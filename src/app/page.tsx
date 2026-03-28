@@ -15,11 +15,13 @@ import {
 } from "lucide-react";
 
 import ThemeToggle from "@/src/ui/components/layout/ThemeToggle";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 import { useUI } from "@/src/context/UIContext";
 
 export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
 
   return (
@@ -51,6 +53,13 @@ export default function Home() {
 
         {/* Profile & Theme Actions */}
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="text-[12px] font-medium text-secondary hover:text-foreground px-3 py-1.5 rounded-full border border-border-dim hover:bg-foreground/5 transition-all"
+          >
+            Preview Modal
+          </button>
+          
           <ThemeToggle />
           
           <div className="relative">
@@ -129,13 +138,13 @@ export default function Home() {
 
             <div className="absolute right-[-10px] bottom-[-20px] w-[140px] h-[120px]">
                {/* Card visualization... */}
-               <div className="absolute right-[10px] bottom-[10px] w-[65px] h-[95px] rounded-[10px] border border-border-dim bg-sidebar/40 rotate-[15deg] translate-x-4 shadow-xl opacity-50 backdrop-blur-sm" />
-               <div className="absolute right-[30px] bottom-[15px] w-[65px] h-[95px] rounded-[10px] border border-border-dim/50 bg-foreground/5 rotate-[20deg] shadow-xl opacity-80 backdrop-blur-md" />
-               <div className="absolute right-[55px] bottom-[20px] w-[65px] h-[95px] rounded-[10px] border border-foreground/10 bg-gradient-to-br from-foreground/[0.05] to-transparent rotate-[25deg] shadow-2xl flex flex-col justify-center items-center gap-2.5 p-2 backdrop-blur-lg">
-                 <div className="w-[16px] h-[2px] bg-foreground/70 rounded-full self-start ml-2 shadow-sm" />
-                 <div className="w-[32px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
-                 <div className="w-[24px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
-               </div>
+                <div className="absolute right-[10px] bottom-[10px] w-[65px] h-[95px] rounded-[10px] border border-border-dim bg-sidebar/40 rotate-[15deg] translate-x-4 shadow-xl opacity-50 backdrop-blur-sm" />
+                <div className="absolute right-[30px] bottom-[15px] w-[65px] h-[95px] rounded-[10px] border border-border-dim/50 bg-foreground/5 rotate-[20deg] shadow-xl opacity-80 backdrop-blur-md" />
+                <div className="absolute right-[55px] bottom-[20px] w-[65px] h-[95px] rounded-[10px] border border-foreground/10 bg-gradient-to-br from-foreground/[0.05] to-transparent rotate-[25deg] shadow-2xl flex flex-col justify-center items-center gap-2.5 p-2 backdrop-blur-lg">
+                  <div className="w-[16px] h-[2px] bg-foreground/70 rounded-full self-start ml-2 shadow-sm" />
+                  <div className="w-[32px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
+                  <div className="w-[24px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
+                </div>
             </div>
           </div>
 
@@ -208,6 +217,31 @@ export default function Home() {
           </div>
         </section>
       </div>
+
+      {/* Sonae Modal Implementation */}
+      <SonaeModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Project Intelligence"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-secondary text-[14px] leading-relaxed">
+            You are accessing the <span className="text-foreground font-medium">Sonae Intelligence</span> layer. This system tracks relationship compounds and identifies high-value opportunities within your network.
+          </p>
+          <div className="p-4 rounded-xl bg-foreground/[0.03] border border-border-dim/50 flex flex-col gap-2">
+            <span className="text-[11px] font-mono tracking-widest text-brand uppercase">Security Protocol</span>
+            <p className="text-[13px] text-secondary">All data accessed is encrypted according to the Ronins Protocol standards.</p>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="bg-foreground text-background text-[13px] font-bold px-6 py-2.5 rounded-full hover:opacity-90 transition-opacity"
+            >
+              Confirm Access
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
     </div>
   );
 }
