@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco;
+
+  /* Workspace Colors - Dynamic */
+  --color-background: var(--bg-main);
+  --color-foreground: var(--text-primary);
+  --color-sidebar: var(--bg-sidebar);
+  --color-card: var(--bg-card);
+  --color-border-dim: var(--border-subtle);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-hover: var(--bg-hover);
+  
+  /* Sonae Brand */
+  --color-brand: #ff5a1f;
+
+  /* Shapes */
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+}
+
+:root {
+  --bg-main: #fcfcfc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --radial-inner: #f2f2f7;
+  --radial-outer: #fdfdfd;
+}
+
+.dark {
+  --bg-main: #0a0a0a;
+  --bg-sidebar: #0c0c0c;
+  --bg-card: #161616;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --text-primary: #ffffff;
+  --text-secondary: #8a8a8a;
+  --text-muted: #555555;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --radial-inner: #333333;
+  --radial-outer: #1a1a1a;
+}
+
+body {
+  background: 
+    linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02)),
+    radial-gradient(circle at center, var(--radial-inner) 0%, var(--radial-outer) 100%);
+  background-attachment: fixed;
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background: 
+    linear-gradient(rgba(10, 10, 10, 0.1), rgba(10, 10, 10, 0.1)),
+    radial-gradient(circle at center, var(--radial-inner) 0%, var(--radial-outer) 100%);
+}
+
+/* Transitions for Theme Switching */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Unset transitions for high-performance elements if needed */
+.no-transition {
+  transition: none !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-secondary);
+  border-radius: var(--radius-sm);
+  opacity: 0.3;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand);
+}
