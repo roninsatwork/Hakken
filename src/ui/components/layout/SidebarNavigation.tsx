@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -14,10 +14,14 @@ import {
   Sidebar,
   Apple,
   Globe,
-  PenTool
+  PenTool,
+  Bot,
+  ShieldCheck,
+  Settings
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useUI } from "@/src/context/UIContext";
 
 interface NavItemProps {
@@ -108,17 +112,32 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
 export default function SidebarNavigation() {
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
-  const [activeItem, setActiveItem] = useState('Dashboard');
+  const pathname = usePathname();
+  const isAdmin = pathname.startsWith('/admin');
+  
+  const [activeItem, setActiveItem] = useState(isAdmin ? 'Admin Dashboard' : 'Dashboard');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     workspace: true,
     businessHub: false,
     clients: false,
-    companies: false
+    companies: false,
+    ai: true,
+    users: false,
+    settings: false
   });
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  // Sync active item when switching between Admin and Navigation modes
+  useEffect(() => {
+    if (isAdmin) {
+      setActiveItem('Admin Dashboard');
+    } else {
+      setActiveItem('Dashboard');
+    }
+  }, [isAdmin]);
 
   return (
     <AnimatePresence mode="wait">
@@ -169,108 +188,164 @@ export default function SidebarNavigation() {
             
             <section>
               <div className="mb-3 px-3">
-                <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">Navigation</span>
+                <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">
+                  {isAdmin ? 'Admin' : 'Navigation'}
+                </span>
               </div>
 
               <nav>
-                <NavItem 
-                  icon={LayoutDashboard} 
-                  label="Dashboard" 
-                  isActive={activeItem === 'Dashboard'} 
-                  onClick={() => setActiveItem('Dashboard')}
-                />
-                
-                <NavItem 
-                  icon={FolderKanban} 
-                  label="Workspace" 
-                  isActive={activeItem === 'Workspace'}
-                  onClick={() => setActiveItem('Workspace')}
-                  hasChildren 
-                  isOpen={openSections.workspace}
-                  onToggle={() => toggleSection('workspace')}
-                >
-                  <SubNavItem label="Active Projects" isActive={activeItem === 'Active Projects'} onClick={() => setActiveItem('Active Projects')} />
-                  <SubNavItem label="Archived" isActive={activeItem === 'Archived'} onClick={() => setActiveItem('Archived')} />
-                </NavItem>
+                {isAdmin ? (
+                  <>
+                    <NavItem 
+                      icon={LayoutDashboard} 
+                      label="Dashboard" 
+                      isActive={activeItem === 'Admin Dashboard'} 
+                      onClick={() => setActiveItem('Admin Dashboard')}
+                    />
+                    
+                    <NavItem 
+                      icon={Bot} 
+                      label="Artificial Intelligence" 
+                      isActive={activeItem === 'Artificial Intelligence'}
+                      onClick={() => setActiveItem('Artificial Intelligence')}
+                      hasChildren 
+                      isOpen={openSections.ai}
+                      onToggle={() => toggleSection('ai')}
+                    >
+                      <SubNavItem label="Rules" isActive={activeItem === 'Rules'} onClick={() => setActiveItem('Rules')} />
+                      <SubNavItem label="Chat Logs" isActive={activeItem === 'Chat Logs'} onClick={() => setActiveItem('Chat Logs')} />
+                      <SubNavItem label="Settings" isActive={activeItem === 'AI Settings'} onClick={() => setActiveItem('AI Settings')} />
+                    </NavItem>
 
-                <NavItem 
-                  icon={Briefcase} 
-                  label="Business Hub" 
-                  isActive={activeItem === 'Business Hub'}
-                  onClick={() => setActiveItem('Business Hub')}
-                  hasChildren 
-                  isOpen={openSections.businessHub}
-                  onToggle={() => toggleSection('businessHub')}
-                >
-                   <SubNavItem label="Documents" isActive={activeItem === 'Documents'} onClick={() => setActiveItem('Documents')} />
-                </NavItem>
+                    <NavItem 
+                      icon={ShieldCheck} 
+                      label="Users" 
+                      isActive={activeItem === 'Users'}
+                      onClick={() => setActiveItem('Users')}
+                      hasChildren 
+                      isOpen={openSections.users}
+                      onToggle={() => toggleSection('users')}
+                    >
+                      <SubNavItem label="Manage Users" isActive={activeItem === 'Manage Users'} onClick={() => setActiveItem('Manage Users')} />
+                    </NavItem>
 
-                <NavItem 
-                  icon={Users2} 
-                  label="Clients" 
-                  isActive={activeItem === 'Clients'}
-                  onClick={() => setActiveItem('Clients')}
-                  hasChildren 
-                  isOpen={openSections.clients}
-                  onToggle={() => toggleSection('clients')}
-                >
-                  <SubNavItem label="Directory" isActive={activeItem === 'Directory'} onClick={() => setActiveItem('Directory')} />
-                </NavItem>
+                    <NavItem 
+                      icon={Settings} 
+                      label="Settings" 
+                      isActive={activeItem === 'Settings'}
+                      onClick={() => setActiveItem('Settings')}
+                      hasChildren 
+                      isOpen={openSections.settings}
+                      onToggle={() => toggleSection('settings')}
+                    >
+                      <SubNavItem label="System Settings" isActive={activeItem === 'System Settings'} onClick={() => setActiveItem('System Settings')} />
+                    </NavItem>
+                  </>
+                ) : (
+                  <>
+                    <NavItem 
+                      icon={LayoutDashboard} 
+                      label="Dashboard" 
+                      isActive={activeItem === 'Dashboard'} 
+                      onClick={() => setActiveItem('Dashboard')}
+                    />
+                    
+                    <NavItem 
+                      icon={FolderKanban} 
+                      label="Workspace" 
+                      isActive={activeItem === 'Workspace'}
+                      onClick={() => setActiveItem('Workspace')}
+                      hasChildren 
+                      isOpen={openSections.workspace}
+                      onToggle={() => toggleSection('workspace')}
+                    >
+                      <SubNavItem label="Active Projects" isActive={activeItem === 'Active Projects'} onClick={() => setActiveItem('Active Projects')} />
+                      <SubNavItem label="Archived" isActive={activeItem === 'Archived'} onClick={() => setActiveItem('Archived')} />
+                    </NavItem>
 
-                <NavItem 
-                  icon={Building2} 
-                  label="Companies" 
-                  isActive={activeItem === 'Companies'}
-                  onClick={() => setActiveItem('Companies')}
-                  hasChildren 
-                  isOpen={openSections.companies}
-                  onToggle={() => toggleSection('companies')}
-                >
-                  <SubNavItem label="Search" isActive={activeItem === 'Search'} onClick={() => setActiveItem('Search')} />
-                </NavItem>
+                    <NavItem 
+                      icon={Briefcase} 
+                      label="Business Hub" 
+                      isActive={activeItem === 'Business Hub'}
+                      onClick={() => setActiveItem('Business Hub')}
+                      hasChildren 
+                      isOpen={openSections.businessHub}
+                      onToggle={() => toggleSection('businessHub')}
+                    >
+                       <SubNavItem label="Documents" isActive={activeItem === 'Documents'} onClick={() => setActiveItem('Documents')} />
+                    </NavItem>
 
-                <NavItem 
-                  icon={LineChart} 
-                  label="Growth Report" 
-                  isActive={activeItem === 'Growth Report'}
-                  onClick={() => setActiveItem('Growth Report')}
-                />
+                    <NavItem 
+                      icon={Users2} 
+                      label="Clients" 
+                      isActive={activeItem === 'Clients'}
+                      onClick={() => setActiveItem('Clients')}
+                      hasChildren 
+                      isOpen={openSections.clients}
+                      onToggle={() => toggleSection('clients')}
+                    >
+                      <SubNavItem label="Directory" isActive={activeItem === 'Directory'} onClick={() => setActiveItem('Directory')} />
+                    </NavItem>
+
+                    <NavItem 
+                      icon={Building2} 
+                      label="Companies" 
+                      isActive={activeItem === 'Companies'}
+                      onClick={() => setActiveItem('Companies')}
+                      hasChildren 
+                      isOpen={openSections.companies}
+                      onToggle={() => toggleSection('companies')}
+                    >
+                      <SubNavItem label="Search" isActive={activeItem === 'Search'} onClick={() => setActiveItem('Search')} />
+                    </NavItem>
+
+                    <NavItem 
+                      icon={LineChart} 
+                      label="Growth Report" 
+                      isActive={activeItem === 'Growth Report'}
+                      onClick={() => setActiveItem('Growth Report')}
+                    />
+                  </>
+                )}
               </nav>
             </section>
 
-            {/* Divider */}
-            <div className="w-full h-[1px] bg-border-dim" />
+            {!isAdmin && (
+              <>
+                {/* Divider */}
+                <div className="w-full h-[1px] bg-border-dim" />
+                
+                <section>
+                <div className="mb-3 px-3">
+                  <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">Favorites</span>
+                </div>
 
-            {/* Favorites Section */}
-            <section>
-              <div className="mb-3 px-3">
-                <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">Favorites</span>
-              </div>
+                <div className="flex flex-col gap-0.5">
+                  {[
+                    { label: 'Apple', icon: <Apple className="w-[18px] h-[18px] text-foreground" />, tag: 'COMPANY' },
+                    { label: 'Google', icon: <Globe className="w-[18px] h-[18px] text-[#4285F4]" />, tag: 'COMPANY' },
+                    { label: 'Figma', icon: <PenTool className="w-[18px] h-[18px] text-[#F24E1E]" />, tag: 'COMPANY' }
+                  ].map((fav, i) => (
+                     <button key={fav.label} className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
+                       <div className="flex items-center gap-3 opacity-90 group-hover:opacity-100">
+                          <div className="text-foreground transition-colors">{fav.icon}</div>
+                          <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">{fav.label}</span>
+                       </div>
+                       <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">{fav.tag}</span>
+                     </button>
+                  ))}
 
-              <div className="flex flex-col gap-0.5">
-                {[
-                  { label: 'Apple', icon: <Apple className="w-[18px] h-[18px] text-foreground" />, tag: 'COMPANY' },
-                  { label: 'Google', icon: <Globe className="w-[18px] h-[18px] text-[#4285F4]" />, tag: 'COMPANY' },
-                  { label: 'Figma', icon: <PenTool className="w-[18px] h-[18px] text-[#F24E1E]" />, tag: 'COMPANY' }
-                ].map((fav, i) => (
-                   <button key={fav.label} className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
-                     <div className="flex items-center gap-3 opacity-90 group-hover:opacity-100">
-                        <div className="text-foreground transition-colors">{fav.icon}</div>
-                        <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">{fav.label}</span>
-                     </div>
-                     <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">{fav.tag}</span>
-                   </button>
-                ))}
-
-                <button className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
-                  <div className="flex items-center gap-3">
-                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman" alt="Aman" className="w-[18px] h-[18px] rounded-full bg-card border border-border-dim" />
-                    <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">Aman</span>
-                  </div>
-                  <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">DESIGNER</span>
-                </button>
-              </div>
-            </section>
+                  <button className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
+                    <div className="flex items-center gap-3">
+                      <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman" alt="Aman" className="w-[18px] h-[18px] rounded-full bg-card border border-border-dim" />
+                      <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">Aman</span>
+                    </div>
+                    <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">DESIGNER</span>
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
 
           </div>
         </motion.aside>

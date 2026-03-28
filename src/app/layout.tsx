@@ -7,6 +7,7 @@ import SidebarNavigation from "@/src/ui/components/layout/SidebarNavigation";
 import FluidWorkspace from "@/src/ui/components/layout/FluidWorkspace";
 
 import { ThemeProvider } from "@/src/ui/providers/ThemeProvider";
+import { cn } from "@/src/ui/lib/utils";
 
 import "./globals.css";
 
@@ -33,7 +34,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight`}
+        suppressHydrationWarning
+        className={cn(
+          inter.variable, 
+          jetbrainsMono.variable, 
+          "antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight"
+        )}
       >
         <ThemeProvider>
           <ConvexClientProvider>

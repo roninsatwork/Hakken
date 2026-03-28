@@ -61,6 +61,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Global Interactive Elements */
+button, 
+a, 
+[role="button"],
+input[type="submit"],
+input[type="button"],
+select {
+  cursor: pointer;
+}
+
+/* Ensure buttons within components inherit this if reset */
+button * {
+  cursor: inherit;
+}
+
 .dark body {
   background: 
     linear-gradient(rgba(10, 10, 10, 0.1), rgba(10, 10, 10, 0.1)),
