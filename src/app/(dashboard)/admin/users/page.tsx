@@ -82,7 +82,7 @@ export default function ManageUsersPage() {
           className="flex items-center gap-2 px-4 py-2 rounded-[14px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
-          <span>Add User</span>
+          <span>Invite User</span>
         </button>
       </div>
 
@@ -181,9 +181,9 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? "Edit User Profile" : "Register System User"}
+        title={editingUser ? "Edit User Profile" : "Invite System User"}
       >
-        <p className="text-secondary mb-2 -mt-4 text-[13px]">{editingUser ? "Modify access protocols and details." : "Create a new identity inside the Sonae protocol."}</p>
+        <p className="text-secondary mb-2 -mt-4 text-[13px]">{editingUser ? "Modify access protocols and details." : "Invite a new identity into the Sonae protocol."}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Full Identity</label>
@@ -245,7 +245,7 @@ export default function ManageUsersPage() {
               type="submit"
               className="px-4 py-2 rounded-[10px] bg-brand text-white hover:bg-brand/90 transition-all text-[13px] font-medium shadow-lg shadow-brand/20"
             >
-              {editingUser ? "Save Modifications" : "Initialize User"}
+              {editingUser ? "Save Modifications" : "Send Invitation"}
             </button>
           </div>
         </form>

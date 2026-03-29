@@ -3,8 +3,8 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { UIProvider } from "@/src/context/UIContext";
 import { ConvexClientProvider } from "@/src/context/ConvexClientProvider";
-import SidebarNavigation from "@/src/ui/components/layout/SidebarNavigation";
-import FluidWorkspace from "@/src/ui/components/layout/FluidWorkspace";
+
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 
 import { ThemeProvider } from "@/src/ui/providers/ThemeProvider";
 import { cn } from "@/src/ui/lib/utils";
@@ -32,30 +32,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        suppressHydrationWarning
-        className={cn(
-          inter.variable, 
-          jetbrainsMono.variable, 
-          "antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight"
-        )}
-      >
-        <ThemeProvider>
-          <ConvexClientProvider>
-            <NextIntlClientProvider>
-              <UIProvider>
-                <div className="flex h-screen overflow-hidden">
-                  <SidebarNavigation />
-                  <FluidWorkspace>
-                    {children}
-                  </FluidWorkspace>
+    <ConvexAuthNextjsServerProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          suppressHydrationWarning
+          className={cn(
+            inter.variable, 
+            jetbrainsMono.variable, 
+            "antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight"
+          )}
+        >
+          <ThemeProvider>
+            <ConvexClientProvider>
+              <NextIntlClientProvider>
+                <UIProvider>
+                  <div className="w-full min-h-screen flex flex-col items-stretch overflow-x-hidden">
+                  {children}
                 </div>
-              </UIProvider>
-            </NextIntlClientProvider>
-          </ConvexClientProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+                </UIProvider>
+              </NextIntlClientProvider>
+            </ConvexClientProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   );
 }
