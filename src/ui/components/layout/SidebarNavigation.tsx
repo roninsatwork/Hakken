@@ -33,17 +33,12 @@ interface NavItemProps {
   onToggle?: () => void;
   onClick?: () => void;
   children?: React.ReactNode;
+  href?: string;
 }
 
-function SubNavItem({ label, isActive, onClick }: { label: string, isActive: boolean, onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left",
-        isActive ? "text-foreground font-medium" : "text-secondary hover:text-foreground"
-      )}
-    >
+function SubNavItem({ label, isActive, onClick, href }: { label: string, isActive: boolean, onClick: () => void, href?: string }) {
+  const content = (
+    <>
       {isActive && (
         <motion.div
           layoutId="active-pill"
@@ -52,44 +47,82 @@ function SubNavItem({ label, isActive, onClick }: { label: string, isActive: boo
         />
       )}
       <span className="relative z-10">{label}</span>
+    </>
+  );
+
+  const className = cn(
+    "py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full",
+    isActive ? "text-foreground font-medium" : "text-secondary hover:text-foreground"
+  );
+
+  if (href) {
+    return (
+      <Link href={href} onClick={onClick} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={className}>
+      {content}
     </button>
   );
 }
 
-function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children }: NavItemProps) {
+function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children, href }: NavItemProps) {
+  const content = (
+    <>
+      {isActive && (
+        <motion.div
+          layoutId="active-pill"
+          className="absolute inset-0 bg-foreground/10 border border-border-dim rounded-[10px] z-0 shadow-sm"
+          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+        />
+      )}
+      <div className="flex items-center gap-3 relative z-10">
+        <Icon className={cn("w-[18px] h-[18px]", isActive ? "text-foreground" : "text-secondary group-hover:text-foreground")} />
+        <span>{label}</span>
+      </div>
+      {hasChildren && (
+        <motion.div
+          initial={false}
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="relative z-10"
+        >
+          <ChevronDown className={cn("w-3.5 h-3.5", isActive ? "text-foreground" : "text-muted")} />
+        </motion.div>
+      )}
+    </>
+  );
+
+  const className = cn(
+    "flex items-center justify-between w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all group relative",
+    isActive 
+      ? "text-foreground" 
+      : "text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"
+  );
+
+  const renderClickable = () => {
+    if (href && !hasChildren) {
+      return (
+        <Link href={href} onClick={onClick} className={className}>
+          {content}
+        </Link>
+      );
+    }
+    return (
+      <button onClick={hasChildren ? (onToggle || onClick) : onClick} className={className}>
+        {content}
+      </button>
+    );
+  };
+
   return (
     <div className="flex flex-col mb-0.5 relative">
-      <button
-        onClick={hasChildren ? (onToggle || onClick) : onClick}
-        className={cn(
-          "flex items-center justify-between w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all group relative",
-          isActive 
-            ? "text-foreground" 
-            : "text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"
-        )}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="active-pill"
-            className="absolute inset-0 bg-foreground/10 border border-border-dim rounded-[10px] z-0 shadow-sm"
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          />
-        )}
-        <div className="flex items-center gap-3 relative z-10">
-          <Icon className={cn("w-[18px] h-[18px]", isActive ? "text-foreground" : "text-secondary group-hover:text-foreground")} />
-          <span>{label}</span>
-        </div>
-        {hasChildren && (
-          <motion.div
-            initial={false}
-            animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="relative z-10"
-          >
-            <ChevronDown className={cn("w-3.5 h-3.5", isActive ? "text-foreground" : "text-muted")} />
-          </motion.div>
-        )}
-      </button>
+      {renderClickable()}
+
       
       <AnimatePresence initial={false}>
         {hasChildren && isOpen && (
@@ -199,7 +232,8 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={LayoutDashboard} 
                       label="Dashboard" 
-                      isActive={activeItem === 'Admin Dashboard'} 
+                      href="/admin"
+                      isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')} 
                       onClick={() => setActiveItem('Admin Dashboard')}
                     />
                     
@@ -220,13 +254,13 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={ShieldCheck} 
                       label="Users" 
-                      isActive={activeItem === 'Users'}
+                      isActive={activeItem === 'Users' || activeItem === 'Manage Users'}
                       onClick={() => setActiveItem('Users')}
                       hasChildren 
                       isOpen={openSections.users}
                       onToggle={() => toggleSection('users')}
                     >
-                      <SubNavItem label="Manage Users" isActive={activeItem === 'Manage Users'} onClick={() => setActiveItem('Manage Users')} />
+                      <SubNavItem label="Manage Users" href="/admin/users" isActive={activeItem === 'Manage Users' || pathname.startsWith('/admin/users')} onClick={() => setActiveItem('Manage Users')} />
                     </NavItem>
 
                     <NavItem 
@@ -246,7 +280,8 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={LayoutDashboard} 
                       label="Dashboard" 
-                      isActive={activeItem === 'Dashboard'} 
+                      href="/"
+                      isActive={activeItem === 'Dashboard' || (pathname === '/')} 
                       onClick={() => setActiveItem('Dashboard')}
                     />
                     

@@ -9,7 +9,11 @@ import {
   LogOut, 
   ChevronDown, 
   Sidebar,
-  ShieldCheck
+  ShieldCheck,
+  HelpCircle,
+  Mail,
+  Bell,
+  ChevronsUpDown
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +26,7 @@ interface HeaderProps {
 
 export default function Header({ onOpenModal }: HeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(true);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
@@ -63,8 +68,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
         </span>
       </nav>
 
-      {/* Profile & Theme Actions */}
-      <div className="flex items-center gap-4">
+      {/* Profile & Utility Actions */}
+      <div className="flex items-center gap-6">
         {onOpenModal && (
           <button
             onClick={onOpenModal}
@@ -74,22 +79,51 @@ export default function Header({ onOpenModal }: HeaderProps) {
           </button>
         )}
         
-        <ThemeToggle />
+        {/* Utility Group */}
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          
+          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
+            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            <HelpCircle className="w-5 h-5" />
+          </button>
+
+          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
+            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Mail className="w-5 h-5" />
+          </button>
+
+          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
+            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Bell className="w-5 h-5" />
+            {hasNotifications && (
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#161616]" />
+            )}
+          </button>
+        </div>
+        
+        <div className="h-8 w-px bg-border-dim/50 ml-2" />
         
         <div className="relative">
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-3 p-1.5 rounded-full hover:bg-foreground/5 transition-colors group border border-transparent active:border-border-dim"
+            className="flex items-center gap-4 p-1 rounded-full hover:bg-foreground/5 transition-colors group"
           >
             <div className="relative">
               <img 
                 src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman" 
                 alt="Aman" 
-                className="w-8 h-8 rounded-full bg-sidebar border border-border-dim group-hover:border-foreground/20 transition-all"
+                className="w-10 h-10 rounded-full bg-sidebar border border-border-dim group-hover:border-foreground/20 transition-all"
               />
-              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#10b981] border-2 border-sidebar rounded-full" />
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#10b981] border-2 border-[#161616] rounded-full" />
             </div>
-            <ChevronDown className={`w-4 h-4 text-secondary transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
+
+            <div className="flex flex-col items-start min-w-[120px]">
+              <span className="text-[15px] font-light text-foreground tracking-[0.12em] leading-tight">Oripio Design</span>
+              <span className="text-[12px] text-secondary/70 font-normal">oripio@gmail.com</span>
+            </div>
+
+            <ChevronsUpDown className={`w-4 h-4 text-secondary/50 group-hover:text-secondary transition-colors transition-transform duration-300 ${isProfileOpen ? 'scale-y-[-1]' : ''}`} />
           </button>
 
           {/* Profile Dropdown */}
@@ -102,9 +136,9 @@ export default function Header({ onOpenModal }: HeaderProps) {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute right-0 top-full mt-2 w-52 bg-card/90 backdrop-blur-xl border border-border-dim rounded-xl shadow-2xl z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-4 w-52 bg-card/90 backdrop-blur-3xl border border-border-dim rounded-[24px] shadow-2xl z-50 overflow-hidden"
                 >
-                  <div className="p-1.5 flex flex-col gap-0.5">
+                  <div className="p-2 flex flex-col gap-0.5">
                     <button 
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-left"
