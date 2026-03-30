@@ -53,4 +53,19 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   }).index("by_type", ["templateType"]),
+
+  // Sonae Assistant Tables
+  threads: defineTable({
+    userId: v.id("users"),
+    title: v.optional(v.string()), // Generated lazily after first exchange
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId", "updatedAt"]),
+
+  messages: defineTable({
+    threadId: v.id("threads"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_thread", ["threadId", "createdAt"]),
 });

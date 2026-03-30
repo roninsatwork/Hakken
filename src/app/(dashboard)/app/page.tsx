@@ -19,10 +19,25 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Header from "@/src/ui/components/layout/Header";
 
 import { useUI } from "@/src/context/UIContext";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useEffect } from "react";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
+  const user = useQuery(api.users.getMe);
+  const [greeting, setGreeting] = useState("Welcome");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else if (hour < 21) setGreeting("Good evening");
+    else setGreeting("Good night");
+  }, []);
+
+  const firstName = user?.name ? user.name.split(" ")[0] : "";
 
   return (
     <div className="flex flex-col">
@@ -34,7 +49,9 @@ export default function Home() {
       <div className="flex flex-col gap-6">
         {/* Hero Header */}
         <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground tracking-tighter">Good morning, Aman</h1>
+          <h1 className="text-3xl font-bold text-foreground tracking-tighter">
+            {greeting}{firstName ? `, ${firstName}` : ""}
+          </h1>
         </header>
 
         {/* Metric Cards Row */}

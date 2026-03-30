@@ -1,0 +1,183 @@
+import { v } from "convex/values";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+
+export const getThreads = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
+    return await ctx.db
+      .query("threads")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc") // newest first
+      .collect();
+  },
+});
+
+export const getMessages = query({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+      throw new Error("Unauthorized or Thread Not Found");
+    }
+
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("asc") // chronological order for rendering UI
+      .collect();
+  },
+});
+
+export const getMessagesForAI = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    // Unchecked auth: This is completely secure because internalQuery can strictly ONLY be invoked by our own verified backend Actions, bypassing the dropped Edge auth context.
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("asc")
+      .collect();
+  },
+});
+
+export const createThread = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
+    const now = Date.now();
+    
+    const threadId = await ctx.db.insert("threads", {
+      userId,
+      title: "New Conversation",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return threadId;
+  },
+});
+
+export const sendMessage = mutation({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+    modelId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+
+    const now = Date.now();
+
+    // 1. Insert User Message
+    await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      role: "user",
+      content: args.content,
+      createdAt: now,
+    });
+
+    // 2. Update Thread timestamp
+    await ctx.db.patch(args.threadId, { updatedAt: now });
+
+    // 3. Trigger the asynchronous Vertex AI Orchestrator Action to respond to this message
+    await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
+      threadId: args.threadId,
+      content: args.content,
+      modelId: args.modelId,
+    });
+
+    return true;
+  },
+});
+
+export const saveAssistantMessage = internalMutation({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      role: "assistant",
+      content: args.content,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const deleteThread = mutation({
+  args: {
+    threadId: v.id("threads"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized Sonae Deletion");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+
+    // Cascade: Retrieve and eradicate all intelligence messages
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .collect();
+      
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id);
+    }
+
+    // 2. Eradicate thread root
+    await ctx.db.delete(args.threadId);
+    
+    return true;
+  },
+});
+
+export const renameThread = mutation({
+  args: {
+    threadId: v.id("threads"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+
+    await ctx.db.patch(args.threadId, {
+      title: args.title.trim() === "" ? "Untitled Conversation" : args.title.trim(),
+      updatedAt: Date.now(),
+    });
+
+    return true;
+  },
+});

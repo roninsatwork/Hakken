@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth/core": "^0.37.4",
     "@convex-dev/auth": "^0.0.91",
+    "@google/genai": "^1.47.0",
     "clsx": "^2.1.1",
     "convex": "^1.31.5",
     "framer-motion": "^12.38.0",

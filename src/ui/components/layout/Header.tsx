@@ -100,23 +100,11 @@ export default function Header({ onOpenModal }: HeaderProps) {
           )}
         </div>
         
-        <div className="h-4 w-px bg-border-dim" />
-        <span className="text-secondary font-mono tracking-[0.15em] text-[11px] uppercase">
-          {isAdmin ? "System Protocol Active" : "14 Live Projects"}
-        </span>
       </nav>
 
       {/* Profile & Utility Actions */}
       <div className="flex items-center gap-6">
-        {onOpenModal && (
-          <button
-            onClick={onOpenModal}
-            className="text-[12px] font-medium text-secondary hover:text-foreground px-3 py-1.5 rounded-full border border-border-dim hover:bg-foreground/5 transition-all"
-          >
-            Preview Modal
-          </button>
-        )}
-        
+
         {/* Utility Group */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
