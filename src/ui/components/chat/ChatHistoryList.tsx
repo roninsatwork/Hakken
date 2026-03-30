@@ -221,13 +221,15 @@ export default function ChatHistoryList() {
                   </button>
                   <button 
                     onClick={async () => {
+                      if (!threadToDelete) return;
                       setIsDeleting(true);
+                      const deletedId = threadToDelete;
                       try {
-                        await deleteThread({ threadId: threadToDelete });
-                        setThreadToDelete(null);
-                        if (pathname.includes(threadToDelete)) {
+                        await deleteThread({ threadId: deletedId });
+                        if (pathname.includes(deletedId)) {
                           router.push("/app/assistant");
                         }
+                        setThreadToDelete(null);
                       } catch (error) {
                         console.error("Failed to delete thread", error);
                       } finally {

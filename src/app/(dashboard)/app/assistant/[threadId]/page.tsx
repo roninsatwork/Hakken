@@ -36,7 +36,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       >
         <div className="w-full flex justify-center px-4 sm:px-8 pt-6 pb-[160px]">
           <div className="w-full flex flex-col">
-            {messages === undefined ? (
+            {!messages ? (
               <div className="flex-1 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-muted animate-spin" />
               </div>

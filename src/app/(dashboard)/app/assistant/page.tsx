@@ -30,7 +30,7 @@ export default function AssistantWelcomePage() {
   const [greeting, setGreeting] = useState("Welcome");
   
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(MODELS[1]);
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]); // Default to Fast
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   

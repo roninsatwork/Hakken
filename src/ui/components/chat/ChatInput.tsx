@@ -31,7 +31,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(MODELS[1]); // Default to Thinking
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]); // Default to Fast
   
   const sendMessage = useMutation(api.chat.sendMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

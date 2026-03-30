@@ -2,7 +2,6 @@ import { mutation, query, action, internalMutation, internalQuery } from "./_gen
 import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
-import { Resend } from "resend";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -193,21 +192,29 @@ export const dispatchInviteEmail = action({
     }
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      
       const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Team <anthony@ronins.co.uk>";
 
-      const { data, error } = await resend.emails.send({
-        from: fromAddress, 
-        to: args.email,
-        subject: args.template.subject,
-        html: emailHtml,
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: args.email,
+          subject: args.template.subject,
+          html: emailHtml
+        })
       });
 
-      if (error) {
-         console.error("Resend API Rejection:", error);
-         throw new Error("Failed to dispatch raw email.");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Resend API Rejection:", errorText);
+        throw new Error("Failed to dispatch raw email.");
       }
+
+      const data = await response.json();
 
       // 4. Record DB mapping on successful dispatch
       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, role: args.role, token });

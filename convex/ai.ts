@@ -13,12 +13,37 @@ export const generateSonaeResponse = internalAction({
   },
   handler: async (ctx, args) => {
     // Escaping Edge runtime limits. Using implicit Node env parsing.
-    const ai = new GoogleGenAI({});
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    
+    const ai = new GoogleGenAI({ 
+      project: projectId, 
+      location: location,
+      vertexai: true,
+      googleAuthOptions: {
+        credentials: {
+          client_email: process.env.GOOGLE_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }
+      }
+    });
     
     // Default mapped model selections for Sonae UI
-    let actualModelStr = "gemini-2.5-pro"; // Default to Thinking
-    if (args.modelId === "fast") actualModelStr = "gemini-2.5-flash";
-    if (args.modelId === "pro") actualModelStr = "gemini-3.1-pro-preview";
+    let actualModelStr = "gemini-3.1-pro-preview"; // Default to Thinking
+    let generationConfig: any = { 
+        thinkingConfig: { thinkingLevel: "MEDIUM" } 
+    };
+    
+    if (args.modelId === "fast") {
+        actualModelStr = "gemini-3.1-flash-lite-preview";
+        generationConfig = {}; // Flash models generally skip deep reasoning levels
+    }
+    if (args.modelId === "pro") {
+        actualModelStr = "gemini-3.1-pro-preview";
+        generationConfig = {
+            thinkingConfig: { thinkingLevel: "HIGH" }
+        };
+    }
     
     try {
         // Fetch up to 20 previous messages to pass as context
@@ -42,7 +67,8 @@ User Prompt: ${args.content}`;
 
         const response = await ai.models.generateContent({
             model: actualModelStr, // Dynamically use Sonae user preference
-            contents: systemPrompt
+            contents: systemPrompt,
+            config: generationConfig
         });
 
         const assistantReply = response.text || "I was unable to assemble a coherent analysis.";

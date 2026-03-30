@@ -29,7 +29,7 @@ export const getMessages = query({
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
-      throw new Error("Unauthorized or Thread Not Found");
+      return null;
     }
 
     return await ctx.db
