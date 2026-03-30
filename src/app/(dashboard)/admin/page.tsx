@@ -95,8 +95,8 @@ export default function AdminDashboard() {
             <div 
               key={i} 
               className="flex-1 bg-brand/20 rounded-t-[2px] transition-all hover:bg-brand/40"
-              style={{ height: `${Math.random() * 40 + 60}%` }}
-            />
+              style={{ height: `${60 + Math.abs(Math.sin(i * 1000) * 40)}%` }}
+            ></div>
           ))}
         </div>
         

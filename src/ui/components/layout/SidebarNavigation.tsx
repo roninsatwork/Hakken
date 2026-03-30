@@ -150,6 +150,7 @@ export default function SidebarNavigation() {
   
   const [activeItem, setActiveItem] = useState(() => {
     if (pathname === '/admin') return 'Admin Dashboard';
+    if (pathname === '/admin/users/invite') return 'Invitations';
     if (pathname.startsWith('/admin/users')) return 'Manage Users';
     if (pathname === '/app') return 'Dashboard';
     if (pathname.startsWith('/app/profile')) return 'Profile';
@@ -172,6 +173,7 @@ export default function SidebarNavigation() {
   // Sync active item when path changes
   useEffect(() => {
     if (pathname === '/admin') setActiveItem('Admin Dashboard');
+    else if (pathname === '/admin/users/invite') setActiveItem('Invitations');
     else if (pathname.startsWith('/admin/users')) setActiveItem('Manage Users');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
@@ -259,13 +261,14 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={ShieldCheck} 
                       label="Users" 
-                      isActive={activeItem === 'Users' || activeItem === 'Manage Users'}
+                      isActive={activeItem === 'Users' || activeItem === 'Manage Users' || activeItem === 'Invitations'}
                       onClick={() => setActiveItem('Users')}
                       hasChildren 
                       isOpen={openSections.users}
                       onToggle={() => toggleSection('users')}
                     >
-                      <SubNavItem label="Manage Users" href="/admin/users" isActive={activeItem === 'Manage Users' || pathname.startsWith('/admin/users')} onClick={() => setActiveItem('Manage Users')} />
+                      <SubNavItem label="Manage Users" href="/admin/users" isActive={activeItem === 'Manage Users' && pathname === '/admin/users'} onClick={() => setActiveItem('Manage Users')} />
+                      <SubNavItem label="Invitations" href="/admin/users/invite" isActive={activeItem === 'Invitations' || pathname.startsWith('/admin/users/invite')} onClick={() => setActiveItem('Invitations')} />
                     </NavItem>
 
                     <NavItem 

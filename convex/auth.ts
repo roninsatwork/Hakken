@@ -2,6 +2,7 @@ import { convexAuth } from "@convex-dev/auth/server";
 import authConfig from "./auth.config";
 
 import Google from "@auth/core/providers/google";
+import Resend from "@auth/core/providers/resend";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -9,11 +10,16 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
     }),
+    Resend({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.RESEND_FROM_EMAIL || "anthony@ronins.co.uk",
+    }),
   ],
 
   callbacks: {
     async createOrUpdateUser(ctx: any, args: any) {
-      const email = args.profile?.email || args.email || args.user?.email || "";
+      const rawEmail = args.profile?.email || args.email || args.user?.email || "";
+      const email = rawEmail.toLowerCase();
       const name = args.profile?.name || args.user?.name || email.split("@")[0] || "User";
       const image = args.profile?.image || args.profile?.picture || args.user?.image || "";
 
@@ -24,18 +30,43 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       // Find if user already exists
       const existingUser = await ctx.db
         .query("users")
-        .withIndex("email", (q) => q.eq("email", email))
+        .withIndex("email", (q: any) => q.eq("email", email))
         .first();
 
       const isAdmin = email === "anthony@ronins.co.uk";
 
       if (!existingUser) {
-        // If not the hardcoded admin and doesn't exist (no invite), REJECT
+        // If not the hardcoded admin, check for pending invites!
         if (!isAdmin) {
-          throw new Error("Access Denied: This is an invite-only platform. Please contact your administrator.");
+          const pendingInvite = await ctx.db
+            .query("invitations")
+            .withIndex("by_email", (q: any) => q.eq("email", email))
+            .filter((q: any) => q.eq(q.field("status"), "PENDING"))
+            .first();
+
+          if (!pendingInvite) {
+            throw new Error("Access Denied: This is an invite-only platform. Please contact your administrator.");
+          }
+
+          // If they have a pending invite, provision them securely
+          const newUserId = await ctx.db.insert("users", {
+            email,
+            name,
+            image,
+            role: pendingInvite.role,
+            createdAt: Date.now(),
+          });
+
+          // Lock the invite as ACCEPTED
+          await ctx.db.patch(pendingInvite._id, {
+            status: "ACCEPTED",
+            acceptedAt: Date.now(),
+          });
+
+          return newUserId;
         }
 
-        // Auto-provision the admin
+        // Auto-provision the primary admin
         return await ctx.db.insert("users", {
           email,
           name,

@@ -20,7 +20,9 @@ import { Id } from "@/convex/_generated/dataModel";
 
 export default function ManageUsersPage() {
   const users = useQuery(api.users.getAllUsers) || [];
+  const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
   const deleteUser = useMutation(api.users.deleteUser);
+  const revokeInvite = useMutation(api.invites.revokeInvite);
   const addUser = useMutation(api.users.addUser);
   const updateUser = useMutation(api.users.updateUser);
 
@@ -28,12 +30,17 @@ export default function ManageUsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "" });
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter((u: any) => 
+    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredInvites = pendingInvites.filter((inv: any) => 
+    (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenAdd = () => {
@@ -65,6 +72,13 @@ export default function ManageUsersPage() {
     }
   };
 
+  const confirmRevoke = async () => {
+    if (deletingInvite) {
+      await revokeInvite({ id: deletingInvite._id });
+      setDeletingInvite(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* Header Section */}
@@ -77,13 +91,13 @@ export default function ManageUsersPage() {
           <p className="text-[13px] text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
         </div>
         
-        <button 
-          onClick={handleOpenAdd}
+        <Link 
+          href="/admin/users/invite"
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
           <span>Invite User</span>
-        </button>
+        </Link>
       </div>
 
       {/* Control Bar */}
@@ -114,62 +128,106 @@ export default function ManageUsersPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredUsers.length === 0 ? (
+                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No users found matching your search.
+                      No users or pending invitations found matching your search.
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <motion.tr 
-                      key={user._id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
-                    >
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
-                            alt={user.name} 
-                            className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                          />
-                          <div>
-                            <Link href={`/admin/users/${user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
-                              {user.name}
-                            </Link>
-                            <span className="text-[12px] text-secondary">{user.email}</span>
+                  <>
+                    {filteredInvites.map((inv) => (
+                      <motion.tr 
+                        key={inv._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
+                               <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
+                                Pending Invitation
+                              </span>
+                              <span className="text-[12px] text-secondary">{inv.email}</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                          {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                          <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                            {user.role || 'USER'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-[12px] text-secondary">
-                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link href={`/admin/users/${user._id}`} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                            <MoreVertical className="w-4 h-4" />
-                          </Link>
-                          <button onClick={() => handleOpenEdit(user)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeletingUser(user)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
+                            <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
+                              PENDING {inv.role}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[12px] text-secondary">
+                          {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
+                             <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+
+                    {filteredUsers.map((user) => (
+                      <motion.tr 
+                        key={user._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
+                      >
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
+                              alt={user.name} 
+                              className="w-8 h-8 rounded-full bg-card border border-border-dim"
+                            />
+                            <div>
+                              <Link href={`/admin/users/${user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
+                                {user.name}
+                              </Link>
+                              <span className="text-[12px] text-secondary">{user.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                            {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
+                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                              {user.role || 'USER'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-[12px] text-secondary">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link href={`/admin/users/${user._id}`} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                              <MoreVertical className="w-4 h-4" />
+                            </Link>
+                            <button onClick={() => handleOpenEdit(user)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setDeletingUser(user)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </>
                 )}
               </AnimatePresence>
             </tbody>
@@ -274,6 +332,33 @@ export default function ManageUsersPage() {
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
           >
             Delete User
+          </button>
+        </div>
+      </SonaeModal>
+
+      {/* Revoke Invitation Modal */}
+      <SonaeModal
+        isOpen={!!deletingInvite}
+        onClose={() => setDeletingInvite(null)}
+        title="Revoke Access"
+      >
+        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
+          Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
+        </p>
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
+          <button 
+            type="button" 
+            onClick={() => setDeletingInvite(null)}
+            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            onClick={confirmRevoke}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+          >
+            Revoke Access
           </button>
         </div>
       </SonaeModal>

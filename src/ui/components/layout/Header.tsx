@@ -15,7 +15,8 @@ import {
   Bell,
   ChevronsUpDown
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect } from "react";
@@ -32,6 +33,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const [hasNotifications, setHasNotifications] = useState(true);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuthActions();
   const isAdmin = pathname.startsWith('/admin');
   
   const user = useQuery(api.users.getMe);
@@ -58,6 +61,13 @@ export default function Header({ onOpenModal }: HeaderProps) {
         });
     }
   }, [user, recordLogin]);
+
+  const handleLogout = async () => {
+    setIsProfileOpen(false);
+    sessionStorage.removeItem("login_tracked");
+    await signOut();
+    router.push("/");
+  };
 
   return (
     <header className="sticky top-0 z-30 -mx-8 -mt-8 px-8 py-4 mb-8 bg-sidebar/40 backdrop-blur-xl border-b border-border-dim flex items-center justify-between shadow-sm transition-all duration-300">
@@ -197,7 +207,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
                     <div className="h-px bg-border-dim my-1 mx-2" />
                     
                     <button 
-                      onClick={() => setIsProfileOpen(false)}
+                      onClick={handleLogout}
                       className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-[#f43f5e] hover:bg-[#f43f5e]/10 transition-all text-left font-medium"
                     >
                       <LogOut className="w-4 h-4" />

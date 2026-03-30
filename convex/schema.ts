@@ -31,4 +31,26 @@ export default defineSchema({
       searchField: "device",
       filterFields: ["userId"],
     }),
+
+  invitations: defineTable({
+    email: v.string(),
+    role: v.union(v.literal("USER"), v.literal("ADMIN")),
+    status: v.union(v.literal("PENDING"), v.literal("ACCEPTED"), v.literal("REVOKED")),
+    token: v.string(),
+    invitedBy: v.optional(v.id("users")),
+    invitedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+  })
+    .index("by_email", ["email"])
+    .index("by_token", ["token"]),
+    
+  emailTemplates: defineTable({
+    templateType: v.string(), // "INVITE"
+    subject: v.string(),
+    headline: v.string(),
+    body: v.string(),
+    ctaText: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_type", ["templateType"]),
 });
