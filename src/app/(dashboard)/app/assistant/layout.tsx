@@ -1,4 +1,5 @@
 import ChatHistoryList from "@/src/ui/components/chat/ChatHistoryList";
+import Header from "@/src/ui/components/layout/Header";
 
 /* This is a wrapper layout for the Sonae Assistant interface establishing the dual-pane architecture */
 export default function AssistantLayout({
@@ -7,7 +8,11 @@ export default function AssistantLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-[calc(100vh-64px)] gap-6 overflow-hidden">
+    <div className="flex flex-col h-full w-full">
+      <div className="pb-4">
+        <Header />
+      </div>
+      <div className="flex flex-1 gap-6 overflow-hidden">
       
       {/* Left Column: Historical Threads & Thread Generation */}
       <aside className="w-[300px] flex-shrink-0 hidden md:flex flex-col rounded-[20px] border border-border-dim bg-sidebar/20 backdrop-blur-xl shadow-md p-4 relative overflow-hidden z-20">
@@ -20,6 +25,7 @@ export default function AssistantLayout({
         {children}
       </main>
 
+      </div>
     </div>
   );
 }

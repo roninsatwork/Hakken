@@ -71,7 +71,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       </div>
 
       {/* Floating Viewport Bottom Composer Input */}
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#1b1b1d] via-[#1b1b1d]/90 to-transparent pt-32 pb-0 z-40 px-4 sm:px-8 pointer-events-none flex justify-center">
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/90 to-transparent pt-32 pb-0 z-40 px-4 sm:px-8 pointer-events-none flex justify-center">
         <div className="pointer-events-auto w-full">
             <ChatInput threadId={threadId} />
         </div>

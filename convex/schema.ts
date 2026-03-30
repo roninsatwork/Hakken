@@ -54,6 +54,24 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_type", ["templateType"]),
 
+  // Sonae System Configurations
+  systemConfig: defineTable({
+    key: v.string(), // e.g. "SYSTEM_PROMPT"
+    value: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
+
+  // AI Rule Engine (Triggers & Logic Processing)
+  aiRules: defineTable({
+    trigger: v.string(),
+    instruction: v.string(),
+    priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_active", ["isActive", "createdAt"]),
+
   // Sonae Assistant Tables
   threads: defineTable({
     userId: v.id("users"),
@@ -67,5 +85,9 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     createdAt: v.number(),
+    // Sonae AI Logistics
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    modelUsed: v.optional(v.string())
   }).index("by_thread", ["threadId", "createdAt"]),
 });

@@ -152,6 +152,10 @@ export default function SidebarNavigation() {
     if (pathname === '/admin') return 'Admin Dashboard';
     if (pathname === '/admin/users/invite') return 'Invitations';
     if (pathname.startsWith('/admin/users')) return 'Manage Users';
+    if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
+    if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
+    if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
+    if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
     if (pathname === '/app') return 'Dashboard';
     if (pathname.startsWith('/app/profile')) return 'Profile';
     return isAdmin ? 'Admin Dashboard' : '';
@@ -175,6 +179,10 @@ export default function SidebarNavigation() {
     if (pathname === '/admin') setActiveItem('Admin Dashboard');
     else if (pathname === '/admin/users/invite') setActiveItem('Invitations');
     else if (pathname.startsWith('/admin/users')) setActiveItem('Manage Users');
+    else if (pathname.startsWith('/admin/ai/system-prompt')) setActiveItem('System Prompt');
+    else if (pathname.startsWith('/admin/ai/chat-logs')) setActiveItem('Chat Logs');
+    else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
+    else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -211,18 +219,22 @@ export default function SidebarNavigation() {
             </button>
           </div>
 
-          <div className="px-5 pb-5">
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] bg-foreground/[0.03] border border-border-dim text-secondary cursor-text hover:border-brand/30 hover:text-foreground transition-all shadow-sm">
-              <Search className="w-[18px] h-[18px] opacity-70" />
-              <span className="text-[13px] font-medium flex-1 tracking-wide">Search</span>
-              <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-secondary/50 tracking-widest bg-transparent">
-                <span>⌘</span>
-                <span>K</span>
+          {!isAdmin && (
+            <>
+              <div className="px-5 pb-5">
+                <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] bg-foreground/[0.03] border border-border-dim text-secondary cursor-text hover:border-brand/30 hover:text-foreground transition-all shadow-sm">
+                  <Search className="w-[18px] h-[18px] opacity-70" />
+                  <span className="text-[13px] font-medium flex-1 tracking-wide">Search</span>
+                  <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-secondary/50 tracking-widest bg-transparent">
+                    <span>⌘</span>
+                    <span>K</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="w-full h-[1px] bg-border-dim" />
+              <div className="w-full h-[1px] bg-border-dim" />
+            </>
+          )}
 
           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pt-6 pb-8 px-4 gap-6">
             
@@ -247,14 +259,16 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={Bot} 
                       label="Artificial Intelligence" 
-                      isActive={activeItem === 'Artificial Intelligence'}
+                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'AI Settings'}
                       onClick={() => setActiveItem('Artificial Intelligence')}
                       hasChildren 
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label="Rules" isActive={activeItem === 'Rules'} onClick={() => setActiveItem('Rules')} />
-                      <SubNavItem label="Chat Logs" isActive={activeItem === 'Chat Logs'} onClick={() => setActiveItem('Chat Logs')} />
+                      <SubNavItem label="Chat Logs" href="/admin/ai/chat-logs" isActive={activeItem === 'Chat Logs' || pathname.startsWith('/admin/ai/chat-logs')} onClick={() => setActiveItem('Chat Logs')} />
+                      <SubNavItem label="Rules" href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
+                      <SubNavItem label="System Prompt" href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
+                      <SubNavItem label="Running Costs" href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
                       <SubNavItem label="Settings" isActive={activeItem === 'AI Settings'} onClick={() => setActiveItem('AI Settings')} />
                     </NavItem>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -19,7 +19,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import { useUI } from "@/src/context/UIContext";
@@ -39,6 +38,19 @@ export default function Header({ onOpenModal }: HeaderProps) {
   
   const user = useQuery(api.users.getMe);
   const recordLogin = useMutation(api.users.recordLogin);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+    if (isProfileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileOpen]);
 
   useEffect(() => {
     if (user && !sessionStorage.getItem("login_tracked")) {
@@ -130,7 +142,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
         
         <div className="h-8 w-px bg-border-dim/50 ml-2" />
         
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-4 p-1 rounded-full hover:bg-foreground/5 transition-colors group"
@@ -155,9 +167,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
           {/* Profile Dropdown */}
           <AnimatePresence>
             {isProfileOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
-                <motion.div
+              <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -203,7 +213,6 @@ export default function Header({ onOpenModal }: HeaderProps) {
                     </button>
                   </div>
                 </motion.div>
-              </>
             )}
           </AnimatePresence>
         </div>

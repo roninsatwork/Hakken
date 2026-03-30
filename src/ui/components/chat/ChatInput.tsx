@@ -89,7 +89,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
         onSubmit={handleSubmit}
         className="w-full relative z-20"
       >
-        <div className="relative flex flex-col bg-[#1e1e20] border border-white/5 rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] focus-within:bg-[#252528] transition-colors duration-300">
+        <div className="relative flex flex-col bg-card dark:bg-[#1e1e20] border border-border-dim dark:border-white/5 rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] focus-within:bg-card/70 dark:focus-within:bg-[#252528] transition-colors duration-300">
           
           {/* Top Row: Icon + Input */}
           <div className="flex items-start gap-3 w-full pl-1">
@@ -117,14 +117,14 @@ export default function ChatInput({ threadId }: ChatInputProps) {
             <div className="flex items-center gap-1">
               <button 
                 type="button"
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-muted transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors"
                 title="Upload files"
               >
                 <Plus className="w-5 h-5" />
               </button>
               <button 
                 type="button"
-                className="h-10 px-4 flex items-center gap-2 rounded-full hover:bg-white/10 text-muted transition-colors"
+                className="h-10 px-4 flex items-center gap-2 rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors"
               >
                 <Settings2 className="w-[18px] h-[18px]" />
                 <span className="text-[14px] font-medium tracking-wide">Tools</span>
@@ -137,7 +137,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
               {/* Voice Dictation (Mic) */}
               <button 
                 type="button" 
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-muted transition-colors sm:mr-1"
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors sm:mr-1"
                 title="Start voice dictation"
               >
                 <Mic className="w-[18px] h-[18px]" />
@@ -148,7 +148,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                 <button 
                   type="button"
                   onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
-                  className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors ${modelDropdownOpen ? 'bg-white/10 text-foreground' : 'hover:bg-white/10 text-muted'}`}
+                  className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                 >
                   <span className="text-[14px] font-medium">{selectedModel.name}</span>
                   <ChevronDown className="w-4 h-4" />
@@ -162,9 +162,9 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 10 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute bottom-full right-0 mb-3 w-[280px] sm:w-[320px] bg-[#1a1a1c] border border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col"
+                      className="absolute bottom-full right-0 mb-3 w-[280px] sm:w-[320px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col"
                     >
-                      <div className="px-4 py-3 pb-2 border-b border-white/5 mb-1">
+                      <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1">
                         <span className="text-[12px] font-medium text-muted tracking-widest uppercase">Sonae Models</span>
                       </div>
                       {MODELS.map((model) => (
@@ -175,7 +175,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                             setSelectedModel(model);
                             setModelDropdownOpen(false);
                           }}
-                          className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModel.id === model.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                          className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModel.id === model.id ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                         >
                           <div className="flex flex-col gap-1">
                             <span className={`text-[15px] font-medium ${selectedModel.id === model.id ? 'text-foreground' : 'text-foreground/80'}`}>{model.name}</span>

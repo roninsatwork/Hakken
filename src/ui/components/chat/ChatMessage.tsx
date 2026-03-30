@@ -5,6 +5,7 @@ import { Sparkles, User } from "lucide-react";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { SonaeMarkdown } from "./SonaeMarkdown";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -32,16 +33,16 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       <div 
         className={`max-w-[90%] lg:max-w-[75%] px-5 py-4 rounded-[20px] relative ${
           isAssistant 
-            ? "bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-tl-[4px] text-foreground/90 leading-relaxed font-light shadow-md"
-            : "bg-[#252528] border border-white/5 text-foreground/90 leading-relaxed font-light rounded-tr-[4px] shadow-xl shadow-black/20"
+            ? "bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-tl-[4px] shadow-md"
+            : "bg-card dark:bg-[#252528] text-foreground/90 dark:text-white/90 border border-border-dim dark:border-white/5 rounded-tr-[4px] shadow-xl dark:shadow-black/20"
         }`}
       >
-        <div className="whitespace-pre-wrap text-[15px] tracking-wide">
-          {message.content}
+        <div className={`${isAssistant ? "" : "whitespace-pre-wrap text-[15px] leading-relaxed font-light tracking-wide"}`}>
+          {isAssistant ? <SonaeMarkdown content={message.content} /> : message.content}
         </div>
         
         {/* Ambient Subtle Timestamp Data */}
-        <div className={`text-[10px] font-mono mt-3 opacity-40 uppercase tracking-widest ${isAssistant ? "text-left" : "text-right"}`}>
+        <div className={`text-[10px] font-mono mt-3 uppercase tracking-widest ${isAssistant ? "text-left opacity-40" : "text-right opacity-50 dark:opacity-40"}`}>
           {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>

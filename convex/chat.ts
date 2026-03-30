@@ -118,6 +118,9 @@ export const saveAssistantMessage = internalMutation({
   args: {
     threadId: v.id("threads"),
     content: v.string(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    modelUsed: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {
@@ -125,6 +128,9 @@ export const saveAssistantMessage = internalMutation({
       role: "assistant",
       content: args.content,
       createdAt: Date.now(),
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      modelUsed: args.modelUsed
     });
   },
 });

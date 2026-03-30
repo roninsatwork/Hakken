@@ -57,26 +57,47 @@ export const generateSonaeResponse = internalAction({
             memoryString += `\n[${msg.role.toUpperCase()}]: ${msg.content}`;
         });
 
-        const systemPrompt = `You are Sonae Assistant. You are a highly intelligent, premium AI embedded in the Sonae productivity dashboard.
-You are concise, highly analytical, and maintain a starkly elegant tone. Do NOT use emojis.
-Never hallucinate system capabilities you do not have. Answer formatting should use markdown for readability.
+        // Dynamically extract the live Administrator protocol rulebook
+        const [customPrompt, customRules] = await Promise.all([
+            ctx.runQuery(internal.system.getInternalSystemPrompt),
+            ctx.runQuery(internal.aiRules.getActiveRulesInternal)
+        ]);
+        
+        // Failsafe string array if the database table runs empty or is corrupted
+        const fallbackSystemPrompt = "You are Sonae Assistant. You are a highly intelligent, premium AI embedded in the Sonae productivity dashboard.\nYou are concise, highly analytical, and maintain a starkly elegant tone. Do NOT use emojis.\nNever hallucinate system capabilities you do not have. Answer formatting should use markdown for readability.";
+        
+        let activeSystemInstruction = (customPrompt && customPrompt.trim().length > 0) ? customPrompt : fallbackSystemPrompt;
 
-${messages.length > 0 ? memoryString : ""}
+        // Compile explicit logic branches if any are flagged active in the DB
+        if (customRules && customRules.length > 0) {
+            const compiledRules = customRules.map((r: any) => `[PRIORITY: ${r.priority}]\nIF USER ASKS OR MENTIONS: ${r.trigger}\nTHEN YOU MUST: ${r.instruction}`).join("\n\n---\n\n");
+            activeSystemInstruction += `\n\n====================\nCRITICAL BEHAVIORAL OVERRIDES (STRICTLY OBEY THE FOLLOWING RULES WHEN REGIONALLY APPLICABLE):\n\n${compiledRules}`;
+        }
+
+        // Clean prompt construction (isolated from logic rules)
+        const combinedPrompt = `${messages.length > 0 ? memoryString : ""}
 
 User Prompt: ${args.content}`;
 
+        // Dynamically inject rules into generation architecture
+        generationConfig.systemInstruction = activeSystemInstruction;
+
         const response = await ai.models.generateContent({
             model: actualModelStr, // Dynamically use Sonae user preference
-            contents: systemPrompt,
+            contents: combinedPrompt,
             config: generationConfig
         });
 
         const assistantReply = response.text || "I was unable to assemble a coherent analysis.";
+        const telemetry = response.usageMetadata;
 
-        // Write response back to DB via an internal mutation
+        // Write response back to DB via an internal mutation alongside the exact financial traces
         await ctx.runMutation(internal.chat.saveAssistantMessage, {
             threadId: args.threadId,
-            content: assistantReply
+            content: assistantReply,
+            inputTokens: telemetry?.promptTokenCount,
+            outputTokens: telemetry?.candidatesTokenCount,
+            modelUsed: actualModelStr
         });
 
     } catch (error) {
