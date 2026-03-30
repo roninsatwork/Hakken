@@ -17,4 +17,18 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
   }).index("email", ["email"]),
+  
+  logins: defineTable({
+    userId: v.id("users"),
+    ip: v.string(),
+    device: v.string(),
+    location: v.string(),
+    status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId", "timestamp"])
+    .searchIndex("search_device", {
+      searchField: "device",
+      filterFields: ["userId"],
+    }),
 });

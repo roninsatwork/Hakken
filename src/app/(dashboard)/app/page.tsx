@@ -31,22 +31,22 @@ export default function Home() {
       <Header onOpenModal={() => setIsModalOpen(true)} />
 
       {/* Main Content Area */}
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-6">
         {/* Hero Header */}
         <header className="flex items-center justify-between">
-          <h1 className="text-5xl font-bold text-foreground tracking-tighter">Good morning, Aman</h1>
+          <h1 className="text-3xl font-bold text-foreground tracking-tighter">Good morning, Aman</h1>
         </header>
 
         {/* Metric Cards Row */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           
           {/* Active Contracts Card */}
-          <div className="bg-card dark:bg-gradient-to-b dark:from-[#1c1c1c] dark:to-[#121212] border border-border-dim rounded-[16px] p-6 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
-            <div className="flex justify-between items-start mb-6 z-10 relative">
-              <span className="text-secondary text-[13px] font-medium tracking-wide">Active Contracts</span>
+          <div className="bg-card dark:bg-gradient-to-b dark:from-[#2e2e30] dark:to-[#222224] border border-border-dim rounded-[14px] p-5 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
+            <div className="flex justify-between items-start mb-4 z-10 relative">
+              <span className="text-secondary text-[12px] font-medium tracking-wide">Active Contracts</span>
             </div>
             <div className="flex flex-col z-10 relative">
-              <span className="text-[44px] font-semibold text-foreground tracking-tight leading-none mb-3">25</span>
+              <span className="text-[36px] font-semibold text-foreground tracking-tight leading-none mb-2">25</span>
               <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider">
                 <span className="text-[#10b981] font-bold">+5</span>
                 <span className="text-secondary">vs last month</span>
@@ -66,12 +66,12 @@ export default function Home() {
           </div>
 
           {/* Pending Signatures Card */}
-          <div className="bg-card dark:bg-gradient-to-b dark:from-[#1c1c1c] dark:to-[#121212] border border-border-dim rounded-[16px] p-6 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
-            <div className="flex justify-between items-start mb-6 z-10 relative">
-              <span className="text-secondary text-[13px] font-medium tracking-wide">Pending Signatures</span>
+          <div className="bg-card dark:bg-gradient-to-b dark:from-[#2e2e30] dark:to-[#222224] border border-border-dim rounded-[14px] p-5 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
+            <div className="flex justify-between items-start mb-4 z-10 relative">
+              <span className="text-secondary text-[12px] font-medium tracking-wide">Pending Signatures</span>
             </div>
             <div className="flex flex-col z-10 relative">
-              <span className="text-[44px] font-semibold text-foreground tracking-tight leading-none mb-3">09</span>
+              <span className="text-[36px] font-semibold text-foreground tracking-tight leading-none mb-2">09</span>
               <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider">
                 <span className="text-[#10b981] font-bold">+6</span>
                 <span className="text-secondary">vs last month</span>
@@ -81,12 +81,12 @@ export default function Home() {
         </section>
 
         {/* Revenue Chart Section */}
-        <section className="bg-card dark:bg-gradient-to-b dark:from-[#161616] dark:to-[#0f0f0f] border border-border-dim rounded-[16px] p-7 flex flex-col gap-10 shadow-md dark:shadow-2xl">
+        <section className="bg-card dark:bg-gradient-to-b dark:from-[#2c2c2e] dark:to-[#1e1e20] border border-border-dim rounded-[14px] p-6 flex flex-col gap-6 shadow-md dark:shadow-2xl">
           
           {/* Headers for Revenue */}
           <div className="flex flex-col gap-1 z-10 relative">
-            <span className="text-secondary text-[13px] font-medium tracking-wide">Revenue</span>
-            <span className="text-[34px] font-semibold text-foreground tracking-tight leading-none mt-1">$10,985.56</span>
+            <span className="text-secondary text-[12px] font-medium tracking-wide">Revenue</span>
+            <span className="text-3xl font-semibold text-foreground tracking-tight leading-none mt-1">$10,985.56</span>
             <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider mt-2">
               <span className="text-[#f43f5e] font-bold pb-[1px]">2.5% ↓</span>
               <span className="text-secondary">vs last week</span>

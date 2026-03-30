@@ -148,7 +148,13 @@ export default function SidebarNavigation() {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
   
-  const [activeItem, setActiveItem] = useState(isAdmin ? 'Admin Dashboard' : 'Dashboard');
+  const [activeItem, setActiveItem] = useState(() => {
+    if (pathname === '/admin') return 'Admin Dashboard';
+    if (pathname.startsWith('/admin/users')) return 'Manage Users';
+    if (pathname === '/app') return 'Dashboard';
+    if (pathname.startsWith('/app/profile')) return 'Profile';
+    return isAdmin ? 'Admin Dashboard' : '';
+  });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     workspace: true,
     businessHub: false,
@@ -163,14 +169,13 @@ export default function SidebarNavigation() {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Sync active item when switching between Admin and Navigation modes
+  // Sync active item when path changes
   useEffect(() => {
-    if (isAdmin) {
-      setActiveItem('Admin Dashboard');
-    } else {
-      setActiveItem('Dashboard');
-    }
-  }, [isAdmin]);
+    if (pathname === '/admin') setActiveItem('Admin Dashboard');
+    else if (pathname.startsWith('/admin/users')) setActiveItem('Manage Users');
+    else if (pathname === '/app') setActiveItem('Dashboard');
+    else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
+  }, [pathname]);
 
   return (
     <AnimatePresence mode="wait">
@@ -280,8 +285,8 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={LayoutDashboard} 
                       label="Dashboard" 
-                      href="/"
-                      isActive={activeItem === 'Dashboard' || (pathname === '/')} 
+                      href="/app"
+                      isActive={activeItem === 'Dashboard' || (pathname === '/app')} 
                       onClick={() => setActiveItem('Dashboard')}
                     />
                     

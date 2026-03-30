@@ -1,0 +1,210 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Header from "@/src/ui/components/layout/Header";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { UserCircle, Save, CheckCircle } from "lucide-react";
+import ProfileTabs from "./ProfileTabs";
+
+export default function MyProfilePage() {
+  const user = useQuery(api.users.getMe);
+  const updateProfile = useMutation(api.users.updateMyProfile);
+  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    image: "",
+    storageId: "" as any,
+  });
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        image: user.image || "",
+        storageId: "",
+      });
+    }
+  }, [user]);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // 1. Get short-lived upload URL from Convex
+      const postUrl = await generateUploadUrl();
+      
+      // 2. POST the file to the URL
+      const result = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // 3. Save the storage ID to form state and generate a local preview URL
+      const localPreviewUrl = URL.createObjectURL(file);
+      setFormData({ ...formData, storageId, image: localPreviewUrl });
+    } catch (error) {
+      console.error("Upload failed", error);
+    } finally {
+      setIsUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveSuccess(false);
+    
+    try {
+      await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        image: formData.image,
+        ...(formData.storageId ? { storageId: formData.storageId } : {}),
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error("Failed to update profile", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <Header />
+      
+      {/* Main Content Area */}
+      <div className="flex flex-col gap-5 pb-8">
+        {/* Header Section */}
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <UserCircle className="w-6 h-6 text-brand" />
+              My Profile
+            </h1>
+            <p className="text-[13px] text-secondary mt-1">Manage your identity and personal preferences.</p>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {saveSuccess && (
+              <div className="flex items-center gap-2 text-[#10b981] text-[13px] font-medium animate-in fade-in slide-in-from-right-2 duration-300">
+                <CheckCircle className="w-4 h-4" />
+                <span>Profile saved</span>
+              </div>
+            )}
+            <button 
+              form="profile-form"
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all text-[13px] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-[14px] h-[14px]" />
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </header>
+
+        {/* Form Container */}
+        <div className="w-full mt-2">
+
+          <form id="profile-form" onSubmit={handleSubmit} className="relative z-10 flex flex-col gap-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-4xl">
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Full Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-[13px] w-full"
+                  placeholder="e.g. Aman"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest flex items-center justify-between">
+                  <span>Communications (Email)</span>
+                  <span className="text-[9px] bg-white/10 px-2 py-0.5 rounded-sm text-secondary tracking-normal">FIXED</span>
+                </label>
+                <input 
+                  type="email" 
+                  disabled
+                  value={formData.email}
+                  className="px-4 py-2.5 bg-background/50 border border-border-dim/50 rounded-[10px] text-muted outline-none transition-all text-[13px] w-full cursor-not-allowed opacity-70"
+                  placeholder="aman@example.com"
+                />
+                <p className="text-[11px] text-secondary mt-0.5">Bound securely to your authentication provider.</p>
+              </div>
+
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Phone Number (Optional)</label>
+                <input 
+                  type="tel" 
+                  value={formData.phone}
+                  onChange={e => setFormData({...formData, phone: e.target.value})}
+                  className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-[13px] w-full"
+                  placeholder="+1 (555) 000-0000"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Profile Photo</label>
+                <div className="flex items-center gap-4 w-full h-full pb-1">
+                  {formData.image ? (
+                    <img src={formData.image} alt="Avatar Preview" className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full border border-dashed border-white/20 flex items-center justify-center bg-white/5 shrink-0">
+                      <UserCircle className="w-5 h-5 text-muted" />
+                    </div>
+                  )}
+                  <div className="flex flex-col items-start gap-1">
+                    <button 
+                      type="button" 
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="px-3 py-1.5 rounded-[8px] bg-foreground/10 text-foreground text-[12px] font-medium hover:bg-foreground/20 transition-all disabled:opacity-50"
+                    >
+                      {isUploading ? "Uploading Securely..." : "Upload New Photo"}
+                    </button>
+                    <p className="text-[10px] text-secondary">JPG or PNG, max 2MB.</p>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    ref={imageInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden" 
+                  />
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        {/* Profile Tabs Section */}
+        <ProfileTabs />
+
+      </div>
+    </div>
+  );
+}

@@ -11,6 +11,7 @@
 ### 🌊 Layout & Fluidity
 - **Always Fluid**: The content workspace MUST NOT have a maximum width. It should always be 100% fluid regardless of screen size.
 - **Glassmorphism**: Prioritize translucent, blurred backgrounds for all layered UI elements.
+- **Strict Page Margins**: All new pages must wrap their main content in `<div className="flex flex-col gap-5">` (or `gap-6`) immediately following `<Header />`. Do NOT use arbitrary `mt-*` or `h-screen` classes on inner wrappers. `Header` natively controls top spacing via `-mb-8` against the `FluidWorkspace` parent padding.
 
 ### 🛡️ UI & Feedback
 - **Modal Policy**: NEVER use system/native modals (alert/confirm/prompt).

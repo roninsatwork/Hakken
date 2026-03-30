@@ -1,16 +1,18 @@
 import { convexAuth } from "@convex-dev/auth/server";
+import authConfig from "./auth.config";
+
 import Google from "@auth/core/providers/google";
-import Resend from "@auth/core/providers/resend";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
-    Google,
-    Resend({
-      from: process.env.AUTH_EMAIL ?? "Sonae <onboarding@resend.dev>",
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
     }),
   ],
+
   callbacks: {
-    async createOrUpdateUser(ctx, args: any) {
+    async createOrUpdateUser(ctx: any, args: any) {
       const email = args.profile?.email || args.email || args.user?.email || "";
       const name = args.profile?.name || args.user?.name || email.split("@")[0] || "User";
       const image = args.profile?.image || args.profile?.picture || args.user?.image || "";

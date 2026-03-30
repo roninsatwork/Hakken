@@ -15,8 +15,11 @@ import {
   Bell,
   ChevronsUpDown
 } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useEffect } from "react";
+import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import { useUI } from "@/src/context/UIContext";
 
@@ -30,6 +33,31 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
+  
+  const user = useQuery(api.users.getMe);
+  const recordLogin = useMutation(api.users.recordLogin);
+
+  useEffect(() => {
+    if (user && !sessionStorage.getItem("login_tracked")) {
+      sessionStorage.setItem("login_tracked", "true");
+      fetch("https://ipapi.co/json/")
+        .then(res => res.json())
+        .then(data => {
+          recordLogin({
+            device: navigator.userAgent,
+            ip: data.ip || "Unknown IP",
+            location: data.city ? `${data.city}, ${data.country_name}` : "Unknown Location"
+          });
+        })
+        .catch(() => {
+          recordLogin({
+            device: navigator.userAgent,
+            ip: "Concealed IP",
+            location: "Unknown Location"
+          });
+        });
+    }
+  }, [user, recordLogin]);
 
   return (
     <header className="sticky top-0 z-30 -mx-8 -mt-8 px-8 py-4 mb-8 bg-sidebar/40 backdrop-blur-xl border-b border-border-dim flex items-center justify-between shadow-sm transition-all duration-300">
@@ -111,16 +139,16 @@ export default function Header({ onOpenModal }: HeaderProps) {
           >
             <div className="relative">
               <img 
-                src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman" 
-                alt="Aman" 
-                className="w-10 h-10 rounded-full bg-sidebar border border-border-dim group-hover:border-foreground/20 transition-all"
+                src={user?.image || "https://api.dicebear.com/7.x/notionists/svg?seed=Aman"} 
+                alt={user?.name || "Aman"} 
+                className="w-10 h-10 rounded-full bg-sidebar border border-border-dim group-hover:border-foreground/20 transition-all object-cover"
               />
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#10b981] border-2 border-[#161616] rounded-full" />
             </div>
 
             <div className="flex flex-col items-start min-w-[120px]">
-              <span className="text-[15px] font-light text-foreground tracking-[0.12em] leading-tight">Oripio Design</span>
-              <span className="text-[12px] text-secondary/70 font-normal">oripio@gmail.com</span>
+              <span className="text-[15px] font-light text-foreground tracking-[0.12em] leading-tight">{user?.name || "Loading..."}</span>
+              <span className="text-[12px] text-secondary/70 font-normal">{user?.email || "Authenticating..."}</span>
             </div>
 
             <ChevronsUpDown className={`w-4 h-4 text-secondary/50 group-hover:text-secondary transition-colors transition-transform duration-300 ${isProfileOpen ? 'scale-y-[-1]' : ''}`} />
@@ -139,16 +167,17 @@ export default function Header({ onOpenModal }: HeaderProps) {
                   className="absolute right-0 top-full mt-4 w-52 bg-card/90 backdrop-blur-3xl border border-border-dim rounded-[24px] shadow-2xl z-50 overflow-hidden"
                 >
                   <div className="p-2 flex flex-col gap-0.5">
-                    <button 
+                    <Link 
+                      href="/app/profile"
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-left"
                     >
                       <User className="w-4 h-4" />
                       <span>Profile</span>
-                    </button>
+                    </Link>
                     
                     <Link 
-                      href="/" 
+                      href="/app" 
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-left"
                     >

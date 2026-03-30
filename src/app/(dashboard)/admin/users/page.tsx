@@ -66,20 +66,20 @@ export default function ManageUsersPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-5">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Users className="w-8 h-8 text-brand" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <Users className="w-6 h-6 text-brand" />
             User Management
           </h1>
-          <p className="text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
+          <p className="text-[13px] text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
         </div>
         
         <button 
           onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-[14px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
           <span>Invite User</span>
@@ -105,11 +105,11 @@ export default function ManageUsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border-dim text-[12px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-6 py-4 font-medium">User</th>
-                <th className="px-6 py-4 font-medium">Role</th>
-                <th className="px-6 py-4 font-medium">Joined</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+                <th className="px-4 py-3 font-medium">User</th>
+                <th className="px-4 py-3 font-medium">Role</th>
+                <th className="px-4 py-3 font-medium">Joined</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -129,33 +129,33 @@ export default function ManageUsersPage() {
                       exit={{ opacity: 0, y: -10 }}
                       className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-3">
                           <img 
                             src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
                             alt={user.name} 
-                            className="w-10 h-10 rounded-full bg-card border border-border-dim"
+                            className="w-8 h-8 rounded-full bg-card border border-border-dim"
                           />
                           <div>
-                            <Link href={`/admin/users/${user._id}`} className="font-medium text-foreground hover:text-brand transition-colors block leading-tight">
+                            <Link href={`/admin/users/${user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
                               {user.name}
                             </Link>
-                            <span className="text-[13px] text-secondary">{user.email}</span>
+                            <span className="text-[12px] text-secondary">{user.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                          {user.role === 'ADMIN' ? <ShieldCheck className="w-3.5 h-3.5 text-brand" /> : <User className="w-3.5 h-3.5 text-foreground/70" />}
-                          <span className="text-[11px] font-mono tracking-widest text-foreground/80 uppercase">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                          {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
+                          <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
                             {user.role || 'USER'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[13px] text-secondary">
+                      <td className="px-4 py-2.5 text-[12px] text-secondary">
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link href={`/admin/users/${user._id}`} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
                             <MoreVertical className="w-4 h-4" />
@@ -181,71 +181,71 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? "Edit User Profile" : "Invite System User"}
+        title={editingUser ? "Edit User" : "Invite User"}
       >
-        <p className="text-secondary mb-2 -mt-4 text-[13px]">{editingUser ? "Modify access protocols and details." : "Invite a new identity into the Sonae protocol."}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Full Identity</label>
+        <p className="text-secondary mb-6 text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
             <input 
               type="text" 
               required
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
-              className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all"
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
               placeholder="e.g. Aman"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Communications (Email)</label>
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
             <input 
               type="email" 
               required
               value={formData.email}
               onChange={e => setFormData({...formData, email: e.target.value})}
-              className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all"
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
               placeholder="aman@example.com"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Protocol Level (Role)</label>
-            <select
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
+            <select 
               value={formData.role}
               onChange={e => setFormData({...formData, role: e.target.value})}
-              className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all appearance-none cursor-pointer"
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
-              <option value="USER">Standard User (USER)</option>
-              <option value="ADMIN">System Administrator (ADMIN)</option>
+              <option value="USER">User (Read-only)</option>
+              <option value="ADMIN">System Administrator</option>
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
             <input 
               type="url" 
               value={formData.image}
               onChange={e => setFormData({...formData, image: e.target.value})}
-              className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all"
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
               placeholder="https://example.com/avatar.jpg"
             />
             <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-dim">
+          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
             <button 
               type="button" 
               onClick={() => setIsAddModalOpen(false)}
-              className="px-4 py-2 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="px-4 py-2 rounded-[10px] bg-brand text-white hover:bg-brand/90 transition-all text-[13px] font-medium shadow-lg shadow-brand/20"
+              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm"
             >
-              {editingUser ? "Save Modifications" : "Send Invitation"}
+              {editingUser ? "Update User" : "Send Invite"}
             </button>
           </div>
         </form>
@@ -255,23 +255,25 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={!!deletingUser}
         onClose={() => setDeletingUser(null)}
-        title="Eradicate Identity"
+        title="Delete User"
       >
-        <p className="text-secondary mb-2 -mt-4 text-[13px]">Are you absolutely sure you want to permanently delete <strong className="text-foreground font-medium">{deletingUser?.name}</strong>? This action cannot be reversed.</p>
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border-dim">
+        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
+          Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 
             type="button" 
             onClick={() => setDeletingUser(null)}
-            className="px-4 py-2 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
           >
             Cancel
           </button>
           <button 
             type="button"
             onClick={confirmDelete}
-            className="px-4 py-2 rounded-[10px] bg-red-500 text-white hover:bg-red-600 transition-all text-[13px] font-medium shadow-lg shadow-red-500/20"
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
           >
-            Confirm Deletion
+            Delete User
           </button>
         </div>
       </SonaeModal>
