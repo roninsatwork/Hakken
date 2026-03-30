@@ -219,23 +219,6 @@ export default function SidebarNavigation() {
             </button>
           </div>
 
-          {!isAdmin && (
-            <>
-              <div className="px-5 pb-5">
-                <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] bg-foreground/[0.03] border border-border-dim text-secondary cursor-text hover:border-brand/30 hover:text-foreground transition-all shadow-sm">
-                  <Search className="w-[18px] h-[18px] opacity-70" />
-                  <span className="text-[13px] font-medium flex-1 tracking-wide">Search</span>
-                  <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-secondary/50 tracking-widest bg-transparent">
-                    <span>⌘</span>
-                    <span>K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full h-[1px] bg-border-dim" />
-            </>
-          )}
-
           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pt-6 pb-8 px-4 gap-6">
             
             <section>
@@ -259,17 +242,16 @@ export default function SidebarNavigation() {
                     <NavItem 
                       icon={Bot} 
                       label="Artificial Intelligence" 
-                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'AI Settings'}
+                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'Running Costs'}
                       onClick={() => setActiveItem('Artificial Intelligence')}
                       hasChildren 
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
+                      <SubNavItem label="Running Costs" href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
                       <SubNavItem label="Chat Logs" href="/admin/ai/chat-logs" isActive={activeItem === 'Chat Logs' || pathname.startsWith('/admin/ai/chat-logs')} onClick={() => setActiveItem('Chat Logs')} />
                       <SubNavItem label="Rules" href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
                       <SubNavItem label="System Prompt" href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
-                      <SubNavItem label="Running Costs" href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
-                      <SubNavItem label="Settings" isActive={activeItem === 'AI Settings'} onClick={() => setActiveItem('AI Settings')} />
                     </NavItem>
 
                     <NavItem 
@@ -366,42 +348,7 @@ export default function SidebarNavigation() {
               </nav>
             </section>
 
-            {!isAdmin && (
-              <>
-                {/* Divider */}
-                <div className="w-full h-[1px] bg-border-dim" />
-                
-                <section>
-                <div className="mb-3 px-3">
-                  <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">Favorites</span>
-                </div>
 
-                <div className="flex flex-col gap-0.5">
-                  {[
-                    { label: 'Apple', icon: <Apple className="w-[18px] h-[18px] text-foreground" />, tag: 'COMPANY' },
-                    { label: 'Google', icon: <Globe className="w-[18px] h-[18px] text-[#4285F4]" />, tag: 'COMPANY' },
-                    { label: 'Figma', icon: <PenTool className="w-[18px] h-[18px] text-[#F24E1E]" />, tag: 'COMPANY' }
-                  ].map((fav, i) => (
-                     <button key={fav.label} className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
-                       <div className="flex items-center gap-3 opacity-90 group-hover:opacity-100">
-                          <div className="text-foreground transition-colors">{fav.icon}</div>
-                          <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">{fav.label}</span>
-                       </div>
-                       <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">{fav.tag}</span>
-                     </button>
-                  ))}
-
-                  <button className="flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-[13px] hover:bg-hover group transition-all">
-                    <div className="flex items-center gap-3">
-                      <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman" alt="Aman" className="w-[18px] h-[18px] rounded-full bg-card border border-border-dim" />
-                      <span className="text-secondary group-hover:text-foreground tracking-wide transition-colors">Aman</span>
-                    </div>
-                    <span className="text-[10px] font-mono tracking-[0.15em] text-muted uppercase">DESIGNER</span>
-                  </button>
-                </div>
-              </section>
-            </>
-          )}
 
           </div>
         </motion.aside>
