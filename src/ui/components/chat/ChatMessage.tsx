@@ -31,7 +31,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       {/* Primary Message Bubble Container */}
       <div 
-        className={`max-w-[90%] lg:max-w-[75%] px-5 py-4 rounded-[20px] relative ${
+        className={`max-w-[95%] lg:max-w-[92%] px-5 py-4 rounded-[20px] relative ${
           isAssistant 
             ? "bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-tl-[4px] shadow-md"
             : "bg-card dark:bg-[#252528] text-foreground/90 dark:text-white/90 border border-border-dim dark:border-white/5 rounded-tr-[4px] shadow-xl dark:shadow-black/20"

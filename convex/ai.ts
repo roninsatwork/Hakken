@@ -53,7 +53,7 @@ export const generateSonaeResponse = internalAction({
         
         // Reconstruct conversation history (simplified for text-only currently)
         let memoryString = "Previous Conversation History:\n";
-        messages.slice(-10).forEach((msg: any) => { // Grab last 10 messages for token efficiency
+        messages.slice(-20).forEach((msg: any) => { // Grab last 20 messages for deep contextual memory
             memoryString += `\n[${msg.role.toUpperCase()}]: ${msg.content}`;
         });
 
@@ -90,18 +90,19 @@ export const generateSonaeResponse = internalAction({
                 if (queryVector && queryVector.length === 768) {
                     const results = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                         vector: queryVector as number[],
-                        limit: 3,
+                        limit: 100, // Maximized vector recall logic: Gemini 1.5 handles 2M tokens. Let it ingest the whole DB.
                         filter: (q) => q.eq("companyId", thread.companyId!)
                     });
                     
                     if (results.length > 0) {
-                        ragContext = "\n\n====================\nCOMPANY KNOWLEDGE BASE CONTEXT (USE THIS FACTUAL DATA TO INFORM YOUR ANSWER IF IT RELATES TO THE QUESTION):\n";
+                        ragContext = "\n\n====================\n[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]\nBelow is raw context retrieved from the company's private documents. You MUST use this data to answer the user's prompt. If answering a question about features or capabilities, be EXHAUSTIVE and list EVERY detail found here. DO NOT summarize broadly; extract specific bullet points and data.\n\n<context_data>\n";
                         for (const res of results) {
                            const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
                            if (chunk) {
-                              ragContext += `\n[Context Fragment]: ${chunk.text}\n`;
+                              ragContext += `---\n${chunk.text}\n`;
                            }
                         }
+                        ragContext += "</context_data>\n====================\n";
                     }
                 }
             } catch (e) {
@@ -109,14 +110,14 @@ export const generateSonaeResponse = internalAction({
             }
         }
 
-        if (ragContext) {
-            activeSystemInstruction += ragContext;
-        }
-
         // Clean prompt construction (isolated from logic rules)
-        const combinedPrompt = `${messages.length > 0 ? memoryString : ""}
+        let combinedPrompt = `${messages.length > 0 ? memoryString : ""}
 
 User Prompt: ${args.content}`;
+
+        if (ragContext) {
+            combinedPrompt += ragContext;
+        }
 
         // Dynamically inject rules into generation architecture
         generationConfig.systemInstruction = activeSystemInstruction;

@@ -34,7 +34,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-y-auto w-full scrollbar-hide relative"
       >
-        <div className="w-full flex justify-center px-4 sm:px-8 pt-6 pb-[160px]">
+        <div className="w-full flex justify-center px-4 sm:px-8 pt-6">
           <div className="w-full flex flex-col">
             {!messages ? (
               <div className="flex-1 flex items-center justify-center">
@@ -62,8 +62,11 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                   </div>
                 )}
                 
-                {/* Scroll Target */}
-                <div ref={messagesEndRef} className="h-8 w-full flex-shrink-0 pointer-events-none" />
+                {/* Dynamic Spacer to clear fixed input box */}
+                <div className="h-[180px] w-full flex-shrink-0 pointer-events-none" />
+                
+                {/* Scroll Target placed explicitly at the real bottom */}
+                <div ref={messagesEndRef} />
               </div>
             )}
           </div>

@@ -152,3 +152,16 @@ export const markDocFailedInternal = internalMutation({
      });
   }
 });
+
+export const debugCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const chunks = await ctx.db.query("knowledgeChunks").collect();
+    const docs = await ctx.db.query("knowledgeDocuments").collect();
+    return {
+      totalChunks: chunks.length,
+      totalDocs: docs.length,
+      docsInfo: docs.map(d => ({ id: d._id, title: d.title, format: d.format, status: d.status }))
+    };
+  }
+});
