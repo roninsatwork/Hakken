@@ -19,6 +19,7 @@ import {
 import { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
+import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -34,10 +35,9 @@ export default function ChatInput({ threadId }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Voice Dictation States
-  const [isRecording, setIsRecording] = useState(false);
-  const [permissionError, setPermissionError] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const { isRecording, isTranscribing, toggleRecording, permissionError, setPermissionError } = useVoiceToText({
+     onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
+  });
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS[0]); // Default to Fast
@@ -57,15 +57,6 @@ export default function ChatInput({ threadId }: ChatInputProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Web Speech API Cleanup
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
-
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -74,74 +65,12 @@ export default function ChatInput({ threadId }: ChatInputProps) {
     }
   }, [content]);
 
-  const toggleRecording = () => {
-    // If securely tracing voice, sever the connection stream
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
-    }
-
-    // Attempt Native API Verification
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setPermissionError(true);
-      return;
-    }
-
-    // Initialize API Instance
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    
-    // Attempt local browser default dialect
-    recognition.lang = typeof navigator !== 'undefined' ? navigator.language || 'en-US' : 'en-US';
-
-    // Map the string buffer intercept so we don't overwrite historically typed parameters
-    const initialTextBuffer = content;
-
-    recognition.onresult = (event: any) => {
-      let currentTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        currentTranscript += event.results[i][0].transcript;
-      }
-      
-      // Concat existing input with transcribed string buffer into the UI layer directly
-      setContent(initialTextBuffer + (initialTextBuffer ? ' ' : '') + currentTranscript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Sonae Audio API Error:", event.error);
-      if (event.error === 'not-allowed') {
-        setPermissionError(true);
-      }
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      if (isRecording) {
-         setIsRecording(false);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    
-    try {
-      recognition.start();
-      setIsRecording(true);
-    } catch(err) {
-      console.error("Sonae Mic API crashed bounding stream:", err);
-      setIsRecording(false);
-    }
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!content.trim() || isSubmitting) return;
 
     if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
+      toggleRecording(); // Cleanly detach MediaRecorder so audio saves if they press enter before stopping
     }
 
     setIsSubmitting(true);
@@ -188,7 +117,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={isRecording ? "Listening to your secure proxy..." : "Enter a prompt for Sonae"}
+                placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : "Enter a prompt for Sonae"}
                 className={`w-full bg-transparent border-none outline-none focus:outline-none text-[16px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed transition-colors ${
                   isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"
                 }`}
@@ -232,14 +161,19 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                 <button 
                   type="button" 
                   onClick={toggleRecording}
+                  disabled={isTranscribing}
                   className={`w-10 h-10 flex items-center justify-center rounded-full transition-all sm:mr-1 ${
                     isRecording 
                       ? "bg-brand/10 text-brand animate-pulse scale-105" 
+                      : isTranscribing
+                      ? "text-brand"
                       : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground"
                   }`}
-                  title={isRecording ? "Stop dictation" : "Start voice dictation"}
+                  title={isRecording ? "Stop recording" : "Start voice dictation"}
                 >
-                  {isRecording ? <MicOff className="w-[18px] h-[18px]" /> : <Mic className="w-[18px] h-[18px]" />}
+                  {isRecording ? <MicOff className="w-[18px] h-[18px]" /> : 
+                   isTranscribing ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : 
+                   <Mic className="w-[18px] h-[18px]" />}
                 </button>
 
                 {/* Model Selector Wrapper */}

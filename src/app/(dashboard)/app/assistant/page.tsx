@@ -14,9 +14,13 @@ import {
   Check, 
   ArrowUp,
   Square,
-  Mic
+  Mic,
+  MicOff,
+  AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 
 const MODELS = [
   { id: "fast", name: "Fast", description: "Answers quickly" },
@@ -29,6 +33,10 @@ export default function AssistantWelcomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [greeting, setGreeting] = useState("Welcome");
   
+  const { isRecording, isTranscribing, toggleRecording, permissionError, setPermissionError } = useVoiceToText({
+     onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
+  });
+
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS[0]); // Default to Fast
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -68,6 +76,8 @@ export default function AssistantWelcomePage() {
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSubmitting) return;
+
+    if (isRecording) toggleRecording(); // Clean detach stream early
 
     setIsSubmitting(true);
     try {
@@ -116,18 +126,20 @@ export default function AssistantWelcomePage() {
               
               {/* Top Row: Icon + Input */}
               <div className="flex items-start gap-3 w-full pl-1">
-                <ShieldCheck className="w-[18px] h-[18px] text-muted/60 mt-[3px] flex-shrink-0" />
+                <ShieldCheck className={`w-[18px] h-[18px] mt-[3px] flex-shrink-0 transition-colors ${isRecording ? "text-brand" : "text-muted/60"}`} />
                 <textarea
                   ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Enter a prompt for Sonae"
-                  className="w-full bg-transparent border-none outline-none focus:outline-none text-foreground text-[16px] placeholder:text-muted/70 focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed"
+                  placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : "Enter a prompt for Sonae"}
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none text-[16px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed transition-colors ${
+                    isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"
+                  }`}
                   rows={1}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleStart(e);
+                      handleStart(e as unknown as React.FormEvent);
                     }
                   }}
                 />
@@ -153,10 +165,20 @@ export default function AssistantWelcomePage() {
                   {/* Voice Dictation (Mic) */}
                   <button 
                     type="button" 
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors sm:mr-1"
-                    title="Start voice dictation"
+                    onClick={toggleRecording}
+                    disabled={isTranscribing}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-all sm:mr-1 ${
+                      isRecording 
+                        ? "bg-brand/10 text-brand animate-pulse scale-105" 
+                        : isTranscribing
+                        ? "text-brand"
+                        : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground"
+                    }`}
+                    title={isRecording ? "Stop recording" : "Start voice dictation"}
                   >
-                    <Mic className="w-[18px] h-[18px]" />
+                    {isRecording ? <MicOff className="w-[18px] h-[18px]" /> : 
+                     isTranscribing ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : 
+                     <Mic className="w-[18px] h-[18px]" />}
                   </button>
 
                   {/* Model Selector Wrapper */}
@@ -241,6 +263,36 @@ export default function AssistantWelcomePage() {
         </div>
       </div>
 
+      {/* Access Denial Matrix */}
+      <SonaeModal 
+        isOpen={permissionError} 
+        onClose={() => setPermissionError(false)}
+        title="Microphone Access Blocked"
+      >
+        <div className="flex flex-col gap-5 pt-2">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
+            <AlertTriangle className="w-6 h-6 text-red-500 opacity-80" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-[16px] font-semibold tracking-wide">Secure API Blocked</span>
+            <p className="text-[14px] text-secondary font-light leading-relaxed">
+              Your browser has explicitly blocked Sonae from accessing the native Web Speech API microphone proxy.
+            </p>
+          </div>
+          <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4 text-[13px] text-muted font-mono tracking-wide mt-2">
+            Click the `microphone` icon located in your browser's top URL search bar and select "Allow".
+          </div>
+          <div className="w-full flex justify-end mt-2">
+            <button 
+              onClick={() => setPermissionError(false)}
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
+            >
+              Close Alert
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+      
     </div>
   );
 }

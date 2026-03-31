@@ -11,23 +11,22 @@ import {
   ShieldCheck,
   User,
   Trash2,
-  Edit2
+  Edit2,
+  Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 
 export default function ManageSuperAdminsPage() {
+  const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   
-  if (!isSuperAdmin) {
-    return <div className="p-8 text-secondary">Unauthorized area.</div>;
-  }
-
-  const users = useQuery(api.users.getSuperAdmins) || [];
-  const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
+  const users = useQuery(api.users.getSuperAdmins, isSuperAdmin ? {} : "skip") || [];
+  const pendingInvites = useQuery(api.invites.getPendingInvites, isSuperAdmin ? {} : "skip") || [];
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
   const addUser = useMutation(api.users.addUser);
@@ -49,6 +48,18 @@ export default function ManageSuperAdminsPage() {
   const filteredInvites = pendingInvites.filter((inv: any) => 
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (currentUser === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return <div className="p-8 text-secondary">Unauthorized area.</div>;
+  }
 
   const handleOpenAdd = () => {
     setFormData({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
@@ -95,7 +106,7 @@ export default function ManageSuperAdminsPage() {
             <Users className="w-6 h-6 text-brand" />
             System Administrators
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage all global Super Admin accounts with complete systemic control.</p>
+          <p className="text-[13px] text-secondary mt-1">Manage all system Super Admin accounts with complete systemic control.</p>
         </div>
         
         <Link 
@@ -127,7 +138,7 @@ export default function ManageSuperAdminsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">Global Administrator</th>
+                <th className="px-4 py-3 font-medium">System Administrator</th>
                 <th className="px-4 py-3 font-medium">Joined Date</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
@@ -190,7 +201,8 @@ export default function ManageSuperAdminsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
+                        onClick={() => router.push(`/admin/users/${user._id}`)}
+                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-3">
@@ -200,9 +212,9 @@ export default function ManageSuperAdminsPage() {
                               className="w-8 h-8 rounded-full bg-card border border-border-dim"
                             />
                             <div>
-                              <Link href={`/admin/users/${user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
+                              <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
                                 {user.name}
-                              </Link>
+                              </span>
                               <span className="text-[12px] text-secondary">{user.email}</span>
                             </div>
                           </div>
@@ -220,13 +232,10 @@ export default function ManageSuperAdminsPage() {
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Link href={`/admin/users/${user._id}`} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </Link>
-                            <button onClick={() => handleOpenEdit(user)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(user); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setDeletingUser(user)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -280,7 +289,7 @@ export default function ManageSuperAdminsPage() {
               disabled
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground outline-none text-sm appearance-none opacity-50 cursor-not-allowed"
             >
-              <option value="SUPER_ADMIN">Global Super Admin</option>
+              <option value="SUPER_ADMIN">System Super Admin</option>
             </select>
           </div>
 

@@ -17,10 +17,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 export default function CompanyUsersPage() {
   const params = useParams();
+  const router = useRouter();
   const companyId = params.id as Id<"companies">;
 
   const currentUser = useQuery(api.users.getMe);
@@ -198,7 +199,8 @@ export default function CompanyUsersPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
+                        onClick={() => router.push(`/admin/users/${user._id}`)}
+                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-3">
@@ -208,9 +210,9 @@ export default function CompanyUsersPage() {
                               className="w-8 h-8 rounded-full bg-card border border-border-dim"
                             />
                             <div>
-                              <Link href={`/admin/users/${user._id}`} className="font-medium text-[13px] text-foreground hover:text-brand transition-colors block leading-tight">
+                              <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
                                 {user.name}
-                              </Link>
+                              </span>
                               <span className="text-[12px] text-secondary">{user.email}</span>
                             </div>
                           </div>
@@ -228,13 +230,10 @@ export default function CompanyUsersPage() {
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Link href={`/admin/users/${user._id}`} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </Link>
-                            <button onClick={() => handleOpenEdit(user)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(user); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setDeletingUser(user)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -257,29 +256,41 @@ export default function CompanyUsersPage() {
       >
         <p className="text-secondary mb-6 text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
-            <input 
-              type="text" 
-              required
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Aman"
-            />
-          </div>
+          {editingUser ? (
+            <div className="flex flex-col gap-3 p-4 rounded-[10px] bg-foreground/[0.02] border border-border-dim/50 mb-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">User</span>
+                <span className="text-[14px] text-foreground font-medium">{editingUser.name}</span>
+                <span className="text-[13px] text-secondary">{editingUser.email}</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+                  placeholder="e.g. Aman"
+                />
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
-            <input 
-              type="email" 
-              required
-              value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="aman@example.com"
-            />
-          </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  value={formData.email}
+                  onChange={e => setFormData({...formData, email: e.target.value})}
+                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+                  placeholder="aman@example.com"
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
@@ -293,17 +304,19 @@ export default function CompanyUsersPage() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
-            <input 
-              type="url" 
-              value={formData.image}
-              onChange={e => setFormData({...formData, image: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="https://example.com/avatar.jpg"
-            />
-            <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
-          </div>
+          {!editingUser && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
+              <input 
+                type="url" 
+                value={formData.image}
+                onChange={e => setFormData({...formData, image: e.target.value})}
+                className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+                placeholder="https://example.com/avatar.jpg"
+              />
+              <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
             <button 

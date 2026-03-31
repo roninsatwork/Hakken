@@ -10,9 +10,6 @@ import {
   ChevronDown, 
   Sidebar,
   ShieldCheck,
-  HelpCircle,
-  Mail,
-  Bell,
   ChevronsUpDown
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -121,23 +118,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
         <div className="flex items-center gap-3">
           <ThemeToggle />
           
-          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
-            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-            <HelpCircle className="w-5 h-5" />
-          </button>
 
-          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
-            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Mail className="w-5 h-5" />
-          </button>
-
-          <button className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-sidebar/40 backdrop-blur-3xl border border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5 transition-all group overflow-hidden">
-            <div className="absolute inset-0 bg-radial-at-tl from-white/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Bell className="w-5 h-5" />
-            {hasNotifications && (
-              <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#161616]" />
-            )}
-          </button>
         </div>
         
         <div className="h-8 w-px bg-border-dim/50 ml-2" />

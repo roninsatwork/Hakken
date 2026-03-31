@@ -23,6 +23,8 @@ import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUI } from "@/src/context/UIContext";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useTheme } from "next-themes";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -146,8 +148,16 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 }
 
 export default function SidebarNavigation() {
-  const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
+  const { isSidebarOpen, setIsSidebarOpen } = useUI();
+  const settings = useSystemSettings();
+  const { theme, systemTheme } = useTheme();
+  
+  const currentTheme = theme === "system" ? systemTheme : theme;
+  const activeLogo = currentTheme === "dark" && settings.logoUrlDark 
+     ? settings.logoUrlDark 
+     : settings.logoUrlLight;
+
   const isAdmin = pathname.startsWith('/admin');
   
   const user = useQuery(api.users.getMe);
@@ -163,6 +173,7 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
     if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
     if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
+    if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
     if (pathname.startsWith('/app/profile')) return 'Profile';
     return isAdmin ? 'Admin Dashboard' : '';
@@ -192,6 +203,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/ai/chat-logs')) setActiveItem('Chat Logs');
     else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
     else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
+    else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -210,15 +222,23 @@ export default function SidebarNavigation() {
           {/* Header Area */}
           <div className="flex items-center justify-between px-5 pt-8 pb-5">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-[30px] h-[30px] rounded-[8px] bg-card border border-border-dim flex items-center justify-center relative shadow-sm">
-                <div className="w-[18px] h-[18px] text-brand flex items-center justify-center">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-                     <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
-                     <circle cx="12" cy="12" r="3" />
-                   </svg>
+              {activeLogo ? (
+                 <img src={activeLogo} alt={settings.platformName} className="h-8 object-contain" />
+              ) : (
+                <div className="w-[30px] h-[30px] rounded-[8px] bg-card border border-border-dim flex items-center justify-center relative shadow-sm">
+                  <div className="w-[18px] h-[18px] text-brand flex items-center justify-center">
+                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+                       <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
+                       <circle cx="12" cy="12" r="3" />
+                     </svg>
+                  </div>
                 </div>
-              </div>
-              <span className="font-bold text-[18px] text-foreground tracking-tight group-hover:opacity-90 transition-opacity">Sonae</span>
+              )}
+              {!activeLogo && (
+                <span className="font-bold text-[18px] text-foreground tracking-tight group-hover:opacity-90 transition-opacity">
+                   {settings.platformName}
+                </span>
+              )}
             </Link>
             <button 
               onClick={() => setIsSidebarOpen(false)}
@@ -253,10 +273,14 @@ export default function SidebarNavigation() {
                         <NavItem 
                           icon={Building2} 
                           label="Companies" 
-                          href="/admin/companies"
-                          isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')} 
+                          isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
                           onClick={() => setActiveItem('Companies')}
-                        />
+                          hasChildren 
+                          isOpen={openSections.companies}
+                          onToggle={() => toggleSection('companies')}
+                        >
+                          <SubNavItem label="Manage Companies" href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+                        </NavItem>
                         <NavItem 
                           icon={ShieldCheck} 
                           label="System Admins" 
@@ -266,7 +290,7 @@ export default function SidebarNavigation() {
                           isOpen={openSections.superAdmins}
                           onToggle={() => toggleSection('superAdmins')}
                         >
-                          <SubNavItem label="Global Admins" href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label="System Admins" href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
                           <SubNavItem label="Invitations" href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
                         </NavItem>
                       </>
@@ -317,7 +341,7 @@ export default function SidebarNavigation() {
                         isOpen={openSections.settings}
                         onToggle={() => toggleSection('settings')}
                       >
-                        <SubNavItem label="System Settings" isActive={activeItem === 'System Settings'} onClick={() => setActiveItem('System Settings')} />
+                        <SubNavItem label="System Settings" href="/admin/settings" isActive={activeItem === 'System Settings' || pathname.startsWith('/admin/settings')} onClick={() => setActiveItem('System Settings')} />
                       </NavItem>
                     )}
                   </>

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { cascadeDeleteUserAction } from "./users";
 
 export const getCompanies = query({
   args: {},
@@ -94,16 +95,28 @@ export const deleteCompany = mutation({
        throw new Error("Unauthorized");
     }
 
-    // Safety constraint: Verify it has no bound users
+    // HARD CASCADE DELETE: GDPR Compliance Nuke
+    // Loop over all bound users and nuke them
     const users = await ctx.db
       .query("users")
       .filter(q => q.eq(q.field("companyId"), args.id))
       .collect();
       
-    if (users.length > 0) {
-       throw new Error("Cannot delete a company while users are still assigned to it.");
+    for (const user of users) {
+      await cascadeDeleteUserAction(ctx, user._id);
     }
 
+    // Eliminate all pending system invitations targeting this company
+    const invites = await ctx.db
+      .query("invitations")
+      .filter(q => q.eq(q.field("companyId"), args.id))
+      .collect();
+      
+    for (const invite of invites) {
+      await ctx.db.delete(invite._id);
+    }
+
+    // Erase the company entity representation globally
     await ctx.db.delete(args.id);
     return true;
   },

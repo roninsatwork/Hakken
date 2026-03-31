@@ -1,4 +1,5 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, MutationCtx } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { auth } from "./auth";
@@ -122,10 +123,27 @@ export const updateUser = mutation({
   },
 });
 
+export const cascadeDeleteUserAction = async (ctx: MutationCtx, userId: Id<"users">) => {
+  const logins = await ctx.db.query("logins").withIndex("by_user", q => q.eq("userId", userId)).collect();
+  for (const login of logins) await ctx.db.delete(login._id);
+
+  const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", userId)).collect();
+  for (const thread of threads) {
+    const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).collect();
+    for (const msg of messages) await ctx.db.delete(msg._id);
+    await ctx.db.delete(thread._id);
+  }
+
+  const rules = await ctx.db.query("aiRules").filter(q => q.eq(q.field("createdBy"), userId)).collect();
+  for (const rule of rules) await ctx.db.delete(rule._id);
+
+  await ctx.db.delete(userId);
+};
+
 export const deleteUser = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    await cascadeDeleteUserAction(ctx, args.id);
     return true;
   },
 });

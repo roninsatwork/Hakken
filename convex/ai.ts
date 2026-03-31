@@ -1,6 +1,6 @@
 "use node";
 
-import { internalAction } from "./_generated/server";
+import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI } from "@google/genai";
 import { api, internal } from "./_generated/api";
@@ -109,4 +109,42 @@ User Prompt: ${args.content}`;
         });
     }
   },
+});
+
+export const transcribeAudio = action({
+  args: {
+    audioBase64: v.string(),
+    mimeType: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = "us-central1"; // Enforce central routing for stable multimodal models
+    
+    const ai = new GoogleGenAI({ 
+      project: projectId, 
+      location: location,
+      vertexai: true,
+      googleAuthOptions: {
+        credentials: {
+          client_email: process.env.GOOGLE_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }
+      }
+    });
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash", // Most robust model publicly available in us-central1
+            contents: [
+                { text: "Transcribe the following audio exactly. Output ONLY the raw transcription text without any prefix, markdown, or commentary." },
+                { inlineData: { mimeType: args.mimeType, data: args.audioBase64 } }
+            ]
+        });
+
+        return response.text ? response.text.trim() : "";
+    } catch (error) {
+        console.error("Vertex AI Transcription Error:", error);
+        throw new Error("Failed to transcribe audio stream properly.");
+    }
+  }
 });

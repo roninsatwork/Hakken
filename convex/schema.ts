@@ -10,6 +10,55 @@ export default defineSchema({
     logo: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_name", ["name"]),
+  
+  systemSettings: defineTable({
+    platformName: v.string(),
+    logoUrlLight: v.optional(v.string()),
+    logoUrlDark: v.optional(v.string()),
+    brandColorHex: v.optional(v.string()),
+    fontFamily: v.optional(v.string()), // Deprecated, keep for legacy
+    headingFontFamily: v.optional(v.string()),
+    bodyFontFamily: v.optional(v.string()),
+    fontSizeBase: v.optional(v.string()),
+    headingSizeGlobal: v.optional(v.string()),
+    subTextSizeGlobal: v.optional(v.string()),
+    borderRadius: v.optional(v.string()),
+
+    lightBg: v.optional(v.string()),
+    lightFg: v.optional(v.string()),
+    lightCardBg: v.optional(v.string()),
+    lightCardFg: v.optional(v.string()),
+    lightBorder: v.optional(v.string()),
+    lightMuted: v.optional(v.string()),
+    lightMutedFg: v.optional(v.string()),
+    lightSuccess: v.optional(v.string()),
+    lightDestructive: v.optional(v.string()),
+    lightRing: v.optional(v.string()),
+
+    darkBg: v.optional(v.string()),
+    darkFg: v.optional(v.string()),
+    darkCardBg: v.optional(v.string()),
+    darkCardFg: v.optional(v.string()),
+    darkBorder: v.optional(v.string()),
+    darkMuted: v.optional(v.string()),
+    darkMutedFg: v.optional(v.string()),
+    darkSuccess: v.optional(v.string()),
+    darkDestructive: v.optional(v.string()),
+    darkRing: v.optional(v.string()),
+
+    currencySymbol: v.optional(v.string()),
+    monthlySeatPrice: v.number(),
+    monthlyBasePrice: v.number()
+  }),
+  
+  companyMetrics: defineTable({
+    companyId: v.id("companies"),
+    date: v.string(),
+    activeUsers: v.number(),
+    totalMessages: v.number(),
+    totalTokens: v.number(),
+    costGBP: v.number(),
+  }).index("by_company_date", ["companyId", "date"]),
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),

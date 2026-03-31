@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { UIProvider } from "@/src/context/UIContext";
 import { ConvexClientProvider } from "@/src/context/ConvexClientProvider";
+import { SystemSettingsProvider } from "@/src/context/SystemSettingsContext";
 
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 
@@ -44,13 +45,15 @@ export default function RootLayout({
         >
           <ThemeProvider>
             <ConvexClientProvider>
-              <NextIntlClientProvider>
-                <UIProvider>
-                  <div className="w-full min-h-screen flex flex-col items-stretch overflow-x-hidden">
-                  {children}
-                </div>
-                </UIProvider>
-              </NextIntlClientProvider>
+              <SystemSettingsProvider>
+                <NextIntlClientProvider>
+                  <UIProvider>
+                    <div className="w-full min-h-screen flex flex-col items-stretch overflow-x-hidden">
+                      {children}
+                    </div>
+                  </UIProvider>
+                </NextIntlClientProvider>
+              </SystemSettingsProvider>
             </ConvexClientProvider>
           </ThemeProvider>
         </body>

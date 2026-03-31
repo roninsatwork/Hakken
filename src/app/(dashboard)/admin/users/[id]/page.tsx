@@ -14,7 +14,7 @@ export default function UserProfilePage() {
   const userId = params.id as Id<"users">;
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"logins" | "costs">("costs");
+  const [activeTab, setActiveTab] = useState<"logins" | "costs">("logins");
 
   const { results: logins, status, loadMore } = usePaginatedQuery(
     api.users.getUserLogins,

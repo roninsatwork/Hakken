@@ -169,11 +169,9 @@ export default function CompaniesPage() {
                             <button onClick={() => handleOpenEdit(company)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            {company.userCount === 0 && (
-                                <button onClick={() => setDeletingCompany(company)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Empty Company">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
+                            <button onClick={() => setDeletingCompany(company)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Company & Wipe Data">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </motion.tr>
@@ -232,9 +230,15 @@ export default function CompaniesPage() {
         onClose={() => setDeletingCompany(null)}
         title="Delete Company Workspace"
       >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong>? This action cannot be undone.
-        </p>
+        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
+          <p>
+            Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong>? This action cannot be undone.
+          </p>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-4 text-red-500/90 text-[13px]">
+            <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">Warning: Cascade Nuke Active</strong>
+            This will permanently erase the company along with ALL of its assigned users, system logic, analytics, and historical chat logs to comply with GDPR.
+          </div>
+        </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 
             type="button" 

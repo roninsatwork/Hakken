@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -295,6 +295,593 @@ export const getUserCostOverview = query({
       totalCostGBP: Number((totalCostUSD * 0.78).toFixed(6)),
       totalTokens,
       threads: enrichedThreads.sort((a, b) => b.createdAt - a.createdAt)
+    };
+  }
+});
+
+/**
+ * Executes a hard compute of metrics for a specific day.
+ * We extract this so both the cron job and the manual backfill can call it.
+ */
+async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
+  const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
+  if (!targetDateStr) {
+    targetDate.setDate(targetDate.getDate() - 1); // Yesterday
+  }
+  
+  const dateStr = targetDate.toISOString().split('T')[0];
+  const startTime = targetDate.setUTCHours(0, 0, 0, 0);
+  const endTime = targetDate.setUTCHours(23, 59, 59, 999);
+  
+  const companies = await ctx.db.query("companies").collect();
+  
+  for (const company of companies) {
+    const users = await ctx.db
+      .query("users")
+      .filter((q: any) => q.eq(q.field("companyId"), company._id))
+      .collect();
+    
+    let totalMessages = 0;
+    let totalTokens = 0;
+    let costUSD = 0;
+    const activeUserIds = new Set<string>();
+    
+    for (const user of users) {
+      const threads = await ctx.db
+        .query("threads")
+        .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+        .collect();
+        
+      let userWasActive = false;
+      
+      for (const thread of threads) {
+         const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_thread", (q: any) => q.eq("threadId", thread._id))
+          .collect();
+          
+         for (const msg of messages) {
+           if (msg.role === "assistant" && msg.createdAt >= startTime && msg.createdAt <= endTime) {
+             userWasActive = true;
+             totalMessages++;
+             const inputs = msg.inputTokens || 0;
+             const outputs = msg.outputTokens || 0;
+             const model = msg.modelUsed || "gemini-1.5-flash"; 
+             
+             totalTokens += (inputs + outputs);
+             
+             if (model.includes("pro")) {
+               costUSD += (inputs / 1000000) * 3.50 + (outputs / 1000000) * 10.50;
+             } else {
+               costUSD += (inputs / 1000000) * 0.075 + (outputs / 1000000) * 0.30;
+             }
+           }
+         }
+      }
+      
+      if (userWasActive) activeUserIds.add(user._id);
+      else {
+         const logins = await ctx.db.query("logins").withIndex("by_user", (q: any) => q.eq("userId", user._id)).collect();
+         const hasLogin = logins.some((l: any) => l.timestamp >= startTime && l.timestamp <= endTime);
+         if (hasLogin) activeUserIds.add(user._id);
+      }
+    }
+    
+    const existing = await ctx.db
+      .query("companyMetrics")
+      .withIndex("by_company_date", (q: any) => q.eq("companyId", company._id).eq("date", dateStr))
+      .first();
+      
+    const costGBP = costUSD * 0.78;
+    
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        activeUsers: activeUserIds.size,
+        totalMessages,
+        totalTokens,
+        costGBP
+      });
+    } else {
+      await ctx.db.insert("companyMetrics", {
+        companyId: company._id,
+        date: dateStr,
+        activeUsers: activeUserIds.size,
+        totalMessages,
+        totalTokens,
+        costGBP
+      });
+    }
+  }
+}
+
+// ----------------------------------------------------
+// CRON ROUTER & BACKFILL
+// ----------------------------------------------------
+
+export const aggregateNightlyMetrics = internalMutation({
+  args: { targetDateStr: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await computeMetricsForDate(ctx, args.targetDateStr);
+  }
+});
+
+export const backfillCompanyMetrics = mutation({
+  args: { days: v.number() },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthorized");
+    const admin = await ctx.db.get(adminId);
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    
+    const now = new Date();
+    for (let i = 0; i < args.days; i++) {
+       const target = new Date(now);
+       target.setDate(now.getDate() - i);
+       const dateStr = target.toISOString().split('T')[0];
+       await computeMetricsForDate(ctx, dateStr);
+    }
+    return true;
+  }
+});
+
+export const getCompanyMetrics = query({
+  args: { 
+    companyId: v.id("companies"), 
+    timeframe: v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
+    customStart: v.optional(v.number()),
+    customEnd: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthorized");
+    const admin = await ctx.db.get(adminId);
+    if (!admin) throw new Error("Unauthorized");
+    
+    if (admin.role !== "SUPER_ADMIN") {
+       if (admin.role !== "ADMIN" || admin.companyId !== args.companyId) {
+          throw new Error("Unauthorized");
+       }
+    }
+
+    // 2. Establish Timeframe Boundaries
+    const now = new Date();
+    let startDate = new Date();
+    
+    if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
+    else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
+    else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
+    else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
+
+    let endDate = now;
+    if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
+
+    // 4. Fetch the Highly-Optimized CompanyMetrics Ledger
+    const allMetrics = await ctx.db
+       .query("companyMetrics")
+       .withIndex("by_company_date", (q) => q.eq("companyId", args.companyId))
+       .collect();
+
+    const validMetrics = allMetrics.filter(m => m.date >= startDateStr && m.date <= endDateStr);
+    
+    // Aggregation Variables
+    let totalMessages = 0;
+    let totalTokens = 0;
+    let totalCostGBP = 0;
+    const timelineMap: Record<string, { cost: number; messages: number }> = {};
+
+    for (const m of validMetrics) {
+       totalMessages += m.totalMessages;
+       totalTokens += m.totalTokens;
+       totalCostGBP += m.costGBP;
+
+       const metricDate = new Date(m.date);
+       let dateGroup = "";
+       if (aggregationType === "month") {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+       } else if (aggregationType === "week") {
+           const target = new Date(metricDate.valueOf());
+           const dayNr = (metricDate.getDay() + 6) % 7;
+           target.setDate(target.getDate() - dayNr + 3);
+           const firstThursday = target.valueOf();
+           target.setMonth(0, 1);
+           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+           dateGroup = `Wk ${weekNum}`;
+       } else {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+       }
+
+       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+       timelineMap[dateGroup].cost += m.costGBP;
+       timelineMap[dateGroup].messages += m.totalMessages;
+    }
+
+    // 5. Dynamic "Today" Telemetry Injection 
+    const todayStr = now.toISOString().split('T')[0];
+    const hasToday = validMetrics.some(m => m.date === todayStr);
+    
+    // Calculate raw "Today" and Top Users natively from the raw message tables
+    const companyUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
+    const companyUserIds = new Set(companyUsers.map(u => u._id));
+    
+    const threads = await ctx.db.query("threads").collect();
+    const companyThreads = threads.filter(t => companyUserIds.has(t.userId));
+    const companyThreadIds = new Set(companyThreads.map(t => t._id));
+
+    const allMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
+    const rawMessages = allMessages.filter(m => companyThreadIds.has(m.threadId));
+
+    const startTimeStamp = startDate.getTime();
+    const endTimeStamp = endDate.getTime();
+    const periodRawMessages = rawMessages.filter(m => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
+    const todayStartTime = new Date(now).setUTCHours(0,0,0,0);
+    const todayMessages = periodRawMessages.filter(m => m.createdAt >= todayStartTime);
+
+    // Build the "Top Users" natively
+    const threadUserMap = new Map(companyThreads.map(t => [t._id, t.userId]));
+    const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
+    const activePeriodUsers = new Set<string>();
+
+    for (const msg of periodRawMessages) {
+       const userId = threadUserMap.get(msg.threadId);
+       if (userId) {
+          activePeriodUsers.add(userId);
+          
+          let msgCost = 0;
+          const inputs = msg.inputTokens || 0;
+          const outputs = msg.outputTokens || 0;
+          const model = msg.modelUsed || "gemini-1.5-flash"; 
+          if(model.includes("pro")) msgCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
+          else msgCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          
+          const gbpCost = msgCost * 0.78;
+
+          if (!userLeaderboard[userId]) {
+             const userObj = companyUsers.find(u => u._id === userId);
+             userLeaderboard[userId] = {
+                id: userId,
+                name: userObj?.name || "Unknown",
+                image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
+                email: userObj?.email || "",
+                cost: 0,
+                messages: 0
+             };
+          }
+          userLeaderboard[userId].cost += gbpCost;
+          userLeaderboard[userId].messages += 1;
+       }
+    }
+
+    if (!hasToday && todayMessages.length > 0) {
+       let tCost = 0;
+       let tMsgs = 0; 
+       let tTokens = 0;
+
+       for (const msg of todayMessages) {
+          tMsgs++;
+          const inputs = msg.inputTokens || 0;
+          const outputs = msg.outputTokens || 0;
+          const model = msg.modelUsed || "gemini-1.5-flash"; 
+          
+          tTokens += (inputs + outputs);
+          let mCost = 0;
+          if (model.includes("pro")) mCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
+          else mCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          tCost += (mCost * 0.78);
+          
+          let dateGroup = "";
+          if (aggregationType === "month") dateGroup = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+          else if (aggregationType === "week") {
+              const target = new Date(now.valueOf());
+              const dayNr = (now.getDay() + 6) % 7;
+              target.setDate(target.getDate() - dayNr + 3);
+              const firstThursday = target.valueOf();
+              target.setMonth(0, 1);
+              if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+              const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+              dateGroup = `Wk ${weekNum}`;
+          } else {
+              dateGroup = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          }
+
+          if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+          timelineMap[dateGroup].cost += (mCost * 0.78);
+          timelineMap[dateGroup].messages += 1;
+       }
+       
+       totalMessages += tMsgs;
+       totalTokens += tTokens;
+       totalCostGBP += tCost;
+    }
+
+    const timeline = Object.keys(timelineMap).map(k => ({
+       date: k,
+       cost: Number(timelineMap[k].cost.toFixed(4)),
+       messages: timelineMap[k].messages
+    }));
+
+    const topUsers = Object.values(userLeaderboard)
+       .sort((a,b) => b.cost - a.cost)
+       .slice(0, 10);
+
+    return {
+       timeline,
+       aggregates: {
+          activeUsers: activePeriodUsers.size,
+          totalMessages,
+          totalTokens,
+          totalCostGBP: Number(totalCostGBP.toFixed(4)),
+          aggregationType
+       },
+       topUsers
+    };
+  }
+});
+
+/**
+ * Universal Global Analytics Engine (Google Analytics Style)
+ * Supports dynamic timeframe ranges and twin leaderboards.
+ */
+export const getGlobalAnalytics = query({
+  args: { 
+    timeframe: v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
+    customStart: v.optional(v.number()),
+    customEnd: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    // 1. Core Authorization Check
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthorized");
+    const admin = await ctx.db.get(adminId);
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    // 2. Establish Timeframe Boundaries
+    const now = new Date();
+    let startDate = new Date();
+    
+    if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
+    else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
+    else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
+    else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
+
+    let endDate = now;
+    if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
+
+    // 3. Structure Telemetry
+    const users = await ctx.db.query("users").collect();
+    const companies = await ctx.db.query("companies").collect();
+    const companyMap = new Map(companies.map(c => [c._id, c]));
+
+    // 4. Fetch the Highly-Optimized CompanyMetrics Ledger
+    const allMetrics = await ctx.db.query("companyMetrics").collect();
+    const validMetrics = allMetrics.filter(m => m.date >= startDateStr && m.date <= endDateStr);
+    
+    // Aggregation Variables
+    let totalMessages = 0;
+    let totalTokens = 0;
+    let totalCostGBP = 0;
+    const timelineMap: Record<string, { cost: number; messages: number }> = {};
+    const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
+
+    // Grouping Ledger Data
+    for (const m of validMetrics) {
+       totalMessages += m.totalMessages;
+       totalTokens += m.totalTokens;
+       totalCostGBP += m.costGBP;
+
+       // Timeline Formatting 
+       const metricDate = new Date(m.date);
+       let dateGroup = "";
+       if (aggregationType === "month") {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+       } else if (aggregationType === "week") {
+           const target = new Date(metricDate.valueOf());
+           const dayNr = (metricDate.getDay() + 6) % 7;
+           target.setDate(target.getDate() - dayNr + 3);
+           const firstThursday = target.valueOf();
+           target.setMonth(0, 1);
+           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+           dateGroup = `Wk ${weekNum}`;
+       } else {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+       }
+
+       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+       timelineMap[dateGroup].cost += m.costGBP;
+       timelineMap[dateGroup].messages += m.totalMessages;
+
+       // Top Companies Aggregation
+       if (!companyLeaderboard[m.companyId]) {
+          const comp = companyMap.get(m.companyId);
+          companyLeaderboard[m.companyId] = {
+             id: m.companyId,
+             name: comp?.name || "Unknown Company",
+             logo: comp?.logo || "",
+             cost: 0,
+             messages: 0
+          };
+       }
+       companyLeaderboard[m.companyId].cost += m.costGBP;
+       companyLeaderboard[m.companyId].messages += m.totalMessages;
+    }
+
+    // 5. Dynamic "Today" Telemetry Injection (for real-time dashboard accuracy)
+    const todayStr = now.toISOString().split('T')[0];
+    const hasToday = validMetrics.some(m => m.date === todayStr);
+    
+    // Calculate raw "Today" and Top Users natively from the raw message tables
+    const threads = await ctx.db.query("threads").collect();
+    const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
+    
+    const startTimeStamp = startDate.getTime();
+    const endTimeStamp = endDate.getTime();
+    const periodRawMessages = rawMessages.filter(m => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
+    const todayStartTime = new Date(now).setUTCHours(0,0,0,0);
+    const todayMessages = periodRawMessages.filter(m => m.createdAt >= todayStartTime);
+    
+    // Core MAU Calculation (last 30 days rolling)
+    const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+    const thirtyDayMessages = rawMessages.filter(m => m.createdAt >= thirtyDaysAgo);
+    const threadUserMapAll = new Map(threads.map(t => [t._id, t.userId]));
+    const mauSet = new Set<string>();
+    for (const msg of thirtyDayMessages) {
+       const uId = threadUserMapAll.get(msg.threadId);
+       if (uId) mauSet.add(uId);
+    }
+
+    // Build the "Top Users" natively
+    const threadUserMap = new Map(threads.map(t => [t._id, t.userId]));
+    const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
+    const activePeriodUsers = new Set<string>();
+
+    for (const msg of periodRawMessages) {
+       const userId = threadUserMap.get(msg.threadId);
+       if (userId) {
+          activePeriodUsers.add(userId);
+          
+          let msgCost = 0;
+          const inputs = msg.inputTokens || 0;
+          const outputs = msg.outputTokens || 0;
+          const model = msg.modelUsed || "gemini-1.5-flash"; 
+          if(model.includes("pro")) msgCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
+          else msgCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          
+          const gbpCost = msgCost * 0.78;
+
+          if (!userLeaderboard[userId]) {
+             const userObj = users.find(u => u._id === userId);
+             const compObj = userObj?.companyId ? companyMap.get(userObj.companyId) : null;
+             userLeaderboard[userId] = {
+                id: userId,
+                name: userObj?.name || "Unknown",
+                image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
+                email: userObj?.email || "",
+                companyName: compObj?.name || "Independent",
+                cost: 0,
+                messages: 0
+             };
+          }
+          userLeaderboard[userId].cost += gbpCost;
+          userLeaderboard[userId].messages += 1;
+       }
+    }
+
+    // Process if "Today" is completely missing from the Ledger timeline
+    if (!hasToday && todayMessages.length > 0) {
+       let tCost = 0;
+       let tMsgs = 0; 
+       let tTokens = 0;
+
+       for (const msg of todayMessages) {
+          tMsgs++;
+          const inputs = msg.inputTokens || 0;
+          const outputs = msg.outputTokens || 0;
+          const model = msg.modelUsed || "gemini-1.5-flash"; 
+          
+          tTokens += (inputs + outputs);
+          let mCost = 0;
+          if (model.includes("pro")) mCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
+          else mCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          tCost += (mCost * 0.78);
+          
+          // Add to timeline group
+          let dateGroup = "";
+          if (aggregationType === "month") dateGroup = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+          else if (aggregationType === "week") {
+              const target = new Date(now.valueOf());
+              const dayNr = (now.getDay() + 6) % 7;
+              target.setDate(target.getDate() - dayNr + 3);
+              const firstThursday = target.valueOf();
+              target.setMonth(0, 1);
+              if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+              const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+              dateGroup = `Wk ${weekNum}`;
+          } else {
+              dateGroup = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          }
+
+          if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+          timelineMap[dateGroup].cost += (mCost * 0.78);
+          timelineMap[dateGroup].messages += 1;
+
+          // Add to Top Companies
+          const userId = threadUserMap.get(msg.threadId);
+          if (userId) {
+             const userAcct = users.find(u => u._id === userId);
+             if (userAcct && userAcct.companyId) {
+                if (!companyLeaderboard[userAcct.companyId]) {
+                   const compObj = companyMap.get(userAcct.companyId);
+                   companyLeaderboard[userAcct.companyId] = {
+                      id: userAcct.companyId,
+                      name: compObj?.name || "Unknown Company",
+                      logo: compObj?.logo || "",
+                      cost: 0,
+                      messages: 0
+                   };
+                }
+                companyLeaderboard[userAcct.companyId].cost += (mCost * 0.78);
+                companyLeaderboard[userAcct.companyId].messages += 1;
+             }
+          }
+       }
+       
+       totalMessages += tMsgs;
+       totalTokens += tTokens;
+       totalCostGBP += tCost;
+    }
+
+    // 6. Format Outputs
+    const timeline = Object.keys(timelineMap).map(k => ({
+       date: k,
+       cost: Number(timelineMap[k].cost.toFixed(4)),
+       messages: timelineMap[k].messages
+    }));
+
+    const topCompanies = Object.values(companyLeaderboard)
+       .sort((a,b) => b.cost - a.cost)
+       .slice(0, 8);
+       
+    const topUsers = Object.values(userLeaderboard)
+       .sort((a,b) => b.cost - a.cost)
+       .slice(0, 8);
+
+    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
+
+    // 7. Calculate Dynamic MRR based on Settings
+    const settings = await ctx.db.query("systemSettings").first() || { monthlyBasePrice: 199, monthlySeatPrice: 49 };
+    const mrr = (companies.length * settings.monthlyBasePrice) + (users.length * settings.monthlySeatPrice);
+
+    return {
+       timeline,
+       aggregates: {
+          activeUsers: activePeriodUsers.size,
+          mau: mauSet.size,
+          mrr: Number(mrr.toFixed(2)),
+          totalMessages,
+          totalTokens,
+          totalCostGBP: Number(totalCostGBP.toFixed(4)),
+          costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
+          aggregationType
+       },
+       topCompanies,
+       topUsers,
+       systemIntegrity: {
+          totalProvisionedUsers: users.length,
+          totalProvisionedCompanies: companies.length
+       }
     };
   }
 });

@@ -7,16 +7,12 @@ import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, Eye, Sparkles
 import { Id } from "@/convex/_generated/dataModel";
 
 export default function InviteUsersPage() {
-  const activeTemplate = useQuery(api.invites.getActiveTemplate);
-  const saveTemplate = useMutation(api.invites.saveTemplate);
-  const dispatchInvite = useAction(api.invites.dispatchInviteEmail);
-
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  
-  if (!isSuperAdmin) {
-    return <div className="p-8 text-secondary">Unauthorized area.</div>;
-  }
+
+  const activeTemplate = useQuery(api.invites.getActiveTemplate, isSuperAdmin ? {} : "skip");
+  const saveTemplate = useMutation(api.invites.saveTemplate);
+  const dispatchInvite = useAction(api.invites.dispatchInviteEmail);
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -82,12 +78,16 @@ export default function InviteUsersPage() {
     }
   };
 
-  if (activeTemplate === undefined) {
+  if (user === undefined || activeTemplate === undefined) {
     return (
       <div className="w-full flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     );
+  }
+
+  if (!isSuperAdmin) {
+    return <div className="p-8 text-secondary">Unauthorized area.</div>;
   }
 
   return (
@@ -97,10 +97,10 @@ export default function InviteUsersPage() {
         <div className="flex flex-col gap-2 border-b border-border-dim/50 pb-6">
           <h1 className="text-[24px] font-bold tracking-tight text-foreground flex items-center gap-3">
             <ShieldCheck className="w-6 h-6 text-brand" />
-            Global Admin Invitations
+            System Admin Invitations
           </h1>
           <p className="text-[14px] text-secondary max-w-xl leading-relaxed">
-            Dispatch secure access tokens directly to new global system administrators.
+            Dispatch secure access tokens directly to new system administrators.
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export default function InviteUsersPage() {
                     disabled
                     className="px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-foreground outline-none text-[13px] opacity-50 cursor-not-allowed appearance-none relative z-10"
                   >
-                    <option value="SUPER_ADMIN">Global Super Admin</option>
+                    <option value="SUPER_ADMIN">System Super Admin</option>
                   </select>
                 </div>
               </div>
