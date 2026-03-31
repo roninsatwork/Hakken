@@ -159,7 +159,7 @@ export const saveChunksInternal = internalMutation({
       for (const chunk of args.chunks) {
          await ctx.db.insert("knowledgeChunks", {
              documentId: args.documentId,
-             ...(args.companyId ? { companyId: args.companyId } : {}),
+             ...(args.companyId ? { companyId: args.companyId, isGlobal: false } : { isGlobal: true }),
              text: chunk.text,
              embedding: chunk.embedding,
          });

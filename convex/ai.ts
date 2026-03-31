@@ -104,7 +104,7 @@ export const generateSonaeResponse = internalAction({
                     ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                         vector: queryVector as number[],
                         limit: 50,
-                        filter: (q) => q.eq("companyId", undefined)
+                        filter: (q) => q.eq("isGlobal", true)
                     })
                 ]);
                 

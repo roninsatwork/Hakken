@@ -148,12 +148,13 @@ export default defineSchema({
   knowledgeChunks: defineTable({
     documentId: v.id("knowledgeDocuments"),
     companyId: v.optional(v.id("companies")),
+    isGlobal: v.boolean(),
     text: v.string(),
     embedding: v.array(v.number()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
     dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
-    filterFields: ["companyId", "documentId"],
+    filterFields: ["companyId", "documentId", "isGlobal"],
   }),
 
   // Sonae Assistant Tables
