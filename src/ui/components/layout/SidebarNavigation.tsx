@@ -364,7 +364,7 @@ export default function SidebarNavigation() {
                       isOpen={openSections.workspace}
                       onToggle={() => toggleSection('workspace')}
                     >
-                      <SubNavItem label="Sonae Assistant" href="/app/assistant" isActive={activeItem === 'Sonae Assistant'} onClick={() => setActiveItem('Sonae Assistant')} />
+                      <SubNavItem label={`${settings.platformName} Assistant`} href="/app/assistant" isActive={activeItem === 'Assistant'} onClick={() => setActiveItem('Assistant')} />
                     </NavItem>
 
                     <NavItem 

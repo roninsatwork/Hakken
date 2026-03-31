@@ -20,6 +20,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -32,6 +33,7 @@ const MODELS = [
 ];
 
 export default function ChatInput({ threadId }: ChatInputProps) {
+  const settings = useSystemSettings();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -117,7 +119,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : "Enter a prompt for Sonae"}
+                placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : `Enter a prompt for ${settings.platformName}`}
                 className={`w-full bg-transparent border-none outline-none focus:outline-none text-[16px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed transition-colors ${
                   isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"
                 }`}
@@ -199,7 +201,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                         className="absolute bottom-full right-0 mb-3 w-[280px] sm:w-[320px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col"
                       >
                         <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1">
-                          <span className="text-[12px] font-medium text-muted tracking-widest uppercase">Sonae Models</span>
+                          <span className="text-[12px] font-medium text-muted tracking-widest uppercase">{settings.platformName} Models</span>
                         </div>
                         {MODELS.map((model) => (
                           <button
@@ -254,7 +256,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
         {/* Footer Legal Copy */}
         <div className="mt-2.5 pb-2 text-center max-w-2xl px-4 z-10 opacity-70">
           <span className="text-[12px] text-muted font-light leading-relaxed">
-            Sonae Assistant is AI and can make mistakes, please check all responses.
+            {settings.platformName} Assistant is AI and can make mistakes, please check all responses.
           </span>
         </div>
       </div>
@@ -272,7 +274,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
           <div className="flex flex-col gap-2">
             <span className="text-[16px] font-semibold tracking-wide">Secure API Blocked</span>
             <p className="text-[14px] text-secondary font-light leading-relaxed">
-              Your browser has explicitly blocked Sonae from accessing the native Web Speech API microphone proxy.
+              Your browser has explicitly blocked {settings.platformName} from accessing the native Web Speech API microphone proxy.
             </p>
           </div>
           <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4 text-[13px] text-muted font-mono tracking-wide mt-2">
