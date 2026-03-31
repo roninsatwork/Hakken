@@ -11,7 +11,7 @@ export const getAllThreadsAdmin = query({
     if (!adminId) throw new Error("Unauthenticated Admin Request");
 
     const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "ADMIN") throw new Error("Unauthorized: Top level clearance required.");
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized: Top level clearance required.");
 
     // Fetch the raw paginated threads
     const pagedThreads = await ctx.db
@@ -61,7 +61,7 @@ export const getAdminThreadMessages = query({
     if (!adminId) throw new Error("Unauthenticated Admin Request");
 
     const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "ADMIN") throw new Error("Unauthorized: Top level clearance required.");
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized: Top level clearance required.");
 
     return await ctx.db
       .query("messages")

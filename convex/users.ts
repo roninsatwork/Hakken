@@ -22,8 +22,53 @@ export const generateUploadUrl = mutation(async (ctx) => {
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
-    // In a real app we might want to check if the caller is an Admin here
-    return await ctx.db.query("users").order("desc").collect();
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    if (caller.role === "SUPER_ADMIN") {
+      return await ctx.db.query("users").order("desc").collect();
+    } else if (caller.role === "ADMIN") {
+      if (!caller.companyId) return [];
+      const allUsers = await ctx.db.query("users").order("desc").collect();
+      return allUsers.filter(u => u.companyId === caller.companyId);
+    }
+    
+    throw new Error("Unauthorized");
+  },
+});
+
+export const getUsersByCompany = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && caller.companyId === args.companyId)) {
+       const allUsers = await ctx.db.query("users").order("desc").collect();
+       return allUsers.filter(u => u.companyId === args.companyId);
+    }
+    
+    throw new Error("Unauthorized");
+  },
+});
+
+export const getSuperAdmins = query({
+  args: {},
+  handler: async (ctx) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    
+    const caller = await ctx.db.get(callerId);
+    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const allUsers = await ctx.db.query("users").order("desc").collect();
+    return allUsers.filter(u => u.role === "SUPER_ADMIN");
   },
 });
 
@@ -40,6 +85,7 @@ export const addUser = mutation({
     email: v.string(),
     role: v.string(),
     image: v.optional(v.string()),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     // Basic implementation: manually created users get a distinct token pattern
@@ -47,8 +93,9 @@ export const addUser = mutation({
     return await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
-      role: args.role as "USER" | "ADMIN",
+      role: args.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       image: args.image,
+      companyId: args.companyId,
       tokenIdentifier: fakeTokenId,
       createdAt: Date.now(),
     });
@@ -62,12 +109,14 @@ export const updateUser = mutation({
     email: v.optional(v.string()),
     role: v.optional(v.string()),
     image: v.optional(v.string()),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const { id, role, ...updates } = args;
+    const { id, role, companyId, ...updates } = args;
     await ctx.db.patch(id, {
       ...updates,
-      ...(role !== undefined && { role: role as "USER" | "ADMIN" })
+      ...(role !== undefined && { role: role as "USER" | "ADMIN" | "SUPER_ADMIN" }),
+      ...(companyId !== undefined && { companyId })
     });
     return id;
   },
@@ -137,6 +186,34 @@ export const getLogins = query({
     return await ctx.db
       .query("logins")
       .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  }
+});
+
+export const getUserLogins = query({
+  args: { 
+    userId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    // Basic verification
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+       return await ctx.db
+        .query("logins")
+        .withSearchIndex("search_device", (q) => 
+           q.search("device", args.searchTerm!).eq("userId", args.userId)
+        )
+        .paginate(args.paginationOpts);
+    }
+    
+    return await ctx.db
+      .query("logins")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
       .paginate(args.paginationOpts);
   }

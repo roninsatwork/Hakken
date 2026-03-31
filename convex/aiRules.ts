@@ -31,9 +31,9 @@ export const seedPricingRule = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Acquire a valid admin ID to satisfy schema constraints
-    const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "ADMIN")).first();
+    const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "SUPER_ADMIN")).first();
     
-    if (!adminUser) throw new Error("No administrators found in system.");
+    if (!adminUser) throw new Error("No super administrators found in system.");
 
     return await ctx.db.insert("aiRules", {
       trigger: "pricing, cost, how much does it cost, subscription",
@@ -70,7 +70,7 @@ export const createRule = mutation({
 
     // Secure Gate: Verify Admin status
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "SUPER_ADMIN") {
         throw new Error("Unauthorized: System Protocol creation requires Administrator clearance.");
     }
 
@@ -98,7 +98,7 @@ export const updateRule = mutation({
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "SUPER_ADMIN") {
         throw new Error("Unauthorized: System Protocol modification requires Administrator clearance.");
     }
 
@@ -123,7 +123,7 @@ export const toggleRuleActive = mutation({
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "SUPER_ADMIN") {
         throw new Error("Unauthorized.");
     }
 
@@ -139,7 +139,7 @@ export const deleteRule = mutation({
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") {
+    if (user?.role !== "SUPER_ADMIN") {
         throw new Error("Unauthorized: Sonae architectural deletion prevented.");
     }
 

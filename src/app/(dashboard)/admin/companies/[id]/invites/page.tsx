@@ -6,14 +6,15 @@ import { api } from "@/convex/_generated/api";
 import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, Eye, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
+import { useParams } from "next/navigation";
+
 export default function InviteUsersPage() {
+  const params = useParams();
+  const companyId = params.id as Id<"companies">;
+
   const activeTemplate = useQuery(api.invites.getActiveTemplate);
   const saveTemplate = useMutation(api.invites.saveTemplate);
   const dispatchInvite = useAction(api.invites.dispatchInviteEmail);
-
-  const user = useQuery(api.users.getMe);
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -23,7 +24,6 @@ export default function InviteUsersPage() {
   });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"USER" | "ADMIN" | "SUPER_ADMIN">("USER");
-  const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -65,7 +65,7 @@ export default function InviteUsersPage() {
       await dispatchInvite({
          email: inviteEmail,
          role: inviteRole,
-         companyId: isSuperAdmin && inviteCompanyId ? (inviteCompanyId as Id<"companies">) : undefined,
+         companyId,
          template: formData,
       });
       setSendSuccess(true);
@@ -147,27 +147,11 @@ export default function InviteUsersPage() {
                       onClick={() => setInviteRole("ADMIN")}
                       className={`flex items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium border transition-all h-full ${inviteRole === "ADMIN" ? "bg-brand/20 border-brand/30 text-brand" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
                     >
-                      <ShieldCheck className="w-4 h-4" /> System Admin
+                      <ShieldCheck className="w-4 h-4" /> Company Admin
                     </button>
-                 </div>
+                  </div>
                </div>
              </div>
-             
-             {isSuperAdmin && (
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Target Company</label>
-                <select
-                   value={inviteCompanyId}
-                   onChange={e => setInviteCompanyId(e.target.value)}
-                   className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all appearance-none"
-                >
-                   <option value="">No Company (System Level)</option>
-                   {companies.map((c: any) => (
-                     <option key={c._id} value={c._id}>{c.name}</option>
-                   ))}
-                </select>
-              </div>
-             )}
           </div>
 
           {/* STEP 2: PAYLOAD & TEMPLATE */}

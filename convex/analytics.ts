@@ -18,7 +18,7 @@ export const getGlobalAICosts = query({
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized AI Logistics query");
     const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "ADMIN") throw new Error("Unauthorized");
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
     // 1. Establish Temporal Boundaries
     const now = Date.now();
@@ -133,7 +133,7 @@ export const getPlatformOverview = query({
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "ADMIN") throw new Error("Unauthorized");
+    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
     // 2. Base Structural Telemetry
     const users = await ctx.db.query("users").collect();
@@ -216,6 +216,85 @@ export const getPlatformOverview = query({
        cost30DGBP: Number(cost30DGBP.toFixed(5)),
        costPerActiveUserGBP: Number(costPerActiveUserGBP.toFixed(5)),
        topUsers
+    };
+  }
+});
+
+export const getUserCostOverview = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // 1. Authorization Check
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthorized");
+    const admin = await ctx.db.get(adminId);
+    if (!admin) throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) throw new Error("User not found");
+
+    if (admin.role !== "SUPER_ADMIN") {
+       if (admin.role !== "ADMIN" || admin.companyId !== targetUser.companyId || !admin.companyId) {
+          throw new Error("Unauthorized: Company Admin clearance required.");
+       }
+    }
+
+    // 2. Fetch User Threads
+    const threads = await ctx.db
+      .query("threads")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    let totalCostUSD = 0;
+    let totalTokens = 0;
+
+    const enrichedThreads = await Promise.all(
+      threads.map(async (thread) => {
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+          .collect();
+          
+        let threadCostUSD = 0;
+        let threadTokens = 0;
+        let messageCount = messages.length;
+
+        messages.filter(m => m.role === "assistant").forEach(msg => {
+          const inputs = msg.inputTokens || 0;
+          const outputs = msg.outputTokens || 0;
+          const model = msg.modelUsed || "gemini-1.5-flash";
+
+          let msgCost = 0;
+          if (model.includes("pro")) {
+            msgCost += (inputs / 1000000) * 3.50;
+            msgCost += (outputs / 1000000) * 10.50;
+          } else {
+            msgCost += (inputs / 1000000) * 0.075;
+            msgCost += (outputs / 1000000) * 0.30;
+          }
+
+          threadCostUSD += msgCost;
+          threadTokens += (inputs + outputs);
+        });
+
+        totalCostUSD += threadCostUSD;
+        totalTokens += threadTokens;
+
+        return {
+          threadId: thread._id,
+          title: thread.title || "Untitled Conversation",
+          createdAt: thread.createdAt,
+          messageCount,
+          threadTokens,
+          costGBP: threadCostUSD * 0.78
+        };
+      })
+    );
+
+    return {
+      totalCostGBP: Number((totalCostUSD * 0.78).toFixed(6)),
+      totalTokens,
+      threads: enrichedThreads.sort((a, b) => b.createdAt - a.createdAt)
     };
   }
 });

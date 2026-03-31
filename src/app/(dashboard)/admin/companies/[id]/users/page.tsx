@@ -17,16 +17,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { useParams } from "next/navigation";
 
-export default function ManageUsersPage() {
+export default function CompanyUsersPage() {
+  const params = useParams();
+  const companyId = params.id as Id<"companies">;
+
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const companies = useQuery(api.companies.getCompanies) || [];
 
   const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || "System Level";
 
-  const users = useQuery(api.users.getAllUsers) || [];
-  const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
+  const users = useQuery(api.users.getUsersByCompany, { companyId }) || [];
+  const pendingInvites = useQuery(api.invites.getInvitesByCompany, { companyId }) || [];
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
   const addUser = useMutation(api.users.addUser);
@@ -65,7 +69,7 @@ export default function ManageUsersPage() {
     e.preventDefault();
     const payload = {
       ...formData,
-      companyId: isSuperAdmin && formData.companyId ? (formData.companyId as Id<"companies">) : undefined
+      companyId
     };
     if (editingUser) {
       await updateUser({ id: editingUser._id, ...payload });
@@ -96,13 +100,13 @@ export default function ManageUsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Users className="w-6 h-6 text-brand" />
-            User Management
+            Workspace Directory
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
+          <p className="text-[13px] text-secondary mt-1">Manage users strictly assigned to this tenant isolation.</p>
         </div>
         
         <Link 
-          href="/admin/users/invite"
+          href={`/admin/companies/${companyId}/invites`}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
@@ -131,7 +135,6 @@ export default function ManageUsersPage() {
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-4 py-3 font-medium">User</th>
-                {isSuperAdmin && <th className="px-4 py-3 font-medium">Workspace</th>}
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Joined</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -141,7 +144,7 @@ export default function ManageUsersPage() {
               <AnimatePresence>
                 {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
-                    <td colSpan={isSuperAdmin ? 5 : 4} className="px-6 py-12 text-center text-secondary">
+                    <td colSpan={4} className="px-6 py-12 text-center text-secondary">
                       No users or pending invitations found matching your search.
                     </td>
                   </tr>
@@ -175,11 +178,6 @@ export default function ManageUsersPage() {
                             </span>
                           </div>
                         </td>
-                        {isSuperAdmin && (
-                          <td className="px-4 py-3">
-                            <span className="text-[12px] text-secondary">{inv.companyId ? getCompanyName(inv.companyId) : "System Level (Unassigned)"}</span>
-                          </td>
-                        )}
                         <td className="px-4 py-3 text-[12px] text-secondary">
                           {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
                         </td>
@@ -225,11 +223,6 @@ export default function ManageUsersPage() {
                             </span>
                           </div>
                         </td>
-                        {isSuperAdmin && (
-                          <td className="px-4 py-2.5">
-                            <span className="text-[12px] text-secondary">{user.companyId ? getCompanyName(user.companyId) : "Sonae Global"}</span>
-                          </td>
-                        )}
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
@@ -297,25 +290,8 @@ export default function ManageUsersPage() {
             >
               <option value="USER">User (Read-only)</option>
               <option value="ADMIN">Company Administrator</option>
-              {isSuperAdmin && <option value="SUPER_ADMIN">Global Super Admin</option>}
             </select>
           </div>
-
-          {isSuperAdmin && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Workspace Assignment</label>
-              <select 
-                value={formData.companyId}
-                onChange={e => setFormData({...formData, companyId: e.target.value})}
-                className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="">System Level (No Workspace)</option>
-                {companies.map((c: any) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
 
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>

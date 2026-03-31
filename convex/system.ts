@@ -43,8 +43,8 @@ export const updateSystemPrompt = mutation({
 
     // Role verification: Ensure only ADMIN can edit core system protocols
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") {
-        throw new Error("Unauthorized: System Protocol modifications require Administrator clearance.");
+    if (user?.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized: System Protocol modifications require Super Administrator clearance.");
     }
 
     const existingConfig = await ctx.db

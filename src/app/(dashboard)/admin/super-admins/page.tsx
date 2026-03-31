@@ -18,14 +18,15 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 
-export default function ManageUsersPage() {
+export default function ManageSuperAdminsPage() {
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
+  
+  if (!isSuperAdmin) {
+    return <div className="p-8 text-secondary">Unauthorized area.</div>;
+  }
 
-  const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || "System Level";
-
-  const users = useQuery(api.users.getAllUsers) || [];
+  const users = useQuery(api.users.getSuperAdmins) || [];
   const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
@@ -38,7 +39,7 @@ export default function ManageUsersPage() {
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
 
   const filteredUsers = users.filter((u: any) => 
     (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -50,27 +51,23 @@ export default function ManageUsersPage() {
   );
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", email: "", role: "USER", image: "", companyId: "" });
+    setFormData({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
     setEditingUser(null);
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
+    setFormData({ name: user.name, email: user.email, role: "SUPER_ADMIN", image: user.image || "" });
     setEditingUser(user);
     setIsAddModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      ...formData,
-      companyId: isSuperAdmin && formData.companyId ? (formData.companyId as Id<"companies">) : undefined
-    };
     if (editingUser) {
-      await updateUser({ id: editingUser._id, ...payload });
+      await updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined });
     } else {
-      await addUser(payload);
+      await addUser({ ...formData, role: "SUPER_ADMIN", companyId: undefined });
     }
     setIsAddModalOpen(false);
   };
@@ -96,13 +93,13 @@ export default function ManageUsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Users className="w-6 h-6 text-brand" />
-            User Management
+            System Administrators
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
+          <p className="text-[13px] text-secondary mt-1">Manage all global Super Admin accounts with complete systemic control.</p>
         </div>
         
         <Link 
-          href="/admin/users/invite"
+          href="/admin/super-admins/invite"
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
@@ -130,10 +127,8 @@ export default function ManageUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">User</th>
-                {isSuperAdmin && <th className="px-4 py-3 font-medium">Workspace</th>}
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
+                <th className="px-4 py-3 font-medium">Global Administrator</th>
+                <th className="px-4 py-3 font-medium">Joined Date</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -141,7 +136,7 @@ export default function ManageUsersPage() {
               <AnimatePresence>
                 {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
-                    <td colSpan={isSuperAdmin ? 5 : 4} className="px-6 py-12 text-center text-secondary">
+                    <td colSpan={3} className="px-6 py-12 text-center text-secondary">
                       No users or pending invitations found matching your search.
                     </td>
                   </tr>
@@ -175,11 +170,6 @@ export default function ManageUsersPage() {
                             </span>
                           </div>
                         </td>
-                        {isSuperAdmin && (
-                          <td className="px-4 py-3">
-                            <span className="text-[12px] text-secondary">{inv.companyId ? getCompanyName(inv.companyId) : "System Level (Unassigned)"}</span>
-                          </td>
-                        )}
                         <td className="px-4 py-3 text-[12px] text-secondary">
                           {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
                         </td>
@@ -225,11 +215,6 @@ export default function ManageUsersPage() {
                             </span>
                           </div>
                         </td>
-                        {isSuperAdmin && (
-                          <td className="px-4 py-2.5">
-                            <span className="text-[12px] text-secondary">{user.companyId ? getCompanyName(user.companyId) : "Sonae Global"}</span>
-                          </td>
-                        )}
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
@@ -292,30 +277,12 @@ export default function ManageUsersPage() {
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
             <select 
               value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
+              disabled
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground outline-none text-sm appearance-none opacity-50 cursor-not-allowed"
             >
-              <option value="USER">User (Read-only)</option>
-              <option value="ADMIN">Company Administrator</option>
-              {isSuperAdmin && <option value="SUPER_ADMIN">Global Super Admin</option>}
+              <option value="SUPER_ADMIN">Global Super Admin</option>
             </select>
           </div>
-
-          {isSuperAdmin && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Workspace Assignment</label>
-              <select 
-                value={formData.companyId}
-                onChange={e => setFormData({...formData, companyId: e.target.value})}
-                className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
-              >
-                <option value="">System Level (No Workspace)</option>
-                {companies.map((c: any) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
 
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>

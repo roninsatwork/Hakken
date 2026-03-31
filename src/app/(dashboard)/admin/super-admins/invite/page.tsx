@@ -13,7 +13,10 @@ export default function InviteUsersPage() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
+  
+  if (!isSuperAdmin) {
+    return <div className="p-8 text-secondary">Unauthorized area.</div>;
+  }
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -22,8 +25,7 @@ export default function InviteUsersPage() {
     ctaText: "",
   });
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"USER" | "ADMIN" | "SUPER_ADMIN">("USER");
-  const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
+  const inviteRole = "SUPER_ADMIN";
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -64,8 +66,8 @@ export default function InviteUsersPage() {
     try {
       await dispatchInvite({
          email: inviteEmail,
-         role: inviteRole,
-         companyId: isSuperAdmin && inviteCompanyId ? (inviteCompanyId as Id<"companies">) : undefined,
+         role: "SUPER_ADMIN",
+         companyId: undefined,
          template: formData,
       });
       setSendSuccess(true);
@@ -94,11 +96,11 @@ export default function InviteUsersPage() {
         {/* Header */}
         <div className="flex flex-col gap-2 border-b border-border-dim/50 pb-6">
           <h1 className="text-[24px] font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Mail className="w-6 h-6 text-brand" />
-            Workspace Invitations
+            <ShieldCheck className="w-6 h-6 text-brand" />
+            Global Admin Invitations
           </h1>
           <p className="text-[14px] text-secondary max-w-xl leading-relaxed">
-            Configure premium onboarding emails and dispatch secure access tokens directly to new team members.
+            Dispatch secure access tokens directly to new global system administrators.
           </p>
         </div>
 
@@ -133,42 +135,19 @@ export default function InviteUsersPage() {
                </div>
 
                <div className="flex flex-col gap-2">
-                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Platform Role</label>
-                 <div className="grid grid-cols-2 gap-3 h-[46px]">
-                    <button 
-                      type="button"
-                      onClick={() => setInviteRole("USER")}
-                      className={`flex items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium border transition-all h-full ${inviteRole === "USER" ? "bg-foreground/10 border-foreground/20 text-foreground" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
-                    >
-                      <UserIcon className="w-4 h-4" /> Standard User
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => setInviteRole("ADMIN")}
-                      className={`flex items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium border transition-all h-full ${inviteRole === "ADMIN" ? "bg-brand/20 border-brand/30 text-brand" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
-                    >
-                      <ShieldCheck className="w-4 h-4" /> System Admin
-                    </button>
-                 </div>
-               </div>
-             </div>
-             
-             {isSuperAdmin && (
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Target Company</label>
-                <select
-                   value={inviteCompanyId}
-                   onChange={e => setInviteCompanyId(e.target.value)}
-                   className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all appearance-none"
-                >
-                   <option value="">No Company (System Level)</option>
-                   {companies.map((c: any) => (
-                     <option key={c._id} value={c._id}>{c.name}</option>
-                   ))}
-                </select>
+                  <label className="text-[11px] font-mono tracking-widest text-secondary uppercase z-10 flex items-center gap-2">
+                    System Role <ShieldCheck className="w-3.5 h-3.5 text-brand" />
+                  </label>
+                  <select 
+                    value={inviteRole}
+                    disabled
+                    className="px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-foreground outline-none text-[13px] opacity-50 cursor-not-allowed appearance-none relative z-10"
+                  >
+                    <option value="SUPER_ADMIN">Global Super Admin</option>
+                  </select>
+                </div>
               </div>
-             )}
-          </div>
+           </div>
 
           {/* STEP 2: PAYLOAD & TEMPLATE */}
           <div className="flex flex-col gap-6">

@@ -33,11 +33,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         .withIndex("email", (q: any) => q.eq("email", email))
         .first();
 
-      const isAdmin = email === "anthony@ronins.co.uk";
+      const isSuperAdmin = email === "anthony@ronins.co.uk";
 
       if (!existingUser) {
         // If not the hardcoded admin, check for pending invites!
-        if (!isAdmin) {
+        if (!isSuperAdmin) {
           const pendingInvite = await ctx.db
             .query("invitations")
             .withIndex("by_email", (q: any) => q.eq("email", email))
@@ -54,6 +54,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
             name,
             image,
             role: pendingInvite.role,
+            companyId: pendingInvite.companyId,
             createdAt: Date.now(),
           });
 
@@ -71,15 +72,15 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           email,
           name,
           image,
-          role: "ADMIN",
+          role: "SUPER_ADMIN",
           createdAt: Date.now(),
         });
       }
 
       // If user exists (was invited or registered before)
       // We update their profile details silently (from OAuth) but KEEP their role mapping
-      if (isAdmin && existingUser.role !== "ADMIN") {
-        await ctx.db.patch(existingUser._id, { role: "ADMIN" });
+      if (isSuperAdmin && existingUser.role !== "SUPER_ADMIN") {
+        await ctx.db.patch(existingUser._id, { role: "SUPER_ADMIN" });
       }
 
       return existingUser._id;

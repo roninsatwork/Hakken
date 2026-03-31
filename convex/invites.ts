@@ -44,7 +44,7 @@ export const saveTemplate = mutation({
     if (!userId) throw new Error("Unauthenticated");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") throw new Error("Unauthorized");
+    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
     let template = await ctx.db
       .query("emailTemplates")
@@ -74,10 +74,39 @@ export const getPendingInvites = query({
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
-    return await ctx.db
+    const user = await ctx.db.get(userId);
+    if (!user || !user.role || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+       throw new Error("Unauthorized");
+    }
+
+    const allInvites = await ctx.db
       .query("invitations")
       .order("desc")
-      .take(50);
+      .take(200); // Take more to allow filtering
+
+    if (user.role === "SUPER_ADMIN") return allInvites.slice(0, 50);
+    
+    return allInvites.filter(i => i.companyId === user.companyId).slice(0, 50);
+  },
+});
+
+export const getInvitesByCompany = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || (!["ADMIN", "SUPER_ADMIN"].includes(user.role ?? ""))) {
+       throw new Error("Unauthorized");
+    }
+
+    if (user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && user.companyId === args.companyId)) {
+        const allInvites = await ctx.db.query("invitations").order("desc").collect();
+        return allInvites.filter(i => i.companyId === args.companyId);
+    }
+
+    throw new Error("Unauthorized");
   },
 });
 
@@ -89,7 +118,16 @@ export const revokeInvite = mutation({
     if (!userId) throw new Error("Unauthenticated");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "ADMIN") throw new Error("Unauthorized");
+    if (!user || !user.role) throw new Error("Unauthorized");
+
+    const invite = await ctx.db.get(args.id);
+    if (!invite) throw new Error("Invite not found");
+
+    if (user.role !== "SUPER_ADMIN") {
+      if (user.role !== "ADMIN" || invite.companyId !== user.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
 
     await ctx.db.delete(args.id);
   },
@@ -99,7 +137,8 @@ export const revokeInvite = mutation({
 export const createInviteRecord = internalMutation({
   args: {
     email: v.string(),
-    role: v.union(v.literal("USER"), v.literal("ADMIN")),
+    companyId: v.optional(v.id("companies")),
+    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     token: v.string(),
   },
   handler: async (ctx, args) => {
@@ -124,6 +163,7 @@ export const createInviteRecord = internalMutation({
 
     await ctx.db.insert("invitations", {
       email,
+      companyId: args.companyId,
       role: args.role,
       status: "PENDING",
       token: args.token,
@@ -139,7 +179,8 @@ export const createInviteRecord = internalMutation({
 export const dispatchInviteEmail = action({
   args: {
     email: v.string(),
-    role: v.union(v.literal("USER"), v.literal("ADMIN")),
+    companyId: v.optional(v.id("companies")),
+    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     template: v.object({
       subject: v.string(),
       headline: v.string(),
@@ -187,7 +228,7 @@ export const dispatchInviteEmail = action({
     // Skip if API key missing (dev environment graceful degradation)
     if (!process.env.RESEND_API_KEY) {
        console.warn("No RESEND_API_KEY found. Mocking email dispatch successfully.", emailHtml);
-       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, role: args.role, token });
+       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token });
        return { success: true, simulated: true };
     }
 

@@ -4,6 +4,12 @@ import { v } from "convex/values";
 
 export default defineSchema({
   ...authTables,
+  
+  companies: defineTable({
+    name: v.string(),
+    logo: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_name", ["name"]),
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
@@ -13,7 +19,8 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     // Sonae Custom Fields
-    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"))),
+    companyId: v.optional(v.id("companies")),
+    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
   }).index("email", ["email"]),
@@ -34,7 +41,8 @@ export default defineSchema({
 
   invitations: defineTable({
     email: v.string(),
-    role: v.union(v.literal("USER"), v.literal("ADMIN")),
+    companyId: v.optional(v.id("companies")),
+    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     status: v.union(v.literal("PENDING"), v.literal("ACCEPTED"), v.literal("REVOKED")),
     token: v.string(),
     invitedBy: v.optional(v.id("users")),
@@ -75,6 +83,7 @@ export default defineSchema({
   // Sonae Assistant Tables
   threads: defineTable({
     userId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
     title: v.optional(v.string()), // Generated lazily after first exchange
     createdAt: v.number(),
     updatedAt: v.number(),
