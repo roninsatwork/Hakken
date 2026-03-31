@@ -8,6 +8,7 @@ export default defineSchema({
   companies: defineTable({
     name: v.string(),
     logo: v.optional(v.string()),
+    systemPrompt: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_name", ["name"]),
   
@@ -136,7 +137,7 @@ export default defineSchema({
   knowledgeDocuments: defineTable({
     title: v.string(),
     fileId: v.id("_storage"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     status: v.union(v.literal("processing"), v.literal("ready"), v.literal("failed")),
     format: v.string(),
     createdBy: v.id("users"),
@@ -146,7 +147,7 @@ export default defineSchema({
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({
     documentId: v.id("knowledgeDocuments"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     text: v.string(),
     embedding: v.array(v.number()),
   }).vectorIndex("by_embedding", {

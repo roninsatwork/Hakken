@@ -21,13 +21,26 @@ export const generateUploadUrl = mutation({
 
 export const getDocuments = query({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
+    
+    // Global Knowledge Check
+    if (!args.companyId) {
+      if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized access to global knowledge base");
+      }
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .filter(q => q.eq(q.field("companyId"), undefined))
+        .order("desc")
+        .collect();
+    }
+
     if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
         throw new Error("Unauthorized access to company knowledge base");
     }
@@ -43,7 +56,7 @@ export const getDocuments = query({
 export const saveDocument = mutation({
   args: {
     storageId: v.id("_storage"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     title: v.string(),
     format: v.string(),
   },
@@ -52,14 +65,21 @@ export const saveDocument = mutation({
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
-        throw new Error("Unauthorized");
+    
+    if (!args.companyId) {
+      if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized access to global knowledge base");
+      }
+    } else {
+      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
+          throw new Error("Unauthorized");
+      }
     }
 
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
       fileId: args.storageId,
-      companyId: args.companyId,
+      ...(args.companyId ? { companyId: args.companyId } : {}),
       status: "processing",
       format: args.format,
       createdBy: userId,
@@ -86,8 +106,15 @@ export const deleteDocument = mutation({
     if (!doc) throw new Error("Document not found");
 
     const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== doc.companyId)) {
-      throw new Error("Unauthorized");
+    
+    if (!doc.companyId) {
+       if (!user || user.role !== "SUPER_ADMIN") {
+         throw new Error("Unauthorized to delete global documents");
+       }
+    } else {
+       if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== doc.companyId)) {
+         throw new Error("Unauthorized");
+       }
     }
 
     // Attempt to delete from convex storage
@@ -122,7 +149,7 @@ export const getChunkInternal = internalQuery({
 export const saveChunksInternal = internalMutation({
   args: {
       documentId: v.id("knowledgeDocuments"),
-      companyId: v.id("companies"),
+      companyId: v.optional(v.id("companies")),
       chunks: v.array(v.object({
           text: v.string(),
           embedding: v.array(v.number()),
@@ -132,7 +159,7 @@ export const saveChunksInternal = internalMutation({
       for (const chunk of args.chunks) {
          await ctx.db.insert("knowledgeChunks", {
              documentId: args.documentId,
-             companyId: args.companyId,
+             ...(args.companyId ? { companyId: args.companyId } : {}),
              text: chunk.text,
              embedding: chunk.embedding,
          });

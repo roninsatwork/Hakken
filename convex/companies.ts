@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { cascadeDeleteUserAction } from "./users";
 
@@ -46,6 +46,13 @@ export const getCompanyById = query({
        throw new Error("Unauthorized");
     }
 
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getCompanyByIdInternal = internalQuery({
+  args: { id: v.id("companies") },
+  handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
   },
 });
@@ -119,5 +126,21 @@ export const deleteCompany = mutation({
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
     return true;
+  },
+});
+
+export const updateCompanyPrompt = mutation({
+  args: { id: v.id("companies"), systemPrompt: v.string() },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthenticated Admin Request");
+
+    const admin = await ctx.db.get(adminId);
+    if (!admin || admin.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized: System level clearance required.");
+    }
+
+    await ctx.db.patch(args.id, { systemPrompt: args.systemPrompt });
+    return args.id;
   },
 });

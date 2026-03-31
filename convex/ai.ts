@@ -59,15 +59,20 @@ export const generateSonaeResponse = internalAction({
 
         // Dynamically extract the live Administrator protocol rulebook
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
-        const [customPrompt, customRules] = await Promise.all([
+        const [customPrompt, customRules, company] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
-            ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId })
+            ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
+            thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null)
         ]);
         
         // Failsafe string array if the database table runs empty or is corrupted
         const fallbackSystemPrompt = "You are Sonae Assistant. You are a highly intelligent, premium AI embedded in the Sonae productivity dashboard.\nYou are concise, highly analytical, and maintain a starkly elegant tone. Do NOT use emojis.\nNever hallucinate system capabilities you do not have. Answer formatting should use markdown for readability.";
         
         let activeSystemInstruction = (customPrompt && customPrompt.trim().length > 0) ? customPrompt : fallbackSystemPrompt;
+
+        if (company && company.systemPrompt && company.systemPrompt.trim().length > 0) {
+            activeSystemInstruction += `\n\n====================\nTENANT (COMPANY) SPECIFIC BEHAVIORAL INSTRUCTIONS:\n\n${company.systemPrompt}`;
+        }
 
         // Compile explicit logic branches if any are flagged active in the DB
         if (customRules && customRules.length > 0) {
@@ -77,37 +82,47 @@ export const generateSonaeResponse = internalAction({
 
         // --- RAG VECTOR SEARCH PIPELINE ---
         let ragContext = "";
-        if (thread?.companyId) {
-            try {
-                // We reuse the existing `ai` client which is initialized above
-                const userEmbeddingResp = await ai.models.embedContent({
-                    model: "text-embedding-004",
-                    contents: args.content
-                });
-                
-                const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
-                
-                if (queryVector && queryVector.length === 768) {
-                    const results = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+        
+        try {
+            const userEmbeddingResp = await ai.models.embedContent({
+                model: "text-embedding-004",
+                contents: args.content
+            });
+            
+            const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
+            
+            if (queryVector && queryVector.length === 768) {
+                // Execute dual-vector RAG search
+                const [companyChunks, globalChunks] = await Promise.all([
+                    thread?.companyId 
+                      ? ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                          vector: queryVector as number[],
+                          limit: 50,
+                          filter: (q) => q.eq("companyId", thread.companyId!)
+                      })
+                      : Promise.resolve([]),
+                    ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                         vector: queryVector as number[],
-                        limit: 100, // Maximized vector recall logic: Gemini 1.5 handles 2M tokens. Let it ingest the whole DB.
-                        filter: (q) => q.eq("companyId", thread.companyId!)
-                    });
-                    
-                    if (results.length > 0) {
-                        ragContext = "\n\n====================\n[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]\nBelow is raw context retrieved from the company's private documents. You MUST use this data to answer the user's prompt. If answering a question about features or capabilities, be EXHAUSTIVE and list EVERY detail found here. DO NOT summarize broadly; extract specific bullet points and data.\n\n<context_data>\n";
-                        for (const res of results) {
-                           const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
-                           if (chunk) {
-                              ragContext += `---\n${chunk.text}\n`;
-                           }
-                        }
-                        ragContext += "</context_data>\n====================\n";
+                        limit: 50,
+                        filter: (q) => q.eq("companyId", undefined)
+                    })
+                ]);
+                
+                const allChunks = [...globalChunks, ...companyChunks];
+                
+                if (allChunks.length > 0) {
+                    ragContext = "\n\n====================\n[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]\nBelow is raw context retrieved from the global system and the company's private documents. You MUST use this data to answer the user's prompt. Be EXHAUSTIVE and list EVERY detail found here. DO NOT summarize broadly; extract specific bullet points and data.\n\n<context_data>\n";
+                    for (const res of allChunks) {
+                       const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
+                       if (chunk) {
+                          ragContext += `---\n${chunk.text}\n`;
+                       }
                     }
+                    ragContext += "</context_data>\n====================\n";
                 }
-            } catch (e) {
-                console.error("RAG pipeline failed to execute", e);
             }
+        } catch (e) {
+            console.error("RAG pipeline failed to execute", e);
         }
 
         // Clean prompt construction (isolated from logic rules)

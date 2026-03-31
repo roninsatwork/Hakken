@@ -213,7 +213,7 @@ export default function ChatLogsDashboard() {
                            initial={{ opacity: 0, y: 10 }}
                            animate={{ opacity: 1, y: 0 }}
                            key={message._id}
-                           className={`flex flex-col gap-2 max-w-[85%] ${isUser ? "self-end" : "self-start"}`}
+                           className={`flex flex-col gap-2 ${isUser ? "max-w-[85%] self-end" : "w-full self-start"}`}
                          >
                            {/* Log Signature */}
                            <div className={`flex items-center gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -221,14 +221,18 @@ export default function ChatLogsDashboard() {
                                 <img 
                                   src={activeThread?.user?.image || "https://api.dicebear.com/7.x/notionists/svg"} 
                                   className="w-6 h-6 rounded-full border border-border-dim object-cover shrink-0" 
+                                  alt="User"
                                 />
                               ) : (
                                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand/10 border border-brand/20 text-[10px]">
                                   <Bot className="w-3 h-3 text-brand" />
                                 </span>
                               )}
-                              <span className="text-[11px] font-bold uppercase tracking-widest text-muted">
+                              <span className="text-[11px] font-bold uppercase tracking-widest text-muted flex items-center gap-2">
                                 {isUser ? (activeThread?.user?.name || "User") : "Sonae"}
+                                <span className="text-[9px] text-muted/60 font-mono tracking-wider ordinal lowercase">
+                                  {new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(message._creationTime))}
+                                </span>
                               </span>
                            </div>
 
