@@ -269,31 +269,17 @@ export default function SidebarNavigation() {
                     />
                     
                     {isSuperAdmin && (
-                      <>
-                        <NavItem 
-                          icon={Building2} 
-                          label="Companies" 
-                          isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
-                          onClick={() => setActiveItem('Companies')}
-                          hasChildren 
-                          isOpen={openSections.companies}
-                          onToggle={() => toggleSection('companies')}
-                        >
-                          <SubNavItem label="Manage Companies" href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
-                        </NavItem>
-                        <NavItem 
-                          icon={ShieldCheck} 
-                          label="System Admins" 
-                          isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
-                          onClick={() => setActiveItem('System Admins')}
-                          hasChildren 
-                          isOpen={openSections.superAdmins}
-                          onToggle={() => toggleSection('superAdmins')}
-                        >
-                          <SubNavItem label="System Admins" href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
-                          <SubNavItem label="Invitations" href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
-                        </NavItem>
-                      </>
+                      <NavItem 
+                        icon={Building2} 
+                        label="Companies" 
+                        isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
+                        onClick={() => setActiveItem('Companies')}
+                        hasChildren 
+                        isOpen={openSections.companies}
+                        onToggle={() => toggleSection('companies')}
+                      >
+                        <SubNavItem label="Manage Companies" href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+                      </NavItem>
                     )}
                     
                     <NavItem 
@@ -332,17 +318,32 @@ export default function SidebarNavigation() {
                     )}
 
                     {isSuperAdmin && (
-                      <NavItem 
-                        icon={Settings} 
-                        label="Settings" 
-                        isActive={activeItem === 'Settings'}
-                        onClick={() => setActiveItem('Settings')}
-                        hasChildren 
-                        isOpen={openSections.settings}
-                        onToggle={() => toggleSection('settings')}
-                      >
-                        <SubNavItem label="System Settings" href="/admin/settings" isActive={activeItem === 'System Settings' || pathname.startsWith('/admin/settings')} onClick={() => setActiveItem('System Settings')} />
-                      </NavItem>
+                      <>
+                        <NavItem 
+                          icon={ShieldCheck} 
+                          label="System Admins" 
+                          isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
+                          onClick={() => setActiveItem('System Admins')}
+                          hasChildren 
+                          isOpen={openSections.superAdmins}
+                          onToggle={() => toggleSection('superAdmins')}
+                        >
+                          <SubNavItem label="System Admins" href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label="Invitations" href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
+                        </NavItem>
+                        
+                        <NavItem 
+                          icon={Settings} 
+                          label="Settings" 
+                          isActive={activeItem === 'Settings'}
+                          onClick={() => setActiveItem('Settings')}
+                          hasChildren 
+                          isOpen={openSections.settings}
+                          onToggle={() => toggleSection('settings')}
+                        >
+                          <SubNavItem label="System Settings" href="/admin/settings" isActive={activeItem === 'System Settings' || pathname.startsWith('/admin/settings')} onClick={() => setActiveItem('System Settings')} />
+                        </NavItem>
+                      </>
                     )}
                   </>
                 ) : (
