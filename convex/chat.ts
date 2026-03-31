@@ -52,6 +52,13 @@ export const getMessagesForAI = internalQuery({
   },
 });
 
+export const getThreadInternal = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.threadId);
+  },
+});
+
 export const createThread = mutation({
   args: {},
   handler: async (ctx) => {
@@ -59,11 +66,14 @@ export const createThread = mutation({
     if (!userId) {
       throw new Error("Unauthorized");
     }
+    
+    const user = await ctx.db.get(userId);
 
     const now = Date.now();
     
     const threadId = await ctx.db.insert("threads", {
       userId,
+      companyId: user?.companyId,
       title: "New Conversation",
       createdAt: now,
       updatedAt: now,
@@ -109,6 +119,14 @@ export const sendMessage = mutation({
       content: args.content,
       modelId: args.modelId,
     });
+
+    // 4. If this is exactly "New Conversation", asynchronously spawn a title generator
+    if (thread.title === "New Conversation") {
+      await ctx.scheduler.runAfter(0, internal.ai.generateThreadTitle, {
+        threadId: args.threadId,
+        content: args.content,
+      });
+    }
 
     return true;
   },
@@ -179,6 +197,22 @@ export const renameThread = mutation({
       throw new Error("Unauthorized");
     }
 
+    await ctx.db.patch(args.threadId, {
+      title: args.title.trim() === "" ? "Untitled Conversation" : args.title.trim(),
+      updatedAt: Date.now(),
+    });
+
+    return true;
+  },
+});
+
+export const renameThreadInternal = internalMutation({
+  args: {
+    threadId: v.id("threads"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Internal mutations bypass the Edge auth layer, so no user validation is required
     await ctx.db.patch(args.threadId, {
       title: args.title.trim() === "" ? "Untitled Conversation" : args.title.trim(),
       updatedAt: Date.now(),

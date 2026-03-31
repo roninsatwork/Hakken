@@ -53,14 +53,21 @@ export default function ChatHistoryList() {
     <div className="flex flex-col h-full overflow-hidden w-full">
       
       {/* Header Array */}
-      <div className="flex flex-col gap-4 mb-5 px-1">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 mb-5 px-1 relative z-50">
+        <div className="flex items-center justify-between relative z-[60]">
           <span className="text-[11px] font-medium text-secondary tracking-[0.2em] uppercase">History</span>
           <Link 
             href="/app/assistant"
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-foreground text-background hover:scale-105 hover:shadow-brand/20 transition-all shadow-md active:scale-95"
+            className="group relative w-7 h-7 flex items-center justify-center rounded-full bg-foreground text-background hover:scale-105 hover:shadow-brand/20 transition-all shadow-md active:scale-95"
           >
             <Plus className="w-4 h-4" />
+            
+            {/* Tooltip */}
+            <div className="absolute top-full mt-2 right-0 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-[100] translate-y-2 group-hover:translate-y-0">
+              <div className="bg-card dark:bg-[#1a1a1c] border border-border-dim text-[11px] font-medium text-foreground px-3 py-1.5 rounded-[8px] whitespace-nowrap shadow-xl">
+                New Conversation
+              </div>
+            </div>
           </Link>
         </div>
         

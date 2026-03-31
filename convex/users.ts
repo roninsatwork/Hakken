@@ -265,7 +265,23 @@ export const recordLogin = mutation({
       ip: args.ip,
       location: args.location,
       status: "SUCCESS",
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
+  }
+});
+
+export const impersonateCompany = mutation({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+    
+    const caller = await ctx.db.get(userId);
+    if (!caller || caller.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Only super admins can impersonate tenants");
+    }
+
+    await ctx.db.patch(userId, { companyId: args.companyId });
+    return true;
   }
 });

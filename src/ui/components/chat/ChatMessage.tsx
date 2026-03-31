@@ -37,7 +37,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             : "bg-card dark:bg-[#252528] text-foreground/90 dark:text-white/90 border border-border-dim dark:border-white/5 rounded-tr-[4px] shadow-xl dark:shadow-black/20"
         }`}
       >
-        <div className={`${isAssistant ? "" : "whitespace-pre-wrap text-[15px] leading-relaxed font-light tracking-wide"}`}>
+        <div className={`text-[14px] leading-[1.7] font-light tracking-wide ${isAssistant ? "" : "whitespace-pre-wrap"}`}>
           {isAssistant ? <SonaeMarkdown content={message.content} /> : message.content}
         </div>
         

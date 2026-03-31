@@ -20,7 +20,7 @@ import { motion } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 export default function RulesDashboard() {
-  const rules = useQuery(api.aiRules.getRules);
+  const rules = useQuery(api.aiRules.getRules, {});
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
 

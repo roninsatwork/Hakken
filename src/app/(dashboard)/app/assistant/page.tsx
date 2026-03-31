@@ -257,7 +257,7 @@ export default function AssistantWelcomePage() {
           </form>
 
           {/* Footer Legal Copy */}
-          <div className="absolute bottom-6 z-10 opacity-70 w-full text-center px-4">
+          <div className="mt-4 z-10 opacity-70 w-full text-center px-4">
             <span className="text-[12px] text-muted font-light leading-relaxed">
               {settings.platformName} Assistant is AI and can make mistakes, please check all responses.
             </span>

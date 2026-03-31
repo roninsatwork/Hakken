@@ -18,12 +18,12 @@ export function SonaeMarkdown({ content }: SonaeMarkdownProps) {
         ),
         strong: ({ node, ...props }) => <strong className="font-semibold text-foreground tracking-wide" {...props} />,
         em: ({ node, ...props }) => <em className="italic opacity-80" {...props} />,
-        h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-foreground mb-3 tracking-tight" {...props} />,
-        h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-foreground mb-2 tracking-tight mt-5" {...props} />,
-        h3: ({ node, ...props }) => <h3 className="text-base font-semibold text-foreground mb-2 tracking-wide mt-3" {...props} />,
+        h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-foreground mb-3 tracking-tight" {...props} />,
+        h2: ({ node, ...props }) => <h2 className="text-base font-bold text-foreground mb-2 tracking-tight mt-5" {...props} />,
+        h3: ({ node, ...props }) => <h3 className="text-[14px] font-semibold text-foreground mb-2 tracking-wide mt-3" {...props} />,
         ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-3 space-y-2.5 marker:text-brand marker:opacity-80" {...props} />,
         ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-3 space-y-2.5 marker:text-brand marker:opacity-80" {...props} />,
-        li: ({ node, ...props }) => <li className="text-[14px] leading-[1.6] text-secondary [&>p]:mb-0" {...props} />,
+        li: ({ node, ...props }) => <li className="text-[14px] leading-[1.7] text-secondary [&>p]:mb-0" {...props} />,
         blockquote: ({ node, ...props }) => (
           <blockquote className="border-l-2 border-brand/50 pl-4 py-1 mb-4 italic text-muted bg-foreground/5 rounded-r-[8px]" {...props} />
         ),

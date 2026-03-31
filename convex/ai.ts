@@ -58,9 +58,10 @@ export const generateSonaeResponse = internalAction({
         });
 
         // Dynamically extract the live Administrator protocol rulebook
+        const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         const [customPrompt, customRules] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
-            ctx.runQuery(internal.aiRules.getActiveRulesInternal)
+            ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId })
         ]);
         
         // Failsafe string array if the database table runs empty or is corrupted
@@ -72,6 +73,44 @@ export const generateSonaeResponse = internalAction({
         if (customRules && customRules.length > 0) {
             const compiledRules = customRules.map((r: any) => `[PRIORITY: ${r.priority}]\nIF USER ASKS OR MENTIONS: ${r.trigger}\nTHEN YOU MUST: ${r.instruction}`).join("\n\n---\n\n");
             activeSystemInstruction += `\n\n====================\nCRITICAL BEHAVIORAL OVERRIDES (STRICTLY OBEY THE FOLLOWING RULES WHEN REGIONALLY APPLICABLE):\n\n${compiledRules}`;
+        }
+
+        // --- RAG VECTOR SEARCH PIPELINE ---
+        let ragContext = "";
+        if (thread?.companyId) {
+            try {
+                // We reuse the existing `ai` client which is initialized above
+                const userEmbeddingResp = await ai.models.embedContent({
+                    model: "text-embedding-004",
+                    contents: args.content
+                });
+                
+                const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
+                
+                if (queryVector && queryVector.length === 768) {
+                    const results = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                        vector: queryVector as number[],
+                        limit: 3,
+                        filter: (q) => q.eq("companyId", thread.companyId!)
+                    });
+                    
+                    if (results.length > 0) {
+                        ragContext = "\n\n====================\nCOMPANY KNOWLEDGE BASE CONTEXT (USE THIS FACTUAL DATA TO INFORM YOUR ANSWER IF IT RELATES TO THE QUESTION):\n";
+                        for (const res of results) {
+                           const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
+                           if (chunk) {
+                              ragContext += `\n[Context Fragment]: ${chunk.text}\n`;
+                           }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("RAG pipeline failed to execute", e);
+            }
+        }
+
+        if (ragContext) {
+            activeSystemInstruction += ragContext;
         }
 
         // Clean prompt construction (isolated from logic rules)
@@ -145,6 +184,50 @@ export const transcribeAudio = action({
     } catch (error) {
         console.error("Vertex AI Transcription Error:", error);
         throw new Error("Failed to transcribe audio stream properly.");
+    }
+  }
+});
+
+export const generateThreadTitle = internalAction({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    
+    const ai = new GoogleGenAI({ 
+      project: projectId, 
+      location: location,
+      vertexai: true,
+      googleAuthOptions: {
+        credentials: {
+          client_email: process.env.GOOGLE_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }
+      }
+    });
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite-preview",
+        contents: `User Message: "${args.content}"`,
+        config: {
+          systemInstruction: "You are a professional assistant. Generate a concise, 3-to-4 word description of the user's message. Use standard Title Case. Do not include quotes, periods, or other punctuation. Your output must ONLY be the title.",
+          temperature: 0.2,
+        }
+      });
+
+      const title = response.text?.trim().replace(/^["']|["']$/g, '');
+      if (title && title.length > 0) {
+        await ctx.runMutation(internal.chat.renameThreadInternal, {
+          threadId: args.threadId,
+          title: title
+        });
+      }
+    } catch (error) {
+      console.error("Failed to generate thread title:", error);
     }
   }
 });

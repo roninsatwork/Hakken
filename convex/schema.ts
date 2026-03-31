@@ -121,13 +121,39 @@ export default defineSchema({
 
   // AI Rule Engine (Triggers & Logic Processing)
   aiRules: defineTable({
+    companyId: v.optional(v.id("companies")),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
     isActive: v.boolean(),
     createdBy: v.id("users"),
     createdAt: v.number(),
-  }).index("by_active", ["isActive", "createdAt"]),
+  })
+    .index("by_active", ["isActive", "createdAt"])
+    .index("by_company_active", ["companyId", "isActive"]),
+
+  // Knowledge Base Vector Engine & Document Storage
+  knowledgeDocuments: defineTable({
+    title: v.string(),
+    fileId: v.id("_storage"),
+    companyId: v.id("companies"),
+    status: v.union(v.literal("processing"), v.literal("ready"), v.literal("failed")),
+    format: v.string(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_company", ["companyId", "createdAt"]),
+
+  // Knowledge Base Vector Store
+  knowledgeChunks: defineTable({
+    documentId: v.id("knowledgeDocuments"),
+    companyId: v.id("companies"),
+    text: v.string(),
+    embedding: v.array(v.number()),
+  }).vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
+    filterFields: ["companyId", "documentId"],
+  }),
 
   // Sonae Assistant Tables
   threads: defineTable({
