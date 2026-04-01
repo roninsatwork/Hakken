@@ -120,9 +120,40 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
 
+  // AI Agent Usage Billing & Activity Logs
+  agentTransactions: defineTable({
+    agentId: v.id("agents"),
+    threadId: v.optional(v.id("threads")),
+    userId: v.id("users"), // The user who triggered the agent
+    companyId: v.optional(v.id("companies")), // Tenant context
+    actionContext: v.string(), // e.g. "Chat Completion", "Email Draft", "Summarization"
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    modelUsed: v.string(),
+    costGBP: v.number(), // Processed cost for this transaction
+    status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
+    createdAt: v.number(),
+  }).index("by_agent", ["agentId", "createdAt"]),
+
+  // Agent Raw Debug Logs (Execution Payload Storage)
+  agentLogs: defineTable({
+    agentId: v.id("agents"),
+    threadId: v.optional(v.id("threads")),
+    interactionType: v.string(), // "Tool Execution", "Generation", "Error"
+    promptContent: v.string(), // What the Agent was sent
+    responseContent: v.string(), // What the Agent replied or did
+    createdAt: v.number(),
+  })
+    .index("by_agent", ["agentId", "createdAt"])
+    .searchIndex("search_content", {
+      searchField: "promptContent",
+      filterFields: ["agentId"]
+    }),
+
   // AI Rule Engine (Triggers & Logic Processing)
   aiRules: defineTable({
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")), // Link for agent-specific logic
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -131,36 +162,41 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_active", ["isActive", "createdAt"])
-    .index("by_company_active", ["companyId", "isActive"]),
+    .index("by_company_active", ["companyId", "isActive"])
+    .index("by_agent", ["agentId", "createdAt"]),
 
   // Knowledge Base Vector Engine & Document Storage
   knowledgeDocuments: defineTable({
     title: v.string(),
     fileId: v.id("_storage"),
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
     status: v.union(v.literal("processing"), v.literal("ready"), v.literal("failed")),
     format: v.string(),
     createdBy: v.id("users"),
     createdAt: v.number(),
-  }).index("by_company", ["companyId", "createdAt"]),
+  }).index("by_company", ["companyId", "createdAt"])
+    .index("by_agent", ["agentId", "createdAt"]),
 
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({
     documentId: v.id("knowledgeDocuments"),
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
     isGlobal: v.boolean(),
     text: v.string(),
     embedding: v.array(v.number()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
     dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
-    filterFields: ["companyId", "documentId", "isGlobal"],
+    filterFields: ["companyId", "agentId", "documentId", "isGlobal"],
   }),
 
   // Sonae Assistant Tables
   threads: defineTable({
     userId: v.id("users"),
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")), // Sandbox tracking
     title: v.optional(v.string()), // Generated lazily after first exchange
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -176,4 +212,48 @@ export default defineSchema({
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string())
   }).index("by_thread", ["threadId", "createdAt"]),
+
+  // Agent Orchestration Engine
+  agents: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    avatar: v.optional(v.string()), // Optional icon/avatar
+    modelId: v.string(), // e.g. "gemini-3.1-pro-preview"
+    thinkingMode: v.boolean(),
+    systemPrompt: v.optional(v.string()),
+    // Link to specific rule IDs
+    ruleIds: v.optional(v.array(v.id("aiRules"))), 
+    // Link to specific knowledge document IDs for RAG
+    knowledgeDocumentIds: v.optional(v.array(v.id("knowledgeDocuments"))),
+    reasoningEffort: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
+    allowInternetAccess: v.optional(v.boolean()),
+    // Deterministic Execution Parameters
+    temperature: v.optional(v.number()), // 0.0 to 2.0
+    humanApprovalRequired: v.optional(v.boolean()),
+    inputSchema: v.optional(v.string()), // Stringified JSON Schema
+    outputSchema: v.optional(v.string()), // Stringified JSON Schema
+    triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
+  // Global Tool Library
+  aiTools: defineTable({
+    name: v.string(), // "search_web", "query_database"
+    description: v.string(), // Provide clear instructions on what the tool does
+    handlerMapping: v.string(), // Points to internal mutation/action route (e.g., "internalActions.executeDatabaseQuery")
+    requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+  }).index("by_name", ["name"]),
+
+  // Junction table: Authorized Tools per Agent
+  agentTools: defineTable({
+    agentId: v.id("agents"),
+    toolId: v.id("aiTools"),
+    assignedAt: v.number(),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_tool", ["toolId"]),
 });

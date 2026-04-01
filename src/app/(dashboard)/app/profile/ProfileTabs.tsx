@@ -37,7 +37,6 @@ export default function ProfileTabs() {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
           )}
         </button>
-        {/* Future tabs can go here */}
       </div>
 
       {/* Tab Content: Logins */}

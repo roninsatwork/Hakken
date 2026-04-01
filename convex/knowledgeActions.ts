@@ -104,6 +104,7 @@ export const ingestDocument = internalAction({
       await ctx.runMutation(internal.knowledge.saveChunksInternal, {
          documentId: args.documentId,
          ...(doc.companyId ? { companyId: doc.companyId } : {}),
+         ...(doc.agentId ? { agentId: doc.agentId } : {}),
          chunks: embeddedChunks,
       });
 

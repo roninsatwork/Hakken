@@ -60,8 +60,10 @@ export const getThreadInternal = internalQuery({
 });
 
 export const createThread = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    agentId: v.optional(v.id("agents")),
+  },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Unauthorized");
@@ -74,6 +76,7 @@ export const createThread = mutation({
     const threadId = await ctx.db.insert("threads", {
       userId,
       companyId: user?.companyId,
+      agentId: args.agentId,
       title: "New Conversation",
       createdAt: now,
       updatedAt: now,
@@ -88,6 +91,7 @@ export const sendMessage = mutation({
     threadId: v.id("threads"),
     content: v.string(),
     modelId: v.optional(v.string()),
+    dynamicAgentId: v.optional(v.union(v.id("agents"), v.null())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -113,12 +117,29 @@ export const sendMessage = mutation({
     // 2. Update Thread timestamp
     await ctx.db.patch(args.threadId, { updatedAt: now });
 
+    // Determine if we need to hot-swap the agent mid-conversation
+    let targetAgentId = thread.agentId;
+    if (args.dynamicAgentId !== undefined) {
+        targetAgentId = args.dynamicAgentId === null ? undefined : args.dynamicAgentId;
+        if (targetAgentId !== thread.agentId) {
+             await ctx.db.patch(args.threadId, { agentId: targetAgentId });
+        }
+    }
+
     // 3. Trigger the asynchronous Vertex AI Orchestrator Action to respond to this message
-    await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
-      threadId: args.threadId,
-      content: args.content,
-      modelId: args.modelId,
-    });
+    if (targetAgentId) {
+       await ctx.scheduler.runAfter(0, internal.agentRuntime.generateAgentResponse, {
+         threadId: args.threadId,
+         agentId: targetAgentId,
+         content: args.content,
+       });
+    } else {
+       await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
+         threadId: args.threadId,
+         content: args.content,
+         modelId: args.modelId,
+       });
+    }
 
     // 4. If this is exactly "New Conversation", asynchronously spawn a title generator
     if (thread.title === "New Conversation") {

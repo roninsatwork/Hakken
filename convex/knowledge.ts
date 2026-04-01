@@ -22,12 +22,22 @@ export const generateUploadUrl = mutation({
 export const getDocuments = query({
   args: {
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
 
     const user = await ctx.db.get(userId);
+    
+    // Agent-isolated Knowledge Scope (Highest Priority)
+    if (args.agentId) {
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+        .order("desc")
+        .collect();
+    }
     
     // Global Knowledge Check
     if (!args.companyId) {
@@ -57,6 +67,7 @@ export const saveDocument = mutation({
   args: {
     storageId: v.id("_storage"),
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
     title: v.string(),
     format: v.string(),
   },
@@ -80,6 +91,7 @@ export const saveDocument = mutation({
       title: args.title,
       fileId: args.storageId,
       ...(args.companyId ? { companyId: args.companyId } : {}),
+      ...(args.agentId ? { agentId: args.agentId } : {}),
       status: "processing",
       format: args.format,
       createdBy: userId,
@@ -150,6 +162,7 @@ export const saveChunksInternal = internalMutation({
   args: {
       documentId: v.id("knowledgeDocuments"),
       companyId: v.optional(v.id("companies")),
+      agentId: v.optional(v.id("agents")),
       chunks: v.array(v.object({
           text: v.string(),
           embedding: v.array(v.number()),
@@ -160,6 +173,7 @@ export const saveChunksInternal = internalMutation({
          await ctx.db.insert("knowledgeChunks", {
              documentId: args.documentId,
              ...(args.companyId ? { companyId: args.companyId, isGlobal: false } : { isGlobal: true }),
+             ...(args.agentId ? { agentId: args.agentId } : {}),
              text: chunk.text,
              embedding: chunk.embedding,
          });

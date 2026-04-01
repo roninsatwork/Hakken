@@ -1,0 +1,180 @@
+import { v } from "convex/values";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated Admin Request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized: System level clearance required.");
+    }
+
+    return await ctx.db.query("agents").order("desc").collect();
+  },
+});
+
+export const get = query({
+  args: { id: v.id("agents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated Admin Request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    const agent = await ctx.db.get(args.id);
+    if (!agent) throw new Error("Agent not found");
+
+    // We can also fetch populated rules and knowledge documents here if needed
+    let populatedRules: any[] = [];
+    if (agent.ruleIds && agent.ruleIds.length > 0) {
+      populatedRules = await Promise.all(agent.ruleIds.map(id => ctx.db.get(id)));
+    }
+
+    let populatedKnowledge: any[] = [];
+    if (agent.knowledgeDocumentIds && agent.knowledgeDocumentIds.length > 0) {
+      populatedKnowledge = await Promise.all(agent.knowledgeDocumentIds.map(id => ctx.db.get(id)));
+    }
+
+    return {
+      ...agent,
+      populatedRules: populatedRules.filter(Boolean),
+      populatedKnowledge: populatedKnowledge.filter(Boolean),
+    };
+  },
+});
+
+export const createAgent = mutation({
+  args: { 
+    name: v.string(), 
+    description: v.optional(v.string()) 
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    return await ctx.db.insert("agents", {
+      name: args.name,
+      description: args.description,
+      modelId: "gemini-3-flash-preview", // default
+      thinkingMode: false,
+      isActive: true, // defaults to true
+      temperature: 1.0, // Default deterministic score
+      humanApprovalRequired: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updateAgent = mutation({
+  args: { 
+    id: v.id("agents"), 
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    modelId: v.optional(v.string()),
+    thinkingMode: v.optional(v.boolean()),
+    systemPrompt: v.optional(v.string()),
+    ruleIds: v.optional(v.array(v.id("aiRules"))),
+    knowledgeDocumentIds: v.optional(v.array(v.id("knowledgeDocuments"))),
+    isActive: v.optional(v.boolean()),
+    reasoningEffort: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
+    allowInternetAccess: v.optional(v.boolean()),
+    storageId: v.optional(v.id("_storage")),
+    temperature: v.optional(v.number()),
+    humanApprovalRequired: v.optional(v.boolean()),
+    inputSchema: v.optional(v.string()),
+    outputSchema: v.optional(v.string()),
+    triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    const { id, storageId, ...updates } = args;
+    
+    let resolvedAvatarUrl = updates.avatar;
+    if (storageId) {
+      resolvedAvatarUrl = (await ctx.storage.getUrl(storageId)) ?? updates.avatar;
+    }
+    
+    await ctx.db.patch(id, { 
+      ...updates,
+      ...(resolvedAvatarUrl !== undefined && { avatar: resolvedAvatarUrl }),
+      updatedAt: Date.now()
+    });
+    
+    return id;
+  },
+});
+
+export const deleteAgent = mutation({
+  args: { id: v.id("agents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    // Cleanse tool bindings
+    const toolBindings = await ctx.db
+       .query("agentTools")
+       .withIndex("by_agent", q => q.eq("agentId", args.id))
+       .collect();
+       
+    for (const binding of toolBindings) {
+        await ctx.db.delete(binding._id);
+    }
+
+    await ctx.db.delete(args.id);
+    return true;
+  },
+});
+
+export const getAgentInternal = internalQuery({
+  args: { id: v.id("agents") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getAgentToolsInternal = internalQuery({
+  args: { agentId: v.id("agents") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("agentTools")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .collect();
+  },
+});
+
+export const getForCompanyInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (ctx, args) => {
+    // Return all agents (for now agents are global, but filtered by isActive)
+    return await ctx.db
+      .query("agents")
+      .filter(q => q.eq(q.field("isActive"), true))
+      .collect();
+  },
+});

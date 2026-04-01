@@ -91,7 +91,7 @@ export default function ChatLogsDashboard() {
                    initial={{ opacity: 0, scale: 0.95 }}
                    animate={{ opacity: 1, scale: 1 }}
                    onClick={() => setSelectedThreadId(thread._id as Id<"threads">)}
-                   className={`flex flex-col gap-2 px-3 py-3 rounded-[12px] border transition-all relative overflow-hidden group ${
+                   className={`flex items-center gap-3 w-full text-left px-3 py-3 rounded-[12px] border transition-all relative overflow-hidden group ${
                      selectedThreadId === thread._id 
                        ? "bg-brand/10 border-brand/40 shadow-inner" 
                        : "bg-transparent border-transparent hover:bg-foreground/5 hover:border-border-dim"
@@ -102,23 +102,25 @@ export default function ChatLogsDashboard() {
                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 blur-[40px] rounded-full pointer-events-none -translate-y-16 translate-x-12" />
                     )}
 
-                    <div className="flex items-start justify-between w-full gap-3 relative z-10">
-                       <h3 className={`text-[13px] font-semibold line-clamp-1 text-left flex-1 ${selectedThreadId === thread._id ? "text-brand" : "text-foreground"} group-hover:text-brand transition-colors`}>
-                         {thread.title}
-                       </h3>
-                       <span className="text-[10px] text-muted font-mono tracking-widest shrink-0 uppercase mt-[2px]">
-                         {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(thread.createdAt))}
-                       </span>
-                    </div>
+                    <img 
+                      src={thread.user?.image || "https://api.dicebear.com/7.x/notionists/svg"} 
+                      className="w-8 h-8 rounded-full border border-border-dim object-cover shrink-0 relative z-10" 
+                      alt="User"
+                    />
 
-                    <div className="flex items-center gap-2 w-full relative z-10">
-                         <img 
-                           src={thread.user?.image || "https://api.dicebear.com/7.x/notionists/svg"} 
-                           className="w-5 h-5 rounded-full border border-border-dim object-cover shrink-0" 
-                         />
-                         <span className="text-[11px] text-secondary truncate text-left tracking-wide">
-                             {thread.user?.name || thread.user?.email || "Unknown"}
+                    <div className="flex flex-col w-full min-w-0 relative z-10">
+                      <div className="flex items-start justify-between w-full gap-2">
+                         <h3 className={`text-[13px] font-semibold truncate flex-1 ${selectedThreadId === thread._id ? "text-brand" : "text-foreground"} group-hover:text-brand transition-colors`}>
+                           {thread.title}
+                         </h3>
+                         <span className="text-[10px] text-muted font-mono tracking-widest shrink-0 uppercase mt-[2px]">
+                           {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(thread.createdAt))}
                          </span>
+                      </div>
+                      
+                      <span className="text-[11px] text-secondary truncate tracking-wide mt-0.5">
+                          {thread.user?.name || thread.user?.email || "Unknown"}
+                      </span>
                     </div>
                  </motion.button>
                ))}

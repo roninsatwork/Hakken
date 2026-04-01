@@ -1,0 +1,173 @@
+import { query, mutation, internalQuery } from "./_generated/server";
+import { v } from "convex/values";
+import { auth } from "./auth";
+
+// Fetch all registered AI system tools
+export const getTools = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return [];
+    
+    // Tools are strictly globally configured by admins
+    return await ctx.db.query("aiTools").order("desc").collect();
+  },
+});
+
+export const getToolById = query({
+  args: { id: v.id("aiTools") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const createTool = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    handlerMapping: v.string(),
+    requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized: Only Super Admins can register system execution hooks.");
+    }
+
+    return await ctx.db.insert("aiTools", {
+      name: args.name,
+      description: args.description,
+      handlerMapping: args.handlerMapping,
+      requiredRole: args.requiredRole,
+      createdAt: Date.now(),
+      createdBy: userId,
+    });
+  },
+});
+
+export const updateTool = mutation({
+  args: {
+    id: v.id("aiTools"),
+    name: v.string(),
+    description: v.string(),
+    handlerMapping: v.string(),
+    requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized: System modification requires supreme permissions.");
+    }
+
+    await ctx.db.patch(args.id, {
+      name: args.name,
+      description: args.description,
+      handlerMapping: args.handlerMapping,
+      requiredRole: args.requiredRole,
+    });
+    
+    return args.id;
+  },
+});
+
+export const deleteTool = mutation({
+  args: { id: v.id("aiTools") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized: Sonae architectural deletion prevented.");
+    }
+
+    // Must also cleanse all bindings to this tool in the junction table
+    const bindings = await ctx.db
+       .query("agentTools")
+       .withIndex("by_tool", q => q.eq("toolId", args.id))
+       .collect();
+       
+    for (const binding of bindings) {
+        await ctx.db.delete(binding._id);
+    }
+
+    await ctx.db.delete(args.id);
+    return true;
+  },
+});
+
+// Fetch all tool bindings for a specific agent
+export const getAgentTools = query({
+  args: { agentId: v.id("agents") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return [];
+
+    const bindings = await ctx.db
+       .query("agentTools")
+       .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+       .collect();
+
+    // Map tools
+    const tools = [];
+    for (const binding of bindings) {
+        const tool = await ctx.db.get(binding.toolId);
+        if (tool) {
+            tools.push({ bindingId: binding._id, ...tool });
+        }
+    }
+    return tools;
+  },
+});
+
+// Bind or unbind a global tool to an agent
+export const toggleAgentTool = mutation({
+  args: { 
+    agentId: v.id("agents"), 
+    toolId: v.id("aiTools"),
+    action: v.union(v.literal("BIND"), v.literal("UNBIND"))
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized");
+    }
+
+    const existingBinding = await ctx.db
+       .query("agentTools")
+       .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+       .filter(q => q.eq(q.field("toolId"), args.toolId))
+       .first();
+
+    if (args.action === "BIND" && !existingBinding) {
+       await ctx.db.insert("agentTools", {
+          agentId: args.agentId,
+          toolId: args.toolId,
+          assignedAt: Date.now()
+       });
+    } else if (args.action === "UNBIND" && existingBinding) {
+       await ctx.db.delete(existingBinding._id);
+    }
+    
+    return true;
+  },
+});
+
+export const getToolInternal = internalQuery({
+  args: { id: v.id("aiTools") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});

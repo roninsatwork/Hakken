@@ -17,7 +17,8 @@ import {
   PenTool,
   Bot,
   ShieldCheck,
-  Settings
+  Settings,
+  Workflow
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
@@ -172,7 +173,9 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
     if (pathname.startsWith('/admin/ai/global-knowledge')) return 'Global Knowledge';
     if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
+    if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
     if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
+    if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
     if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
@@ -186,6 +189,7 @@ export default function SidebarNavigation() {
     companies: false,
     superAdmins: false,
     ai: true,
+    agents: false,
     users: false,
     settings: false
   });
@@ -203,7 +207,9 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/ai/system-prompt')) setActiveItem('System Prompt');
     else if (pathname.startsWith('/admin/ai/global-knowledge')) setActiveItem('Global Knowledge');
     else if (pathname.startsWith('/admin/ai/chat-logs')) setActiveItem('Chat Logs');
+    else if (pathname.startsWith('/admin/ai/tools')) setActiveItem('Connectors');
     else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
+    else if (pathname.startsWith('/admin/agents')) setActiveItem('Manage Agents');
     else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
     else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
     else if (pathname === '/app') setActiveItem('Dashboard');
@@ -305,6 +311,21 @@ export default function SidebarNavigation() {
                       )}
                     </NavItem>
 
+                    {isSuperAdmin && (
+                      <NavItem 
+                        icon={Workflow} 
+                        label="Agents" 
+                        isActive={activeItem === 'Agents' || activeItem === 'Manage Agents' || activeItem === 'Connectors'}
+                        onClick={() => setActiveItem('Agents')}
+                        hasChildren 
+                        isOpen={openSections.agents}
+                        onToggle={() => toggleSection('agents')}
+                      >
+                        <SubNavItem label="Manage Agents" href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
+                        <SubNavItem label="Connectors" href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
+                      </NavItem>
+                    )}
+
                     {!isSuperAdmin && (
                       <NavItem 
                         icon={ShieldCheck} 
@@ -369,6 +390,7 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('workspace')}
                     >
                       <SubNavItem label={`${settings.platformName} Assistant`} href="/app/assistant" isActive={activeItem === 'Assistant'} onClick={() => setActiveItem('Assistant')} />
+                      <SubNavItem label="Agentic Testing" href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Agentic Testing')} />
                     </NavItem>
 
                     <NavItem 

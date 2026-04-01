@@ -6,22 +6,28 @@ import { auth } from "./auth";
 export const getRules = query({
   args: {
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) return []; 
 
-    if (args.companyId) {
+    if (args.agentId) {
+       return await ctx.db
+        .query("aiRules")
+        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+        .order("desc")
+        .collect();
+    } else if (args.companyId) {
        return await ctx.db
         .query("aiRules")
         .withIndex("by_company_active", q => q.eq("companyId", args.companyId))
         .order("desc")
         .collect();
     } else {
-       // Manual filter for undefined companyId (Global) since index requires equality match on defined values typically, 
-       // but we'll fetch all and filter in JS for now or just trust the index if it allows undefined.
+       // Manual filter for undefined companyId & agentId (Global)
        const allRules = await ctx.db.query("aiRules").order("desc").collect();
-       return allRules.filter(r => r.companyId === undefined);
+       return allRules.filter(r => r.companyId === undefined && r.agentId === undefined);
     }
   },
 });
@@ -29,6 +35,7 @@ export const getRules = query({
 export const getActiveRulesInternal = internalQuery({
   args: {
      companyId: v.optional(v.id("companies")),
+     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
     const activeRules = await ctx.db
@@ -37,8 +44,12 @@ export const getActiveRulesInternal = internalQuery({
       .order("desc")
       .collect();
       
-    // Filter to only global rules OR rules belonging to the requested company
-    return activeRules.filter(r => r.companyId === undefined || r.companyId === args.companyId);
+    // Filter to global rules, company rules, or agent specific rules depending on context
+    return activeRules.filter(r => 
+        (r.companyId === undefined && r.agentId === undefined) || // Global
+        (args.companyId && r.companyId === args.companyId) || // Company Overrides
+        (args.agentId && r.agentId === args.agentId) // Agent Overrides
+    );
   },
 });
 
@@ -75,6 +86,7 @@ export const getRuleById = query({
 export const createRule = mutation({
   args: {
     companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -95,6 +107,7 @@ export const createRule = mutation({
 
     return await ctx.db.insert("aiRules", {
       companyId: args.companyId,
+      agentId: args.agentId,
       trigger: args.trigger,
       instruction: args.instruction,
       priority: args.priority,
