@@ -85,7 +85,7 @@ export default function SonaeModal({
             </div>
 
             {/* Content Body */}
-            <div className="px-10 pb-12 overflow-y-auto max-h-[70vh] custom-scrollbar relative z-10">
+            <div className="px-10 pb-10 overflow-y-auto max-h-[85vh] custom-scrollbar relative z-10">
               {children}
             </div>
           </motion.div>

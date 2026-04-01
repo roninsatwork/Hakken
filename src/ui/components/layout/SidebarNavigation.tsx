@@ -18,7 +18,8 @@ import {
   Bot,
   ShieldCheck,
   Settings,
-  Workflow
+  Workflow,
+  Network
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
@@ -176,6 +177,7 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
     if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
     if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
+    if (pathname.startsWith('/admin/workflows')) return 'Manage Workflows';
     if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
@@ -190,6 +192,7 @@ export default function SidebarNavigation() {
     superAdmins: false,
     ai: true,
     agents: false,
+    workflows: false,
     users: false,
     settings: false
   });
@@ -210,6 +213,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/ai/tools')) setActiveItem('Connectors');
     else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
     else if (pathname.startsWith('/admin/agents')) setActiveItem('Manage Agents');
+    else if (pathname.startsWith('/admin/workflows')) setActiveItem('Manage Workflows');
     else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
     else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
     else if (pathname === '/app') setActiveItem('Dashboard');
@@ -323,6 +327,20 @@ export default function SidebarNavigation() {
                       >
                         <SubNavItem label="Manage Agents" href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
                         <SubNavItem label="Connectors" href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
+                      </NavItem>
+                    )}
+
+                    {isSuperAdmin && (
+                      <NavItem 
+                        icon={Network} 
+                        label="Workflows" 
+                        isActive={activeItem === 'Workflows' || activeItem === 'Manage Workflows'}
+                        onClick={() => setActiveItem('Workflows')}
+                        hasChildren 
+                        isOpen={openSections.workflows}
+                        onToggle={() => toggleSection('workflows')}
+                      >
+                        <SubNavItem label="Manage Workflows" href="/admin/workflows" isActive={pathname.startsWith('/admin/workflows')} onClick={() => setActiveItem('Manage Workflows')} />
                       </NavItem>
                     )}
 

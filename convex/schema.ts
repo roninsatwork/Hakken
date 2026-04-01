@@ -234,9 +234,13 @@ export default defineSchema({
     outputSchema: v.optional(v.string()), // Stringified JSON Schema
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
     isActive: v.boolean(),
+    // Inline Sandbox Configuration
+    isGlobal: v.optional(v.boolean()),
+    workflowId: v.optional(v.id("workflows")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_name", ["name"]),
+  }).index("by_name", ["name"])
+    .index("by_workflow", ["workflowId", "isGlobal"]),
 
   // Global Tool Library
   aiTools: defineTable({
@@ -256,4 +260,27 @@ export default defineSchema({
   })
     .index("by_agent", ["agentId"])
     .index("by_tool", ["toolId"]),
+
+  // AI Workflows Orchestration
+  workflows: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    triggerType: v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE")),
+    nodes: v.optional(v.string()), // JSON stringified array of React Flow nodes
+    edges: v.optional(v.string()), // JSON stringified array of React Flow edges
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.id("users"),
+  }).index("by_name", ["name"]),
+
+  workflowExecutions: defineTable({
+    workflowId: v.id("workflows"),
+    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    triggerType: v.string(),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    startedBy: v.id("users"),
+    state: v.optional(v.string()), // JSON representation of final execution state for debugging
+  }).index("by_workflow", ["workflowId", "startedAt"]),
 });

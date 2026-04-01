@@ -13,7 +13,8 @@ export const list = query({
        throw new Error("Unauthorized: System level clearance required.");
     }
 
-    return await ctx.db.query("agents").order("desc").collect();
+    const allAgents = await ctx.db.query("agents").order("desc").collect();
+    return allAgents.filter(a => a.isGlobal !== false);
   },
 });
 
@@ -176,5 +177,55 @@ export const getForCompanyInternal = internalQuery({
       .query("agents")
       .filter(q => q.eq(q.field("isActive"), true))
       .collect();
+  },
+});
+
+export const createInlineAgent = mutation({
+  args: { 
+    workflowId: v.id("workflows"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    return await ctx.db.insert("agents", {
+      name: "Sandbox Agent",
+      description: "Inline agent logic",
+      modelId: "gemini-3.1-flash-preview", // default
+      thinkingMode: false,
+      isActive: true, // defaults to true
+      temperature: 1.0,
+      humanApprovalRequired: false,
+      isGlobal: false,
+      workflowId: args.workflowId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const promoteToGlobal = mutation({
+  args: { id: v.id("agents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    await ctx.db.patch(args.id, {
+      isGlobal: true,
+      workflowId: undefined, // remove association
+      updatedAt: Date.now()
+    });
+    
+    return true;
   },
 });
