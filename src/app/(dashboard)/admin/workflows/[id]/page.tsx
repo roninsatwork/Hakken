@@ -41,6 +41,7 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
   const [isSaving, setIsSaving] = useState(false);
   
   const [isAddNodeModalOpen, setIsAddNodeModalOpen] = useState(false);
+  const [isManualRunModalOpen, setIsManualRunModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<any>(null);
 
   const onNodeDoubleClick = useCallback((event: any, node: any) => {
@@ -183,7 +184,7 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
           <div className="w-px h-6 bg-border-dim mx-1" />
 
           <button 
-            onClick={() => alert("Manual run execution functionality will hook into the orchestrator agent.")}
+            onClick={() => setIsManualRunModalOpen(true)}
             className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20"
           >
             <Play className="w-4 h-4 fill-current" />
@@ -264,6 +265,24 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
               </button>
             ))
           )}
+        </div>
+      </SonaeModal>
+
+      {/* Manual Run Modal */}
+      <SonaeModal
+        isOpen={isManualRunModalOpen}
+        onClose={() => setIsManualRunModalOpen(false)}
+        title="Execute Manual Run"
+      >
+        <p className="text-secondary mb-6 text-[13px]">Manual run execution functionality will hook into the orchestrator agent. This feature is currently in development.</p>
+        <div className="flex justify-end gap-3">
+          <button 
+            type="button" 
+            onClick={() => setIsManualRunModalOpen(false)}
+            className="px-5 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-md shadow-foreground/10 text-sm"
+          >
+            Acknowledge
+          </button>
         </div>
       </SonaeModal>
 

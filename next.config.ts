@@ -4,9 +4,9 @@ import { createSecureHeaders } from 'next-secure-headers';
 
  
 const nextConfig: NextConfig = {
+  output: 'standalone',
   headers() {
     return [{ source: "/(.*)", headers: createSecureHeaders() }];
-
   },
 };
  

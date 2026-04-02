@@ -10,7 +10,18 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
   const updateAgent = useMutation(api.agents.updateAgent);
   const promoteToGlobal = useMutation((api as any).agents.promoteToGlobal);
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>({
+    name: "",
+    systemPrompt: "",
+    inputSchema: "",
+    outputSchema: "",
+    modelId: "gemini-3.1-pro-preview",
+    thinkingMode: false,
+    reasoningEffort: "MEDIUM",
+    allowInternetAccess: false,
+    humanApprovalRequired: false,
+    temperature: 1.0,
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
