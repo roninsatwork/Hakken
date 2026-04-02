@@ -212,7 +212,7 @@ export default function AgentOverviewPage() {
                   onChange={e => setFormData({...formData, modelId: e.target.value})}
                   className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
                 >
-                  <option value="gemini-3.1-flash-preview">Gemini 3.1 Flash (Fast & Cheap)</option>
+                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Fast & Cheap)</option>
                   <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Deep Reasoning)</option>
                   <option value="gemini-3-flash-preview">Gemini 3.0 Flash (Stable)</option>
                   <option value="gemini-2.5-flash">Gemini 2.5 Flash (Legacy)</option>

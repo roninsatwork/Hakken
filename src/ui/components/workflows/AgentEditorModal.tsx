@@ -165,7 +165,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
                   className="px-3 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                 >
                   <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
-                  <option value="gemini-3.1-flash-preview">Gemini 3.1 Flash</option>
+                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
                   <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
                 </select>
               </div>

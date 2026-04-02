@@ -22,6 +22,7 @@ import type * as chatAdmin from "../chatAdmin.js";
 import type * as companies from "../companies.js";
 import type * as crons from "../crons.js";
 import type * as debug from "../debug.js";
+import type * as fixModels from "../fixModels.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
 import type * as knowledge from "../knowledge.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   companies: typeof companies;
   crons: typeof crons;
   debug: typeof debug;
+  fixModels: typeof fixModels;
   http: typeof http;
   invites: typeof invites;
   knowledge: typeof knowledge;

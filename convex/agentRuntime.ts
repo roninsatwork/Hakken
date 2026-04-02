@@ -16,17 +16,19 @@ export const generateAgentResponse = internalAction({
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
-    const ai = new GoogleGenAI({ 
-      project: projectId, 
-      location: location,
-      vertexai: true,
-      googleAuthOptions: {
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }
-      }
-    });
+    const ai = process.env.GEMINI_API_KEY 
+      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+      : new GoogleGenAI({ 
+          project: projectId, 
+          location: location,
+          vertexai: true,
+          googleAuthOptions: {
+            credentials: {
+              client_email: process.env.GOOGLE_CLIENT_EMAIL,
+              private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            }
+          }
+        });
 
     try {
         // 1. Fetch Agent Identity & System Prompt

@@ -82,7 +82,7 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
         position: { x: 150 + Math.random() * 50, y: 150 + Math.random() * 50 },
         data: { 
           label: "Sandbox Agent",
-          modelId: "gemini-3.1-flash-preview", 
+          modelId: "gemini-3.1-flash-lite-preview", 
           _agentId: newAgentId,
           isInline: true,
         },
