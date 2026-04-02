@@ -83,7 +83,7 @@ export default function AssistantWelcomePage() {
 
     setIsSubmitting(true);
     try {
-      const threadId = await createThread();
+      const threadId = await createThread({});
       await sendMessage({ 
         threadId, 
         content: content.trim(),

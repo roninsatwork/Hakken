@@ -73,7 +73,7 @@ export default defineSchema({
     role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
-  }).index("email", ["email"]),
+  }).index("email", ["email"]).index("by_token", ["tokenIdentifier"]),
   
   logins: defineTable({
     userId: v.id("users"),
