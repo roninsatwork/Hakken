@@ -48,107 +48,77 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="flex flex-col gap-6">
         {/* Hero Header */}
-        <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground tracking-tighter">
+        <header className="flex flex-col gap-3 max-w-3xl border-b border-border-dim pb-6">
+          <h1 className="text-3xl font-light text-foreground tracking-wide">
             {greeting}{firstName ? `, ${firstName}` : ""}
           </h1>
+          <p className="text-secondary text-[15px] font-light leading-relaxed">
+            Welcome to your intelligent workspace. Sonae is fully integrated and ready to assist you. Use this dashboard as your launching pad to interact with the assistant, run specialized workflows, and navigate your projects.
+          </p>
         </header>
 
-        {/* Metric Cards Row */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* User Interaction Guide */}
+        <section className="bg-sidebar/40 backdrop-blur-3xl border border-border-dim rounded-[32px] p-8 flex flex-col gap-6 shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand/10 rounded-full blur-[100px] pointer-events-none" />
           
-          {/* Active Contracts Card */}
-          <div className="bg-card dark:bg-gradient-to-b dark:from-[#2e2e30] dark:to-[#222224] border border-border-dim rounded-[14px] p-5 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
-            <div className="flex justify-between items-start mb-4 z-10 relative">
-              <span className="text-secondary text-[12px] font-medium tracking-wide">Active Contracts</span>
-            </div>
-            <div className="flex flex-col z-10 relative">
-              <span className="text-[36px] font-semibold text-foreground tracking-tight leading-none mb-2">25</span>
-              <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider">
-                <span className="text-[#10b981] font-bold">+5</span>
-                <span className="text-secondary">vs last month</span>
-              </div>
-            </div>
-
-            <div className="absolute right-[-10px] bottom-[-20px] w-[140px] h-[120px]">
-               {/* Card visualization... */}
-                <div className="absolute right-[10px] bottom-[10px] w-[65px] h-[95px] rounded-[10px] border border-border-dim bg-sidebar/40 rotate-[15deg] translate-x-4 shadow-xl opacity-50 backdrop-blur-sm" />
-                <div className="absolute right-[30px] bottom-[15px] w-[65px] h-[95px] rounded-[10px] border border-border-dim/50 bg-foreground/5 rotate-[20deg] shadow-xl opacity-80 backdrop-blur-md" />
-                <div className="absolute right-[55px] bottom-[20px] w-[65px] h-[95px] rounded-[10px] border border-foreground/10 bg-gradient-to-br from-foreground/[0.05] to-transparent rotate-[25deg] shadow-2xl flex flex-col justify-center items-center gap-2.5 p-2 backdrop-blur-lg">
-                  <div className="w-[16px] h-[2px] bg-foreground/70 rounded-full self-start ml-2 shadow-sm" />
-                  <div className="w-[32px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
-                  <div className="w-[24px] h-[2px] bg-foreground/50 rounded-full shadow-sm" />
-                </div>
-            </div>
+          <div className="flex flex-col gap-1 z-10 relative">
+            <span className="text-brand font-mono text-[11px] tracking-widest uppercase">Quick Start</span>
+            <h2 className="text-xl font-light tracking-wide text-foreground">Explore The Workspace</h2>
           </div>
 
-          {/* Pending Signatures Card */}
-          <div className="bg-card dark:bg-gradient-to-b dark:from-[#2e2e30] dark:to-[#222224] border border-border-dim rounded-[14px] p-5 relative overflow-hidden group shadow-md dark:shadow-2xl transition-all">
-            <div className="flex justify-between items-start mb-4 z-10 relative">
-              <span className="text-secondary text-[12px] font-medium tracking-wide">Pending Signatures</span>
-            </div>
-            <div className="flex flex-col z-10 relative">
-              <span className="text-[36px] font-semibold text-foreground tracking-tight leading-none mb-2">09</span>
-              <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider">
-                <span className="text-[#10b981] font-bold">+6</span>
-                <span className="text-secondary">vs last month</span>
+          <div className="flex flex-col gap-4 z-10 relative">
+            
+            <div className="flex items-start gap-4 p-4 rounded-[16px] bg-foreground/[0.02] border border-border-dim/50 hover:bg-foreground/[0.04] transition-colors relative overflow-hidden">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center border border-brand/20 ml-2">
+                <span className="text-brand font-mono text-[11px] font-bold">1</span>
+              </div>
+              <div className="flex flex-col gap-1.5 ml-2">
+                <span className="text-foreground text-[14px] font-medium tracking-wide">Meet The Sonae Assistant</span>
+                <p className="text-secondary text-[13px] font-light">Jump into the Sonae Assistant tab on your left to begin chatting. Ask questions, analyze data, or generate insights instantly.</p>
               </div>
             </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-[16px] bg-foreground/[0.02] border border-border-dim/50 hover:bg-foreground/[0.04] transition-colors">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-foreground/[0.05] flex items-center justify-center border border-border-dim">
+                <span className="text-foreground font-mono text-[11px] font-bold">2</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-[14px] font-medium tracking-wide">Agentic Testing</span>
+                <p className="text-secondary text-[13px] font-light">Access the Agentic Sandbox to experiment with highly specialized workflows isolated from your main history.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-[16px] bg-foreground/[0.02] border border-border-dim/50 hover:bg-foreground/[0.04] transition-colors">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-foreground/[0.05] flex items-center justify-center border border-border-dim">
+                <span className="text-foreground font-mono text-[11px] font-bold">3</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-foreground text-[14px] font-medium tracking-wide">Explore Knowledge</span>
+                <p className="text-secondary text-[13px] font-light">Sonae actively reads from the documents uploaded to your business hub, ensuring your answers are always grounded in reality.</p>
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* Revenue Chart Section */}
-        <section className="bg-card dark:bg-gradient-to-b dark:from-[#2c2c2e] dark:to-[#1e1e20] border border-border-dim rounded-[14px] p-6 flex flex-col gap-6 shadow-md dark:shadow-2xl">
+        {/* Capabilities Grid */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
           
-          {/* Headers for Revenue */}
-          <div className="flex flex-col gap-1 z-10 relative">
-            <span className="text-secondary text-[12px] font-medium tracking-wide">Revenue</span>
-            <span className="text-3xl font-semibold text-foreground tracking-tight leading-none mt-1">$10,985.56</span>
-            <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wider mt-2">
-              <span className="text-[#f43f5e] font-bold pb-[1px]">2.5% ↓</span>
-              <span className="text-secondary">vs last week</span>
-            </div>
+          <div className="bg-sidebar/30 backdrop-blur-3xl border border-border-dim rounded-[24px] p-6 shadow-md transition-all hover:bg-sidebar/50">
+            <h3 className="text-foreground text-[15px] font-medium tracking-wide mb-3">Relationship Context</h3>
+            <p className="text-secondary text-[13px] font-light leading-relaxed">Sonae remembers deep context over time. It synthesizes past interactions so you walk into every meeting fully prepared.</p>
           </div>
 
-          {/* CSS Bar Chart */}
-          <div className="h-[220px] w-full flex items-end justify-between px-2 sm:px-8 pb-8 relative z-0">
-            {/* Horizontal Grid lines */}
-             <div className="absolute inset-x-0 bottom-[15%] border-t border-foreground/[0.04] z-0" />
-             <div className="absolute inset-x-0 bottom-[45%] border-t border-foreground/[0.04] z-0" />
-             <div className="absolute inset-x-0 bottom-[75%] border-t border-foreground/[0.04] z-0" />
-
-            {/* Bars */}
-            {[
-              { label: 'Mon', h: '35%', active: false },
-              { label: 'Tue', h: '65%', active: false },
-              { label: 'Wed', h: '45%', active: false },
-              { label: 'Thu', h: '80%', active: true, target: '$9,340' },
-              { label: 'Fri', h: '55%', active: false },
-            ].map((bar, i) => (
-              <div key={i} className="flex-1 flex justify-center h-full relative z-10 items-end">
-                <div 
-                  className={`w-[48px] sm:w-[50px] rounded-t-[8px] relative transition-transform hover:scale-[1.02] ${
-                    bar.active 
-                      ? 'bg-gradient-to-b from-[#ffedcc] via-[#ff8800] to-[#cc3300] shadow-[0_5px_15px_rgba(255,100,0,0.15)]' 
-                      : 'bg-foreground/[0.08] border-t border-l border-r border-foreground/[0.1] border-b-0 shadow-sm'
-                  }`} 
-                  style={{ height: bar.h }}
-                >
-                  {bar.active && (
-                     <>
-                       <div className="absolute top-[1px] left-[5px] w-[500px] border-t border-dashed border-foreground/30 -z-10" />
-                       <div className="absolute -top-[5px] -left-[5px] w-3 h-3 rounded-full border-[1.5px] border-sidebar bg-[#3b82f6] shadow-[0_0_10px_#3b82f6] z-20 flex items-center">
-                          <div className="absolute right-[16px] bg-card border border-border-dim text-[10px] font-medium text-foreground px-2.5 py-1 rounded-[12px] shadow-2xl whitespace-nowrap tracking-wide">
-                            {bar.target}
-                          </div>
-                       </div>
-                     </>
-                  )}
-                </div>
-                <span className="text-[12px] font-medium text-secondary absolute -bottom-8">{bar.label}</span>
-              </div>
-            ))}
+          <div className="bg-sidebar/30 backdrop-blur-3xl border border-border-dim rounded-[24px] p-6 shadow-md transition-all hover:bg-sidebar/50">
+            <h3 className="text-foreground text-[15px] font-medium tracking-wide mb-3">Always Available</h3>
+            <p className="text-secondary text-[13px] font-light leading-relaxed">Your assistant is connected to a live edge network, ensuring instant replies and unbroken uptime during critical workflows.</p>
           </div>
+
+          <div className="bg-sidebar/30 backdrop-blur-3xl border border-border-dim rounded-[24px] p-6 shadow-md transition-all hover:bg-sidebar/50">
+            <h3 className="text-foreground text-[15px] font-medium tracking-wide mb-3">Air-Tight Security</h3>
+            <p className="text-secondary text-[13px] font-light leading-relaxed">Interactions are locked into your secure company perimeter. Your queries are never used to train public machine learning models.</p>
+          </div>
+
         </section>
       </div>
 

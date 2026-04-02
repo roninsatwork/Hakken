@@ -33,12 +33,12 @@ export default function LandingPage() {
         </div>
         
         <h1 className="text-5xl sm:text-7xl font-light tracking-tight text-foreground leading-[1.1] mb-6 drop-shadow-xl">
-          You Know People. <br />
-          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent">Sonae Remembers Everything Else.</span>
+          Sonae <br />
+          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent text-3xl sm:text-5xl mt-2 block">The Ronins Starter Framework for AI projects</span>
         </h1>
         
         <p className="text-lg sm:text-xl text-secondary max-w-2xl mb-12 font-light leading-relaxed drop-shadow-md">
-          Relationship intelligence for the Ronins ecosystem. Living dossiers, conversation history, and context — so you're always the most prepared person in the room.
+          A scaffolded AI project framework with the tooling already sorted, built from what we have learned across enough engagements to know when a project is ready to hit the ground running and when it needs something different.
         </p>
 
         <Link 

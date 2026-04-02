@@ -80,8 +80,13 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const handleLogout = async () => {
     setIsProfileOpen(false);
     sessionStorage.removeItem("login_tracked");
-    await signOut();
-    router.push("/");
+    try {
+      await signOut();
+    } finally {
+      // Use hard browser navigation instead of router.push() to ensure the redirect happens
+      // even if sudden loss of Convex auth triggers a React client-side exception in deep admin pages
+      window.location.href = "/";
+    }
   };
 
   return (

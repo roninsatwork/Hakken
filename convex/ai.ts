@@ -16,19 +16,17 @@ export const generateSonaeResponse = internalAction({
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
-    const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
-      : new GoogleGenAI({ 
-          project: projectId, 
-          location: location,
-          vertexai: true,
-          googleAuthOptions: {
-            credentials: {
-              client_email: process.env.GOOGLE_CLIENT_EMAIL,
-              private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           }
-        });
+        }
+    });
     
     // Default mapped model selections for Sonae UI
     let actualModelStr = "gemini-3.1-pro-preview"; // Default to Thinking
@@ -177,19 +175,17 @@ export const transcribeAudio = action({
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = "us-central1"; // Enforce central routing for stable multimodal models
     
-    const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
-      : new GoogleGenAI({ 
-          project: projectId, 
-          location: location,
-          vertexai: true,
-          googleAuthOptions: {
-            credentials: {
-              client_email: process.env.GOOGLE_CLIENT_EMAIL,
-              private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           }
-        });
+        }
+    });
 
     try {
         const response = await ai.models.generateContent({
@@ -217,19 +213,17 @@ export const generateThreadTitle = internalAction({
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
-    const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
-      : new GoogleGenAI({ 
-          project: projectId, 
-          location: location,
-          vertexai: true,
-          googleAuthOptions: {
-            credentials: {
-              client_email: process.env.GOOGLE_CLIENT_EMAIL,
-              private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           }
-        });
+        }
+    });
 
     try {
       const response = await ai.models.generateContent({

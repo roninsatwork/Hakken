@@ -411,48 +411,7 @@ export default function SidebarNavigation() {
                       <SubNavItem label="Agentic Testing" href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Agentic Testing')} />
                     </NavItem>
 
-                    <NavItem 
-                      icon={Briefcase} 
-                      label="Business Hub" 
-                      isActive={activeItem === 'Business Hub'}
-                      onClick={() => setActiveItem('Business Hub')}
-                      hasChildren 
-                      isOpen={openSections.businessHub}
-                      onToggle={() => toggleSection('businessHub')}
-                    >
-                       <SubNavItem label="Documents" isActive={activeItem === 'Documents'} onClick={() => setActiveItem('Documents')} />
-                    </NavItem>
 
-                    <NavItem 
-                      icon={Users2} 
-                      label="Clients" 
-                      isActive={activeItem === 'Clients'}
-                      onClick={() => setActiveItem('Clients')}
-                      hasChildren 
-                      isOpen={openSections.clients}
-                      onToggle={() => toggleSection('clients')}
-                    >
-                      <SubNavItem label="Directory" isActive={activeItem === 'Directory'} onClick={() => setActiveItem('Directory')} />
-                    </NavItem>
-
-                    <NavItem 
-                      icon={Building2} 
-                      label="Companies" 
-                      isActive={activeItem === 'Companies'}
-                      onClick={() => setActiveItem('Companies')}
-                      hasChildren 
-                      isOpen={openSections.companies}
-                      onToggle={() => toggleSection('companies')}
-                    >
-                      <SubNavItem label="Search" isActive={activeItem === 'Search'} onClick={() => setActiveItem('Search')} />
-                    </NavItem>
-
-                    <NavItem 
-                      icon={LineChart} 
-                      label="Growth Report" 
-                      isActive={activeItem === 'Growth Report'}
-                      onClick={() => setActiveItem('Growth Report')}
-                    />
                   </>
                 )}
               </nav>

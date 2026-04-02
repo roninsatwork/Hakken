@@ -21,19 +21,17 @@ export const routeAgentIntent = action({
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
-    const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
-      : new GoogleGenAI({ 
-          project: projectId, 
-          location: location,
-          vertexai: true,
-          googleAuthOptions: {
-            credentials: {
-              client_email: process.env.GOOGLE_CLIENT_EMAIL,
-              private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           }
-        });
+        }
+    });
 
     try {
         // Fetch pool of active agents available to this company
