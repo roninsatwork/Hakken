@@ -99,7 +99,7 @@ export default function AssistantWelcomePage() {
   const firstName = user?.name ? user.name.split(" ")[0] : "";
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-card/10 w-full h-full">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-transparent w-full min-h-0">
       
       {/* Background Centralized Aura */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vw] h-[50vw] bg-brand/5 blur-[150px] rounded-full pointer-events-none z-0" />

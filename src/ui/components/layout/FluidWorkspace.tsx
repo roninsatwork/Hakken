@@ -16,7 +16,7 @@ export default function FluidWorkspace({ children, className }: { children: Reac
       transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
       className="h-screen overflow-y-auto flex flex-col w-full bg-transparent text-foreground relative z-0"
     >
-      <div className={`flex-1 w-full p-8 relative ${className || ''}`}>
+      <div className={`flex flex-col flex-1 w-full p-8 relative min-h-0 ${className || ''}`}>
         {children}
       </div>
     </motion.main>
