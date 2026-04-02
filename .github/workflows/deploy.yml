@@ -10,6 +10,7 @@ env:
   REGION: us-central1
   SERVICE: sonae-app
   REPO: sonae-repo
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
