@@ -91,7 +91,7 @@ export default function ChatLogsDashboard() {
                    initial={{ opacity: 0, scale: 0.95 }}
                    animate={{ opacity: 1, scale: 1 }}
                    onClick={() => setSelectedThreadId(thread._id as Id<"threads">)}
-                   className={`flex items-center gap-3 w-full text-left px-3 py-3 rounded-[12px] border transition-all relative overflow-hidden group ${
+                   className={`shrink-0 flex items-center gap-3 w-full text-left px-3 py-3 rounded-[12px] border transition-all relative overflow-hidden group ${
                      selectedThreadId === thread._id 
                        ? "bg-brand/10 border-brand/40 shadow-inner" 
                        : "bg-transparent border-transparent hover:bg-foreground/5 hover:border-border-dim"
