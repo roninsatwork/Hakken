@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // --- QUERIES & MUTATIONS ---
 
