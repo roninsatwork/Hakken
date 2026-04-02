@@ -17,7 +17,7 @@ export const generateSonaeResponse = internalAction({
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
     const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
       : new GoogleGenAI({ 
           project: projectId, 
           location: location,
@@ -178,7 +178,7 @@ export const transcribeAudio = action({
     const location = "us-central1"; // Enforce central routing for stable multimodal models
     
     const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
       : new GoogleGenAI({ 
           project: projectId, 
           location: location,
@@ -218,7 +218,7 @@ export const generateThreadTitle = internalAction({
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
     const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
       : new GoogleGenAI({ 
           project: projectId, 
           location: location,

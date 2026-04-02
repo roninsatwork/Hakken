@@ -17,7 +17,7 @@ export const generateAgentResponse = internalAction({
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     
     const ai = process.env.GEMINI_API_KEY 
-      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+      ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, vertexai: false })
       : new GoogleGenAI({ 
           project: projectId, 
           location: location,
