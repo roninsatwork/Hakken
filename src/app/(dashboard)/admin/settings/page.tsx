@@ -14,7 +14,10 @@ import {
   Building2,
   ImageIcon,
   Sun,
-  Moon
+  Moon,
+  ShieldCheck,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -65,17 +68,27 @@ export default function SystemSettingsPage() {
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);
   const generateUploadUrl = useMutation(api.settings.generateUploadUrl);
+  
+  const currentPiiConfig = useQuery(api.system.getPiiConfig);
+  const updatePiiConfig = useMutation(api.system.updatePiiConfig);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
   // Local state form
   const [formData, setFormData] = useState<any>({});
+  const [piiData, setPiiData] = useState<any>({});
 
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "economics">("identity");
+  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "economics" | "security">("identity");
+
+  useEffect(() => {
+    if (currentPiiConfig) {
+       setPiiData(currentPiiConfig);
+    }
+  }, [currentPiiConfig]);
 
   useEffect(() => {
     if (currentSettings) {
@@ -115,8 +128,12 @@ export default function SystemSettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { _id, _creationTime, ...payload } = formData;
-      await updateSettings(payload);
+      if (activeTab === "security") {
+        await updatePiiConfig({ configStr: JSON.stringify(piiData) });
+      } else {
+        const { _id, _creationTime, ...payload } = formData;
+        await updateSettings(payload);
+      }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (e) {
@@ -192,7 +209,8 @@ export default function SystemSettingsPage() {
         {[
           { id: 'identity', label: 'Brand Identity', icon: Building2 },
           { id: 'appearance', label: 'Appearance', icon: Palette },
-          { id: 'economics', label: 'Economics', icon: CreditCard }
+          { id: 'economics', label: 'Economics', icon: CreditCard },
+          { id: 'security', label: 'Data Privacy', icon: ShieldCheck }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -426,6 +444,80 @@ export default function SystemSettingsPage() {
                           className="w-full bg-background/50 border border-border-dim rounded-[12px] pl-9 pr-4 py-3 text-[18px] text-foreground outline-none focus:border-brand transition-colors font-bold font-mono" 
                        />
                     </div>
+                 </div>
+
+              </div>
+           </SettingBlock>
+        </section>
+        )}
+
+      {/* Global Security Engine */}
+        {activeTab === "security" && (
+        <section className="flex flex-col gap-6">
+           <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
+             <ShieldCheck className="w-3.5 h-3.5" /> PII Masking Firewall
+           </h3>
+           
+           <SettingBlock title="Auto-Redaction Config" sub="When enabled, sensitive data like credit cards or emails is immediately scrubbed and masked on-the-fly before hitting the database or AI orchestration system.">
+              
+              <div className="flex flex-col gap-0 border border-border-dim rounded-[16px] overflow-hidden">
+                 
+                 <div className="flex items-center justify-between p-5 bg-background/50 border-b border-border-dim">
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[14px] text-foreground font-semibold">Master Firewall Toggle</span>
+                       <span className="text-[12px] text-muted">Enable or disable the interceptor entirely.</span>
+                    </div>
+                    <button 
+                       onClick={() => setPiiData({...piiData, enabled: !piiData.enabled})}
+                       className={`transition-colors flex-shrink-0 ${piiData.enabled ? "text-brand" : "text-muted"}`}
+                    >
+                       {piiData.enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                    </button>
+                 </div>
+
+                 <div className={`flex flex-col transition-all duration-300 ${piiData.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                     <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
+                        <span className="text-[13px] text-foreground/90">Mask Email Addresses</span>
+                        <button 
+                           onClick={() => setPiiData({...piiData, maskEmails: !piiData.maskEmails})}
+                           className={`transition-colors flex-shrink-0 ${piiData.maskEmails ? "text-[#10B981]" : "text-border-dim"}`}
+                        >
+                           {piiData.maskEmails ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                        </button>
+                     </div>
+
+                     <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
+                        <span className="text-[13px] text-foreground/90">Mask Credit Cards (13-19 Digits)</span>
+                        <button 
+                           onClick={() => setPiiData({...piiData, maskCreditCards: !piiData.maskCreditCards})}
+                           className={`transition-colors flex-shrink-0 ${piiData.maskCreditCards ? "text-[#10B981]" : "text-border-dim"}`}
+                        >
+                           {piiData.maskCreditCards ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                        </button>
+                     </div>
+
+                     <div className="flex items-center justify-between p-5 bg-card/10 border-b border-border-dim/50">
+                        <span className="text-[13px] text-foreground/90">Mask National Insurance / SSN</span>
+                        <button 
+                           onClick={() => setPiiData({...piiData, maskNinos: !piiData.maskNinos})}
+                           className={`transition-colors flex-shrink-0 ${piiData.maskNinos ? "text-[#10B981]" : "text-border-dim"}`}
+                        >
+                           {piiData.maskNinos ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                        </button>
+                     </div>
+
+                     <div className="flex items-center justify-between p-5 bg-card/10">
+                        <div className="flex flex-col gap-1">
+                           <span className="text-[13px] text-foreground/90">Mask Phone Numbers</span>
+                           <span className="text-[11px] text-muted max-w-[280px]">Prone to false positives (e.g., dates/ids). Only enable if strictly required.</span>
+                        </div>
+                        <button 
+                           onClick={() => setPiiData({...piiData, maskPhones: !piiData.maskPhones})}
+                           className={`transition-colors flex-shrink-0 ${piiData.maskPhones ? "text-[#10B981]" : "text-border-dim"}`}
+                        >
+                           {piiData.maskPhones ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                        </button>
+                     </div>
                  </div>
 
               </div>

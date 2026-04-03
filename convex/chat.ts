@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import { redactPII } from "./utils/pii";
 
 export const getThreads = query({
   args: {},
@@ -107,11 +108,25 @@ export const sendMessage = mutation({
 
     const now = Date.now();
 
+    // -- PII FIREWALL EXTRACTION --
+    const piiConfigEntry = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .first();
+      
+    let piiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
+    if (piiConfigEntry && piiConfigEntry.value) {
+        piiConfig = JSON.parse(piiConfigEntry.value);
+    }
+    
+    // Execute Auto-redaction logic masking sensitive data synchronously
+    const safeContent = redactPII(args.content, piiConfig as any);
+
     // 1. Insert User Message
     await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "user",
-      content: args.content,
+      content: safeContent,
       createdAt: now,
     });
 
@@ -132,12 +147,12 @@ export const sendMessage = mutation({
        await ctx.scheduler.runAfter(0, internal.agentRuntime.generateAgentResponse, {
          threadId: args.threadId,
          agentId: targetAgentId,
-         content: args.content,
+         content: safeContent,
        });
     } else {
        await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
          threadId: args.threadId,
-         content: args.content,
+         content: safeContent,
          modelId: args.modelId,
          thinkingLevel: args.thinkingLevel,
        });
@@ -147,7 +162,7 @@ export const sendMessage = mutation({
     if (thread.title === "New Conversation") {
       await ctx.scheduler.runAfter(0, internal.ai.generateThreadTitle, {
         threadId: args.threadId,
-        content: args.content,
+        content: safeContent,
       });
     }
 
@@ -164,10 +179,24 @@ export const saveAssistantMessage = internalMutation({
     modelUsed: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    
+    // -- PII FIREWALL EXTRACTION (OUTBOUND) --
+    const piiConfigEntry = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .first();
+      
+    let piiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
+    if (piiConfigEntry && piiConfigEntry.value) {
+        piiConfig = JSON.parse(piiConfigEntry.value);
+    }
+    
+    const safeContent = redactPII(args.content, piiConfig as any);
+
     await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
-      content: args.content,
+      content: safeContent,
       createdAt: Date.now(),
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,

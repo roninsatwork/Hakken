@@ -119,3 +119,59 @@ export const updateAnalyticsId = mutation({
     }
   },
 });
+
+export const getPiiConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const config = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .first();
+
+    if (!config || !config.value) {
+      // Return sensible defaults if not set yet
+      return {
+        enabled: false,
+        maskEmails: true,
+        maskCreditCards: true,
+        maskPhones: false,
+        maskNinos: true
+      };
+    }
+
+    return JSON.parse(config.value);
+  },
+});
+
+export const updatePiiConfig = mutation({
+  args: {
+    configStr: v.string(), // JSON string
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const existingConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .first();
+
+    if (existingConfig) {
+      await ctx.db.patch(existingConfig._id, {
+        value: args.configStr,
+        updatedAt: Date.now(),
+        updatedBy: userId,
+      });
+    } else {
+      await ctx.db.insert("systemConfig", {
+        key: "PII_REDACTION_CONFIG",
+        value: args.configStr,
+        updatedAt: Date.now(),
+        updatedBy: userId,
+      });
+    }
+    return true;
+  },
+});

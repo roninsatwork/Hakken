@@ -33,6 +33,7 @@ import type * as orchestrator from "../orchestrator.js";
 import type * as settings from "../settings.js";
 import type * as system from "../system.js";
 import type * as users from "../users.js";
+import type * as utils_pii from "../utils/pii.js";
 import type * as workflows from "../workflows.js";
 
 import type {
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   system: typeof system;
   users: typeof users;
+  "utils/pii": typeof utils_pii;
   workflows: typeof workflows;
 }>;
 
