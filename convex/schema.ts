@@ -283,4 +283,16 @@ export default defineSchema({
     startedBy: v.id("users"),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
   }).index("by_workflow", ["workflowId", "startedAt"]),
+
+  aiModels: defineTable({
+    modelId: v.string(), // e.g. "gemini-3.1-pro-preview"
+    displayName: v.string(),
+    description: v.optional(v.string()), // A short description 
+    isEnabled: v.boolean(),
+    isDefault: v.boolean(),
+    lastSyncedAt: v.number(),
+  })
+    .index("by_model_id", ["modelId"])
+    .index("by_enabled", ["isEnabled"])
+    .index("by_default", ["isDefault"]),
 });

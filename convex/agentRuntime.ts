@@ -37,7 +37,9 @@ export const generateAgentResponse = internalAction({
            ? agent.systemPrompt 
            : "You are an autonomous Sonae Agent. Use available tools to fulfill user requests.";
 
-        const targetModel = agent.modelId || "gemini-3.1-pro-preview";
+        const targetModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, { 
+           requestedModelId: agent.modelId 
+        });
 
         // 2. Fetch Conversation History 
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });

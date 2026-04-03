@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { UIProvider } from "@/src/context/UIContext";
 import { ConvexClientProvider } from "@/src/context/ConvexClientProvider";
 import { SystemSettingsProvider } from "@/src/context/SystemSettingsContext";
+import { AnalyticsProvider } from "@/src/ui/components/layout/AnalyticsProvider";
 
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 
@@ -51,6 +52,7 @@ export default function RootLayout({
                     <div className="w-full min-h-screen flex flex-col items-stretch overflow-x-hidden">
                       {children}
                     </div>
+                    <AnalyticsProvider />
                   </UIProvider>
                 </NextIntlClientProvider>
               </SystemSettingsProvider>

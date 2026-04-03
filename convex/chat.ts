@@ -91,6 +91,7 @@ export const sendMessage = mutation({
     threadId: v.id("threads"),
     content: v.string(),
     modelId: v.optional(v.string()),
+    thinkingLevel: v.optional(v.string()),
     dynamicAgentId: v.optional(v.union(v.id("agents"), v.null())),
   },
   handler: async (ctx, args) => {
@@ -138,6 +139,7 @@ export const sendMessage = mutation({
          threadId: args.threadId,
          content: args.content,
          modelId: args.modelId,
+         thinkingLevel: args.thinkingLevel,
        });
     }
 

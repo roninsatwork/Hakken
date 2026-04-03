@@ -7,6 +7,9 @@ import { Bot, BrainCircuit, Globe, Key, Settings2 } from "lucide-react";
 export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
   const agentId = node?.data?._agentId;
   const agent = useQuery(api.agents.get, agentId ? { id: agentId } : "skip");
+  const allModels = useQuery(api.aiModels.getModels) || [];
+  const activeModels = allModels.filter((m) => m.isEnabled);
+  
   const updateAgent = useMutation(api.agents.updateAgent);
   const promoteToGlobal = useMutation((api as any).agents.promoteToGlobal);
 
@@ -160,13 +163,22 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
                   <Settings2 className="w-4 h-4" /> Cognitive Engine
                 </label>
                 <select
-                  value={formData.modelId}
+                  value={formData.modelId || ''}
                   onChange={e => setFormData({...formData, modelId: e.target.value})}
                   className="px-3 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                 >
-                  <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
-                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
-                  <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                  <option value="" disabled>Select Cognitive Engine...</option>
+                  {activeModels.map((m) => (
+                    <option key={m.modelId} value={m.modelId}>
+                      {m.displayName} {m.isDefault && "(System Default)"}
+                    </option>
+                  ))}
+                  
+                  {formData.modelId && activeModels.length > 0 && !activeModels.find(m => m.modelId === formData.modelId) && (
+                    <option value={formData.modelId}>
+                      {formData.modelId} (Legacy / Disabled)
+                    </option>
+                  )}
                 </select>
               </div>
 

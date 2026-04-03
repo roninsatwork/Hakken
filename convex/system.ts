@@ -69,3 +69,53 @@ export const updateSystemPrompt = mutation({
     }
   },
 });
+
+export const getAnalyticsId = query({
+  args: {},
+  handler: async (ctx) => {
+    const config = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "GOOGLE_ANALYTICS_ID"))
+      .first();
+
+    return config?.value || null;
+  },
+});
+
+export const updateAnalyticsId = mutation({
+  args: {
+    trackingId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      throw new Error("Target identity unauthenticated or session expired");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized: System Protocol modifications require Super Administrator clearance.");
+    }
+
+    const existingConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "GOOGLE_ANALYTICS_ID"))
+      .first();
+
+    if (existingConfig) {
+      await ctx.db.patch(existingConfig._id, {
+        value: args.trackingId.trim(),
+        updatedAt: Date.now(),
+        updatedBy: userId,
+      });
+      return existingConfig._id;
+    } else {
+      return await ctx.db.insert("systemConfig", {
+        key: "GOOGLE_ANALYTICS_ID",
+        value: args.trackingId.trim(),
+        updatedAt: Date.now(),
+        updatedBy: userId,
+      });
+    }
+  },
+});

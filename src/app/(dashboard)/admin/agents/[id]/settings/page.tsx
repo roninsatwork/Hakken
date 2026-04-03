@@ -21,6 +21,9 @@ export default function AgentOverviewPage() {
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
+  const allModels = useQuery(api.aiModels.getModels) || [];
+  const activeModels = allModels.filter((m) => m.isEnabled);
+  
   const updateAgent = useMutation(api.agents.updateAgent);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
   
@@ -208,15 +211,22 @@ export default function AgentOverviewPage() {
               <div className="flex flex-col gap-2 md:col-span-2 md:w-1/2">
                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">AI Model Engine</label>
                 <select
-                  value={formData.modelId || 'gemini-3-flash-preview'}
+                  value={formData.modelId || ''}
                   onChange={e => setFormData({...formData, modelId: e.target.value})}
                   className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
                 >
-                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Fast & Cheap)</option>
-                  <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Deep Reasoning)</option>
-                  <option value="gemini-3-flash-preview">Gemini 3.0 Flash (Stable)</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Legacy)</option>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro (Legacy)</option>
+                  <option value="" disabled>Select Cognitive Engine...</option>
+                  {activeModels.map((m) => (
+                    <option key={m.modelId} value={m.modelId}>
+                      {m.displayName} {m.isDefault && "(System Default)"}
+                    </option>
+                  ))}
+                  
+                  {formData.modelId && activeModels.length > 0 && !activeModels.find(m => m.modelId === formData.modelId) && (
+                    <option value={formData.modelId}>
+                      {formData.modelId} (Legacy / Disabled)
+                    </option>
+                  )}
                 </select>
               </div>
 

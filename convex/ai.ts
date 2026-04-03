@@ -9,7 +9,8 @@ export const generateSonaeResponse = internalAction({
   args: {
     threadId: v.id("threads"),
     content: v.string(),
-    modelId: v.optional(v.string()), // Takes 'fast', 'thinking', or 'pro'
+    modelId: v.optional(v.string()),
+    thinkingLevel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Escaping Edge runtime limits. Using implicit Node env parsing.
@@ -28,22 +29,17 @@ export const generateSonaeResponse = internalAction({
         }
     });
     
-    // Default mapped model selections for Sonae UI
-    let actualModelStr = "gemini-3.1-pro-preview"; // Default to Thinking
-    let generationConfig: any = { 
-        thinkingConfig: { thinkingLevel: "MEDIUM" } 
-    };
+    // Direct mapping configuration
+    let actualModelStr = args.modelId || "gemini-3.1-pro-preview";
     
-    if (args.modelId === "fast") {
-        actualModelStr = "gemini-3.1-flash-lite-preview";
-        generationConfig = {}; // Flash models generally skip deep reasoning levels
+    let generationConfig: any = {};
+    if (args.thinkingLevel && args.thinkingLevel !== "NONE") {
+        generationConfig.thinkingConfig = { thinkingLevel: args.thinkingLevel };
     }
-    if (args.modelId === "pro") {
-        actualModelStr = "gemini-3.1-pro-preview";
-        generationConfig = {
-            thinkingConfig: { thinkingLevel: "HIGH" }
-        };
-    }
+
+    actualModelStr = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {
+        requestedModelId: actualModelStr
+    });
     
     try {
         // Fetch up to 20 previous messages to pass as context

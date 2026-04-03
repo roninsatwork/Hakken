@@ -13,6 +13,8 @@ import type * as agentRuntime from "../agentRuntime.js";
 import type * as agentTransactions from "../agentTransactions.js";
 import type * as agents from "../agents.js";
 import type * as ai from "../ai.js";
+import type * as aiModels from "../aiModels.js";
+import type * as aiModelsActions from "../aiModelsActions.js";
 import type * as aiRules from "../aiRules.js";
 import type * as aiTools from "../aiTools.js";
 import type * as analytics from "../analytics.js";
@@ -45,6 +47,8 @@ declare const fullApi: ApiFromModules<{
   agentTransactions: typeof agentTransactions;
   agents: typeof agents;
   ai: typeof ai;
+  aiModels: typeof aiModels;
+  aiModelsActions: typeof aiModelsActions;
   aiRules: typeof aiRules;
   aiTools: typeof aiTools;
   analytics: typeof analytics;
