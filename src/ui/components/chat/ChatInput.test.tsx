@@ -9,7 +9,7 @@ const mockSendMessage = vi.fn().mockResolvedValue(true)
 vi.mock('convex/react', async (importOriginal) => {
   return {
     useMutation: vi.fn(() => mockSendMessage),
-    useQuery: vi.fn(() => []), // Return empty array by default for Models
+    useQuery: vi.fn(() => [{ modelId: 'fast', displayName: 'Fast', isEnabled: true, isDefault: true }]),
   }
 })
 
@@ -71,8 +71,8 @@ describe('ChatInput Component', () => {
     // Check legal text uses system settings
     expect(screen.getByText(/Sonae Assistant is AI/i)).toBeInTheDocument()
     
-    // Check default model text
-    expect(screen.getByText('Fast')).toBeInTheDocument()
+    // Check default model text (can be twice if dropdown is rendered)
+    expect(screen.getAllByText('Fast')[0]).toBeInTheDocument()
   })
 
   it('handles typing and calling sendMessage on submit', async () => {
@@ -93,7 +93,8 @@ describe('ChatInput Component', () => {
       expect(mockSendMessage).toHaveBeenCalledWith({
         threadId: 'mock_thread_123',
         content: 'Hello AI',
-        modelId: 'fast' // Since "Fast" is default
+        modelId: 'fast',
+        thinkingLevel: 'NONE'
       })
     })
     
