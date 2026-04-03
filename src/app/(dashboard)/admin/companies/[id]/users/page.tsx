@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   User,
   Trash2,
-  Edit2
+  Edit2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -44,6 +46,11 @@ export default function CompanyUsersPage() {
   const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   const filteredUsers = users.filter((u: any) => 
     (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -54,43 +61,80 @@ export default function CompanyUsersPage() {
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const allItems = [
+    ...filteredInvites.map((i: any) => ({ ...i, IS_INVITE: true })),
+    ...filteredUsers
+  ];
+
+  const totalItems = allItems.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const paginatedItems = allItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleSearch = (v: string) => {
+    setSearchTerm(v);
+    setCurrentPage(1);
+  };
+
   const handleOpenAdd = () => {
     setFormData({ name: "", email: "", role: "USER", image: "", companyId: "" });
     setEditingUser(null);
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (user: any) => {
     setFormData({ name: user.name, email: user.email, role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
     setEditingUser(user);
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const payload = {
       ...formData,
       companyId
     };
-    if (editingUser) {
-      await updateUser({ id: editingUser._id, ...payload });
-    } else {
-      await addUser(payload);
+    try {
+      if (editingUser) {
+        await updateUser({ id: editingUser._id, ...payload });
+      } else {
+        await addUser(payload);
+      }
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      setSubmitError(err.message || "Operation failed.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsAddModalOpen(false);
   };
 
   const confirmDelete = async () => {
     if (deletingUser) {
-      await deleteUser({ id: deletingUser._id });
-      setDeletingUser(null);
+      setIsSubmitting(true);
+      try {
+        await deleteUser({ id: deletingUser._id });
+        setDeletingUser(null);
+      } catch (err: any) {
+        setSubmitError(err.message || "Failed to delete user.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   const confirmRevoke = async () => {
     if (deletingInvite) {
-      await revokeInvite({ id: deletingInvite._id });
-      setDeletingInvite(null);
+      setIsSubmitting(true);
+      try {
+        await revokeInvite({ id: deletingInvite._id });
+        setDeletingInvite(null);
+      } catch (err: any) {
+        setSubmitError(err.message || "Failed to revoke invite.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -123,15 +167,15 @@ export default function CompanyUsersPage() {
             type="text" 
             placeholder="Search users by name or email..." 
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
           />
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
@@ -143,7 +187,7 @@ export default function CompanyUsersPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
+                {paginatedItems.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
                       No users or pending invitations found matching your search.
@@ -151,94 +195,94 @@ export default function CompanyUsersPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredInvites.map((inv) => (
-                      <motion.tr 
-                        key={inv._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                               <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                    {paginatedItems.map((item) => (
+                      item.IS_INVITE ? (
+                        <motion.tr 
+                          key={`inv-${item._id}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
+                                 <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
+                                  Pending Invitation
+                                </span>
+                                <span className="text-[12px] text-secondary">{item.email}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                                Pending Invitation
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
+                              <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
+                                PENDING {item.role}
                               </span>
-                              <span className="text-[12px] text-secondary">{inv.email}</span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                            <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                              PENDING {inv.role}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[12px] text-secondary">
-                          {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
-                             <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
-                               <Trash2 className="w-4 h-4" />
-                             </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-
-                    {filteredUsers.map((user) => (
-                      <motion.tr 
-                        key={user._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        onClick={() => router.push(`/admin/users/${user._id}`)}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-3">
-                            <img 
-                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
-                              alt={user.name} 
-                              className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                            />
-                            <div>
-                              <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
-                                {user.name}
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-secondary">
+                            {item.invitedAt ? new Date(item.invitedAt).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
+                               <button onClick={() => setDeletingInvite(item)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ) : (
+                        <motion.tr 
+                          key={`user-${item._id}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          onClick={() => router.push(`/admin/users/${item._id}`)}
+                          className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
+                        >
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name}`} 
+                                alt={item.name} 
+                                className="w-8 h-8 rounded-full bg-card border border-border-dim"
+                              />
+                              <div>
+                                <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
+                                  {item.name}
+                                </span>
+                                <span className="text-[12px] text-secondary">{item.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                              {item.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
+                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                                {item.role || 'USER'}
                               </span>
-                              <span className="text-[12px] text-secondary">{user.email}</span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                            {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {user.role || 'USER'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-[12px] text-secondary">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(user); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingUser(user); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
+                          </td>
+                          <td className="px-4 py-2.5 text-[12px] text-secondary">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); setDeletingUser(item); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      )
                     ))}
                   </>
                 )}
@@ -246,6 +290,37 @@ export default function CompanyUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
+            <div className="flex items-center gap-2 text-[12px] text-muted">
+                <span>Showing</span>
+                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+                <span>to</span>
+                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+                <span>of</span>
+                <span className="font-medium text-foreground">{totalItems}</span>
+                <span>users</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button 
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}
@@ -254,7 +329,10 @@ export default function CompanyUsersPage() {
         onClose={() => setIsAddModalOpen(false)}
         title={editingUser ? "Edit User" : "Invite User"}
       >
-        <p className="text-secondary mb-6 text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
+        <div className="flex flex-col gap-2 mb-6">
+           <p className="text-secondary text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
+           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {editingUser ? (
             <div className="flex flex-col gap-3 p-4 rounded-[10px] bg-foreground/[0.02] border border-border-dim/50 mb-2">
@@ -328,9 +406,10 @@ export default function CompanyUsersPage() {
             </button>
             <button 
               type="submit"
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
-              {editingUser ? "Update User" : "Send Invite"}
+              {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
             </button>
           </div>
         </form>
@@ -339,12 +418,15 @@ export default function CompanyUsersPage() {
       {/* Delete Confirmation Modal */}
       <SonaeModal
         isOpen={!!deletingUser}
-        onClose={() => setDeletingUser(null)}
+        onClose={() => { setDeletingUser(null); setSubmitError(""); }}
         title="Delete User"
       >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
-        </p>
+        <div className="flex flex-col gap-2 mb-6">
+           <p className="text-secondary text-[15px] leading-relaxed">
+             Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
+           </p>
+           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 
             type="button" 
@@ -356,9 +438,10 @@ export default function CompanyUsersPage() {
           <button 
             type="button"
             onClick={confirmDelete}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            Delete User
+            {isSubmitting ? "Deleting..." : "Delete User"}
           </button>
         </div>
       </SonaeModal>
@@ -366,12 +449,15 @@ export default function CompanyUsersPage() {
       {/* Revoke Invitation Modal */}
       <SonaeModal
         isOpen={!!deletingInvite}
-        onClose={() => setDeletingInvite(null)}
+        onClose={() => { setDeletingInvite(null); setSubmitError(""); }}
         title="Revoke Access"
       >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
-        </p>
+        <div className="flex flex-col gap-2 mb-6">
+           <p className="text-secondary text-[15px] leading-relaxed">
+             Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
+           </p>
+           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 
             type="button" 
@@ -383,9 +469,10 @@ export default function CompanyUsersPage() {
           <button 
             type="button"
             onClick={confirmRevoke}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            Revoke Access
+            {isSubmitting ? "Revoking..." : "Revoke Access"}
           </button>
         </div>
       </SonaeModal>

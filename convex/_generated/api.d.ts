@@ -30,6 +30,7 @@ import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
 import type * as migrations from "../migrations.js";
 import type * as orchestrator from "../orchestrator.js";
+import type * as scheduler from "../scheduler.js";
 import type * as settings from "../settings.js";
 import type * as system from "../system.js";
 import type * as users from "../users.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   knowledgeActions: typeof knowledgeActions;
   migrations: typeof migrations;
   orchestrator: typeof orchestrator;
+  scheduler: typeof scheduler;
   settings: typeof settings;
   system: typeof system;
   users: typeof users;

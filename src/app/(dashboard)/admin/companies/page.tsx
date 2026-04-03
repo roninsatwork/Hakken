@@ -8,7 +8,9 @@ import {
   Plus, 
   Search, 
   Trash2,
-  Edit2
+  Edit2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -29,20 +31,35 @@ export default function CompaniesPage() {
 
   const [formData, setFormData] = useState({ name: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   const filteredCompanies = companies.filter((c: any) => 
     (c.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalItems = filteredCompanies.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const paginatedCompanies = filteredCompanies.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleSearch = (v: string) => {
+    setSearchTerm(v);
+    setCurrentPage(1);
+  };
+
   const handleOpenAdd = () => {
     setFormData({ name: "" });
     setEditingCompany(null);
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (company: any) => {
     setFormData({ name: company.name });
     setEditingCompany(company);
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
@@ -57,7 +74,7 @@ export default function CompaniesPage() {
       }
       setIsAddModalOpen(false);
     } catch (err: any) {
-      alert(err.message || "Failed to save company");
+      setSubmitError(err.message || "Failed to save company");
     } finally {
       setIsSubmitting(false);
     }
@@ -70,8 +87,7 @@ export default function CompaniesPage() {
         await deleteCompany({ id: deletingCompany._id });
         setDeletingCompany(null);
       } catch (err: any) {
-        alert(err.message || "Failed to delete company");
-        setDeletingCompany(null); // Close anyway so they can see alert
+        setSubmitError(err.message || "Failed to delete company");
       } finally {
         setIsSubmitting(false);
       }
@@ -107,15 +123,15 @@ export default function CompaniesPage() {
             type="text" 
             placeholder="Search companies by name..." 
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
@@ -127,15 +143,15 @@ export default function CompaniesPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredCompanies.length === 0 ? (
+                {paginatedCompanies.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No companies found matching your query.
+                      No companies match your search or no companies created yet.
                     </td>
                   </tr>
                 ) : (
                   <>
-                    {filteredCompanies.map((company) => (
+                    {paginatedCompanies.map((company) => (
                       <motion.tr 
                         key={company._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -182,6 +198,37 @@ export default function CompaniesPage() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
+            <div className="flex items-center gap-2 text-[12px] text-muted">
+                <span>Showing</span>
+                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+                <span>to</span>
+                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+                <span>of</span>
+                <span className="font-medium text-foreground">{totalItems}</span>
+                <span>companies</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button 
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}
@@ -190,7 +237,10 @@ export default function CompaniesPage() {
         onClose={() => setIsAddModalOpen(false)}
         title={editingCompany ? "Edit Company" : "Create Company Tenant"}
       >
-        <p className="text-secondary mb-6 text-[15px]">{editingCompany ? "Update workspace details." : "Initialize a brand new organizational workspace."}</p>
+        <div className="flex flex-col gap-2 mb-6">
+           <p className="text-secondary text-[15px]">{editingCompany ? "Update workspace details." : "Initialize a brand new organizational workspace."}</p>
+           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary tracking-wide">Company Name</label>
@@ -227,7 +277,7 @@ export default function CompaniesPage() {
       {/* Delete Confirmation Modal */}
       <SonaeModal
         isOpen={!!deletingCompany}
-        onClose={() => setDeletingCompany(null)}
+        onClose={() => { setDeletingCompany(null); setSubmitError(""); }}
         title="Delete Company Workspace"
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
@@ -238,6 +288,7 @@ export default function CompaniesPage() {
             <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">Warning: Cascade Nuke Active</strong>
             This will permanently erase the company along with ALL of its assigned users, system logic, analytics, and historical chat logs to comply with GDPR.
           </div>
+          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 

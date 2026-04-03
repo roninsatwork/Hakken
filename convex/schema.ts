@@ -283,6 +283,15 @@ export default defineSchema({
     startedBy: v.id("users"),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
   }).index("by_workflow", ["workflowId", "startedAt"]),
+  schedules: defineTable({
+    name: v.string(),
+    workflowId: v.id("workflows"),
+    intervalStr: v.string(), // "daily", "weekly"
+    isActive: v.boolean(),
+    lastRunTs: v.optional(v.number()),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+  }).index("by_workflow", ["workflowId"]),
 
   aiModels: defineTable({
     modelId: v.string(), // e.g. "gemini-3.1-pro-preview"

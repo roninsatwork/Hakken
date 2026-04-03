@@ -4,44 +4,49 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { 
-  Network,
+  Timer,
   Plus, 
   Search, 
   Trash2,
-  Settings,
+  CheckCircle2,
+  XCircle,
+  ToggleLeft,
+  ToggleRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 
-export default function WorkflowsPage() {
+export default function SchedulesPage() {
   const router = useRouter();
-  // Using the new workflows API
+  
+  const schedules = useQuery((api as any).scheduler.getSchedules) || [];
   const workflows = useQuery((api as any).workflows.list) || [];
-  const createWorkflow = useMutation((api as any).workflows.createWorkflow);
-  const deleteWorkflow = useMutation((api as any).workflows.deleteWorkflow);
+  
+  const createSchedule = useMutation((api as any).scheduler.createSchedule);
+  const deleteSchedule = useMutation((api as any).scheduler.deleteSchedule);
+  const toggleSchedule = useMutation((api as any).scheduler.toggleSchedule);
+  const manualRunWorkflow = useMutation((api as any).scheduler.manualRunWorkflow);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deletingWorkflow, setDeletingWorkflow] = useState<any | null>(null);
+  const [deletingSchedule, setDeletingSchedule] = useState<any | null>(null);
+  const [messageModal, setMessageModal] = useState<{title: string; body: string} | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  const filteredWorkflows = workflows.filter((w: any) => 
-    (w.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (w.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSchedules = schedules.filter((s: any) => 
+    (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalItems = filteredWorkflows.length;
+  const totalItems = filteredSchedules.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedWorkflows = filteredWorkflows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedSchedules = filteredSchedules.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -49,39 +54,39 @@ export default function WorkflowsPage() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", description: "" });
-    setSubmitError("");
-    setIsAddModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const newWorkflowId = await createWorkflow({ 
-        name: formData.name, 
-        description: formData.description 
-      });
-      setIsAddModalOpen(false);
-      router.push(`/admin/workflows/${newWorkflowId}`);
-    } catch (err: any) {
-      setSubmitError(err.message || "Failed to create workflow");
-    } finally {
-      setIsSubmitting(false);
-    }
+    router.push("/admin/workflows/schedules/new");
   };
 
   const confirmDelete = async () => {
-    if (deletingWorkflow) {
+    if (deletingSchedule) {
       setIsSubmitting(true);
       try {
-        await deleteWorkflow({ id: deletingWorkflow._id });
-        setDeletingWorkflow(null);
+        await deleteSchedule({ scheduleId: deletingSchedule._id });
+        setDeletingSchedule(null);
       } catch (err: any) {
-        setSubmitError(err.message || "Failed to delete workflow");
+        setMessageModal({ title: "Deletion Failed", body: err.message || "Failed to delete schedule" });
       } finally {
         setIsSubmitting(false);
       }
+    }
+  };
+
+  const handleManualRun = async (workflowId: string, e: any) => {
+    e.stopPropagation();
+    try {
+        await manualRunWorkflow({ workflowId: workflowId as any });
+        setMessageModal({ title: "Execution Queued", body: "The engine has successfully pushed the workflow graph to the queue. You can monitor its heartbeat in the Logs tab." });
+    } catch (e: any) {
+        setMessageModal({ title: "Execution Failed", body: e.message || "Failed to run manually." });
+    }
+  };
+
+  const handleToggle = async (scheduleId: string, current: boolean, e: any) => {
+    e.stopPropagation();
+    try {
+        await toggleSchedule({ scheduleId: scheduleId as any, isActive: !current });
+    } catch (e: any) {
+        setMessageModal({ title: "Status Update Failed", body: e.message || "Failed to toggle." });
     }
   };
 
@@ -90,10 +95,10 @@ export default function WorkflowsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Network className="w-6 h-6 text-brand" />
-            Agent Orchestration Workflows
+            <Timer className="w-6 h-6 text-brand" />
+            Autonomous Scheduler
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Visually build, chain, and coordinate multi-agent processes.</p>
+          <p className="text-[13px] text-secondary mt-1">Configure automated triggers that wake up and run workflows chronologically.</p>
         </div>
         
         <button 
@@ -101,7 +106,7 @@ export default function WorkflowsPage() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          <span>New Workflow</span>
+          <span>New Schedule</span>
         </button>
       </div>
 
@@ -110,7 +115,7 @@ export default function WorkflowsPage() {
           <Search className="w-[18px] h-[18px]" />
           <input 
             type="text" 
-            placeholder="Search workflows by name..." 
+            placeholder="Search schedules by name..." 
             value={searchTerm}
             onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -119,71 +124,77 @@ export default function WorkflowsPage() {
       </div>
 
       <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1 h-full">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">Workflow Name</th>
-                <th className="px-4 py-3 font-medium">Trigger</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Schedule Details</th>
+                <th className="px-4 py-3 font-medium">Workflow</th>
+                <th className="px-4 py-3 font-medium">Interval</th>
+                <th className="px-4 py-3 font-medium">Status / Toggle</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               <AnimatePresence>
-                {paginatedWorkflows.length === 0 ? (
+                {paginatedSchedules.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No workflows match your search or no pipelines created yet.
+                    <td colSpan={5} className="px-6 py-12 text-center text-secondary">
+                      No schedules match your search or no schedules created yet.
                     </td>
                   </tr>
                 ) : (
                   <>
-                    {paginatedWorkflows.map((workflow: any) => (
+                    {paginatedSchedules.map((schedule: any) => (
                       <motion.tr 
-                        key={workflow._id}
+                        key={schedule._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        onClick={() => router.push(`/admin/workflows/${workflow._id}`)}
+                        onClick={() => router.push(`/admin/workflows/schedules/${schedule._id}`)}
                         className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-[8px] bg-card border border-border-dim flex items-center justify-center text-foreground">
-                              <Network className="w-4 h-4 text-brand" />
+                              <Timer className="w-4 h-4 text-brand" />
                             </div>
                             <div className="flex flex-col">
                               <span className="font-medium text-[13px] text-foreground leading-tight">
-                                {workflow.name}
+                                {schedule.name}
                               </span>
-                              {workflow.description && (
-                                <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">
-                                  {workflow.description}
-                                </span>
-                              )}
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-3">
+                           <span className="truncate text-[13px] text-foreground/80 font-medium">
+                                {schedule.workflowName}
+                           </span>
                         </td>
                         <td className="px-4 py-3">
                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
                               <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                                {workflow.triggerType}
+                                {schedule.intervalStr}
                               </span>
                             </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className={`flex items-center gap-2 text-[12px] font-medium ${workflow.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${workflow.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
-                            {workflow.isActive ? 'Active' : 'Draft'}
-                          </div>
+                           <button 
+                             onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
+                             className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
+                           >
+                             {schedule.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                             <span className="text-[12px] uppercase tracking-wider font-semibold text-foreground/50">{schedule.isActive ? "Armed" : "Paused"}</span>
+                           </button>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/workflows/${workflow._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title="Visual Builder">
-                              <Settings className="w-4 h-4" />
+                            
+                            <button onClick={(e) => handleManualRun(schedule.workflowId, e)} className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors" title="Force Run Now">
+                                <Play className="w-4 h-4 fill-current" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingWorkflow(workflow); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Workflow">
+
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingSchedule(schedule); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Schedule">
                                 <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -207,7 +218,7 @@ export default function WorkflowsPage() {
                 <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
                 <span>of</span>
                 <span className="font-medium text-foreground">{totalItems}</span>
-                <span>workflows</span>
+                <span>schedules</span>
             </div>
             <div className="flex items-center gap-2">
                 <button 
@@ -229,75 +240,22 @@ export default function WorkflowsPage() {
         )}
       </div>
 
-      <SonaeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Initialize New Workflow"
-      >
-        <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px]">Create a new agent orchestration pipeline.</p>
-           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Workflow Name</label>
-            <input 
-              type="text" 
-              required
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Content Generation Pipeline"
-            />
-          </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Short Description</label>
-            <input 
-              type="text" 
-              value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Multi-agent flow that researches and writes articles"
-            />
-          </div>
-
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
-              onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? "Creating..." : "Create Workflow"}
-            </button>
-          </div>
-        </form>
-      </SonaeModal>
 
       <SonaeModal
-        isOpen={!!deletingWorkflow}
-        onClose={() => { setDeletingWorkflow(null); setSubmitError(""); }}
-        title="Delete Workflow"
+        isOpen={!!deletingSchedule}
+        onClose={() => setDeletingSchedule(null)}
+        title="Delete Schedule"
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{deletingWorkflow?.name}</strong>?
+            Are you sure you want to permanently delete this schedule: <strong className="text-foreground font-semibold">{deletingSchedule?.name}</strong>?
           </p>
-          <p className="text-[13px] text-muted">This action cannot be undone.</p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button 
             type="button" 
-            onClick={() => setDeletingWorkflow(null)}
+            onClick={() => setDeletingSchedule(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             disabled={isSubmitting}
           >
@@ -309,7 +267,27 @@ export default function WorkflowsPage() {
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? "Deleting..." : "Delete Workflow"}
+            {isSubmitting ? "Deleting..." : "Delete Schedule"}
+          </button>
+        </div>
+      </SonaeModal>
+
+      {/* Generic Message Modal */}
+      <SonaeModal
+        isOpen={!!messageModal}
+        onClose={() => setMessageModal(null)}
+        title={messageModal?.title || ""}
+      >
+        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
+          <p>{messageModal?.body}</p>
+        </div>
+        <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
+          <button 
+            type="button" 
+            onClick={() => setMessageModal(null)}
+            className="px-8 py-3 rounded-[10px] bg-foreground text-background transition-all text-sm font-bold tracking-widest uppercase hover:opacity-90"
+          >
+            Dismiss
           </button>
         </div>
       </SonaeModal>

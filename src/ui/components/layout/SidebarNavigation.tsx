@@ -178,7 +178,9 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
     if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
     if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
-    if (pathname.startsWith('/admin/workflows')) return 'Manage Workflows';
+    if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
+    if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
+    if (pathname === '/admin/workflows') return 'Manage Workflows';
     if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
     if (pathname === '/admin/settings/analytics') return 'Analytics';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
@@ -216,7 +218,9 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/ai/tools')) setActiveItem('Connectors');
     else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
     else if (pathname.startsWith('/admin/agents')) setActiveItem('Manage Agents');
-    else if (pathname.startsWith('/admin/workflows')) setActiveItem('Manage Workflows');
+    else if (pathname.startsWith('/admin/workflows/schedules')) setActiveItem('Schedules');
+    else if (pathname.startsWith('/admin/workflows/logs')) setActiveItem('Workflow Logs');
+    else if (pathname === '/admin/workflows') setActiveItem('Manage Workflows');
     else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
     else if (pathname === '/admin/settings/analytics') setActiveItem('Analytics');
     else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
@@ -339,13 +343,15 @@ export default function SidebarNavigation() {
                       <NavItem 
                         icon={Network} 
                         label="Workflows" 
-                        isActive={activeItem === 'Workflows' || activeItem === 'Manage Workflows'}
+                        isActive={activeItem === 'Workflows' || activeItem === 'Manage Workflows' || activeItem === 'Schedules' || activeItem === 'Workflow Logs'}
                         onClick={() => setActiveItem('Workflows')}
                         hasChildren 
                         isOpen={openSections.workflows}
                         onToggle={() => toggleSection('workflows')}
                       >
-                        <SubNavItem label="Manage Workflows" href="/admin/workflows" isActive={pathname.startsWith('/admin/workflows')} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label="Manage Workflows" href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label="Schedules" href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
+                        <SubNavItem label="Logs" href="/admin/workflows/logs" isActive={pathname.startsWith('/admin/workflows/logs')} onClick={() => setActiveItem('Workflow Logs')} />
                       </NavItem>
                     )}
 
