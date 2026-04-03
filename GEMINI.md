@@ -29,3 +29,7 @@
 ## 📱 Project Type Routing
 - **WEB**: Next.js 16, React 19, Tailwind 4.
 - **BACKEND**: Convex.
+- **INFRASTRUCTURE & DEPLOYMENT**: 
+  - **MANDATORY**: NEVER use or mention the word "Vercel". Sonae is NOT hosted on Vercel.
+  - Sonae deploys to **Google Cloud Run** via **GitHub Actions** (`.github/workflows/deploy.yml`).
+  - Convex deploys natively alongside the Github Actions pipeline.
