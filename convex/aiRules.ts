@@ -12,6 +12,15 @@ export const getRules = query({
     const userId = await auth.getUserId(ctx);
     if (!userId) return []; 
 
+    const user = await ctx.db.get(userId);
+    if (!user) return [];
+
+    if (user.role !== "SUPER_ADMIN") {
+        if (args.companyId && args.companyId !== user.companyId) {
+            return []; // Unauthorized to view another company's rules
+        }
+    }
+
     if (args.agentId) {
        return await ctx.db
         .query("aiRules")
@@ -105,7 +114,7 @@ export const createRule = mutation({
         }
     }
 
-    return await ctx.db.insert("aiRules", {
+    const newRuleId = await ctx.db.insert("aiRules", {
       companyId: args.companyId,
       agentId: args.agentId,
       trigger: args.trigger,
@@ -115,6 +124,17 @@ export const createRule = mutation({
       createdBy: userId,
       createdAt: Date.now(),
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "CREATE_AI_RULE",
+      actorId: userId,
+      entityType: "aiRules",
+      entityId: newRuleId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ trigger: args.trigger, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+    });
+
+    return newRuleId;
   },
 });
 
@@ -147,6 +167,15 @@ export const updateRule = mutation({
       priority: args.priority,
       isActive: args.isActive,
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_AI_RULE",
+      actorId: userId,
+      entityType: "aiRules",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ updatedTrigger: args.trigger, updatedPriority: args.priority })
+    });
     
     return args.id;
   },
@@ -172,6 +201,16 @@ export const toggleRuleActive = mutation({
     }
 
     await ctx.db.patch(args.id, { isActive: args.isActive });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "TOGGLE_AI_RULE",
+      actorId: userId,
+      entityType: "aiRules",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ active: args.isActive })
+    });
+
     return args.id;
   },
 });
@@ -193,6 +232,16 @@ export const deleteRule = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_AI_RULE",
+      actorId: userId,
+      entityType: "aiRules",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ trigger: existingRule.trigger })
+    });
+
     return true;
   },
 });

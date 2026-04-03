@@ -68,10 +68,21 @@ export const createCompany = mutation({
        throw new Error("Unauthorized");
     }
 
-    return await ctx.db.insert("companies", {
+    const newCompanyId = await ctx.db.insert("companies", {
       name: args.name,
       createdAt: Date.now(),
     });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: adminId as any,
+      actionType: "CREATE_COMPANY",
+      entityId: newCompanyId,
+      entityType: "companies",
+      metadata: JSON.stringify({ name: args.name }),
+      timestamp: Date.now()
+    });
+
+    return newCompanyId;
   },
 });
 
@@ -86,7 +97,18 @@ export const updateCompany = mutation({
        throw new Error("Unauthorized");
     }
 
+    const previous = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { name: args.name });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: adminId as any,
+      actionType: "UPDATE_COMPANY",
+      entityId: args.id,
+      entityType: "companies",
+      metadata: JSON.stringify({ previousName: previous?.name, newName: args.name }),
+      timestamp: Date.now()
+    });
+
     return args.id;
   },
 });
@@ -123,8 +145,19 @@ export const deleteCompany = mutation({
       await ctx.db.delete(invite._id);
     }
 
+    const company = await ctx.db.get(args.id);
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actorId: adminId as any,
+      actionType: "DELETE_COMPANY",
+      entityId: args.id,
+      entityType: "companies",
+      metadata: JSON.stringify({ name: company?.name }),
+      timestamp: Date.now()
+    });
+
     return true;
   },
 });

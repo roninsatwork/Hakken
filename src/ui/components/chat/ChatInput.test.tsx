@@ -6,13 +6,19 @@ import ChatInput from './ChatInput'
 
 // 1. Mock Convex
 const mockSendMessage = vi.fn().mockResolvedValue(true)
-vi.mock('convex/react', () => ({
-  useMutation: vi.fn(() => mockSendMessage),
-}))
+vi.mock('convex/react', async (importOriginal) => {
+  return {
+    useMutation: vi.fn(() => mockSendMessage),
+    useQuery: vi.fn(() => []), // Return empty array by default for Models
+  }
+})
 
 // 2. Mock Generated APIs
 vi.mock('@/convex/_generated/api', () => ({
-  api: { chat: { sendMessage: 'mock_api_send' } },
+  api: { 
+    chat: { sendMessage: 'mock_api_send' },
+    aiModels: { getModels: 'mock_get_models' }
+  },
 }))
 
 // 3. Mock Custom Hooks

@@ -35,6 +35,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
   
   const user = useQuery(api.users.getMe);
   const recordLogin = useMutation(api.users.recordLogin);
+  const recordLogout = useMutation(api.users.recordLogout);
   const impersonateCompany = useMutation(api.users.impersonateCompany);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -81,6 +82,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
     setIsProfileOpen(false);
     sessionStorage.removeItem("login_tracked");
     try {
+      await recordLogout();
       await signOut();
     } finally {
       // Use hard browser navigation instead of router.push() to ensure the redirect happens

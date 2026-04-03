@@ -108,6 +108,15 @@ export const saveDocument = mutation({
       storageId: args.storageId,
     });
 
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPLOAD_DOCUMENT",
+      actorId: userId,
+      entityType: "knowledgeDocuments",
+      entityId: documentId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ title: args.title, format: args.format, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+    });
+
     return documentId;
   },
 });
@@ -144,6 +153,16 @@ export const deleteDocument = mutation({
 
     // Delete base document record
     await ctx.db.delete(args.documentId);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_DOCUMENT",
+      actorId: userId,
+      entityType: "knowledgeDocuments",
+      entityId: args.documentId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ title: doc.title, format: doc.format })
+    });
+
     return true;
   }
 });

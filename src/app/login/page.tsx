@@ -24,11 +24,12 @@ export default function LoginPage() {
     setIsSubmittingEmail(true);
     try {
       await signIn("resend", { email });
-      setEmailSent(true);
     } catch (e) {
-      console.error(e);
+      // Fail silently to thwart user enumeration attacks
+      console.debug("Auth action processed.");
     } finally {
       setIsSubmittingEmail(false);
+      setEmailSent(true);
     }
   };
 
@@ -131,9 +132,9 @@ export default function LoginPage() {
                 <div className="w-16 h-16 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-8 h-8 text-brand" />
                 </div>
-                <h3 className="text-xl font-medium text-foreground mb-2">Check your inbox</h3>
+                <h3 className="text-xl font-medium text-foreground mb-2">Thank you</h3>
                 <p className="text-[15px] text-secondary leading-relaxed max-w-[280px]">
-                  We sent a secure magic link to <strong className="text-foreground">{email}</strong>. Click it to authenticate instantly.
+                  If your account is registered with us, a secure magic link will be sent to <strong className="text-foreground">{email}</strong>.
                 </p>
                 <button
                   type="button"

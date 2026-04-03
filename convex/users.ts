@@ -83,7 +83,23 @@ export const getSuperAdmins = query({
 export const getUserById = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller) throw new Error("Unauthorized");
+    
+    const targetUser = await ctx.db.get(args.id);
+    if (!targetUser) return null;
+
+    if (caller.role === "SUPER_ADMIN" || caller._id === args.id) {
+       return targetUser;
+    }
+    
+    if (caller.companyId === targetUser.companyId) {
+       return targetUser;
+    }
+
+    throw new Error("Unauthorized");
   },
 });
 
@@ -96,9 +112,20 @@ export const addUser = mutation({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    if (caller.role !== "SUPER_ADMIN") {
+      if (caller.role !== "ADMIN" || caller.companyId !== args.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
+
     // Basic implementation: manually created users get a distinct token pattern
     const fakeTokenId = `manual|${Date.now()}|${Math.random().toString(36).substring(7)}`;
-    return await ctx.db.insert("users", {
+    const newUserId = await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
       role: args.role as "USER" | "ADMIN" | "SUPER_ADMIN",
@@ -107,6 +134,17 @@ export const addUser = mutation({
       tokenIdentifier: fakeTokenId,
       createdAt: Date.now(),
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "CREATE_USER",
+      actorId: callerId as any,
+      entityType: "users",
+      entityId: newUserId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ email: args.email, role: args.role, companyId: args.companyId })
+    });
+
+    return newUserId;
   },
 });
 
@@ -120,12 +158,39 @@ export const updateUser = mutation({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.id);
+    if (!targetUser) throw new Error("User not found");
+
+    if (caller.role !== "SUPER_ADMIN") {
+      if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
+        throw new Error("Unauthorized");
+      }
+      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== caller.companyId)) {
+        throw new Error("Unauthorized: Insufficient privileges");
+      }
+    }
+
     const { id, role, companyId, ...updates } = args;
     await ctx.db.patch(id, {
       ...updates,
       ...(role !== undefined && { role: role as "USER" | "ADMIN" | "SUPER_ADMIN" }),
       ...(companyId !== undefined && { companyId })
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_USER",
+      actorId: callerId as any,
+      entityType: "users",
+      entityId: id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ updatedRole: role, updatedCompanyId: companyId })
+    });
+
     return id;
   },
 });
@@ -150,7 +215,31 @@ export const cascadeDeleteUserAction = async (ctx: MutationCtx, userId: Id<"user
 export const deleteUser = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.id);
+    if (!targetUser) return false;
+
+    if (caller.role !== "SUPER_ADMIN") {
+      if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
+
     await cascadeDeleteUserAction(ctx, args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_USER",
+      actorId: callerId as any,
+      entityType: "users",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ email: targetUser.email, name: targetUser.name })
+    });
+
     return true;
   },
 });
@@ -227,6 +316,16 @@ export const getUserLogins = query({
     const callerId = await auth.getUserId(ctx);
     if (!callerId) throw new Error("Unauthenticated");
 
+    if (callerId !== args.userId) {
+      const caller = await ctx.db.get(callerId);
+      if (!caller || !caller.role) throw new Error("Unauthorized");
+      
+      const targetUser = await ctx.db.get(args.userId);
+      if (!targetUser || (caller.role !== "SUPER_ADMIN" && (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId))) {
+        throw new Error("Unauthorized");
+      }
+    }
+
     if (args.searchTerm && args.searchTerm.trim() !== "") {
        return await ctx.db
         .query("logins")
@@ -254,6 +353,9 @@ export const recordLogin = mutation({
     const userId = await auth.getUserId(ctx);
     if (!userId) return null;
     
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+
     // Prevent duplicated spam tracks logically
     const lastLogin = await ctx.db
       .query("logins")
@@ -266,7 +368,7 @@ export const recordLogin = mutation({
       return lastLogin._id;
     }
 
-    return await ctx.db.insert("logins", {
+    const loginId = await ctx.db.insert("logins", {
       userId,
       device: args.device,
       ip: args.ip,
@@ -274,6 +376,41 @@ export const recordLogin = mutation({
       status: "SUCCESS",
       timestamp: Date.now(),
     });
+
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+       await ctx.db.insert("auditLogs", {
+          actionType: "SYSTEM_AUTHENTICATION",
+          actorId: userId,
+          entityType: "users",
+          entityId: "USER_SESSION",
+          timestamp: Date.now(),
+          metadata: JSON.stringify({ ip: args.ip, location: args.location })
+       });
+    }
+
+    return loginId;
+  }
+});
+
+export const recordLogout = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return;
+
+    const user = await ctx.db.get(userId);
+    if (!user) return;
+
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+      await ctx.db.insert("auditLogs", {
+        actionType: "SYSTEM_DISCONNECTION",
+        actorId: userId,
+        entityType: "users",
+        entityId: "USER_SESSION",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ action: "explicit_logout" })
+      });
+    }
   }
 });
 
@@ -289,6 +426,16 @@ export const impersonateCompany = mutation({
     }
 
     await ctx.db.patch(userId, { companyId: args.companyId });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "IMPERSONATE_COMPANY",
+      actorId: userId as any,
+      entityType: "users",
+      entityId: userId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ targetCompanyId: args.companyId || "None (Reverted)" })
+    });
+
     return true;
   }
 });

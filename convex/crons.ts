@@ -11,4 +11,12 @@ crons.daily(
   {}
 );
 
+// Run hourly dispatcher to evaluate auto-purge schedule
+crons.hourly(
+  "audit-log-purge-dispatcher",
+  { minuteUTC: 0 },
+  internal.auditLogs.dispatcher,
+  {}
+);
+
 export default crons;

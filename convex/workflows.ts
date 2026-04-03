@@ -49,7 +49,7 @@ export const createWorkflow = mutation({
        throw new Error("Unauthorized");
     }
 
-    return await ctx.db.insert("workflows", {
+    const newWorkflowId = await ctx.db.insert("workflows", {
       name: args.name,
       description: args.description,
       isActive: true,
@@ -60,6 +60,17 @@ export const createWorkflow = mutation({
       updatedAt: Date.now(),
       createdBy: userId,
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "CREATE_WORKFLOW",
+      actorId: userId as any,
+      entityType: "workflows",
+      entityId: newWorkflowId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ name: args.name })
+    });
+
+    return newWorkflowId;
   },
 });
 
@@ -89,6 +100,15 @@ export const updateWorkflow = mutation({
       updatedAt: Date.now()
     });
     
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_WORKFLOW",
+      actorId: userId as any,
+      entityType: "workflows",
+      entityId: id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ updatedFields: Object.keys(updates) })
+    });
+
     return id;
   },
 });
@@ -104,7 +124,19 @@ export const deleteWorkflow = mutation({
        throw new Error("Unauthorized");
     }
 
+    const workflow = await ctx.db.get(args.id);
+
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_WORKFLOW",
+      actorId: userId as any,
+      entityType: "workflows",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ name: workflow?.name })
+    });
+
     return true;
   },
 });

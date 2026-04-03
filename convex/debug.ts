@@ -1,42 +1,36 @@
-import { query } from "./_generated/server";
-export const checkFrontendQuery = query({
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const testMutation = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const companies = await ctx.db.query("companies").collect();
-    if (companies.length === 0) return "No companies";
-    const acme = companies[0]._id;
-    
-    // Simulate what getCompanyMetrics does
-    const records = await ctx.db
-       .query("companyMetrics")
-       .withIndex("by_company_date", (q) => q.eq("companyId", acme))
-       .collect();
-       
-    records.sort((a,b) => b.date.localeCompare(a.date)); 
-    const recent = records.slice(0, 30).reverse(); 
-    
-    let totalMessages = 0;
-    let totalTokens = 0;
-    let totalCostGBP = 0;
-    
-    recent.forEach(r => {
-       totalMessages += r.totalMessages;
-       totalTokens += r.totalTokens;
-       totalCostGBP += r.costGBP;
-    });
-    
-    return {
-       timeline: recent.map(r => ({
-          date: r.date.split('-').slice(1).join('/'),
-          messages: r.totalMessages,
-          cost: Number(r.costGBP.toFixed(4))
-       })),
-       aggregates: {
-          totalMessages,
-          totalTokens,
-          totalCostGBP: Number(totalCostGBP.toFixed(2)),
-          totalCostGBPRaw: totalCostGBP
-       }
-    };
+    try {
+      const auditData = {
+        enabled: true,
+        retentionDays: 30,
+        dayOfMonth: 1,
+        hourOfDay: 2,
+        nextRunTimestamp: 0,
+      };
+      
+      const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
+      let payload = auditData;
+      
+      if (configRow) {
+         // simulate UI fetch
+         payload = JSON.parse(configRow.value);
+      }
+      
+      payload.enabled = !payload.enabled;
+      
+      // try to call updateConfig internally but we can't easily do auth from internal mutation to an authenticated one.
+      // let's just observe the payload that the UI is sending
+      console.log("PAYLOAD IS", payload);
+      return payload;
+      
+    } catch(e) {
+      console.error(e);
+      return e;
+    }
   }
 });

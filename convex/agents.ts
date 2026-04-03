@@ -65,7 +65,7 @@ export const createAgent = mutation({
        throw new Error("Unauthorized");
     }
 
-    return await ctx.db.insert("agents", {
+    const newAgentId = await ctx.db.insert("agents", {
       name: args.name,
       description: args.description,
       modelId: "gemini-3-flash-preview", // default
@@ -76,6 +76,17 @@ export const createAgent = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "CREATE_AGENT",
+      actorId: userId as any,
+      entityType: "agents",
+      entityId: newAgentId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ name: args.name, scope: "global" })
+    });
+
+    return newAgentId;
   },
 });
 
@@ -122,6 +133,15 @@ export const updateAgent = mutation({
       updatedAt: Date.now()
     });
     
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_AGENT",
+      actorId: userId as any,
+      entityType: "agents",
+      entityId: id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ updatedFields: Object.keys(updates) })
+    });
+
     return id;
   },
 });
@@ -137,6 +157,8 @@ export const deleteAgent = mutation({
        throw new Error("Unauthorized");
     }
 
+    const agent = await ctx.db.get(args.id);
+
     // Cleanse tool bindings
     const toolBindings = await ctx.db
        .query("agentTools")
@@ -148,6 +170,16 @@ export const deleteAgent = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_AGENT",
+      actorId: userId as any,
+      entityType: "agents",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ name: agent?.name })
+    });
+
     return true;
   },
 });
@@ -193,7 +225,7 @@ export const createInlineAgent = mutation({
        throw new Error("Unauthorized");
     }
 
-    return await ctx.db.insert("agents", {
+    const newAgentId = await ctx.db.insert("agents", {
       name: "Sandbox Agent",
       description: "Inline agent logic",
       modelId: "gemini-3.1-flash-preview", // default
@@ -206,6 +238,17 @@ export const createInlineAgent = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "CREATE_AGENT",
+      actorId: userId as any,
+      entityType: "agents",
+      entityId: newAgentId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ scope: "inline_workflow", workflowId: args.workflowId })
+    });
+
+    return newAgentId;
   },
 });
 
@@ -226,6 +269,15 @@ export const promoteToGlobal = mutation({
       updatedAt: Date.now()
     });
     
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_AGENT",
+      actorId: userId as any,
+      entityType: "agents",
+      entityId: args.id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ action: "promoted_to_global" })
+    });
+
     return true;
   },
 });

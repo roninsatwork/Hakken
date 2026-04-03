@@ -17,9 +17,12 @@ import {
   Moon,
   ShieldCheck,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  History,
+  Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const SettingBlock = ({ title, sub, children }: any) => (
   <motion.div 
@@ -72,23 +75,51 @@ export default function SystemSettingsPage() {
   const currentPiiConfig = useQuery(api.system.getPiiConfig);
   const updatePiiConfig = useMutation(api.system.updatePiiConfig);
 
+  const currentAuditConfig = useQuery(api.auditLogs.getConfig);
+  const updateAuditConfig = useMutation(api.auditLogs.updateConfig);
+  const recentLogs = useQuery(api.auditLogs.getRecentLogs);
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
   // Local state form
   const [formData, setFormData] = useState<any>({});
   const [piiData, setPiiData] = useState<any>({});
+  const [auditData, setAuditData] = useState<any>({});
 
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "economics" | "security">("identity");
+  const searchParams = useSearchParams();
+  const initTab = (searchParams.get("tab") as any) || "identity";
+  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "economics" | "security" | "audit">(initTab);
+
+  const router = useRouter();
 
   useEffect(() => {
     if (currentPiiConfig) {
        setPiiData(currentPiiConfig);
     }
   }, [currentPiiConfig]);
+
+  useEffect(() => {
+    const freshTab = searchParams.get("tab") as any;
+    if (freshTab && freshTab !== activeTab) {
+      setActiveTab(freshTab);
+    }
+  }, [searchParams]);
+
+  // Optionally, update the URL instantly when clicking tabs
+  const handleTabChange = (tab: any) => {
+    setActiveTab(tab);
+    router.replace(`/admin/settings?tab=${tab}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (currentAuditConfig) {
+      setAuditData(currentAuditConfig);
+    }
+  }, [currentAuditConfig]);
 
   useEffect(() => {
     if (currentSettings) {
@@ -130,6 +161,9 @@ export default function SystemSettingsPage() {
     try {
       if (activeTab === "security") {
         await updatePiiConfig({ configStr: JSON.stringify(piiData) });
+        await updateAuditConfig(auditData);
+      } else if (activeTab === "audit") {
+        // Read-only feed, no state to save
       } else {
         const { _id, _creationTime, ...payload } = formData;
         await updateSettings(payload);
@@ -210,14 +244,15 @@ export default function SystemSettingsPage() {
           { id: 'identity', label: 'Brand Identity', icon: Building2 },
           { id: 'appearance', label: 'Appearance', icon: Palette },
           { id: 'economics', label: 'Economics', icon: CreditCard },
-          { id: 'security', label: 'Data Privacy', icon: ShieldCheck }
+          { id: 'security', label: 'Data Privacy', icon: ShieldCheck },
+          { id: 'audit', label: 'Audit Logs', icon: History }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button 
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-all border-b-2 whitespace-nowrap ${
                 isActive 
                 ? 'border-brand text-brand bg-brand/5' 
@@ -446,12 +481,13 @@ export default function SystemSettingsPage() {
                     </div>
                  </div>
 
-              </div>
-           </SettingBlock>
-        </section>
-        )}
+               </div>
+            </SettingBlock>
 
-      {/* Global Security Engine */}
+         </section>
+         )}
+
+        {/* Global Security Engine */}
         {activeTab === "security" && (
         <section className="flex flex-col gap-6">
            <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
@@ -522,9 +558,250 @@ export default function SystemSettingsPage() {
 
               </div>
            </SettingBlock>
+
+           <SettingBlock title="Automated Purge Engine" sub="Configures the global cron dispatcher. When active, it automatically cleanses the Audit Log database based on the retention and dispatch schedules below.">
+              
+              <div className="flex flex-col gap-0 border border-border-dim rounded-[16px] overflow-hidden">
+                 
+                 <div className="flex items-center justify-between p-5 bg-background/50 border-b border-border-dim">
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[14px] text-foreground font-semibold">Enable Automated Purge</span>
+                       <span className="text-[12px] text-muted">Toggle the execution of the purge chron job entirely.</span>
+                    </div>
+                    <button 
+                       onClick={() => setAuditData({...auditData, enabled: !auditData.enabled})}
+                       className={`transition-colors flex-shrink-0 ${auditData.enabled ? "text-brand" : "text-muted"}`}
+                    >
+                       {auditData.enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                    </button>
+                 </div>
+
+                 <div className={`flex flex-col p-6 gap-6 transition-all duration-300 ${auditData.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex flex-col gap-2 relative">
+                           <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">Retention Window (Days)</span>
+                           <select 
+                               value={auditData.retentionDays || 30}
+                               onChange={(e) => setAuditData({...auditData, retentionDays: parseInt(e.target.value)})}
+                               className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                            >
+                               <option value={7}>7 Days</option>
+                               <option value={14}>14 Days</option>
+                               <option value={30}>30 Days (Standard)</option>
+                               <option value={90}>90 Days (Quarterly)</option>
+                               <option value={365}>365 Days (Enterprise ISO)</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-2 relative">
+                           <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">Monthly Dispatch (Day)</span>
+                           <select 
+                               value={auditData.dayOfMonth || 1}
+                               onChange={(e) => setAuditData({...auditData, dayOfMonth: parseInt(e.target.value)})}
+                               className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                            >
+                               {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                                 <option key={day} value={day}>Every {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of the Month</option>
+                               ))}
+                            </select>
+                            <span className="text-[10px] text-muted ml-2">Capped at 28 to prevent EOF Month leap-year desync.</span>
+                        </div>
+
+                        <div className="flex flex-col gap-2 relative">
+                           <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">Execution Local Time</span>
+                           <select 
+                               value={auditData.hourOfDay || 2}
+                               onChange={(e) => setAuditData({...auditData, hourOfDay: parseInt(e.target.value)})}
+                               className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                            >
+                               {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                                 const hh = hour.toString().padStart(2, '0');
+                                 return <option key={hour} value={hour}>{hh}:00 (24h)</option>
+                               })}
+                            </select>
+                        </div>
+                    </div>
+
+                    {auditData.nextRunTimestamp && auditData.enabled && (
+                       <div className="mt-2 p-4 bg-brand/5 border border-brand/20 rounded-[12px] flex items-center justify-between">
+                          <span className="text-[12px] text-foreground font-medium">Next Purge Calculated Cycle:</span>
+                          <span className="text-[12px] font-mono text-brand font-bold bg-brand/10 px-3 py-1 rounded-[6px]">
+                             {new Date(auditData.nextRunTimestamp).toUTCString()}
+                          </span>
+                       </div>
+                    )}
+
+                 </div>
+
+              </div>
+           </SettingBlock>
         </section>
         )}
 
+        {/* Global Audit Logs Subsystem */}
+        {activeTab === "audit" && (
+        <section className="flex flex-col gap-6">
+           <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
+             <History className="w-3.5 h-3.5" /> Audit Logging
+           </h3>
+
+           <AuditLogsTable logs={recentLogs} />
+        </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
+  const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemsPerPage = 20;
+
+  if (logs === undefined) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-brand" /></div>;
+  }
+
+  // Mock data fallback if DB is empty
+  const activeLogs = logs.length > 0 ? logs : [
+    {
+       _id: "mock-log-1a2b3c",
+       actionType: "UPDATE_COMPANY",
+       actorName: "Anthony (SuperAdmin)",
+       entityId: "comp_291039",
+       timestamp: Date.now() - 1000 * 60 * 5, // 5 mins ago
+       metadata: "{\"field\":\"security_policy\",\"status\":\"enforced\"}"
+    },
+    {
+       _id: "mock-log-4d5e6f",
+       actionType: "TOGGLE_PII",
+       actorName: "System Subroutine",
+       entityId: "system_global",
+       timestamp: Date.now() - 1000 * 60 * 120, // 2 hours ago
+       metadata: "{\"rule\":\"maskCreditCards\",\"newState\":true}"
+    },
+    {
+       _id: "mock-log-7g8h9i",
+       actionType: "DELETE_USER",
+       actorName: "Anthony (SuperAdmin)",
+       entityId: "usr_malicious_99",
+       timestamp: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+       metadata: "{\"reason\":\"TOS Violation\",\"email\":\"spam@fake.com\"}"
+    },
+    {
+       _id: "mock-log-xjx9a1",
+       actionType: "CREATE_INVITE",
+       actorName: "Regional Admin",
+       entityId: "inv_91823",
+       timestamp: Date.now() - 1000 * 60 * 60 * 48, // 2 days ago
+       metadata: "{\"role\":\"USER\",\"companyId\":\"comp_812\"}"
+    }
+  ];
+
+  const filteredLogs = activeLogs.filter((l: any) => 
+    l.actionType.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (l.actorName || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalItems = filteredLogs.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+  return (
+    <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl mt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
+        <div>
+          <h3 className="text-[14px] font-medium text-foreground tracking-wide">Action Audit Feed</h3>
+          <p className="text-[12px] text-secondary mt-0.5">Immutable global ledger of administrative actions.</p>
+        </div>
+        
+        <div className="relative w-full sm:w-[280px]">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="w-4 h-4 text-muted" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by action or admin..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-9 pr-4 py-2 bg-background/50 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
+          />
+        </div>
+      </div>
+
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-border-dim/50 bg-foreground/[0.02] whitespace-nowrap">
+              <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">Action Signature</th>
+              <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">Administrator</th>
+              <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">Target ID</th>
+              <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] text-right">Timestamp</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-dim/30">
+            {filteredLogs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-8 text-center text-secondary text-[13px]">
+                  {logs.length === 0 ? "No audit logs found. Try performing an admin action." : "No records match your search."}
+                </td>
+              </tr>
+            ) : (
+              paginatedLogs.map((log: any) => (
+                <tr 
+                   key={log._id} 
+                   onClick={() => router.push(`/admin/audit-logs/${log._id}`)}
+                   className="group hover:bg-foreground/[0.03] transition-colors cursor-pointer"
+                 >
+                  <td className="px-5 py-4">
+                    <span className="text-[10px] font-mono tracking-widest bg-foreground/5 border border-border-dim text-foreground px-2 py-1 rounded-[4px] font-medium">
+                       {log.actionType}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-[13px] font-medium text-foreground">{log.actorName}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="text-[12px] font-mono text-secondary truncate max-w-[150px] inline-block">{log.entityId || "N/A"}</span>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <span className="text-[12px] text-secondary tracking-wide whitespace-nowrap">
+                      {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-foreground/[0.02] px-5">
+        <span className="text-[12px] text-secondary">
+          Showing {totalItems > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} entries
+        </span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

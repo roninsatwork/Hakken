@@ -65,6 +65,15 @@ export const saveTemplate = mutation({
         updatedBy: userId,
       });
     }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_EMAIL_TEMPLATE",
+      actorId: userId,
+      entityType: "systemConfig",
+      entityId: "INVITE_TEMPLATE",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ subject: args.subject, headline: args.headline })
+    });
   },
 });
 
@@ -130,6 +139,15 @@ export const revokeInvite = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "REVOKE_INVITE",
+      actorId: userId,
+      entityType: "invitations",
+      entityId: invite._id,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ email: invite.email, role: invite.role })
+    });
   },
 });
 
@@ -140,6 +158,7 @@ export const createInviteRecord = internalMutation({
     companyId: v.optional(v.id("companies")),
     role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     token: v.string(),
+    callerId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const email = args.email.toLowerCase();
@@ -161,7 +180,7 @@ export const createInviteRecord = internalMutation({
       return;
     }
 
-    await ctx.db.insert("invitations", {
+    const newInviteId = await ctx.db.insert("invitations", {
       email,
       companyId: args.companyId,
       role: args.role,
@@ -169,6 +188,17 @@ export const createInviteRecord = internalMutation({
       token: args.token,
       invitedAt: Date.now(),
     });
+
+    if (args.callerId) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "CREATE_INVITE",
+        actorId: args.callerId,
+        entityType: "invitations",
+        entityId: newInviteId,
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ email: args.email, role: args.role })
+      });
+    }
   },
 });
 
@@ -189,6 +219,21 @@ export const dispatchInviteEmail = action({
     }),
   },
   handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated request");
+
+    const caller = await ctx.runQuery(internal.users.getUserInternal, { userId: callerId });
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    if (caller.role !== "SUPER_ADMIN") {
+      if (caller.role !== "ADMIN" || caller.companyId !== args.companyId) {
+        throw new Error("Unauthorized: Insufficient privileges to dispatch invites");
+      }
+      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== caller.companyId)) {
+        throw new Error("Unauthorized: Cannot invite external or elevated roles");
+      }
+    }
+
     // 1. Generate secure arbitrary tracking token
     const token = crypto.randomUUID();
     
@@ -228,7 +273,7 @@ export const dispatchInviteEmail = action({
     // Skip if API key missing (dev environment graceful degradation)
     if (!process.env.RESEND_API_KEY) {
        console.warn("No RESEND_API_KEY found. Mocking email dispatch successfully.", emailHtml);
-       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token });
+       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
        return { success: true, simulated: true };
     }
 
@@ -258,7 +303,7 @@ export const dispatchInviteEmail = action({
       const data = await response.json();
 
       // 4. Record DB mapping on successful dispatch
-      await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, role: args.role, token });
+      await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
 
       return { success: true, id: data?.id };
     } catch (e: any) {

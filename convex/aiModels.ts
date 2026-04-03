@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { auth } from "./auth";
 
 export const getModels = query({
   args: {},
@@ -44,6 +45,12 @@ export const resolveModelForExecution = internalQuery({
 export const toggleModelEnforcement = mutation({
   args: { modelId: v.id("aiModels"), isEnabled: v.boolean() },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
     if (!args.isEnabled) {
       const model = await ctx.db.get(args.modelId);
       if (model?.isDefault) {
@@ -51,12 +58,28 @@ export const toggleModelEnforcement = mutation({
       }
     }
     await ctx.db.patch(args.modelId, { isEnabled: args.isEnabled });
+
+    const targetModel = await ctx.db.get(args.modelId);
+    await ctx.db.insert("auditLogs", {
+      actionType: "TOGGLE_AI_MODEL",
+      actorId: userId,
+      entityType: "systemConfig",
+      entityId: "SYSTEM_MODELS",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ model: targetModel?.modelId, enabled: args.isEnabled })
+    });
   },
 });
 
 export const setDefaultModel = mutation({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
     const currentDefaults = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
@@ -69,6 +92,16 @@ export const setDefaultModel = mutation({
     }
 
     await ctx.db.patch(args.modelId, { isDefault: true, isEnabled: true });
+
+    const newDefault = await ctx.db.get(args.modelId);
+    await ctx.db.insert("auditLogs", {
+      actionType: "SET_DEFAULT_AI_MODEL",
+      actorId: userId,
+      entityType: "systemConfig",
+      entityId: "SYSTEM_MODELS",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ model: newDefault?.modelId })
+    });
   },
 });
 

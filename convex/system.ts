@@ -58,14 +58,35 @@ export const updateSystemPrompt = mutation({
         updatedAt: Date.now(),
         updatedBy: userId,
       });
+      
+      await ctx.db.insert("auditLogs", {
+        actionType: "UPDATE_SYSTEM_PROMPT",
+        actorId: user._id,
+        entityType: "systemConfig",
+        entityId: "SYSTEM_PROMPT",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ promptLength: args.prompt.length })
+      });
+      
       return existingConfig._id;
     } else {
-      return await ctx.db.insert("systemConfig", {
+      const id = await ctx.db.insert("systemConfig", {
         key: "SYSTEM_PROMPT",
         value: args.prompt,
         updatedAt: Date.now(),
         updatedBy: userId,
       });
+      
+      await ctx.db.insert("auditLogs", {
+        actionType: "UPDATE_SYSTEM_PROMPT",
+        actorId: user._id,
+        entityType: "systemConfig",
+        entityId: "SYSTEM_PROMPT",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ promptLength: args.prompt.length })
+      });
+      
+      return id;
     }
   },
 });
@@ -108,14 +129,35 @@ export const updateAnalyticsId = mutation({
         updatedAt: Date.now(),
         updatedBy: userId,
       });
+      
+      await ctx.db.insert("auditLogs", {
+        actionType: "UPDATE_ANALYTICS_ID",
+        actorId: user._id,
+        entityType: "systemConfig",
+        entityId: "GOOGLE_ANALYTICS_ID",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ newTrackingId: args.trackingId.trim() })
+      });
+      
       return existingConfig._id;
     } else {
-      return await ctx.db.insert("systemConfig", {
+      const id = await ctx.db.insert("systemConfig", {
         key: "GOOGLE_ANALYTICS_ID",
         value: args.trackingId.trim(),
         updatedAt: Date.now(),
         updatedBy: userId,
       });
+      
+      await ctx.db.insert("auditLogs", {
+        actionType: "UPDATE_ANALYTICS_ID",
+        actorId: user._id,
+        entityType: "systemConfig",
+        entityId: "GOOGLE_ANALYTICS_ID",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ newTrackingId: args.trackingId.trim() })
+      });
+      
+      return id;
     }
   },
 });
@@ -172,6 +214,16 @@ export const updatePiiConfig = mutation({
         updatedBy: userId,
       });
     }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_PII_FIREWALL",
+      actorId: user._id,
+      entityType: "systemConfig",
+      entityId: "PII_REDACTION_CONFIG",
+      timestamp: Date.now(),
+      metadata: args.configStr
+    });
+
     return true;
   },
 });

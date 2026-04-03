@@ -131,6 +131,16 @@ export const update = mutation({
         ...patchObj,
       });
     }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_SYSTEM_PREFERENCES",
+      actorId: admin._id,
+      entityType: "systemSettings",
+      entityId: settings?._id || "global_settings",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ modifiedFields: Object.keys(patchObj) })
+    });
+
     return true;
   },
 });

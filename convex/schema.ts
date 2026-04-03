@@ -120,6 +120,19 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
 
+  auditLogs: defineTable({
+    actorId: v.id("users"), // The admin who did it
+    actionType: v.string(), // e.g. "UPDATE_COMPANY"
+    entityId: v.optional(v.string()), // Target ID
+    entityType: v.string(), // "companies", "users"
+    metadata: v.optional(v.string()), // JSON diff or params
+    companyId: v.optional(v.id("companies")), // Context organization
+    timestamp: v.number(),
+  })
+    .index("by_actor", ["actorId", "timestamp"])
+    .index("by_company", ["companyId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
   // AI Agent Usage Billing & Activity Logs
   agentTransactions: defineTable({
     agentId: v.id("agents"),
