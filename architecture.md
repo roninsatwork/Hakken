@@ -83,6 +83,7 @@ The platform ingests multimodal documents and processes them into conversational
 > Under no circumstances attempt to deploy this project via Vercel or utilize Vercel Edge infrastructure patterns.  
 
 - **Host Env:** Deploys natively to **Google Cloud Run**.
+- **Branching Protocol:** All active development/tickets are strictly executed on the `dev` branch as a safe workspace. The `main` branch is explicitly reserved for production. Merging `dev` into `main` is what triggers the automated rollout.
 - **CI/CD Pipeline Sequence:** Governed strictly via **GitHub Actions** (`.github/workflows/deploy.yml`).
   1. **Testing Firewall:** The `test` job boots `vitest` to verify component integrity.
   2. **Deployment Block:** The `deploy` job is gated by `needs: test`. If any test fails, deployment halts immediately to protect production.
@@ -103,10 +104,11 @@ Sonae utilizes a strict dual-environment testing workspace to prove component in
 - Components are rendered in a simulated headless browser structure.
 - **Protocol:** The `convex/react` data layer (`useQuery`, `useMutation`) is globally mocked via `vitest.setup.ts` to instantly return default states. UI tests must *never* execute actual network requests to the database backend.
 
-### B. Backend Security Testing (convex-test)
+### B. Backend Security Testing (convex-test & OWASP Verification)
 - Located in `convex/**/*.test.ts` and run inside a non-browser workspace.
 - Boots an invisible, in-memory replica of the Convex environment natively.
-- **Protocol:** Mutations and queries must be actively tested against unauthorized access by programmatically mapping fake identites (e.g., standard `USER`) and asserting explicit `Error("Unauthorized")` rejections on administrative routes.
+- **Protocol (OWASP Broken Access Control):** Mutations and queries must be actively tested against unauthorized access by programmatically mapping fake identities (e.g., standard `USER`, foreign `ADMIN`) and asserting explicit `Error("Unauthorized")` or `Error("Unauthenticated")` rejections.
+- **Coverage Map:** Critical infrastructure including Tenancy (users, invites, companies), Platform Settings (system config, AI model billing toggles), and Proprietary Data (workflows, agents, chat telemetry) operate under zero-trust constraints. This must be structurally proven within their respective test suites before deployment is permitted.
 
 ### C. CI/CD Exclusivity
 - Automated tests are strictly sequestered to the development phase or CI/CD pipelines (GitHub Actions). No test runner logic or "Health Checks" mimicking test loops should ever be deployed via the production dashboard UI.
