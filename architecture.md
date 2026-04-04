@@ -83,8 +83,14 @@ The platform ingests multimodal documents and processes them into conversational
 > Under no circumstances attempt to deploy this project via Vercel or utilize Vercel Edge infrastructure patterns.  
 
 - **Host Env:** Deploys natively to **Google Cloud Run**.
-- **CI/CD:** Governed implicitly via **GitHub Actions** (`.github/workflows/deploy.yml`).
-- **Convex Synchrony:** The backend schema compiles and syncs concurrently during the GH Actions continuous deployment lifecycle.
+- **CI/CD Pipeline Sequence:** Governed strictly via **GitHub Actions** (`.github/workflows/deploy.yml`).
+  1. **Testing Firewall:** The `test` job boots `vitest` to verify component integrity.
+  2. **Deployment Block:** The `deploy` job is gated by `needs: test`. If any test fails, deployment halts immediately to protect production.
+  3. **Convex Synchrony:** Executes `npx convex deploy` to push the database schema concurrently with the Github Actions flow.
+  4. **Container Build:** Compiles the Next.js app via Docker and pushes directly to Cloud Run.
+
+> [!IMPORTANT]
+> **GitHub Secrets Matrix:** The automated deployment requires `CONVEX_DEPLOY_KEY` configured within the GitHub Account's "Actions Secrets" interface. Failure to supply this will result in a hard pipeline crash during the Convex synchrony step.
 
 ---
 

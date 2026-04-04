@@ -33,3 +33,4 @@
   - **MANDATORY**: NEVER use or mention the word "Vercel". Sonae is NOT hosted on Vercel.
   - Sonae deploys to **Google Cloud Run** via **GitHub Actions** (`.github/workflows/deploy.yml`).
   - Convex deploys natively alongside the Github Actions pipeline.
+  - **BRANCHING PROTOCOL**: All daily coding and new features MUST be written on the `dev` branch. `main` is strictly protected for production. Merge `dev` to `main` locally to trigger a live auto-deployment.
