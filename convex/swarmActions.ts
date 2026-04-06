@@ -1,0 +1,158 @@
+"use node";
+
+import { internalAction } from "./_generated/server";
+import { v } from "convex/values";
+import { GoogleGenAI } from "@google/genai";
+import { internal } from "./_generated/api";
+
+export const executeSwarmObjective = internalAction({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(internal.swarmRuntime.clearSwarmLogs, { threadId: args.threadId });
+
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          }
+        }
+    });
+
+    let order = 0;
+
+    const planId = await ctx.runMutation(internal.swarmRuntime.appendSwarmLog, {
+      threadId: args.threadId,
+      message: "Orchestrator Agent compiling delegation plan...",
+      status: "running",
+      order: ++order,
+      isHeading: true,
+    });
+    
+    const demoAgents = await ctx.runQuery(internal.swarmRuntime.getDemoAgents);
+    if (!demoAgents || demoAgents.length === 0) {
+        await ctx.runMutation(internal.swarmRuntime.updateSwarmLogStatus, { logId: planId, status: "error" });
+        await ctx.runMutation(internal.chat.saveAssistantMessage, {
+            threadId: args.threadId,
+            content: "Swarm failed: No agents found in the database. Please run the seed command."
+        });
+        return;
+    }
+
+    await ctx.runMutation(internal.swarmRuntime.updateSwarmLogStatus, { logId: planId, status: "success" });
+
+    // Multi-tenant Context Extraction
+    const tenantContext = await ctx.runQuery(internal.swarmRuntime.getCompanyContextForThread, { threadId: args.threadId });
+
+    let memoryPayload = `[USER OBJECTIVE / DIRECTIVE FOR SAAAS TENANT: ${tenantContext.name}]:\n`;
+    if (tenantContext.systemPrompt) {
+        memoryPayload += `[TENANT DEFINITION & RULES]:\n${tenantContext.systemPrompt}\n`;
+    }
+    memoryPayload += `\n${args.content}\n\n`;
+    let lastOutput = "";
+    let totalInTokens = 0;
+    let totalOutTokens = 0;
+
+    for (const agent of demoAgents) {
+       if (!agent) continue;
+       
+       let dynamicMessage = `${agent.name} mapping objective...`;
+       if (agent.name.includes("Sourcing")) dynamicMessage = "Market Sourcing Agent querying global networks...";
+       if (agent.name.includes("Architect")) dynamicMessage = "Internal Architect crawling local semantic space...";
+       if (agent.name.includes("Verification")) dynamicMessage = "Verification Agent auditing raw data flows...";
+       if (agent.name.includes("Financial")) dynamicMessage = "Financial Modeler computing predictive vectors...";
+       if (agent.name.includes("Synthesis")) dynamicMessage = "Executive Synthesis mapping final matrix report...";
+
+       const logId = await ctx.runMutation(internal.swarmRuntime.appendSwarmLog, {
+          threadId: args.threadId,
+          message: dynamicMessage,
+          status: "running",
+          order: ++order,
+       });
+
+       let config: any = {
+           systemInstruction: agent.systemPrompt,
+           temperature: 0.1
+       };
+
+       if (agent.name.includes("Sourcing")) {
+           config.tools = [{ googleSearch: {} }];
+       }
+
+       try {
+           if (agent.name.includes("Architect")) {
+               const { embeddings } = await ai.models.embedContent({
+                 model: "text-embedding-004",
+                 contents: args.content,
+               });
+               
+               if (embeddings && embeddings.length > 0) {
+                 let filterArgs: any = {};
+                 if (tenantContext.companyId) {
+                     filterArgs.filter = (q: any) => q.eq("companyId", tenantContext.companyId);
+                 }
+                 const results = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                   vector: embeddings[0].values as number[],
+                   limit: 50,
+                   ...filterArgs
+                 });
+                 let ragContext = "";
+                 for (const res of results) {
+                   const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
+                   if (chunk) ragContext += chunk.text + "\\n\\n";
+                 }
+                 memoryPayload += `\\n[INTERNAL SONAE KNOWLEDGE CONTEXT]:\\n${ragContext}\\n\\n`;
+               }
+           }
+
+           let targetModel = "gemini-2.5-flash";  
+           
+           const response = await ai.models.generateContent({
+              model: targetModel,
+              contents: memoryPayload,
+              config
+           });
+
+           const output = response.text || "No actionable data recovered.";
+           lastOutput = output; 
+
+           totalInTokens += response.usageMetadata?.promptTokenCount || 0;
+           totalOutTokens += response.usageMetadata?.candidatesTokenCount || 0;
+           
+           await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+               agentId: agent._id,
+               threadId: args.threadId,
+               interactionType: "SWARM MICRO-EXECUTION",
+               promptContent: "SWARM MEMORY PAYLOAD OVERRIDDEN",
+               responseContent: output
+           });
+
+           memoryPayload += `\n\n==============================\n[INTELLIGENCE FROM: ${agent.name.toUpperCase()}]\n${output}\n==============================\n`;
+
+           await ctx.runMutation(internal.swarmRuntime.updateSwarmLogStatus, { logId, status: "success" });
+       } catch (error) {
+           console.error(`Swarm Agent Exception (${agent.name}):`, error);
+           await ctx.runMutation(internal.swarmRuntime.updateSwarmLogStatus, { logId, status: "error" });
+           memoryPayload += `\n\n[WARNING: ${agent.name} encountered structural logic failure]\n`;
+       }
+    }
+
+    // Pass the finalized synthesis report directly back to the UI feed
+    await ctx.runMutation(internal.chat.saveAssistantMessage, {
+      threadId: args.threadId,
+      content: lastOutput,
+      inputTokens: totalInTokens,
+      outputTokens: totalOutTokens,
+      modelUsed: "sonae-swarm-cluster-v1",
+    });
+  },
+});

@@ -63,6 +63,12 @@ The Visual Node-Flow Builder interfaces multi-agent orchestration dynamically.
 - **Trigger Types:** Webhook payloads, Manual invocation, and Scheduled chron integrations.
 - Nodes process linearly on a visual canvas canvas, handing context and JSON envelopes sequentially between attached Inline Agents.
 
+### C. The Autonomous Swarm Engine
+The Swarm is a real-time, LangChain-style orchestrator capable of chaining dynamic agent interactions autonomously.
+- **Edge vs. Node Isolation:** Swarm orchestration strictly splits execution between runtimes. Real-time UI progress polling and logic queries (e.g., `getSwarmLogs`) run exclusively on the **Convex V8 Edge** to ensure millisecond reactivity and native Auth compatibility. The heavy LLM execution macro runs in **Node.js Actions** (`swarmActions.ts`) to support the heavy Google GenAI/Vertex SDK signature requirements.
+- **Multi-Tenant Context Autonomy:** The orchestrator never relies on hardcoded domain knowledge. It intercepts the user's active `threadId`, extracts their `companyName`, `description`, and `systemPrompt` from the tenant database natively, and injects it into the root Swarm Memory Payload.
+- **Strict RAG Security:** When the Swarm triggers the Internal Architect Agent, Vector Searches against the knowledge base are intensely restricted by injecting an explicit `.filter(q => q.eq("companyId", currentCompanyId))`. Cross-tenant data bleed within the Swarm is technically impossible.
+
 ---
 
 ## 5. The Knowledge Engine (RAG Pipeline)

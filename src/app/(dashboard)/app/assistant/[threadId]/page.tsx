@@ -6,6 +6,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useEffect, useRef } from "react";
 import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import ChatInput from "@/src/ui/components/chat/ChatInput";
+import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
 import { Loader2, Sparkles } from "lucide-react";
 import { use } from "react";
 
@@ -48,6 +49,9 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                   <ChatMessage key={msg._id} message={msg} />
                 ))}
                 
+                {/* Swarm Live Execution Visualizer */}
+                <SwarmStatusCard threadId={threadId} />
+
                 {/* Live Model Thinking Indicator */}
                 {messages.length > 0 && messages[messages.length - 1].role === "user" && (
                   <div className="flex gap-4 w-full justify-start mb-6">

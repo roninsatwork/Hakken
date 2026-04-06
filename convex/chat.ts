@@ -149,6 +149,11 @@ export const sendMessage = mutation({
          agentId: targetAgentId,
          content: safeContent,
        });
+    } else if (args.thinkingLevel === "SWARM") {
+       await ctx.scheduler.runAfter(0, internal.swarmActions.executeSwarmObjective, {
+         threadId: args.threadId,
+         content: safeContent,
+       });
     } else {
        await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
          threadId: args.threadId,

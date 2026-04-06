@@ -14,7 +14,8 @@ import {
   Loader2,
   Mic,
   MicOff,
-  AlertTriangle
+  AlertTriangle,
+  Target
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +52,8 @@ export default function ChatInput({ threadId }: ChatInputProps) {
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [selectedThinking, setSelectedThinking] = useState(THINKING_LEVELS[0]); 
   
+  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
+
   const sendMessage = useMutation(api.chat.sendMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -109,7 +112,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
         threadId, 
         content: textSnapshot,
         modelId: selectedModelId || undefined,
-        thinkingLevel: selectedThinking.id,
+        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinking.id,
       });
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -177,6 +180,15 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                   <Settings2 className="w-[18px] h-[18px]" />
                   <span className="text-[14px] font-medium tracking-wide">Tools</span>
                 </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsAutonomousMode(!isAutonomousMode)}
+                  className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${isAutonomousMode ? 'bg-foreground/10 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
+                  disabled={isRecording}
+                >
+                  <Target className={`w-[18px] h-[18px] ${isAutonomousMode ? 'text-brand' : ''}`} />
+                  <span className="text-[14px] font-medium tracking-wide">Autonomous</span>
+                </button>
               </div>
 
               {/* Right Controls */}
@@ -206,7 +218,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                   <button 
                     type="button"
                     onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
-                    disabled={isRecording || activeModels.length === 0}
+                    disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
                     className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                   >
                     <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData?.displayName || "Select Engine"}</span>
@@ -256,7 +268,7 @@ export default function ChatInput({ threadId }: ChatInputProps) {
                   <button 
                     type="button"
                     onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
-                    disabled={isRecording}
+                    disabled={isRecording || isAutonomousMode}
                     className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${thinkingDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                   >
                     <span className="text-[14px] font-medium">{selectedThinking.name}</span>

@@ -8,6 +8,7 @@ export default defineSchema({
   companies: defineTable({
     name: v.string(),
     logo: v.optional(v.string()),
+    description: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_name", ["name"]),
@@ -305,6 +306,15 @@ export default defineSchema({
     createdAt: v.number(),
     createdBy: v.id("users"),
   }).index("by_workflow", ["workflowId"]),
+
+  swarmLogs: defineTable({
+    threadId: v.id("threads"),
+    message: v.string(),
+    status: v.union(v.literal("pending"), v.literal("running"), v.literal("success"), v.literal("error")),
+    order: v.number(),
+    isHeading: v.optional(v.boolean()),
+    createdAt: v.number(),
+  }).index("by_thread", ["threadId", "order"]),
 
   aiModels: defineTable({
     modelId: v.string(), // e.g. "gemini-3.1-pro-preview"

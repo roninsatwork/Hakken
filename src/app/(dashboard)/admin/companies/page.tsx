@@ -29,7 +29,7 @@ export default function CompaniesPage() {
   const [editingCompany, setEditingCompany] = useState<any | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<any | null>(null);
 
-  const [formData, setFormData] = useState({ name: "" });
+  const [formData, setFormData] = useState({ name: "", systemPrompt: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -50,14 +50,14 @@ export default function CompaniesPage() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "" });
+    setFormData({ name: "", systemPrompt: "" });
     setEditingCompany(null);
     setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (company: any) => {
-    setFormData({ name: company.name });
+    setFormData({ name: company.name, systemPrompt: company.systemPrompt || "" });
     setEditingCompany(company);
     setSubmitError("");
     setIsAddModalOpen(true);
@@ -68,9 +68,9 @@ export default function CompaniesPage() {
     setIsSubmitting(true);
     try {
       if (editingCompany) {
-        await updateCompany({ id: editingCompany._id, name: formData.name });
+        await updateCompany({ id: editingCompany._id, name: formData.name, systemPrompt: formData.systemPrompt });
       } else {
-        await createCompany({ name: formData.name });
+        await createCompany({ name: formData.name, systemPrompt: formData.systemPrompt });
       }
       setIsAddModalOpen(false);
     } catch (err: any) {
@@ -251,6 +251,19 @@ export default function CompaniesPage() {
               onChange={e => setFormData({...formData, name: e.target.value})}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
               placeholder="e.g. Sonae LLC"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[13px] font-medium text-secondary tracking-wide">Company Profile & AI Rules</label>
+              <span className="text-[11px] text-muted">Optional</span>
+            </div>
+            <textarea 
+              value={formData.systemPrompt}
+              onChange={e => setFormData({...formData, systemPrompt: e.target.value})}
+              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm min-h-[120px] resize-y custom-scrollbar leading-relaxed"
+              placeholder="e.g. Ronins is a boutique CRM firm. Our top competitors are HubSpot and Salesforce. We prioritize relationship intelligence over mass outreach."
             />
           </div>
 

@@ -44,6 +44,15 @@ describe("OWASP: Broken Access Control - Companies", () => {
     await expect(
       maliciousClient.mutation(api.companies.deleteCompany, { id: companyId })
     ).rejects.toThrow("Unauthorized");
+
+    // Also assert they cannot edit the Tenant's Swarm Intelligence Context
+    await expect(
+      maliciousClient.mutation(api.companies.updateCompanyPrompt, { id: companyId, systemPrompt: "Hacked!" })
+    ).rejects.toThrow("Unauthorized");
+
+    await expect(
+      maliciousClient.mutation(api.companies.updateCompanyDescription, { id: companyId, description: "Hacked!" })
+    ).rejects.toThrow("Unauthorized");
   });
 
   test("Logged-in ADMIN cannot access system-level company deletion", async () => {

@@ -6,7 +6,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, ArrowLeft, Users, Mail, Activity, BookOpen, BrainCircuit, UserCheck, Loader2, TerminalSquare } from "lucide-react";
+import { Building2, ArrowLeft, Users, Mail, Activity, BookOpen, BrainCircuit, UserCheck, Loader2, TerminalSquare, FileText } from "lucide-react";
 
 export default function CompanyDashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -37,7 +37,8 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   }
 
   const tabs = [
-    { label: 'Overview', href: `/admin/companies/${companyId}`, icon: Activity },
+    { label: 'Dashboard', href: `/admin/companies/${companyId}`, icon: Activity },
+    { label: 'Overview', href: `/admin/companies/${companyId}/overview`, icon: FileText },
     { label: 'Directory', href: `/admin/companies/${companyId}/users`, icon: Users },
     { label: 'Invites', href: `/admin/companies/${companyId}/invites`, icon: Mail },
     { label: 'Knowledge Base', href: `/admin/companies/${companyId}/knowledge`, icon: BookOpen },

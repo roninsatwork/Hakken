@@ -58,7 +58,7 @@ export const getCompanyByIdInternal = internalQuery({
 });
 
 export const createCompany = mutation({
-  args: { name: v.string() },
+  args: { name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated");
@@ -70,6 +70,7 @@ export const createCompany = mutation({
 
     const newCompanyId = await ctx.db.insert("companies", {
       name: args.name,
+      systemPrompt: args.systemPrompt,
       createdAt: Date.now(),
     });
 
@@ -87,7 +88,7 @@ export const createCompany = mutation({
 });
 
 export const updateCompany = mutation({
-  args: { id: v.id("companies"), name: v.string() },
+  args: { id: v.id("companies"), name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated");
@@ -98,7 +99,7 @@ export const updateCompany = mutation({
     }
 
     const previous = await ctx.db.get(args.id);
-    await ctx.db.patch(args.id, { name: args.name });
+    await ctx.db.patch(args.id, { name: args.name, systemPrompt: args.systemPrompt });
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId as any,
@@ -174,6 +175,22 @@ export const updateCompanyPrompt = mutation({
     }
 
     await ctx.db.patch(args.id, { systemPrompt: args.systemPrompt });
+    return args.id;
+  },
+});
+
+export const updateCompanyDescription = mutation({
+  args: { id: v.id("companies"), description: v.string() },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthenticated Admin Request");
+
+    const admin = await ctx.db.get(adminId);
+    if (!admin || admin.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized: System level clearance required.");
+    }
+
+    await ctx.db.patch(args.id, { description: args.description });
     return args.id;
   },
 });
