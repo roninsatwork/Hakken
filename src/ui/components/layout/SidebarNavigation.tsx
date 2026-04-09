@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  Building2, 
-  Users2, 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Building2,
+  Users2,
   Briefcase,
-  LineChart, 
+  LineChart,
   ChevronDown,
   Search,
   Sidebar,
@@ -29,6 +29,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTheme } from "next-themes";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useTranslations } from "next-intl";
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -105,8 +106,8 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
   const className = cn(
     "flex items-center justify-between w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all group relative",
-    isActive 
-      ? "text-foreground" 
+    isActive
+      ? "text-foreground"
       : "text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"
   );
 
@@ -129,7 +130,7 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
     <div className="flex flex-col mb-0.5 relative">
       {renderClickable()}
 
-      
+
       <AnimatePresence initial={false}>
         {hasChildren && isOpen && (
           <motion.div
@@ -150,21 +151,23 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 }
 
 export default function SidebarNavigation() {
+  const t = useTranslations('sidebar');
+  const tc = useTranslations('common');
   const pathname = usePathname();
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const settings = useSystemSettings();
   const { theme, systemTheme } = useTheme();
-  
+
   const currentTheme = theme === "system" ? systemTheme : theme;
-  const activeLogo = currentTheme === "dark" && settings.logoUrlDark 
-     ? settings.logoUrlDark 
-     : settings.logoUrlLight;
+  const activeLogo = currentTheme === "dark" && settings.logoUrlDark
+    ? settings.logoUrlDark
+    : settings.logoUrlLight;
 
   const isAdmin = pathname.startsWith('/admin');
-  
+
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  
+
   const [activeItem, setActiveItem] = useState(() => {
     if (pathname === '/admin') return 'Admin Dashboard';
     if (pathname.startsWith('/admin/companies')) return 'Companies';
@@ -231,36 +234,36 @@ export default function SidebarNavigation() {
   return (
     <AnimatePresence mode="wait">
       {isSidebarOpen && (
-        <motion.aside 
+        <motion.aside
           initial={{ x: -275, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -275, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
           className="fixed left-0 top-0 bottom-0 w-[275px] bg-sidebar border-r border-border-dim/50 flex flex-col z-50 shadow-2xl"
         >
-          
+
           {/* Header Area */}
           <div className="flex items-center justify-between px-5 pt-8 pb-5">
             <Link href="/" className="flex items-center gap-3 group">
               {activeLogo ? (
-                 <img src={activeLogo} alt={settings.platformName} className="h-8 object-contain" />
+                <img src={activeLogo} alt={settings.platformName} className="h-8 object-contain" />
               ) : (
                 <div className="w-[30px] h-[30px] rounded-[8px] bg-card border border-border-dim flex items-center justify-center relative shadow-sm">
                   <div className="w-[18px] h-[18px] text-brand flex items-center justify-center">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-                       <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
-                       <circle cx="12" cy="12" r="3" />
-                     </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+                      <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
                   </div>
                 </div>
               )}
               {!activeLogo && (
                 <span className="font-bold text-[18px] text-foreground tracking-tight group-hover:opacity-90 transition-opacity">
-                   {settings.platformName}
+                  {settings.platformName}
                 </span>
               )}
             </Link>
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(false)}
               className="text-muted hover:text-foreground transition-colors border border-transparent hover:border-border-dim p-1.5 rounded-md"
             >
@@ -269,158 +272,158 @@ export default function SidebarNavigation() {
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pt-6 pb-8 px-4 gap-6">
-            
+
             <section>
               <div className="mb-3 px-3">
                 <span className="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">
-                  {isAdmin ? 'Admin' : 'Navigation'}
+                  {isAdmin ? t('admin') : t('navigation')}
                 </span>
               </div>
 
               <nav>
                 {isAdmin ? (
                   <>
-                    <NavItem 
-                      icon={LayoutDashboard} 
-                      label="Dashboard" 
+                    <NavItem
+                      icon={LayoutDashboard}
+                      label={t('dashboard')}
                       href="/admin"
-                      isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')} 
+                      isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')}
                       onClick={() => setActiveItem('Admin Dashboard')}
                     />
-                    
+
                     {isSuperAdmin && (
-                      <NavItem 
-                        icon={Building2} 
-                        label="Companies" 
+                      <NavItem
+                        icon={Building2}
+                        label={t('companies')}
                         isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
                         onClick={() => setActiveItem('Companies')}
-                        hasChildren 
+                        hasChildren
                         isOpen={openSections.companies}
                         onToggle={() => toggleSection('companies')}
                       >
-                        <SubNavItem label="Manage Companies" href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+                        <SubNavItem label={t('manageCompanies')} href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
                       </NavItem>
                     )}
-                    
-                    <NavItem 
-                      icon={Bot} 
-                      label="Artificial Intelligence" 
+
+                    <NavItem
+                      icon={Bot}
+                      label={t('ai')}
                       isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Global Knowledge' || activeItem === 'Models' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'Running Costs'}
                       onClick={() => setActiveItem('Artificial Intelligence')}
-                      hasChildren 
+                      hasChildren
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label="Running Costs" href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
-                      
+                      <SubNavItem label={t('runningCosts')} href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
+
                       {isSuperAdmin && (
                         <>
-                          <SubNavItem label="Chat Logs" href="/admin/ai/chat-logs" isActive={activeItem === 'Chat Logs' || pathname.startsWith('/admin/ai/chat-logs')} onClick={() => setActiveItem('Chat Logs')} />
-                          <SubNavItem label="Rules" href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
-                          <SubNavItem label="System Prompt" href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
-                          <SubNavItem label="Global Knowledge" href="/admin/ai/global-knowledge" isActive={activeItem === 'Global Knowledge' || pathname.startsWith('/admin/ai/global-knowledge')} onClick={() => setActiveItem('Global Knowledge')} />
-                          <SubNavItem label="Models" href="/admin/ai/models" isActive={activeItem === 'Models' || pathname.startsWith('/admin/ai/models')} onClick={() => setActiveItem('Models')} />
+                          <SubNavItem label={t('chatLogs')} href="/admin/ai/chat-logs" isActive={activeItem === 'Chat Logs' || pathname.startsWith('/admin/ai/chat-logs')} onClick={() => setActiveItem('Chat Logs')} />
+                          <SubNavItem label={t('rules')} href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
+                          <SubNavItem label={t('systemPrompt')} href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
+                          <SubNavItem label={t('globalKnowledge')} href="/admin/ai/global-knowledge" isActive={activeItem === 'Global Knowledge' || pathname.startsWith('/admin/ai/global-knowledge')} onClick={() => setActiveItem('Global Knowledge')} />
+                          <SubNavItem label={t('models')} href="/admin/ai/models" isActive={activeItem === 'Models' || pathname.startsWith('/admin/ai/models')} onClick={() => setActiveItem('Models')} />
                         </>
                       )}
                     </NavItem>
 
                     {isSuperAdmin && (
-                      <NavItem 
-                        icon={Workflow} 
-                        label="Agents" 
+                      <NavItem
+                        icon={Workflow}
+                        label={t('agents')}
                         isActive={activeItem === 'Agents' || activeItem === 'Manage Agents' || activeItem === 'Connectors'}
                         onClick={() => setActiveItem('Agents')}
-                        hasChildren 
+                        hasChildren
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label="Manage Agents" href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
-                        <SubNavItem label="Connectors" href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
+                        <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
+                        <SubNavItem label={t('connectors')} href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
                       </NavItem>
                     )}
 
                     {isSuperAdmin && (
-                      <NavItem 
-                        icon={Network} 
-                        label="Workflows" 
+                      <NavItem
+                        icon={Network}
+                        label={t('workflows')}
                         isActive={activeItem === 'Workflows' || activeItem === 'Manage Workflows' || activeItem === 'Schedules' || activeItem === 'Workflow Logs'}
                         onClick={() => setActiveItem('Workflows')}
-                        hasChildren 
+                        hasChildren
                         isOpen={openSections.workflows}
                         onToggle={() => toggleSection('workflows')}
                       >
-                        <SubNavItem label="Manage Workflows" href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
-                        <SubNavItem label="Schedules" href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
-                        <SubNavItem label="Logs" href="/admin/workflows/logs" isActive={pathname.startsWith('/admin/workflows/logs')} onClick={() => setActiveItem('Workflow Logs')} />
+                        <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
+                        <SubNavItem label={t('workflowLogs')} href="/admin/workflows/logs" isActive={pathname.startsWith('/admin/workflows/logs')} onClick={() => setActiveItem('Workflow Logs')} />
                       </NavItem>
                     )}
 
                     {!isSuperAdmin && (
-                      <NavItem 
-                        icon={ShieldCheck} 
-                        label="Users" 
+                      <NavItem
+                        icon={ShieldCheck}
+                        label={t('users')}
                         isActive={activeItem === 'Users' || activeItem === 'Manage Users' || activeItem === 'Invitations'}
                         onClick={() => setActiveItem('Users')}
-                        hasChildren 
+                        hasChildren
                         isOpen={openSections.users}
                         onToggle={() => toggleSection('users')}
                       >
-                        <SubNavItem label="Manage Users" href="/admin/users" isActive={activeItem === 'Manage Users' && pathname === '/admin/users'} onClick={() => setActiveItem('Manage Users')} />
-                        <SubNavItem label="Invitations" href="/admin/users/invite" isActive={activeItem === 'Invitations' || pathname.startsWith('/admin/users/invite')} onClick={() => setActiveItem('Invitations')} />
+                        <SubNavItem label={t('manageUsers')} href="/admin/users" isActive={activeItem === 'Manage Users' && pathname === '/admin/users'} onClick={() => setActiveItem('Manage Users')} />
+                        <SubNavItem label={t('invitations')} href="/admin/users/invite" isActive={activeItem === 'Invitations' || pathname.startsWith('/admin/users/invite')} onClick={() => setActiveItem('Invitations')} />
                       </NavItem>
                     )}
 
                     {isSuperAdmin && (
                       <>
-                        <NavItem 
-                          icon={ShieldCheck} 
-                          label="System Admins" 
+                        <NavItem
+                          icon={ShieldCheck}
+                          label={t('systemAdmins')}
                           isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
                           onClick={() => setActiveItem('System Admins')}
-                          hasChildren 
+                          hasChildren
                           isOpen={openSections.superAdmins}
                           onToggle={() => toggleSection('superAdmins')}
                         >
-                          <SubNavItem label="System Admins" href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
-                          <SubNavItem label="Invitations" href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label={t('invitations')} href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
                         </NavItem>
-                        
-                        <NavItem 
-                          icon={Settings} 
-                          label="Settings" 
+
+                        <NavItem
+                          icon={Settings}
+                          label={t('settings')}
                           isActive={activeItem === 'System Settings' || activeItem === 'Analytics'}
                           onClick={() => setActiveItem('System Settings')}
-                          hasChildren 
+                          hasChildren
                           isOpen={openSections.settings}
                           onToggle={() => toggleSection('settings')}
                         >
-                          <SubNavItem label="System Settings" href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
-                          <SubNavItem label="Analytics" href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
+                          <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
+                          <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
                       </>
                     )}
                   </>
                 ) : (
                   <>
-                    <NavItem 
-                      icon={LayoutDashboard} 
-                      label="Dashboard" 
+                    <NavItem
+                      icon={LayoutDashboard}
+                      label={t('dashboard')}
                       href="/app"
-                      isActive={activeItem === 'Dashboard' || (pathname === '/app')} 
+                      isActive={activeItem === 'Dashboard' || (pathname === '/app')}
                       onClick={() => setActiveItem('Dashboard')}
                     />
-                    
-                    <NavItem 
-                      icon={FolderKanban} 
-                      label="Workspace" 
+
+                    <NavItem
+                      icon={FolderKanban}
+                      label={t('workspace')}
                       isActive={activeItem === 'Workspace'}
                       onClick={() => setActiveItem('Workspace')}
-                      hasChildren 
+                      hasChildren
                       isOpen={openSections.workspace}
                       onToggle={() => toggleSection('workspace')}
                     >
-                      <SubNavItem label={`${settings.platformName} Assistant`} href="/app/assistant" isActive={activeItem === 'Assistant'} onClick={() => setActiveItem('Assistant')} />
-                      <SubNavItem label="Agentic Testing" href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Agentic Testing')} />
+                      <SubNavItem label={`${settings.platformName} ${t('assistant')}`} href="/app/assistant" isActive={activeItem === 'Assistant'} onClick={() => setActiveItem('Assistant')} />
+                      <SubNavItem label={t('agenticTesting')} href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Assistant')} />
                     </NavItem>
 
 

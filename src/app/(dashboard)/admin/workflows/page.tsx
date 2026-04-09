@@ -3,10 +3,10 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { 
+import {
   Network,
-  Plus, 
-  Search, 
+  Plus,
+  Search,
   Trash2,
   Settings,
   ChevronLeft,
@@ -15,9 +15,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function WorkflowsPage() {
   const router = useRouter();
+  const t = useTranslations('admin.workflows');
+  const tCommon = useTranslations('common');
   // Using the new workflows API
   const workflows = useQuery((api as any).workflows.list) || [];
   const createWorkflow = useMutation((api as any).workflows.createWorkflow);
@@ -34,7 +37,7 @@ export default function WorkflowsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  const filteredWorkflows = workflows.filter((w: any) => 
+  const filteredWorkflows = workflows.filter((w: any) =>
     (w.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (w.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -58,14 +61,14 @@ export default function WorkflowsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const newWorkflowId = await createWorkflow({ 
-        name: formData.name, 
-        description: formData.description 
+      const newWorkflowId = await createWorkflow({
+        name: formData.name,
+        description: formData.description
       });
       setIsAddModalOpen(false);
       router.push(`/admin/workflows/${newWorkflowId}`);
     } catch (err: any) {
-      setSubmitError(err.message || "Failed to create workflow");
+      setSubmitError(err.message || t('errors.create'));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +81,7 @@ export default function WorkflowsPage() {
         await deleteWorkflow({ id: deletingWorkflow._id });
         setDeletingWorkflow(null);
       } catch (err: any) {
-        setSubmitError(err.message || "Failed to delete workflow");
+        setSubmitError(err.message || t('errors.delete'));
       } finally {
         setIsSubmitting(false);
       }
@@ -91,26 +94,26 @@ export default function WorkflowsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Network className="w-6 h-6 text-brand" />
-            Agent Orchestration Workflows
+            {t('title')}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Visually build, chain, and coordinate multi-agent processes.</p>
+          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleOpenAdd}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          <span>New Workflow</span>
+          <span>{t('new')}</span>
         </button>
       </div>
 
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
         <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
           <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search workflows by name..." 
+          <input
+            type="text"
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -123,10 +126,10 @@ export default function WorkflowsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">Workflow Name</th>
-                <th className="px-4 py-3 font-medium">Trigger</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-4 py-3 font-medium">{t('table.name')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.trigger')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
+                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -134,13 +137,13 @@ export default function WorkflowsPage() {
                 {paginatedWorkflows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No workflows match your search or no pipelines created yet.
+                      {t('table.empty')}
                     </td>
                   </tr>
                 ) : (
                   <>
                     {paginatedWorkflows.map((workflow: any) => (
-                      <motion.tr 
+                      <motion.tr
                         key={workflow._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -166,25 +169,25 @@ export default function WorkflowsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
-                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                                {workflow.triggerType}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
+                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                              {workflow.triggerType}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className={`flex items-center gap-2 text-[12px] font-medium ${workflow.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
                             <div className={`w-1.5 h-1.5 rounded-full ${workflow.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
-                            {workflow.isActive ? 'Active' : 'Draft'}
+                            {workflow.isActive ? t('table.active') : t('table.draft')}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/workflows/${workflow._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title="Visual Builder">
+                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/workflows/${workflow._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title={t('table.visualBuilder')}>
                               <Settings className="w-4 h-4" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingWorkflow(workflow); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Workflow">
-                                <Trash2 className="w-4 h-4" />
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingWorkflow(workflow); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.delete')}>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -201,29 +204,29 @@ export default function WorkflowsPage() {
         {totalItems > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
             <div className="flex items-center gap-2 text-[12px] text-muted">
-                <span>Showing</span>
-                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                <span>to</span>
-                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                <span>of</span>
-                <span className="font-medium text-foreground">{totalItems}</span>
-                <span>workflows</span>
+              <span>{t('pagination.showing')}</span>
+              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+              <span>{t('pagination.to')}</span>
+              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+              <span>{t('pagination.of')}</span>
+              <span className="font-medium text-foreground">{totalItems}</span>
+              <span>{t('pagination.items')}</span>
             </div>
             <div className="flex items-center gap-2">
-                <button 
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button 
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
@@ -232,51 +235,51 @@ export default function WorkflowsPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Initialize New Workflow"
+        title={t('modal.initTitle')}
       >
         <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px]">Create a new agent orchestration pipeline.</p>
-           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+          <p className="text-secondary text-[15px]">{t('modal.initDesc')}</p>
+          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Workflow Name</label>
-            <input 
-              type="text" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.name')}</label>
+            <input
+              type="text"
               required
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Content Generation Pipeline"
+              placeholder={t('placeholders.name')}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Short Description</label>
-            <input 
-              type="text" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.description')}</label>
+            <input
+              type="text"
               value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Multi-agent flow that researches and writes articles"
+              placeholder={t('placeholders.description')}
             />
           </div>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsAddModalOpen(false)}
               className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
               disabled={isSubmitting}
             >
-              Cancel
+              {t('buttons.cancel')}
             </button>
-            <button 
+            <button
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
-              {isSubmitting ? "Creating..." : "Create Workflow"}
+              {isSubmitting ? t('buttons.creating') : t('buttons.create')}
             </button>
           </div>
         </form>
@@ -285,31 +288,31 @@ export default function WorkflowsPage() {
       <SonaeModal
         isOpen={!!deletingWorkflow}
         onClose={() => { setDeletingWorkflow(null); setSubmitError(""); }}
-        title="Delete Workflow"
+        title={t('modal.deleteTitle')}
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{deletingWorkflow?.name}</strong>?
+            {t('modal.deleteConfirm', { name: deletingWorkflow?.name })}
           </p>
-          <p className="text-[13px] text-muted">This action cannot be undone.</p>
+          <p className="text-[13px] text-muted">{t('modal.undone')}</p>
           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setDeletingWorkflow(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             disabled={isSubmitting}
           >
-            Cancel
+            {t('buttons.cancel')}
           </button>
-          <button 
+          <button
             type="button"
             onClick={confirmDelete}
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? "Deleting..." : "Delete Workflow"}
+            {isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
           </button>
         </div>
       </SonaeModal>

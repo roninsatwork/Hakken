@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { Bot, Network } from 'lucide-react';
 import { cn } from '@/src/ui/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export type AgentNodeData = {
   label: string;
@@ -14,6 +15,8 @@ export type AgentNodeData = {
 export type AgentNodeType = Node<AgentNodeData, 'agentNode'>;
 
 export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<AgentNodeType>) => {
+  const t = useTranslations('admin.workflows.designer.node');
+
   // Parse schemas to show properties visually if available
   let inputProps: string[] = [];
   let outputProps: string[] = [];
@@ -61,7 +64,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
           <div className="flex flex-col flex-1 min-w-0">
             <span className="font-semibold text-[13px] text-foreground truncate">{data.label}</span>
             <span className="text-[10px] uppercase tracking-wider text-muted font-mono truncate">
-              {data.modelId || "Agent"}
+              {data.modelId || t('agent')}
             </span>
           </div>
         </div>
@@ -70,7 +73,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
         <div className="p-3 flex flex-col gap-3">
           {inputProps.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">Inputs</span>
+              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">{t('inputs')}</span>
               <div className="flex flex-wrap gap-1">
                 {inputProps.map(prop => (
                   <span key={prop} className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] font-mono text-muted">
@@ -80,10 +83,10 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
               </div>
             </div>
           )}
-          
+
           {outputProps.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">Outputs</span>
+              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">{t('outputs')}</span>
               <div className="flex flex-wrap gap-1">
                 {outputProps.map(prop => (
                   <span key={prop} className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">
@@ -96,7 +99,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
 
           {inputProps.length === 0 && outputProps.length === 0 && (
             <div className="text-[11px] text-muted italic text-center py-2">
-              No schema defined
+              {t('noSchema')}
             </div>
           )}
         </div>

@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState, use } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { 
-  ReactFlow, 
-  Background, 
-  Controls, 
-  useNodesState, 
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
   useEdgesState,
   addEdge,
   Connection,
@@ -16,10 +16,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { AgentNode } from "@/src/ui/components/workflows/AgentNode";
-import { ArrowLeft, Save, Plus, Play, Bot } from "lucide-react";
-import Link from "next/link";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
+import { useTranslations } from "next-intl";
 
 const nodeTypes: NodeTypes = {
   agentNode: AgentNode as any,
@@ -27,10 +26,11 @@ const nodeTypes: NodeTypes = {
 
 export default function WorkflowCanvas({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  
+  const t = useTranslations('admin.workflows.designer');
+
   const workflow = useQuery((api as any).workflows.get, { id });
   const allAgents = useQuery(api.agents.list) || [];
-  
+
   const updateWorkflow = useMutation((api as any).workflows.updateWorkflow);
   const createInlineAgent = useMutation((api as any).agents.createInlineAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
@@ -39,7 +39,7 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [isAddNodeModalOpen, setIsAddNodeModalOpen] = useState(false);
   const [isManualRunModalOpen, setIsManualRunModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<any>(null);
@@ -80,9 +80,9 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
         id: `agent-${newAgentId}-${Date.now()}`,
         type: 'agentNode',
         position: { x: 150 + Math.random() * 50, y: 150 + Math.random() * 50 },
-        data: { 
-          label: "Sandbox Agent",
-          modelId: "gemini-3.1-flash-lite-preview", 
+        data: {
+          label: t('sandboxLabel', { defaultValue: 'Sandbox Agent' }),
+          modelId: "gemini-3.1-flash-lite-preview",
           _agentId: newAgentId,
           isInline: true,
         },
@@ -91,17 +91,17 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
       setEditingNode(newNode);
     } catch (e) {
       console.error(e);
-      alert("Failed to initialize inline sandbox node");
+      alert(t('alerts.initSandboxFailed'));
     }
   };
 
   useEffect(() => {
     if (workflow && isInitializing) {
       if (workflow.nodes && workflow.nodes !== "[]") {
-        try { setNodes(JSON.parse(workflow.nodes)); } catch(e){}
+        try { setNodes(JSON.parse(workflow.nodes)); } catch (e) { }
       }
       if (workflow.edges && workflow.edges !== "[]") {
-        try { setEdges(JSON.parse(workflow.edges)); } catch(e){}
+        try { setEdges(JSON.parse(workflow.edges)); } catch (e) { }
       }
       setIsInitializing(false);
     }
@@ -121,9 +121,9 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
         nodes: JSON.stringify(nodes),
         edges: JSON.stringify(edges)
       });
-    } catch(e) {
+    } catch (e) {
       console.error(e);
-      alert("Failed to save workflow");
+      alert(t('alerts.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -134,20 +134,20 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
       id: `agent-${agent._id}-${Date.now()}`,
       type: 'agentNode',
       position: { x: 150 + Math.random() * 50, y: 150 + Math.random() * 50 },
-      data: { 
-        label: agent.name, 
+      data: {
+        label: agent.name,
         avatar: agent.avatar,
         modelId: agent.modelId,
         inputSchema: agent.inputSchema,
         outputSchema: agent.outputSchema,
-        _agentId: agent._id 
+        _agentId: agent._id
       },
     };
     setNodes((nds) => [...nds, newNode]);
     setIsAddNodeModalOpen(false);
   };
 
-  if (!workflow) return <div className="p-8 text-secondary">Loading canvas...</div>;
+  if (!workflow) return <div className="p-8 text-secondary">{t('loading')}</div>;
 
   return (
     <div className="flex flex-col h-full bg-background rounded-l-[32px] overflow-hidden -m-8 mr-0" style={{ height: 'calc(100vh - 80px)' }}>
@@ -159,36 +159,36 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
           </Link>
           <div className="flex flex-col">
             <h1 className="text-xl font-bold tracking-tight text-foreground">{workflow.name}</h1>
-            <span className="text-[11px] text-muted tracking-widest uppercase">{workflow.triggerType} TRIGGER</span>
+            <span className="text-[11px] text-muted tracking-widest uppercase">{t('header.trigger', { type: workflow.triggerType })}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={() => setIsAddNodeModalOpen(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-sidebar border border-border-dim text-foreground font-medium hover:bg-foreground/5 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Agent</span>
+            <span>{t('header.addAgent')}</span>
           </button>
-          
-          <button 
+
+          <button
             onClick={handleSave}
             disabled={isSaving}
             className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-brand text-brand-foreground font-medium hover:bg-brand/90 transition-all shadow-xl shadow-brand/20 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span>{isSaving ? "Saving..." : "Save Graph"}</span>
+            <span>{isSaving ? t('header.saving') : t('header.saveGraph')}</span>
           </button>
 
           <div className="w-px h-6 bg-border-dim mx-1" />
 
-          <button 
+          <button
             onClick={() => setIsManualRunModalOpen(true)}
             className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>Manual Run</span>
+            <span>{t('header.manualRun')}</span>
           </button>
         </div>
       </div>
@@ -218,28 +218,28 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
       <SonaeModal
         isOpen={isAddNodeModalOpen}
         onClose={() => setIsAddNodeModalOpen(false)}
-        title="Add Agent to Workflow"
+        title={t('addModal.title')}
       >
-        <p className="text-secondary mb-4 text-[13px]">Select an autonomous agent to perform tasks in this workflow.</p>
-        
+        <p className="text-secondary mb-4 text-[13px]">{t('addModal.description')}</p>
+
         <button
           type="button"
           onClick={handleCreateInlineAgent}
           className="w-full py-4 rounded-[12px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all flex items-center justify-center gap-2 shadow-xl shadow-foreground/20 text-[14px] mb-4"
         >
           <Bot className="w-5 h-5" />
-          Create Custom Sandbox Agent
+          {t('addModal.createSandbox')}
         </button>
 
         <div className="flex items-center gap-4 mb-4">
           <div className="h-px bg-border-dim flex-1" />
-          <span className="text-[10px] uppercase tracking-widest text-muted">Or Choose Pre-built</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted">{t('addModal.choosePrebuilt')}</span>
           <div className="h-px bg-border-dim flex-1" />
         </div>
 
         <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
           {allAgents.length === 0 ? (
-            <div className="text-center py-6 text-muted text-[13px]">No agents available. Go to the Agents tab to create one.</div>
+            <div className="text-center py-6 text-muted text-[13px]">{t('addModal.noAgents')}</div>
           ) : (
             allAgents.map((agent: any) => (
               <button
@@ -259,7 +259,7 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
                     {agent.name}
                   </span>
                   <span className="text-[11px] text-secondary truncate">
-                    {agent.description || "No description"}
+                    {agent.description || t('addModal.defaultDesc')}
                   </span>
                 </div>
               </button>
@@ -272,24 +272,24 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
       <SonaeModal
         isOpen={isManualRunModalOpen}
         onClose={() => setIsManualRunModalOpen(false)}
-        title="Execute Manual Run"
+        title={t('runModal.title')}
       >
-        <p className="text-secondary mb-6 text-[13px]">Manual run execution functionality will hook into the orchestrator agent. This feature is currently in development.</p>
+        <p className="text-secondary mb-6 text-[13px]">{t('runModal.description')}</p>
         <div className="flex justify-end gap-3">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setIsManualRunModalOpen(false)}
             className="px-5 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-md shadow-foreground/10 text-sm"
           >
-            Acknowledge
+            {t('runModal.acknowledge')}
           </button>
         </div>
       </SonaeModal>
 
-      <AgentEditorModal 
-        node={editingNode} 
-        onClose={() => setEditingNode(null)} 
-        onUpdateNode={handleUpdateNodeData} 
+      <AgentEditorModal
+        node={editingNode}
+        onClose={() => setEditingNode(null)}
+        onUpdateNode={handleUpdateNodeData}
       />
     </div>
   );

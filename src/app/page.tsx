@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { FluidBackground } from "../ui/components/layout/FluidBackground";
+import { useTranslations } from "next-intl";
 
 export default function LandingPage() {
+  const t = useTranslations('landing');
+
   return (
     <div className="relative min-h-screen w-full bg-background flex flex-col items-center justify-center overflow-hidden">
-      
+
       {/* The Interactive Living Aura Layer */}
       <FluidBackground />
 
@@ -17,11 +20,11 @@ export default function LandingPage() {
           </div>
           <span className="text-xl font-light tracking-[0.2em] uppercase text-foreground">Sonae</span>
         </div>
-        <Link 
-          href="/login" 
+        <Link
+          href="/login"
           className="px-6 py-2.5 rounded-full bg-sidebar/50 border border-border-dim text-[13px] font-medium text-foreground hover:bg-foreground hover:text-background transition-all backdrop-blur-md"
         >
-          Get Started
+          {t('getStarted')}
         </Link>
       </header>
 
@@ -29,30 +32,32 @@ export default function LandingPage() {
       <main className="relative z-20 flex flex-col items-center text-center px-4 max-w-4xl pt-20">
         <div className="mb-8 px-4 py-1.5 rounded-full border border-brand/30 bg-brand/5 backdrop-blur-md flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-          <span className="text-[12px] font-medium text-brand tracking-widest uppercase shadow-brand/50 drop-shadow-md">To Be Prepared</span>
+          <span className="text-[12px] font-medium text-brand tracking-widest uppercase shadow-brand/50 drop-shadow-md">{t('toBePrepared')}</span>
         </div>
-        
+
         <h1 className="text-5xl sm:text-7xl font-light tracking-tight text-foreground leading-[1.1] mb-6 drop-shadow-xl">
           Sonae <br />
-          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent text-3xl sm:text-5xl mt-2 block">The Ronins Starter Framework for AI projects</span>
+          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent text-3xl sm:text-5xl mt-2 block">{t('frameworkTitle')}</span>
         </h1>
-        
+
         <p className="text-lg sm:text-xl text-secondary max-w-2xl mb-12 font-light leading-relaxed drop-shadow-md">
-          A scaffolded AI project framework with the tooling already sorted, built from what we have learned across enough engagements to know when a project is ready to hit the ground running and when it needs something different.
+          {t('frameworkDescription')}
         </p>
 
-        <Link 
+        <Link
           href="/login"
           className="group relative flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-[20px] font-medium hover:bg-foreground/90 transition-all shadow-2xl shadow-foreground/20 hover:shadow-brand/20 hover:scale-[1.02]"
         >
-          <span className="text-[15px] tracking-wide relative z-10">Get Started</span>
+          <span className="text-[15px] tracking-wide relative z-10">{t('getStarted')}</span>
           <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform relative z-10" />
         </Link>
       </main>
 
       {/* Footer */}
       <footer className="absolute bottom-6 w-full text-center z-20">
-        <p className="text-[11px] text-muted tracking-widest uppercase">© {new Date().getFullYear()} Ronins Group Ltd. All rights reserved.</p>
+        <p className="text-[11px] text-muted tracking-widest uppercase">
+          {t('copyright', { year: new Date().getFullYear() })}
+        </p>
       </footer>
     </div>
   );

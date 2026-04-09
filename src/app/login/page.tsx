@@ -5,8 +5,10 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ChevronRight, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { FluidBackground } from "../../ui/components/layout/FluidBackground";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
+  const t = useTranslations('login');
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
@@ -35,32 +37,32 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-background p-4 sm:p-8 overflow-hidden">
-      
+
       {/* The Interactive Living Aura Layer */}
       <FluidBackground />
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="relative w-full max-w-md"
       >
         <div className="bg-sidebar/40 border border-border-dim rounded-[32px] p-8 sm:p-10 shadow-2xl backdrop-blur-2xl flex flex-col items-center">
-          
+
           <div className="w-16 h-16 rounded-[20px] bg-foreground/5 border border-border-dim flex items-center justify-center mb-6 shadow-inner">
             <ShieldCheck className="w-8 h-8 text-brand" />
           </div>
 
           <h1 className="text-3xl font-light tracking-[0.12em] text-foreground mb-2 text-center">
-            SONAE
+            {t('title')}
           </h1>
           <p className="text-secondary text-center mb-8 text-[12px] font-medium tracking-[0.2em] uppercase">
-            To Be Prepared
+            {t('subtitle')}
           </p>
 
           <AnimatePresence mode="wait">
             {!emailSent ? (
-              <motion.form 
+              <motion.form
                 key="form"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -73,13 +75,13 @@ export default function LoginPage() {
                   <input
                     type="email"
                     required
-                    placeholder="Enter your email address"
+                    placeholder={t('emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-background border border-border-dim focus:border-brand/50 rounded-[16px] pl-12 pr-4 py-4 text-[15px] text-foreground outline-none transition-all placeholder:text-secondary focus:ring-4 focus:ring-brand/10"
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={isSubmittingEmail || !email}
@@ -89,7 +91,7 @@ export default function LoginPage() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <span>Send Magic Link</span>
+                      <span>{t('sendMagicLink')}</span>
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -97,7 +99,7 @@ export default function LoginPage() {
 
                 <div className="flex items-center gap-4 my-2">
                   <div className="flex-1 h-px bg-border-dim"></div>
-                  <span className="text-[11px] text-muted tracking-widest uppercase">Or</span>
+                  <span className="text-[11px] text-muted tracking-widest uppercase">{t('or')}</span>
                   <div className="flex-1 h-px bg-border-dim"></div>
                 </div>
 
@@ -117,7 +119,7 @@ export default function LoginPage() {
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                       </svg>
-                      <span>Continue with Google</span>
+                      <span>{t('continueWithGoogle')}</span>
                     </>
                   )}
                 </button>
@@ -132,16 +134,16 @@ export default function LoginPage() {
                 <div className="w-16 h-16 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-8 h-8 text-brand" />
                 </div>
-                <h3 className="text-xl font-medium text-foreground mb-2">Thank you</h3>
+                <h3 className="text-xl font-medium text-foreground mb-2">{t('thankYou')}</h3>
                 <p className="text-[15px] text-secondary leading-relaxed max-w-[280px]">
-                  If your account is registered with us, a secure magic link will be sent to <strong className="text-foreground">{email}</strong>.
+                  {t.rich('magicLinkSent', { email: (chunks) => <strong className="text-foreground">{email}</strong> })}
                 </p>
                 <button
                   type="button"
                   onClick={() => setEmailSent(false)}
                   className="mt-8 text-[13px] text-brand hover:text-brand/80 transition-colors underline underline-offset-4"
                 >
-                  Try a different email address
+                  {t('tryDifferentEmail')}
                 </button>
               </motion.div>
             )}

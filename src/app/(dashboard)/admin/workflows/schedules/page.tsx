@@ -3,10 +3,10 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { 
+import {
   Timer,
-  Plus, 
-  Search, 
+  Plus,
+  Search,
   Trash2,
   CheckCircle2,
   XCircle,
@@ -19,13 +19,16 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function SchedulesPage() {
   const router = useRouter();
-  
+  const t = useTranslations('admin.workflows.schedules');
+  const tCommon = useTranslations('common');
+
   const schedules = useQuery((api as any).scheduler.getSchedules) || [];
   const workflows = useQuery((api as any).workflows.list) || [];
-  
+
   const createSchedule = useMutation((api as any).scheduler.createSchedule);
   const deleteSchedule = useMutation((api as any).scheduler.deleteSchedule);
   const toggleSchedule = useMutation((api as any).scheduler.toggleSchedule);
@@ -33,13 +36,13 @@ export default function SchedulesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingSchedule, setDeletingSchedule] = useState<any | null>(null);
-  const [messageModal, setMessageModal] = useState<{title: string; body: string} | null>(null);
+  const [messageModal, setMessageModal] = useState<{ title: string; body: string } | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  const filteredSchedules = schedules.filter((s: any) => 
+  const filteredSchedules = schedules.filter((s: any) =>
     (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -64,7 +67,7 @@ export default function SchedulesPage() {
         await deleteSchedule({ scheduleId: deletingSchedule._id });
         setDeletingSchedule(null);
       } catch (err: any) {
-        setMessageModal({ title: "Deletion Failed", body: err.message || "Failed to delete schedule" });
+        setMessageModal({ title: t('modals.error.deleteFailed'), body: err.message || tCommon('errors.default') });
       } finally {
         setIsSubmitting(false);
       }
@@ -74,19 +77,19 @@ export default function SchedulesPage() {
   const handleManualRun = async (workflowId: string, e: any) => {
     e.stopPropagation();
     try {
-        await manualRunWorkflow({ workflowId: workflowId as any });
-        setMessageModal({ title: "Execution Queued", body: "The engine has successfully pushed the workflow graph to the queue. You can monitor its heartbeat in the Logs tab." });
+      await manualRunWorkflow({ workflowId: workflowId as any });
+      setMessageModal({ title: t('modals.execution.title'), body: t('modals.execution.body') });
     } catch (e: any) {
-        setMessageModal({ title: "Execution Failed", body: e.message || "Failed to run manually." });
+      setMessageModal({ title: t('modals.error.executionFailed'), body: e.message || tCommon('errors.default') });
     }
   };
 
   const handleToggle = async (scheduleId: string, current: boolean, e: any) => {
     e.stopPropagation();
     try {
-        await toggleSchedule({ scheduleId: scheduleId as any, isActive: !current });
+      await toggleSchedule({ scheduleId: scheduleId as any, isActive: !current });
     } catch (e: any) {
-        setMessageModal({ title: "Status Update Failed", body: e.message || "Failed to toggle." });
+      setMessageModal({ title: t('modals.error.statusFailed'), body: e.message || tCommon('errors.default') });
     }
   };
 
@@ -96,26 +99,26 @@ export default function SchedulesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Timer className="w-6 h-6 text-brand" />
-            Autonomous Scheduler
+            {t('title')}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Configure automated triggers that wake up and run workflows chronologically.</p>
+          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleOpenAdd}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          <span>New Schedule</span>
+          <span>{t('newSchedule')}</span>
         </button>
       </div>
 
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
         <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
           <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search schedules by name..." 
+          <input
+            type="text"
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -128,11 +131,11 @@ export default function SchedulesPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">Schedule Details</th>
-                <th className="px-4 py-3 font-medium">Workflow</th>
-                <th className="px-4 py-3 font-medium">Interval</th>
-                <th className="px-4 py-3 font-medium">Status / Toggle</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-4 py-3 font-medium">{t('table.details')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.workflow')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.interval')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
+                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -140,13 +143,13 @@ export default function SchedulesPage() {
                 {paginatedSchedules.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-secondary">
-                      No schedules match your search or no schedules created yet.
+                      {t('table.noSchedules')}
                     </td>
                   </tr>
                 ) : (
                   <>
                     {paginatedSchedules.map((schedule: any) => (
-                      <motion.tr 
+                      <motion.tr
                         key={schedule._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -167,35 +170,35 @@ export default function SchedulesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                           <span className="truncate text-[13px] text-foreground/80 font-medium">
-                                {schedule.workflowName}
-                           </span>
+                          <span className="truncate text-[13px] text-foreground/80 font-medium">
+                            {schedule.workflowName}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
-                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                                {schedule.intervalStr}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
+                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                              {schedule.intervalStr}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
-                           <button 
-                             onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
-                             className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
-                           >
-                             {schedule.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                             <span className="text-[12px] uppercase tracking-wider font-semibold text-foreground/50">{schedule.isActive ? "Armed" : "Paused"}</span>
-                           </button>
+                          <button
+                            onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
+                            className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
+                          >
+                            {schedule.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                            <span className="text-[12px] uppercase tracking-wider font-semibold text-foreground/50">{schedule.isActive ? t('status.armed') : t('status.paused')}</span>
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            
-                            <button onClick={(e) => handleManualRun(schedule.workflowId, e)} className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors" title="Force Run Now">
-                                <Play className="w-4 h-4 fill-current" />
+
+                            <button onClick={(e) => handleManualRun(schedule.workflowId, e)} className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors" title={t('actions.forceRun')}>
+                              <Play className="w-4 h-4 fill-current" />
                             </button>
 
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingSchedule(schedule); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Schedule">
-                                <Trash2 className="w-4 h-4" />
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingSchedule(schedule); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('actions.delete')}>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -212,29 +215,29 @@ export default function SchedulesPage() {
         {totalItems > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
             <div className="flex items-center gap-2 text-[12px] text-muted">
-                <span>Showing</span>
-                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                <span>to</span>
-                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                <span>of</span>
-                <span className="font-medium text-foreground">{totalItems}</span>
-                <span>schedules</span>
+              <span>{tCommon('pagination.showing')}</span>
+              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+              <span>{tCommon('pagination.to')}</span>
+              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+              <span>{tCommon('pagination.of')}</span>
+              <span className="font-medium text-foreground">{totalItems}</span>
+              <span>{tCommon('pagination.items')}</span>
             </div>
             <div className="flex items-center gap-2">
-                <button 
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button 
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
@@ -245,29 +248,29 @@ export default function SchedulesPage() {
       <SonaeModal
         isOpen={!!deletingSchedule}
         onClose={() => setDeletingSchedule(null)}
-        title="Delete Schedule"
+        title={t('modals.delete.title')}
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            Are you sure you want to permanently delete this schedule: <strong className="text-foreground font-semibold">{deletingSchedule?.name}</strong>?
+            {t('modals.delete.confirm', { name: deletingSchedule?.name })}
           </p>
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setDeletingSchedule(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             disabled={isSubmitting}
           >
-            Cancel
+            {t('modals.delete.cancel')}
           </button>
-          <button 
+          <button
             type="button"
             onClick={confirmDelete}
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? "Deleting..." : "Delete Schedule"}
+            {isSubmitting ? t('modals.delete.submitting') : t('modals.delete.submit')}
           </button>
         </div>
       </SonaeModal>
@@ -282,12 +285,12 @@ export default function SchedulesPage() {
           <p>{messageModal?.body}</p>
         </div>
         <div className="flex justify-end mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setMessageModal(null)}
             className="px-8 py-3 rounded-[10px] bg-foreground text-background transition-all text-sm font-bold tracking-widest uppercase hover:opacity-90"
           >
-            Dismiss
+            {t('modals.error.dismiss')}
           </button>
         </div>
       </SonaeModal>

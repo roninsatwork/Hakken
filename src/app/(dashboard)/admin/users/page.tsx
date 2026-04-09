@@ -3,10 +3,10 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { 
-  Users, 
-  Plus, 
-  Search, 
+import {
+  Users,
+  Plus,
+  Search,
   MoreVertical,
   ShieldCheck,
   User,
@@ -16,14 +16,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
 
 export default function ManageUsersPage() {
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const companies = useQuery(api.companies.getCompanies) || [];
+  const t = useTranslations('admin.users');
+  const tCommon = useTranslations('common');
 
-  const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || "System Level";
+  const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || t('table.systemLevel');
 
   const users = useQuery(api.users.getAllUsers) || [];
   const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
@@ -40,12 +43,12 @@ export default function ManageUsersPage() {
 
   const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
 
-  const filteredUsers = users.filter((u: any) => 
-    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = users.filter((u: any) =>
+    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredInvites = pendingInvites.filter((inv: any) => 
+  const filteredInvites = pendingInvites.filter((inv: any) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -96,17 +99,17 @@ export default function ManageUsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Users className="w-6 h-6 text-brand" />
-            User Management
+            {t('title')}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage system administrators, editors, and read-only users.</p>
+          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
         </div>
-        
-        <Link 
+
+        <Link
           href="/admin/users/invite"
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
-          <span>Invite User</span>
+          <span>{t('invite')}</span>
         </Link>
       </div>
 
@@ -114,9 +117,9 @@ export default function ManageUsersPage() {
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
         <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
           <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search users by name or email..." 
+          <input
+            type="text"
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -130,11 +133,11 @@ export default function ManageUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">User</th>
-                {isSuperAdmin && <th className="px-4 py-3 font-medium">Workspace</th>}
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-4 py-3 font-medium">{tCommon('table.user')}</th>
+                {isSuperAdmin && <th className="px-4 py-3 font-medium">{t('table.workspace')}</th>}
+                <th className="px-4 py-3 font-medium">{tCommon('table.role')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.joined')}</th>
+                <th className="px-4 py-3 font-medium text-right">{tCommon('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -142,13 +145,13 @@ export default function ManageUsersPage() {
                 {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
                     <td colSpan={isSuperAdmin ? 5 : 4} className="px-6 py-12 text-center text-secondary">
-                      No users or pending invitations found matching your search.
+                      {t('table.noMatches')}
                     </td>
                   </tr>
                 ) : (
                   <>
                     {filteredInvites.map((inv) => (
-                      <motion.tr 
+                      <motion.tr
                         key={inv._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -158,11 +161,11 @@ export default function ManageUsersPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                               <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                              <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
                             </div>
                             <div>
                               <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                                Pending Invitation
+                                {t('table.pending')}
                               </span>
                               <span className="text-[12px] text-secondary">{inv.email}</span>
                             </div>
@@ -171,31 +174,31 @@ export default function ManageUsersPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                              PENDING {inv.role}
+                              {t('table.pending')} {inv.role}
                             </span>
                           </div>
                         </td>
                         {isSuperAdmin && (
                           <td className="px-4 py-3">
-                            <span className="text-[12px] text-secondary">{inv.companyId ? getCompanyName(inv.companyId) : "System Level (Unassigned)"}</span>
+                            <span className="text-[12px] text-secondary">{inv.companyId ? getCompanyName(inv.companyId) : t('table.systemLevel')}</span>
                           </td>
                         )}
                         <td className="px-4 py-3 text-[12px] text-secondary">
-                          {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
+                          {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : t('table.na')}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
-                             <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
-                               <Trash2 className="w-4 h-4" />
-                             </button>
+                            <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">{t('table.awaiting')}</span>
+                            <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.revoke')}>
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </motion.tr>
                     ))}
 
                     {filteredUsers.map((user) => (
-                      <motion.tr 
+                      <motion.tr
                         key={user._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -204,9 +207,9 @@ export default function ManageUsersPage() {
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-3">
-                            <img 
-                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
-                              alt={user.name} 
+                            <img
+                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`}
+                              alt={user.name}
                               className="w-8 h-8 rounded-full bg-card border border-border-dim"
                             />
                             <div>
@@ -221,17 +224,17 @@ export default function ManageUsersPage() {
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {user.role || 'USER'}
+                              {user.role === 'SUPER_ADMIN' ? t('roles.superAdmin') : user.role === 'ADMIN' ? t('roles.admin') : t('roles.user')}
                             </span>
                           </div>
                         </td>
                         {isSuperAdmin && (
                           <td className="px-4 py-2.5">
-                            <span className="text-[12px] text-secondary">{user.companyId ? getCompanyName(user.companyId) : "Sonae Global"}</span>
+                            <span className="text-[12px] text-secondary">{user.companyId ? getCompanyName(user.companyId) : t('table.sonaeGlobal')}</span>
                           </td>
                         )}
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : t('table.na')}
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -260,56 +263,56 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={editingUser ? "Edit User" : "Invite User"}
+        title={editingUser ? t('modal.editTitle') : t('modal.inviteTitle')}
       >
-        <p className="text-secondary mb-6 text-[15px]">{editingUser ? "Update this user's details and roles." : "Invite a new user to the platform."}</p>
+        <p className="text-secondary mb-6 text-[15px]">{editingUser ? t('modal.editDesc') : t('modal.inviteDesc')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
-            <input 
-              type="text" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.fullName')}</label>
+            <input
+              type="text"
               required
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Aman"
+              placeholder={t('modal.namePlaceholder')}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
-            <input 
-              type="email" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.email')}</label>
+            <input
+              type="email"
               required
               value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="aman@example.com"
+              placeholder={t('modal.emailPlaceholder')}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
-            <select 
+            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.role')}</label>
+            <select
               value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
+              onChange={e => setFormData({ ...formData, role: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
-              <option value="USER">User (Read-only)</option>
-              <option value="ADMIN">Company Administrator</option>
-              {isSuperAdmin && <option value="SUPER_ADMIN">Global Super Admin</option>}
+              <option value="USER">{t('roles.user')}</option>
+              <option value="ADMIN">{t('roles.admin')}</option>
+              {isSuperAdmin && <option value="SUPER_ADMIN">{t('roles.superAdmin')}</option>}
             </select>
           </div>
 
           {isSuperAdmin && (
             <div className="flex flex-col gap-2">
-              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Workspace Assignment</label>
-              <select 
+              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.workspace')}</label>
+              <select
                 value={formData.companyId}
-                onChange={e => setFormData({...formData, companyId: e.target.value})}
+                onChange={e => setFormData({ ...formData, companyId: e.target.value })}
                 className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
               >
-                <option value="">System Level (No Workspace)</option>
+                <option value="">{t('table.systemLevel')}</option>
                 {companies.map((c: any) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
@@ -318,30 +321,30 @@ export default function ManageUsersPage() {
           )}
 
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
-            <input 
-              type="url" 
+            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.avatar')}</label>
+            <input
+              type="url"
               value={formData.image}
-              onChange={e => setFormData({...formData, image: e.target.value})}
+              onChange={e => setFormData({ ...formData, image: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="https://example.com/avatar.jpg"
+              placeholder={t('modal.avatarPlaceholder')}
             />
-            <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
+            <p className="text-[11px] text-muted">{t('modal.avatarHint')}</p>
           </div>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsAddModalOpen(false)}
               className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             >
-              Cancel
+              {t('buttons.cancel')}
             </button>
-            <button 
+            <button
               type="submit"
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm"
             >
-              {editingUser ? "Update User" : "Send Invite"}
+              {editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
             </button>
           </div>
         </form>
@@ -351,25 +354,25 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={!!deletingUser}
         onClose={() => setDeletingUser(null)}
-        title="Delete User"
+        title={t('modal.deleteTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
+          {t('modal.deleteConfirm', { name: deletingUser?.name })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setDeletingUser(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
           >
-            Cancel
+            {t('buttons.cancel')}
           </button>
-          <button 
+          <button
             type="button"
             onClick={confirmDelete}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
           >
-            Delete User
+            {t('buttons.delete')}
           </button>
         </div>
       </SonaeModal>
@@ -378,25 +381,25 @@ export default function ManageUsersPage() {
       <SonaeModal
         isOpen={!!deletingInvite}
         onClose={() => setDeletingInvite(null)}
-        title="Revoke Access"
+        title={t('modal.revokeTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
+          {t('modal.revokeConfirm', { email: deletingInvite?.email })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setDeletingInvite(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
           >
-            Cancel
+            {t('buttons.cancel')}
           </button>
-          <button 
+          <button
             type="button"
             onClick={confirmRevoke}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
           >
-            Revoke Access
+            {t('buttons.revoke')}
           </button>
         </div>
       </SonaeModal>

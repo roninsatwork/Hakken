@@ -1,4 +1,784 @@
 {
-    "hello": "Hello World!!",
-    "projectName": "Next.js Starter"
+    "common": {
+        "loading": "Loading...",
+        "actions": {
+            "save": "Save",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "edit": "Edit",
+            "create": "Create",
+            "dismiss": "Got it",
+            "back": "Back"
+        },
+        "pagination": {
+            "showing": "Showing",
+            "to": "to",
+            "of": "of",
+            "items": "items"
+        },
+        "status": {
+            "success": "Success",
+            "failed": "Failed",
+            "running": "Running",
+            "active": "Active",
+            "inactive": "Inactive",
+            "pending": "Pending",
+            "draft": "Draft"
+        },
+        "timeframes": {
+            "24h": "Last 24 Hours",
+            "7d": "Last 7 Days",
+            "30d": "Last 30 Days",
+            "all": "All Time"
+        },
+        "errors": {
+            "default": "An unexpected error occurred.",
+            "unauthorized": "You are not authorized to perform this action.",
+            "notFound": "Resource not found."
+        }
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "companies": "Companies",
+        "users": "User Management",
+        "workflows": "Workflows",
+        "agents": "Agentic Fleet",
+        "settings": "System Settings",
+        "aiManagement": "AI Management",
+        "auditLogs": "Audit Ledger"
+    },
+    "admin": {
+        "companies": {
+            "title": "Tenants & Organizations",
+            "subtitle": "Manage multi-tenant isolation, branding, and provisioned system prompts.",
+            "newCompany": "New Tenant",
+            "searchPlaceholder": "Search by tenant name...",
+            "tenantName": "Tenant Name",
+            "provisionedDate": "Provisioned",
+            "assignedUsers": "Assigned Users",
+            "actions": "Operations",
+            "emptyState": "No organizations provisioned matching the query.",
+            "users": "{count, plural, =0 {No users} one {1 user} other {# users}}",
+            "showing": "Showing",
+            "to": "to",
+            "of": "of",
+            "companies": "tenants",
+            "createTitle": "Provision Tenant",
+            "createSubtitle": "Initialize a new segregated workspace environment.",
+            "editTitle": "Edit Workspace",
+            "editSubtitle": "Modify tenant identity and AI operational boundaries.",
+            "nameLabel": "Company Name",
+            "namePlaceholder": "e.g. Sonae LLC",
+            "promptLabel": "Company Profile & AI Rules",
+            "promptSubtitle": "The fundamental system prompt injected for all users in this tenant.",
+            "promptOptional": "Optional",
+            "promptPlaceholder": "e.g. Ronins is a boutique CRM firm...",
+            "provisionTenant": "Provision Tenant",
+            "deleteTitle": "Decommission Tenant",
+            "deleteConfirm": "Are you sure you want to permanently decommission {name}?",
+            "warningCascade": "CASCADE DATA PURGE",
+            "warningDesc": "This action will permanently wipe all associated users, workflows, and historical data.",
+            "deleteTenant": "Decommission",
+            "errors": {
+                "saveFailed": "Failed to save tenant configuration",
+                "deleteFailed": "Failed to decommission tenant"
+            }
+        },
+        "workflows": {
+            "title": "Autonomous Workflows",
+            "description": "Orchestrate multi-agent sequences and event-driven automation.",
+            "newWorkflow": "New Workflow",
+            "searchPlaceholder": "Search workflows by name...",
+            "tabs": {
+                "designer": "Designer",
+                "logs": "Execution Logs",
+                "schedules": "Schedules"
+            },
+            "designer": {
+                "loading": "Initializing designer canvas...",
+                "saveGraph": "Save Graph",
+                "saving": "Synchronizing...",
+                "manualRun": "Manual Run",
+                "addAgent": "Add Agent",
+                "sandboxLabel": "Sandbox Agent",
+                "header": {
+                    "trigger": "Trigger: {type}",
+                    "addAgent": "Add Agent",
+                    "saveGraph": "Save Graph",
+                    "saving": "Synchronizing...",
+                    "manualRun": "Manual Run"
+                },
+                "addModal": {
+                    "title": "Add Intelligence Unit",
+                    "description": "Select an existing agent or initialize a new sandbox unit for this flow.",
+                    "createSandbox": "Create New Sandbox Agent",
+                    "choosePrebuilt": "OR CHOOSE PRE-BUILT AGENT",
+                    "noAgents": "No agents available in the fleet.",
+                    "defaultDesc": "Autonomous intelligence unit."
+                },
+                "runModal": {
+                    "title": "Manual Dispatch",
+                    "description": "The workflow has been queued for immediate execution. You can monitor progress in the Execution Logs.",
+                    "acknowledge": "Got it"
+                },
+                "alerts": {
+                    "saveSuccess": "Workflow architecture saved successfully.",
+                    "saveFailed": "Failed to synchronize workflow architecture.",
+                    "initSandboxFailed": "Failed to initialize sandbox agent."
+                }
+            },
+            "logs": {
+                "title": "Workflow Executions",
+                "description": "Monitor and debug live agent coordination runs.",
+                "searchPlaceholder": "Filter logs by name, status, or trigger...",
+                "table": {
+                    "status": "Status",
+                    "workflow": "Workflow",
+                    "trigger": "Trigger",
+                    "timestamp": "Timestamp",
+                    "noLogs": "No execution logs recorded."
+                },
+                "report": {
+                    "title": "Execution Report",
+                    "description": "Granular execution tracking and state analysis.",
+                    "notFound": {
+                        "title": "Log Not Found",
+                        "description": "The requested execution cycle could not be located in the ledger.",
+                        "back": "Back to Logs"
+                    },
+                    "meta": {
+                        "status": "Final Resolution",
+                        "trigger": "Trigger Source",
+                        "target": "Target Workflow",
+                        "startedAt": "Started At"
+                    },
+                    "output": {
+                        "title": "State Resolution",
+                        "noOutput": "No state data recorded"
+                    }
+                }
+            },
+            "schedules": {
+                "title": "Dispatch Schedules",
+                "description": "Configure temporal triggers and recurring automation cycles.",
+                "newSchedule": "New Schedule",
+                "searchPlaceholder": "Search schedules...",
+                "table": {
+                    "details": "Details",
+                    "workflow": "Target Workflow",
+                    "interval": "Interval",
+                    "status": "Status",
+                    "actions": "Actions",
+                    "noSchedules": "No active schedules found."
+                },
+                "status": {
+                    "armed": "Armed",
+                    "paused": "Paused"
+                },
+                "actions": {
+                    "toggleStatus": "Toggle Status",
+                    "forceRun": "Force Dispatch",
+                    "delete": "Remove Schedule"
+                },
+                "modals": {
+                    "delete": {
+                        "title": "Remove Schedule",
+                        "confirm": "Are you sure you want to remove the schedule \"{name}\"? This will halt all future automated triggers for this workflow.",
+                        "cancel": "Cancel",
+                        "submit": "Remove Schedule",
+                        "submitting": "Removing..."
+                    },
+                    "execution": {
+                        "title": "Manual Dispatch Initiated",
+                        "body": "The workflow has been manually queued. Processing will begin shortly."
+                    },
+                    "error": {
+                        "deleteFailed": "Deletion failed",
+                        "executionFailed": "Manual dispatch failed",
+                        "statusFailed": "Status update failed",
+                        "dismiss": "Got it"
+                    }
+                },
+                "editor": {
+                    "createTitle": "Create Schedule",
+                    "editTitle": "Edit Schedule",
+                    "description": "Configure a temporal trigger for autonomous agent flows.",
+                    "status": {
+                        "armed": "Armed",
+                        "paused": "Paused",
+                        "armedDesc": "Active automated trigger",
+                        "pausedDesc": "Temporary suspension"
+                    },
+                    "fields": {
+                        "name": {
+                            "label": "Schedule Name",
+                            "placeholder": "e.g. Daily Market Report"
+                        },
+                        "workflow": {
+                            "label": "Target Workflow",
+                            "searchPlaceholder": "Search workflows...",
+                            "selectedDesc": "Selected workflow for automated dispatch.",
+                            "change": "Change",
+                            "noDescription": "No description",
+                            "noWorkflows": "No workflows found matching query."
+                        },
+                        "interval": {
+                            "label": "Dispatch Frequency",
+                            "daily": "Daily",
+                            "weekly": "Weekly",
+                            "monthly": "Monthly",
+                            "dayOfWeek": "Day of Week",
+                            "dayOfMonth": "Day of Month",
+                            "timeLabel": "Time of Day (UTC)",
+                            "days": {
+                                "monday": "Monday",
+                                "tuesday": "Tuesday",
+                                "wednesday": "Wednesday",
+                                "thursday": "Thursday",
+                                "friday": "Friday",
+                                "saturday": "Saturday",
+                                "sunday": "Sunday"
+                            }
+                        }
+                    },
+                    "intervals": {
+                        "daily": "Daily at {time}",
+                        "weekly": "Every {day} at {time}",
+                        "monthly": "On day {day} of the month at {time}"
+                    },
+                    "actions": {
+                        "cancel": "Cancel",
+                        "deploy": "Deploy Schedule",
+                        "deploying": "Deploying...",
+                        "save": "Save Changes",
+                        "saving": "Saving..."
+                    },
+                    "errors": {
+                        "noWorkflow": "Please select a target workflow.",
+                        "configError": "Configuration Error"
+                    }
+                }
+            }
+        },
+        "agents": {
+            "title": "AI Agent Management",
+            "description": "Deploy, configure, and monitor specialized AI personalities.",
+            "new": "New Agent",
+            "searchPlaceholder": "Search agents by name...",
+            "table": {
+                "agent": "Agent",
+                "model": "Model",
+                "status": "Status",
+                "actions": "Actions",
+                "empty": "No agents found matching your query.",
+                "active": "Active",
+                "draft": "Draft",
+                "configure": "Configure Agent"
+            },
+            "modal": {
+                "initTitle": "Initialize New Agent",
+                "initDesc": "Assign a name and primary mission to your new assistant.",
+                "name": "Agent Name",
+                "description": "Functional Description",
+                "deleteTitle": "Delete Agent",
+                "deleteConfirm": "Are you sure you want to permanently delete {name}?",
+                "undone": "This action cannot be undone."
+            },
+            "placeholders": {
+                "name": "e.g. Lead Researcher",
+                "description": "e.g. Specialized in extracting data from LinkedIn profiles"
+            },
+            "errors": {
+                "create": "Error creating agent",
+                "delete": "Error deleting agent"
+            },
+            "buttons": {
+                "creating": "Creating...",
+                "deleting": "Deleting...",
+                "create": "Create Agent",
+                "delete": "Delete Agent",
+                "cancel": "Cancel"
+            },
+            "details": {
+                "loading": "Loading agent...",
+                "notFound": "Agent not found",
+                "unnamed": "Unnamed Agent",
+                "noDescription": "No description provided.",
+                "backButton": "Back to Agents",
+                "tabs": {
+                    "dashboard": "Dashboard",
+                    "settings": "Settings",
+                    "knowledge": "Knowledge",
+                    "prompt": "System Prompt",
+                    "rules": "AI Rules",
+                    "integrations": "Integrations",
+                    "schemas": "I/O Schemas",
+                    "logs": "Logs"
+                },
+                "dashboard": {
+                    "title": "Agent Activity Dashboard",
+                    "subtitle": "Real-time feed of LLM transactions, tool submissions, and token consumption associated with this Agent.",
+                    "stats": {
+                        "generations": "Total Generations",
+                        "tokens": "Tokens Ingested",
+                        "opex": "Total OPEX Cost"
+                    },
+                    "table": {
+                        "timestamp": "Timestamp",
+                        "context": "Transaction Context",
+                        "pipeline": "Model Pipeline",
+                        "tokens": "Tokens",
+                        "cost": "Cost",
+                        "status": "Status",
+                        "loading": "Loading transactions...",
+                        "noTransactions": "No Transactions",
+                        "noTransactionsDesc": "Start running tasks with this agent to see live telemetry.",
+                        "seedButton": "Generate Sample Data",
+                        "loadMore": "Load More"
+                    }
+                },
+                "settings": {
+                    "loading": "Loading...",
+                    "notFound": "Agent not found",
+                    "sections": {
+                        "identity": {
+                            "title": "Agent Identity & Core Configuration",
+                            "synchronized": "Synchronized",
+                            "saveButton": "Save Agent Profile",
+                            "saving": "Saving...",
+                            "name": "Agent Name",
+                            "description": "Performance Directives",
+                            "avatar": {
+                                "label": "Neural Frame (Avatar)",
+                                "updateButton": "Update Neural Frame",
+                                "hint": "PNG/JPG recommended. 400x400px."
+                            }
+                        },
+                        "engine": {
+                            "title": "Cognitive Engine Configuration",
+                            "model": {
+                                "label": "Core LLM Model",
+                                "placeholder": "Select intelligence unit...",
+                                "systemDefault": "(System Default)",
+                                "legacy": "({id}) (Legacy / Disabled)"
+                            },
+                            "reasoning": {
+                                "label": "Reasoning Intensity",
+                                "hint": "Higher engagement increases depth but raises latency and cost.",
+                                "levels": {
+                                    "LOW": "Low",
+                                    "MEDIUM": "Medium",
+                                    "HIGH": "High"
+                                }
+                            },
+                            "internet": {
+                                "label": "Internet Perception",
+                                "hint": "Enable live web retrieval via Google Search.",
+                                "offline": "Offline Only",
+                                "liveSearch": "Live Search"
+                            },
+                            "status": {
+                                "label": "Deployment Status",
+                                "active": "Active Fleet",
+                                "inactive": "Maintenance / Draft"
+                            }
+                        }
+                    },
+                    "errors": {
+                        "saveFailed": "Protocol violation: Could not synchronize agent.",
+                        "uploadFailed": "Neural frame upload failed."
+                    },
+                    "uploadModal": {
+                        "title": "Upload Neural Frame",
+                        "subtitle": "Select a visual identifier for this autonomous unit.",
+                        "processing": "Encoding neural data...",
+                        "dropText": "Drop neural frame here",
+                        "dropHint": "OR CLICK TO BROWSE",
+                        "cancel": "Abort Upload"
+                    }
+                },
+                "systemPrompt": {
+                    "title": "Core System Directives",
+                    "subtitle": "The fundamental behavioral matrix that dictates agent identity and operational boundaries.",
+                    "placeholder": "Enter system prompt...",
+                    "save": "Sync Directives",
+                    "saving": "Writing to memory...",
+                    "success": "Directives Synchronized"
+                },
+                "rules": {
+                    "title": "Operational Boundary Rules",
+                    "description": "Specific functional constraints and tactical protocols the agent must strictly follow.",
+                    "new": "New Rule",
+                    "searchPlaceholder": "Search rules...",
+                    "empty": "No rules defined for this agent.",
+                    "table": {
+                        "rule": "Rule",
+                        "type": "Type",
+                        "status": "Status",
+                        "actions": "Actions"
+                    },
+                    "form": {
+                        "title": "Configure Protocol Rule",
+                        "newTitle": "New Operational Rule",
+                        "editTitle": "Edit Protocol Rule",
+                        "name": "Rule Name",
+                        "description": "Rule Logic",
+                        "type": "Protocol Type",
+                        "isActive": "Active Protocol",
+                        "save": "Save Rule",
+                        "saving": "Saving Protocol...",
+                        "cancel": "Abort",
+                        "placeholders": {
+                            "name": "e.g. Data Privacy",
+                            "description": "e.g. Never reveal internal system IDs to the user."
+                        }
+                    }
+                },
+                "knowledge": {
+                    "title": "Knowledge Graph",
+                    "description": "Persistent memory and document embeddings this agent can reference.",
+                    "upload": "Ingest Document",
+                    "empty": "Neural memory is currently empty.",
+                    "table": {
+                        "name": "Document",
+                        "size": "Size",
+                        "type": "Type",
+                        "actions": "Actions"
+                    }
+                },
+                "integrations": {
+                    "title": "Connected Ecosystems",
+                    "description": "Third-party APIs and internal tools this agent can orchestrate.",
+                    "empty": "No tools or integrations mapped to this unit."
+                },
+                "schemas": {
+                    "title": "I/O Interface Schemas",
+                    "description": "Structured JSON schemas defining rigid input requirements and output formatting.",
+                    "input": "Invocation Schema (Input)",
+                    "output": "Resolution Schema (Output)",
+                    "save": "Save Interfaces",
+                    "saving": "Synchronizing...",
+                    "success": "Interfaces Saved"
+                },
+                "logs": {
+                    "title": "Execution Traces",
+                    "description": "Raw telemetry and historical conversation threads.",
+                    "empty": "No execution cycles found."
+                }
+            }
+        },
+        "settings": {
+            "title": "System Settings",
+            "subtitle": "Architectural control center for platform identity, aesthetics, and global operational protocols.",
+            "save": "Save Changes",
+            "saving": "Synchronizing...",
+            "success": "Configuration Saved",
+            "tabs": {
+                "identity": "Core Identity",
+                "appearance": "Global Aesthetics",
+                "economics": "Economic Engine",
+                "security": "System Security",
+                "audit": "Audit Ledger"
+            },
+            "identity": {
+                "title": "Platform Identity",
+                "platformName": "Platform Name",
+                "platformNameSub": "The primary identifier used throughout the workspace.",
+                "placeholder": "Enter platform name",
+                "logoLight": "Main Logo (Light)",
+                "logoLightSub": "Vector or high-res PNG for default surfaces.",
+                "logoDark": "System Logo (Dark)",
+                "logoDarkSub": "Variants optimized for dark and night environments."
+            },
+            "appearance": {
+                "title": "Theming & Typography",
+                "typography": "Aesthetic Framework",
+                "typographySub": "Defined typographic scales and font family injection.",
+                "headingFont": "Heading Font",
+                "bodyFont": "Body Font",
+                "headingSize": "Global Heading Scalar",
+                "subTextSize": "Metadata Scalar",
+                "fonts": {
+                    "inter": "Inter (Sans-Serif)",
+                    "jetbrains": "JetBrains Mono",
+                    "playfair": "Playfair Display",
+                    "outfit": "Outfit"
+                },
+                "sizes": {
+                    "tighter": "Tighter (1.25rem)",
+                    "standard": "Standard (1.5rem)",
+                    "punchy": "Punchy (1.875rem)",
+                    "editorial": "Editorial (2.25rem)",
+                    "micro": "Micro (12px)",
+                    "readable": "Readable (14px)"
+                },
+                "darkMatrix": "Dark Mode Color Matrix",
+                "darkMatrixSub": "Luminance and saturation overrides for dark environments.",
+                "lightMatrix": "Light Mode Color Matrix",
+                "lightMatrixSub": "Surface and text tokens for bright environments.",
+                "coreEnv": "Core Environment",
+                "semanticOps": "Semantic Operations",
+                "bgBase": "Background Base",
+                "cardSurfaces": "Card Surfaces",
+                "primaryText": "Primary Text (FG)",
+                "secondaryText": "Secondary Text",
+                "hoverBlocks": "Hover/Muted Blocks",
+                "borders": "Border Dimming",
+                "success": "Success State",
+                "destructive": "Destructive Action",
+                "focusRing": "Interactive Focus Ring",
+                "brandOrigin": "Brand Origin",
+                "brandOriginSub": "The primary accent color for the entire system.",
+                "brandColor": "Brand Accent Color"
+            },
+            "economics": {
+                "title": "Economic Engine",
+                "mrrMultipliers": "MRR Multipliers & Units",
+                "mrrSub": "Configure currency symbols and unit license costs.",
+                "symbolMatrix": "Currency Symbol Matrix",
+                "baseOrg": "Monthly Base Subscription",
+                "unitLicense": "Monthly Unit License (Seat)",
+                "currencies": {
+                    "gbp": "GBP (£) - Sterling",
+                    "usd": "USD ($) - Dollar",
+                    "eur": "EUR (€) - Euro"
+                }
+            },
+            "security": {
+                "title": "System Security",
+                "redaction": "PII Redaction Engine",
+                "redactionSub": "Automatic data masking for PII/GDPR compliance.",
+                "mfaPolicy": "System MFA Policy",
+                "mfaSub": "Force multi-factor authentication for all users."
+            },
+            "audit": {
+                "title": "Global Audit Ledger",
+                "description": "Immutable record of all architectural mutations and system events.",
+                "search": "Search ledger...",
+                "empty": "No audit records found.",
+                "table": {
+                    "event": "Event Signature",
+                    "actor": "Actor",
+                    "timestamp": "Timestamp",
+                    "actions": "Actions"
+                }
+            }
+        },
+        "auditLogs": {
+            "title": "Global Audit Ledger",
+            "description": "Immutable record of all architectural mutations and system events.",
+            "searchPlaceholder": "Search by event, actor or metadata...",
+            "empty": "No audit records found matching current filters.",
+            "table": {
+                "event": "Event Signature",
+                "actor": "Actor",
+                "timestamp": "Timestamp",
+                "actions": "Actions"
+            },
+            "detail": {
+                "title": "Audit Event Detail",
+                "back": "Back to Ledger",
+                "signature": "Event Signature",
+                "timestamp": "Global Timestamp",
+                "actor": "Initiating Actor",
+                "payload": "Event Metadata Payload",
+                "copy": "Copy JSON"
+            }
+        },
+        "users": {
+            "title": "Access & Identity Control",
+            "description": "Orchestrate global authentication state, permissions, and directory visibility.",
+            "invite": "Invite Intelligence",
+            "searchPlaceholder": "Search users by name, role or email...",
+            "table": {
+                "user": "Protocol Identity",
+                "role": "Clearance Level",
+                "workspace": "Workspace Scope",
+                "joined": "Onboarded",
+                "actions": "Operations",
+                "pending": "Invite Pending",
+                "awaiting": "Awaiting Callback",
+                "systemLevel": "System Level",
+                "sonaeGlobal": "Sonae Global",
+                "noMatches": "No active identities found matching the query.",
+                "na": "N/A"
+            },
+            "roles": {
+                "superAdmin": "Super Admin",
+                "admin": "Administrator",
+                "user": "Protocol User"
+            },
+            "buttons": {
+                "cancel": "Abort",
+                "updateUser": "Update Identity",
+                "sendInvite": "Dispatch Invite",
+                "revoke": "Revoke Invite",
+                "delete": "Purge Identity"
+            },
+            "modal": {
+                "inviteTitle": "Invite Intelligence",
+                "inviteDesc": "Provision a new identity for the Sonae architecture.",
+                "editTitle": "Edit Protocol Identity",
+                "editDesc": "Modify authentication handles and authorization levels.",
+                "deleteTitle": "Purge Identity",
+                "deleteConfirm": "Are you sure you want to permanently purge \"{name}\" from the ledger?",
+                "revokeTitle": "Revoke Invitation",
+                "revokeConfirm": "Are you sure you want to revoke the pending invite for {email}?",
+                "fullName": "Identity Label (Full Name)",
+                "email": "Authentication Handle (Email)",
+                "role": "Authorization Role",
+                "workspace": "Workspace Alignment",
+                "avatar": "Neural Frame (Avatar URL)",
+                "avatarHint": "Image URL for the user's visual identity.",
+                "namePlaceholder": "e.g. John Doe",
+                "emailPlaceholder": "e.g. john@sonae.ai",
+                "avatarPlaceholder": "https://..."
+            }
+        }
+    },
+    "ai": {
+        "costs": {
+            "title": "Global AI Economic Telemetry",
+            "subtitle": "Real-time monitoring of token consumption and model operational costs across the Sonae network.",
+            "grossCost": "Total Network Spend",
+            "totalTokens": "Processed Token Target",
+            "opex": "Approximate OPEX",
+            "convertedGbp": "Converted to GBP",
+            "timeframes": {
+                "24h": "Last 24 Hours",
+                "7d": "Last 7 Days",
+                "30d": "Last 30 Days",
+                "all": "All Time"
+            },
+            "charts": {
+                "costOverTime": "Cumulative Cost Velocity",
+                "modelDistribution": "Model Expenditure Distribution"
+            }
+        },
+        "chatLogs": {
+            "title": "Global Message Ledger",
+            "subtitle": "Interception and analysis of all underlying LLM conversations occurring within the system architecture.",
+            "searchPlaceholder": "Search by title, user or message...",
+            "empty": "No conversations found in the message ledger.",
+            "unknownActor": "Unknown Actor",
+            "userLabel": "User",
+            "viewer": {
+                "title": "Message Trace Inspector",
+                "subtitle": "Raw payload analysis of conversation trace {id}",
+                "traceIntercept": "Intercepted Trace",
+                "idLabel": "Trace Identifier",
+                "financials": "Financial Telemetry",
+                "tokens": "Tokens",
+                "cost": "Cost",
+                "status": "Final Resolution"
+            }
+        },
+        "assistant": {
+            "welcome": {
+                "greetings": {
+                    "morning": "Good morning",
+                    "afternoon": "Good afternoon",
+                    "evening": "Good evening",
+                    "night": "Good night",
+                    "default": "Welcome"
+                },
+                "subtitle": "What would you like to discuss today?",
+                "inputPlaceholder": "Enter a prompt for {platformName}",
+                "recording": "Recording securely...",
+                "transcribing": "Transcribing perfectly...",
+                "footer": "{platformName} Assistant is AI and can make mistakes, please check all responses."
+            },
+            "controls": {
+                "tools": "Tools",
+                "autonomous": "Autonomous",
+                "mic": {
+                    "start": "Start voice dictation",
+                    "stop": "Stop recording"
+                },
+                "engine": {
+                    "label": "Select Engine",
+                    "title": "Verified Grid Engines",
+                    "defaultDesc": "Active production capability"
+                },
+                "reasoning": {
+                    "title": "Agent Reasoning Effort",
+                    "levels": {
+                        "NONE": "Fast",
+                        "LOW": "Low Focus",
+                        "MEDIUM": "Deep Focus",
+                        "HIGH": "Max Focus"
+                    },
+                    "descriptions": {
+                        "NONE": "Instant standard responses",
+                        "LOW": "Quick verification thoughts",
+                        "MEDIUM": "Standard problem solving",
+                        "HIGH": "Complex autonomous reasoning"
+                    }
+                }
+            },
+            "errors": {
+                "mic": {
+                    "title": "Microphone Access Blocked",
+                    "subtitle": "Secure API Blocked",
+                    "description": "Your browser has explicitly blocked {platformName} from accessing the native Web Speech API microphone proxy.",
+                    "instruction": "Click the `microphone` icon located in your browser's top URL search bar and select \"Allow\"."
+                }
+            }
+        }
+    },
+    "user": {
+        "profile": {
+            "title": "My Profile",
+            "description": "Manage your identity and personal preferences.",
+            "saved": "Profile saved",
+            "saving": "Saving...",
+            "saveChanges": "Save Changes",
+            "fields": {
+                "name": {
+                    "label": "Full Name",
+                    "placeholder": "e.g. Aman"
+                },
+                "email": {
+                    "label": "Communications (Email)",
+                    "fixed": "FIXED",
+                    "description": "Bound securely to your authentication provider."
+                },
+                "phone": {
+                    "label": "Phone Number (Optional)",
+                    "placeholder": "+1 (555) 000-0000"
+                },
+                "photo": {
+                    "label": "Profile Photo",
+                    "upload": "Upload New Photo",
+                    "uploading": "Uploading Securely...",
+                    "hint": "JPG or PNG, max 2MB."
+                }
+            }
+        },
+        "logins": {
+            "tabs": {
+                "security": "Security & Logins"
+            },
+            "header": {
+                "title": "Recent Login Activity",
+                "description": "Track devices and geographic locations assessing your account."
+            },
+            "searchPlaceholder": "Search devices or locations...",
+            "table": {
+                "device": "Device",
+                "location": "Location & IP",
+                "status": "Status",
+                "timestamp": "Timestamp",
+                "empty": "No login records found. Log in again to record footprints.",
+                "loadMore": "Load More History"
+            },
+            "devices": {
+                "macos": "macOS Device",
+                "windows": "Windows PC",
+                "iphone": "iPhone",
+                "android": "Android Device",
+                "unknown": "Unknown Device"
+            }
+        }
+    }
 }

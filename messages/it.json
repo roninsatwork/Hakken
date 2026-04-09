@@ -1,0 +1,784 @@
+{
+    "common": {
+        "loading": "Caricamento...",
+        "actions": {
+            "save": "Salva",
+            "cancel": "Annulla",
+            "delete": "Elimina",
+            "edit": "Modifica",
+            "create": "Crea",
+            "dismiss": "Ho capito",
+            "back": "Indietro"
+        },
+        "pagination": {
+            "showing": "Visualizzazione da",
+            "to": "a",
+            "of": "di",
+            "items": "elementi"
+        },
+        "status": {
+            "success": "Successo",
+            "failed": "Fallito",
+            "running": "In corso",
+            "active": "Attivo",
+            "inactive": "Inattivo",
+            "pending": "In attesa",
+            "draft": "Bozza"
+        },
+        "timeframes": {
+            "24h": "Ultime 24 ore",
+            "7d": "Ultimi 7 giorni",
+            "30d": "Ultimi 30 giorni",
+            "all": "Sempre"
+        },
+        "errors": {
+            "default": "Si è verificato un errore imprevisto.",
+            "unauthorized": "Non sei autorizzato a eseguire questa azione.",
+            "notFound": "Risorsa non trovata."
+        }
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "companies": "Aziende",
+        "users": "Gestione Utenti",
+        "workflows": "Workflow",
+        "agents": "Flotta Agent",
+        "settings": "Impostazioni",
+        "aiManagement": "Gestione AI",
+        "auditLogs": "Audit Ledger"
+    },
+    "admin": {
+        "companies": {
+            "title": "Tenant & Organizzazioni",
+            "subtitle": "Gestisci l'isolamento multi-tenant, il branding e i prompt di sistema forniti.",
+            "newCompany": "Nuovo Tenant",
+            "searchPlaceholder": "Cerca per nome tenant...",
+            "tenantName": "Nome Tenant",
+            "provisionedDate": "Creato il",
+            "assignedUsers": "Utenti Assegnati",
+            "actions": "Operazioni",
+            "emptyState": "Nessuna organizzazione trovata corrispondente alla ricerca.",
+            "users": "{count, plural, =0 {Nessun utente} one {1 utente} other {# utenti}}",
+            "showing": "Visualizzazione da",
+            "to": "a",
+            "of": "di",
+            "companies": "tenant",
+            "createTitle": "Configura Tenant",
+            "createSubtitle": "Inizializza un nuovo ambiente di lavoro segregato.",
+            "editTitle": "Modifica Workspace",
+            "editSubtitle": "Modifica l'identità del tenant e i confini operativi AI.",
+            "nameLabel": "Nome Azienda",
+            "namePlaceholder": "es. Sonae LLC",
+            "promptLabel": "Profilo Aziendale & Regole AI",
+            "promptSubtitle": "Il prompt di sistema fondamentale iniettato per tutti gli utenti in questo tenant.",
+            "promptOptional": "Opzionale",
+            "promptPlaceholder": "es. Sonae è una boutique CRM...",
+            "provisionTenant": "Attiva Tenant",
+            "deleteTitle": "Dismissione Tenant",
+            "deleteConfirm": "Sei sicuro di voler dismettere definitivamente {name}?",
+            "warningCascade": "EPURAZIONE DATI A CASCATA",
+            "warningDesc": "Questa azione cancellerà permanentemente tutti gli utenti associati, i workflow e i dati storici.",
+            "deleteTenant": "Dismetti",
+            "errors": {
+                "saveFailed": "Impossibile salvare la configurazione del tenant",
+                "deleteFailed": "Impossibile dismettere il tenant"
+            }
+        },
+        "workflows": {
+            "title": "Workflow Autonomi",
+            "description": "Orchestra sequenze multi-agent e automazioni orientate agli eventi.",
+            "newWorkflow": "Nuovo Workflow",
+            "searchPlaceholder": "Cerca workflow per nome...",
+            "tabs": {
+                "designer": "Designer",
+                "logs": "Log Esecuzione",
+                "schedules": "Programmazioni"
+            },
+            "designer": {
+                "loading": "Inizializzazione canvas...",
+                "saveGraph": "Salva Grafo",
+                "saving": "Sincronizzazione...",
+                "manualRun": "Esecuzione Manuale",
+                "addAgent": "Aggiungi Agent",
+                "sandboxLabel": "Agent Sandbox",
+                "header": {
+                    "trigger": "Trigger: {type}",
+                    "addAgent": "Aggiungi Agent",
+                    "saveGraph": "Salva Grafo",
+                    "saving": "Sincronizzazione...",
+                    "manualRun": "Esecuzione Manuale"
+                },
+                "addModal": {
+                    "title": "Aggiungi Unità di Intelligenza",
+                    "description": "Seleziona un agent esistente o inizializza una nuova unità sandbox per questo flusso.",
+                    "createSandbox": "Crea Nuovo Agent Sandbox",
+                    "choosePrebuilt": "O SCEGLI UN AGENT PRE-CONFIGURATO",
+                    "noAgents": "Nessun agent disponibile nella flotta.",
+                    "defaultDesc": "Unità di intelligenza autonoma."
+                },
+                "runModal": {
+                    "title": "Invio Manuale",
+                    "description": "Il workflow è stato messo in coda per l'esecuzione immediata. Puoi monitorare il progresso nei Log di Esecuzione.",
+                    "acknowledge": "Ho capito"
+                },
+                "alerts": {
+                    "saveSuccess": "Architettura workflow salvata con successo.",
+                    "saveFailed": "Errore durante la sincronizzazione dell'architettura.",
+                    "initSandboxFailed": "Errore durante l'inizializzazione dell'agent sandbox."
+                }
+            },
+            "logs": {
+                "title": "Esecuzioni Workflow",
+                "description": "Monitora e debugga i cicli di coordinamento live tra agent.",
+                "searchPlaceholder": "Filtra log per nome, stato o trigger...",
+                "table": {
+                    "status": "Stato",
+                    "workflow": "Workflow",
+                    "trigger": "Trigger",
+                    "timestamp": "Timestamp",
+                    "noLogs": "Nessun log di esecuzione registrato."
+                },
+                "report": {
+                    "title": "Report Esecuzione",
+                    "description": "Tracciamento granulare dell'esecuzione e analisi dello stato.",
+                    "notFound": {
+                        "title": "Log Non Trovato",
+                        "description": "Il ciclo di esecuzione richiesto non è stato trovato nel registro.",
+                        "back": "Torna ai Log"
+                    },
+                    "meta": {
+                        "status": "Risoluzione Finale",
+                        "trigger": "Sorgente Trigger",
+                        "target": "Workflow Destinazione",
+                        "startedAt": "Iniziato il"
+                    },
+                    "output": {
+                        "title": "Risoluzione dello Stato",
+                        "noOutput": "Nessun dato di stato registrato"
+                    }
+                }
+            },
+            "schedules": {
+                "title": "Programmazioni Invio",
+                "description": "Configura trigger temporali e cicli di automazione ricorrenti.",
+                "newSchedule": "Nuova Programmazione",
+                "searchPlaceholder": "Cerca programmazioni...",
+                "table": {
+                    "details": "Dettagli",
+                    "workflow": "Workflow Destinazione",
+                    "interval": "Intervallo",
+                    "status": "Stato",
+                    "actions": "Azioni",
+                    "noSchedules": "Nessuna programmazione attiva trovata."
+                },
+                "status": {
+                    "armed": "Attivo",
+                    "paused": "In pausa"
+                },
+                "actions": {
+                    "toggleStatus": "Cambia Stato",
+                    "forceRun": "Forza Esecuzione",
+                    "delete": "Elimina Programmazione"
+                },
+                "modals": {
+                    "delete": {
+                        "title": "Rimuovi Programmazione",
+                        "confirm": "Sei sicuro di voler rimuovere la programmazione \"{name}\"? Questo interromperà tutti i trigger automatici futuri per questo workflow.",
+                        "cancel": "Annulla",
+                        "submit": "Rimuovi Programmazione",
+                        "submitting": "Rimozione..."
+                    },
+                    "execution": {
+                        "title": "Esecuzione Manuale Avviata",
+                        "body": "Il workflow è stato messo in coda manualmente. L'elaborazione inizierà a breve."
+                    },
+                    "error": {
+                        "deleteFailed": "Eliminazione fallita",
+                        "executionFailed": "Esecuzione manuale fallita",
+                        "statusFailed": "Aggiornamento stato fallito",
+                        "dismiss": "Ho capito"
+                    }
+                },
+                "editor": {
+                    "createTitle": "Crea Programmazione",
+                    "editTitle": "Modifica Programmazione",
+                    "description": "Configura un trigger temporale per i flussi autonomi degli agent.",
+                    "status": {
+                        "armed": "Attivo",
+                        "paused": "In pausa",
+                        "armedDesc": "Trigger automatico attivo",
+                        "pausedDesc": "Sospensione temporanea"
+                    },
+                    "fields": {
+                        "name": {
+                            "label": "Nome Programmazione",
+                            "placeholder": "es. Report Giornaliero Mercato"
+                        },
+                        "workflow": {
+                            "label": "Workflow Destinazione",
+                            "searchPlaceholder": "Cerca workflow...",
+                            "selectedDesc": "Workflow selezionato per l'invio automatizzato.",
+                            "change": "Cambia",
+                            "noDescription": "Nessuna descrizione",
+                            "noWorkflows": "Nessun workflow trovato corrispondente alla ricerca."
+                        },
+                        "interval": {
+                            "label": "Frequenza di Invio",
+                            "daily": "Giornaliero",
+                            "weekly": "Settimanale",
+                            "monthly": "Mensile",
+                            "dayOfWeek": "Giorno della settimana",
+                            "dayOfMonth": "Giorno del mese",
+                            "timeLabel": "Ora del giorno (UTC)",
+                            "days": {
+                                "monday": "Lunedì",
+                                "tuesday": "Martedì",
+                                "wednesday": "Mercoledì",
+                                "thursday": "Giovedì",
+                                "friday": "Venerdì",
+                                "saturday": "Sabato",
+                                "sunday": "Domenica"
+                            }
+                        }
+                    },
+                    "intervals": {
+                        "daily": "Giornaliero alle {time}",
+                        "weekly": "Ogni {day} alle {time}",
+                        "monthly": "Il giorno {day} del mese alle {time}"
+                    },
+                    "actions": {
+                        "cancel": "Annulla",
+                        "deploy": "Attiva Programmazione",
+                        "deploying": "Attivazione...",
+                        "save": "Salva Modifiche",
+                        "saving": "Salvataggio..."
+                    },
+                    "errors": {
+                        "noWorkflow": "Seleziona un workflow di destinazione.",
+                        "configError": "Errore di Configurazione"
+                    }
+                }
+            }
+        },
+        "agents": {
+            "title": "Gestione Agent AI",
+            "description": "Distribuisci, configura e monitora personalità AI specializzate.",
+            "new": "Nuovo Agent",
+            "searchPlaceholder": "Cerca agent per nome...",
+            "table": {
+                "agent": "Agent",
+                "model": "Modello",
+                "status": "Stato",
+                "actions": "Azioni",
+                "empty": "Nessun agent trovato corrispondente alla ricerca.",
+                "active": "Attivo",
+                "draft": "Bozza",
+                "configure": "Configura Agent"
+            },
+            "modal": {
+                "initTitle": "Inizializza Nuovo Agent",
+                "initDesc": "Assegna un nome e una missione principale al tuo nuovo assistente.",
+                "name": "Nome Agent",
+                "description": "Descrizione Funzionale",
+                "deleteTitle": "Elimina Agent",
+                "deleteConfirm": "Sei sicuro di voler eliminare definitivamente {name}?",
+                "undone": "Questa azione non può essere annullata."
+            },
+            "placeholders": {
+                "name": "es. Ricercatore Lead",
+                "description": "es. Specializzato nell'estrazione dati dai profili LinkedIn"
+            },
+            "errors": {
+                "create": "Errore durante la creazione dell'agent",
+                "delete": "Errore durante l'eliminazione dell'agent"
+            },
+            "buttons": {
+                "creating": "Creazione...",
+                "deleting": "Eliminazione...",
+                "create": "Crea Agent",
+                "delete": "Elimina Agent",
+                "cancel": "Annulla"
+            },
+            "details": {
+                "loading": "Caricamento agent...",
+                "notFound": "Agent non trovato",
+                "unnamed": "Agent senza nome",
+                "noDescription": "Nessuna descrizione fornita.",
+                "backButton": "Torna agli Agent",
+                "tabs": {
+                    "dashboard": "Dashboard",
+                    "settings": "Impostazioni",
+                    "knowledge": "Conoscenza",
+                    "prompt": "Prompt di Sistema",
+                    "rules": "Regole AI",
+                    "integrations": "Integrazioni",
+                    "schemas": "Schemi I/O",
+                    "logs": "Log"
+                },
+                "dashboard": {
+                    "title": "Dashboard Attività Agent",
+                    "subtitle": "Feed in tempo reale delle transazioni LLM, invii di azioni e consumo di token associati a questo Agent.",
+                    "stats": {
+                        "generations": "Generazioni Totali",
+                        "tokens": "Token Ingeriti",
+                        "opex": "Costo Totale OPEX"
+                    },
+                    "table": {
+                        "timestamp": "Timestamp",
+                        "context": "Contesto Transazione",
+                        "pipeline": "Pipeline Modello",
+                        "tokens": "Token",
+                        "cost": "Costo",
+                        "status": "Stato",
+                        "loading": "Caricamento transazioni...",
+                        "noTransactions": "Nessuna Transazione",
+                        "noTransactionsDesc": "Inizia a eseguire task con questo agent per vedere la telemetria live.",
+                        "seedButton": "Genera Dati di Esempio",
+                        "loadMore": "Carica Altri"
+                    }
+                },
+                "settings": {
+                    "loading": "Caricamento...",
+                    "notFound": "Agent non trovato",
+                    "sections": {
+                        "identity": {
+                            "title": "Identità Agent & Configurazione Core",
+                            "synchronized": "Sincronizzato",
+                            "saveButton": "Salva Profilo Agent",
+                            "saving": "Salvataggio...",
+                            "name": "Nome Agent",
+                            "description": "Direttive di Performance",
+                            "avatar": {
+                                "label": "Visualizzazione Neurale (Avatar)",
+                                "updateButton": "Aggiorna Frame Neurale",
+                                "hint": "Consigliato PNG/JPG. 400x400px."
+                            }
+                        },
+                        "engine": {
+                            "title": "Configurazione Motore Cognitivo",
+                            "model": {
+                                "label": "Modello LLM Core",
+                                "placeholder": "Seleziona unità di intelligenza...",
+                                "systemDefault": "(Default di Sistema)",
+                                "legacy": "({id}) (Legacy / Disabilitato)"
+                            },
+                            "reasoning": {
+                                "label": "Intensità di Ragionamento",
+                                "hint": "Un impegno maggiore aumenta la profondità ma eleva latenza e costi.",
+                                "levels": {
+                                    "LOW": "Bassa",
+                                    "MEDIUM": "Media",
+                                    "HIGH": "Alta"
+                                }
+                            },
+                            "internet": {
+                                "label": "Percezione Internet",
+                                "hint": "Abilita il recupero web live tramite Google Search.",
+                                "offline": "Solo Offline",
+                                "liveSearch": "Ricerca Live"
+                            },
+                            "status": {
+                                "label": "Stato di Distribuzione",
+                                "active": "Flotta Attiva",
+                                "inactive": "Manutenzione / Bozza"
+                            }
+                        }
+                    },
+                    "errors": {
+                        "saveFailed": "Violazione del protocollo: Impossibile sincronizzare l'agent.",
+                        "uploadFailed": "Caricamento del frame neurale fallito."
+                    },
+                    "uploadModal": {
+                        "title": "Carica Frame Neurale",
+                        "subtitle": "Seleziona un identificatore visivo per questa unità autonoma.",
+                        "processing": "Codifica dati neurali...",
+                        "dropText": "Trascina qui il frame neurale",
+                        "dropHint": "O CLICCA PER SFOGLIARE",
+                        "cancel": "Interrompi Caricamento"
+                    }
+                },
+                "systemPrompt": {
+                    "title": "Direttive di Sistema Core",
+                    "subtitle": "La matrice comportamentale fondamentale che detta l'identità dell'agent e i suoi limiti operativi.",
+                    "placeholder": "Inserisci il prompt di sistema...",
+                    "save": "Sincronizza Direttive",
+                    "saving": "Scrittura in memoria...",
+                    "success": "Direttive Sincronizzate"
+                },
+                "rules": {
+                    "title": "Regole di Confine Operativo",
+                    "description": "Vincoli funzionali specifici e protocolli tattici che l'agent deve seguire rigorosamente.",
+                    "new": "Nuova Regola",
+                    "searchPlaceholder": "Cerca regole...",
+                    "empty": "Nessuna regola definita per questo agent.",
+                    "table": {
+                        "rule": "Regola",
+                        "type": "Tipo",
+                        "status": "Stato",
+                        "actions": "Azioni"
+                    },
+                    "form": {
+                        "title": "Configura Regola di Protocollo",
+                        "newTitle": "Nuova Regola Operativa",
+                        "editTitle": "Modifica Regola di Protocollo",
+                        "name": "Nome Regola",
+                        "description": "Logica della Regola",
+                        "type": "Tipo di Protocollo",
+                        "isActive": "Protocollo Attivo",
+                        "save": "Salva Regola",
+                        "saving": "Salvataggio Protocollo...",
+                        "cancel": "Interrompi",
+                        "placeholders": {
+                            "name": "es. Privacy dei Dati",
+                            "description": "es. Non rivelare mai gli ID di sistema interni all'utente."
+                        }
+                    }
+                },
+                "knowledge": {
+                    "title": "Grafo della Conoscenza",
+                    "description": "Memoria persistente ed embedding di documenti a cui questo agent può fare riferimento.",
+                    "upload": "Ingerisci Documento",
+                    "empty": "La memoria neurale è attualmente vuota.",
+                    "table": {
+                        "name": "Documento",
+                        "size": "Dimensione",
+                        "type": "Tipo",
+                        "actions": "Azioni"
+                    }
+                },
+                "integrations": {
+                    "title": "Ecosistemi Connessi",
+                    "description": "API di terze parti e strumenti interni che questo agent può orchestrare.",
+                    "empty": "Nessuno strumento o integrazione mappato a questa unità."
+                },
+                "schemas": {
+                    "title": "Schemi dell'Interfaccia I/O",
+                    "description": "Schemi JSON strutturati che definiscono rigorosi requisiti di input e formattazione di output.",
+                    "input": "Schema di Invocazione (Input)",
+                    "output": "Schema di Risoluzione (Output)",
+                    "save": "Salva Interfacce",
+                    "saving": "Sincronizzazione...",
+                    "success": "Interfacce Salvate"
+                },
+                "logs": {
+                    "title": "Tracce di Esecuzione",
+                    "description": "Telemetria grezza e thread storici delle conversazioni.",
+                    "empty": "Nessun ciclo di esecuzione trovato."
+                }
+            }
+        },
+        "settings": {
+            "title": "Impostazioni di Sistema",
+            "subtitle": "Centro di controllo architettonico per l'identità della piattaforma, l'estetica e i protocolli operativi globali.",
+            "save": "Salva Modifiche",
+            "saving": "Sincronizzazione...",
+            "success": "Configurazione Salvata",
+            "tabs": {
+                "identity": "Identità Core",
+                "appearance": "Aspetto Globale",
+                "economics": "Motore Economico",
+                "security": "Sicurezza di Sistema",
+                "audit": "Cronologia Audit"
+            },
+            "identity": {
+                "title": "Identità della Piattaforma",
+                "platformName": "Nome Piattaforma",
+                "platformNameSub": "L'identificatore principale utilizzato in tutto lo spazio di lavoro.",
+                "placeholder": "Inserisci il nome della piattaforma",
+                "logoLight": "Logo Principale (Light)",
+                "logoLightSub": "PNG vettoriale o ad alta risoluzione per superfici predefinite.",
+                "logoDark": "Logo di Sistema (Dark)",
+                "logoDarkSub": "Variante ottimizzata per ambienti scuri e notturni."
+            },
+            "appearance": {
+                "title": "Temi & Tipografia",
+                "typography": "Framework Estetico",
+                "typographySub": "Scale tipografiche definite e iniezione di famiglie di font.",
+                "headingFont": "Font Titoli",
+                "bodyFont": "Font Corpo",
+                "headingSize": "Scalare Titoli Globale",
+                "subTextSize": "Metadati Scalar",
+                "fonts": {
+                    "inter": "Inter (Sans-Serif)",
+                    "jetbrains": "JetBrains Mono",
+                    "playfair": "Playfair Display",
+                    "outfit": "Outfit"
+                },
+                "sizes": {
+                    "tighter": "Più Stretto (1.25rem)",
+                    "standard": "Standard (1.5rem)",
+                    "punchy": "Deciso (1.875rem)",
+                    "editorial": "Editoriale (2.25rem)",
+                    "micro": "Micro (12px)",
+                    "readable": "Leggibile (14px)"
+                },
+                "darkMatrix": "Matrice Colori Dark Mode",
+                "darkMatrixSub": "Override di luminanza e saturazione per ambienti scuri.",
+                "lightMatrix": "Matrice Colori Light Mode",
+                "lightMatrixSub": "Token per superfici e testi in ambienti luminosi.",
+                "coreEnv": "Ambiente Core",
+                "semanticOps": "Operazioni Semantiche",
+                "bgBase": "Background Base",
+                "cardSurfaces": "Superfici Card",
+                "primaryText": "Testo Primario (FG)",
+                "secondaryText": "Testo Secondario",
+                "hoverBlocks": "Blocchi Hover/Muted",
+                "borders": "Dimming Bordi",
+                "success": "Stato Successo",
+                "destructive": "Azione Distruttiva",
+                "focusRing": "Anello Focus Interattivo",
+                "brandOrigin": "Origine Brand",
+                "brandOriginSub": "Il colore di accento principale per l'intero sistema.",
+                "brandColor": "Colore Accento Brand"
+            },
+            "economics": {
+                "title": "Motore Economico",
+                "mrrMultipliers": "Moltiplicatori MRR & Unità",
+                "mrrSub": "Configura simboli valuta e costi unitari delle licenze.",
+                "symbolMatrix": "Matrice Simboli Valuta",
+                "baseOrg": "Abbonamento Base Mensile",
+                "unitLicense": "Licenza Unitaria Mensile (Posto)",
+                "currencies": {
+                    "gbp": "GBP (£) - Sterlina",
+                    "usd": "USD ($) - Dollaro",
+                    "eur": "EUR (€) - Euro"
+                }
+            },
+            "security": {
+                "title": "Sicurezza di Sistema",
+                "redaction": "Motore Redazione PII",
+                "redactionSub": "Oscuramento automatico dei dati per conformità PII/GDPR.",
+                "mfaPolicy": "Policy MFA di Sistema",
+                "mfaSub": "Forza l'autenticazione a più fattori per tutti gli utenti."
+            },
+            "audit": {
+                "title": "Log di Audit Globali",
+                "description": "Registro immutabile di tutte le mutazioni architettoniche ed eventi di sistema.",
+                "search": "Cerca log...",
+                "empty": "Nessun record di audit trovato.",
+                "table": {
+                    "event": "Firma Evento",
+                    "actor": "Attore",
+                    "timestamp": "Timestamp",
+                    "actions": "Azioni"
+                }
+            }
+        },
+        "auditLogs": {
+            "title": "Log di Audit Globali",
+            "description": "Registro immutabile di tutte le mutazioni architettoniche ed eventi di sistema.",
+            "searchPlaceholder": "Cerca per evento, attore o metadati...",
+            "empty": "Nessun record di audit trovato con i filtri attuali.",
+            "table": {
+                "event": "Firma Evento",
+                "actor": "Attore",
+                "timestamp": "Timestamp",
+                "actions": "Azioni"
+            },
+            "detail": {
+                "title": "Dettaglio Evento Audit",
+                "back": "Torna ai Log",
+                "signature": "Firma Evento",
+                "timestamp": "Timestamp Globale",
+                "actor": "Attore Iniziante",
+                "payload": "Payload Metadati Evento",
+                "copy": "Copia JSON"
+            }
+        },
+        "users": {
+            "title": "Controllo Accessi & Identità",
+            "description": "Orchestra lo stato di autenticazione globale, i permessi e la visibilità della directory.",
+            "invite": "Invita Intelligenza",
+            "searchPlaceholder": "Cerca utenti per nome, ruolo o email...",
+            "table": {
+                "user": "Identità Protocollo",
+                "role": "Livello di Clearance",
+                "workspace": "Ambito Workspace",
+                "joined": "Aggiunto il",
+                "actions": "Operazioni",
+                "pending": "Invito in Attesa",
+                "awaiting": "In attesa di risposta",
+                "systemLevel": "Livello di Sistema",
+                "sonaeGlobal": "Sonae Global",
+                "noMatches": "Nessuna identità attiva trovata corrispondente alla query.",
+                "na": "N/D"
+            },
+            "roles": {
+                "superAdmin": "Super Admin",
+                "admin": "Amministratore",
+                "user": "Utente Protocollo"
+            },
+            "buttons": {
+                "cancel": "Annulla",
+                "updateUser": "Aggiorna Identità",
+                "sendInvite": "Invia Invito",
+                "revoke": "Revoca Invito",
+                "delete": "Elimina Identità"
+            },
+            "modal": {
+                "inviteTitle": "Invita Intelligenza",
+                "inviteDesc": "Provisioning di una nuova identità per l'architettura Sonae.",
+                "editTitle": "Modifica Identità Protocollo",
+                "editDesc": "Modifica gli handle di autenticazione e i livelli di autorizzazione.",
+                "deleteTitle": "Elimina Identità",
+                "deleteConfirm": "Sei sicuro di voler eliminare definitivamente \"{name}\" dal registro?",
+                "revokeTitle": "Revoca Invito",
+                "revokeConfirm": "Sei sicuro di voler revocare l'invito in sospeso per {email}?",
+                "fullName": "Etichetta Identità (Nome Completo)",
+                "email": "Handle Autenticazione (Email)",
+                "role": "Ruolo di Autorizzazione",
+                "workspace": "Allineamento Workspace",
+                "avatar": "Frame Neurale (URL Avatar)",
+                "avatarHint": "URL dell'immagine per l'identità visiva dell'utente.",
+                "namePlaceholder": "es. Mario Rossi",
+                "emailPlaceholder": "es. mario@sonae.ai",
+                "avatarPlaceholder": "https://..."
+            }
+        }
+    },
+    "ai": {
+        "costs": {
+            "title": "Telemetria Economica AI Globale",
+            "subtitle": "Monitoraggio in tempo reale del consumo di token e dei costi operativi dei modelli in tutta la rete Sonae.",
+            "grossCost": "Spesa Totale della Rete",
+            "totalTokens": "Target di Token Elaborati",
+            "opex": "OPEX Approssimativo",
+            "convertedGbp": "Convertito in GBP",
+            "timeframes": {
+                "24h": "Ultime 24 ore",
+                "7d": "Ultimi 7 giorni",
+                "30d": "Ultimi 30 giorni",
+                "all": "Sempre"
+            },
+            "charts": {
+                "costOverTime": "Velocità di Costo Cumulativa",
+                "modelDistribution": "Distribuzione Spesa per Modello"
+            }
+        },
+        "chatLogs": {
+            "title": "Audit Messaggi Globale",
+            "subtitle": "Intercettazione e analisi di tutte le conversazioni LLM sottostanti che avvengono nell'architettura.",
+            "searchPlaceholder": "Cerca per titolo, utente o messaggio...",
+            "empty": "Nessuna conversazione trovata nel registro messaggi.",
+            "unknownActor": "Attore Sconosciuto",
+            "userLabel": "Utente",
+            "viewer": {
+                "title": "Ispettore Tracce Messaggi",
+                "subtitle": "Analisi del payload grezzo della traccia {id}",
+                "traceIntercept": "Traccia Intercettata",
+                "idLabel": "Identificatore Traccia",
+                "financials": "Telemetria Finanziaria",
+                "tokens": "Token",
+                "cost": "Costo",
+                "status": "Risoluzione Finale"
+            }
+        },
+        "assistant": {
+            "welcome": {
+                "greetings": {
+                    "morning": "Buongiorno",
+                    "afternoon": "Buon pomeriggio",
+                    "evening": "Buonasera",
+                    "night": "Buonanotte",
+                    "default": "Benvenuto"
+                },
+                "subtitle": "Di cosa vorresti discutere oggi?",
+                "inputPlaceholder": "Inserisci un prompt per {platformName}",
+                "recording": "Registrazione sicura...",
+                "transcribing": "Trascrizione in corso...",
+                "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
+            },
+            "controls": {
+                "tools": "Strumenti",
+                "autonomous": "Autonomo",
+                "mic": {
+                    "start": "Avvia dettatura vocale",
+                    "stop": "Ferma registrazione"
+                },
+                "engine": {
+                    "label": "Seleziona Motore",
+                    "title": "Motori Grid Verificati",
+                    "defaultDesc": "Capacità di produzione attiva"
+                },
+                "reasoning": {
+                    "title": "Impegno di Ragionamento Agent",
+                    "levels": {
+                        "NONE": "Veloce",
+                        "LOW": "Basso Relax",
+                        "MEDIUM": "Focus Profondo",
+                        "HIGH": "Max Focus"
+                    },
+                    "descriptions": {
+                        "NONE": "Risposte standard istantanee",
+                        "LOW": "Pensieri di verifica rapidi",
+                        "MEDIUM": "Risoluzione problemi standard",
+                        "HIGH": "Ragionamento autonomo complesso"
+                    }
+                }
+            },
+            "errors": {
+                "mic": {
+                    "title": "Accesso Microfono Bloccato",
+                    "subtitle": "API Sicura Bloccata",
+                    "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo della Web Speech API.",
+                    "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
+                }
+            }
+        }
+    },
+    "user": {
+        "profile": {
+            "title": "Il Mio Profilo",
+            "description": "Gestisci la tua identità e le tue preferenze personali.",
+            "saved": "Profilo salvato",
+            "saving": "Salvataggio...",
+            "saveChanges": "Salva Modifiche",
+            "fields": {
+                "name": {
+                    "label": "Nome Completo",
+                    "placeholder": "es. Aman"
+                },
+                "email": {
+                    "label": "Comunicazioni (Email)",
+                    "fixed": "FISSO",
+                    "description": "Collegato in modo sicuro al tuo provider di autenticazione."
+                },
+                "phone": {
+                    "label": "Numero di Telefono (Opzionale)",
+                    "placeholder": "+39 000 000 0000"
+                },
+                "photo": {
+                    "label": "Foto Profilo",
+                    "upload": "Carica Nuova Foto",
+                    "uploading": "Caricamento sicuro...",
+                    "hint": "JPG o PNG, max 2MB."
+                }
+            }
+        },
+        "logins": {
+            "tabs": {
+                "security": "Sicurezza e Accessi"
+            },
+            "header": {
+                "title": "Attività di Accesso Recente",
+                "description": "Monitora i dispositivi e le posizioni geografiche che accedono al tuo account."
+            },
+            "searchPlaceholder": "Cerca dispositivi o posizioni...",
+            "table": {
+                "device": "Dispositivo",
+                "location": "Posizione e IP",
+                "status": "Stato",
+                "timestamp": "Timestamp",
+                "empty": "Nessun record di accesso trovato. Accedi di nuovo per registrare nuove attività.",
+                "loadMore": "Carica Cronologia"
+            },
+            "devices": {
+                "macos": "Dispositivo macOS",
+                "windows": "PC Windows",
+                "iphone": "iPhone",
+                "android": "Dispositivo Android",
+                "unknown": "Dispositivo Sconosciuto"
+            }
+        }
+    }
+}

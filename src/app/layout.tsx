@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getLocale } from 'next-intl/server';
 import { UIProvider } from "@/src/context/UIContext";
 import { ConvexClientProvider } from "@/src/context/ConvexClientProvider";
 import { SystemSettingsProvider } from "@/src/context/SystemSettingsContext";
@@ -28,26 +29,29 @@ export const metadata: Metadata = {
   description: "Sonae Living Dossier",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <ConvexAuthNextjsServerProvider>
       <html lang="en" suppressHydrationWarning>
         <body
           suppressHydrationWarning
           className={cn(
-            inter.variable, 
-            jetbrainsMono.variable, 
+            inter.variable,
+            jetbrainsMono.variable,
             "antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight"
           )}
         >
           <ThemeProvider>
             <ConvexClientProvider>
               <SystemSettingsProvider>
-                <NextIntlClientProvider>
+                <NextIntlClientProvider locale={locale} messages={messages}>
                   <UIProvider>
                     <div className="w-full min-h-screen flex flex-col items-stretch overflow-x-hidden">
                       {children}

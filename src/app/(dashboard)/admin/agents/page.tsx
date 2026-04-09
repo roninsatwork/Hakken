@@ -3,20 +3,23 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { 
-  Bot, 
+import {
+  Bot,
   Workflow,
-  Plus, 
-  Search, 
+  Plus,
+  Search,
   Trash2,
   Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function AgentsPage() {
   const router = useRouter();
+  const t = useTranslations('admin.agents');
+  const tCommon = useTranslations('common');
   const agents = useQuery(api.agents.list) || [];
   const createAgent = useMutation(api.agents.createAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
@@ -28,7 +31,7 @@ export default function AgentsPage() {
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filteredAgents = agents.filter((a: any) => 
+  const filteredAgents = agents.filter((a: any) =>
     (a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -42,15 +45,15 @@ export default function AgentsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const newAgentId = await createAgent({ 
-        name: formData.name, 
-        description: formData.description 
+      const newAgentId = await createAgent({
+        name: formData.name,
+        description: formData.description
       });
       setIsAddModalOpen(false);
       // Navigate straight to the new agent's config page
       router.push(`/admin/agents/${newAgentId}`);
     } catch (err: any) {
-      alert(err.message || "Failed to create agent");
+      alert(err.message || t('errors.create'));
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +66,7 @@ export default function AgentsPage() {
         await deleteAgent({ id: deletingAgent._id });
         setDeletingAgent(null);
       } catch (err: any) {
-        alert(err.message || "Failed to delete agent");
+        alert(err.message || t('errors.delete'));
         setDeletingAgent(null);
       } finally {
         setIsSubmitting(false);
@@ -78,17 +81,17 @@ export default function AgentsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Workflow className="w-6 h-6 text-brand" />
-            Agent Orchestration
+            {t('title')}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Create and configure autonomous AI agents for workflows.</p>
+          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleOpenAdd}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          <span>New Agent</span>
+          <span>{t('new')}</span>
         </button>
       </div>
 
@@ -96,9 +99,9 @@ export default function AgentsPage() {
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
         <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
           <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search agents by name or description..." 
+          <input
+            type="text"
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -112,10 +115,10 @@ export default function AgentsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">Agent</th>
-                <th className="px-4 py-3 font-medium">Model</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-4 py-3 font-medium">{t('table.agent')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.model')}</th>
+                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
+                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -123,13 +126,13 @@ export default function AgentsPage() {
                 {filteredAgents.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No agents found. Create your first autonomous agent to get started.
+                      {t('table.empty')}
                     </td>
                   </tr>
                 ) : (
                   <>
                     {filteredAgents.map((agent: any) => (
-                      <motion.tr 
+                      <motion.tr
                         key={agent._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -159,25 +162,25 @@ export default function AgentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
-                                {agent.modelId}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
+                              {agent.modelId}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className={`flex items-center gap-2 text-[12px] font-medium ${agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
                             <div className={`w-1.5 h-1.5 rounded-full ${agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
-                            {agent.isActive ? 'Active' : 'Draft'}
+                            {agent.isActive ? t('table.active') : t('table.draft')}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/agents/${agent._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title="Configure Agent">
+                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/agents/${agent._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title={t('table.configure')}>
                               <Settings className="w-4 h-4" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingAgent(agent); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Agent">
-                                <Trash2 className="w-4 h-4" />
+                            <button onClick={(e) => { e.stopPropagation(); setDeletingAgent(agent); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.delete')}>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -195,48 +198,48 @@ export default function AgentsPage() {
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Initialize New Agent"
+        title={t('modal.initTitle')}
       >
-        <p className="text-secondary mb-6 text-[15px]">Create a new autonomous agent wrapper.</p>
+        <p className="text-secondary mb-6 text-[15px]">{t('modal.initDesc')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Agent Name</label>
-            <input 
-              type="text" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.name')}</label>
+            <input
+              type="text"
               required
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Lead SEO Analyst"
+              placeholder={t('placeholders.name')}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Short Description</label>
-            <input 
-              type="text" 
+            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.description')}</label>
+            <input
+              type="text"
               value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Audits web pages for technical SEO"
+              placeholder={t('placeholders.description')}
             />
           </div>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsAddModalOpen(false)}
               className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
               disabled={isSubmitting}
             >
-              Cancel
+              {t('buttons.cancel')}
             </button>
-            <button 
+            <button
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
-              {isSubmitting ? "Creating..." : "Create Agent"}
+              {isSubmitting ? t('buttons.creating') : t('buttons.create')}
             </button>
           </div>
         </form>
@@ -246,30 +249,30 @@ export default function AgentsPage() {
       <SonaeModal
         isOpen={!!deletingAgent}
         onClose={() => setDeletingAgent(null)}
-        title="Delete Agent"
+        title={t('modal.deleteTitle')}
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            Are you sure you want to permanently delete <strong className="text-foreground font-semibold">{deletingAgent?.name}</strong>?
+            {t('modal.deleteConfirm', { name: deletingAgent?.name })}
           </p>
-          <p className="text-[13px] text-muted">This will remove it from any associated workflows. This action cannot be undone.</p>
+          <p className="text-[13px] text-muted">{t('modal.undone')}</p>
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setDeletingAgent(null)}
             className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             disabled={isSubmitting}
           >
-            Cancel
+            {t('buttons.cancel')}
           </button>
-          <button 
+          <button
             type="button"
             onClick={confirmDelete}
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? "Deleting..." : "Delete Agent"}
+            {isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
           </button>
         </div>
       </SonaeModal>
