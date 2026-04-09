@@ -2,6 +2,17 @@
 
 A high-performance Next.js starter template integrated with Convex for a real-time, type-safe backend.
 
+## 📚 Internal Documentation
+
+A comprehensive guide for developers is available in the **[/docs](./docs/index.md)** folder. It covers:
+- **[Getting Started](./docs/getting-started.md)**: Local setup and environment.
+- **[System Architecture](./docs/architecture.md)**: Tech stack and system design.
+- **[Frontend Development](./docs/frontend.md)**: Design system and Sonae Modal Protocol.
+- **[Backend & Data Layer](./docs/backend.md)**: Convex and AI orchestration.
+- **[Deployment](./docs/deployment.md)**: CI/CD and hosting.
+
+---
+
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
