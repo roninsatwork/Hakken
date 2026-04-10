@@ -37,7 +37,7 @@ export default function LandingPage() {
 
         <h1 className="text-5xl sm:text-7xl font-light tracking-tight text-foreground leading-[1.1] mb-6 drop-shadow-xl">
           Sonae <br />
-          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent text-3xl sm:text-5xl mt-2 block">{t('frameworkTitle')}</span>
+          <span className="font-semibold bg-gradient-to-r from-foreground via-foreground/80 to-brand bg-clip-text text-transparent text-3xl sm:text-5xl mt-2 block leading-[1.1]">{t('frameworkTitle')}</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-secondary max-w-2xl mb-12 font-light leading-relaxed drop-shadow-md">

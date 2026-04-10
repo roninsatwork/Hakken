@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
+import { motion, AnimatePresence } from "framer-motion";
 
 type TimeframeOption = "7d" | "30d" | "90d" | "ytd" | "custom";
 

@@ -33,6 +33,7 @@ import type * as migrations from "../migrations.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as scheduler from "../scheduler.js";
 import type * as seedAgents from "../seedAgents.js";
+import type * as seedUsers from "../seedUsers.js";
 import type * as settings from "../settings.js";
 import type * as swarmActions from "../swarmActions.js";
 import type * as swarmRuntime from "../swarmRuntime.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   orchestrator: typeof orchestrator;
   scheduler: typeof scheduler;
   seedAgents: typeof seedAgents;
+  seedUsers: typeof seedUsers;
   settings: typeof settings;
   swarmActions: typeof swarmActions;
   swarmRuntime: typeof swarmRuntime;

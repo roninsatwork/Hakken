@@ -1,14 +1,27 @@
 {
     "common": {
         "loading": "Loading...",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "dismiss": "Dismiss",
+        "back": "Back",
         "actions": {
             "save": "Save",
             "cancel": "Cancel",
             "delete": "Delete",
             "edit": "Edit",
             "create": "Create",
-            "dismiss": "Got it",
+            "dismiss": "Dismiss",
             "back": "Back"
+        },
+        "table": {
+            "user": "User",
+            "role": "Role",
+            "actions": "Actions",
+            "status": "Status",
+            "date": "Date",
+            "name": "Name"
         },
         "pagination": {
             "showing": "Showing",
@@ -35,7 +48,56 @@
             "default": "An unexpected error occurred.",
             "unauthorized": "You are not authorized to perform this action.",
             "notFound": "Resource not found."
-        }
+        },
+        "inf": "{count, plural, =0 {No interactions} one {1 interaction} other {# interactions}}",
+        "welcome": "Welcome",
+        "goodMorning": "Good Morning",
+        "goodAfternoon": "Good Afternoon",
+        "goodEvening": "Good Evening",
+        "goodNight": "Good Night",
+        "authenticating": "Authenticating...",
+        "profile": "My Profile",
+        "admin": "Admin Panel",
+        "logout": "Logout",
+        "dashboard": "Dashboard"
+    },
+    "landing": {
+        "getStarted": "Get Started",
+        "toBePrepared": "To be prepared",
+        "frameworkTitle": "Framework for Intelligent Autonomy",
+        "frameworkDescription": "Sonae is the world's most sophisticated agentic orchestration platform, designed to deploy, monitor and scale specialized AI fleets.",
+        "copyright": "© {year} Sonae. All rights reserved."
+    },
+    "dashboard": {
+        "heroDesc": "You are currently within the Sonae core protocol. Your agentic fleet is operational and synchronized with the multi-tenant context.",
+        "quickStart": "Quick Start",
+        "exploreWorkspace": "Explore your workspace",
+        "meetAssistant": "Meet your AI Assistant",
+        "meetAssistantDesc": "Start a conversation with Sonae Core to orchestrate workflows or analyze data.",
+        "agenticTesting": "Agentic Testing Lab",
+        "agenticTestingDesc": "Simulate agent interactions and validate your knowledge graphs.",
+        "exploreKnowledge": "Explore Knowledge",
+        "exploreKnowledgeDesc": "Review and update the documents and data that power your agents' intelligence.",
+        "relationshipContext": "Relationship Intelligence",
+        "relationshipContextDesc": "Sonae understands the complex relationships between your entities and users.",
+        "alwaysAvailable": "Continuity of Protocol",
+        "alwaysAvailableDesc": "Your agents continue processing and learning even when you are offline.",
+        "security": "Secure by Design",
+        "securityDesc": "End-to-end encryption and multi-tenant isolation ensure your data remains your own.",
+        "intelLayer": "{sonae} provides a sophisticated layer of agentic orchestration for your protocol.",
+        "securityProtocol": "Security Protocol",
+        "securityProtocolDesc": "Verify your identity using multi-factor authentication for sensitive operations."
+    },
+    "login": {
+        "title": "Welcome Back",
+        "subtitle": "Secure Authentication",
+        "emailPlaceholder": "Enter your email address",
+        "sendMagicLink": "Send Magic Link",
+        "or": "OR",
+        "continueWithGoogle": "Continue with Google",
+        "thankYou": "Check your inbox",
+        "magicLinkSent": "A magic link has been sent to {email}. Click it to sign in.",
+        "tryDifferentEmail": "Try a different email address"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -47,48 +109,193 @@
         "aiManagement": "AI Management",
         "auditLogs": "Audit Ledger"
     },
+    "sidebar": {
+        "admin": "System Protocol",
+        "navigation": "Main Navigation",
+        "dashboard": "Dashboard",
+        "companies": "Companies",
+        "manageCompanies": "Manage Companies",
+        "ai": "Artificial Intelligence",
+        "runningCosts": "Running Costs",
+        "chatLogs": "Chat Logs",
+        "rules": "Rules",
+        "systemPrompt": "System Prompt",
+        "globalKnowledge": "Global Knowledge",
+        "models": "Models",
+        "agents": "Agents",
+        "manageAgents": "Manage Agents",
+        "connectors": "Connectors",
+        "workflows": "Workflows",
+        "manageWorkflows": "Manage Workflows",
+        "schedules": "Schedules",
+        "workflowLogs": "Workflow Logs",
+        "users": "Users",
+        "manageUsers": "Manage Users",
+        "invitations": "Invitations",
+        "systemAdmins": "System Admins",
+        "settings": "Settings",
+        "systemSettings": "System Settings",
+        "analytics": "Analytics",
+        "workspace": "Workspace",
+        "assistant": "Assistant",
+        "agenticTesting": "Agentic Testing"
+    },
+    "header": {
+        "adminOverview": "Infrastructure Protocol",
+        "exitWorkspace": "Exit Tenant Environment"
+    },
     "admin": {
+        "overview": {
+            "title": "Protocol Dashboard",
+            "subtitle": "Global telemetry and orchestration status of the Sonae architecture.",
+            "charts": {
+                "daily": "Daily Activity",
+                "weekly": "Weekly Throughput",
+                "monthly": "Monthly Capacity",
+                "globalMessages": "Global Messages",
+                "estimatedCost": "Approximate Cost",
+                "noData": "No Protocol Data Available"
+            },
+            "metrics": {
+                "mrr": "Projected MRR",
+                "mrrSub": "SaaS Final Resolution",
+                "mau": "Active Identities (MAU)",
+                "mauSub": "Monthly unique initiators",
+                "compute": "Network Compute",
+                "computeSub": "{count} messages intercepted",
+                "activeContext": "Active Initiators",
+                "activeSub": "Live protocol interaction",
+                "logisticBurn": "Network Burn",
+                "burnSub": "Approximate monthly OPEX"
+            },
+            "leaderboards": {
+                "tenants": "Top Consumption Workspaces",
+                "initiators": "Top Protocol Initiators",
+                "empty": "No telemetry recorded."
+            },
+            "timeframes": {
+                "7d": "7 Days",
+                "30d": "30 Days",
+                "90d": "90 Days",
+                "ytd": "Year to Date",
+                "custom": "Custom Range"
+            }
+        },
         "companies": {
-            "title": "Tenants & Organizations",
-            "subtitle": "Manage multi-tenant isolation, branding, and provisioned system prompts.",
-            "newCompany": "New Tenant",
-            "searchPlaceholder": "Search by tenant name...",
-            "tenantName": "Tenant Name",
+            "title": "Tenant Protocol",
+            "subtitle": "Manage isolated workspace environments and system-level directives.",
+            "newCompany": "Provision Tenant",
+            "searchPlaceholder": "Search by workspace name...",
+            "tenantName": "Workspace Identity",
             "provisionedDate": "Provisioned",
-            "assignedUsers": "Assigned Users",
-            "actions": "Operations",
-            "emptyState": "No organizations provisioned matching the query.",
+            "assignedUsers": "Authorized Access",
+            "actions": "Directives",
+            "emptyState": "No active workspaces found in protocol.",
             "users": "{count, plural, =0 {No users} one {1 user} other {# users}}",
             "showing": "Showing",
             "to": "to",
             "of": "of",
-            "companies": "tenants",
-            "createTitle": "Provision Tenant",
-            "createSubtitle": "Initialize a new segregated workspace environment.",
-            "editTitle": "Edit Workspace",
-            "editSubtitle": "Modify tenant identity and AI operational boundaries.",
-            "nameLabel": "Company Name",
-            "namePlaceholder": "e.g. Sonae LLC",
-            "promptLabel": "Company Profile & AI Rules",
-            "promptSubtitle": "The fundamental system prompt injected for all users in this tenant.",
-            "promptOptional": "Optional",
-            "promptPlaceholder": "e.g. Ronins is a boutique CRM firm...",
-            "provisionTenant": "Provision Tenant",
-            "deleteTitle": "Decommission Tenant",
-            "deleteConfirm": "Are you sure you want to permanently decommission {name}?",
-            "warningCascade": "CASCADE DATA PURGE",
-            "warningDesc": "This action will permanently wipe all associated users, workflows, and historical data.",
-            "deleteTenant": "Decommission",
+            "companies": "workspaces",
+            "createTitle": "Initialize Workspace",
+            "createSubtitle": "Provision a new isolated tenant environment for an organization.",
+            "editTitle": "Update Directives",
+            "editSubtitle": "Modify core directives and workspace identity for this tenant.",
+            "nameLabel": "Workspace Name",
+            "namePlaceholder": "e.g. ACME Corp",
+            "promptLabel": "Tenant System Matrix",
+            "promptOptional": "Override system-level defaults",
+            "promptPlaceholder": "Enter specialized directives for this organization...",
+            "provisionTenant": "Provision Workspace",
+            "deleteTitle": "De-provision Workspace",
+            "deleteConfirm": "Are you sure you want to permanently erase {name} and all associated protocol data?",
+            "warningCascade": "Permanent Data Deletion",
+            "warningDesc": "This action will purge all agents, messages, and configurations for this tenant. This cannot be undone.",
+            "deleteTenant": "Purge Tenant",
             "errors": {
-                "saveFailed": "Failed to save tenant configuration",
-                "deleteFailed": "Failed to decommission tenant"
+                "saveFailed": "Failed to sync tenant directives.",
+                "deleteFailed": "Failed to purge tenant from protocol."
+            }
+        },
+        "companyDetails": {
+            "title": "Tenant Telemetry",
+            "overview": "Deep analytics and resource utilization for this isolated workspace.",
+            "timeframe": {
+                "7d": "7 Days",
+                "30d": "30 Days",
+                "90d": "90 Days",
+                "ytd": "Year to Date",
+                "custom": "Custom Protocol Range"
+            },
+            "metrics": {
+                "grossBurn": "Workspace Burn",
+                "tenantAiCost": "Isolated AI OPEX",
+                "tokenVolume": "Compute Volume",
+                "computeDesc": "Total token utilization",
+                "messageInferences": "Inferences",
+                "instructionsDesc": "Successful protocol actions",
+                "activeIndividuals": "Active Access",
+                "loginsDesc": "Unique initiators"
+            },
+            "aggregation": {
+                "day": "Daily Resolution",
+                "week": "Weekly Throughput",
+                "month": "Monthly Capacity"
+            },
+            "chart": {
+                "estimatedAiCost": "Estimated AI Cost",
+                "workspaceActions": "Workspace Actions",
+                "noData": "No Telemetry Detected"
+            },
+            "leaderboard": {
+                "title": "Direct Initiators",
+                "empty": "No active initiators in this cycle."
             }
         },
         "workflows": {
             "title": "Autonomous Workflows",
             "description": "Orchestrate multi-agent sequences and event-driven automation.",
-            "newWorkflow": "New Workflow",
+            "new": "New Workflow",
             "searchPlaceholder": "Search workflows by name...",
+            "table": {
+                "name": "Workflow Name",
+                "trigger": "Trigger Source",
+                "status": "Final Resolution",
+                "actions": "Operations",
+                "empty": "No autonomous workflows provisioned matching the query.",
+                "active": "Active",
+                "draft": "Draft",
+                "visualBuilder": "Open Visual Designer"
+            },
+            "pagination": {
+                "showing": "Showing",
+                "to": "to",
+                "of": "of",
+                "items": "workflows"
+            },
+            "modal": {
+                "initTitle": "Configure Workflow",
+                "initDesc": "Initialize a new autonomous sequence for your agentic fleet.",
+                "name": "Workflow Name",
+                "description": "Functional Purpose",
+                "deleteTitle": "Decommission Workflow",
+                "deleteConfirm": "Are you sure you want to permanently decommission {name}?",
+                "undone": "This action will purge all execution logs and historical data."
+            },
+            "placeholders": {
+                "name": "e.g. Market Research Flow",
+                "description": "e.g. Daily analysis of technical indicators."
+            },
+            "buttons": {
+                "cancel": "Abort",
+                "create": "Initialize Workflow",
+                "creating": "Initializing...",
+                "delete": "Decommission",
+                "deleting": "Purging..."
+            },
+            "errors": {
+                "create": "Failed to initialize workflow",
+                "delete": "Failed to decommission workflow"
+            },
             "tabs": {
                 "designer": "Designer",
                 "logs": "Execution Logs",
@@ -634,58 +841,22 @@
                 "emailPlaceholder": "e.g. john@sonae.ai",
                 "avatarPlaceholder": "https://..."
             }
-        }
+        },
     },
     "ai": {
-        "costs": {
-            "title": "Global AI Economic Telemetry",
-            "subtitle": "Real-time monitoring of token consumption and model operational costs across the Sonae network.",
-            "grossCost": "Total Network Spend",
-            "totalTokens": "Processed Token Target",
-            "opex": "Approximate OPEX",
-            "convertedGbp": "Converted to GBP",
-            "timeframes": {
-                "24h": "Last 24 Hours",
-                "7d": "Last 7 Days",
-                "30d": "Last 30 Days",
-                "all": "All Time"
-            },
-            "charts": {
-                "costOverTime": "Cumulative Cost Velocity",
-                "modelDistribution": "Model Expenditure Distribution"
-            }
-        },
-        "chatLogs": {
-            "title": "Global Message Ledger",
-            "subtitle": "Interception and analysis of all underlying LLM conversations occurring within the system architecture.",
-            "searchPlaceholder": "Search by title, user or message...",
-            "empty": "No conversations found in the message ledger.",
-            "unknownActor": "Unknown Actor",
-            "userLabel": "User",
-            "viewer": {
-                "title": "Message Trace Inspector",
-                "subtitle": "Raw payload analysis of conversation trace {id}",
-                "traceIntercept": "Intercepted Trace",
-                "idLabel": "Trace Identifier",
-                "financials": "Financial Telemetry",
-                "tokens": "Tokens",
-                "cost": "Cost",
-                "status": "Final Resolution"
-            }
-        },
         "assistant": {
             "welcome": {
                 "greetings": {
-                    "morning": "Good morning",
-                    "afternoon": "Good afternoon",
-                    "evening": "Good evening",
-                    "night": "Good night",
+                    "morning": "Good Morning",
+                    "afternoon": "Good Afternoon",
+                    "evening": "Good Evening",
+                    "night": "Good Evening",
                     "default": "Welcome"
                 },
-                "subtitle": "What would you like to discuss today?",
-                "inputPlaceholder": "Enter a prompt for {platformName}",
+                "subtitle": "How can I assist your workflow today?",
                 "recording": "Recording securely...",
                 "transcribing": "Transcribing perfectly...",
+                "inputPlaceholder": "Enter a prompt for {platformName}",
                 "footer": "{platformName} Assistant is AI and can make mistakes, please check all responses."
             },
             "controls": {
@@ -721,10 +892,113 @@
                     "title": "Microphone Access Blocked",
                     "subtitle": "Secure API Blocked",
                     "description": "Your browser has explicitly blocked {platformName} from accessing the native Web Speech API microphone proxy.",
-                    "instruction": "Click the `microphone` icon located in your browser's top URL search bar and select \"Allow\"."
+                    "instruction": "Click the microphone icon located in your browser's top URL search bar and select 'Allow'."
                 }
             }
+        },
+        "costs": {
+            "title": "Global AI Economic Telemetry",
+            "subtitle": "Real-time monitoring of token consumption and model operating costs across the Sonae network.",
+            "grossCost": "Total Network Spend",
+            "totalTokens": "Target Processed Tokens",
+            "opex": "Approximate OPEX",
+            "convertedGbp": "Converted to GBP",
+            "timeframes": {
+                "24h": "Last 24 Hours",
+                "7d": "Last 7 Days",
+                "30d": "Last 30 Days",
+                "all": "All Time"
+            },
+            "charts": {
+                "costOverTime": "Cumulative Cost Velocity",
+                "modelDistribution": "Spend Distribution by Model"
+            }
+        },
+        "chatLogs": {
+            "title": "Global Message Audit",
+            "subtitle": "Interception and analysis of all underlying LLM conversations occurring within the architecture.",
+            "searchPlaceholder": "Search by title, user, or message...",
+            "empty": "No conversations located in the message ledger.",
+            "unknownActor": "Unknown Actor",
+            "userLabel": "User",
+            "viewer": {
+                "title": "Message Trace Inspector",
+                "subtitle": "Analyzing raw payload for trace {id}",
+                "traceIntercept": "Intercepted Trace",
+                "idLabel": "Trace Identifier",
+                "financials": "Financial Telemetry",
+                "tokens": "Tokens",
+                "cost": "Cost",
+                "status": "Final Resolution"
+            }
+        },
+        "systemPrompt": {
+            "title": "Core System Directives",
+            "subtitle": "The foundational behavioral matrix that dictates agent identity and operational boundaries.",
+            "revert": "Reset to Vault",
+            "commit": "Commit to Protocol",
+            "error": {
+                "title": "Protocol Violation",
+                "defaultMsg": "Failed to commit system prompt to memory."
+            },
+            "success": {
+                "title": "Directives Synchronized",
+                "message": "System prompt has been successfully updated across the fleet."
+            },
+            "section": {
+                "title": "Main Prompt Matrix",
+                "unsaved": "Local Mutation",
+                "synced": "Memory Sync",
+                "label": "Prompt Architecture",
+                "connecting": "Connecting to Vault...",
+                "placeholder": "Enter system prompt directives..."
+            }
+        },
+        "rules": {
+            "title": "Operational Boundary Rules",
+            "subtitle": "Specific functional constraints and tactical protocols for your agentic fleet.",
+            "addRule": "Inject Rule",
+            "searchPlaceholder": "Search rules by trigger or instruction...",
+            "status": {
+                "noRules": "No boundary rules found.",
+                "activate": "Activate Protocol",
+                "deactivate": "Suspend Protocol",
+                "edit": "Modify Rule",
+                "delete": "Purge Rule"
+            },
+            "deleteModal": {
+                "title": "Purge Protocol Rule",
+                "description": "This will permanently delete the operational rule from the system architecture.",
+                "warning": "Purged rules cannot be recovered from memory.",
+                "abort": "Abort Purge",
+                "confirm": "Purge Rule"
+            }
+        },
+        "models": {
+            "title": "Grid Model Inventory",
+            "subtitle": "Authorized LLM units and cognitive engines verified for platform deployment.",
+            "syncButton": {
+                "idle": "Sync Grid Models",
+                "syncing": "Syncing..."
+            },
+            "empty": {
+                "title": "No Models Verified",
+                "description": "The AI model grid is currently empty. Synchronize with Vertex AI to populate authorized units.",
+                "button": {
+                    "idle": "Initiate Grid Sync",
+                    "syncing": "Syncing Grid..."
+                }
+            },
+            "model": {
+                "default": "Default",
+                "active": "Online",
+                "disabled": "Offline",
+                "makeDefault": "Set as Default",
+                "enable": "Initialize",
+                "disable": "Deactivate"
+            }
         }
+    },
     },
     "user": {
         "profile": {

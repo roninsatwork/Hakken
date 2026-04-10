@@ -1,14 +1,27 @@
 {
     "common": {
         "loading": "Caricamento...",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "saving": "Salvataggio...",
+        "dismiss": "Chiudi",
+        "back": "Indietro",
         "actions": {
             "save": "Salva",
             "cancel": "Annulla",
             "delete": "Elimina",
             "edit": "Modifica",
             "create": "Crea",
-            "dismiss": "Ho capito",
+            "dismiss": "Chiudi",
             "back": "Indietro"
+        },
+        "table": {
+            "user": "Utente",
+            "role": "Ruolo",
+            "actions": "Azioni",
+            "status": "Stato",
+            "date": "Data",
+            "name": "Nome"
         },
         "pagination": {
             "showing": "Visualizzazione da",
@@ -35,7 +48,56 @@
             "default": "Si è verificato un errore imprevisto.",
             "unauthorized": "Non sei autorizzato a eseguire questa azione.",
             "notFound": "Risorsa non trovata."
-        }
+        },
+        "inf": "{count, plural, =0 {Nessuna interazione} one {1 interazione} other {# interazioni}}",
+        "welcome": "Benvenuto",
+        "goodMorning": "Buongiorno",
+        "goodAfternoon": "Buon pomeriggio",
+        "goodEvening": "Buonasera",
+        "goodNight": "Buonanotte",
+        "authenticating": "Autenticazione...",
+        "profile": "Il Mio Profilo",
+        "admin": "Pannello Admin",
+        "logout": "Esci",
+        "dashboard": "Dashboard"
+    },
+    "landing": {
+        "getStarted": "Inizia ora",
+        "toBePrepared": "Prepararsi al futuro",
+        "frameworkTitle": "Framework per l'Autonomia Intelligente",
+        "frameworkDescription": "Sonae è la piattaforma di orchestrazione agentica più sofisticata al mondo, progettata per distribuire, monitorare e scalare flotta AI specializzate.",
+        "copyright": "© {year} Sonae. Tutti i diritti riservati."
+    },
+    "dashboard": {
+        "heroDesc": "Ti trovi attualmente all'interno del protocollo principale Sonae. La tua flotta di agenti è operativa e sincronizzata con il contesto multi-tenant.",
+        "quickStart": "Inizio Rapido",
+        "exploreWorkspace": "Esplora il tuo workspace",
+        "meetAssistant": "Incontra il tuo Assistente AI",
+        "meetAssistantDesc": "Inizia una conversazione con Sonae Core per orchestrare i workflow o analizzare i dati.",
+        "agenticTesting": "Laboratorio di Test Agentico",
+        "agenticTestingDesc": "Simula le interazioni degli agenti e convalida i tuoi grafi di conoscenza.",
+        "exploreKnowledge": "Esplora la Conoscenza",
+        "exploreKnowledgeDesc": "Rivedi e aggiorna i documenti e i dati che alimentano l'intelligenza dei tuoi agenti.",
+        "relationshipContext": "Intelligenza Relazionale",
+        "relationshipContextDesc": "Sonae comprende le complesse relazioni tra le tue entità e i tuoi utenti.",
+        "alwaysAvailable": "Continuità del Protocollo",
+        "alwaysAvailableDesc": "I tuoi agenti continuano a elaborare e apprendere anche quando sei offline.",
+        "security": "Sicuro per Progettazione",
+        "securityDesc": "La crittografia end-to-end e l'isolamento multi-tenant garantiscono che i tuoi dati rimangano tuoi.",
+        "intelLayer": "{sonae} fornisce un sofisticato livello di orchestrazione agentica per il tuo protocollo.",
+        "securityProtocol": "Protocollo di Sicurezza",
+        "securityProtocolDesc": "Verifica la tua identità utilizzando l'autenticazione a più fattori per le operazioni sensibili."
+    },
+    "login": {
+        "title": "Bentornato",
+        "subtitle": "Autenticazione Sicura",
+        "emailPlaceholder": "Inserisci il tuo indirizzo email",
+        "sendMagicLink": "Invia Magic Link",
+        "or": "OPPURE",
+        "continueWithGoogle": "Continua con Google",
+        "thankYou": "Controlla la tua posta",
+        "magicLinkSent": "Un link magico è stato inviato a {email}. Cliccalo per accedere.",
+        "tryDifferentEmail": "Prova un altro indirizzo email"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -47,48 +109,193 @@
         "aiManagement": "Gestione AI",
         "auditLogs": "Audit Ledger"
     },
+    "sidebar": {
+        "admin": "Protocollo di Sistema",
+        "navigation": "Navigazione Principale",
+        "dashboard": "Dashboard",
+        "companies": "Aziende",
+        "manageCompanies": "Gestisci Aziende",
+        "ai": "Intelligenza Artificiale",
+        "runningCosts": "Costi di Esercizio",
+        "chatLogs": "Log delle Chat",
+        "rules": "Regole",
+        "systemPrompt": "Prompt di Sistema",
+        "globalKnowledge": "Conoscenza Globale",
+        "models": "Modelli",
+        "agents": "Agenti",
+        "manageAgents": "Gestisci Agenti",
+        "connectors": "Connettori",
+        "workflows": "Workflow",
+        "manageWorkflows": "Gestisci Workflow",
+        "schedules": "Programmazioni",
+        "workflowLogs": "Log dei Workflow",
+        "users": "Utenti",
+        "manageUsers": "Gestisci Utenti",
+        "invitations": "Inviti",
+        "systemAdmins": "Admin di Sistema",
+        "settings": "Impostazioni",
+        "systemSettings": "Impostazioni di Sistema",
+        "analytics": "Analytics",
+        "workspace": "Workspace",
+        "assistant": "Assistente",
+        "agenticTesting": "Test Agentico"
+    },
+    "header": {
+        "adminOverview": "Protocollo Infrastruttura",
+        "exitWorkspace": "Esci dal Tenant"
+    },
     "admin": {
+        "overview": {
+            "title": "Dashboard Protocollo",
+            "subtitle": "Telemetria globale e stato di orchestrazione dell'architettura Sonae.",
+            "charts": {
+                "daily": "Attività Giornaliera",
+                "weekly": "Throughput Settimanale",
+                "monthly": "Capacità Mensile",
+                "globalMessages": "Messaggi Globali",
+                "estimatedCost": "Costo Approssimativo",
+                "noData": "Nessun Dato di Protocollo Disponibile"
+            },
+            "metrics": {
+                "mrr": "MRR Proiettato",
+                "mrrSub": "Risoluzione Finale SaaS",
+                "mau": "Identità Attive (MAU)",
+                "mauSub": "Iniziatori unici mensili",
+                "compute": "Network Compute",
+                "computeSub": "{count} messaggi intercettati",
+                "activeContext": "Iniziatori Attivi",
+                "activeSub": "Interazione protocollo live",
+                "logisticBurn": "Network Burn",
+                "burnSub": "OPEX mensile approssimativo"
+            },
+            "leaderboards": {
+                "tenants": "Workspace a Maggior Consumo",
+                "initiators": "Principali Iniziatori Protocollo",
+                "empty": "Nessuna telemetria registrata."
+            },
+            "timeframes": {
+                "7d": "7 Giorni",
+                "30d": "30 Giorni",
+                "90d": "90 Giorni",
+                "ytd": "Dall'inizio dell'anno",
+                "custom": "Intervallo Personalizzato"
+            }
+        },
         "companies": {
-            "title": "Tenant & Organizzazioni",
-            "subtitle": "Gestisci l'isolamento multi-tenant, il branding e i prompt di sistema forniti.",
-            "newCompany": "Nuovo Tenant",
-            "searchPlaceholder": "Cerca per nome tenant...",
-            "tenantName": "Nome Tenant",
-            "provisionedDate": "Creato il",
-            "assignedUsers": "Utenti Assegnati",
-            "actions": "Operazioni",
-            "emptyState": "Nessuna organizzazione trovata corrispondente alla ricerca.",
+            "title": "Protocollo Tenant",
+            "subtitle": "Gestisci gli ambienti di lavoro isolati e le direttive a livello di sistema.",
+            "newCompany": "Attiva Tenant",
+            "searchPlaceholder": "Cerca per nome workspace...",
+            "tenantName": "Identità Workspace",
+            "provisionedDate": "Attivato il",
+            "assignedUsers": "Accesso Autorizzato",
+            "actions": "Direttive",
+            "emptyState": "Nessun workspace attivo trovato nel protocollo.",
             "users": "{count, plural, =0 {Nessun utente} one {1 utente} other {# utenti}}",
             "showing": "Visualizzazione da",
             "to": "a",
             "of": "di",
-            "companies": "tenant",
-            "createTitle": "Configura Tenant",
-            "createSubtitle": "Inizializza un nuovo ambiente di lavoro segregato.",
-            "editTitle": "Modifica Workspace",
-            "editSubtitle": "Modifica l'identità del tenant e i confini operativi AI.",
-            "nameLabel": "Nome Azienda",
-            "namePlaceholder": "es. Sonae LLC",
-            "promptLabel": "Profilo Aziendale & Regole AI",
-            "promptSubtitle": "Il prompt di sistema fondamentale iniettato per tutti gli utenti in questo tenant.",
-            "promptOptional": "Opzionale",
-            "promptPlaceholder": "es. Sonae è una boutique CRM...",
-            "provisionTenant": "Attiva Tenant",
-            "deleteTitle": "Dismissione Tenant",
-            "deleteConfirm": "Sei sicuro di voler dismettere definitivamente {name}?",
-            "warningCascade": "EPURAZIONE DATI A CASCATA",
-            "warningDesc": "Questa azione cancellerà permanentemente tutti gli utenti associati, i workflow e i dati storici.",
-            "deleteTenant": "Dismetti",
+            "companies": "workspace",
+            "createTitle": "Inizializza Workspace",
+            "createSubtitle": "Attiva un nuovo ambiente tenant isolato per un'organizzazione.",
+            "editTitle": "Aggiorna Direttive",
+            "editSubtitle": "Modifica le direttive core e l'identità del workspace per questo tenant.",
+            "nameLabel": "Nome Workspace",
+            "namePlaceholder": "es. ACME Corp",
+            "promptLabel": "Matrice Sistema Tenant",
+            "promptOptional": "Sovrascrivi i default di sistema",
+            "promptPlaceholder": "Inserisci direttive specializzate per questa organizzazione...",
+            "provisionTenant": "Attiva Workspace",
+            "deleteTitle": "Disattiva Workspace",
+            "deleteConfirm": "Sei sicuro di voler eliminare permanentemente {name} e tutti i dati di protocollo associati?",
+            "warningCascade": "Eliminazione Permanente Dati",
+            "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
+            "deleteTenant": "Purga Tenant",
             "errors": {
-                "saveFailed": "Impossibile salvare la configurazione del tenant",
-                "deleteFailed": "Impossibile dismettere il tenant"
+                "saveFailed": "Impossibile sincronizzare le direttive tenant.",
+                "deleteFailed": "Impossibile purgare il tenant dal protocollo."
+            }
+        },
+        "companyDetails": {
+            "title": "Telemetria Tenant",
+            "overview": "Analisi approfondite e utilizzo delle risorse per questo workspace isolato.",
+            "timeframe": {
+                "7d": "7 Giorni",
+                "30d": "30 Giorni",
+                "90d": "90 Giorni",
+                "ytd": "Dall'inizio dell'anno",
+                "custom": "Intervallo Protocollo Personalizzato"
+            },
+            "metrics": {
+                "grossBurn": "Burn Workspace",
+                "tenantAiCost": "OPEX AI Isolata",
+                "tokenVolume": "Volume Calcolo",
+                "computeDesc": "Utilizzo totale token",
+                "messageInferences": "Inferenze",
+                "instructionsDesc": "Azioni protocollo completate",
+                "activeIndividuals": "Accesso Attivo",
+                "loginsDesc": "Iniziatori unici"
+            },
+            "aggregation": {
+                "day": "Risoluzione Giornaliera",
+                "week": "Throughput Settimanale",
+                "month": "Capacità Mensile"
+            },
+            "chart": {
+                "estimatedAiCost": "Costo AI Stimato",
+                "workspaceActions": "Azioni Workspace",
+                "noData": "Nessuna Telemetria Rilevata"
+            },
+            "leaderboard": {
+                "title": "Iniziatori Diretti",
+                "empty": "Nessun iniziatore attivo in questo ciclo."
             }
         },
         "workflows": {
             "title": "Workflow Autonomi",
             "description": "Orchestra sequenze multi-agent e automazioni orientate agli eventi.",
-            "newWorkflow": "Nuovo Workflow",
+            "new": "Nuovo Workflow",
             "searchPlaceholder": "Cerca workflow per nome...",
+            "table": {
+                "name": "Nome Workflow",
+                "trigger": "Sorgente Trigger",
+                "status": "Risoluzione Finale",
+                "actions": "Operazioni",
+                "empty": "Nessun workflow autonomo configurato corrispondente alla ricerca.",
+                "active": "Attivo",
+                "draft": "Bozza",
+                "visualBuilder": "Apri Visual Designer"
+            },
+            "pagination": {
+                "showing": "Visualizzazione da",
+                "to": "a",
+                "of": "di",
+                "items": "workflow"
+            },
+            "modal": {
+                "initTitle": "Configura Workflow",
+                "initDesc": "Inizializza una nuova sequenza autonoma per la tua flotta agentica.",
+                "name": "Nome Workflow",
+                "description": "Scopo Funzionale",
+                "deleteTitle": "Dismetti Workflow",
+                "deleteConfirm": "Sei sicuro di voler dismettere definitivamente {name}?",
+                "undone": "Questa azione cancellerà tutti i log di esecuzione e i dati storici."
+            },
+            "placeholders": {
+                "name": "es. Analisi di Mercato",
+                "description": "es. Analisi giornaliera degli indicatori tecnici."
+            },
+            "buttons": {
+                "cancel": "Annulla",
+                "create": "Inizializza Workflow",
+                "creating": "Inizializzazione...",
+                "delete": "Dismetti",
+                "deleting": "Eliminazione..."
+            },
+            "errors": {
+                "create": "Inizializzazione workflow fallita",
+                "delete": "Dismissione workflow fallita"
+            },
             "tabs": {
                 "designer": "Designer",
                 "logs": "Log Esecuzione",
@@ -637,6 +844,58 @@
         }
     },
     "ai": {
+        "assistant": {
+            "welcome": {
+                "greetings": {
+                    "morning": "Buongiorno",
+                    "afternoon": "Buon Pomeriggio",
+                    "evening": "Buona Sera",
+                    "night": "Buona Notte",
+                    "default": "Benvenuto"
+                },
+                "subtitle": "Come posso assistere il tuo flusso di lavoro oggi?",
+                "recording": "Registrazione sicura...",
+                "transcribing": "Trascrizione in corso...",
+                "inputPlaceholder": "Inserisci un prompt per {platformName}",
+                "footer": "L'Assistente {platformName} è un'IA e può commettere errori, verifica sempre le risposte."
+            },
+            "controls": {
+                "tools": "Strumenti",
+                "autonomous": "Autonomo",
+                "mic": {
+                    "start": "Inizia dettatura vocale",
+                    "stop": "Ferma registrazione"
+                },
+                "engine": {
+                    "label": "Seleziona Motore",
+                    "title": "Motori Grid Verificati",
+                    "defaultDesc": "Capacità di produzione attiva"
+                },
+                "reasoning": {
+                    "title": "Sforzo di Ragionamento Agent",
+                    "levels": {
+                        "NONE": "Veloce",
+                        "LOW": "Basso Focus",
+                        "MEDIUM": "Focus Profondo",
+                        "HIGH": "Massimo Focus"
+                    },
+                    "descriptions": {
+                        "NONE": "Risposte standard istantanee",
+                        "LOW": "Pensieri di verifica rapida",
+                        "MEDIUM": "Risoluzione problemi standard",
+                        "HIGH": "Ragionamento autonomo complesso"
+                    }
+                }
+            },
+            "errors": {
+                "mic": {
+                    "title": "Accesso Microfono Bloccato",
+                    "subtitle": "API Sicura Bloccata",
+                    "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo Web Speech API.",
+                    "instruction": "Clicca sull'icona del microfono nella barra degli URL del tuo browser e seleziona 'Consenti'."
+                }
+            }
+        },
         "costs": {
             "title": "Telemetria Economica AI Globale",
             "subtitle": "Monitoraggio in tempo reale del consumo di token e dei costi operativi dei modelli in tutta la rete Sonae.",
@@ -673,6 +932,72 @@
                 "status": "Risoluzione Finale"
             }
         },
+        "systemPrompt": {
+            "title": "Direttive di Sistema Core",
+            "subtitle": "La matrice comportamentale fondamentale che detta l'identità dell'agent e i suoi limiti operativi.",
+            "revert": "Ripristina da Vault",
+            "commit": "Invia a Protocollo",
+            "error": {
+                "title": "Violazione del Protocollo",
+                "defaultMsg": "Impossibile salvare il prompt di sistema in memoria."
+            },
+            "success": {
+                "title": "Direttive Sincronizzate",
+                "message": "Il prompt di sistema è stato aggiornato con successo in tutta la flotta."
+            },
+            "section": {
+                "title": "Matrice Prompt Principale",
+                "unsaved": "Mutazione Locale",
+                "synced": "Sincronizzato",
+                "label": "Architettura Prompt",
+                "connecting": "Connessione al Vault...",
+                "placeholder": "Inserisci le direttive del prompt di sistema..."
+            }
+        },
+        "rules": {
+            "title": "Regole di Confine Operativo",
+            "subtitle": "Vincoli funzionali specifici e protocolli tattici per la tua flotta agentica.",
+            "addRule": "Inietta Regola",
+            "searchPlaceholder": "Cerca regole per trigger o istruzione...",
+            "status": {
+                "noRules": "Nessuna regola di confine trovata.",
+                "activate": "Attiva Protocollo",
+                "deactivate": "Sospendi Protocollo",
+                "edit": "Modifica Regola",
+                "delete": "Epura Regola"
+            },
+            "deleteModal": {
+                "title": "Epura Regola di Protocollo",
+                "description": "Questa azione eliminerà permanentemente la regola operativa dall'architettura del sistema.",
+                "warning": "Le regole epurate non possono essere recuperate dalla memoria.",
+                "abort": "Annulla Epura",
+                "confirm": "Epura Regola"
+            }
+        },
+        "models": {
+            "title": "Inventario Modelli Grid",
+            "subtitle": "Unità LLM autorizzate e motori cognitivi verificati per la distribuzione sulla piattaforma.",
+            "syncButton": {
+                "idle": "Sincronizza Modelli Grid",
+                "syncing": "Sincronizzazione..."
+            },
+            "empty": {
+                "title": "Nessun Modello Verificato",
+                "description": "La griglia dei modelli AI è attualmente vuota. Sincronizza con Vertex AI per popolare le unità autorizzate.",
+                "button": {
+                    "idle": "Inizia Sincronizzazione Grid",
+                    "syncing": "Sincronizzazione Grid..."
+                }
+            },
+            "model": {
+                "default": "Default",
+                "active": "Online",
+                "disabled": "Offline",
+                "makeDefault": "Imposta come Default",
+                "enable": "Inizializza",
+                "disable": "Disattiva"
+            }
+        },
         "assistant": {
             "welcome": {
                 "greetings": {
@@ -685,7 +1010,7 @@
                 "subtitle": "Di cosa vorresti discutere oggi?",
                 "inputPlaceholder": "Inserisci un prompt per {platformName}",
                 "recording": "Registrazione sicura...",
-                "transcribing": "Trascrizione in corso...",
+                "transcribing": "Trascrizione pensiero...",
                 "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
             },
             "controls": {
@@ -703,7 +1028,7 @@
                 "reasoning": {
                     "title": "Impegno di Ragionamento Agent",
                     "levels": {
-                        "NONE": "Veloce",
+                        "NONE": "Istantaneo",
                         "LOW": "Basso Relax",
                         "MEDIUM": "Focus Profondo",
                         "HIGH": "Max Focus"
