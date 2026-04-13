@@ -1,4 +1,5 @@
 {
+    "projectName": "Sonae",
     "common": {
         "loading": "Loading...",
         "cancel": "Cancel",
@@ -313,7 +314,53 @@
                     "addAgent": "Add Agent",
                     "saveGraph": "Save Graph",
                     "saving": "Synchronizing...",
-                    "manualRun": "Manual Run"
+                    "manualRun": "Manual Run",
+                    "dispatching": "Dispatching..."
+                },
+                "node": {
+                    "agent": "Agent Unit",
+                    "inputs": "Inputs",
+                    "outputs": "Outputs",
+                    "noSchema": "No I/O schemas defined"
+                },
+                "editor": {
+                    "configureAgent": "Configure Agent Unit",
+                    "loading": "Connecting to neural unit...",
+                    "identity": {
+                        "label": "Agent Identity",
+                        "placeholder": "Enter unit name..."
+                    },
+                    "directives": {
+                        "label": "Behavioral Directives",
+                        "placeholder": "Enter system instruction matrix..."
+                    },
+                    "schemas": {
+                        "input": "Input Interface (JSON Schema)",
+                        "output": "Output Resolution (JSON Schema)"
+                    },
+                    "engine": {
+                        "label": "Cognitive Engine",
+                        "placeholder": "Select LLM unit...",
+                        "systemDefault": "(System Default)",
+                        "legacy": "({id}) (Restricted)"
+                    },
+                    "thinking": {
+                        "label": "Deep Reasoning",
+                        "hint": "Enable advanced cognitive processing.",
+                        "effort": "Computational Effort"
+                    },
+                    "search": {
+                        "label": "Live Web Access",
+                        "hint": "Enable real-time internet retrieval."
+                    },
+                    "temperature": {
+                        "label": "Creative Variance ({value})",
+                        "hint": "Higher values increase creative diversity but reduce determinism."
+                    },
+                    "promote": "Promote to Global Fleet",
+                    "promoteConfirm": "Are you sure you want to promote this agent to the global fleet? It will become accessible across all workflows.",
+                    "promoteSuccess": "Agent promoted to global fleet successfully.",
+                    "save": "Sync Changes"
                 },
                 "addModal": {
                     "title": "Add Intelligence Unit",
@@ -331,7 +378,10 @@
                 "alerts": {
                     "saveSuccess": "Workflow architecture saved successfully.",
                     "saveFailed": "Failed to synchronize workflow architecture.",
-                    "initSandboxFailed": "Failed to initialize sandbox agent."
+                    "initSandboxFailed": "Failed to initialize sandbox agent.",
+                    "saveAgentFailed": "Failed to synchronize agent configuration.",
+                    "promoteFailed": "Failed to promote agent to global fleet.",
+                    "dispatchFailed": "Failed to dispatch manual execution."
                 }
             },
             "logs": {
@@ -841,7 +891,7 @@
                 "emailPlaceholder": "e.g. john@sonae.ai",
                 "avatarPlaceholder": "https://..."
             }
-        },
+        }
     },
     "ai": {
         "assistant": {
@@ -997,8 +1047,33 @@
                 "enable": "Initialize",
                 "disable": "Deactivate"
             }
+        },
+        "knowledge": {
+            "title": "Global Knowledge Base",
+            "subtitle": "Ingest and manage global documents that provide architectural context to your entire agentic fleet.",
+            "uploadButton": "Ingest Document",
+            "empty": {
+                "title": "Knowledge Base Empty",
+                "description": "No global documents have been provisioned. Upload PDFs, Word documents or TXT files to ground your agents."
+            },
+            "status": {
+                "ingesting": "Ingesting...",
+                "ready": "Ready",
+                "failed": "Failed"
+            },
+            "deleteTooltip": "Purge Document",
+            "modal": {
+                "title": "Ingest New Knowledge",
+                "ingestion": "Encoding Neural Data...",
+                "dragDropTitle": "Drop document here",
+                "dragDropDesc": "PDF, DOCX or TXT (Max 50MB)",
+                "browse": "Browse Files"
+            },
+            "errors": {
+                "unsupported": "Unsupported file format. Please use PDF, DOCX or TXT.",
+                "uploadFailed": "Failed to synchronize document with vault."
+            }
         }
-    },
     },
     "user": {
         "profile": {

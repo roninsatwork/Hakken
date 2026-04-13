@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
@@ -31,6 +32,15 @@ export const get = query({
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw new Error("Workflow not found");
 
+    return workflow;
+  },
+});
+
+export const internalGet = query({
+  args: { id: v.id("workflows") },
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.id);
+    if (!workflow) throw new Error("Workflow not found");
     return workflow;
   },
 });
@@ -138,5 +148,66 @@ export const deleteWorkflow = mutation({
     });
 
     return true;
+  },
+});
+
+export const triggerManualRun = mutation({
+  args: { 
+    id: v.id("workflows"),
+    initialInput: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    // 1. Create Execution Record
+    const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
+      workflowId: args.id,
+      triggerType: "MANUAL",
+      startedBy: userId,
+    });
+
+    // 2. Schedule the execution in the background
+    await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeWorkflow, {
+      workflowId: args.id,
+      executionId: executionId,
+      initialInput: args.initialInput,
+    });
+
+    return executionId;
+  },
+});
+
+export const runManualSync = action({
+  args: {
+    workflowId: v.id("workflows"),
+    initialInput: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+
+    const user = await ctx.runQuery(api.users.getUser, { userId });
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized");
+    }
+
+    // 1. Create execution record
+    const executionId = await ctx.runMutation(api.workflows.triggerManualRun, {
+      id: args.workflowId,
+      initialInput: args.initialInput,
+    });
+
+    // 2. Run the workflow
+    return await ctx.runAction(internal.workflowRuntime.executeWorkflow, {
+      workflowId: args.workflowId,
+      executionId: executionId,
+      initialInput: args.initialInput,
+    });
   },
 });

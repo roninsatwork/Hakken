@@ -1,4 +1,5 @@
 {
+    "projectName": "Sonae",
     "common": {
         "loading": "Caricamento...",
         "cancel": "Annulla",
@@ -313,7 +314,53 @@
                     "addAgent": "Aggiungi Agent",
                     "saveGraph": "Salva Grafo",
                     "saving": "Sincronizzazione...",
-                    "manualRun": "Esecuzione Manuale"
+                    "manualRun": "Esecuzione Manuale",
+                    "dispatching": "Invio in corso..."
+                },
+                "node": {
+                    "agent": "Unità Agent",
+                    "inputs": "Input",
+                    "outputs": "Output",
+                    "noSchema": "Nessuno schema I/O definito"
+                },
+                "editor": {
+                    "configureAgent": "Configura Unità Agent",
+                    "loading": "Connessione all'unità neurale...",
+                    "identity": {
+                        "label": "Identità Agent",
+                        "placeholder": "Inserisci il nome dell'unità..."
+                    },
+                    "directives": {
+                        "label": "Direttive Comportamentali",
+                        "placeholder": "Inserisci la matrice di istruzioni di sistema..."
+                    },
+                    "schemas": {
+                        "input": "Interfaccia Input (Schema JSON)",
+                        "output": "Risoluzione Output (Schema JSON)"
+                    },
+                    "engine": {
+                        "label": "Motore Cognitivo",
+                        "placeholder": "Seleziona unità LLM...",
+                        "systemDefault": "(Default di Sistema)",
+                        "legacy": "({id}) (Ristretto)"
+                    },
+                    "thinking": {
+                        "label": "Ragionamento Profondo",
+                        "hint": "Abilita l'elaborazione cognitiva avanzata.",
+                        "effort": "Sforzo Computazionale"
+                    },
+                    "search": {
+                        "label": "Accesso Web Live",
+                        "hint": "Abilita il recupero internet in tempo reale."
+                    },
+                    "temperature": {
+                        "label": "Varianza Creativa ({value})",
+                        "hint": "Valori più alti aumentano la diversità creativa ma riducono il determinismo."
+                    },
+                    "promote": "Promuovi alla Flotta Globale",
+                    "promoteConfirm": "Sei sicuro di voler promuovere questo agent alla flotta globale? Diventerà accessibile in tutti i workflow.",
+                    "promoteSuccess": "Agent promosso alla flotta globale con successo.",
+                    "save": "Sincronizza Modifiche"
                 },
                 "addModal": {
                     "title": "Aggiungi Unità di Intelligenza",
@@ -331,7 +378,10 @@
                 "alerts": {
                     "saveSuccess": "Architettura workflow salvata con successo.",
                     "saveFailed": "Errore durante la sincronizzazione dell'architettura.",
-                    "initSandboxFailed": "Errore durante l'inizializzazione dell'agent sandbox."
+                    "initSandboxFailed": "Errore durante l'inizializzazione dell'agent sandbox.",
+                    "saveAgentFailed": "Impossibile sincronizzare la configurazione dell'agent.",
+                    "promoteFailed": "Impossibile promuovere l'agent alla flotta globale.",
+                    "dispatchFailed": "Impossibile avviare l'esecuzione manuale."
                 }
             },
             "logs": {
@@ -996,6 +1046,32 @@
                 "makeDefault": "Imposta come Default",
                 "enable": "Inizializza",
                 "disable": "Disattiva"
+            }
+        },
+        "knowledge": {
+            "title": "Base di Conoscenza Globale",
+            "subtitle": "Ingerisci e gestisci i documenti globali che forniscono contesto architettonico a tutta la tua flotta agentica.",
+            "uploadButton": "Ingerisci Documento",
+            "empty": {
+                "title": "Base di Conoscenza Vuota",
+                "description": "Nessun documento globale è stato configurato. Carica PDF, documenti Word o file TXT per istruire i tuoi agent."
+            },
+            "status": {
+                "ingesting": "Ingestione...",
+                "ready": "Pronto",
+                "failed": "Fallito"
+            },
+            "deleteTooltip": "Elimina Documento",
+            "modal": {
+                "title": "Ingerisci Nuova Conoscenza",
+                "ingestion": "Codifica Dati Neurali...",
+                "dragDropTitle": "Trascina qui il documento",
+                "dragDropDesc": "PDF, DOCX o TXT (Max 50MB)",
+                "browse": "Sfoglia File"
+            },
+            "errors": {
+                "unsupported": "Formato file non supportato. Usa PDF, DOCX o TXT.",
+                "uploadFailed": "Impossibile sincronizzare il documento con il vault."
             }
         },
         "assistant": {

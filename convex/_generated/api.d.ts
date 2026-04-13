@@ -34,12 +34,15 @@ import type * as orchestrator from "../orchestrator.js";
 import type * as scheduler from "../scheduler.js";
 import type * as seedAgents from "../seedAgents.js";
 import type * as seedUsers from "../seedUsers.js";
+import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as settings from "../settings.js";
 import type * as swarmActions from "../swarmActions.js";
 import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
 import type * as users from "../users.js";
 import type * as utils_pii from "../utils/pii.js";
+import type * as workflowExecutions from "../workflowExecutions.js";
+import type * as workflowRuntime from "../workflowRuntime.js";
 import type * as workflows from "../workflows.js";
 
 import type {
@@ -75,12 +78,15 @@ declare const fullApi: ApiFromModules<{
   scheduler: typeof scheduler;
   seedAgents: typeof seedAgents;
   seedUsers: typeof seedUsers;
+  seedWorkflows: typeof seedWorkflows;
   settings: typeof settings;
   swarmActions: typeof swarmActions;
   swarmRuntime: typeof swarmRuntime;
   system: typeof system;
   users: typeof users;
   "utils/pii": typeof utils_pii;
+  workflowExecutions: typeof workflowExecutions;
+  workflowRuntime: typeof workflowRuntime;
   workflows: typeof workflows;
 }>;
 

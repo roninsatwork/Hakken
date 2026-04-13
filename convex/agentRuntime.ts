@@ -259,3 +259,73 @@ export const generateAgentResponse = internalAction({
     }
   },
 });
+
+export const executeAgentNode = internalAction({
+  args: {
+    agentId: v.id("agents"),
+    input: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          }
+        }
+    });
+
+    const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
+    if (!agent) throw new Error("Agent not found.");
+
+    const targetModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, { 
+       requestedModelId: agent.modelId 
+    });
+
+    const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
+    
+    let config: any = {
+        systemInstruction: systemInstruction,
+        temperature: 0.1,
+    };
+
+    if (agent.outputSchema) {
+        try {
+            config.responseMimeType = "application/json";
+            config.responseSchema = JSON.parse(agent.outputSchema);
+        } catch (e) {
+            console.error("Failed to parse output schema", e);
+        }
+    }
+
+    const response = await ai.models.generateContent({
+        model: targetModel,
+        contents: `Input Data:\n${args.input}`,
+        config: config
+    });
+
+    const output = response.text || "{}";
+
+    // Log Execution for Observability
+    await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+        agentId: args.agentId,
+        interactionType: "WORKFLOW_EXECUTION",
+        promptContent: args.input,
+        responseContent: output,
+    });
+
+    return {
+        output,
+        usage: {
+            inputTokens: response.usageMetadata?.promptTokenCount || 0,
+            outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+        }
+    };
+  },
+});

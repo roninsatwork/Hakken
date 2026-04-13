@@ -84,7 +84,7 @@ export const seedForAgent = mutation({
 export const insertAgentLogInternal = internalMutation({
   args: {
     agentId: v.id("agents"),
-    threadId: v.id("threads"),
+    threadId: v.optional(v.id("threads")),
     interactionType: v.string(),
     promptContent: v.string(),
     responseContent: v.string(),

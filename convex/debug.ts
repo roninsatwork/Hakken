@@ -1,36 +1,17 @@
-import { internalMutation } from "./_generated/server";
-import { v } from "convex/values";
+import { mutation } from "./_generated/server";
 
-export const testMutation = internalMutation({
+export const enableAllModels = mutation({
   args: {},
   handler: async (ctx) => {
-    try {
-      const auditData = {
-        enabled: true,
-        retentionDays: 30,
-        dayOfMonth: 1,
-        hourOfDay: 2,
-        nextRunTimestamp: 0,
-      };
-      
-      const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
-      let payload = auditData;
-      
-      if (configRow) {
-         // simulate UI fetch
-         payload = JSON.parse(configRow.value);
-      }
-      
-      payload.enabled = !payload.enabled;
-      
-      // try to call updateConfig internally but we can't easily do auth from internal mutation to an authenticated one.
-      // let's just observe the payload that the UI is sending
-      console.log("PAYLOAD IS", payload);
-      return payload;
-      
-    } catch(e) {
-      console.error(e);
-      return e;
+    const allModels = await ctx.db.query("aiModels").collect();
+    for (const model of allModels) {
+      await ctx.db.patch(model._id, { isEnabled: true });
     }
-  }
+    // Set a default
+    const geminiPro = allModels.find(m => m.modelId === "gemini-3.1-pro-preview");
+    if (geminiPro) {
+      await ctx.db.patch(geminiPro._id, { isDefault: true });
+    }
+    return true;
+  },
 });
