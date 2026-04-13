@@ -327,4 +327,16 @@ export default defineSchema({
     .index("by_model_id", ["modelId"])
     .index("by_enabled", ["isEnabled"])
     .index("by_default", ["isDefault"]),
+
+  workflowExecutionSteps: defineTable({
+    executionId: v.id("workflowExecutions"),
+    nodeId: v.string(),
+    agentId: v.optional(v.id("agents")),
+    input: v.string(), // JSON stringified
+    output: v.optional(v.string()), // JSON stringified
+    status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  }).index("by_execution", ["executionId", "nodeId"]),
 });

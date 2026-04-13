@@ -19,6 +19,8 @@ import { AgentNode } from "@/src/ui/components/workflows/AgentNode";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { ArrowLeft, Bot, Play, Plus, Save, Loader2 } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
   agentNode: AgentNode as any,
@@ -34,11 +36,13 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
   const updateWorkflow = useMutation((api as any).workflows.updateWorkflow);
   const createInlineAgent = useMutation((api as any).agents.createInlineAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
+  const runWorkflow = useMutation((api as any).workflows.triggerManualRun);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
 
   const [isAddNodeModalOpen, setIsAddNodeModalOpen] = useState(false);
   const [isManualRunModalOpen, setIsManualRunModalOpen] = useState(false);
@@ -129,6 +133,22 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const handleManualRun = async () => {
+    if (!workflow) return;
+    setIsRunning(true);
+    try {
+      // We first trigger the mutation to get a record, then let Convex handle the rest (usually via actions/runners)
+      // Since runManualSync is a long running action, we often trigger the mutation and navigate or show logs.
+      await runWorkflow({ id: workflow._id as any });
+      setIsManualRunModalOpen(true);
+    } catch (e) {
+      console.error(e);
+      alert(t('alerts.dispatchFailed' as any));
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   const handleAddAgentNode = (agent: any) => {
     const newNode = {
       id: `agent-${agent._id}-${Date.now()}`,
@@ -184,11 +204,16 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
           <div className="w-px h-6 bg-border-dim mx-1" />
 
           <button
-            onClick={() => setIsManualRunModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20"
+            onClick={handleManualRun}
+            disabled={isRunning}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20 disabled:opacity-50"
           >
-            <Play className="w-4 h-4 fill-current" />
-            <span>{t('header.manualRun')}</span>
+            {isRunning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4 fill-current" />
+            )}
+            <span>{isRunning ? t('header.dispatching' as any) : t('header.manualRun')}</span>
           </button>
         </div>
       </div>
