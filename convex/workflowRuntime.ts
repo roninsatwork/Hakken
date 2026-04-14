@@ -11,7 +11,7 @@ export const executeWorkflow = internalAction({
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const workflow = await ctx.runQuery(internal.workflows.internalGet, { id: args.workflowId });
+    const workflow = await ctx.runQuery((internal as any).workflows.internalGet, { id: args.workflowId });
     if (!workflow) throw new Error("Workflow not found");
 
     const nodes = JSON.parse(workflow.nodes || "[]");
@@ -53,13 +53,13 @@ export const executeWorkflow = internalAction({
     const existingSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, {
       executionId: args.executionId,
     });
-    const stepMap = new Map(existingSteps.map((s) => [s.nodeId, s]));
+    const stepMap = new Map<string, any>(existingSteps.map((s: any) => [s.nodeId, s]));
 
     let lastOutput = args.initialInput || "{}";
 
     // 3. Execution Loop
     for (const node of sequence) {
-      const existingStep = stepMap.get(node.id);
+      const existingStep = stepMap.get(node.id) as any;
       
       // If step already succeeded, we skip and use its output for the next one
       if (existingStep?.status === "SUCCESS") {
