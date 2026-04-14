@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 export const list = query({
   args: {},
@@ -156,7 +157,7 @@ export const triggerManualRun = mutation({
     id: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"workflowExecutions">> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
@@ -188,11 +189,11 @@ export const runManualSync = action({
     workflowId: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
-    const user = await ctx.runQuery(api.users.getUser, { userId });
+    const user = await ctx.runQuery(api.users.getUserById, { id: userId as any });
     if (!user || user.role !== "SUPER_ADMIN") {
       throw new Error("Unauthorized");
     }
