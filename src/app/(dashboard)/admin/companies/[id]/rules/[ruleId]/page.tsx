@@ -86,10 +86,10 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <BrainCircuit className="w-6 h-6 text-brand" />
-          Modify Behavioral Rule
+          Edit Rule
         </h1>
         <p className="text-[13px] text-secondary tracking-wide">
-          Recalibrate existing semantic actions mapped to UI prompts for this company.
+          Change how the AI responds to this trigger phrase.
         </p>
       </header>
 
@@ -102,7 +102,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">1</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Semantic Trigger Vector</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">Trigger Phrase</span>
              </div>
              
              {/* Read-Only Identity Tag */}
@@ -112,7 +112,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
            </div>
            
            <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Keyword Correlation Entity</label>
+             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Keywords</label>
              <input
                value={trigger}
                onChange={(e) => setTrigger(e.target.value)}
@@ -126,7 +126,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         <section className="flex flex-col gap-4">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">2</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Behavioral Priority Tier</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">Priority Level</span>
            </div>
            
            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
@@ -147,11 +147,11 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         <section className="flex flex-col gap-4 flex-1">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">3</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Execution Framework Instructions</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">AI Instructions</span>
            </div>
            
            <div className="flex flex-col gap-2 relative group ml-1 h-[300px]">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">LLM Execution Context</label>
+             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Instructions</label>
              <textarea
                value={instruction}
                onChange={(e) => setInstruction(e.target.value)}
@@ -170,7 +170,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Commit System Modifications</span>
+            <span>Save Rule</span>
           </button>
         </div>
       </form>

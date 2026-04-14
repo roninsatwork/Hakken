@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Bot, RefreshCw, Loader2, Star, ShieldCheck, Power, PowerOff, CheckCircle2 } from "lucide-react";
@@ -9,6 +10,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 
 export default function AIModelsPage() {
+  const router = useRouter();
   const t = useTranslations("ai.models");
   const models = useQuery(api.aiModels.getModels, {});
   const syncVertexModels = useAction(api.aiModelsActions.syncVertexModels);
@@ -86,8 +88,9 @@ export default function AIModelsPage() {
           {models.map((model) => (
             <div
               key={model._id}
+              onClick={() => router.push(`/admin/ai/models/${model._id}`)}
               className={cn(
-                "p-4 rounded-[12px] border flex items-center justify-between group transition-all duration-300",
+                "p-4 rounded-[12px] border flex items-center justify-between group transition-all duration-300 cursor-pointer",
                 model.isDefault
                   ? "bg-brand/5 border-brand/30"
                   : model.isEnabled
@@ -128,7 +131,10 @@ export default function AIModelsPage() {
                 {/* Make Default Button */}
                 {model.isEnabled && !model.isDefault && (
                   <button
-                    onClick={() => makeDefault(model._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      makeDefault(model._id);
+                    }}
                     className="px-4 py-2 border border-border-dim rounded-[8px] text-[12px] font-bold tracking-wide text-secondary hover:text-brand hover:border-brand/40 hover:bg-brand/5 transition-all opacity-0 group-hover:opacity-100"
                   >
                     {t("model.makeDefault")}
@@ -137,7 +143,10 @@ export default function AIModelsPage() {
 
                 {/* Enable / Disable Toggle */}
                 <button
-                  onClick={() => toggleStatus(model._id, model.isEnabled)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleStatus(model._id, model.isEnabled);
+                  }}
                   className={cn(
                     "w-[70px] h-9 rounded-[8px] flex items-center justify-center gap-2 text-[12px] font-bold tracking-wide transition-all",
                     model.isEnabled

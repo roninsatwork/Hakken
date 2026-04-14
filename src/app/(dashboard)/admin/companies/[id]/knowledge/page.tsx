@@ -87,7 +87,7 @@ export default function CompanyKnowledgeBasePage() {
     <div className="flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium tracking-tight">Intelligence Base</h2>
+          <h2 className="text-lg font-medium tracking-tight">Knowledge Base</h2>
           <p className="text-secondary text-[13px] mt-1">Upload company policies, handbooks, and operations manuals to empower Sonae's responses.</p>
         </div>
         <button 
@@ -113,7 +113,7 @@ export default function CompanyKnowledgeBasePage() {
           <FileText className="w-10 h-10 text-brand mb-4 opacity-80" />
           <h3 className="text-sm font-medium text-foreground mb-1">No Documents Uploaded</h3>
           <p className="text-[13px] text-secondary max-w-sm">
-            Upload PDF or DOCX files to automatically grant the AI deeply-integrated, private context about this company.
+            Upload PDF or DOCX files so the AI can securely learn about this company.
           </p>
         </div>
       ) : (
@@ -168,7 +168,7 @@ export default function CompanyKnowledgeBasePage() {
     <SonaeModal
       isOpen={isModalOpen}
       onClose={() => setIsModalOpen(false)}
-      title="Upload Intelligence Document"
+      title="Upload Knowledge Document"
       size="md"
     >
       <div className="flex flex-col gap-6 w-full pt-4">
@@ -196,14 +196,14 @@ export default function CompanyKnowledgeBasePage() {
             {isUploading ? (
                <div className="flex flex-col flex-1 items-center justify-center pointer-events-none">
                   <Loader2 className="w-12 h-12 text-brand animate-spin mb-4" />
-                  <p className="text-[14px] font-bold text-foreground">Securely Uploading Core Intelligence...</p>
+                  <p className="text-[14px] font-bold text-foreground">Securely Uploading Document...</p>
                </div>
             ) : (
                <div className="flex flex-col flex-1 items-center justify-center pointer-events-none">
                   <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${dragActive ? 'text-brand scale-110' : 'text-secondary'}`} />
                   <p className="text-[14px] font-bold text-foreground mb-1">Drag & Drop Documentation</p>
                   <p className="text-[13px] text-muted text-center max-w-[250px] leading-relaxed mb-6">
-                     Supports securely encrypted .PDF, .DOCX, and .TXT extraction.
+                     Supports .PDF, .DOCX, and .TXT format.
                   </p>
                   <button 
                      onClick={(e) => { e.preventDefault(); inputRef.current?.click(); }}

@@ -23,7 +23,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
     systemPrompt: "",
     inputSchema: "",
     outputSchema: "",
-    modelId: "gemini-3.1-pro-preview",
+    modelId: activeModels.find((m: any) => m.isDefault)?.modelId || "",
     thinkingMode: false,
     reasoningEffort: "MEDIUM",
     allowInternetAccess: false,
@@ -39,7 +39,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
         systemPrompt: agent.systemPrompt || "",
         inputSchema: agent.inputSchema || "",
         outputSchema: agent.outputSchema || "",
-        modelId: agent.modelId || "gemini-3.1-pro-preview",
+        modelId: agent.modelId || activeModels.find((m: any) => m.isDefault)?.modelId || "",
         thinkingMode: agent.thinkingMode || false,
         reasoningEffort: agent.reasoningEffort || "MEDIUM",
         allowInternetAccess: agent.allowInternetAccess || false,
@@ -175,7 +175,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
                   <option value="" disabled>{t('engine.placeholder')}</option>
                   {activeModels.map((m) => (
                     <option key={m.modelId} value={m.modelId}>
-                      {m.displayName} {m.isDefault && t('engine.systemDefault')}
+                      {m.friendlyName || m.displayName || m.modelId} {m.isDefault && t('engine.systemDefault')}
                     </option>
                   ))}
 

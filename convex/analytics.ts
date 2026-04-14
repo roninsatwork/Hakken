@@ -2,6 +2,13 @@ import { query, mutation, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
+export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: Map<string, any>) {
+    const config = modelMap.get(model);
+    const inRate = config ? (inputs > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
+    const outRate = config ? (config.outputResponseCost || 0) : 0;
+    return (inputs / 1000000) * inRate + (outputs / 1000000) * outRate;
+}
+
 export const getGlobalAICosts = query({
   args: {
     timeframe: v.union(
@@ -15,6 +22,8 @@ export const getGlobalAICosts = query({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized AI Logistics query");
     const admin = await ctx.db.get(adminId);
@@ -34,7 +43,7 @@ export const getGlobalAICosts = query({
     if (args.timeframe === "custom" && args.customEnd) endDate = args.customEnd;
 
     // Filter target threads natively against timeframe parameters
-    const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
+        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
     const messages = rawMessages.filter(m => m.createdAt >= startDate && m.createdAt <= endDate);
     
     // Relational Map
@@ -59,14 +68,7 @@ export const getGlobalAICosts = query({
        const outputs = msg.outputTokens || 0;
        const model = msg.modelUsed || "gemini-1.5-flash"; 
 
-       let msgCost = 0;
-       if (model.includes("pro")) {
-          msgCost += (inputs / 1000000) * 3.50;
-          msgCost += (outputs / 1000000) * 10.50;
-       } else {
-          msgCost += (inputs / 1000000) * 0.075;
-          msgCost += (outputs / 1000000) * 0.30;
-       }
+       let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
        // Core Execution Additions
        periodProcessed++;
@@ -129,6 +131,8 @@ export const getGlobalAICosts = query({
 export const getPlatformOverview = query({
   args: {},
   handler: async (ctx) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     // 1. Core Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -146,7 +150,7 @@ export const getPlatformOverview = query({
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
-    const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
+        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
     const avgInteractionDepth = totalThreads > 0 ? (rawMessages.length / totalThreads) : 1.0;
 
     // 4. Financial Calculation Engine
@@ -168,14 +172,7 @@ export const getPlatformOverview = query({
        const outputs = msg.outputTokens || 0;
        const model = msg.modelUsed || "gemini-1.5-flash"; 
 
-       let msgCost = 0;
-       if (model.includes("pro")) {
-          msgCost += (inputs / 1000000) * 3.50;
-          msgCost += (outputs / 1000000) * 10.50;
-       } else {
-          msgCost += (inputs / 1000000) * 0.075;
-          msgCost += (outputs / 1000000) * 0.30;
-       }
+       let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
        
        total30DCostUSD += msgCost;
 
@@ -223,6 +220,8 @@ export const getPlatformOverview = query({
 export const getUserCostOverview = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     // 1. Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -239,6 +238,7 @@ export const getUserCostOverview = query({
     }
 
     // 2. Fetch User Threads
+    
     const threads = await ctx.db
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -264,14 +264,7 @@ export const getUserCostOverview = query({
           const outputs = msg.outputTokens || 0;
           const model = msg.modelUsed || "gemini-1.5-flash";
 
-          let msgCost = 0;
-          if (model.includes("pro")) {
-            msgCost += (inputs / 1000000) * 3.50;
-            msgCost += (outputs / 1000000) * 10.50;
-          } else {
-            msgCost += (inputs / 1000000) * 0.075;
-            msgCost += (outputs / 1000000) * 0.30;
-          }
+          let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
           threadCostUSD += msgCost;
           threadTokens += (inputs + outputs);
@@ -304,6 +297,8 @@ export const getUserCostOverview = query({
  * We extract this so both the cron job and the manual backfill can call it.
  */
 async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
+  const aiModelsFetch = await ctx.db.query("aiModels").collect();
+  const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
   const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
   if (!targetDateStr) {
     targetDate.setDate(targetDate.getDate() - 1); // Yesterday
@@ -313,7 +308,19 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
   const startTime = targetDate.setUTCHours(0, 0, 0, 0);
   const endTime = targetDate.setUTCHours(23, 59, 59, 999);
   
-  const companies = await ctx.db.query("companies").collect();
+  let companies = await ctx.db.query("companies").collect();
+  
+  let systemCompany = companies.find((c: any) => c.name === "Sonae System");
+  if (!systemCompany) {
+     const cId = await ctx.db.insert("companies", { name: "Sonae System", createdAt: Date.now() });
+     systemCompany = await ctx.db.get(cId);
+     companies.push(systemCompany);
+  }
+  
+  const orphanedUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), undefined)).collect();
+  for (const u of orphanedUsers) {
+     await ctx.db.patch(u._id, { companyId: systemCompany._id });
+  }
   
   for (const company of companies) {
     const users = await ctx.db
@@ -323,12 +330,15 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
     
     let totalMessages = 0;
     let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
     let costUSD = 0;
     const activeUserIds = new Set<string>();
     
     for (const user of users) {
-      const threads = await ctx.db
-        .query("threads")
+      
+    const threads = await ctx.db
+      .query("threads")
         .withIndex("by_user", (q: any) => q.eq("userId", user._id))
         .collect();
         
@@ -349,12 +359,10 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
              const model = msg.modelUsed || "gemini-1.5-flash"; 
              
              totalTokens += (inputs + outputs);
+             totalInputTokens += inputs;
+             totalOutputTokens += outputs;
              
-             if (model.includes("pro")) {
-               costUSD += (inputs / 1000000) * 3.50 + (outputs / 1000000) * 10.50;
-             } else {
-               costUSD += (inputs / 1000000) * 0.075 + (outputs / 1000000) * 0.30;
-             }
+             costUSD += computeCostFromMap(model, inputs, outputs, modelMap);
            }
          }
       }
@@ -379,6 +387,8 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
         activeUsers: activeUserIds.size,
         totalMessages,
         totalTokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
         costGBP
       });
     } else {
@@ -388,6 +398,8 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
         activeUsers: activeUserIds.size,
         totalMessages,
         totalTokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
         costGBP
       });
     }
@@ -401,6 +413,8 @@ async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
 export const aggregateNightlyMetrics = internalMutation({
   args: { targetDateStr: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     await computeMetricsForDate(ctx, args.targetDateStr);
   }
 });
@@ -408,6 +422,8 @@ export const aggregateNightlyMetrics = internalMutation({
 export const backfillCompanyMetrics = mutation({
   args: { days: v.number() },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -432,6 +448,8 @@ export const getCompanyMetrics = query({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -537,8 +555,7 @@ export const getCompanyMetrics = query({
           const inputs = msg.inputTokens || 0;
           const outputs = msg.outputTokens || 0;
           const model = msg.modelUsed || "gemini-1.5-flash"; 
-          if(model.includes("pro")) msgCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
-          else msgCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
           
           const gbpCost = msgCost * 0.78;
 
@@ -571,8 +588,7 @@ export const getCompanyMetrics = query({
           
           tTokens += (inputs + outputs);
           let mCost = 0;
-          if (model.includes("pro")) mCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
-          else mCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          mCost = computeCostFromMap(model, inputs, outputs, modelMap);
           tCost += (mCost * 0.78);
           
           let dateGroup = "";
@@ -630,11 +646,13 @@ export const getCompanyMetrics = query({
  */
 export const getGlobalAnalytics = query({
   args: { 
-    timeframe: v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(v.literal("today"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     // 1. Core Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -661,7 +679,7 @@ export const getGlobalAnalytics = query({
 
     // 3. Structure Telemetry
     const users = await ctx.db.query("users").collect();
-    const companies = await ctx.db.query("companies").collect();
+      const companies = await ctx.db.query("companies").collect();
     const companyMap = new Map(companies.map(c => [c._id, c]));
 
     // 4. Fetch the Highly-Optimized CompanyMetrics Ledger
@@ -671,6 +689,8 @@ export const getGlobalAnalytics = query({
     // Aggregation Variables
     let totalMessages = 0;
     let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
@@ -679,6 +699,8 @@ export const getGlobalAnalytics = query({
     for (const m of validMetrics) {
        totalMessages += m.totalMessages;
        totalTokens += m.totalTokens;
+       totalInputTokens += (m.inputTokens || 0);
+       totalOutputTokens += (m.outputTokens || 0);
        totalCostGBP += m.costGBP;
 
        // Timeline Formatting 
@@ -724,7 +746,7 @@ export const getGlobalAnalytics = query({
     
     // Calculate raw "Today" and Top Users natively from the raw message tables
     const threads = await ctx.db.query("threads").collect();
-    const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
+        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
     
     const startTimeStamp = startDate.getTime();
     const endTimeStamp = endDate.getTime();
@@ -756,8 +778,7 @@ export const getGlobalAnalytics = query({
           const inputs = msg.inputTokens || 0;
           const outputs = msg.outputTokens || 0;
           const model = msg.modelUsed || "gemini-1.5-flash"; 
-          if(model.includes("pro")) msgCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
-          else msgCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
           
           const gbpCost = msgCost * 0.78;
 
@@ -784,6 +805,8 @@ export const getGlobalAnalytics = query({
        let tCost = 0;
        let tMsgs = 0; 
        let tTokens = 0;
+       let tInputs = 0;
+       let tOutputs = 0;
 
        for (const msg of todayMessages) {
           tMsgs++;
@@ -792,9 +815,10 @@ export const getGlobalAnalytics = query({
           const model = msg.modelUsed || "gemini-1.5-flash"; 
           
           tTokens += (inputs + outputs);
+          tInputs += inputs;
+          tOutputs += outputs;
           let mCost = 0;
-          if (model.includes("pro")) mCost = (inputs/1000000)*3.50 + (outputs/1000000)*10.50;
-          else mCost = (inputs/1000000)*0.075 + (outputs/1000000)*0.30;
+          mCost = computeCostFromMap(model, inputs, outputs, modelMap);
           tCost += (mCost * 0.78);
           
           // Add to timeline group
@@ -840,6 +864,8 @@ export const getGlobalAnalytics = query({
        
        totalMessages += tMsgs;
        totalTokens += tTokens;
+       totalInputTokens += tInputs;
+       totalOutputTokens += tOutputs;
        totalCostGBP += tCost;
     }
 
@@ -864,6 +890,8 @@ export const getGlobalAnalytics = query({
     const settings = await ctx.db.query("systemSettings").first() || { monthlyBasePrice: 199, monthlySeatPrice: 49 };
     const mrr = (companies.length * settings.monthlyBasePrice) + (users.length * settings.monthlySeatPrice);
 
+    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
+
     return {
        timeline,
        aggregates: {
@@ -872,8 +900,11 @@ export const getGlobalAnalytics = query({
           mrr: Number(mrr.toFixed(2)),
           totalMessages,
           totalTokens,
+          totalInputTokens,
+          totalOutputTokens,
           totalCostGBP: Number(totalCostGBP.toFixed(4)),
           costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
+          avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
           aggregationType
        },
        topCompanies,

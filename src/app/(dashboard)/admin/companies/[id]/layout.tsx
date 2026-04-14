@@ -41,8 +41,8 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
     { label: 'Overview', href: `/admin/companies/${companyId}/overview`, icon: FileText },
     { label: 'Directory', href: `/admin/companies/${companyId}/users`, icon: Users },
     { label: 'Invites', href: `/admin/companies/${companyId}/invites`, icon: Mail },
-    { label: 'Knowledge Base', href: `/admin/companies/${companyId}/knowledge`, icon: BookOpen },
-    { label: 'System Prompt', href: `/admin/companies/${companyId}/system-prompt`, icon: TerminalSquare },
+    { label: 'Knowledge', href: `/admin/companies/${companyId}/knowledge`, icon: BookOpen },
+    { label: 'Prompt', href: `/admin/companies/${companyId}/system-prompt`, icon: TerminalSquare },
     { label: 'AI Rules', href: `/admin/companies/${companyId}/rules`, icon: BrainCircuit },
   ];
 
@@ -56,7 +56,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
               <Building2 className="w-6 h-6 text-brand" />
               {company.name} Workspace
             </h1>
-            <p className="text-[13px] text-secondary mt-1">Manage {company.name}&apos;s dedicated tenant isolation.</p>
+            <p className="text-[13px] text-secondary mt-1">Manage workspace settings.</p>
           </div>
           
           <div className="flex items-center gap-3">

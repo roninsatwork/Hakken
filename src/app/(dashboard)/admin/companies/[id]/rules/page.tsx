@@ -20,8 +20,8 @@ export default function CompanyAiRulesPage() {
     <div className="flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium tracking-tight">AI Protocol Rules</h2>
-          <p className="text-secondary text-[13px] mt-1">Define strict behavioral rules for the AI when interacting with the company's data.</p>
+          <h2 className="text-lg font-medium tracking-tight">AI Rules</h2>
+          <p className="text-secondary text-[13px] mt-1">Set rules for how the AI responds to users.</p>
         </div>
         <Link 
           href={`/admin/companies/${companyId}/rules/new`}
@@ -37,9 +37,9 @@ export default function CompanyAiRulesPage() {
       ) : rules.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
           <BrainCircuit className="w-10 h-10 text-brand mb-4 opacity-80" />
-          <h3 className="text-sm font-medium text-foreground mb-1">No Active Protocols</h3>
+          <h3 className="text-sm font-medium text-foreground mb-1">No Rules Yet</h3>
           <p className="text-[13px] text-secondary max-w-sm">
-            Create custom triggers to override the AI's default behavior or inject specific operational knowledge dynamically.
+            Create rules to customize how the AI responds to specific questions or topics.
           </p>
         </div>
       ) : (

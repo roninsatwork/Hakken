@@ -111,7 +111,7 @@
         "auditLogs": "Audit Ledger"
     },
     "sidebar": {
-        "admin": "System Protocol",
+        "admin": "Administration",
         "navigation": "Main Navigation",
         "dashboard": "Dashboard",
         "companies": "Companies",
@@ -142,13 +142,13 @@
         "agenticTesting": "Agentic Testing"
     },
     "header": {
-        "adminOverview": "Infrastructure Protocol",
-        "exitWorkspace": "Exit Tenant Environment"
+        "adminOverview": "Platform Management",
+        "exitWorkspace": "Exit Workspace"
     },
     "admin": {
         "overview": {
-            "title": "Protocol Dashboard",
-            "subtitle": "Global telemetry and orchestration status of the Sonae architecture.",
+            "title": "Admin Dashboard",
+            "subtitle": "Platform usage and analytics.",
             "charts": {
                 "daily": "Daily Activity",
                 "weekly": "Weekly Throughput",
@@ -159,22 +159,23 @@
             },
             "metrics": {
                 "mrr": "Projected MRR",
-                "mrrSub": "SaaS Final Resolution",
-                "mau": "Active Identities (MAU)",
-                "mauSub": "Monthly unique initiators",
-                "compute": "Network Compute",
-                "computeSub": "{count} messages intercepted",
-                "activeContext": "Active Initiators",
-                "activeSub": "Live protocol interaction",
-                "logisticBurn": "Network Burn",
+                "mrrSub": "Estimated Monthly Revenue",
+                "mau": "Active Users",
+                "mauSub": "Monthly active users",
+                "compute": "Total Tokens",
+                "computeSub": "{input} IN • {output} OUT",
+                "activeContext": "Active Now",
+                "activeSub": "Currently online",
+                "logisticBurn": "Estimated Cost",
                 "burnSub": "Approximate monthly OPEX"
             },
             "leaderboards": {
-                "tenants": "Top Consumption Workspaces",
-                "initiators": "Top Protocol Initiators",
-                "empty": "No telemetry recorded."
+                "tenants": "Top Companies by Usage",
+                "initiators": "Top Users by Activity",
+                "empty": "No activity recorded yet."
             },
             "timeframes": {
+                "today": "Today",
                 "7d": "7 Days",
                 "30d": "30 Days",
                 "90d": "90 Days",
@@ -183,12 +184,12 @@
             }
         },
         "companies": {
-            "title": "Tenant Protocol",
-            "subtitle": "Manage isolated workspace environments and system-level directives.",
-            "newCompany": "Provision Tenant",
-            "searchPlaceholder": "Search by workspace name...",
-            "tenantName": "Workspace Identity",
-            "provisionedDate": "Provisioned",
+            "title": "Manage Companies",
+            "subtitle": "Manage company settings.",
+            "newCompany": "Add Company",
+            "searchPlaceholder": "Search by company name...",
+            "tenantName": "Company",
+            "provisionedDate": "Added",
             "assignedUsers": "Authorized Access",
             "actions": "Directives",
             "emptyState": "No active workspaces found in protocol.",
@@ -196,60 +197,60 @@
             "showing": "Showing",
             "to": "to",
             "of": "of",
-            "companies": "workspaces",
-            "createTitle": "Initialize Workspace",
-            "createSubtitle": "Provision a new isolated tenant environment for an organization.",
-            "editTitle": "Update Directives",
-            "editSubtitle": "Modify core directives and workspace identity for this tenant.",
-            "nameLabel": "Workspace Name",
+            "companies": "companies",
+            "createTitle": "Add Company",
+            "createSubtitle": "Add a new company structure to the platform.",
+            "editTitle": "Edit Company",
+            "editSubtitle": "Modify settings and profile for this company.",
+            "nameLabel": "Company Name",
             "namePlaceholder": "e.g. ACME Corp",
-            "promptLabel": "Tenant System Matrix",
+            "promptLabel": "Company System Directives",
             "promptOptional": "Override system-level defaults",
             "promptPlaceholder": "Enter specialized directives for this organization...",
-            "provisionTenant": "Provision Workspace",
-            "deleteTitle": "De-provision Workspace",
+            "provisionTenant": "Save Company",
+            "deleteTitle": "Delete Company",
             "deleteConfirm": "Are you sure you want to permanently erase {name} and all associated protocol data?",
             "warningCascade": "Permanent Data Deletion",
-            "warningDesc": "This action will purge all agents, messages, and configurations for this tenant. This cannot be undone.",
-            "deleteTenant": "Purge Tenant",
+            "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
+            "deleteTenant": "Delete Company",
             "errors": {
                 "saveFailed": "Failed to sync tenant directives.",
                 "deleteFailed": "Failed to purge tenant from protocol."
             }
         },
         "companyDetails": {
-            "title": "Tenant Telemetry",
-            "overview": "Deep analytics and resource utilization for this isolated workspace.",
+            "title": "Dashboard",
+            "overview": "Analytics and resource usage for this company.",
             "timeframe": {
                 "7d": "7 Days",
                 "30d": "30 Days",
                 "90d": "90 Days",
                 "ytd": "Year to Date",
-                "custom": "Custom Protocol Range"
+                "custom": "Custom Range"
             },
             "metrics": {
-                "grossBurn": "Workspace Burn",
-                "tenantAiCost": "Isolated AI OPEX",
-                "tokenVolume": "Compute Volume",
-                "computeDesc": "Total token utilization",
-                "messageInferences": "Inferences",
-                "instructionsDesc": "Successful protocol actions",
-                "activeIndividuals": "Active Access",
-                "loginsDesc": "Unique initiators"
+                "grossBurn": "Estimated Cost",
+                "tenantAiCost": "Estimated AI costs",
+                "tokenVolume": "Tokens Used",
+                "computeDesc": "Total AI tokens processed",
+                "messageInferences": "Generations",
+                "instructionsDesc": "Successful AI generations",
+                "activeIndividuals": "Active Users",
+                "loginsDesc": "Unique active users"
             },
             "aggregation": {
-                "day": "Daily Resolution",
-                "week": "Weekly Throughput",
-                "month": "Monthly Capacity"
+                "day": "Daily",
+                "week": "Weekly",
+                "month": "Monthly"
             },
             "chart": {
                 "estimatedAiCost": "Estimated AI Cost",
                 "workspaceActions": "Workspace Actions",
-                "noData": "No Telemetry Detected"
+                "noData": "No Data Available"
             },
             "leaderboard": {
-                "title": "Direct Initiators",
-                "empty": "No active initiators in this cycle."
+                "title": "Top Users",
+                "empty": "No active users in this period."
             }
         },
         "workflows": {
@@ -947,96 +948,112 @@
             }
         },
         "costs": {
-            "title": "Global AI Economic Telemetry",
-            "subtitle": "Real-time monitoring of token consumption and model operating costs across the Sonae network.",
-            "grossCost": "Total Network Spend",
-            "totalTokens": "Target Processed Tokens",
-            "opex": "Approximate OPEX",
-            "convertedGbp": "Converted to GBP",
-            "timeframes": {
-                "24h": "Last 24 Hours",
-                "7d": "Last 7 Days",
-                "30d": "Last 30 Days",
-                "all": "All Time"
+            "title": "AI Running Costs",
+            "subtitle": "Track AI token consumption and operating costs across all companies.",
+            "metrics": {
+                "periodCost": "Total Cost",
+                "exchangeSub": "Estimated total spend",
+                "tokensProcessed": "Total Tokens",
+                "tokenSub": "{input} IN • {output} OUT",
+                "interactions": "Total Messages",
+                "interactionsSub": "Messages generated",
+                "avgCostUser": "Average Cost per User",
+                "avgCostUserSub": "Cost per active user",
+                "avgCostConv": "Average Cost per Message",
+                "avgCostConvSub": "Cost per message"
             },
-            "charts": {
-                "costOverTime": "Cumulative Cost Velocity",
-                "modelDistribution": "Spend Distribution by Model"
+            "aggregation": {
+                "day": "Daily Cost",
+                "week": "Weekly Cost",
+                "month": "Monthly Cost"
+            },
+            "chart": {
+                "tooltipLabel": "Total Cost"
             }
         },
         "chatLogs": {
-            "title": "Global Message Audit",
-            "subtitle": "Interception and analysis of all underlying LLM conversations occurring within the architecture.",
+            "title": "Conversation Logs",
+            "subtitle": "View and manage all AI interactions occurring across the platform.",
             "searchPlaceholder": "Search by title, user, or message...",
-            "empty": "No conversations located in the message ledger.",
-            "unknownActor": "Unknown Actor",
-            "userLabel": "User",
+            "empty": "No conversations found.",
             "viewer": {
-                "title": "Message Trace Inspector",
-                "subtitle": "Analyzing raw payload for trace {id}",
-                "traceIntercept": "Intercepted Trace",
-                "idLabel": "Trace Identifier",
-                "financials": "Financial Telemetry",
+                "title": "Conversation Thread",
+                "subtitle": "Viewing messages for thread {id}",
+                "traceIntercept": "Archived Conversation",
+                "idLabel": "Thread ID",
+                "financials": "Session Costs",
                 "tokens": "Tokens",
+                "tokensHandled": "Total Tokens",
                 "cost": "Cost",
-                "status": "Final Resolution"
+                "estCost": "Estimated Cost",
+                "status": "Final Resolution",
+                "unknownActor": "Unknown User",
+                "userLabel": "User",
+                "emptyTitle": "Select a Conversation",
+                "emptyDesc": "Click on any conversation from the list to view the complete message history and usage metrics."
+            },
+            "status": {
+                "loading": "Loading logs...",
+                "loadMore": "Load More",
+                "noTraces": "No logs found.",
+                "logEmpty": "This conversation is empty."
             }
         },
         "systemPrompt": {
-            "title": "Core System Directives",
-            "subtitle": "The foundational behavioral matrix that dictates agent identity and operational boundaries.",
-            "revert": "Reset to Vault",
-            "commit": "Commit to Protocol",
+            "title": "AI Instructions",
+            "subtitle": "Define the foundational behavior and boundaries for your AI agent.",
+            "revert": "Discard Changes",
+            "commit": "Save Instructions",
             "error": {
-                "title": "Protocol Violation",
-                "defaultMsg": "Failed to commit system prompt to memory."
+                "title": "Save Failed",
+                "defaultMsg": "Failed to save AI instructions."
             },
             "success": {
-                "title": "Directives Synchronized",
-                "message": "System prompt has been successfully updated across the fleet."
+                "title": "Instructions Saved",
+                "message": "Agent instructions updated successfully."
             },
             "section": {
-                "title": "Main Prompt Matrix",
-                "unsaved": "Local Mutation",
-                "synced": "Memory Sync",
-                "label": "Prompt Architecture",
-                "connecting": "Connecting to Vault...",
-                "placeholder": "Enter system prompt directives..."
+                "title": "Main Prompt",
+                "unsaved": "Unsaved Changes",
+                "synced": "Saved",
+                "label": "Prompt Content",
+                "connecting": "Connecting...",
+                "placeholder": "Enter instructions..."
             }
         },
         "rules": {
-            "title": "Operational Boundary Rules",
-            "subtitle": "Specific functional constraints and tactical protocols for your agentic fleet.",
-            "addRule": "Inject Rule",
-            "searchPlaceholder": "Search rules by trigger or instruction...",
+            "title": "AI Rules",
+            "subtitle": "Specific functional rules and constraints for your agent.",
+            "addRule": "Add Rule",
+            "searchPlaceholder": "Search rules...",
             "status": {
-                "noRules": "No boundary rules found.",
-                "activate": "Activate Protocol",
-                "deactivate": "Suspend Protocol",
-                "edit": "Modify Rule",
-                "delete": "Purge Rule"
+                "noRules": "No rules found.",
+                "activate": "Activate Rule",
+                "deactivate": "Suspend Rule",
+                "edit": "Edit Rule",
+                "delete": "Delete Rule"
             },
             "deleteModal": {
-                "title": "Purge Protocol Rule",
-                "description": "This will permanently delete the operational rule from the system architecture.",
-                "warning": "Purged rules cannot be recovered from memory.",
-                "abort": "Abort Purge",
-                "confirm": "Purge Rule"
+                "title": "Delete Rule",
+                "description": "This will permanently delete the rule from the system.",
+                "warning": "Deleted rules cannot be recovered.",
+                "abort": "Cancel",
+                "confirm": "Delete Rule"
             }
         },
         "models": {
-            "title": "Grid Model Inventory",
-            "subtitle": "Authorized LLM units and cognitive engines verified for platform deployment.",
+            "title": "AI Models",
+            "subtitle": "Authorized AI models verified for platform use.",
             "syncButton": {
-                "idle": "Sync Grid Models",
+                "idle": "Sync Models",
                 "syncing": "Syncing..."
             },
             "empty": {
-                "title": "No Models Verified",
-                "description": "The AI model grid is currently empty. Synchronize with Vertex AI to populate authorized units.",
+                "title": "No Models Found",
+                "description": "The AI model list is empty. Synchronize with Vertex AI to populate models.",
                 "button": {
-                    "idle": "Initiate Grid Sync",
-                    "syncing": "Syncing Grid..."
+                    "idle": "Initiate Sync",
+                    "syncing": "Syncing..."
                 }
             },
             "model": {
@@ -1050,28 +1067,28 @@
         },
         "knowledge": {
             "title": "Global Knowledge Base",
-            "subtitle": "Ingest and manage global documents that provide architectural context to your entire agentic fleet.",
-            "uploadButton": "Ingest Document",
+            "subtitle": "Upload and manage documents to provide context to your AI agents.",
+            "uploadButton": "Upload Document",
             "empty": {
                 "title": "Knowledge Base Empty",
-                "description": "No global documents have been provisioned. Upload PDFs, Word documents or TXT files to ground your agents."
+                "description": "No documents found. Upload PDFs, Word documents, or TXT files to provide context to your agents."
             },
             "status": {
-                "ingesting": "Ingesting...",
+                "ingesting": "Processing...",
                 "ready": "Ready",
                 "failed": "Failed"
             },
-            "deleteTooltip": "Purge Document",
+            "deleteTooltip": "Delete Document",
             "modal": {
-                "title": "Ingest New Knowledge",
-                "ingestion": "Encoding Neural Data...",
+                "title": "Upload New Document",
+                "ingestion": "Processing Document...",
                 "dragDropTitle": "Drop document here",
                 "dragDropDesc": "PDF, DOCX or TXT (Max 50MB)",
                 "browse": "Browse Files"
             },
             "errors": {
                 "unsupported": "Unsupported file format. Please use PDF, DOCX or TXT.",
-                "uploadFailed": "Failed to synchronize document with vault."
+                "uploadFailed": "Upload failed. Please try again."
             }
         }
     },

@@ -150,7 +150,10 @@ export default function AdminDashboard() {
               icon={Activity}
               title={t('metrics.compute')}
               value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
-              sub={t('metrics.computeSub', { count: (data.aggregates.totalMessages ?? 0).toLocaleString() })}
+              sub={t('metrics.computeSub', { 
+                input: (data.aggregates.totalInputTokens ?? 0).toLocaleString(), 
+                output: (data.aggregates.totalOutputTokens ?? 0).toLocaleString() 
+              })}
               delay={0.2}
             />
           </div>

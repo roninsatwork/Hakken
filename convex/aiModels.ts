@@ -143,3 +143,50 @@ export const internalBatchUpsert = internalMutation({
     return true;
   },
 });
+
+export const getModel = query({
+  args: { modelId: v.id("aiModels") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.modelId);
+  },
+});
+
+export const updatePricingConfig = mutation({
+  args: {
+    modelId: v.id("aiModels"),
+    friendlyName: v.optional(v.string()),
+    standardInputCostBelow200k: v.optional(v.number()),
+    standardInputCostAbove200k: v.optional(v.number()),
+    cachedInputCostBelow200k: v.optional(v.number()),
+    cachedInputCostAbove200k: v.optional(v.number()),
+    outputResponseCost: v.optional(v.number()),
+    outputReasoningCost: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const { modelId, ...fields } = args;
+    await ctx.db.patch(modelId, fields);
+
+    const targetModel = await ctx.db.get(modelId);
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_MODEL_PRICING",
+      actorId: userId,
+      entityType: "systemConfig",
+      entityId: "SYSTEM_MODELS",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ model: targetModel?.modelId, fields })
+    });
+  },
+});
+
+export const getAllModelsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("aiModels").collect();
+  },
+});

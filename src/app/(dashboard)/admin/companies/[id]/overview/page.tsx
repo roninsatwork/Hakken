@@ -52,7 +52,7 @@ export default function CompanyOverviewPage() {
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-bold tracking-tight text-foreground">Company Overview</h2>
         <p className="text-[13px] text-secondary leading-relaxed">
-          Provide a general description and overview of this tenant. This field is for high-level company context, mission statement, and structural understanding.
+          Provide a general description of this company. Use this space for context, mission statements, or general administrative notes.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export default function CompanyOverviewPage() {
         <div className="flex items-start gap-3 p-4 bg-brand/5 border border-brand/20 rounded-[12px]">
           <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
           <p className="text-[13px] text-foreground/80 leading-relaxed font-medium">
-            While the System Prompt tab is responsible for hardcoded AI directives and strict rules, this Overview field is your space to store the actual human-readable profile, market position, and general description of the company for administrative record keeping.
+            While the Prompt tab is used to write strict instructions for your AI agents, this Overview field is for your own team. Store the company's background, market position, and general profile here for easy reference.
           </p>
         </div>
 

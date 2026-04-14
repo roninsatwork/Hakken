@@ -52,7 +52,7 @@ export default function CompanySystemPromptPage() {
     } catch (error: any) {
       console.error("Failed to commit System Prompt protocol:", error);
       setSaveStatus("error");
-      setErrorMessage(error.message || "Failed to transmit changes to the persistent Edge store.");
+      setErrorMessage(error.message || "Failed to save changes.");
     } finally {
       setIsSaving(false);
     }
@@ -72,10 +72,10 @@ export default function CompanySystemPromptPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <TerminalSquare className="w-6 h-6 text-brand" />
-            Company AI Prompt
+            Company Prompt
           </h1>
           <p className="text-[13px] text-secondary mt-1 tracking-wide">
-            Tenant-specific protocol overrides injected into the neural pipeline for {company?.name || "this workspace"}.
+            Custom instructions and rules that apply to all AI agents in {company?.name || "this workspace"}.
           </p>
         </div>
         
@@ -106,7 +106,7 @@ export default function CompanySystemPromptPage() {
             ) : (
               <Save className="w-3.5 h-3.5" />
             )}
-            <span>Commit Configuration</span>
+            <span>Save Prompt</span>
           </button>
         </div>
       </header>
@@ -124,8 +124,8 @@ export default function CompanySystemPromptPage() {
             <div className="flex items-center gap-3 w-full bg-[#10b981]/10 border border-[#10b981]/20 rounded-[12px] p-4 text-[#10b981]">
               <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
               <div className="flex flex-col">
-                <span className="font-semibold text-[13px] tracking-wide">Protocol Synchronized</span>
-                <span className="text-[12px] opacity-80">The structural system prompt was successfully deployed for this tenant.</span>
+                <span className="font-semibold text-[13px] tracking-wide">Prompt Saved</span>
+                <span className="text-[12px] opacity-80">The company prompt was successfully updated.</span>
               </div>
             </div>
           </motion.div>
@@ -142,7 +142,7 @@ export default function CompanySystemPromptPage() {
             <div className="flex items-center gap-3 w-full bg-red-500/10 border border-red-500/20 rounded-[12px] p-4 text-red-500">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <div className="flex flex-col">
-                <span className="font-semibold text-[13px] tracking-wide">Transmission Failure</span>
+                <span className="font-semibold text-[13px] tracking-wide">Save Failed</span>
                 <span className="text-[12px] opacity-80">{errorMessage}</span>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function CompanySystemPromptPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Company Prompt Payload</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">Company Instructions</span>
           </div>
            
            <div className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest transition-colors ${
@@ -168,7 +168,7 @@ export default function CompanySystemPromptPage() {
         </div>
 
         <div className="flex flex-col gap-2 flex-1 relative group">
-          <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">COMPANY INSTRUCTION</label>
+          <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">INSTRUCTIONS</label>
           <div className="relative flex-1 w-full bg-transparent border border-border-dim rounded-[10px] overflow-hidden transition-colors group-focus-within:border-foreground/30 shadow-sm dark:bg-[#111111]/30">
             {!isLoaded ? (
               <div className="absolute inset-0 flex items-center justify-center bg-transparent backdrop-blur-sm z-20">

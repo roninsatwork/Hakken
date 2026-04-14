@@ -36,7 +36,7 @@ export default function AICostsDashboard() {
   const t = useTranslations("ai.costs");
   const adminOverview = useTranslations("admin.overview");
 
-  const analytics = useQuery(api.analytics.getGlobalAICosts, {
+  const data = useQuery(api.analytics.getGlobalAnalytics, {
     timeframe,
     customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
     customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined // end of day 
@@ -125,7 +125,7 @@ export default function AICostsDashboard() {
       </header>
 
       {/* Synchronized Loader */}
-      {analytics === undefined ? (
+      {data === undefined ? (
         <div className="w-full h-[400px] flex items-center justify-center p-20">
           <Loader2 className="w-8 h-8 animate-spin text-brand opacity-80" />
         </div>
@@ -141,21 +141,21 @@ export default function AICostsDashboard() {
               <MetricBlock
                 icon={PoundSterling}
                 title={t("metrics.periodCost")}
-                value={`£${(analytics.periodCostGBP ?? 0) < 0.00001 && (analytics.periodCostGBP ?? 0) > 0 ? "< 0.00001" : (analytics.periodCostGBP ?? 0).toFixed(5)}`}
+                value={`£${(data.aggregates.totalCostGBP ?? 0) < 0.00001 && (data.aggregates.totalCostGBP ?? 0) > 0 ? "< 0.00001" : (data.aggregates.totalCostGBP ?? 0).toFixed(5)}`}
                 sub={t("metrics.exchangeSub")}
                 delay={0}
               />
               <MetricBlock
                 icon={Cpu}
                 title={t("metrics.tokensProcessed")}
-                value={(analytics.periodTokens ?? 0).toLocaleString()}
-                sub={t("metrics.tokenSub", { input: (analytics.periodInputTokens ?? 0).toLocaleString(), output: (analytics.periodOutputTokens ?? 0).toLocaleString() })}
+                value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
+                sub={t("metrics.tokenSub", { input: (data.aggregates.totalInputTokens ?? 0).toLocaleString(), output: (data.aggregates.totalOutputTokens ?? 0).toLocaleString() })}
                 delay={0.1}
               />
               <MetricBlock
                 icon={Bot}
                 title={t("metrics.interactions")}
-                value={(analytics.periodProcessed ?? 0).toLocaleString()}
+                value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
                 sub={t("metrics.interactionsSub")}
                 delay={0.2}
               />
@@ -167,14 +167,14 @@ export default function AICostsDashboard() {
             <MetricBlock
               icon={Users}
               title={t("metrics.avgCostUser")}
-              value={`£${(analytics.avgCostPerUser ?? 0) < 0.00001 && (analytics.avgCostPerUser ?? 0) > 0 ? "< 0.00001" : (analytics.avgCostPerUser ?? 0).toFixed(5)}`}
+              value={`£${(data.aggregates.costPerActiveUser ?? 0) < 0.00001 && (data.aggregates.costPerActiveUser ?? 0) > 0 ? "< 0.00001" : (data.aggregates.costPerActiveUser ?? 0).toFixed(5)}`}
               sub={t("metrics.avgCostUserSub")}
               delay={0.3}
             />
             <MetricBlock
               icon={MessageSquare}
               title={t("metrics.avgCostConv")}
-              value={`£${(analytics.avgCostPerThread ?? 0) < 0.00001 && (analytics.avgCostPerThread ?? 0) > 0 ? "< 0.00001" : (analytics.avgCostPerThread ?? 0).toFixed(5)}`}
+              value={`£${(data.aggregates.avgCostPerMessage ?? 0) < 0.00001 && (data.aggregates.avgCostPerMessage ?? 0) > 0 ? "< 0.00001" : (data.aggregates.avgCostPerMessage ?? 0).toFixed(5)}`}
               sub={t("metrics.avgCostConvSub")}
               delay={0.4}
             />
@@ -191,14 +191,14 @@ export default function AICostsDashboard() {
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-5 h-5 text-brand" />
-                  <h3 className="text-[15px] font-bold tracking-wide">{getAggregationLabel(analytics.aggregationType)} (£ GBP)</h3>
+                  <h3 className="text-[15px] font-bold tracking-wide">{getAggregationLabel(data.aggregates.aggregationType)} (£ GBP)</h3>
                 </div>
               </div>
 
               <div className="w-full flex-1 min-h-[300px]">
-                {analytics.timeline && analytics.timeline.length > 0 ? (
+                {data.timeline && data.timeline.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={analytics.timeline}>
+                    <AreaChart data={data.timeline}>
                       <defs>
                         <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
@@ -228,7 +228,7 @@ export default function AICostsDashboard() {
                       />
                       <Area
                         type="monotone"
-                        dataKey="costGBP"
+                        dataKey="cost"
                         stroke="#f43f5e"
                         strokeWidth={3}
                         fillOpacity={1}

@@ -225,7 +225,7 @@ export default function AssistantWelcomePage() {
                       disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
                       className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                     >
-                      <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData?.displayName || t('controls.engine.label')}</span>
+                      <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : t('controls.engine.label')}</span>
                       <ChevronDown className="w-4 h-4 flex-shrink-0" />
                     </button>
 
@@ -252,7 +252,7 @@ export default function AssistantWelcomePage() {
                               className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                             >
                               <div className="flex flex-col gap-1 min-w-0 pr-4">
-                                <span className={`text-[15px] font-medium truncate ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.displayName}</span>
+                                <span className={`text-[15px] font-medium truncate ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
                                 <span className="text-[13px] text-muted font-light truncate">{model.description || t('controls.engine.defaultDesc')}</span>
                               </div>
                               {selectedModelId === model.modelId && (

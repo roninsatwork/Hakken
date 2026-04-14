@@ -59,6 +59,8 @@ export default defineSchema({
     activeUsers: v.number(),
     totalMessages: v.number(),
     totalTokens: v.number(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
     costGBP: v.number(),
   }).index("by_company_date", ["companyId", "date"]),
   users: defineTable({
@@ -323,6 +325,13 @@ export default defineSchema({
     isEnabled: v.boolean(),
     isDefault: v.boolean(),
     lastSyncedAt: v.number(),
+    friendlyName: v.optional(v.string()), // A short user-friendly name
+    standardInputCostBelow200k: v.optional(v.number()),
+    standardInputCostAbove200k: v.optional(v.number()),
+    cachedInputCostBelow200k: v.optional(v.number()),
+    cachedInputCostAbove200k: v.optional(v.number()),
+    outputResponseCost: v.optional(v.number()),
+    outputReasoningCost: v.optional(v.number()),
   })
     .index("by_model_id", ["modelId"])
     .index("by_enabled", ["isEnabled"])

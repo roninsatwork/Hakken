@@ -21,6 +21,7 @@ export default function AgentsPage() {
   const t = useTranslations('admin.agents');
   const tCommon = useTranslations('common');
   const agents = useQuery(api.agents.list) || [];
+  const activeModels = useQuery(api.aiModels.getModels) || [];
   const createAgent = useMutation(api.agents.createAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
 
@@ -164,7 +165,7 @@ export default function AgentsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
-                              {agent.modelId}
+                              {activeModels.find((m: any) => m.modelId === agent.modelId)?.friendlyName || activeModels.find((m: any) => m.modelId === agent.modelId)?.displayName || agent.modelId}
                             </span>
                           </div>
                         </td>

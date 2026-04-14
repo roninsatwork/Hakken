@@ -3,6 +3,8 @@ import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { Bot, Network } from 'lucide-react';
 import { cn } from '@/src/ui/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export type AgentNodeData = {
   label: string;
@@ -16,6 +18,9 @@ export type AgentNodeType = Node<AgentNodeData, 'agentNode'>;
 
 export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<AgentNodeType>) => {
   const t = useTranslations('admin.workflows.designer.node');
+  const allModels = useQuery(api.aiModels.getModels) || [];
+  const modelConfig = (allModels as any[]).find(m => m.modelId === data.modelId);
+  const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || data.modelId) : data.modelId;
 
   // Parse schemas to show properties visually if available
   let inputProps: string[] = [];
@@ -64,7 +69,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
           <div className="flex flex-col flex-1 min-w-0">
             <span className="font-semibold text-[13px] text-foreground truncate">{data.label}</span>
             <span className="text-[10px] uppercase tracking-wider text-muted font-mono truncate">
-              {data.modelId || t('agent')}
+              {displayModelName || t('agent')}
             </span>
           </div>
         </div>

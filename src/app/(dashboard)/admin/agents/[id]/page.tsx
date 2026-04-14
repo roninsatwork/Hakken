@@ -24,6 +24,7 @@ export default function AgentDashboard() {
   const agentId = params.id as Id<"agents">;
 
   const seedMutation = useMutation(api.agentTransactions.seedForAgent);
+  const activeModels = useQuery(api.aiModels.getModels) || [];
 
   const stats = useQuery(api.agentTransactions.getStatsForAgent, { agentId });
 
@@ -154,7 +155,7 @@ export default function AgentDashboard() {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
-                      {tx.modelUsed}
+                      {activeModels.find((m: any) => m.modelId === tx.modelUsed)?.friendlyName || activeModels.find((m: any) => m.modelId === tx.modelUsed)?.displayName || tx.modelUsed}
                     </div>
                   </td>
                   <td className="px-5 py-4 text-right">
