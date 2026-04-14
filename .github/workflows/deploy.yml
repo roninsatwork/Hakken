@@ -27,7 +27,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Workaround NPM Optional Dependency Bug
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
       - name: Execute Automated Test Matrix
         run: npx vitest run
@@ -55,7 +58,7 @@ jobs:
           node-version: '20'
           
       - name: Sync Backend Schema to Convex Production
-        run: npm install && npx convex deploy
+        run: npm ci && npx convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
