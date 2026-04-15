@@ -20,6 +20,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
   const rule = useQuery(api.aiRules.getRuleById, { id: ruleId });
   const updateRule = useMutation(api.aiRules.updateRule);
 
+  const [name, setName] = useState("");
   const [trigger, setTrigger] = useState("");
   const [instruction, setInstruction] = useState("");
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "CRITICAL">("NORMAL");
@@ -29,6 +30,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
   // Sync DB record to local UI state once it lands
   useEffect(() => {
     if (rule) {
+      setName(rule.name || "");
       setTrigger(rule.trigger);
       setInstruction(rule.instruction);
       setPriority(rule.priority);
@@ -38,12 +40,13 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trigger.trim() || !instruction.trim() || isSubmitting) return;
+    if (!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       await updateRule({
         id: ruleId,
+        name: name.trim(),
         trigger: trigger.trim(),
         instruction: instruction.trim(),
         priority,
@@ -79,7 +82,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-12">
+    <div className="flex flex-col gap-4 w-full pb-8">
       <header className="flex flex-col gap-1">
         <Link
           href={`/admin/agents/${agentId}/rules`}
@@ -99,18 +102,40 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
 
       <div className="w-full h-[1px] bg-border-dim my-2" />
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-10 flex-1 relative max-w-4xl">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6 flex-1 relative max-w-4xl">
+
+        {/* Name Block */}
+        <section className="flex flex-col gap-3">
+           <div className="flex items-center justify-between">
+             <div className="flex items-center gap-3">
+               <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">Rule Name</span>
+             </div>
+             
+             {/* Read-Only Identity Tag */}
+             <div className="px-3 py-1 rounded-full border border-border-dim bg-foreground/5 text-muted text-[10px] uppercase font-mono tracking-widest">
+               {t("edit.idLabel", { id: ruleId.slice(0, 8) })}...
+             </div>
+           </div>
+           
+           <div className="flex flex-col gap-2 relative group ml-1">
+             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Friendly Label</label>
+             <input
+               autoFocus
+               value={name}
+               onChange={(e) => setName(e.target.value)}
+               placeholder="e.g. 'Geography Extraction'"
+               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+             />
+           </div>
+        </section>
 
         {/* Trigger Block */}
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">1</div>
+              <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">2</div>
               <span className="text-foreground text-[14px] font-bold tracking-wide">{t("trigger.label")}</span>
-            </div>
-            {/* Read-Only Identity Tag */}
-            <div className="px-3 py-1 rounded-full border border-border-dim bg-foreground/5 text-muted text-[10px] uppercase font-mono tracking-widest">
-              {t("edit.idLabel", { id: ruleId.slice(0, 8) })}...
             </div>
           </div>
           <div className="flex flex-col gap-2 relative group ml-1">
@@ -119,15 +144,15 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
               value={trigger}
               onChange={(e) => setTrigger(e.target.value)}
               placeholder={t("trigger.placeholder")}
-              className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+              className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
             />
           </div>
         </section>
 
         {/* Priority Block */}
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">2</div>
+            <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">3</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("priority.label")}</span>
           </div>
 
@@ -137,7 +162,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
                 key={p}
                 type="button"
                 onClick={() => setPriority(p)}
-                className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === priority ? selectedClasses[p] : `border-border-dim bg-transparent text-secondary ${priorityClasses[p]}`}`}
+                className={`flex flex-col items-start gap-1 p-3 rounded-[10px] border transition-all text-left ${p === priority ? selectedClasses[p] : `border-border-dim bg-transparent text-secondary ${priorityClasses[p]}`}`}
               >
                 <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{t(`priority.levels.${p}`)}</span>
               </button>
@@ -146,28 +171,28 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
         </section>
 
         {/* Instruction Block */}
-        <section className="flex flex-col gap-4 flex-1">
+        <section className="flex flex-col gap-3 flex-1">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">3</div>
+            <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("instruction.label")}</span>
           </div>
-          <div className="flex flex-col gap-2 relative group ml-1 h-[300px]">
+          <div className="flex flex-col gap-2 relative group ml-1 min-h-[160px] flex-1">
             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("instruction.context")}</label>
             <textarea
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               placeholder={t("instruction.placeholder.edit")}
-              className="w-full h-full resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
+              className="w-full h-full resize-y min-h-[160px] bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
               spellCheck={false}
             />
           </div>
         </section>
 
         {/* Submit Actions */}
-        <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
+        <div className="flex justify-end pt-4 border-t border-border-dim mt-2">
           <button
             type="submit"
-            disabled={!trigger.trim() || !instruction.trim() || isSubmitting}
+            disabled={!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

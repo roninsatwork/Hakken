@@ -34,8 +34,8 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full h-full pl-2">
-      <div className="flex flex-col gap-6 relative z-10">
+    <div className="absolute inset-0 flex flex-col gap-6 pl-2 pr-4 pb-4 overflow-hidden">
+      <div className="flex flex-col gap-6 relative z-10 shrink-0 pr-4">
 
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -90,7 +90,7 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4 w-full">
+      <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4 w-full pr-4 overflow-y-auto custom-scrollbar">
         {children}
       </div>
     </div>

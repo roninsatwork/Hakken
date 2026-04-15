@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   FileText,
   Search,
@@ -12,13 +12,19 @@ import {
   ChevronRight,
   DatabaseZap,
   Loader2,
-  Workflow
+  Workflow,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  ArrowRight
 } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export default function AgentLogsDashboard() {
   const t = useTranslations("admin.agents.details.logs");
   const params = useParams();
+  const router = useRouter();
   const agentId = params.id as Id<"agents">;
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,6 +49,15 @@ export default function AgentLogsDashboard() {
 
   const logData = useQuery(api.agentLogs.getOffsetPaginated, queryParams);
   const seedMutation = useMutation(api.agentLogs.seedForAgent);
+  const deleteLogMutation = useMutation(api.agentLogs.deleteLog);
+
+  const handleDelete = async (logId: Id<"agentLogs">) => {
+    try {
+      await deleteLogMutation({ id: logId });
+    } catch (e) {
+      console.error("Failed to delete log", e);
+    }
+  };
 
   const handleSeed = async () => {
     try {
@@ -90,21 +105,22 @@ export default function AgentLogsDashboard() {
             <thead>
               <tr className="border-b border-border-dim/50 bg-sidebar/40">
                 <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[180px]">{t("table.headers.timestamp")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[220px]">{t("table.headers.phase")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.headers.input")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.headers.output")}</th>
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[150px]">{t("table.headers.status")}</th>
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.headers.event")}</th>
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[180px] text-right">{t("table.headers.report")}</th>
+                <th className="w-[60px] px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-16 text-center text-secondary">
+                  <td colSpan={5} className="px-5 py-16 text-center text-secondary">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-500 opacity-80" />
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-16 text-center">
+                  <td colSpan={5} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-4 w-full">
                       <DatabaseZap className="w-8 h-8 text-muted/30" />
                       <div className="flex flex-col gap-1 items-center">
@@ -128,42 +144,62 @@ export default function AgentLogsDashboard() {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
-                  <tr key={log._id} className="group hover:bg-white/[0.02] transition-colors items-start">
-                    <td className="px-5 py-5 align-top">
-                      <div className="flex flex-col gap-0.5 mt-0.5">
-                        <span className="text-[13px] font-medium text-foreground tracking-wide">
-                          {new Date(log.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        <span className="text-[11px] font-mono text-muted">
-                          {new Date(log.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-5 align-top">
-                      <div className="flex items-center gap-2 text-[11px] font-mono font-medium tracking-wide w-max px-2.5 py-1 rounded-[6px] border bg-foreground/[0.03] border-border-dim/60">
-                        {log.interactionType.includes("TOOL") ? (
-                          <Workflow className="w-3.5 h-3.5 text-brand" />
-                        ) : log.interactionType.includes("ERROR") ? (
-                          <DatabaseZap className="w-3.5 h-3.5 text-rose-500" />
+                logs.map((log) => {
+                  const isFailed = log.interactionType.toUpperCase().includes("ERROR") || log.interactionType.toUpperCase().includes("FAIL");
+                  return (
+                    <tr 
+                      key={log._id} 
+                      onClick={() => router.push(`/admin/agents/${agentId}/logs/${log._id}`)}
+                      className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
+                    >
+                      <td className="px-5 py-4 align-middle">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[13px] font-bold text-foreground tracking-wide">
+                            {new Date(log.createdAt).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                          <span className="text-[11px] font-mono tracking-widest text-muted">
+                            {new Date(log.createdAt).toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 align-middle">
+                        {isFailed ? (
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-[0.1em] text-rose-500 w-max px-2 py-1 rounded-[6px] border bg-rose-500/10 border-rose-500/20">
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>FAILED</span>
+                          </div>
                         ) : (
-                          <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-[0.1em] text-[#10b981] w-max px-2 py-1 rounded-[6px] border bg-[#10b981]/10 border-[#10b981]/20">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>SUCCESS</span>
+                          </div>
                         )}
-                        <span className="text-foreground/80">{log.interactionType}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-5 align-top max-w-[300px]">
-                      <div className="text-[13px] leading-relaxed text-secondary/90 bg-black/20 p-3 rounded-[8px] border border-white/5 font-mono whitespace-pre-wrap">
-                        {log.promptContent}
-                      </div>
-                    </td>
-                    <td className="px-5 py-5 align-top max-w-[300px]">
-                      <div className="text-[13px] leading-relaxed text-foreground/90 bg-foreground/5 p-3 rounded-[8px] border border-white/5 font-mono whitespace-pre-wrap">
-                        {log.responseContent}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-5 py-4 align-middle">
+                        <span className="text-[13px] font-bold text-secondary/90 tracking-wide uppercase font-mono">
+                          {log.interactionType}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 align-middle text-right">
+                        <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold tracking-widest text-indigo-400 group-hover:text-indigo-300 transition-colors uppercase">
+                          <span>View Trace</span>
+                          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 align-middle text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(log._id);
+                          }}
+                          className="text-muted hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

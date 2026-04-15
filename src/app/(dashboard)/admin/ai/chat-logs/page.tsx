@@ -13,7 +13,9 @@ import {
   User as UserIcon,
   ChevronRight,
   Database,
-  CalendarDays
+  CalendarDays,
+  Copy,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -22,6 +24,7 @@ import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
 export default function ChatLogsDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<Id<"threads"> | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
   const t = useTranslations("ai.chatLogs");
 
   // Pagination bounds
@@ -37,17 +40,106 @@ export default function ChatLogsDashboard() {
     selectedThreadId ? { threadId: selectedThreadId } : "skip"
   );
 
+  const handleCopyChat = async () => {
+    if (!messages || messages.length === 0) return;
+    const activeThread = results.find((t) => t._id === selectedThreadId);
+
+    try {
+      let htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.5; color: #333;">`;
+      let textContent = "";
+
+      htmlContent += `<h2 style="margin-bottom: 4px;">Chat Log: ${activeThread?.title || "Unknown"}</h2>`;
+      const dateStr = activeThread
+        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" }).format(new Date(activeThread.createdAt))
+        : new Date().toLocaleString();
+      htmlContent += `<p style="color: #666; font-size: 13px; margin-top: 0;">${dateStr}</p>`;
+      htmlContent += `<hr style="border: none; border-bottom: 1px solid #eaeaea; margin: 20px 0;" />`;
+
+      textContent += `Chat Log: ${activeThread?.title || "Unknown"}\n`;
+      textContent += `Date: ${dateStr}\n`;
+      textContent += `-------------------------------------------------\n\n`;
+
+      let msgHtml = "";
+
+      messages.forEach((msg) => {
+        const isUser = msg.role === "user";
+        const senderName = isUser ? activeThread?.user?.name || t("viewer.userLabel") : "Sonae";
+        const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(msg._creationTime));
+
+        // Format basic Markdown to HTML
+        let formattedHtml = msg.content
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.*?)\*/g, "<em>$1</em>")
+          .replace(/`{3}([\s\S]*?)`{3}/g, '<pre style="background: #f4f5f7; padding: 12px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 12px;">$1</pre>')
+          .replace(/`(.*?)`/g, '<code style="background: #f4f5f7; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px;">$1</code>')
+          .replace(/\n\n/g, "</p><p>")
+          .replace(/\n/g, "<br/>");
+
+        // Better Lists
+        formattedHtml = formattedHtml.replace(/(<br\/>)?- (.*)/g, "<li>$2</li>");
+        formattedHtml = formattedHtml.replace(/(<li>.*<\/li>)/s, '<ul style="margin-top: 4px; margin-bottom: 4px; padding-left: 20px;">$1</ul>');
+
+        msgHtml += `<div style="margin-bottom: 24px;">`;
+        msgHtml += `<div style="margin-bottom: 4px;">`;
+        msgHtml += `<strong style="color: ${isUser ? "#000" : "#4f46e5"}">${senderName}</strong> <span style="color: #999; font-size: 11px; margin-left: 8px;">${time}</span>`;
+        msgHtml += `</div>`;
+        msgHtml += `<div style="font-size: 14px; background: ${isUser ? "#f9f9f9" : "#fff"}; border: 1px solid ${isUser ? "#eee" : "#e0e7ff"}; padding: 12px; border-radius: 8px;">`;
+        msgHtml += `<p style="margin: 0;">${formattedHtml}</p>`;
+        msgHtml += `</div></div>`;
+
+        textContent += `[${time}] ${senderName}:\n${msg.content}\n\n`;
+      });
+
+      htmlContent += msgHtml;
+      htmlContent += `</div>`;
+
+      // Use the Clipboard API with HTML
+      const clipboardItem = new ClipboardItem({
+        "text/html": new Blob([htmlContent], { type: "text/html" }),
+        "text/plain": new Blob([textContent], { type: "text/plain" }),
+      });
+      await navigator.clipboard.write([clipboardItem]);
+
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      // Fallback
+      navigator.clipboard.writeText(textContent);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full antialiased overflow-hidden">
       {/* Header Block */}
-      <header className="flex flex-col gap-2 mb-6 shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-          <Database className="w-6 h-6 text-brand" />
-          {t("title")}
-        </h1>
-        <p className="text-[13px] text-secondary tracking-wide">
-          {t("subtitle")}
-        </p>
+      <header className="flex items-start justify-between w-full mb-6 shrink-0">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <Database className="w-6 h-6 text-brand" />
+            {t("title")}
+          </h1>
+          <p className="text-[13px] text-secondary tracking-wide">
+            {t("subtitle")}
+          </p>
+        </div>
+
+        {/* Right Aligned Header Actions */}
+        {selectedThreadId && messages && messages.length > 0 && (
+          <button
+            onClick={handleCopyChat}
+            className="flex items-center gap-2 px-4 py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border-dim rounded-[12px] transition-colors text-secondary hover:text-foreground shadow-sm shrink-0"
+          >
+            {isCopied ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
+            <span className="text-[13px] font-semibold tracking-wide">
+              {isCopied ? "Copied" : "Copy Chat Transcript"}
+            </span>
+          </button>
+        )}
       </header>
 
       {/* Split Pane Architecture */}
@@ -169,10 +261,10 @@ export default function ChatLogsDashboard() {
 
                   {/* Thread Financial Telemetry */}
                   {messages && messages.length > 0 && (
-                    <div className="flex items-center gap-6 px-4 py-2 bg-foreground/5 border border-border-dim rounded-[12px]">
+                    <div className="flex items-center gap-6 px-4 py-2 bg-foreground/5 border border-border-dim rounded-[12px] shadow-sm">
                       <div className="flex flex-col items-end">
-                        <span className="text-[9px] uppercase font-mono tracking-widest text-muted mb-0.5">{t("viewer.tokensHandled")}</span>
-                        <span className="text-[14px] font-bold text-foreground">
+                          <span className="text-[9px] uppercase font-mono tracking-widest text-muted mb-0.5">{t("viewer.tokensHandled")}</span>
+                          <span className="text-[14px] font-bold text-foreground">
                           {messages.reduce((acc, msg) => acc + ((msg.inputTokens || 0) + (msg.outputTokens || 0)), 0).toLocaleString()}
                         </span>
                       </div>

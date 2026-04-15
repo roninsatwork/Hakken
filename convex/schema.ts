@@ -59,6 +59,8 @@ export default defineSchema({
     activeUsers: v.number(),
     totalMessages: v.number(),
     totalTokens: v.number(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
     costGBP: v.number(),
   }).index("by_company_date", ["companyId", "date"]),
   users: defineTable({
@@ -168,6 +170,7 @@ export default defineSchema({
   aiRules: defineTable({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")), // Link for agent-specific logic
+    name: v.optional(v.string()),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -299,13 +302,16 @@ export default defineSchema({
   }).index("by_workflow", ["workflowId", "startedAt"]),
   schedules: defineTable({
     name: v.string(),
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
     intervalStr: v.string(), // "daily", "weekly"
     isActive: v.boolean(),
     lastRunTs: v.optional(v.number()),
     createdAt: v.number(),
     createdBy: v.id("users"),
-  }).index("by_workflow", ["workflowId"]),
+  })
+    .index("by_workflow", ["workflowId"])
+    .index("by_agent", ["agentId"]),
 
   swarmLogs: defineTable({
     threadId: v.id("threads"),
@@ -323,6 +329,13 @@ export default defineSchema({
     isEnabled: v.boolean(),
     isDefault: v.boolean(),
     lastSyncedAt: v.number(),
+    friendlyName: v.optional(v.string()), // A short user-friendly name
+    standardInputCostBelow200k: v.optional(v.number()),
+    standardInputCostAbove200k: v.optional(v.number()),
+    cachedInputCostBelow200k: v.optional(v.number()),
+    cachedInputCostAbove200k: v.optional(v.number()),
+    outputResponseCost: v.optional(v.number()),
+    outputReasoningCost: v.optional(v.number()),
   })
     .index("by_model_id", ["modelId"])
     .index("by_enabled", ["isEnabled"])

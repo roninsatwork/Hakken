@@ -114,7 +114,7 @@ export const executeSwarmObjective = internalAction({
                }
            }
 
-           let targetModel = "gemini-2.5-flash";  
+           let targetModel = agent.modelId || await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});  
            
            const response = await ai.models.generateContent({
               model: targetModel,

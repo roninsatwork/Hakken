@@ -30,7 +30,7 @@ export const generateSonaeResponse = internalAction({
     });
     
     // Direct mapping configuration
-    let actualModelStr = args.modelId || "gemini-3.1-pro-preview";
+    let actualModelStr = args.modelId;
     
     let generationConfig: any = {};
     if (args.thinkingLevel && args.thinkingLevel !== "NONE") {
@@ -184,8 +184,10 @@ export const transcribeAudio = action({
     });
 
     try {
+        const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+        
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash", // Most robust model publicly available in us-central1
+            model: defaultModel,
             contents: [
                 { text: "Transcribe the following audio exactly. Output ONLY the raw transcription text without any prefix, markdown, or commentary." },
                 { inlineData: { mimeType: args.mimeType, data: args.audioBase64 } }
@@ -222,8 +224,10 @@ export const generateThreadTitle = internalAction({
     });
 
     try {
+      const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+      
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite-preview",
+        model: defaultModel,
         contents: `User Message: "${args.content}"`,
         config: {
           systemInstruction: "You are a professional assistant. Generate a concise, 3-to-4 word description of the user's message. Use standard Title Case. Do not include quotes, periods, or other punctuation. Your output must ONLY be the title.",

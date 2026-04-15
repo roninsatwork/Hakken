@@ -57,17 +57,19 @@ export const seedForAgent = mutation({
 
     // Generate 15 dummy transactions
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
-    const models = ["gemini-3.1-flash", "gemini-3.1-pro-preview", "gemini-2.0-flash-lite"];
+    const activeModels = await ctx.db.query("aiModels").collect();
+    const modelMap = new Map(activeModels.map(m => [m.modelId, m]));
+    const models = activeModels.length > 0 ? activeModels.map(m => m.modelId) : ["gemini-1.5-flash"];
     
     for (let i = 0; i < 15; i++) {
         const inputTokens = Math.floor(Math.random() * 8000) + 200;
         const outputTokens = Math.floor(Math.random() * 1500) + 50;
         const model = models[Math.floor(Math.random() * models.length)];
         
-        let multiplier = 0.000001;
-        if (model.includes("pro")) multiplier = 0.000005;
-        
-        const cost = (inputTokens + outputTokens) * multiplier;
+        const config = modelMap.get(model);
+        const inRate = config ? (inputTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
+        const outRate = config ? (config.outputResponseCost || 0) : 0;
+        const cost = (inputTokens / 1000000) * inRate + (outputTokens / 1000000) * outRate;
 
         await ctx.db.insert("agentTransactions", {
             agentId: args.agentId,

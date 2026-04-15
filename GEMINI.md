@@ -20,6 +20,19 @@
   - **Dynamic Lighting**: Use subtle top-left inner glow (radial gradients) and a deep shadow-pulse for tactical depth.
   - **Fidelity**: `backdrop-blur-3xl`, `bg-sidebar/40`, and a soft `32px` corner radius.
   - **Typography**: Titles must use `font-light` with wider `tracking-[0.12em]` for an editorial feel.
+  
+### 🗣️ Terminology & Localization
+- **Friendly SaaS Language**: Avoid overly technical or "sci-fi" jargon in the UI. Use clear, accessible, standard SaaS terminology to keep the administrative environments approachable.
+- **Strict Locale Parity**: Always maintain full parity between English (`en.json`) and Italian (`it.json`) dictionaries. Any new UI label, tooltip, or description must be localized simultaneously.
+- **AI Page Footers**: Ensure AI workspaces or chatbot interfaces always display a standardized footer containing liability/verification disclaimers (e.g., instructing users to double-check AI generations).
+
+### 📊 Tables & Data Feeds
+- **Standardized Pagination**: All administrative table views, log lists, and dashboard feeds MUST enforce a strict **15-row limit** per page for ecosystem consistency.
+- **Server-Side Priorities**: For large datasets, always prioritize robust backend indexing and server-side filtering logic rather than purely client-side implementations.
+
+### 🔌 Agents & Scrapers
+- **Rate Limit Defenses**: Any external platform intelligence integrations (Vertex AI, Twitter, Facebook) MUST implement robust queueing and progressive exponential backoff to safely handle API throttling or `429` errors.
+- **Dispatch Staggering**: Space out concurrent Convex scheduled jobs or autonomous agent invocations to avoid burst traffic ceilings and ensure reliable ingestion flow.
 
 ---
 

@@ -9,7 +9,9 @@ import {
   Plus,
   Search,
   Trash2,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -21,6 +23,7 @@ export default function AgentsPage() {
   const t = useTranslations('admin.agents');
   const tCommon = useTranslations('common');
   const agents = useQuery(api.agents.list) || [];
+  const activeModels = useQuery(api.aiModels.getModels) || [];
   const createAgent = useMutation(api.agents.createAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
 
@@ -31,10 +34,22 @@ export default function AgentsPage() {
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
   const filteredAgents = agents.filter((a: any) =>
     (a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalItems = filteredAgents.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const paginatedAgents = filteredAgents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleSearch = (v: string) => {
+    setSearchTerm(v);
+    setCurrentPage(1);
+  };
 
   const handleOpenAdd = () => {
     setFormData({ name: "", description: "" });
@@ -103,15 +118,15 @@ export default function AgentsPage() {
             type="text"
             placeholder={t('searchPlaceholder')}
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1">
-        <div className="overflow-x-auto h-full">
+      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
@@ -123,7 +138,7 @@ export default function AgentsPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredAgents.length === 0 ? (
+                {paginatedAgents.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
                       {t('table.empty')}
@@ -131,7 +146,7 @@ export default function AgentsPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredAgents.map((agent: any) => (
+                    {paginatedAgents.map((agent: any) => (
                       <motion.tr
                         key={agent._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -164,7 +179,7 @@ export default function AgentsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
-                              {agent.modelId}
+                              {activeModels.find((m: any) => m.modelId === agent.modelId)?.friendlyName || activeModels.find((m: any) => m.modelId === agent.modelId)?.displayName || agent.modelId}
                             </span>
                           </div>
                         </td>
@@ -192,6 +207,37 @@ export default function AgentsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
+            <div className="flex items-center gap-2 text-[12px] text-muted">
+              <span>Showing</span>
+              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+              <span>to</span>
+              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+              <span>of</span>
+              <span className="font-medium text-foreground">{totalItems}</span>
+              <span>agents</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Modal */}

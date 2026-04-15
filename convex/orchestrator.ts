@@ -78,9 +78,11 @@ Do not force a match. If the prompt is generic conversation (e.g., "Hello", "How
 Output your intent alignment as JSON.
         `;
 
-        // 3.1-flash-lite-preview excels at sub-500ms zero-shot routing 
+        // Execute routing via system default model
+        const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+        
         const response = await ai.models.generateContent({
-             model: "gemini-3.1-flash-lite-preview",
+             model: defaultModel,
              contents: routingPrompt,
              config: {
                  responseMimeType: "application/json",

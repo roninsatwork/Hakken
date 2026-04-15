@@ -45,7 +45,7 @@ export default function AgentOverviewPage() {
         name: agent.name || "",
         description: agent.description || "",
         avatar: agent.avatar || "",
-        modelId: agent.modelId || "gemini-3-flash-preview",
+        modelId: agent.modelId || activeModels.find((m: any) => m.isDefault)?.modelId || "",
         thinkingMode: agent.thinkingMode || false,
         reasoningEffort: agent.reasoningEffort || "MEDIUM",
         allowInternetAccess: agent.allowInternetAccess || false,
@@ -220,7 +220,7 @@ export default function AgentOverviewPage() {
                 <option value="" disabled>{t("sections.engine.model.placeholder")}</option>
                 {activeModels.map((m) => (
                   <option key={m.modelId} value={m.modelId}>
-                    {m.displayName} {m.isDefault && t("sections.engine.model.systemDefault")}
+                    {m.friendlyName || m.displayName || m.modelId} {m.isDefault && t("sections.engine.model.systemDefault")}
                   </option>
                 ))}
 

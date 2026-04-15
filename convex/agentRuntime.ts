@@ -200,8 +200,13 @@ export const generateAgentResponse = internalAction({
         const outTokens = response.usageMetadata?.candidatesTokenCount || 0;
         
         // Calculate dynamic cost based on the exact model utilized
-        const multiplier = targetModel.includes("flash") ? 0.0000002 : 0.000005; // Flash is approx 25x cheaper than Pro
-        const calculatedCost = (inTokens + outTokens) * multiplier;
+        const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
+        const modelMap = new Map((allModelsRaw as any[]).map(m => [m.modelId, m]));
+        const config = modelMap.get(targetModel);
+        
+        const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
+        const outRate = config ? (config.outputResponseCost || 0) : 0;
+        const calculatedCost = (inTokens / 1000000) * inRate + (outTokens / 1000000) * outRate;
 
         // Write response back to DB
         await ctx.runMutation(internal.chat.saveAssistantMessage, {
