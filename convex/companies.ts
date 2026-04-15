@@ -194,3 +194,39 @@ export const updateCompanyDescription = mutation({
     return args.id;
   },
 });
+
+export const updateCompanyProfile = mutation({
+  args: { 
+    id: v.id("companies"), 
+    name: v.string(), 
+    description: v.optional(v.string()), 
+    overview: v.optional(v.string()) 
+  },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthenticated Admin Request");
+
+    const admin = await ctx.db.get(adminId);
+    if (!admin || admin.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized: System level clearance required.");
+    }
+
+    const previous = await ctx.db.get(args.id);
+    await ctx.db.patch(args.id, { 
+      name: args.name, 
+      description: args.description,
+      overview: args.overview,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: adminId as any,
+      actionType: "UPDATE_COMPANY_PROFILE",
+      entityId: args.id,
+      entityType: "companies",
+      metadata: JSON.stringify({ previousName: previous?.name, newName: args.name }),
+      timestamp: Date.now()
+    });
+
+    return args.id;
+  },
+});

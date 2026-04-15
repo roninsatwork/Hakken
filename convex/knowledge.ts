@@ -143,13 +143,12 @@ export const deleteDocument = mutation({
     }
 
     // Attempt to delete from convex storage
-    await ctx.storage.delete(doc.fileId);
-
-    // Eradicate associated memory chunks 
-    const chunks = await ctx.db.query("knowledgeChunks").filter(q => q.eq(q.field("documentId"), doc._id)).collect();
-    for (const chunk of chunks) {
-       await ctx.db.delete(chunk._id);
+    if (doc.fileId) {
+       await ctx.storage.delete(doc.fileId);
     }
+
+    // Eradicate associated memory chunks in an isolated transaction
+    await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
 
     // Delete base document record
     await ctx.db.delete(args.documentId);
@@ -174,6 +173,172 @@ export const getDocInternal = internalQuery({
   }
 });
 
+export const getNextPendingUrlInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+     return await ctx.db.query("knowledgeDocuments").filter(q => q.eq(q.field("status"), "pending")).first();
+  }
+});
+
+export const saveManualText = mutation({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    title: v.string(),
+    textContent: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    
+    if (!args.companyId) {
+      if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized access to global knowledge base");
+      }
+    } else {
+      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
+          throw new Error("Unauthorized");
+      }
+    }
+
+    const documentId = await ctx.db.insert("knowledgeDocuments", {
+      title: args.title,
+      textContent: args.textContent,
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      ...(args.agentId ? { agentId: args.agentId } : {}),
+      status: "processing",
+      format: "text/plain",
+      createdBy: userId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
+      documentId,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPLOAD_DOCUMENT",
+      actorId: userId,
+      entityType: "knowledgeDocuments",
+      entityId: documentId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ title: args.title, format: "text/plain", scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+    });
+
+    return documentId;
+  },
+});
+
+export const queueWebsiteUrls = mutation({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    urls: v.array(v.string()),
+    forceRefresh: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    
+    if (!args.companyId) {
+      if (!user || user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized access to global knowledge base");
+      }
+    } else {
+      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
+          throw new Error("Unauthorized");
+      }
+    }
+
+    const docIds = [];
+    for (const url of args.urls) {
+        // Simple duplicates check
+        const existing = await ctx.db.query("knowledgeDocuments")
+            .filter(q => q.and(
+               q.eq(q.field("sourceUrl"), url),
+               args.companyId ? q.eq(q.field("companyId"), args.companyId) : q.eq(q.field("companyId"), undefined)
+            )).first();
+            
+        if (existing) {
+             if (args.forceRefresh) {
+                 await ctx.db.patch(existing._id, { status: "pending" });
+                 docIds.push(existing._id);
+             }
+             continue;
+        }
+
+        const documentId = await ctx.db.insert("knowledgeDocuments", {
+          title: url,
+          sourceUrl: url,
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          ...(args.agentId ? { agentId: args.agentId } : {}),
+          status: "pending",
+          format: "url",
+          createdBy: userId,
+          createdAt: Date.now(),
+        });
+        docIds.push(documentId);
+    }
+
+    if (docIds.length > 0) {
+       await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+    }
+    
+    return docIds;
+  },
+});
+
+export const deleteWebsiteBulk = mutation({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    rootDomain: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    const user = await ctx.db.get(userId);
+    
+    if (!args.companyId) {
+      if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    } else {
+      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) throw new Error("Unauthorized");
+    }
+
+    // Query documents scoped to company or agent
+    let docsCursor = ctx.db.query("knowledgeDocuments");
+    if (args.companyId) {
+        docsCursor = docsCursor.withIndex("by_company", q => q.eq("companyId", args.companyId));
+    }
+    const docs = await docsCursor.collect();
+
+    let count = 0;
+    for (const doc of docs) {
+        if (doc.format === "url" && doc.sourceUrl && doc.sourceUrl.startsWith(args.rootDomain)) {
+            await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
+            await ctx.db.delete(doc._id);
+            count++;
+        }
+    }
+    return count;
+  }
+});
+
+export const purgeDocumentChunksInternal = internalMutation({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args) => {
+     const chunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).collect();
+     for (const chunk of chunks) {
+         await ctx.db.delete(chunk._id);
+     }
+  }
+});
+
 export const getChunkInternal = internalQuery({
   args: { id: v.id("knowledgeChunks") },
   handler: async (ctx, args) => {
@@ -189,9 +354,14 @@ export const saveChunksInternal = internalMutation({
       chunks: v.array(v.object({
           text: v.string(),
           embedding: v.array(v.number()),
-      })),
+        })),
   },
   handler: async (ctx, args) => {
+      const existingChunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).collect();
+      for (const chunk of existingChunks) {
+         await ctx.db.delete(chunk._id);
+      }
+
       for (const chunk of args.chunks) {
          await ctx.db.insert("knowledgeChunks", {
              documentId: args.documentId,

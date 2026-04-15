@@ -11,7 +11,7 @@ export default function FluidWorkspace({ children, className }: { children: Reac
     <motion.main
       initial={false}
       animate={{ 
-        paddingLeft: isSidebarOpen ? "275px" : "0px",
+        paddingLeft: isSidebarOpen ? "240px" : "0px",
       }}
       transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
       className="h-screen overflow-y-auto flex flex-col w-full bg-transparent text-foreground relative z-0"
