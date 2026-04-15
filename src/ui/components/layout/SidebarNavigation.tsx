@@ -235,11 +235,11 @@ export default function SidebarNavigation() {
     <AnimatePresence mode="wait">
       {isSidebarOpen && (
         <motion.aside
-          initial={{ x: -275, opacity: 0 }}
+          initial={{ x: -240, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -275, opacity: 0 }}
+          exit={{ x: -240, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
-          className="fixed left-0 top-0 bottom-0 w-[275px] bg-sidebar border-r border-border-dim/50 flex flex-col z-50 shadow-2xl"
+          className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar border-r border-border-dim/50 flex flex-col z-50 shadow-2xl"
         >
 
           {/* Header Area */}

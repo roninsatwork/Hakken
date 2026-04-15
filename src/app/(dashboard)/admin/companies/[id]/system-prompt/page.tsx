@@ -153,7 +153,7 @@ export default function CompanySystemPromptPage() {
       {/* Flat Content Flow Section */}
       <div className="w-full h-[1px] bg-border-dim my-2" />
 
-      <section className="flex flex-col gap-6 flex-1 min-h-[75vh] h-full relative">
+      <section className="flex flex-col gap-6 flex-1 min-h-[40vh] h-full relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>

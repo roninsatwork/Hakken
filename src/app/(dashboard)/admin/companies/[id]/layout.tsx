@@ -56,7 +56,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
               <Building2 className="w-6 h-6 text-brand" />
               {company.name} Workspace
             </h1>
-            <p className="text-[13px] text-secondary mt-1">Manage workspace settings.</p>
+            <p className="text-[13px] text-secondary mt-1">{company.description || "Manage workspace settings."}</p>
           </div>
           
           <div className="flex items-center gap-3">

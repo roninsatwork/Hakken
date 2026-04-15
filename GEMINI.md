@@ -33,6 +33,7 @@
 ### 🔌 Agents & Scrapers
 - **Rate Limit Defenses**: Any external platform intelligence integrations (Vertex AI, Twitter, Facebook) MUST implement robust queueing and progressive exponential backoff to safely handle API throttling or `429` errors.
 - **Dispatch Staggering**: Space out concurrent Convex scheduled jobs or autonomous agent invocations to avoid burst traffic ceilings and ensure reliable ingestion flow.
+- **Vector Bulk limits**: NEVER loop through and delete or load multiple heavy vector chunks (`knowledgeChunks`) inside a single linear mutation context. The massive 768-dimensional float arrays will rapidly breach Convex's strict 16MB function transaction limit. Always cleanly delegate bulk chunk operations to a staggered `ctx.scheduler` scheduled mutation queue to execute iteratively.
 
 ---
 

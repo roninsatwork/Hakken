@@ -9,6 +9,7 @@ export default defineSchema({
     name: v.string(),
     logo: v.optional(v.string()),
     description: v.optional(v.string()),
+    overview: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_name", ["name"]),
@@ -185,11 +186,13 @@ export default defineSchema({
   // Knowledge Base Vector Engine & Document Storage
   knowledgeDocuments: defineTable({
     title: v.string(),
-    fileId: v.id("_storage"),
+    fileId: v.optional(v.id("_storage")),
+    sourceUrl: v.optional(v.string()),
+    textContent: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
-    status: v.union(v.literal("processing"), v.literal("ready"), v.literal("failed")),
-    format: v.string(),
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")),
+    format: v.string(), // "application/pdf", "text/plain", "url"
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
@@ -207,7 +210,7 @@ export default defineSchema({
     vectorField: "embedding",
     dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
     filterFields: ["companyId", "agentId", "documentId", "isGlobal"],
-  }),
+  }).index("by_document", ["documentId"]),
 
   // Sonae Assistant Tables
   threads: defineTable({
