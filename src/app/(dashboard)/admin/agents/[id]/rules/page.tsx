@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import { Scale, BrainCircuit, Plus, Search, Power, PowerOff, RefreshCcw, Trash2, Edit2, AlertOctagon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 export default function AgentRulesPage() {
   const t = useTranslations("admin.agents.details.rules");
   const params = useParams();
+  const router = useRouter();
   const agentId = (params?.id as Id<"agents">) || undefined;
 
   const rules = useQuery(api.aiRules.getRules, agentId ? { agentId } : "skip");
