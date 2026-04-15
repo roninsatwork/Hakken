@@ -44,10 +44,10 @@ export default function ChatLogsDashboard() {
     if (!messages || messages.length === 0) return;
     const activeThread = results.find((t) => t._id === selectedThreadId);
 
+    let htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.5; color: #333;">`;
+    let textContent = "";
+    
     try {
-      let htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.5; color: #333;">`;
-      let textContent = "";
-
       htmlContent += `<h2 style="margin-bottom: 4px;">Chat Log: ${activeThread?.title || "Unknown"}</h2>`;
       const dateStr = activeThread
         ? new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" }).format(new Date(activeThread.createdAt))
