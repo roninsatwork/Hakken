@@ -10,6 +10,7 @@ export type AgentNodeData = {
   label: string;
   avatar?: string;
   modelId?: string;
+  _agentId?: string;
   inputSchema?: string;
   outputSchema?: string;
 };
