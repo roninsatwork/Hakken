@@ -49,7 +49,7 @@ export default function CompanyOverviewPage() {
     }
   };
 
-  if (company === undefined) {
+  if (!company) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-6 h-6 animate-spin text-brand" />
