@@ -310,12 +310,10 @@ export const deleteWebsiteBulk = mutation({
       if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) throw new Error("Unauthorized");
     }
 
-    // Query documents scoped to company or agent
-    let docsCursor = ctx.db.query("knowledgeDocuments");
-    if (args.companyId) {
-        docsCursor = docsCursor.withIndex("by_company", q => q.eq("companyId", args.companyId));
-    }
-    const docs = await docsCursor.collect();
+    // Query documents scoped to company or agent safely satisfying TypeScript's QueryInitializer
+    const docs = args.companyId 
+        ? await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).collect()
+        : await ctx.db.query("knowledgeDocuments").collect();
 
     let count = 0;
     for (const doc of docs) {
