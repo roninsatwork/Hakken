@@ -100,3 +100,17 @@ export const insertAgentLogInternal = internalMutation({
     });
   },
 });
+
+export const getLogById = query({
+  args: { id: v.id("agentLogs") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const deleteLog = mutation({
+  args: { id: v.id("agentLogs") },
+  handler: async (ctx, args) => {
+    return await ctx.db.delete(args.id);
+  },
+});

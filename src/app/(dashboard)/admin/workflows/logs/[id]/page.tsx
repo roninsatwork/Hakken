@@ -11,9 +11,12 @@ import {
   Loader2,
   Play,
   Terminal,
-  Code
+  Code,
+  Copy,
+  Check
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 export default function WorkflowExecutionLogPage() {
   const params = useParams();
@@ -23,6 +26,14 @@ export default function WorkflowExecutionLogPage() {
   const executionId = params.id as string;
 
   const exec = useQuery((api as any).scheduler.getWorkflowExecution, { executionId: executionId as any });
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!exec?.state) return;
+    navigator.clipboard.writeText(safeParseJSON(exec.state));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const safeParseJSON = (str: string) => {
     try {
@@ -105,13 +116,23 @@ export default function WorkflowExecutionLogPage() {
         </div>
 
         <div className="relative w-full rounded-[16px] overflow-hidden bg-[#0A0A0A] border border-border-dim/40 shadow-inner group">
-          <div className="absolute top-0 left-0 right-0 h-10 bg-[#111111] border-b border-border-dim/40 flex items-center px-4">
+          <div className="absolute top-0 left-0 right-0 h-10 bg-[#111111] border-b border-border-dim/40 flex items-center justify-between px-4 z-10">
             <div className="flex items-center gap-2">
               <Code className="w-4 h-4 text-muted/50" />
               <span className="text-[11px] font-mono text-muted">execution_state.json</span>
             </div>
+            
+            {exec.state && (
+              <button
+                onClick={handleCopy}
+                className="p-1.5 rounded-[6px] bg-white/5 border border-white/10 text-muted hover:text-foreground hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                title="Copy to clipboard"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-brand" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            )}
           </div>
-          <pre className="p-6 pt-16 overflow-x-auto text-[13px] font-mono text-[#D4D4D4] leading-relaxed custom-scrollbar">
+          <pre className="p-6 pt-16 overflow-x-auto text-[13px] font-mono text-[#D4D4D4] leading-relaxed custom-scrollbar relative z-0">
             {exec.state ? (
               safeParseJSON(exec.state)
             ) : (

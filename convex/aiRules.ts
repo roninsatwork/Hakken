@@ -71,6 +71,7 @@ export const seedPricingRule = internalMutation({
     if (!adminUser) throw new Error("No super administrators found in system.");
 
     return await ctx.db.insert("aiRules", {
+      name: "Pricing Protocol",
       trigger: "pricing, cost, how much does it cost, subscription",
       instruction: "Under no circumstances should you provide strict numbers or definitive pricing. Sonae operates strictly on a custom enterprise agreement model. If the user asks about costs, immediately tell them to contact anthony@ronins.co.uk for a bespoke architectural quote.",
       priority: "HIGH",
@@ -96,6 +97,7 @@ export const createRule = mutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
+    name: v.string(),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -115,6 +117,7 @@ export const createRule = mutation({
     }
 
     const newRuleId = await ctx.db.insert("aiRules", {
+      name: args.name,
       companyId: args.companyId,
       agentId: args.agentId,
       trigger: args.trigger,
@@ -141,6 +144,7 @@ export const createRule = mutation({
 export const updateRule = mutation({
   args: {
     id: v.id("aiRules"),
+    name: v.string(),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -162,6 +166,7 @@ export const updateRule = mutation({
     }
 
     await ctx.db.patch(args.id, {
+      name: args.name,
       trigger: args.trigger,
       instruction: args.instruction,
       priority: args.priority,

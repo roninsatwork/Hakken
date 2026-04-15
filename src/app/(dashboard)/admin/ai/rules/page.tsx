@@ -10,7 +10,7 @@ import {
   Search,
   Power,
   PowerOff,
-  Edit3,
+  Edit2,
   Trash2,
   AlertOctagon,
   RefreshCcw
@@ -33,7 +33,8 @@ export default function RulesDashboard() {
 
   // Derived Filter State
   const filteredRules = rules?.filter(
-    rule => rule.trigger.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    rule => (rule.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rule.trigger.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rule.instruction.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
@@ -113,54 +114,55 @@ export default function RulesDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               key={rule._id}
-              className={`flex items-start sm:items-center justify-between gap-4 p-5 rounded-[16px] border backdrop-blur-xl transition-all ${rule.isActive
-                  ? "bg-card border-border-dim shadow-md dark:shadow-xl hover:border-brand/30"
-                  : "bg-background/50 border-border-dim/50 opacity-60 grayscale hover:grayscale-0 hover:opacity-100"
-                }`}
+
+              className="flex flex-col gap-2 justify-center p-4 sm:p-5 rounded-[12px] bg-sidebar/40 border border-border-dim transition-all hover:bg-sidebar/60 group cursor-pointer"
+              onClick={() => { window.location.href = `/admin/ai/rules/${rule._id}`; }}
             >
-              {/* Metadata Tree */}
-              <Link href={`/admin/ai/rules/${rule._id}`} className="flex flex-col gap-1.5 flex-1 min-w-0 group cursor-pointer pr-4">
-                <div className="flex items-center gap-3">
-                  <div className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${getPriorityColor(rule.priority)}`}>
-                    {rule.priority}
-                  </div>
-                  <h3 className="text-[15px] font-semibold text-foreground truncate group-hover:text-brand transition-colors">
-                    "{rule.trigger}"
-                  </h3>
-                </div>
-                <p className="text-[12px] text-muted line-clamp-1 pr-6 font-mono tracking-wide group-hover:text-foreground/80 transition-colors">
-                  {rule.instruction}
-                </p>
-              </Link>
+               <div className="flex items-center justify-between gap-4 w-full">
+                 <div className="flex items-center gap-3 min-w-0 pr-4">
+                   <div className={`mt-[1px] px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
+                     {rule.priority}
+                   </div>
+                   <h3 className="text-[14px] font-bold text-foreground truncate group-hover:text-brand transition-colors">
+                     {rule.name || `"${rule.trigger}"`}
+                   </h3>
+                 </div>
+                 
+                 <div className="flex items-center gap-4 flex-shrink-0 text-secondary ml-4 pr-1">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleActive({ id: rule._id, isActive: !rule.isActive }); }}
+                      className="hover:text-foreground transition-colors"
+                      title={rule.isActive ? t("status.deactivate") : t("status.activate")}
+                    >
+                      <Power className={`w-4 h-4 ${rule.isActive ? 'text-orange-500' : 'opacity-40'}`} />
+                    </button>
+                    
+                    <div className="h-4 w-px bg-border-dim" />
+                    
+                    <Link
+                      href={`/admin/ai/rules/${rule._id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-foreground transition-colors"
+                      title={t("status.edit")}
+                    >
+                      <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
+                    </Link>
 
-              {/* Interaction Tools */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => toggleActive({ id: rule._id, isActive: !rule.isActive })}
-                  className="p-2 rounded-full border border-transparent hover:bg-foreground/5 hover:border-border-dim text-secondary transition-colors"
-                  title={rule.isActive ? t("status.deactivate") : t("status.activate")}
-                >
-                  {rule.isActive ? <Power className="w-4 h-4 text-brand" /> : <PowerOff className="w-4 h-4" />}
-                </button>
+                    <div className="h-4 w-px bg-border-dim" />
 
-                <div className="h-4 w-px bg-border-dim/50 mx-1" />
-
-                <Link
-                  href={`/admin/ai/rules/${rule._id}`}
-                  className="p-2 rounded-full border border-transparent hover:bg-foreground/5 hover:border-border-dim text-secondary transition-colors"
-                  title={t("status.edit")}
-                >
-                  <Edit3 className="w-4 h-4" />
-                </Link>
-
-                <button
-                  onClick={() => setDeleteId(rule._id)}
-                  className="p-2 rounded-full border border-transparent hover:bg-rose-500/10 hover:border-rose-500/20 text-rose-500/70 hover:text-rose-500 transition-colors"
-                  title={t("status.delete")}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteId(rule._id); }}
+                      className="transition-colors group/trash"
+                      title={t("status.delete")}
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
+                    </button>
+                 </div>
+               </div>
+               
+               <p className={`text-[12.5px] line-clamp-1 font-mono tracking-wide opacity-50 ${rule.isActive ? 'text-muted' : 'text-muted/50'}`}>
+                 {rule.instruction}
+               </p>
             </motion.div>
           ))
         )}

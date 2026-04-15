@@ -95,8 +95,8 @@ export default function SchedulesPage() {
 
   return (
     <div className="flex flex-col gap-5 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+        <div className="flex flex-col">
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Timer className="w-6 h-6 text-brand" />
             {t('title')}
@@ -104,29 +104,28 @@ export default function SchedulesPage() {
           <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('newSchedule')}</span>
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
+        <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+          <div className="flex-1 sm:w-[250px] flex items-center gap-2 px-3 py-2 bg-sidebar/50 border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all shadow-sm">
+            <Search className="w-4 h-4 text-muted" />
+            <input
+              type="text"
+              placeholder={t('searchPlaceholder')}
+              value={searchTerm}
+              onChange={e => handleSearch(e.target.value)}
+              className="bg-transparent border-none outline-none w-full text-[13px] placeholder:text-muted"
+            />
+          </div>
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('newSchedule')}</span>
+          </button>
         </div>
       </div>
 
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
+      <div className="bg-sidebar/40 border border-border-dim rounded-[16px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col w-full">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -170,9 +169,14 @@ export default function SchedulesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="truncate text-[13px] text-foreground/80 font-medium">
-                            {schedule.workflowName}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-[13px] text-foreground/80 font-medium">
+                              {schedule.targetName || schedule.workflowName || schedule.agentName}
+                            </span>
+                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-border-dim/50 text-muted">
+                              {schedule.agentId ? 'Agent' : 'Workflow'}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">

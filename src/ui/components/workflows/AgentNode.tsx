@@ -19,8 +19,18 @@ export type AgentNodeType = Node<AgentNodeData, 'agentNode'>;
 export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<AgentNodeType>) => {
   const t = useTranslations('admin.workflows.designer.node');
   const allModels = useQuery(api.aiModels.getModels) || [];
-  const modelConfig = (allModels as any[]).find(m => m.modelId === data.modelId);
-  const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || data.modelId) : data.modelId;
+  // Pretty-print fallback for unknown models
+  const formatFallback = (id?: string) => {
+    if (!id) return '';
+    return id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+  };
+
+  const agent = useQuery(api.agents.get, data._agentId ? { id: data._agentId as any } : "skip");
+  
+  // Use live agent config if available, otherwise trust the local canvas snapshot
+  const liveModelId = agent ? agent.modelId : data.modelId;
+  const modelConfig = (allModels as any[]).find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
+  const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || liveModelId) : formatFallback(liveModelId);
 
   // Parse schemas to show properties visually if available
   let inputProps: string[] = [];
@@ -68,7 +78,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
           )}
           <div className="flex flex-col flex-1 min-w-0">
             <span className="font-semibold text-[13px] text-foreground truncate">{data.label}</span>
-            <span className="text-[10px] uppercase tracking-wider text-muted font-mono truncate">
+            <span className="text-[11px] tracking-wide text-muted font-mono truncate">
               {displayModelName || t('agent')}
             </span>
           </div>

@@ -247,6 +247,8 @@ export const getUserCostOverview = query({
 
     let totalCostUSD = 0;
     let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
 
     const enrichedThreads = await Promise.all(
       threads.map(async (thread) => {
@@ -257,12 +259,17 @@ export const getUserCostOverview = query({
           
         let threadCostUSD = 0;
         let threadTokens = 0;
+        let threadInputTokens = 0;
+        let threadOutputTokens = 0;
         let messageCount = messages.length;
 
         messages.filter(m => m.role === "assistant").forEach(msg => {
           const inputs = msg.inputTokens || 0;
           const outputs = msg.outputTokens || 0;
           const model = msg.modelUsed || "gemini-1.5-flash";
+
+          threadInputTokens += inputs;
+          threadOutputTokens += outputs;
 
           let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
@@ -272,6 +279,8 @@ export const getUserCostOverview = query({
 
         totalCostUSD += threadCostUSD;
         totalTokens += threadTokens;
+        totalInputTokens += threadInputTokens;
+        totalOutputTokens += threadOutputTokens;
 
         return {
           threadId: thread._id,
@@ -287,6 +296,8 @@ export const getUserCostOverview = query({
     return {
       totalCostGBP: Number((totalCostUSD * 0.78).toFixed(6)),
       totalTokens,
+      totalInputTokens,
+      totalOutputTokens,
       threads: enrichedThreads.sort((a, b) => b.createdAt - a.createdAt)
     };
   }

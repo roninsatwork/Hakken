@@ -241,16 +241,19 @@ export default function UserProfilePage() {
                 </table>
               </div>
 
-              {status === "CanLoadMore" && (
-                <div className="w-full p-3 border-t border-border-dim/50 flex justify-center bg-sidebar/10">
+              <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
+                <span className="text-[12px] text-secondary">
+                  {logins.length > 0 ? t('logins.showing', { count: logins.length }) : ''}
+                </span>
+                {status === "CanLoadMore" && (
                   <button
                     onClick={() => loadMore(10)}
                     className="px-4 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all"
                   >
                     {t('logins.loadMore')}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -267,7 +270,7 @@ export default function UserProfilePage() {
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
   const t = useTranslations('admin.users.profilePage.costs');
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });
@@ -294,11 +297,25 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t('grossCost')}</span>
-          <span className="text-2xl font-medium text-foreground">£{costs.totalCostGBP.toFixed(4)}</span>
+          <span className="text-3xl font-medium text-foreground tracking-tight leading-none mt-1">£{costs.totalCostGBP.toFixed(4)}</span>
         </div>
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">{t('totalTokens')}</span>
-          <span className="text-2xl font-medium text-foreground">{costs.totalTokens.toLocaleString()}</span>
+          <div className="flex items-end justify-between w-full mt-1">
+            <span className="text-3xl font-medium text-foreground leading-none tracking-tight">{costs.totalTokens.toLocaleString()}</span>
+            
+            <div className="flex items-center gap-3 bg-black/40 py-1.5 px-3.5 rounded-[8px] border border-white/5 shadow-inner">
+                <div className="flex items-center gap-2">
+                   <span className="text-[9px] text-muted uppercase tracking-widest font-bold">IN</span>
+                   <span className="text-[13px] font-mono text-secondary font-medium">{costs.totalInputTokens?.toLocaleString() || 0}</span>
+                </div>
+                <div className="w-[1px] h-3 bg-border-dim/50" />
+                <div className="flex items-center gap-2">
+                   <span className="text-[9px] text-muted uppercase tracking-widest font-bold">OUT</span>
+                   <span className="text-[13px] font-mono text-brand font-medium">{costs.totalOutputTokens?.toLocaleString() || 0}</span>
+                </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -374,7 +391,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
           <span className="text-[12px] text-secondary">
             {totalItems > 0 ? (
-              <>Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} entries</>
+              <>{t('pagination.showing')} {startIndex + 1} {t('pagination.to')} {Math.min(startIndex + itemsPerPage, totalItems)} {t('pagination.of')} {totalItems} {t('pagination.entries')}</>
             ) : null}
           </span>
           <div className="flex items-center gap-2">
@@ -383,14 +400,14 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
               disabled={currentPage === 1}
               className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             >
-              Previous
+              {t('pagination.previous')}
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
               className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             >
-              Next
+              {t('pagination.next')}
             </button>
           </div>
         </div>

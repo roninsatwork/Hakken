@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { BrainCircuit, Plus, Loader2, Play, Pause, Trash2, Edit2 } from "lucide-react";
+import { BrainCircuit, Plus, Loader2, Power, Trash2, Edit2, Search } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -15,21 +16,56 @@ export default function CompanyAiRulesPage() {
   const rules = useQuery(api.aiRules.getRules, { companyId });
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredRules = rules?.filter(
+    rule => (rule.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rule.trigger.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rule.instruction.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const getPriorityColor = (p: string) => {
+    if (p === "CRITICAL") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+    if (p === "HIGH") return "text-orange-500 bg-orange-500/10 border-orange-500/20";
+    if (p === "NORMAL") return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+    return "text-secondary bg-foreground/5 border-border-dim";
+  };
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 w-full pb-12">
+      {/* Header Area */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium tracking-tight">AI Rules</h2>
-          <p className="text-secondary text-[13px] mt-1">Set rules for how the AI responds to users.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <BrainCircuit className="w-6 h-6 text-brand" />
+            AI Rules
+          </h1>
+          <p className="text-[13px] text-secondary mt-1 tracking-wide">
+            Set rules for how the AI responds to users.
+          </p>
         </div>
-        <Link 
+
+        <Link
           href={`/admin/companies/${companyId}/rules/new`}
-          className="h-9 px-4 rounded-[10px] bg-foreground text-background font-medium text-[13px] flex items-center gap-2 hover:bg-foreground/90 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
         >
-          <Plus className="w-3.5 h-3.5" />
-          Create Rule
+          <Plus className="w-4 h-4" />
+          <span>Create Rule</span>
         </Link>
+      </header>
+      
+      {/* Control Bar */}
+      <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">
+        <div className="flex items-center gap-2 px-3 flex-1">
+          <Search className="w-4 h-4 text-muted" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search triggers or instructions..."
+            className="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"
+          />
+        </div>
       </div>
       
       {rules === undefined ? (
@@ -44,40 +80,50 @@ export default function CompanyAiRulesPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {rules.map((rule) => (
-            <div key={rule._id} className="p-5 rounded-[12px] bg-sidebar/50 border border-border-dim flex flex-col gap-3 relative group">
-               <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-[#10b981]">{rule.priority} Priority</span>
-                    <h4 className="text-[14px] font-bold mt-1 text-foreground">IF USER MENTIONS: <span className="text-secondary ml-1 font-mono text-[12px] bg-foreground/5 px-2 py-0.5 rounded">{rule.trigger}</span></h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                     <button
-                        onClick={() => toggleActive({ id: rule._id, isActive: !rule.isActive })}
-                        className={`p-2 rounded-lg border flex items-center gap-2 text-[12px] font-bold transition-all ${rule.isActive ? "border-[#10b981]/30 text-[#10b981] bg-[#10b981]/10 hover:bg-[#10b981]/20" : "border-border-dim text-secondary hover:text-foreground"}`}
-                      >
-                        {rule.isActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        {rule.isActive ? "ACTIVE" : "PAUSED"}
-                      </button>
-                      
-                      <Link
-                        href={`/admin/companies/${companyId}/rules/${rule._id}`}
-                        className="p-2 rounded-lg border border-border-dim text-secondary hover:text-foreground transition-all"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Link>
+          {filteredRules.map((rule) => (
+            <div key={rule._id} className="flex flex-col gap-2 justify-center p-4 sm:p-5 rounded-[12px] bg-sidebar/40 border border-border-dim transition-all hover:bg-sidebar/60 group cursor-pointer" onClick={() => router.push(`/admin/companies/${companyId}/rules/${rule._id}`)}>
+               <div className="flex items-center justify-between gap-4 w-full">
+                 <div className="flex items-center gap-3 min-w-0 pr-4">
+                   <div className={`mt-[1px] px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
+                     {rule.priority}
+                   </div>
+                   <h3 className="text-[14px] font-bold text-foreground truncate group-hover:text-brand transition-colors">
+                     {rule.name || `"${rule.trigger}"`}
+                   </h3>
+                 </div>
+                 
+                 <div className="flex items-center gap-4 flex-shrink-0 text-secondary ml-4 pr-1">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleActive({ id: rule._id, isActive: !rule.isActive }); }}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      <Power className={`w-4 h-4 ${rule.isActive ? 'text-orange-500' : 'opacity-40'}`} />
+                    </button>
+                    
+                    <div className="h-4 w-px bg-border-dim" />
+                    
+                    <Link
+                      href={`/admin/companies/${companyId}/rules/${rule._id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
+                    </Link>
 
-                      <button
-                        onClick={() => deleteRuleMutation({ id: rule._id })}
-                        className="p-2 rounded-lg border border-border-dim text-secondary hover:text-red-500 hover:border-red-500/30 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                  </div>
+                    <div className="h-4 w-px bg-border-dim" />
+
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteRuleMutation({ id: rule._id }); }}
+                      className="transition-colors group/trash"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
+                    </button>
+                 </div>
                </div>
-               <div className="bg-[#111111]/40 border border-white/5 p-4 rounded-lg font-mono text-[13px] text-secondary leading-relaxed mt-2 hidden sm:block">
-                 THEN: {rule.instruction}
-               </div>
+               
+               <p className={`text-[12.5px] line-clamp-1 font-mono tracking-wide opacity-50 ${rule.isActive ? 'text-muted' : 'text-muted/50'}`}>
+                 {rule.instruction}
+               </p>
             </div>
           ))}
         </div>

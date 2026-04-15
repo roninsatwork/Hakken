@@ -12,13 +12,27 @@ export const getSchedules = query({
     // We fetch all schedules. Assume admin access or scoped later.
     const schedules = await ctx.db.query("schedules").order("desc").collect();
     
-    // Enrich with workflow names
+    // Enrich with workflow or agent names
     return await Promise.all(
       schedules.map(async (s) => {
-        const wf = await ctx.db.get(s.workflowId);
+        let workflowName = "Deleted Workflow";
+        let agentName = "Deleted Agent";
+        
+        if (s.workflowId) {
+          const wf = await ctx.db.get(s.workflowId);
+          if (wf) workflowName = wf.name;
+        }
+        
+        if (s.agentId) {
+          const ag = await ctx.db.get(s.agentId);
+          if (ag) agentName = ag.name;
+        }
+        
         return {
           ...s,
-          workflowName: wf?.name || "Deleted Workflow"
+          workflowName: s.workflowId ? workflowName : undefined,
+          agentName: s.agentId ? agentName : undefined,
+          targetName: s.workflowId ? workflowName : agentName
         };
       })
     );
@@ -28,17 +42,23 @@ export const getSchedules = query({
 export const createSchedule = mutation({
   args: {
     name: v.string(),
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
     intervalStr: v.string(), // e.g. "daily", "weekly"
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    
+    if (!args.workflowId && !args.agentId) {
+      throw new Error("Must select a target payload (Workflow or Agent).");
+    }
 
     return await ctx.db.insert("schedules", {
       name: args.name,
       workflowId: args.workflowId,
+      agentId: args.agentId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
       createdAt: Date.now(),
@@ -60,7 +80,8 @@ export const updateSchedule = mutation({
   args: {
     scheduleId: v.id("schedules"),
     name: v.string(),
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
     intervalStr: v.string(),
     isActive: v.boolean(),
   },
@@ -68,9 +89,14 @@ export const updateSchedule = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
+    if (!args.workflowId && !args.agentId) {
+      throw new Error("Must select a target payload (Workflow or Agent).");
+    }
+
     await ctx.db.patch(args.scheduleId, {
       name: args.name,
       workflowId: args.workflowId,
+      agentId: args.agentId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
     });
@@ -107,17 +133,22 @@ export const deleteSchedule = mutation({
   },
 });
 
-export const manualRunWorkflow = mutation({
+export const manualRunSchedule = mutation({
   args: {
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    
+    if (!args.workflowId && !args.agentId) {
+      throw new Error("Cannot run: no target specified.");
+    }
 
     // Create execution log entry
     const executionId = await ctx.db.insert("workflowExecutions", {
-      workflowId: args.workflowId,
+      workflowId: args.workflowId as any, // Temporary backcompat if agentId used
       status: "RUNNING",
       triggerType: "MANUAL",
       startedAt: Date.now(),

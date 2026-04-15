@@ -170,6 +170,7 @@ export default defineSchema({
   aiRules: defineTable({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")), // Link for agent-specific logic
+    name: v.optional(v.string()),
     trigger: v.string(),
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
@@ -301,13 +302,16 @@ export default defineSchema({
   }).index("by_workflow", ["workflowId", "startedAt"]),
   schedules: defineTable({
     name: v.string(),
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
     intervalStr: v.string(), // "daily", "weekly"
     isActive: v.boolean(),
     lastRunTs: v.optional(v.number()),
     createdAt: v.number(),
     createdBy: v.id("users"),
-  }).index("by_workflow", ["workflowId"]),
+  })
+    .index("by_workflow", ["workflowId"])
+    .index("by_agent", ["agentId"]),
 
   swarmLogs: defineTable({
     threadId: v.id("threads"),

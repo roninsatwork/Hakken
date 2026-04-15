@@ -28,7 +28,10 @@
             "showing": "Visualizzazione da",
             "to": "a",
             "of": "di",
-            "items": "elementi"
+            "items": "elementi",
+            "entries": "voci",
+            "previous": "Precedente",
+            "next": "Successivo"
         },
         "status": {
             "success": "Successo",
@@ -397,21 +400,21 @@
                 },
                 "report": {
                     "title": "Report Esecuzione",
-                    "description": "Tracciamento granulare dell'esecuzione e analisi dello stato.",
+                    "description": "Dettagli sull'esecuzione di questo processo.",
                     "notFound": {
                         "title": "Log Non Trovato",
-                        "description": "Il ciclo di esecuzione richiesto non è stato trovato nel registro.",
+                        "description": "Il log di esecuzione richiesto non è stato trovato.",
                         "back": "Torna ai Log"
                     },
                     "meta": {
-                        "status": "Risoluzione Finale",
-                        "trigger": "Sorgente Trigger",
-                        "target": "Workflow Destinazione",
+                        "status": "Risultato",
+                        "trigger": "Avviato da",
+                        "target": "Eseguito",
                         "startedAt": "Iniziato il"
                     },
                     "output": {
-                        "title": "Risoluzione dello Stato",
-                        "noOutput": "Nessun dato di stato registrato"
+                        "title": "Log di Output",
+                        "noOutput": "Nessun dato di output registrato"
                     }
                 }
             },
@@ -459,34 +462,49 @@
                 "editor": {
                     "createTitle": "Crea Programmazione",
                     "editTitle": "Modifica Programmazione",
-                    "description": "Configura un trigger temporale per i flussi autonomi degli agent.",
+                    "description": "Configura un'automazione periodica per un workflow o un agent.",
                     "status": {
                         "armed": "Attivo",
                         "paused": "In pausa",
-                        "armedDesc": "Trigger automatico attivo",
-                        "pausedDesc": "Sospensione temporanea"
+                        "armedDesc": "L'automazione verrà eseguita normalmente",
+                        "pausedDesc": "L'automazione è attualmente in pausa"
                     },
                     "fields": {
                         "name": {
                             "label": "Nome Programmazione",
                             "placeholder": "es. Report Giornaliero Mercato"
                         },
+                        "payload": {
+                            "label": "Cosa Eseguire",
+                            "workflowGraph": "Workflow",
+                            "autonomousAgent": "Agent"
+                        },
                         "workflow": {
-                            "label": "Workflow Destinazione",
+                            "label": "Seleziona Workflow",
                             "searchPlaceholder": "Cerca workflow...",
-                            "selectedDesc": "Workflow selezionato per l'invio automatizzato.",
+                            "selectedDesc": "Questo workflow verrà eseguito secondo la programmazione.",
                             "change": "Cambia",
                             "noDescription": "Nessuna descrizione",
-                            "noWorkflows": "Nessun workflow trovato corrispondente alla ricerca."
+                            "noWorkflows": "Nessun workflow trovato."
+                        },
+                        "agent": {
+                            "label": "Seleziona Agent",
+                            "searchPlaceholder": "Cerca agent...",
+                            "selectedDesc": "Questo agent verrà eseguito secondo la programmazione.",
+                            "change": "Cambia",
+                            "noDescription": "Nessuna descrizione",
+                            "noAgents": "Nessun agent trovato."
                         },
                         "interval": {
-                            "label": "Frequenza di Invio",
+                            "label": "Frequenza",
+                            "hourly": "Oraria",
                             "daily": "Giornaliero",
                             "weekly": "Settimanale",
                             "monthly": "Mensile",
+                            "everyXHours": "Ogni [X] ore",
                             "dayOfWeek": "Giorno della settimana",
-                            "dayOfMonth": "Giorno del mese",
-                            "timeLabel": "Ora del giorno (UTC)",
+                            "dayOfMonth": "Data",
+                            "timeLabel": "Orario",
                             "days": {
                                 "monday": "Lunedì",
                                 "tuesday": "Martedì",
@@ -499,6 +517,8 @@
                         }
                     },
                     "intervals": {
+                        "hourly": "Ogni {hours} ore",
+                        "hourlySingle": "Ogni ora",
                         "daily": "Giornaliero alle {time}",
                         "weekly": "Ogni {day} alle {time}",
                         "monthly": "Il giorno {day} del mese alle {time}"
@@ -511,7 +531,7 @@
                         "saving": "Salvataggio..."
                     },
                     "errors": {
-                        "noWorkflow": "Seleziona un workflow di destinazione.",
+                        "noWorkflow": "Seleziona un workflow o agent da eseguire.",
                         "configError": "Errore di Configurazione"
                     }
                 }
@@ -726,7 +746,7 @@
         },
         "settings": {
             "title": "Impostazioni di Sistema",
-            "subtitle": "Centro di controllo architettonico per l'identità della piattaforma, l'estetica e i protocolli operativi globali.",
+            "subtitle": "Gestisci l'identità globale, i temi visivi e le impostazioni dello spazio di lavoro.",
             "save": "Salva Modifiche",
             "saving": "Sincronizzazione...",
             "success": "Configurazione Salvata",
@@ -749,12 +769,12 @@
             },
             "appearance": {
                 "title": "Temi & Tipografia",
-                "typography": "Framework Estetico",
-                "typographySub": "Scale tipografiche definite e iniezione di famiglie di font.",
+                "typography": "Tipografia e Font",
+                "typographySub": "Scegli le famiglie di font e le dimensioni del testo per l'intera piattaforma.",
                 "headingFont": "Font Titoli",
                 "bodyFont": "Font Corpo",
-                "headingSize": "Scalare Titoli Globale",
-                "subTextSize": "Metadati Scalar",
+                "headingSize": "Dimensione Base Titoli",
+                "subTextSize": "Dimensione Testo Piccolo",
                 "fonts": {
                     "inter": "Inter (Sans-Serif)",
                     "jetbrains": "JetBrains Mono",
@@ -769,80 +789,182 @@
                     "micro": "Micro (12px)",
                     "readable": "Leggibile (14px)"
                 },
-                "darkMatrix": "Matrice Colori Dark Mode",
-                "darkMatrixSub": "Override di luminanza e saturazione per ambienti scuri.",
-                "lightMatrix": "Matrice Colori Light Mode",
-                "lightMatrixSub": "Token per superfici e testi in ambienti luminosi.",
-                "coreEnv": "Ambiente Core",
-                "semanticOps": "Operazioni Semantiche",
-                "bgBase": "Background Base",
-                "cardSurfaces": "Superfici Card",
-                "primaryText": "Testo Primario (FG)",
+                "darkMatrix": "Tema Modalità Scura",
+                "darkMatrixSub": "Personalizza i colori quando gli utenti attivano la modalità scura.",
+                "lightMatrix": "Tema Modalità Chiara",
+                "lightMatrixSub": "Personalizza i colori quando gli utenti attivano la modalità chiara.",
+                "coreEnv": "Sfondo & Superfici",
+                "semanticOps": "Colori di Stato",
+                "bgBase": "Sfondo Principale",
+                "cardSurfaces": "Sfondo Card",
+                "primaryText": "Testo Principale",
                 "secondaryText": "Testo Secondario",
-                "hoverBlocks": "Blocchi Hover/Muted",
-                "borders": "Dimming Bordi",
-                "success": "Stato Successo",
-                "destructive": "Azione Distruttiva",
-                "focusRing": "Anello Focus Interattivo",
+                "hoverBlocks": "Stato Hover",
+                "borders": "Bordi e Divisori",
+                "success": "Successo",
+                "destructive": "Errore / Elimina",
+                "focusRing": "Contorno Focus",
                 "brandOrigin": "Origine Brand",
                 "brandOriginSub": "Il colore di accento principale per l'intero sistema.",
                 "brandColor": "Colore Accento Brand"
             },
             "economics": {
-                "title": "Motore Economico",
-                "mrrMultipliers": "Moltiplicatori MRR & Unità",
-                "mrrSub": "Configura simboli valuta e costi unitari delle licenze.",
-                "symbolMatrix": "Matrice Simboli Valuta",
+                "title": "Fatturazione e Abbonamenti",
+                "mrrMultipliers": "Configurazione Prezzi",
+                "mrrSub": "Configura i simboli di valuta e i costi standard delle licenze.",
+                "symbolMatrix": "Valuta di Sistema",
                 "baseOrg": "Abbonamento Base Mensile",
-                "unitLicense": "Licenza Unitaria Mensile (Posto)",
+                "unitLicense": "Licenza Componente Mensile",
                 "currencies": {
-                    "gbp": "GBP (£) - Sterlina",
-                    "usd": "USD ($) - Dollaro",
+                    "gbp": "GBP (£) - Sterlina Britannica",
+                    "usd": "USD ($) - Dollaro Statunitense",
                     "eur": "EUR (€) - Euro"
                 }
             },
             "security": {
-                "title": "Sicurezza di Sistema",
-                "redaction": "Motore Redazione PII",
-                "redactionSub": "Oscuramento automatico dei dati per conformità PII/GDPR.",
-                "mfaPolicy": "Policy MFA di Sistema",
-                "mfaSub": "Forza l'autenticazione a più fattori per tutti gli utenti."
+                "title": "Sicurezza dei Dati",
+                "redaction": "Privacy e Mascheramento",
+                "redactionSub": "Mascheramento automatico dei dati per la privacy e la conformità.",
+                "mfaPolicy": "Criteri MFA di Sistema",
+                "mfaSub": "Forza l'autenticazione a più fattori per tutti gli utenti.",
+                "masterToggle": "Abilita Mascheramento Dati",
+                "masterToggleSub": "Attiva il mascheramento per i campi sensibili.",
+                "maskEmails": "Maschera Indirizzi Email",
+                "maskCreditCards": "Maschera Numeri di Carta di Credito",
+                "maskNi": "Maschera Numeri di Identità Nazionale",
+                "maskPhones": "Maschera Numeri di Telefono",
+                "maskPhonesSub": "Nascondi i numeri di telefono fisso e mobile ovunque appaiano.",
+                "purgeEngine": "Conservazione Automatica dei Dati",
+                "purgeSub": "Elimina automaticamente i vecchi record in base alla programmazione.",
+                "purgeToggle": "Abilita Criteri di Conservazione",
+                "purgeToggleSub": "Il sistema eliminerà i record più vecchi del periodo di conservazione selezionato.",
+                "retention": "Periodo di Conservazione",
+                "days": {
+                    "7": "7 Giorni",
+                    "14": "14 Giorni",
+                    "30": "30 Giorni",
+                    "90": "90 Giorni",
+                    "365": "1 Anno"
+                },
+                "monthlyDispatch": "Frequenza di Eliminazione",
+                "everyDay": "{day}º giorno del mese",
+                "executionTime": "Obiettivo di Esecuzione",
+                "hourLabel": "Ore {hour}:00",
+                "purgeCapNote": "Limita il sovraccarico del database.",
+                "nextRun": "Prossima Esecuzione Programmata"
             },
             "audit": {
-                "title": "Log di Audit Globali",
-                "description": "Registro immutabile di tutte le mutazioni architettoniche ed eventi di sistema.",
-                "search": "Cerca log...",
-                "empty": "Nessun record di audit trovato.",
+                "title": "Registro Eventi di Sistema",
+                "description": "Cronologia immutabile di tutte le mutazioni della piattaforma.",
+                "search": "Cerca eventi...",
+                "empty": "Nessun evento registrato.",
                 "table": {
-                    "event": "Firma Evento",
-                    "actor": "Attore",
-                    "timestamp": "Timestamp",
+                    "event": "Evento",
+                    "actor": "Amministratore",
+                    "timestamp": "Periodo",
                     "actions": "Azioni"
                 }
             }
         },
         "auditLogs": {
-            "title": "Log di Audit Globali",
-            "description": "Registro immutabile di tutte le mutazioni architettoniche ed eventi di sistema.",
-            "searchPlaceholder": "Cerca per evento, attore o metadati...",
-            "empty": "Nessun record di audit trovato con i filtri attuali.",
-            "table": {
-                "event": "Firma Evento",
-                "actor": "Attore",
-                "timestamp": "Timestamp",
-                "actions": "Azioni"
+            "title": "Registro Eventi di Sistema",
+            "description": "Una cronologia completa di tutte le modifiche sulla piattaforma.",
+            "feedTitle": "Registro degli Eventi",
+            "feedSub": "Un registro cronologico delle modifiche al sistema per la conformità.",
+            "noMatch": "Nessun evento corrisponde alla tua ricerca.",
+            "searchPlaceholder": "Cerca per evento, bersaglio o amministratore...",
+            "empty": "Nessun evento registrato.",
+            "columns": {
+                "action": "Azione",
+                "admin": "Amministratore",
+                "target": "Bersaglio",
+                "timestamp": "Ora"
             },
-            "detail": {
-                "title": "Dettaglio Evento Audit",
-                "back": "Torna ai Log",
-                "signature": "Firma Evento",
-                "timestamp": "Timestamp Globale",
-                "actor": "Attore Iniziante",
-                "payload": "Payload Metadati Evento",
-                "copy": "Copia JSON"
+            "detailPage": {
+                "title": "Dettagli Evento",
+                "subtitle": "Log ID: {id}",
+                "back": "Torna ai Log di Audit",
+                "eventSignature": "Azione",
+                "timestamp": "Ora",
+                "executionActor": "Amministratore",
+                "targetObject": "Risorsa Bersaglio",
+                "unboundContext": "Sistema Globale",
+                "decryptedPayload": "Metadati dell'Evento",
+                "noMetadata": "Nessun metadato registrato per questo evento.",
+                "error": {
+                    "title": "Log Non Trovato",
+                    "message": "Impossibile individuare il log dell'evento richiesto. Potrebbe essere stato eliminato o non hai i permessi per visualizzarlo."
+                }
             }
         },
         "users": {
+            "profilePage": {
+                "title": "Profilo Utente",
+                "description": "Visualizza dettagli, attività e costi associati a questo utente.",
+                "backToDirectory": "Torna alla Directory",
+                "userNotFound": "Utente non trovato",
+                "returnToDirectory": "Torna alla Directory",
+                "fields": {
+                    "fullName": "Nome Completo",
+                    "unnamed": "Utente Senza Nome",
+                    "communications": "Email",
+                    "verified": "Verificato",
+                    "noEmail": "Nessuna email",
+                    "systemRole": "Ruolo",
+                    "profilePhoto": "Foto Profilo",
+                    "currentAvatar": "Avatar Attuale",
+                    "avatarDesc": "Identità visiva caricata o generata."
+                },
+                "tabs": {
+                    "security": "Accessi Recenti",
+                    "aiCosts": "Utilizzo e Costi AI"
+                },
+                "logins": {
+                    "title": "Attività di Accesso",
+                    "description": "Eventi di autenticazione recenti.",
+                    "searchPlaceholder": "Cerca per dispositivo o posizione...",
+                    "table": {
+                        "device": "Dispositivo",
+                        "location": "Posizione e IP",
+                        "status": "Stato",
+                        "timestamp": "Data e Ora"
+                    },
+                    "empty": "Nessuna attività registrata.",
+                    "showing": "Visualizzati i {count} accessi più recenti",
+                    "loadMore": "Carica Altri"
+                },
+                "costs": {
+                    "grossCost": "Costo Totale",
+                    "totalTokens": "Token Totali",
+                    "usageLog": "Log di Utilizzo",
+                    "usageLogDesc": "Analisi dei costi per singola conversazione.",
+                    "searchPlaceholder": "Cerca per titolo conversazione...",
+                    "table": {
+                        "conversation": "Conversazione",
+                        "date": "Data",
+                        "messages": "Messaggi",
+                        "tokens": "Token",
+                        "cost": "Costo"
+                    },
+                    "empty": "Nessun utilizzo registrato.",
+                    "noMatch": "Nessun utilizzo trovato.",
+                    "pagination": {
+                        "showing": "Visualizzazione da",
+                        "to": "a",
+                        "of": "di",
+                        "entries": "elementi",
+                        "previous": "Precedente",
+                        "next": "Successivo"
+                    }
+                },
+                "devices": {
+                    "macOS": "Mac",
+                    "windows": "Windows",
+                    "iPhone": "iPhone",
+                    "android": "Android",
+                    "unknown": "Dispositivo Sconosciuto"
+                }
+            },
             "title": "Controllo Accessi & Identità",
             "description": "Orchestra lo stato di autenticazione globale, i permessi e la visibilità della directory.",
             "invite": "Invita Intelligenza",

@@ -646,7 +646,7 @@ export default function SystemSettingsPage() {
         {activeTab === "audit" && (
           <section className="flex flex-col gap-6">
             <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
-              <History className="w-3.5 h-3.5" /> {t('auditLogs.title')}
+              <History className="w-3.5 h-3.5" /> {t('audit.title')}
             </h3>
 
             <AuditLogsTable logs={recentLogs} />
@@ -661,7 +661,7 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 20;
+  const itemsPerPage = 15;
 
   if (logs === undefined) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-brand" /></div>;
@@ -790,7 +790,7 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
 
       <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-foreground/[0.02] px-5">
         <span className="text-[12px] text-secondary">
-          {common('showing', { start: totalItems > 0 ? startIndex + 1 : 0, end: Math.min(startIndex + itemsPerPage, totalItems), total: totalItems })}
+          {totalItems > 0 ? `${common('pagination.showing')} ${startIndex + 1} ${common('pagination.to')} ${Math.min(startIndex + itemsPerPage, totalItems)} ${common('pagination.of')} ${totalItems} ${common('pagination.entries')}` : null}
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -798,14 +798,14 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
             disabled={currentPage === 1}
             className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
           >
-            {common('previous')}
+            {common('pagination.previous')}
           </button>
           <button
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages || totalPages === 0}
+            disabled={currentPage === totalPages}
             className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
           >
-            {common('next')}
+            {common('pagination.next')}
           </button>
         </div>
       </div>
