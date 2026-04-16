@@ -172,7 +172,7 @@ export default function AdminDashboard() {
             <MetricBlock
               icon={PoundSterling}
               title={t('metrics.logisticBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`}
+              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
               sub={t('metrics.burnSub')}
               delay={0.4}
             />
