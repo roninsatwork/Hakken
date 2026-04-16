@@ -185,7 +185,7 @@ export default function ReportsPage() {
                         <Zap className="w-4 h-4 text-brand" /> Top Deals to Watch
                       </h3>
                       <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
-                        {topDeals.map((deal: any, i: number) => (
+                        {(topDeals || []).map((deal: any, i: number) => (
                            <div key={i} className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.03] hover:bg-white/[0.04] hover:border-brand/30 hover:shadow-[0_0_30px_rgba(var(--color-brand-rgb),0.1)] transition-all duration-500 group relative overflow-hidden">
                               <div className="absolute inset-0 bg-gradient-to-r from-brand/0 via-brand/[0.03] to-brand/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
                               <div className="flex justify-between items-start mb-3">
@@ -214,7 +214,7 @@ export default function ReportsPage() {
                        4a. Pipeline by Stage <span className="opacity-50 tracking-normal capitalize ml-1">(Value)</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
-                       {pipelineHealth?.byStage.map((ph: any, i: number) => (
+                       {(pipelineHealth?.byStage || []).map((ph: any, i: number) => (
                          <div key={i} className="flex flex-col group">
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[12px] uppercase tracking-[0.1em] text-muted font-medium truncate">{ph.stage}</span>
@@ -235,7 +235,7 @@ export default function ReportsPage() {
                        4b. Pipeline by Rep <span className="opacity-50 tracking-normal capitalize ml-1">(Weighted Value)</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
-                       {pipelineHealth?.byRep.map((ph: any, i: number) => (
+                       {(pipelineHealth?.byRep || []).map((ph: any, i: number) => (
                          <div key={i} className="flex flex-col group">
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[14px] font-medium text-foreground truncate">{ph.rep}</span>
@@ -351,7 +351,7 @@ export default function ReportsPage() {
                              <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#00C49F]/30">{teamSpotlight.momentum}</p>
                            ) : (
                              <div className="space-y-4">
-                               {teamSpotlight.momentum.map((item: any, i: number) => (
+                               {(teamSpotlight?.momentum || []).map((item: any, i: number) => (
                                  <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#00C49F]/30">
                                    <strong className="text-foreground font-semibold">{item.rep}</strong> — {item.summary}
                                  </p>
@@ -369,7 +369,7 @@ export default function ReportsPage() {
                              <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#FF8042]/30">{teamSpotlight.supportNeeded}</p>
                            ) : (
                              <div className="space-y-4">
-                               {teamSpotlight.supportNeeded.map((item: any, i: number) => (
+                               {(teamSpotlight?.supportNeeded || []).map((item: any, i: number) => (
                                  <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#FF8042]/30">
                                    <strong className="text-foreground font-semibold">{item.rep}</strong> — {item.summary}
                                  </p>
@@ -387,7 +387,7 @@ export default function ReportsPage() {
                        <LineChart className="w-4 h-4 text-brand" /> Patterns & Signals
                     </h3>
                     <div className="space-y-6 relative z-10">
-                        {patterns.map((p: any, i: number) => (
+                        {(patterns || []).map((p: any, i: number) => (
                            <div key={i} className="relative">
                               <Zap className="absolute -left-1.5 top-0.5 w-[14px] h-[14px] text-brand/80 bg-background rounded-full drop-shadow-[0_0_8px_rgba(var(--color-brand-rgb),0.5)] z-10" />
                               <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-brand/30">
@@ -406,7 +406,7 @@ export default function ReportsPage() {
                        <CheckCircle2 className="w-4 h-4 text-brand" /> This Week's Priorities
                    </h3>
                    <div className="space-y-5 relative z-10">
-                      {priorities.map((task: string, i: number) => (
+                      {(priorities || []).map((task: string, i: number) => (
                         <div key={i} className="flex items-start gap-4">
                            <div className="w-6 h-6 rounded-full bg-background border border-brand/30 flex items-center justify-center font-mono text-[10px] text-brand/80 shrink-0 shadow-[0_0_10px_rgba(var(--color-brand-rgb),0.2)]">
                              {i + 1}
