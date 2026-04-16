@@ -723,7 +723,7 @@ export const getGlobalAnalytics = query({
        .sort((a,b) => b.cost - a.cost)
        .slice(0, 10);
 
-    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
+    const costPerActiveUser = users.length > 0 ? (totalCostGBP / users.length) : 0;
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
     const settings = await ctx.db.query("systemSettings").first() || { monthlyBasePrice: 199, monthlySeatPrice: 49 };
