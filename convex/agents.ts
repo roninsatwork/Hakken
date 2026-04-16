@@ -70,7 +70,7 @@ export const createAgent = mutation({
     const newAgentId = await ctx.db.insert("agents", {
       name: args.name,
       description: args.description,
-      modelId: defaultModel?.modelId || "gemini-3.1-pro-preview", // securely extract default or fallback
+      modelId: defaultModel?.modelId || "gemini-2.5-flash", // securely extract default or fallback
       thinkingMode: false,
       isActive: true, // defaults to true
       temperature: 1.0, // Default deterministic score
@@ -232,7 +232,7 @@ export const createInlineAgent = mutation({
     const newAgentId = await ctx.db.insert("agents", {
       name: "Sandbox Agent",
       description: "Inline agent logic",
-      modelId: defaultModel?.modelId || "gemini-3.1-pro-preview", // securely extract default or fallback
+      modelId: defaultModel?.modelId || "gemini-2.5-flash", // securely extract default or fallback
       thinkingMode: false,
       isActive: true, // defaults to true
       temperature: 1.0,

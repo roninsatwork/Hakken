@@ -208,10 +208,14 @@ export default defineSchema({
     userId: v.id("users"),
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")), // Sandbox tracking
+    widgetId: v.optional(v.id("widgets")), // To link threads directly to a widget
+    sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_user", ["userId", "updatedAt"]),
+  }).index("by_user", ["userId", "updatedAt"])
+    .index("by_widget", ["widgetId", "updatedAt"])
+    .index("by_company", ["companyId", "updatedAt"]),
 
   messages: defineTable({
     threadId: v.id("threads"),
@@ -409,4 +413,17 @@ export default defineSchema({
     createdAt: v.number()
   }).index("by_company", ["companyId", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"]),
+
+  // Website Widget Integration
+  widgets: defineTable({
+    companyId: v.id("companies"),
+    agentId: v.optional(v.id("agents")),
+    name: v.string(), // Identifier (e.g., "Main Website Bot")
+    allowedDomains: v.array(v.string()), // Security boundary e.g., ["https://acmecorp.com"]
+    themePrimaryColor: v.optional(v.string()),
+    themeGreeting: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_company", ["companyId"]),
 });

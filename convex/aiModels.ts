@@ -13,7 +13,7 @@ export const getModels = query({
 export const resolveModelForExecution = internalQuery({
   args: { requestedModelId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const FAILSAFE_MODEL = "gemini-3.1-pro-preview"; // Hardcoded network backup
+    const FAILSAFE_MODEL = "gemini-2.5-flash"; // Hardcoded network backup
 
     // Try finding the exact model requested
     if (args.requestedModelId) {

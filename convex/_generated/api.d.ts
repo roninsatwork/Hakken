@@ -44,6 +44,7 @@ import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
 import type * as users from "../users.js";
 import type * as utils_pii from "../utils/pii.js";
+import type * as widgets from "../widgets.js";
 import type * as workflowExecutions from "../workflowExecutions.js";
 import type * as workflowRuntime from "../workflowRuntime.js";
 import type * as workflows from "../workflows.js";
@@ -91,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   system: typeof system;
   users: typeof users;
   "utils/pii": typeof utils_pii;
+  widgets: typeof widgets;
   workflowExecutions: typeof workflowExecutions;
   workflowRuntime: typeof workflowRuntime;
   workflows: typeof workflows;
