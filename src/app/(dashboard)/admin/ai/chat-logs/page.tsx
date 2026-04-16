@@ -80,7 +80,7 @@ export default function ChatLogsDashboard() {
 
         // Better Lists
         formattedHtml = formattedHtml.replace(/(<br\/>)?- (.*)/g, "<li>$2</li>");
-        formattedHtml = formattedHtml.replace(/(<li>.*<\/li>)/s, '<ul style="margin-top: 4px; margin-bottom: 4px; padding-left: 20px;">$1</ul>');
+        formattedHtml = formattedHtml.replace(/(<li>[\s\S]*<\/li>)/, '<ul style="margin-top: 4px; margin-bottom: 4px; padding-left: 20px;">$1</ul>');
 
         msgHtml += `<div style="margin-bottom: 24px;">`;
         msgHtml += `<div style="margin-bottom: 4px;">`;

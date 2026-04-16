@@ -12,7 +12,8 @@ import {
   Bot,
   Users,
   MessageSquare,
-  Calendar
+  Calendar,
+  Building2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -244,6 +245,117 @@ export default function AICostsDashboard() {
                 )}
               </div>
             </motion.div>
+          </div>
+
+          {/* Deep Dark Leaderboards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
+            {/* Left: Top Companies */}
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-4 h-4 text-[#10b981] opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">{adminOverview('leaderboards.tenants')}</h2>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                {(data.topCompanies && data.topCompanies.length === 0) ? (
+                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
+                ) : (
+                  data.topCompanies?.map((c: any, i: number) => (
+                    <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{i + 1}</span>
+                        {c.logo ? (
+                          <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-border-dim/50 flex items-center justify-center text-[10px] text-foreground font-bold">
+                            {c.name.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-[13px] font-semibold tracking-wide text-foreground">{c.name}</span>
+                      </div>
+                      <div className="flex flex-col items-end min-w-[80px]">
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{c.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{c.messages.toLocaleString()} INT.</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.section>
+
+            {/* Middle: Top Users */}
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4 h-4 text-brand opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">{adminOverview('leaderboards.initiators')}</h2>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                {(data.topUsers && data.topUsers.length === 0) ? (
+                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
+                ) : (
+                  data.topUsers?.map((u: any, i: number) => (
+                    <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
+                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
+                        <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
+                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.companyName}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{u.messages.toLocaleString()} INT.</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.section>
+
+            {/* Right: Top Agents */}
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
+              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <Activity className="w-4 h-4 text-brand opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">Top Agents</h2>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                {(!data.topAgents || data.topAgents.length === 0) ? (
+                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
+                ) : (
+                  data.topAgents?.map((a: any, i: number) => (
+                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
+                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
+                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
+                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{(a.interactions || a.messages || 0).toLocaleString()} INT.</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.section>
           </div>
         </motion.div>
       )}

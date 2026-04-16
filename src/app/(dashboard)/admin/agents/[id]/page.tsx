@@ -70,13 +70,20 @@ export default function AgentDashboard() {
           <div className="flex items-center gap-2 text-[12px] font-medium tracking-widest text-muted uppercase">
             <Database className="w-3.5 h-3.5" /> {t("stats.tokens")}
           </div>
-          <div className="text-3xl font-bold text-foreground font-mono mt-1">
+          <div className="text-3xl font-bold text-foreground font-mono mt-1 flex flex-col gap-1">
             {stats === undefined ? (
               <Loader2 className="w-5 h-5 animate-spin text-muted/50 mt-1" />
             ) : (
-              stats.totalTokensIngested > 1000
-                ? (stats.totalTokensIngested / 1000).toFixed(1) + 'k'
-                : stats.totalTokensIngested.toLocaleString()
+              <>
+                <span>
+                  {stats.totalTokensIngested > 1000
+                    ? (stats.totalTokensIngested / 1000).toFixed(1) + 'k'
+                    : stats.totalTokensIngested.toLocaleString()}
+                </span>
+                <span className="text-[10px] tracking-widest font-mono text-muted/80 uppercase">
+                  {stats.totalInputTokens.toLocaleString()} IN • {stats.totalOutputTokens.toLocaleString()} OUT
+                </span>
+              </>
             )}
           </div>
         </div>
@@ -86,7 +93,7 @@ export default function AgentDashboard() {
             <TerminalSquare className="w-3.5 h-3.5" /> {t("stats.opex")}
           </div>
           <div className="text-3xl font-bold text-foreground font-mono mt-1">
-            {stats === undefined ? <Loader2 className="w-5 h-5 animate-spin text-muted/50 mt-1" /> : `£${stats.totalOpexCost.toFixed(2)}`}
+            {stats === undefined ? <Loader2 className="w-5 h-5 animate-spin text-muted/50 mt-1" /> : `£${stats.totalOpexCost < 0.00001 && stats.totalOpexCost > 0 ? "< 0.00001" : stats.totalOpexCost.toFixed(5)}`}
           </div>
         </div>
       </div>
