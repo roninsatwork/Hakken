@@ -169,7 +169,7 @@ export default function ReportsPage() {
                             contentStyle={{ backgroundColor: 'rgba(15,15,15,0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}
                             itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}
                             labelStyle={{ color: 'var(--color-brand)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                            formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                            formatter={(value: any, name: any) => [formatCurrency(Number(value) || 0), name]}
                           />
                           <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#888', paddingTop: '0px', paddingBottom: '15px' }} />
                           <Area type="monotone" dataKey="totalValue" name="Total Pipeline" fill="url(#totalArea)" stroke="var(--color-brand)" strokeOpacity={0.3} strokeWidth={2} />
