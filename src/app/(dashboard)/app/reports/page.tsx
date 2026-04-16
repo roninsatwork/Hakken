@@ -37,7 +37,7 @@ export default function ReportsPage() {
   if (report === undefined) {
     return (
       <>
-        <Header title="Reports" subtitle="Sales Report" />
+        <Header />
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-center h-[50vh]">
             <Loader2 className="w-8 h-8 animate-spin text-brand" />
@@ -50,7 +50,7 @@ export default function ReportsPage() {
   if (report === null) {
     return (
       <>
-        <Header title="Reports" subtitle="Sales Report" />
+        <Header />
         <div className="flex flex-col gap-5">
           <div className="px-8 mt-4">
             <div className="bg-card/40 border border-border-dim rounded-2xl p-12 text-center flex flex-col items-center">
@@ -84,7 +84,7 @@ export default function ReportsPage() {
 
   return (
     <>
-      <Header title="Reports" subtitle="Sales Report" />
+      <Header />
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-6 max-w-none px-4 md:px-8 pb-12 pt-4">
           <div className="flex items-center justify-between">
