@@ -355,6 +355,11 @@ export const getCompanyMetrics = query({
     const agents = await ctx.db.query("agents").collect();
     const agentMap = new Map(agents.map((a: any) => [a._id, a]));
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
+    for (const a of agents) {
+       agentLeaderboard[a._id] = { id: a._id, name: a.name, avatar: a.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${a._id}`, cost: 0, interactions: 0 };
+    }
+    // Also inject the system assistant
+    agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
     const companyUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
     const companyUserIds = new Set(companyUsers.map((u: any) => u._id));
@@ -374,12 +379,33 @@ export const getCompanyMetrics = query({
 
     const threadUserMap = new Map(companyThreads.map((t: any) => [t._id, t.userId]));
     const threadAgentMap = new Map(companyThreads.map((t: any) => [t._id, t.agentId]));
+    const threadWidgetMap = new Map(companyThreads.map((t: any) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
+    for (const u of companyUsers) {
+       userLeaderboard[u._id] = {
+           id: u._id,
+           name: u.name || "Unknown",
+           image: u.image || "https://api.dicebear.com/7.x/notionists/svg",
+           email: u.email || "",
+           cost: 0,
+           messages: 0
+       };
+    }
     const activePeriodUsers = new Set<string>();
+    
+    userLeaderboard["WIDGET_USER_GROUP"] = {
+        id: "WIDGET_USER_GROUP",
+        name: "Widget User",
+        image: "https://api.dicebear.com/7.x/shapes/svg?seed=WidgetUser",
+        email: "anonymous@widget",
+        cost: 0,
+        messages: 0
+    };
     
     const unifiedInteractions = [
        ...periodRawMessages.map((m: any) => ({
           userId: threadUserMap.get(m.threadId),
+          widgetId: threadWidgetMap.get(m.threadId),
           agentId: threadAgentMap.get(m.threadId) || "system_assistant",
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
@@ -388,6 +414,7 @@ export const getCompanyMetrics = query({
        })),
        ...periodAgentTxs.map((t: any) => ({
           userId: t.userId,
+          widgetId: undefined, // Txs don't have thread visibility easily, but they follow raw messages
           agentId: t.agentId,
           inputTokens: t.inputTokens || 0,
           outputTokens: t.outputTokens || 0,
@@ -433,10 +460,14 @@ export const getCompanyMetrics = query({
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
           
-          if (!userLeaderboard[msg.userId]) {
-             const userObj = companyUsers.find((u: any) => u._id === msg.userId);
-             userLeaderboard[msg.userId] = {
-                id: msg.userId,
+          const isWidgetThread = !!msg.widgetId;
+          const isRegistered = companyUsers.some((u: any) => u._id === msg.userId);
+          const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
+          
+          if (!userLeaderboard[targetLeaderId]) {
+             const userObj = companyUsers.find((u: any) => u._id === targetLeaderId);
+             userLeaderboard[targetLeaderId] = {
+                id: targetLeaderId,
                 name: userObj?.name || "Unknown",
                 image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
                 email: userObj?.email || "",
@@ -444,8 +475,8 @@ export const getCompanyMetrics = query({
                 messages: 0
              };
           }
-          userLeaderboard[msg.userId].cost += gbpCost;
-          userLeaderboard[msg.userId].messages += 1;
+          userLeaderboard[targetLeaderId].cost += gbpCost;
+          userLeaderboard[targetLeaderId].messages += 1;
        }
 
        if (msg.agentId) {
@@ -558,7 +589,16 @@ export const getGlobalAnalytics = query({
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
+    for (const c of companies) {
+       companyLeaderboard[c._id] = { id: c._id, name: c.name, logo: c.logo || "", cost: 0, messages: 0 };
+    }
+
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
+    for (const a of agents) {
+       agentLeaderboard[a._id] = { id: a._id, name: a.name, avatar: a.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${a._id}`, cost: 0, interactions: 0 };
+    }
+    // Also inject the system assistant
+    agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
     const threads = await ctx.db.query("threads").collect();
     const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
@@ -585,12 +625,36 @@ export const getGlobalAnalytics = query({
 
     const threadUserMap = new Map(threads.map((t: any) => [t._id, t.userId]));
     const threadAgentMap = new Map(threads.map((t: any) => [t._id, t.agentId]));
+    const threadWidgetMap = new Map(threads.map((t: any) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
+    for (const u of users) {
+       const compObj = u.companyId ? companyMap.get(u.companyId) : null;
+       userLeaderboard[u._id] = {
+           id: u._id,
+           name: u.name || "Unknown",
+           image: u.image || "https://api.dicebear.com/7.x/notionists/svg",
+           email: u.email || "",
+           companyName: compObj?.name || "Independent",
+           cost: 0,
+           messages: 0
+       };
+    }
     const activePeriodUsers = new Set<string>();
+    
+    userLeaderboard["WIDGET_USER_GROUP"] = {
+        id: "WIDGET_USER_GROUP",
+        name: "Widget User",
+        image: "https://api.dicebear.com/7.x/shapes/svg?seed=WidgetUser",
+        companyName: "External Web Traffic",
+        email: "anonymous@widget",
+        cost: 0,
+        messages: 0
+    };
     
     const unifiedInteractions = [
        ...periodRawMessages.map((m: any) => ({
           userId: threadUserMap.get(m.threadId),
+          widgetId: threadWidgetMap.get(m.threadId),
           companyId: undefined, // Resolved in loop
           agentId: threadAgentMap.get(m.threadId) || "system_assistant",
           inputTokens: m.inputTokens || 0,
@@ -600,6 +664,7 @@ export const getGlobalAnalytics = query({
        })),
        ...periodAgentTxs.map((t: any) => ({
           userId: t.userId,
+          widgetId: undefined,
           companyId: t.companyId,
           agentId: t.agentId,
           inputTokens: t.inputTokens || 0,
@@ -646,11 +711,15 @@ export const getGlobalAnalytics = query({
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
           
-          if (!userLeaderboard[msg.userId]) {
-             const userObj = users.find((u: any) => u._id === msg.userId);
+          const isWidgetThread = !!msg.widgetId;
+          const isRegistered = users.some((u: any) => u._id === msg.userId);
+          const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
+          
+          if (!userLeaderboard[targetLeaderId]) {
+             const userObj = users.find((u: any) => u._id === targetLeaderId);
              const compObj = (msg.companyId || (userObj && userObj.companyId)) ? companyMap.get(msg.companyId || userObj?.companyId) : null;
-             userLeaderboard[msg.userId] = {
-                id: msg.userId,
+             userLeaderboard[targetLeaderId] = {
+                id: targetLeaderId,
                 name: userObj?.name || "Unknown",
                 image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
                 email: userObj?.email || "",
@@ -659,8 +728,8 @@ export const getGlobalAnalytics = query({
                 messages: 0
              };
           }
-          userLeaderboard[msg.userId].cost += gbpCost;
-          userLeaderboard[msg.userId].messages += 1;
+          userLeaderboard[targetLeaderId].cost += gbpCost;
+          userLeaderboard[targetLeaderId].messages += 1;
        }
 
        const activeCompanyId = msg.companyId || (msg.userId ? users.find((u: any) => u._id === msg.userId)?.companyId : undefined);

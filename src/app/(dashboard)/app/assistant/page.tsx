@@ -16,8 +16,7 @@ import {
   Square,
   Mic,
   MicOff,
-  AlertTriangle,
-  Target
+  AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -54,7 +53,6 @@ export default function AssistantWelcomePage() {
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [selectedThinkingId, setSelectedThinkingId] = useState(THINKING_LEVELS[0].id);
 
-  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
 
   const modelRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
@@ -113,7 +111,7 @@ export default function AssistantWelcomePage() {
         threadId,
         content: content.trim(),
         modelId: selectedModelId || undefined,
-        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinkingId
+        thinkingLevel: selectedThinkingId
       });
       router.push(`/app/assistant/${threadId}`);
     } catch (error) {
@@ -174,30 +172,7 @@ export default function AssistantWelcomePage() {
               </div>
 
               {/* Bottom Row: Controls */}
-              <div className="flex items-center justify-between w-full mt-3">
-
-                {/* Left Controls */}
-                <div className="flex items-center gap-1">
-                  <button type="button" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors" disabled={isRecording}>
-                    <Plus className="w-5 h-5" />
-                  </button>
-                  <button type="button" className="h-10 px-4 flex items-center gap-2 rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors" disabled={isRecording}>
-                    <Settings2 className="w-[18px] h-[18px]" />
-                    <span className="text-[14px] font-medium tracking-wide">{t('controls.tools')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAutonomousMode(!isAutonomousMode)}
-                    className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${isAutonomousMode ? 'bg-foreground/10 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
-                    disabled={isRecording}
-                  >
-                    <Target className={`w-[18px] h-[18px] ${isAutonomousMode ? 'text-brand' : ''}`} />
-                    <span className="text-[14px] font-medium tracking-wide">{t('controls.autonomous')}</span>
-                  </button>
-                </div>
-
-                {/* Right Controls */}
-                <div className="flex items-center gap-2 relative">
+              <div className="flex flex-wrap items-center justify-end w-full mt-3 gap-2 relative">
 
                   {/* Voice Dictation (Mic) */}
                   <button
@@ -222,7 +197,7 @@ export default function AssistantWelcomePage() {
                     <button
                       type="button"
                       onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
-                      disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
+                      disabled={isRecording || activeModels.length === 0}
                       className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                     >
                       <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : t('controls.engine.label')}</span>
@@ -272,7 +247,7 @@ export default function AssistantWelcomePage() {
                     <button
                       type="button"
                       onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
-                      disabled={isRecording || isAutonomousMode}
+                      disabled={isRecording}
                       className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${thinkingDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                     >
                       <span className="text-[14px] font-medium">{t(`controls.reasoning.levels.${selectedThinkingId}`)}</span>
@@ -334,7 +309,6 @@ export default function AssistantWelcomePage() {
                       <ArrowUp className="w-5 h-5" />
                     )}
                   </button>
-                </div>
               </div>
             </div>
           </form>

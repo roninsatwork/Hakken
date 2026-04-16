@@ -176,6 +176,7 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/admin/users')) return 'Manage Users';
     if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
     if (pathname.startsWith('/admin/ai/global-knowledge')) return 'Global Knowledge';
+    if (pathname.startsWith('/admin/ai/widget')) return 'Widget';
     if (pathname.startsWith('/admin/ai/models')) return 'Models';
     if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
     if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
@@ -218,6 +219,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/users')) setActiveItem('Manage Users');
     else if (pathname.startsWith('/admin/ai/system-prompt')) setActiveItem('System Prompt');
     else if (pathname.startsWith('/admin/ai/global-knowledge')) setActiveItem('Global Knowledge');
+    else if (pathname.startsWith('/admin/ai/widget')) setActiveItem('Widget');
     else if (pathname.startsWith('/admin/ai/models')) setActiveItem('Models');
     else if (pathname.startsWith('/admin/ai/chat-logs')) setActiveItem('Chat Logs');
     else if (pathname.startsWith('/admin/ai/tools')) setActiveItem('Connectors');
@@ -311,7 +313,7 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={Bot}
                       label={t('ai')}
-                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Global Knowledge' || activeItem === 'Models' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'Running Costs'}
+                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Global Knowledge' || activeItem === 'Widget' || activeItem === 'Models' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'Running Costs'}
                       onClick={() => setActiveItem('Artificial Intelligence')}
                       hasChildren
                       isOpen={openSections.ai}
@@ -325,6 +327,7 @@ export default function SidebarNavigation() {
                           <SubNavItem label={t('rules')} href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
                           <SubNavItem label={t('systemPrompt')} href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
                           <SubNavItem label={t('globalKnowledge')} href="/admin/ai/global-knowledge" isActive={activeItem === 'Global Knowledge' || pathname.startsWith('/admin/ai/global-knowledge')} onClick={() => setActiveItem('Global Knowledge')} />
+                          <SubNavItem label="Widget" href="/admin/ai/widget" isActive={activeItem === 'Widget' || pathname.startsWith('/admin/ai/widget')} onClick={() => setActiveItem('Widget')} />
                           <SubNavItem label={t('models')} href="/admin/ai/models" isActive={activeItem === 'Models' || pathname.startsWith('/admin/ai/models')} onClick={() => setActiveItem('Models')} />
                         </>
                       )}

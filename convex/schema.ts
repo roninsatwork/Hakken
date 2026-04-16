@@ -416,14 +416,16 @@ export default defineSchema({
 
   // Website Widget Integration
   widgets: defineTable({
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
     name: v.string(), // Identifier (e.g., "Main Website Bot")
     allowedDomains: v.array(v.string()), // Security boundary e.g., ["https://acmecorp.com"]
     themePrimaryColor: v.optional(v.string()),
     themeGreeting: v.optional(v.string()),
     isActive: v.boolean(),
+    isGlobal: v.optional(v.boolean()),
     createdBy: v.id("users"),
     createdAt: v.number(),
-  }).index("by_company", ["companyId"]),
+  }).index("by_company", ["companyId"])
+    .index("by_global", ["isGlobal"]),
 });

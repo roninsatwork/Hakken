@@ -21,6 +21,24 @@ export const getWidgetsByCompany = query({
   },
 });
 
+export const getGlobalWidgets = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+    
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized Access");
+    }
+
+    return await ctx.db
+      .query("widgets")
+      .withIndex("by_global", (q) => q.eq("isGlobal", true))
+      .collect();
+  },
+});
+
 export const getWidgetById = query({
   args: { widgetId: v.id("widgets") },
   handler: async (ctx, args) => {
@@ -51,21 +69,28 @@ export const getWidgetById = query({
 export const saveWidget = mutation({
   args: {
     widgetId: v.optional(v.id("widgets")),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     name: v.string(),
     agentId: v.optional(v.id("agents")),
     allowedDomains: v.array(v.string()),
     themePrimaryColor: v.optional(v.string()),
     themeGreeting: v.optional(v.string()),
     isActive: v.boolean(),
+    isGlobal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN" && user?.companyId !== args.companyId) {
-      throw new Error("Unauthorized");
+    
+    if (user?.role !== "SUPER_ADMIN") {
+      if (args.isGlobal || !args.companyId) {
+        throw new Error("Unauthorized: Only Super Admins can manage global widgets.");
+      }
+      if (user?.companyId !== args.companyId) {
+        throw new Error("Unauthorized");
+      }
     }
 
     const now = Date.now();
@@ -73,7 +98,8 @@ export const saveWidget = mutation({
     if (args.widgetId) {
       // Update
       const existing = await ctx.db.get(args.widgetId);
-      if (!existing || existing.companyId !== args.companyId) throw new Error("Widget not found");
+      if (!existing) throw new Error("Widget not found");
+      if (user?.role !== "SUPER_ADMIN" && existing.companyId !== args.companyId) throw new Error("Widget not found");
       
       await ctx.db.patch(args.widgetId, {
         name: args.name,
@@ -82,6 +108,7 @@ export const saveWidget = mutation({
         themePrimaryColor: args.themePrimaryColor,
         themeGreeting: args.themeGreeting,
         isActive: args.isActive,
+        isGlobal: args.isGlobal,
       });
 
       // Audit Log
@@ -105,6 +132,7 @@ export const saveWidget = mutation({
         themePrimaryColor: args.themePrimaryColor,
         themeGreeting: args.themeGreeting,
         isActive: args.isActive,
+        isGlobal: args.isGlobal,
         createdBy: userId,
         createdAt: now,
       });
@@ -127,19 +155,22 @@ export const saveWidget = mutation({
 export const deleteWidget = mutation({
   args: {
     widgetId: v.id("widgets"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
     const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN" && user?.companyId !== args.companyId) {
-      throw new Error("Unauthorized");
-    }
-
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget || widget.companyId !== args.companyId) throw new Error("Widget not found");
+    
+    if (!widget) throw new Error("Widget not found");
+
+    if (user?.role !== "SUPER_ADMIN") {
+      if (widget.isGlobal || widget.companyId !== user?.companyId || args.companyId !== user?.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
 
     await ctx.db.delete(args.widgetId);
 
