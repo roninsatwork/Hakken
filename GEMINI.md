@@ -49,6 +49,7 @@
   - Sonae deploys to **Google Cloud Run** via **GitHub Actions** (`.github/workflows/deploy.yml`).
   - Convex deploys natively alongside the Github Actions pipeline.
   - **BRANCHING PROTOCOL**: All daily coding and new features MUST be written on the `dev` branch. `main` is strictly protected for production. Merge `dev` to `main` locally to trigger a live auto-deployment.
+  - **PRE-FLIGHT SWEEP (CRITICAL)**: Because Google Cloud CI operates with strict production TypeScript bounds, you MUST intercept compiler errors locally before pushing to `main` by executing: `source ~/.zshrc && npm run build`. Ensure a `100%` clean output to prevent consecutive broken pipeline loops.
 
 ## 🚀 Local Development
 - **Starting the App**: The local shell environment requires the RC file to be sourced before running Node commands in a non-interactive shell. To start the local application, you must use persistent terminals and explicit source commands:
