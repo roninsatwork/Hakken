@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import Header from "@/src/ui/components/layout/Header";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
+import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 
 const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE'];
 
@@ -141,7 +142,7 @@ export default function ReportsPage() {
 
                 {/* SECTION 3: Closing Windows */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mb-6">
-                  <div className="lg:col-span-2 bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl overflow-hidden shadow-xl flex flex-col relative">
+                  <ChartExportWrapper exportName="closing-windows-chart" className="lg:col-span-2 bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl overflow-hidden shadow-xl flex flex-col relative h-full">
                     <div className="absolute inset-0 bg-gradient-to-br from-brand/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
                     <div className="p-6 border-b border-white/5 flex items-center justify-between relative z-10">
                       <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2">
@@ -177,7 +178,7 @@ export default function ReportsPage() {
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
+                  </ChartExportWrapper>
 
                   <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl overflow-hidden shadow-xl p-7 relative flex flex-col h-full">
                      <div className="absolute top-0 right-0 w-full h-64 bg-gradient-to-bl from-brand/10 to-transparent rounded-full -mt-20 -mr-20 pointer-events-none blur-3xl"></div>
@@ -208,7 +209,7 @@ export default function ReportsPage() {
 
                 {/* SECTION 4: Pipeline Health */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
-                  <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden">
+                  <ChartExportWrapper exportName="pipeline-stage-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden h-full">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-[60px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
                        4a. Pipeline by Stage <span className="opacity-50 tracking-normal capitalize ml-1">(Value)</span>
@@ -227,9 +228,9 @@ export default function ReportsPage() {
                          </div>
                        ))}
                     </div>
-                  </div>
+                  </ChartExportWrapper>
 
-                  <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden">
+                  <ChartExportWrapper exportName="pipeline-rep-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden h-full">
                     <div className="absolute top-0 left-0 w-64 h-64 bg-brand/5 blur-[60px] rounded-full -mt-20 -ml-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
                        4b. Pipeline by Rep <span className="opacity-50 tracking-normal capitalize ml-1">(Weighted Value)</span>
@@ -248,7 +249,7 @@ export default function ReportsPage() {
                          </div>
                        ))}
                     </div>
-                  </div>
+                  </ChartExportWrapper>
                 </div>
 
                 {/* SECTION 5: Risk Radar & Vector Analysis */}
@@ -315,7 +316,7 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden flex flex-col">
+                  <ChartExportWrapper exportName="risk-vector-chart" className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-7 shadow-xl relative overflow-hidden flex flex-col h-full">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-400/5 blur-[80px] rounded-full -mt-20 -mr-20 pointer-events-none"></div>
                     <h3 className="text-[13px] uppercase tracking-[0.2em] font-medium text-foreground flex items-center gap-2 mb-8 relative z-10">
                        Risk Vector Analysis
@@ -330,7 +331,7 @@ export default function ReportsPage() {
                         </RadarChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
+                  </ChartExportWrapper>
                 </div>
 
                 {/* SECTION 6 & 7: Team & Patterns Grid */}
