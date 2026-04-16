@@ -204,8 +204,8 @@ export const getWorkflowExecutions = query({
     // Enrich
     return await Promise.all(
       execs.map(async (e) => {
-        const wf = await ctx.db.get(e.workflowId);
-        const user = await ctx.db.get(e.startedBy);
+        const wf = e.workflowId ? await ctx.db.get(e.workflowId) : null;
+        const user = e.startedBy ? await ctx.db.get(e.startedBy) : null;
         return {
           ...e,
           workflowName: wf?.name || "Deleted Workflow",
