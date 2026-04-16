@@ -131,12 +131,12 @@ export default function ReportsPage() {
              <>
                 {/* SECTION 2: Pipeline at a Glance */}
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-2">
-                  <KpiCard label="Total Pipeline" value={formatCurrency(kpis.totalPipeline)} />
-                  <KpiCard label="Weighted" value={formatCurrency(kpis.weightedPipeline)} />
-                  <KpiCard label="Open Deals" value={kpis.openDeals.toString()} />
-                  <KpiCard label="Avg Size" value={formatCurrency(kpis.avgDealSize)} />
-                  <KpiCard label="Cycle Days" value={kpis.avgSalesCycleDays.toString()} />
-                  <KpiCard label="Win Rate" value={`${(kpis.winRatePct).toFixed(1)}%`} highlight />
+                  <KpiCard label="Total Pipeline" value={formatCurrency(kpis?.totalPipeline || 0)} />
+                  <KpiCard label="Weighted" value={formatCurrency(kpis?.weightedPipeline || 0)} />
+                  <KpiCard label="Open Deals" value={(kpis?.openDeals || 0).toString()} />
+                  <KpiCard label="Avg Size" value={formatCurrency(kpis?.avgDealSize || 0)} />
+                  <KpiCard label="Cycle Days" value={(kpis?.avgSalesCycleDays || 0).toString()} />
+                  <KpiCard label="Win Rate" value={`${(kpis?.winRatePct || 0).toFixed(1)}%`} highlight />
                 </div>
 
                 {/* SECTION 3: Closing Windows */}
