@@ -64,8 +64,10 @@ export const getCompanyThreadsAdmin = query({
     if (!adminId) throw new Error("Unauthenticated Request");
 
     const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN" && admin?.companyId !== args.companyId) {
-        throw new Error("Unauthorized");
+    if (admin?.role !== "SUPER_ADMIN") {
+        if (admin?.role !== "ADMIN" || !admin.companyId || admin.companyId !== args.companyId) {
+            throw new Error("Unauthorized");
+        }
     }
 
     const pagedThreads = await ctx.db
@@ -120,7 +122,7 @@ export const getAdminThreadMessages = query({
     const thread = await ctx.db.get(args.threadId);
     
     if (admin?.role !== "SUPER_ADMIN") {
-        if (!thread || thread.companyId !== admin?.companyId) {
+        if (admin?.role !== "ADMIN" || !admin.companyId || !thread || thread.companyId !== admin.companyId) {
             throw new Error("Unauthorized: Cross-boundary access denied.");
         }
     }
