@@ -225,8 +225,8 @@ export const getWorkflowExecution = query({
     const exec = await ctx.db.get(args.executionId);
     if (!exec) return null;
 
-    const wf = await ctx.db.get(exec.workflowId);
-    const user = await ctx.db.get(exec.startedBy);
+    const wf = exec.workflowId ? await ctx.db.get(exec.workflowId) : null;
+    const user = exec.startedBy ? await ctx.db.get(exec.startedBy) : null;
 
     return {
       ...exec,
