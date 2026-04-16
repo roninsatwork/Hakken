@@ -178,6 +178,8 @@
                 "empty": "Nessuna telemetria registrata."
             },
             "timeframes": {
+                "today": "Oggi",
+                "yesterday": "Ieri",
                 "7d": "7 Giorni",
                 "30d": "30 Giorni",
                 "90d": "90 Giorni",

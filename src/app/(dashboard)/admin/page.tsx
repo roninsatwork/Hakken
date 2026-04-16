@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
 
-type TimeframeOption = "7d" | "30d" | "90d" | "ytd" | "custom";
+type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
 
 // Reusable Animated Component mapping standard integers
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
@@ -45,7 +45,7 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
 export default function AdminDashboard() {
   const t = useTranslations('admin.overview');
   const tCommon = useTranslations('common');
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
 
@@ -84,6 +84,8 @@ export default function AdminDashboard() {
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as TimeframeOption)}
             >
+              <option value="today">{t('timeframes.today')}</option>
+              <option value="yesterday">{t('timeframes.yesterday')}</option>
               <option value="7d">{t('timeframes.7d')}</option>
               <option value="30d">{t('timeframes.30d')}</option>
               <option value="90d">{t('timeframes.90d')}</option>
@@ -135,7 +137,7 @@ export default function AdminDashboard() {
             <MetricBlock
               icon={CreditCard}
               title={t('metrics.mrr')}
-              value={`£${data.aggregates.mrr.toFixed(2)}`}
+              value={`£${(data.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               sub={t('metrics.mrrSub')}
               delay={0}
             />
@@ -170,7 +172,7 @@ export default function AdminDashboard() {
             <MetricBlock
               icon={PoundSterling}
               title={t('metrics.logisticBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toFixed(4)}`}
+              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`}
               sub={t('metrics.burnSub')}
               delay={0.4}
             />
@@ -214,11 +216,21 @@ export default function AdminDashboard() {
                       />
                       <YAxis
                         yAxisId="left"
+                        orientation="left"
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 11, fill: '#888888' }}
-                        tickFormatter={(val) => `£${Number(val || 0).toFixed(4)}`}
+                        tickFormatter={(val) => `£${Number(val || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`}
                         width={80}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#888888' }}
+                        tickFormatter={(val) => val.toLocaleString()}
+                        width={40}
                       />
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                       <Tooltip
@@ -226,7 +238,7 @@ export default function AdminDashboard() {
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
                         formatter={(value: any, name: any) => [
-                          name === 'cost' ? `£${Number(value || 0).toFixed(4)}` : value,
+                          name === 'cost' ? `£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}` : value,
                           name === 'cost' ? t('charts.estimatedCost') : t('charts.globalMessages')
                         ]}
                       />
@@ -240,7 +252,7 @@ export default function AdminDashboard() {
                         fill="url(#colorCost)"
                       />
                       <Area
-                        yAxisId="left"
+                        yAxisId="right"
                         type="monotone"
                         dataKey="messages"
                         stroke="#8b5cf6"
@@ -261,7 +273,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Deep Dark Leaderboards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
             {/* Left: Top Companies */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
@@ -277,7 +289,7 @@ export default function AdminDashboard() {
                 {data.topCompanies.length === 0 ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
-                  data.topCompanies.map((c, i) => (
+                  data.topCompanies.map((c: any, i: number) => (
                     <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{i + 1}</span>
@@ -291,7 +303,7 @@ export default function AdminDashboard() {
                         <span className="text-[13px] font-semibold tracking-wide text-foreground">{c.name}</span>
                       </div>
                       <div className="flex flex-col items-end min-w-[80px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{c.cost.toFixed(4)}</span>
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{c.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                         <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: c.messages.toLocaleString() })}</span>
                       </div>
                     </div>
@@ -300,7 +312,7 @@ export default function AdminDashboard() {
               </div>
             </motion.section>
 
-            {/* Right: Top Users */}
+            {/* Middle: Top Users */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
               className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
@@ -315,7 +327,7 @@ export default function AdminDashboard() {
                 {data.topUsers.length === 0 ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
-                  data.topUsers.map((u, i) => (
+                  data.topUsers.map((u: any, i: number) => (
                     <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
@@ -326,8 +338,43 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 min-w-[70px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{u.cost.toFixed(4)}</span>
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                         <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: u.messages.toLocaleString() })}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.section>
+
+            {/* Right: Top Agents */}
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
+              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <Activity className="w-4 h-4 text-brand opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">Top Agents</h2>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                {(!data.topAgents || data.topAgents.length === 0) ? (
+                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
+                ) : (
+                  data.topAgents.map((a: any, i: number) => (
+                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
+                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
+                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
+                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
+                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: (a.interactions || a.messages || 0).toLocaleString() })}</span>
                       </div>
                     </div>
                   ))

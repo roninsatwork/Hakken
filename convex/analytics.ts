@@ -303,158 +303,14 @@ export const getUserCostOverview = query({
   }
 });
 
-/**
- * Executes a hard compute of metrics for a specific day.
- * We extract this so both the cron job and the manual backfill can call it.
- */
-async function computeMetricsForDate(ctx: any, targetDateStr?: string) {
-  const aiModelsFetch = await ctx.db.query("aiModels").collect();
-  const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-  const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
-  if (!targetDateStr) {
-    targetDate.setDate(targetDate.getDate() - 1); // Yesterday
-  }
-  
-  const dateStr = targetDate.toISOString().split('T')[0];
-  const startTime = targetDate.setUTCHours(0, 0, 0, 0);
-  const endTime = targetDate.setUTCHours(23, 59, 59, 999);
-  
-  let companies = await ctx.db.query("companies").collect();
-  
-  let systemCompany = companies.find((c: any) => c.name === "Sonae System");
-  if (!systemCompany) {
-     const cId = await ctx.db.insert("companies", { name: "Sonae System", createdAt: Date.now() });
-     systemCompany = await ctx.db.get(cId);
-     companies.push(systemCompany);
-  }
-  
-  const orphanedUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), undefined)).collect();
-  for (const u of orphanedUsers) {
-     await ctx.db.patch(u._id, { companyId: systemCompany._id });
-  }
-  
-  for (const company of companies) {
-    const users = await ctx.db
-      .query("users")
-      .filter((q: any) => q.eq(q.field("companyId"), company._id))
-      .collect();
-    
-    let totalMessages = 0;
-    let totalTokens = 0;
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-    let costUSD = 0;
-    const activeUserIds = new Set<string>();
-    
-    for (const user of users) {
-      
-    const threads = await ctx.db
-      .query("threads")
-        .withIndex("by_user", (q: any) => q.eq("userId", user._id))
-        .collect();
-        
-      let userWasActive = false;
-      
-      for (const thread of threads) {
-         const messages = await ctx.db
-          .query("messages")
-          .withIndex("by_thread", (q: any) => q.eq("threadId", thread._id))
-          .collect();
-          
-         for (const msg of messages) {
-           if (msg.role === "assistant" && msg.createdAt >= startTime && msg.createdAt <= endTime) {
-             userWasActive = true;
-             totalMessages++;
-             const inputs = msg.inputTokens || 0;
-             const outputs = msg.outputTokens || 0;
-             const model = msg.modelUsed || "gemini-1.5-flash"; 
-             
-             totalTokens += (inputs + outputs);
-             totalInputTokens += inputs;
-             totalOutputTokens += outputs;
-             
-             costUSD += computeCostFromMap(model, inputs, outputs, modelMap);
-           }
-         }
-      }
-      
-      if (userWasActive) activeUserIds.add(user._id);
-      else {
-         const logins = await ctx.db.query("logins").withIndex("by_user", (q: any) => q.eq("userId", user._id)).collect();
-         const hasLogin = logins.some((l: any) => l.timestamp >= startTime && l.timestamp <= endTime);
-         if (hasLogin) activeUserIds.add(user._id);
-      }
-    }
-    
-    const existing = await ctx.db
-      .query("companyMetrics")
-      .withIndex("by_company_date", (q: any) => q.eq("companyId", company._id).eq("date", dateStr))
-      .first();
-      
-    const costGBP = costUSD * 0.78;
-    
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        activeUsers: activeUserIds.size,
-        totalMessages,
-        totalTokens,
-        inputTokens: totalInputTokens,
-        outputTokens: totalOutputTokens,
-        costGBP
-      });
-    } else {
-      await ctx.db.insert("companyMetrics", {
-        companyId: company._id,
-        date: dateStr,
-        activeUsers: activeUserIds.size,
-        totalMessages,
-        totalTokens,
-        inputTokens: totalInputTokens,
-        outputTokens: totalOutputTokens,
-        costGBP
-      });
-    }
-  }
-}
-
 // ----------------------------------------------------
-// CRON ROUTER & BACKFILL
+// FULL RESOLUTION REAL-TIME TELEMETRY ENGINE
 // ----------------------------------------------------
-
-export const aggregateNightlyMetrics = internalMutation({
-  args: { targetDateStr: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    await computeMetricsForDate(ctx, args.targetDateStr);
-  }
-});
-
-export const backfillCompanyMetrics = mutation({
-  args: { days: v.number() },
-  handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
-    
-    const now = new Date();
-    for (let i = 0; i < args.days; i++) {
-       const target = new Date(now);
-       target.setDate(now.getDate() - i);
-       const dateStr = target.toISOString().split('T')[0];
-       await computeMetricsForDate(ctx, dateStr);
-    }
-    return true;
-  }
-});
 
 export const getCompanyMetrics = query({
   args: { 
     companyId: v.id("companies"), 
-    timeframe: v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
@@ -472,44 +328,88 @@ export const getCompanyMetrics = query({
        }
     }
 
-    // 2. Establish Timeframe Boundaries
     const now = new Date();
     let startDate = new Date();
+    let endDate = new Date();
     
-    if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
+    else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
+    else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
     else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
     else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
     else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
     else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
 
-    let endDate = now;
     if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
     const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
 
-    // 4. Fetch the Highly-Optimized CompanyMetrics Ledger
-    const allMetrics = await ctx.db
-       .query("companyMetrics")
-       .withIndex("by_company_date", (q) => q.eq("companyId", args.companyId))
-       .collect();
-
-    const validMetrics = allMetrics.filter(m => m.date >= startDateStr && m.date <= endDateStr);
-    
-    // Aggregation Variables
     let totalMessages = 0;
     let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number }> = {};
 
-    for (const m of validMetrics) {
-       totalMessages += m.totalMessages;
-       totalTokens += m.totalTokens;
-       totalCostGBP += m.costGBP;
+    const agents = await ctx.db.query("agents").collect();
+    const agentMap = new Map(agents.map((a: any) => [a._id, a]));
+    const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
 
-       const metricDate = new Date(m.date);
+    const companyUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
+    const companyUserIds = new Set(companyUsers.map((u: any) => u._id));
+    
+    const threads = await ctx.db.query("threads").collect();
+    const companyThreads = threads.filter((t: any) => companyUserIds.has(t.userId));
+    const companyThreadIds = new Set(companyThreads.map((t: any) => t._id));
+
+    const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
+    const rawAgentTxs = await ctx.db.query("agentTransactions").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
+
+    const startTimeStamp = startDate.getTime();
+    const endTimeStamp = endDate.getTime();
+    
+    const periodRawMessages = rawMessages.filter((m: any) => companyThreadIds.has(m.threadId) && m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
+    const periodAgentTxs = rawAgentTxs.filter((t: any) => t.createdAt >= startTimeStamp && t.createdAt <= endTimeStamp);
+
+    const threadUserMap = new Map(companyThreads.map((t: any) => [t._id, t.userId]));
+    const threadAgentMap = new Map(companyThreads.map((t: any) => [t._id, t.agentId]));
+    const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
+    const activePeriodUsers = new Set<string>();
+    
+    const unifiedInteractions = [
+       ...periodRawMessages.map((m: any) => ({
+          userId: threadUserMap.get(m.threadId),
+          agentId: threadAgentMap.get(m.threadId) || "system_assistant",
+          inputTokens: m.inputTokens || 0,
+          outputTokens: m.outputTokens || 0,
+          modelUsed: m.modelUsed || "gemini-1.5-flash",
+          createdAt: m.createdAt
+       })),
+       ...periodAgentTxs.map((t: any) => ({
+          userId: t.userId,
+          agentId: t.agentId,
+          inputTokens: t.inputTokens || 0,
+          outputTokens: t.outputTokens || 0,
+          modelUsed: t.modelUsed || "gemini-1.5-flash",
+          createdAt: t.createdAt
+       }))
+    ];
+
+    for (const msg of unifiedInteractions) {
+       const inputs = msg.inputTokens || 0;
+       const outputs = msg.outputTokens || 0;
+       const model = msg.modelUsed || "gemini-1.5-flash"; 
+       const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+       const gbpCost = msgCost * 0.78;
+
+       totalMessages += 1;
+       totalTokens += (inputs + outputs);
+       totalInputTokens += inputs;
+       totalOutputTokens += outputs;
+       totalCostGBP += gbpCost;
+
+       const metricDate = new Date(msg.createdAt);
        let dateGroup = "";
        if (aggregationType === "month") {
            dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
@@ -527,53 +427,16 @@ export const getCompanyMetrics = query({
        }
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
-       timelineMap[dateGroup].cost += m.costGBP;
-       timelineMap[dateGroup].messages += m.totalMessages;
-    }
+       timelineMap[dateGroup].cost += gbpCost;
+       timelineMap[dateGroup].messages += 1;
 
-    // 5. Dynamic "Today" Telemetry Injection 
-    const todayStr = now.toISOString().split('T')[0];
-    const hasToday = validMetrics.some(m => m.date === todayStr);
-    
-    // Calculate raw "Today" and Top Users natively from the raw message tables
-    const companyUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
-    const companyUserIds = new Set(companyUsers.map(u => u._id));
-    
-    const threads = await ctx.db.query("threads").collect();
-    const companyThreads = threads.filter(t => companyUserIds.has(t.userId));
-    const companyThreadIds = new Set(companyThreads.map(t => t._id));
-
-    const allMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
-    const rawMessages = allMessages.filter(m => companyThreadIds.has(m.threadId));
-
-    const startTimeStamp = startDate.getTime();
-    const endTimeStamp = endDate.getTime();
-    const periodRawMessages = rawMessages.filter(m => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
-    const todayStartTime = new Date(now).setUTCHours(0,0,0,0);
-    const todayMessages = periodRawMessages.filter(m => m.createdAt >= todayStartTime);
-
-    // Build the "Top Users" natively
-    const threadUserMap = new Map(companyThreads.map(t => [t._id, t.userId]));
-    const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
-    const activePeriodUsers = new Set<string>();
-
-    for (const msg of periodRawMessages) {
-       const userId = threadUserMap.get(msg.threadId);
-       if (userId) {
-          activePeriodUsers.add(userId);
+       if (msg.userId) {
+          activePeriodUsers.add(msg.userId);
           
-          let msgCost = 0;
-          const inputs = msg.inputTokens || 0;
-          const outputs = msg.outputTokens || 0;
-          const model = msg.modelUsed || "gemini-1.5-flash"; 
-          msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
-          
-          const gbpCost = msgCost * 0.78;
-
-          if (!userLeaderboard[userId]) {
-             const userObj = companyUsers.find(u => u._id === userId);
-             userLeaderboard[userId] = {
-                id: userId,
+          if (!userLeaderboard[msg.userId]) {
+             const userObj = companyUsers.find((u: any) => u._id === msg.userId);
+             userLeaderboard[msg.userId] = {
+                id: msg.userId,
                 name: userObj?.name || "Unknown",
                 image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
                 email: userObj?.email || "",
@@ -581,50 +444,34 @@ export const getCompanyMetrics = query({
                 messages: 0
              };
           }
-          userLeaderboard[userId].cost += gbpCost;
-          userLeaderboard[userId].messages += 1;
+          userLeaderboard[msg.userId].cost += gbpCost;
+          userLeaderboard[msg.userId].messages += 1;
        }
-    }
 
-    if (!hasToday && todayMessages.length > 0) {
-       let tCost = 0;
-       let tMsgs = 0; 
-       let tTokens = 0;
-
-       for (const msg of todayMessages) {
-          tMsgs++;
-          const inputs = msg.inputTokens || 0;
-          const outputs = msg.outputTokens || 0;
-          const model = msg.modelUsed || "gemini-1.5-flash"; 
-          
-          tTokens += (inputs + outputs);
-          let mCost = 0;
-          mCost = computeCostFromMap(model, inputs, outputs, modelMap);
-          tCost += (mCost * 0.78);
-          
-          let dateGroup = "";
-          if (aggregationType === "month") dateGroup = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-          else if (aggregationType === "week") {
-              const target = new Date(now.valueOf());
-              const dayNr = (now.getDay() + 6) % 7;
-              target.setDate(target.getDate() - dayNr + 3);
-              const firstThursday = target.valueOf();
-              target.setMonth(0, 1);
-              if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-              const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-              dateGroup = `Wk ${weekNum}`;
-          } else {
-              dateGroup = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+       if (msg.agentId) {
+          if (!agentLeaderboard[msg.agentId]) {
+             if (msg.agentId === "system_assistant") {
+                agentLeaderboard[msg.agentId] = {
+                   id: "system_assistant",
+                   name: "Platform Assistant (Web)",
+                   avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant",
+                   cost: 0,
+                   interactions: 0
+                };
+             } else {
+                 const agentObj = agentMap.get(msg.agentId);
+                 agentLeaderboard[msg.agentId] = {
+                    id: msg.agentId,
+                    name: agentObj?.name || "Unknown Agent",
+                    avatar: agentObj?.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${msg.agentId}`,
+                    cost: 0,
+                    interactions: 0
+                 };
+             }
           }
-
-          if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
-          timelineMap[dateGroup].cost += (mCost * 0.78);
-          timelineMap[dateGroup].messages += 1;
+          agentLeaderboard[msg.agentId].cost += gbpCost;
+          agentLeaderboard[msg.agentId].interactions += 1;
        }
-       
-       totalMessages += tMsgs;
-       totalTokens += tTokens;
-       totalCostGBP += tCost;
     }
 
     const timeline = Object.keys(timelineMap).map(k => ({
@@ -637,67 +484,73 @@ export const getCompanyMetrics = query({
        .sort((a,b) => b.cost - a.cost)
        .slice(0, 10);
 
+    const topAgents = Object.values(agentLeaderboard)
+       .sort((a,b) => b.cost - a.cost)
+       .slice(0, 10);
+
+    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
+    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
+
     return {
        timeline,
        aggregates: {
           activeUsers: activePeriodUsers.size,
           totalMessages,
           totalTokens,
+          totalInputTokens,
+          totalOutputTokens,
           totalCostGBP: Number(totalCostGBP.toFixed(4)),
-          aggregationType
+          costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
+          avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
+          aggregationType,
+          mrr: 0,
+          mau: 0
        },
-       topUsers
+       topUsers,
+       topAgents,
+       topCompanies: [] as any[]
     };
   }
 });
 
-/**
- * Universal Global Analytics Engine (Google Analytics Style)
- * Supports dynamic timeframe ranges and twin leaderboards.
- */
 export const getGlobalAnalytics = query({
   args: { 
-    timeframe: v.union(v.literal("today"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").collect();
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    // 1. Core Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
     if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
-    // 2. Establish Timeframe Boundaries
     const now = new Date();
     let startDate = new Date();
+    let endDate = new Date();
     
-    if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
+    else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
+    else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
     else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
     else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
     else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
     else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
 
-    let endDate = now;
     if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
     const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
 
-    // 3. Structure Telemetry
     const users = await ctx.db.query("users").collect();
-      const companies = await ctx.db.query("companies").collect();
-    const companyMap = new Map(companies.map(c => [c._id, c]));
+    const companies = await ctx.db.query("companies").collect();
+    const companyMap = new Map(companies.map((c: any) => [c._id, c]));
 
-    // 4. Fetch the Highly-Optimized CompanyMetrics Ledger
-    const allMetrics = await ctx.db.query("companyMetrics").collect();
-    const validMetrics = allMetrics.filter(m => m.date >= startDateStr && m.date <= endDateStr);
-    
-    // Aggregation Variables
+    const agents = await ctx.db.query("agents").collect();
+    const agentMap = new Map(agents.map((a: any) => [a._id, a]));
+
     let totalMessages = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
@@ -705,17 +558,71 @@ export const getGlobalAnalytics = query({
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
+    const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
 
-    // Grouping Ledger Data
-    for (const m of validMetrics) {
-       totalMessages += m.totalMessages;
-       totalTokens += m.totalTokens;
-       totalInputTokens += (m.inputTokens || 0);
-       totalOutputTokens += (m.outputTokens || 0);
-       totalCostGBP += m.costGBP;
+    const threads = await ctx.db.query("threads").collect();
+    const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
+    const rawAgentTxs = await ctx.db.query("agentTransactions").collect();
+    
+    const startTimeStamp = startDate.getTime();
+    const endTimeStamp = endDate.getTime();
+    
+    const periodRawMessages = rawMessages.filter((m: any) => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
+    const periodAgentTxs = rawAgentTxs.filter((t: any) => t.createdAt >= startTimeStamp && t.createdAt <= endTimeStamp);
+    
+    const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+    const thirtyDayMessages = rawMessages.filter((m: any) => m.createdAt >= thirtyDaysAgo);
+    const threadUserMapAll = new Map(threads.map((t: any) => [t._id, t.userId]));
+    const mauSet = new Set<string>();
+    for (const msg of thirtyDayMessages) {
+       const uId = threadUserMapAll.get(msg.threadId);
+       if (uId) mauSet.add(uId);
+    }
+    const thirtyDayTxs = rawAgentTxs.filter((t: any) => t.createdAt >= thirtyDaysAgo);
+    for (const tx of thirtyDayTxs) {
+       if (tx.userId) mauSet.add(tx.userId);
+    }
 
-       // Timeline Formatting 
-       const metricDate = new Date(m.date);
+    const threadUserMap = new Map(threads.map((t: any) => [t._id, t.userId]));
+    const threadAgentMap = new Map(threads.map((t: any) => [t._id, t.agentId]));
+    const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
+    const activePeriodUsers = new Set<string>();
+    
+    const unifiedInteractions = [
+       ...periodRawMessages.map((m: any) => ({
+          userId: threadUserMap.get(m.threadId),
+          companyId: undefined, // Resolved in loop
+          agentId: threadAgentMap.get(m.threadId) || "system_assistant",
+          inputTokens: m.inputTokens || 0,
+          outputTokens: m.outputTokens || 0,
+          modelUsed: m.modelUsed || "gemini-1.5-flash",
+          createdAt: m.createdAt
+       })),
+       ...periodAgentTxs.map((t: any) => ({
+          userId: t.userId,
+          companyId: t.companyId,
+          agentId: t.agentId,
+          inputTokens: t.inputTokens || 0,
+          outputTokens: t.outputTokens || 0,
+          modelUsed: t.modelUsed || "gemini-1.5-flash",
+          createdAt: t.createdAt
+       }))
+    ];
+
+    for (const msg of unifiedInteractions) {
+       const inputs = msg.inputTokens || 0;
+       const outputs = msg.outputTokens || 0;
+       const model = msg.modelUsed || "gemini-1.5-flash"; 
+       const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+       const gbpCost = msgCost * 0.78;
+
+       totalMessages += 1;
+       totalTokens += (inputs + outputs);
+       totalInputTokens += inputs;
+       totalOutputTokens += outputs;
+       totalCostGBP += gbpCost;
+
+       const metricDate = new Date(msg.createdAt);
        let dateGroup = "";
        if (aggregationType === "month") {
            dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
@@ -733,71 +640,17 @@ export const getGlobalAnalytics = query({
        }
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
-       timelineMap[dateGroup].cost += m.costGBP;
-       timelineMap[dateGroup].messages += m.totalMessages;
+       timelineMap[dateGroup].cost += gbpCost;
+       timelineMap[dateGroup].messages += 1;
 
-       // Top Companies Aggregation
-       if (!companyLeaderboard[m.companyId]) {
-          const comp = companyMap.get(m.companyId);
-          companyLeaderboard[m.companyId] = {
-             id: m.companyId,
-             name: comp?.name || "Unknown Company",
-             logo: comp?.logo || "",
-             cost: 0,
-             messages: 0
-          };
-       }
-       companyLeaderboard[m.companyId].cost += m.costGBP;
-       companyLeaderboard[m.companyId].messages += m.totalMessages;
-    }
-
-    // 5. Dynamic "Today" Telemetry Injection (for real-time dashboard accuracy)
-    const todayStr = now.toISOString().split('T')[0];
-    const hasToday = validMetrics.some(m => m.date === todayStr);
-    
-    // Calculate raw "Today" and Top Users natively from the raw message tables
-    const threads = await ctx.db.query("threads").collect();
-        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
-    
-    const startTimeStamp = startDate.getTime();
-    const endTimeStamp = endDate.getTime();
-    const periodRawMessages = rawMessages.filter(m => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
-    const todayStartTime = new Date(now).setUTCHours(0,0,0,0);
-    const todayMessages = periodRawMessages.filter(m => m.createdAt >= todayStartTime);
-    
-    // Core MAU Calculation (last 30 days rolling)
-    const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
-    const thirtyDayMessages = rawMessages.filter(m => m.createdAt >= thirtyDaysAgo);
-    const threadUserMapAll = new Map(threads.map(t => [t._id, t.userId]));
-    const mauSet = new Set<string>();
-    for (const msg of thirtyDayMessages) {
-       const uId = threadUserMapAll.get(msg.threadId);
-       if (uId) mauSet.add(uId);
-    }
-
-    // Build the "Top Users" natively
-    const threadUserMap = new Map(threads.map(t => [t._id, t.userId]));
-    const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
-    const activePeriodUsers = new Set<string>();
-
-    for (const msg of periodRawMessages) {
-       const userId = threadUserMap.get(msg.threadId);
-       if (userId) {
-          activePeriodUsers.add(userId);
+       if (msg.userId) {
+          activePeriodUsers.add(msg.userId);
           
-          let msgCost = 0;
-          const inputs = msg.inputTokens || 0;
-          const outputs = msg.outputTokens || 0;
-          const model = msg.modelUsed || "gemini-1.5-flash"; 
-          msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
-          
-          const gbpCost = msgCost * 0.78;
-
-          if (!userLeaderboard[userId]) {
-             const userObj = users.find(u => u._id === userId);
-             const compObj = userObj?.companyId ? companyMap.get(userObj.companyId) : null;
-             userLeaderboard[userId] = {
-                id: userId,
+          if (!userLeaderboard[msg.userId]) {
+             const userObj = users.find((u: any) => u._id === msg.userId);
+             const compObj = (msg.companyId || (userObj && userObj.companyId)) ? companyMap.get(msg.companyId || userObj?.companyId) : null;
+             userLeaderboard[msg.userId] = {
+                id: msg.userId,
                 name: userObj?.name || "Unknown",
                 image: userObj?.image || "https://api.dicebear.com/7.x/notionists/svg",
                 email: userObj?.email || "",
@@ -806,81 +659,52 @@ export const getGlobalAnalytics = query({
                 messages: 0
              };
           }
-          userLeaderboard[userId].cost += gbpCost;
-          userLeaderboard[userId].messages += 1;
+          userLeaderboard[msg.userId].cost += gbpCost;
+          userLeaderboard[msg.userId].messages += 1;
        }
-    }
 
-    // Process if "Today" is completely missing from the Ledger timeline
-    if (!hasToday && todayMessages.length > 0) {
-       let tCost = 0;
-       let tMsgs = 0; 
-       let tTokens = 0;
-       let tInputs = 0;
-       let tOutputs = 0;
-
-       for (const msg of todayMessages) {
-          tMsgs++;
-          const inputs = msg.inputTokens || 0;
-          const outputs = msg.outputTokens || 0;
-          const model = msg.modelUsed || "gemini-1.5-flash"; 
-          
-          tTokens += (inputs + outputs);
-          tInputs += inputs;
-          tOutputs += outputs;
-          let mCost = 0;
-          mCost = computeCostFromMap(model, inputs, outputs, modelMap);
-          tCost += (mCost * 0.78);
-          
-          // Add to timeline group
-          let dateGroup = "";
-          if (aggregationType === "month") dateGroup = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-          else if (aggregationType === "week") {
-              const target = new Date(now.valueOf());
-              const dayNr = (now.getDay() + 6) % 7;
-              target.setDate(target.getDate() - dayNr + 3);
-              const firstThursday = target.valueOf();
-              target.setMonth(0, 1);
-              if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-              const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-              dateGroup = `Wk ${weekNum}`;
-          } else {
-              dateGroup = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+       const activeCompanyId = msg.companyId || (msg.userId ? users.find((u: any) => u._id === msg.userId)?.companyId : undefined);
+       if (activeCompanyId) {
+          if (!companyLeaderboard[activeCompanyId]) {
+             const compObj = companyMap.get(activeCompanyId);
+             companyLeaderboard[activeCompanyId] = {
+                id: activeCompanyId,
+                name: compObj?.name || "Unknown Company",
+                logo: compObj?.logo || "",
+                cost: 0,
+                messages: 0
+             };
           }
+          companyLeaderboard[activeCompanyId].cost += gbpCost;
+          companyLeaderboard[activeCompanyId].messages += 1;
+       }
 
-          if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
-          timelineMap[dateGroup].cost += (mCost * 0.78);
-          timelineMap[dateGroup].messages += 1;
-
-          // Add to Top Companies
-          const userId = threadUserMap.get(msg.threadId);
-          if (userId) {
-             const userAcct = users.find(u => u._id === userId);
-             if (userAcct && userAcct.companyId) {
-                if (!companyLeaderboard[userAcct.companyId]) {
-                   const compObj = companyMap.get(userAcct.companyId);
-                   companyLeaderboard[userAcct.companyId] = {
-                      id: userAcct.companyId,
-                      name: compObj?.name || "Unknown Company",
-                      logo: compObj?.logo || "",
-                      cost: 0,
-                      messages: 0
-                   };
-                }
-                companyLeaderboard[userAcct.companyId].cost += (mCost * 0.78);
-                companyLeaderboard[userAcct.companyId].messages += 1;
+       if (msg.agentId) {
+          if (!agentLeaderboard[msg.agentId]) {
+             if (msg.agentId === "system_assistant") {
+                agentLeaderboard[msg.agentId] = {
+                   id: "system_assistant",
+                   name: "Platform Assistant (Web)",
+                   avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant",
+                   cost: 0,
+                   interactions: 0
+                };
+             } else {
+                 const agentObj = agentMap.get(msg.agentId);
+                 agentLeaderboard[msg.agentId] = {
+                    id: msg.agentId,
+                    name: agentObj?.name || "Unknown Agent",
+                    avatar: agentObj?.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${msg.agentId}`,
+                    cost: 0,
+                    interactions: 0
+                 };
              }
           }
+          agentLeaderboard[msg.agentId].cost += gbpCost;
+          agentLeaderboard[msg.agentId].interactions += 1;
        }
-       
-       totalMessages += tMsgs;
-       totalTokens += tTokens;
-       totalInputTokens += tInputs;
-       totalOutputTokens += tOutputs;
-       totalCostGBP += tCost;
     }
 
-    // 6. Format Outputs
     const timeline = Object.keys(timelineMap).map(k => ({
        date: k,
        cost: Number(timelineMap[k].cost.toFixed(4)),
@@ -889,19 +713,21 @@ export const getGlobalAnalytics = query({
 
     const topCompanies = Object.values(companyLeaderboard)
        .sort((a,b) => b.cost - a.cost)
-       .slice(0, 8);
+       .slice(0, 10);
        
     const topUsers = Object.values(userLeaderboard)
        .sort((a,b) => b.cost - a.cost)
-       .slice(0, 8);
+       .slice(0, 10);
+
+    const topAgents = Object.values(agentLeaderboard)
+       .sort((a,b) => b.cost - a.cost)
+       .slice(0, 10);
 
     const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
+    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
-    // 7. Calculate Dynamic MRR based on Settings
     const settings = await ctx.db.query("systemSettings").first() || { monthlyBasePrice: 199, monthlySeatPrice: 49 };
     const mrr = (companies.length * settings.monthlyBasePrice) + (users.length * settings.monthlySeatPrice);
-
-    const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
     return {
        timeline,
@@ -920,6 +746,7 @@ export const getGlobalAnalytics = query({
        },
        topCompanies,
        topUsers,
+       topAgents,
        systemIntegrity: {
           totalProvisionedUsers: users.length,
           totalProvisionedCompanies: companies.length
@@ -927,3 +754,13 @@ export const getGlobalAnalytics = query({
     };
   }
 });
+
+
+export const debugTime = query({
+  args: {},
+  handler: async (ctx) => {
+    const rawAgentTxs = await ctx.db.query("agentTransactions").order("desc").take(5);
+    return rawAgentTxs.map(t => ({ id: t._id, userId: t.userId, tokens: t.inputTokens }));
+  }
+});
+

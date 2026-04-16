@@ -26,16 +26,22 @@ export const getStatsForAgent = query({
       
     let totalGenerations = txs.length;
     let totalTokensIngested = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
     let totalOpexCost = 0;
 
     for (const tx of txs) {
        totalTokensIngested += (tx.inputTokens || 0) + (tx.outputTokens || 0);
+       totalInputTokens += (tx.inputTokens || 0);
+       totalOutputTokens += (tx.outputTokens || 0);
        totalOpexCost += (tx.costGBP || 0);
     }
 
     return {
        totalGenerations,
        totalTokensIngested,
+       totalInputTokens,
+       totalOutputTokens,
        totalOpexCost
     };
   },

@@ -54,16 +54,7 @@ export default defineSchema({
     monthlyBasePrice: v.number()
   }),
   
-  companyMetrics: defineTable({
-    companyId: v.id("companies"),
-    date: v.string(),
-    activeUsers: v.number(),
-    totalMessages: v.number(),
-    totalTokens: v.number(),
-    inputTokens: v.optional(v.number()),
-    outputTokens: v.optional(v.number()),
-    costGBP: v.number(),
-  }).index("by_company_date", ["companyId", "date"]),
+
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
