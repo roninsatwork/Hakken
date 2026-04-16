@@ -50,7 +50,7 @@ export const generateAgentResponse = internalAction({
         });
 
         // Map Sonae generic messages into expected Vertex AI Content arrays
-        let conversationHistory: any[] = messages.slice(-20).map((msg: any) => {
+        const conversationHistory: any[] = messages.slice(-20).map((msg: any) => {
             return {
                 role: msg.role === "user" ? "user" : "model",
                 parts: [{ text: msg.content }]
@@ -119,13 +119,13 @@ export const generateAgentResponse = internalAction({
             console.error("Agent RAG pipeline failed to execute", e);
         }
 
-        let finalSystemInstruction = systemInstruction;
+        const finalSystemInstruction = systemInstruction;
         if (ragContext) {
              // Append to the final user message to prioritize context grounding over system instruction fading
              conversationHistory[conversationHistory.length - 1].parts[0].text += ragContext;
         }
 
-        let genConfig: any = {
+        const genConfig: any = {
             systemInstruction: finalSystemInstruction,
             temperature: 0.1, // Deterministic logic routing
         };
@@ -295,7 +295,7 @@ export const executeAgentNode = internalAction({
 
     const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
     
-    let config: any = {
+    const config: any = {
         systemInstruction: systemInstruction,
         temperature: 0.1,
     };

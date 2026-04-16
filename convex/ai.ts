@@ -13,6 +13,11 @@ export const generateSonaeResponse = internalAction({
     thinkingLevel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // 🛡️ SECURITY: Denial of Wallet Prevention (Enforce 10k character limit ~ 2500 tokens)
+    if (args.content.length > 10000) {
+       throw new Error("Payload Too Large: Input exceeds maximum system context window.");
+    }
+
     // Escaping Edge runtime limits. Using implicit Node env parsing.
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
@@ -32,7 +37,7 @@ export const generateSonaeResponse = internalAction({
     // Direct mapping configuration
     let actualModelStr = args.modelId;
     
-    let generationConfig: any = {};
+    const generationConfig: any = {};
     if (args.thinkingLevel && args.thinkingLevel !== "NONE") {
         generationConfig.thinkingConfig = { thinkingLevel: args.thinkingLevel };
     }

@@ -24,7 +24,7 @@ export const getStatsForAgent = query({
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
       .collect();
       
-    let totalGenerations = txs.length;
+    const totalGenerations = txs.length;
     let totalTokensIngested = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;

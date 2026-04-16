@@ -539,6 +539,32 @@
                 }
             }
         },
+        "aiTools": {
+            "new": {
+                "back": "Back to Tools Library",
+                "title": "Add AI Tool",
+                "subtitle": "Create a new executable function for the AI to use.",
+                "fields": {
+                    "name": {
+                        "label": "Tool Name",
+                        "placeholder": "e.g. check_inventory",
+                        "help": "Must be strictly snake_case with no spaces. This is the exact name the AI model will receive."
+                    },
+                    "description": {
+                        "label": "How to use",
+                        "placeholder": "Tell the AI exactly what this tool does and when it should use it..."
+                    },
+                    "handler": {
+                        "label": "Internal Function Path",
+                        "placeholder": "e.g. api.integrations.stripe.createCharge"
+                    },
+                    "role": {
+                        "label": "Required Role"
+                    }
+                },
+                "submit": "Add AI Tool"
+            }
+        },
         "agents": {
             "title": "Gestione Agent AI",
             "description": "Distribuisci, configura e monitora personalità AI specializzate.",
@@ -679,70 +705,187 @@
                 "systemPrompt": {
                     "title": "Direttive di Sistema Core",
                     "subtitle": "La matrice comportamentale fondamentale che detta l'identità dell'agent e i suoi limiti operativi.",
-                    "placeholder": "Inserisci il prompt di sistema...",
-                    "save": "Sincronizza Direttive",
-                    "saving": "Scrittura in memoria...",
-                    "success": "Direttive Sincronizzate"
+                    "saveButton": "Save Prompt",
+                    "revertButton": "Undo Changes",
+                    "feedback": {
+                        "success": {
+                            "title": "Prompt Saved",
+                            "subtitle": "The agent's instructions have been successfully updated."
+                        },
+                        "error": {
+                            "title": "Configuration Error"
+                        }
+                    },
+                    "errors": {
+                        "saveFailed": "Failed to save the system prompt."
+                    },
+                    "sections": {
+                        "editor": {
+                            "title": "Prompt Definition",
+                            "statusUnsaved": "Unsaved",
+                            "statusSynced": "Saved",
+                            "label": "System Instructions",
+                            "loading": "Loading prompt data...",
+                            "placeholder": "Enter the core system instructions that define how this agent behaves, answers, and operates..."
+                        }
+                    }
                 },
                 "rules": {
                     "title": "Regole di Confine Operativo",
-                    "description": "Vincoli funzionali specifici e protocolli tattici che l'agent deve seguire rigorosamente.",
-                    "new": "Nuova Regola",
+                    "subtitle": "Specific instructions and constraints this agent must follow.",
+                    "addButton": "Add Rule",
                     "searchPlaceholder": "Cerca regole...",
                     "empty": "Nessuna regola definita per questo agent.",
                     "table": {
-                        "rule": "Regola",
-                        "type": "Tipo",
-                        "status": "Stato",
-                        "actions": "Azioni"
+                        "tooltips": {
+                            "activate": "Activate",
+                            "deactivate": "Deactivate",
+                            "edit": "Edit",
+                            "delete": "Delete"
+                        }
+                    },
+                    "deleteModal": {
+                        "title": "Delete Rule",
+                        "description": "Are you sure you want to permanently delete this rule?",
+                        "warning": "This action cannot be undone.",
+                        "abort": "Cancel",
+                        "confirm": "Delete"
                     },
                     "form": {
-                        "title": "Configura Regola di Protocollo",
-                        "newTitle": "Nuova Regola Operativa",
-                        "editTitle": "Modifica Regola di Protocollo",
-                        "name": "Nome Regola",
-                        "description": "Logica della Regola",
-                        "type": "Tipo di Protocollo",
-                        "isActive": "Protocollo Attivo",
-                        "save": "Salva Regola",
-                        "saving": "Salvataggio Protocollo...",
-                        "cancel": "Interrompi",
-                        "placeholders": {
-                            "name": "es. Privacy dei Dati",
-                            "description": "es. Non rivelare mai gli ID di sistema interni all'utente."
+                        "back": "Back to Rules",
+                        "create": {
+                            "title": "Add Rule",
+                            "subtitle": "Create a new instruction for this agent.",
+                            "submit": "Create Rule"
+                        },
+                        "edit": {
+                            "title": "Edit Rule",
+                            "subtitle": "Modify an existing instruction for this agent.",
+                            "idLabel": "ID: {id}",
+                            "submit": "Save Changes"
+                        },
+                        "trigger": {
+                            "label": "Activation Trigger",
+                            "entity": "When this happens...",
+                            "placeholder": "e.g., When asked about pricing..."
+                        },
+                        "priority": {
+                            "label": "Execution Priority",
+                            "levels": {
+                                "LOW": "Low",
+                                "NORMAL": "Normal",
+                                "HIGH": "High",
+                                "CRITICAL": "Critical"
+                            }
+                        },
+                        "instruction": {
+                            "label": "Agent Instruction",
+                            "context": "Agent must do the following:",
+                            "placeholder": {
+                                "new": "Type the exact instruction the agent must follow...",
+                                "edit": "Type the exact instruction the agent must follow..."
+                            }
                         }
                     }
                 },
                 "knowledge": {
                     "title": "Grafo della Conoscenza",
-                    "description": "Memoria persistente ed embedding di documenti a cui questo agent può fare riferimento.",
-                    "upload": "Ingerisci Documento",
-                    "empty": "La memoria neurale è attualmente vuota.",
+                    "subtitle": "Files, documents, and data this agent can reference during conversations.",
+                    "uploadButton": "Upload Document",
+                    "empty": {
+                        "title": "No documents uploaded",
+                        "subtitle": "Upload PDF, Word, or Text files to give your agent custom memory."
+                    },
                     "table": {
                         "name": "Documento",
                         "size": "Dimensione",
                         "type": "Tipo",
-                        "actions": "Azioni"
+                        "actions": "Azioni",
+                        "statusReady": "Ready",
+                        "deleteConfirm": "Are you sure you want to delete this document?"
+                    },
+                    "errors": {
+                        "unsupportedFileType": "Unsupported file type.",
+                        "uploadFailed": "Upload failed",
+                        "deleteFailed": "Failed to delete document"
+                    },
+                    "uploadModal": {
+                        "title": "Upload Document",
+                        "processing": "Encoding document...",
+                        "dropTitle": "Drag and drop your file here",
+                        "dropSubtitle": "Supports .pdf, .docx, and .txt files",
+                        "browseButton": "Browse Files"
                     }
                 },
                 "integrations": {
                     "title": "Ecosistemi Connessi",
-                    "description": "API di terze parti e strumenti interni che questo agent può orchestrare.",
-                    "empty": "Nessuno strumento o integrazione mappato a questa unità."
+                    "subtitle": "Connect third-party APIs and internal tools for this agent.",
+                    "sectionTitle": "Available Integrations",
+                    "empty": "Nessuno strumento o integrazione mappato a questa unità.",
+                    "errors": {
+                        "assignFailed": "Failed to assign integration."
+                    },
+                    "card": {
+                        "assigned": "Connected"
+                    }
                 },
                 "schemas": {
                     "title": "Schemi dell'Interfaccia I/O",
-                    "description": "Schemi JSON strutturati che definiscono rigorosi requisiti di input e formattazione di output.",
-                    "input": "Schema di Invocazione (Input)",
-                    "output": "Schema di Risoluzione (Output)",
-                    "save": "Salva Interfacce",
-                    "saving": "Sincronizzazione...",
-                    "success": "Interfacce Salvate"
+                    "subtitle": "Define structured JSON data formats for this agent's inputs and outputs.",
+                    "saveButton": "Save Schemas",
+                    "savingButton": "Saving...",
+                    "saveSuccess": "Schemas saved successfully",
+                    "input": {
+                        "title": "Input Schema",
+                        "subtitle": "The exact data format this agent requires to begin processing."
+                    },
+                    "output": {
+                        "title": "Output Schema",
+                        "subtitle": "The strict JSON structure this agent must return.",
+                        "warning": {
+                            "label": "WARNING:",
+                            "text": "Forcing an output schema bypasses standard conversational responses. The agent will exclusively reply in raw JSON matching this schema."
+                        }
+                    },
+                    "errors": {
+                        "saveFailed": "Failed to save schemas."
+                    }
                 },
                 "logs": {
                     "title": "Tracce di Esecuzione",
-                    "description": "Telemetria grezza e thread storici delle conversazioni.",
-                    "empty": "Nessun ciclo di esecuzione trovato."
+                    "subtitle": "View a history of this agent's interactions and background tasks.",
+                    "searchPlaceholder": "Search logs by input or output...",
+                    "table": {
+                        "headers": {
+                            "timestamp": "Timestamp",
+                            "status": "Status",
+                            "event": "Pipeline Event",
+                            "report": "Trace Report"
+                        },
+                        "empty": {
+                            "search": "No logs found matching search.",
+                            "index": "No activity logs recorded.",
+                            "tryDifferent": "Try adjusting your search criteria.",
+                            "notIntercepted": "When this agent runs tasks, logs will appear here.",
+                            "seedButton": "Generate Sample Log"
+                        }
+                    },
+                    "pagination": {
+                        "showing": "Showing {start} to {end} of {total} logs",
+                        "none": "No logs to display",
+                        "prev": "Previous",
+                        "pageOf": "Page {current} of {total}",
+                        "next": "Next"
+                    },
+                    "detail": {
+                        "title": "Execution Trace Detail",
+                        "recorded": "Recorded: {date}",
+                        "back": "Back to Index",
+                        "tabs": {
+                            "payload": "EXECUTION PAYLOAD",
+                            "config": "PROMPT & RUNTIME CONFIGURATION"
+                        }
+                    }
                 }
             }
         },
@@ -1022,22 +1165,22 @@
             "welcome": {
                 "greetings": {
                     "morning": "Buongiorno",
-                    "afternoon": "Buon Pomeriggio",
-                    "evening": "Buona Sera",
-                    "night": "Buona Notte",
+                    "afternoon": "Buon pomeriggio",
+                    "evening": "Buonasera",
+                    "night": "Buonanotte",
                     "default": "Benvenuto"
                 },
-                "subtitle": "Come posso assistere il tuo flusso di lavoro oggi?",
+                "subtitle": "Di cosa vorresti discutere oggi?",
                 "recording": "Registrazione sicura...",
-                "transcribing": "Trascrizione in corso...",
+                "transcribing": "Trascrizione pensiero...",
                 "inputPlaceholder": "Inserisci un prompt per {platformName}",
-                "footer": "L'Assistente {platformName} è un'IA e può commettere errori, verifica sempre le risposte."
+                "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
             },
             "controls": {
                 "tools": "Strumenti",
                 "autonomous": "Autonomo",
                 "mic": {
-                    "start": "Inizia dettatura vocale",
+                    "start": "Avvia dettatura vocale",
                     "stop": "Ferma registrazione"
                 },
                 "engine": {
@@ -1046,16 +1189,16 @@
                     "defaultDesc": "Capacità di produzione attiva"
                 },
                 "reasoning": {
-                    "title": "Sforzo di Ragionamento Agent",
+                    "title": "Impegno di Ragionamento Agent",
                     "levels": {
-                        "NONE": "Veloce",
-                        "LOW": "Basso Focus",
+                        "NONE": "Istantaneo",
+                        "LOW": "Basso Relax",
                         "MEDIUM": "Focus Profondo",
-                        "HIGH": "Massimo Focus"
+                        "HIGH": "Max Focus"
                     },
                     "descriptions": {
                         "NONE": "Risposte standard istantanee",
-                        "LOW": "Pensieri di verifica rapida",
+                        "LOW": "Pensieri di verifica rapidi",
                         "MEDIUM": "Risoluzione problemi standard",
                         "HIGH": "Ragionamento autonomo complesso"
                     }
@@ -1065,27 +1208,33 @@
                 "mic": {
                     "title": "Accesso Microfono Bloccato",
                     "subtitle": "API Sicura Bloccata",
-                    "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo Web Speech API.",
-                    "instruction": "Clicca sull'icona del microfono nella barra degli URL del tuo browser e seleziona 'Consenti'."
+                    "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo della Web Speech API.",
+                    "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
                 }
             }
         },
         "costs": {
             "title": "Telemetria Economica AI Globale",
             "subtitle": "Monitoraggio in tempo reale del consumo di token e dei costi operativi dei modelli in tutta la rete Sonae.",
-            "grossCost": "Spesa Totale della Rete",
-            "totalTokens": "Target di Token Elaborati",
-            "opex": "OPEX Approssimativo",
-            "convertedGbp": "Convertito in GBP",
-            "timeframes": {
-                "24h": "Ultime 24 ore",
-                "7d": "Ultimi 7 giorni",
-                "30d": "Ultimi 30 giorni",
-                "all": "Sempre"
+            "metrics": {
+                "periodCost": "Total Cost",
+                "exchangeSub": "Estimated total spend",
+                "tokensProcessed": "Total Tokens",
+                "tokenSub": "{input} IN • {output} OUT",
+                "interactions": "Total Messages",
+                "interactionsSub": "Messages generated",
+                "avgCostUser": "Average Cost per User",
+                "avgCostUserSub": "Cost per active user",
+                "avgCostConv": "Average Cost per Message",
+                "avgCostConvSub": "Cost per message"
             },
-            "charts": {
-                "costOverTime": "Velocità di Costo Cumulativa",
-                "modelDistribution": "Distribuzione Spesa per Modello"
+            "aggregation": {
+                "day": "Daily Cost",
+                "week": "Weekly Cost",
+                "month": "Monthly Cost"
+            },
+            "chart": {
+                "tooltipLabel": "Total Cost"
             }
         },
         "chatLogs": {
@@ -1093,8 +1242,6 @@
             "subtitle": "Intercettazione e analisi di tutte le conversazioni LLM sottostanti che avvengono nell'architettura.",
             "searchPlaceholder": "Cerca per titolo, utente o messaggio...",
             "empty": "Nessuna conversazione trovata nel registro messaggi.",
-            "unknownActor": "Attore Sconosciuto",
-            "userLabel": "Utente",
             "viewer": {
                 "title": "Ispettore Tracce Messaggi",
                 "subtitle": "Analisi del payload grezzo della traccia {id}",
@@ -1102,8 +1249,20 @@
                 "idLabel": "Identificatore Traccia",
                 "financials": "Telemetria Finanziaria",
                 "tokens": "Token",
+                "tokensHandled": "Token Totali",
                 "cost": "Costo",
-                "status": "Risoluzione Finale"
+                "estCost": "Costo Stimato",
+                "status": "Risoluzione Finale",
+                "unknownActor": "Utente Sconosciuto",
+                "userLabel": "Utente",
+                "emptyTitle": "Seleziona una Conversazione",
+                "emptyDesc": "Fai clic su qualsiasi conversazione dall'elenco per visualizzare la cronologia completa dei messaggi."
+            },
+            "status": {
+                "loading": "Loading logs...",
+                "loadMore": "Load More",
+                "noTraces": "No logs found.",
+                "logEmpty": "This conversation is empty."
             }
         },
         "systemPrompt": {
@@ -1196,58 +1355,6 @@
             "errors": {
                 "unsupported": "Formato file non supportato. Usa PDF, DOCX o TXT.",
                 "uploadFailed": "Impossibile sincronizzare il documento con il vault."
-            }
-        },
-        "assistant": {
-            "welcome": {
-                "greetings": {
-                    "morning": "Buongiorno",
-                    "afternoon": "Buon pomeriggio",
-                    "evening": "Buonasera",
-                    "night": "Buonanotte",
-                    "default": "Benvenuto"
-                },
-                "subtitle": "Di cosa vorresti discutere oggi?",
-                "inputPlaceholder": "Inserisci un prompt per {platformName}",
-                "recording": "Registrazione sicura...",
-                "transcribing": "Trascrizione pensiero...",
-                "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
-            },
-            "controls": {
-                "tools": "Strumenti",
-                "autonomous": "Autonomo",
-                "mic": {
-                    "start": "Avvia dettatura vocale",
-                    "stop": "Ferma registrazione"
-                },
-                "engine": {
-                    "label": "Seleziona Motore",
-                    "title": "Motori Grid Verificati",
-                    "defaultDesc": "Capacità di produzione attiva"
-                },
-                "reasoning": {
-                    "title": "Impegno di Ragionamento Agent",
-                    "levels": {
-                        "NONE": "Istantaneo",
-                        "LOW": "Basso Relax",
-                        "MEDIUM": "Focus Profondo",
-                        "HIGH": "Max Focus"
-                    },
-                    "descriptions": {
-                        "NONE": "Risposte standard istantanee",
-                        "LOW": "Pensieri di verifica rapidi",
-                        "MEDIUM": "Risoluzione problemi standard",
-                        "HIGH": "Ragionamento autonomo complesso"
-                    }
-                }
-            },
-            "errors": {
-                "mic": {
-                    "title": "Accesso Microfono Bloccato",
-                    "subtitle": "API Sicura Bloccata",
-                    "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo della Web Speech API.",
-                    "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
-                }
             }
         }
     },

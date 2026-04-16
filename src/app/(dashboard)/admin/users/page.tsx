@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
@@ -28,25 +29,27 @@ export default function ManageUsersPage() {
 
   const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || t('table.systemLevel');
 
-  const users = useQuery(api.users.getAllUsers) || [];
+  const [searchTerm, setSearchTerm] = useState("");
+  
   const pendingInvites = useQuery(api.invites.getPendingInvites) || [];
+
+  const { results: filteredUsers, status, loadMore } = usePaginatedQuery(
+    api.users.getPaginatedUsers,
+    { searchTerm },
+    { initialNumItems: 15 }
+  );
+
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
   const addUser = useMutation(api.users.addUser);
   const updateUser = useMutation(api.users.updateUser);
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
-
-  const filteredUsers = users.filter((u: any) =>
-    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const filteredInvites = pendingInvites.filter((inv: any) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -144,8 +147,11 @@ export default function ManageUsersPage() {
               <AnimatePresence>
                 {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
-                    <td colSpan={isSuperAdmin ? 5 : 4} className="px-6 py-12 text-center text-secondary">
-                      {t('table.noMatches')}
+                    <td colSpan={isSuperAdmin ? 5 : 4} className="p-0 border-none">
+                      <SonaeEmptyState 
+                        title="Nessun Risultato" 
+                        description={searchTerm.length > 0 ? "La query di ricerca non ha prodotto corrispondenze nel repository attivo." : t('table.noMatches')} 
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -257,6 +263,17 @@ export default function ManageUsersPage() {
             </tbody>
           </table>
         </div>
+        
+        {status === "CanLoadMore" && (
+          <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
+            <button
+              onClick={() => loadMore(15)}
+              className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
+            >
+              Load More Identities
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

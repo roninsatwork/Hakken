@@ -13,7 +13,7 @@ export const getActiveTemplate = query({
     const userId = await auth.getUserId(ctx);
     if (!userId) return null;
 
-    let template = await ctx.db
+    const template = await ctx.db
       .query("emailTemplates")
       .withIndex("by_type", (q) => q.eq("templateType", "INVITE"))
       .first();
@@ -46,7 +46,7 @@ export const saveTemplate = mutation({
     const user = await ctx.db.get(userId);
     if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
-    let template = await ctx.db
+    const template = await ctx.db
       .query("emailTemplates")
       .withIndex("by_type", (q) => q.eq("templateType", "INVITE"))
       .first();

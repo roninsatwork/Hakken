@@ -79,7 +79,7 @@ export const executeSwarmObjective = internalAction({
           order: ++order,
        });
 
-       let config: any = {
+       const config: any = {
            systemInstruction: agent.systemPrompt,
            temperature: 0.1
        };
@@ -96,7 +96,7 @@ export const executeSwarmObjective = internalAction({
                });
                
                if (embeddings && embeddings.length > 0) {
-                 let filterArgs: any = {};
+                 const filterArgs: any = {};
                  if (tenantContext.companyId) {
                      filterArgs.filter = (q: any) => q.eq("companyId", tenantContext.companyId);
                  }
@@ -114,7 +114,7 @@ export const executeSwarmObjective = internalAction({
                }
            }
 
-           let targetModel = agent.modelId || await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});  
+           const targetModel = agent.modelId || await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});  
            
            const response = await ai.models.generateContent({
               model: targetModel,

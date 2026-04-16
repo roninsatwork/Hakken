@@ -68,7 +68,7 @@ export const getGlobalAICosts = query({
        const outputs = msg.outputTokens || 0;
        const model = msg.modelUsed || "gemini-1.5-flash"; 
 
-       let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+       const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
        // Core Execution Additions
        periodProcessed++;
@@ -172,7 +172,7 @@ export const getPlatformOverview = query({
        const outputs = msg.outputTokens || 0;
        const model = msg.modelUsed || "gemini-1.5-flash"; 
 
-       let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+       const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
        
        total30DCostUSD += msgCost;
 
@@ -261,7 +261,7 @@ export const getUserCostOverview = query({
         let threadTokens = 0;
         let threadInputTokens = 0;
         let threadOutputTokens = 0;
-        let messageCount = messages.length;
+        const messageCount = messages.length;
 
         messages.filter(m => m.role === "assistant").forEach(msg => {
           const inputs = msg.inputTokens || 0;
@@ -271,7 +271,7 @@ export const getUserCostOverview = query({
           threadInputTokens += inputs;
           threadOutputTokens += outputs;
 
-          let msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+          const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
           threadCostUSD += msgCost;
           threadTokens += (inputs + outputs);

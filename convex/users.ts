@@ -27,6 +27,56 @@ export const generateUploadUrl = mutation(async (ctx) => {
 
 // === User Management CRUD Operations ===
 
+export const getPaginatedUsers = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    
+    const caller = await ctx.db.get(callerId);
+    if (!caller || !caller.role) throw new Error("Unauthorized");
+
+    // Dynamic Database Query Object
+    const userQuery = ctx.db.query("users");
+
+    if (caller.role === "ADMIN") {
+      if (!caller.companyId) throw new Error("Unauthorized");
+      // Admins are locked to their specific tenant scope
+      if (args.searchTerm && args.searchTerm.trim() !== "") {
+        return await ctx.db
+          .query("users")
+          .withSearchIndex("search_email", (q) => q.search("email", args.searchTerm!))
+          .filter(q => q.eq(q.field("companyId"), caller.companyId))
+          .paginate(args.paginationOpts);
+      } else {
+        return await ctx.db
+          .query("users")
+          .filter(q => q.eq(q.field("companyId"), caller.companyId))
+          .order("desc")
+          .paginate(args.paginationOpts);
+      }
+    } else if (caller.role === "SUPER_ADMIN") {
+      // Super Admins map globally
+      if (args.searchTerm && args.searchTerm.trim() !== "") {
+        return await ctx.db
+          .query("users")
+          .withSearchIndex("search_email", (q) => q.search("email", args.searchTerm!))
+          .paginate(args.paginationOpts);
+      } else {
+        return await ctx.db
+          .query("users")
+          .order("desc")
+          .paginate(args.paginationOpts);
+      }
+    }
+
+    throw new Error("Unauthorized");
+  },
+});
+
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {

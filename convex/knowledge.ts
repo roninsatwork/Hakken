@@ -256,6 +256,18 @@ export const queueWebsiteUrls = mutation({
 
     const docIds = [];
     for (const url of args.urls) {
+        // 🛡️ SECURITY: SSRF Prevention Shield
+        try {
+           const parsed = new URL(url);
+           const host = parsed.hostname;
+           // Block traversal and internal network lookups
+           if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.") || parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+               throw new Error(`SSRF Prevention: Cannot scrape internal or restricted URL (${url})`);
+           }
+        } catch(e) {
+           throw new Error(`SSRF Prevention: Malformed URL provided.`);
+        }
+
         // Simple duplicates check
         const existing = await ctx.db.query("knowledgeDocuments")
             .filter(q => q.and(

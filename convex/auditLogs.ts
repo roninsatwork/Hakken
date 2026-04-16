@@ -60,7 +60,7 @@ export const updateConfig = mutation({
 
     // Calculate next run timestamp securely handling UTC bounds
     const now = new Date();
-    let nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), args.dayOfMonth, args.hourOfDay, 0, 0, 0));
+    const nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), args.dayOfMonth, args.hourOfDay, 0, 0, 0));
     
     // If the planned time has already passed this month, bump to next month
     if (nextRun.getTime() <= now.getTime()) {

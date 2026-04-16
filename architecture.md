@@ -7,7 +7,7 @@
 
 ## 1. Core Technology Stack
 
-- **Frontend Layer:** Next.js 15 (App Router), React 19.
+- **Frontend Layer:** Next.js 16.2+ (App Router), React 19.2+.
 - **Styling Pipeline:** Tailwind CSS v4 + Framer Motion.
 - **Backend & Data:** Convex (Real-time reactivity, isolated Actions/Mutations, background Scheduler).
 - **Authentication:** Convex Auth (Resend Magic Links + Google OAuth).
@@ -99,6 +99,9 @@ The platform ingests multimodal documents and processes them into conversational
 > [!IMPORTANT]
 > **GitHub Secrets Matrix:** The automated deployment requires `CONVEX_DEPLOY_KEY` configured within the GitHub Account's "Actions Secrets" interface. Failure to supply this will result in a hard pipeline crash during the Convex synchrony step.
 
+> [!WARNING]
+> **Local Server Collision (Pre-Flight Hazard):** Executing `npm run build` or `npm install` actively deletes the `.next` development cache and reorganizes `node_modules`. If the Next.js local development server (`npm run dev`) is concurrently running, these commands will instantly hard-crash the active server, resulting in a persistent `ERR_CONNECTION_REFUSED` on localhost until the Next.js process is manually restarted. Always shut down `npm run dev` before running the Pre-Flight Sweep locally.
+
 ---
 
 ## 7. Automated Testing & Security Baselines
@@ -120,3 +123,40 @@ Sonae utilizes a strict dual-environment testing workspace to prove component in
 - Automated tests are strictly sequestered to the development phase or CI/CD pipelines (GitHub Actions). No test runner logic or "Health Checks" mimicking test loops should ever be deployed via the production dashboard UI.
 
 ---
+
+## 8. Data Pipelines & UI Integrity Mechanics
+
+To secure downstream rendering performance and guard against edge cases, Sonae implements strict pipeline constraints across data querying and structural translation files.
+
+### A. Strict Edge-Pagination (15-Row Constraints)
+- **The Mega Array Threat:** Administrative feeds (e.g. `getAllUsers`) must NEVER aggregate entire database pools into UI memory via standard `.collect()` or `useQuery` commands.
+- **Protocol:** All dynamic tables and data feeds must utilize Edge-constrained `.paginate()` hooks native to Convex. Front-end components invoke `usePaginatedQuery` tightly coupled with a `15-row` mapping threshold and an interactive "Load More" interface node.
+- **Server-Side Searching:** Rather than iterating huge JS arrays locally, searches must be piped straight to the backend via `.withSearchIndex()` parameters to map directly against Convex vectors instantly.
+
+### B. Internationalization (i18n) Parity Locking
+- Sonae's structural localization framework runs dynamically off `/messages/en.json` and `/messages/it.json`.
+- **Structural Integrity:** These JSON trees must perfectly map one another. Dropping keys or creating unmapped variables breaks the Next-Intl parser silently. 
+- **The Parity Test:** Component integrity is proven mechanically via the `i18n.test.ts` loop to violently fail builds if keys ever orphan.
+
+### C. Ring 3 LLM Defenses & Denial-of-Wallet
+- Under no circumstances will Google GenAI/Vertex execution nodes (`generateSonaeResponse`) ingest unbounded text streams from the client.
+- **Payload Truncation:** To defend against autonomous Resource Exhaustion ("Denial of Wallet") attacks, `ai.ts` actions strictly hard-cap structural lengths natively at `10,000` chars before transmission to paid APIs.
+- **XSS Neutralization:** All AI-rendered markdown in the client must parse linearly utilizing `react-markdown` strictly stripping and rejecting `script` or foreign `html` hooks generated via prompt-injections natively.
+
+---
+
+## 9. Edge Interfaces & Telemetry Systems
+
+Sonae operates several unauthenticated and automated tracking interfaces that require specific structural considerations when modifying data pipelines.
+
+### A. Analytics & Financial Telemetry
+- **Granular Cost Resolution:** Every single interaction hitting the `generateSonaeResponse` proxy natively pipes a detailed logging footprint to `agentTransactions`.
+- **Scope:** Variables including `inputTokens`, `outputTokens`, `modelUsed`, and `costGBP` are mathematically calculated on the fly and aggregated into the Admin Dashboards. This allows Sonae to strictly bill and track AI usage separated intrinsically by `companyId` (Tenant) or `widgetId` (Anonymous Traffic).
+
+### B. Encrypted Widget Architecture
+- **Boundary Defenses:** Sonae extends AI functionality to external consumer websites via public Chat Widgets. Public ingestion points operate completely unauthenticated but are strictly hardened via `allowedDomains` cross-origin enforcement matrices.
+- **Thread Sandboxing:** Anonymous requests hitting a generic `widgetId` spawn isolated conversational threads structurally decoupled from standard platform authorization tokens (`tokenIdentifier`), restricting prompt-injections from leaping into administrative logic.
+
+### C. The AI Reporting Engine (Generation & Rasterization)
+- **Structured Outputs:** Sonae goes beyond generic markdown generation by instructing Vertex AI to map insights directly to the `salesReports` schema. 
+- **JSON Telemetry:** Reports orchestrate multi-tiered components natively (e.g., `pipelineHealth`, `riskRadar`, `closingWindows`) rather than vomiting flat text. This enforces strict UI mapping capability, allowing React to chart and rasterize complex analytical visualizations safely and beautifully.

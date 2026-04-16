@@ -55,3 +55,6 @@
 - **Starting the App**: The local shell environment requires the RC file to be sourced before running Node commands in a non-interactive shell. To start the local application, you must use persistent terminals and explicit source commands:
   - Frontend: `source ~/.zshrc && npm run dev`
   - Backend: `source ~/.zshrc && npm run convex:dev`
+- **MANDATORY - SERVER CRASH PREVENTION**: **NEVER** autonomously execute `npm run build` or `npm install` if the Next.js local development server (`npm run dev` on port 3000) is actively running. 
+  - *Why?* Running a build clears the `.next` cache directory, and `npm install` aggressively manipulates `node_modules` while the running server is actively pointing to them in memory. This instantly kills the user's localhost connection with an `ERR_CONNECTION_REFUSED` hard crash.
+  - *Action:* If you need to install standard module updates or run the pre-flight sweep (`npm run build`), you MUST first formally verify that `npm run dev` is shut down, or explicitly warn the user that they must restart their server afterwards.
