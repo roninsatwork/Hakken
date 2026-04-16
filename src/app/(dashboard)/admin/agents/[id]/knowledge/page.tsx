@@ -30,7 +30,7 @@ export default function AgentKnowledgePage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File) => {
-    if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"].includes(file.type)) {
+    if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/csv"].includes(file.type)) {
       setErrorDetails(t("errors.unsupportedFileType"));
       return;
     }
@@ -201,7 +201,7 @@ export default function AgentKnowledgePage() {
             <input
               ref={inputRef}
               type="file"
-              accept=".pdf,.docx,.txt"
+              accept=".pdf,.docx,.txt,.csv"
               onChange={handleChange}
               className="hidden"
             />

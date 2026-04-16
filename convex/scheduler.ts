@@ -148,7 +148,8 @@ export const manualRunSchedule = mutation({
 
     // Create execution log entry
     const executionId = await ctx.db.insert("workflowExecutions", {
-      workflowId: args.workflowId as any, // Temporary backcompat if agentId used
+      workflowId: args.workflowId,
+      agentId: args.agentId,
       status: "RUNNING",
       triggerType: "MANUAL",
       startedAt: Date.now(),
@@ -157,6 +158,14 @@ export const manualRunSchedule = mutation({
 
     // In a real execution environment, we would queue the workflow runtime here:
     // await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNodeGraph, { workflowId: args.workflowId, executionId });
+
+    if (args.agentId) {
+       // Run the Sales Report Agent action specifically
+       await ctx.scheduler.runAfter(0, internal.salesReportActions.generateReport, {
+           agentId: args.agentId,
+           companyId: undefined // Would resolve from auth in a real tenant setting
+       });
+    }
 
     // For now, since the actual workflow execution engine is deeply tied to the visual nodes,
     // we simply simulate a successful run to prove the logging works.

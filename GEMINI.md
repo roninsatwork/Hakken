@@ -11,7 +11,7 @@
 ### 🌊 Layout & Fluidity
 - **Always Fluid**: The content workspace MUST NOT have a maximum width. It should always be 100% fluid regardless of screen size.
 - **Glassmorphism**: Prioritize translucent, blurred backgrounds for all layered UI elements.
-- **Strict Page Margins**: All new pages must wrap their main content in `<div className="flex flex-col gap-5">` (or `gap-6`) immediately following `<Header />`. Do NOT use arbitrary `mt-*` or `h-screen` classes on inner wrappers. `Header` natively controls top spacing via `-mb-8` against the `FluidWorkspace` parent padding.
+- **Strict Page Margins**: ALL new frontend pages MUST render the standard `<Header />` component at the absolute top of their content flow. Do not forget to import it. immediately following the `<Header />`, you must wrap the main content in `<div className="flex flex-col gap-5">` (or `gap-6`). Do NOT use arbitrary `mt-*` or `h-screen` classes on inner wrappers. `Header` natively controls top spacing via `-mb-8` against the `FluidWorkspace` parent padding.
 
 ### 🛡️ UI & Feedback
 - **Modal Policy**: NEVER use system/native modals (alert/confirm/prompt).
@@ -34,6 +34,7 @@
 - **Rate Limit Defenses**: Any external platform intelligence integrations (Vertex AI, Twitter, Facebook) MUST implement robust queueing and progressive exponential backoff to safely handle API throttling or `429` errors.
 - **Dispatch Staggering**: Space out concurrent Convex scheduled jobs or autonomous agent invocations to avoid burst traffic ceilings and ensure reliable ingestion flow.
 - **Vector Bulk limits**: NEVER loop through and delete or load multiple heavy vector chunks (`knowledgeChunks`) inside a single linear mutation context. The massive 768-dimensional float arrays will rapidly breach Convex's strict 16MB function transaction limit. Always cleanly delegate bulk chunk operations to a staggered `ctx.scheduler` scheduled mutation queue to execute iteratively.
+- **Dynamic AI Models**: NEVER hardcode model literal strings (e.g., `gemini-3.1-pro-preview`) into backend server actions when orchestrating Agents or processing Generations. ALWAYS extract and resolve the assigned LLM dynamically from the user's configuration in the database (e.g., `agent.modelId`). This ensures any Model adjustments made via the Admin Dashboard seamlessly flow into the workflow.
 
 ---
 
@@ -48,3 +49,8 @@
   - Sonae deploys to **Google Cloud Run** via **GitHub Actions** (`.github/workflows/deploy.yml`).
   - Convex deploys natively alongside the Github Actions pipeline.
   - **BRANCHING PROTOCOL**: All daily coding and new features MUST be written on the `dev` branch. `main` is strictly protected for production. Merge `dev` to `main` locally to trigger a live auto-deployment.
+
+## 🚀 Local Development
+- **Starting the App**: The local shell environment requires the RC file to be sourced before running Node commands in a non-interactive shell. To start the local application, you must use persistent terminals and explicit source commands:
+  - Frontend: `source ~/.zshrc && npm run dev`
+  - Backend: `source ~/.zshrc && npm run convex:dev`

@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText } from "lucide-react";
+import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 export default function AgentDashboardLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("admin.agents.details");
@@ -14,6 +16,28 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
   const agentId = params.id as Id<"agents">;
   const agent = useQuery(api.agents.get, { id: agentId });
   const pathname = usePathname();
+
+  const runManualSchedule = useMutation(api.scheduler.manualRunSchedule);
+  const [isManualRunning, setIsManualRunning] = useState(false);
+  const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
+
+  const handleManualRun = async () => {
+    setIsManualRunning(true);
+    try {
+      await runManualSchedule({ agentId });
+      setModalState({
+        title: "Execution Launched",
+        message: "Agent execution initiated! You can monitor live telemetry inside the Logs tab."
+      });
+    } catch (e: any) {
+      setModalState({
+        title: "Execution Blocked",
+        message: e.message || "An unknown error prevented execution."
+      });
+    } finally {
+      setIsManualRunning(false);
+    }
+  };
 
   if (agent === undefined) {
     return <div className="p-8 text-secondary">{t("loading")}</div>;
@@ -55,6 +79,14 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
           </div>
 
           <div className="flex items-center gap-3 z-20">
+            <button
+              onClick={handleManualRun}
+              disabled={isManualRunning}
+              className="px-5 py-2 rounded-[10px] bg-brand text-white font-medium hover:opacity-90 transition-all text-[13px] flex items-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              {isManualRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              Launch Run
+            </button>
             <Link
               href="/admin/agents"
               className="px-5 py-2 rounded-[10px] bg-foreground/5 text-foreground font-medium hover:bg-foreground/10 transition-all text-[13px] flex items-center gap-2 border border-border-dim/50"
@@ -93,6 +125,25 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
       <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4 w-full pr-4 overflow-y-auto custom-scrollbar">
         {children}
       </div>
+
+      <SonaeModal
+        isOpen={!!modalState}
+        onClose={() => setModalState(null)}
+        title={modalState?.title || ""}
+        size="sm"
+      >
+        <div className="pt-2 pb-4 px-1 text-[14px] text-secondary flex flex-col gap-6">
+           <p>{modalState?.message}</p>
+           <div className="flex justify-end">
+             <button
+               onClick={() => setModalState(null)}
+               className="px-5 py-2.5 rounded-[10px] bg-brand text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm"
+             >
+                Acknowledge
+             </button>
+           </div>
+        </div>
+      </SonaeModal>
     </div>
   );
 }

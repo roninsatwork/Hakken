@@ -50,8 +50,8 @@ export default function CompanyKnowledgeBasePage() {
   const [websiteError, setWebsiteError] = useState("");
 
   const processFile = async (file: File) => {
-    if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"].includes(file.type)) {
-       setFileError("Unsupported file type. Please upload a PDF, DOCX, or TXT file.");
+    if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/csv"].includes(file.type)) {
+       setFileError("Unsupported file type. Please upload a PDF, DOCX, TXT, or CSV file.");
        return;
     }
 
@@ -505,7 +505,7 @@ export default function CompanyKnowledgeBasePage() {
             <input 
                ref={inputRef}
                type="file"
-               accept=".pdf,.docx,.txt"
+               accept=".pdf,.docx,.txt,.csv"
                onChange={handleChange}
                className="hidden"
             />
@@ -519,7 +519,7 @@ export default function CompanyKnowledgeBasePage() {
                   <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${dragActive ? 'text-brand scale-110' : 'text-secondary'}`} />
                   <p className="text-[14px] font-bold text-foreground mb-1">Drag & Drop Documentation</p>
                   <p className="text-[13px] text-muted text-center max-w-[250px] leading-relaxed mb-6">
-                     Supports .PDF, .DOCX, and .TXT format.
+                     Supports .PDF, .DOCX, .TXT, and .CSV format.
                   </p>
                   <button 
                      onClick={(e) => { e.preventDefault(); inputRef.current?.click(); }}

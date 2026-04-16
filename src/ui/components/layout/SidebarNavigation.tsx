@@ -188,6 +188,7 @@ export default function SidebarNavigation() {
     if (pathname === '/admin/settings/analytics') return 'Analytics';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
+    if (pathname.startsWith('/app/reports')) return 'Reports';
     if (pathname.startsWith('/app/profile')) return 'Profile';
     return isAdmin ? 'Admin Dashboard' : '';
   });
@@ -201,7 +202,8 @@ export default function SidebarNavigation() {
     agents: false,
     workflows: false,
     users: false,
-    settings: false
+    settings: false,
+    reports: false
   });
 
   const toggleSection = (section: string) => {
@@ -227,6 +229,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
     else if (pathname === '/admin/settings/analytics') setActiveItem('Analytics');
     else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
+    else if (pathname.startsWith('/app/reports')) setActiveItem('Reports');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -426,6 +429,17 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('agenticTesting')} href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Assistant')} />
                     </NavItem>
 
+                    <NavItem
+                      icon={LineChart}
+                      label="Reports"
+                      isActive={activeItem === 'Reports'}
+                      onClick={() => setActiveItem('Reports')}
+                      hasChildren
+                      isOpen={openSections.reports}
+                      onToggle={() => toggleSection('reports')}
+                    >
+                      <SubNavItem label="Sales Report" href="/app/reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
+                    </NavItem>
 
                   </>
                 )}

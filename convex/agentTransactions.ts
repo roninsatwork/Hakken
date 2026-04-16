@@ -91,7 +91,7 @@ export const insertTransactionInternal = internalMutation({
     agentId: v.id("agents"),
     threadId: v.optional(v.id("threads")),
     companyId: v.optional(v.id("companies")),
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     actionContext: v.string(),
     modelUsed: v.string(),
     inputTokens: v.number(),

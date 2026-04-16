@@ -141,7 +141,7 @@ export default defineSchema({
   agentTransactions: defineTable({
     agentId: v.id("agents"),
     threadId: v.optional(v.id("threads")),
-    userId: v.id("users"), // The user who triggered the agent
+    userId: v.optional(v.id("users")), // The user who triggered the agent
     companyId: v.optional(v.id("companies")), // Tenant context
     actionContext: v.string(), // e.g. "Chat Completion", "Email Draft", "Summarization"
     inputTokens: v.number(),
@@ -295,7 +295,8 @@ export default defineSchema({
   }).index("by_name", ["name"]),
 
   workflowExecutions: defineTable({
-    workflowId: v.id("workflows"),
+    workflowId: v.optional(v.id("workflows")),
+    agentId: v.optional(v.id("agents")),
     status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
     triggerType: v.string(),
     startedAt: v.number(),
@@ -355,4 +356,66 @@ export default defineSchema({
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_execution", ["executionId", "nodeId"]),
+
+  // Generated Agent Reports
+  salesReports: defineTable({
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    headline: v.string(), // Section 1
+    executiveSummary: v.optional(v.string()), // Section 1 Text
+    markdownReport: v.optional(v.string()), // Legacy Fallback
+    kpis: v.object({ // Section 2
+      totalPipeline: v.number(),
+      totalPipelineChange: v.optional(v.string()),
+      weightedPipeline: v.number(),
+      weightedPipelineChange: v.optional(v.string()),
+      openDeals: v.number(),
+      openDealsChange: v.optional(v.string()),
+      winRatePct: v.number(),
+      winRatePctChange: v.optional(v.string()),
+      avgDealSize: v.optional(v.number()),
+      avgDealSizeChange: v.optional(v.string()),
+      avgSalesCycleDays: v.optional(v.number()),
+      avgSalesCycleDaysChange: v.optional(v.string()),
+    }),
+    closingWindows: v.optional(v.array(v.object({ // Section 3
+        window: v.string(),
+        deals: v.number(),
+        totalValue: v.number(),
+        weightedValue: v.number()
+    }))),
+    topDeals: v.optional(v.array(v.object({ // Section 3
+        dealName: v.string(),
+        rep: v.string(),
+        value: v.number(),
+        probability: v.number(),
+        status: v.string()
+    }))),
+    chartData: v.optional(v.object({ // Section 4 / 9
+      funnel: v.array(v.object({ stage: v.string(), value: v.number(), count: v.number() })),
+      timeline: v.array(v.object({ month: v.string(), expectedValue: v.number() })),
+      sources: v.array(v.object({ source: v.string(), winRate: v.number(), count: v.number() }))
+    })),
+    riskTables: v.optional(v.any()), // Legacy support
+    pipelineHealth: v.optional(v.object({ // Section 4
+        byStage: v.array(v.object({ stage: v.string(), value: v.number(), valueFormatted: v.optional(v.string()), barChart: v.string(), observation: v.string() })),
+        byRep: v.array(v.object({ rep: v.string(), valPct: v.number(), valueFormatted: v.optional(v.string()), barChart: v.string(), observation: v.string() }))
+    })),
+    riskRadar: v.optional(v.object({ // Section 5
+        critical: v.array(v.object({ dealName: v.string(), rep: v.string(), value: v.number(), reason: v.string(), recommendation: v.string() })),
+        atRisk: v.array(v.object({ dealName: v.string(), rep: v.string(), value: v.number(), reason: v.string(), recommendation: v.string() })),
+        quiet: v.array(v.object({ dealName: v.string(), rep: v.string(), value: v.number(), reason: v.string(), recommendation: v.string() }))
+    })),
+    teamSpotlight: v.optional(v.object({ // Section 6
+        momentum: v.union(v.string(), v.array(v.object({ rep: v.string(), summary: v.string() }))),
+        supportNeeded: v.union(v.string(), v.array(v.object({ rep: v.string(), summary: v.string() })))
+    })),
+    patterns: v.optional(v.array(v.object({ // Section 7
+        pattern: v.string(),
+        observation: v.string()
+    }))),
+    priorities: v.optional(v.array(v.string())), // Section 8
+    createdAt: v.number()
+  }).index("by_company", ["companyId", "createdAt"])
+    .index("by_agent", ["agentId", "createdAt"]),
 });
