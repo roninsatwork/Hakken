@@ -48,7 +48,8 @@ export const getDocuments = query({
         .query("knowledgeDocuments")
         .filter(q => q.and(
             q.eq(q.field("companyId"), undefined),
-            q.eq(q.field("agentId"), undefined)
+            q.eq(q.field("agentId"), undefined),
+            q.eq(q.field("threadId"), undefined)
         ))
         .order("desc")
         .collect();
@@ -61,7 +62,10 @@ export const getDocuments = query({
     return await ctx.db
       .query("knowledgeDocuments")
       .withIndex("by_company", q => q.eq("companyId", args.companyId))
-      .filter(q => q.eq(q.field("agentId"), undefined))
+      .filter(q => q.and(
+          q.eq(q.field("agentId"), undefined),
+          q.eq(q.field("threadId"), undefined)
+      ))
       .order("desc")
       .collect();
   },
