@@ -10,10 +10,15 @@ import {
   Loader2,
   ShieldCheck,
   Plus,
+  Settings2,
+  ChevronDown,
+  Check,
+  Square,
   ArrowUp,
   Mic,
   MicOff,
   AlertTriangle,
+  Target,
   Paperclip,
   FileText,
   X
@@ -25,7 +30,12 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 import { useTranslations } from "next-intl";
 
-
+const THINKING_LEVELS = [
+  { id: "NONE" },
+  { id: "LOW" },
+  { id: "MEDIUM" },
+  { id: "HIGH" },
+];
 
 export default function AssistantWelcomePage() {
   const t = useTranslations('ai.assistant');
@@ -46,7 +56,19 @@ export default function AssistantWelcomePage() {
     onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
   });
 
+  const allModels = useQuery(api.aiModels.getModels) || [];
+  const activeModels = allModels.filter((m: any) => m.isEnabled);
 
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
+  const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
+  const [selectedThinkingId, setSelectedThinkingId] = useState(THINKING_LEVELS[0].id);
+
+  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
+
+  const modelRef = useRef<HTMLDivElement>(null);
+  const thinkingRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createThread = useMutation(api.chat.createThread);
@@ -56,7 +78,25 @@ export default function AssistantWelcomePage() {
   const user = useQuery(api.users.getMe);
   const router = useRouter();
 
+  useEffect(() => {
+    if (!selectedModelId && activeModels.length > 0) {
+      const defModel = activeModels.find((m: any) => m.isDefault) || activeModels[0];
+      setSelectedModelId(defModel.modelId);
+    }
+  }, [activeModels, selectedModelId]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (modelRef.current && !modelRef.current.contains(event.target as Node)) {
+        setModelDropdownOpen(false);
+      }
+      if (thinkingRef.current && !thinkingRef.current.contains(event.target as Node)) {
+        setThinkingDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -175,8 +215,8 @@ export default function AssistantWelcomePage() {
       await sendMessage({
         threadId,
         content: textSnapshot || "Analyzed attached documents.",
-        modelId: undefined,
-        thinkingLevel: "NONE",
+        modelId: selectedModelId || undefined,
+        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinkingId,
         fileIds: uploadedFileIds,
       });
       router.push(`/app/assistant/${threadId}`);
@@ -310,6 +350,7 @@ export default function AssistantWelcomePage() {
                   >
                     <Plus className="w-[20px] h-[20px] transition-transform group-hover:scale-110" />
                   </button>
+
                 </div>
 
                 {/* Right Controls */}
@@ -333,7 +374,105 @@ export default function AssistantWelcomePage() {
                         <Mic className="w-[18px] h-[18px]" />}
                   </button>
 
+                  {/* Database Model Selector */}
+                  <div className="relative" ref={modelRef}>
+                    <button
+                      type="button"
+                      onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
+                      disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
+                      className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
+                    >
+                      <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : t('controls.engine.label')}</span>
+                      <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                    </button>
 
+                    <AnimatePresence>
+                      {modelDropdownOpen && !isRecording && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full right-0 mb-3 w-[280px] sm:w-[320px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar"
+                        >
+                          <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1 sticky top-0 bg-card z-10">
+                            <span className="text-[12px] font-medium text-muted tracking-widest uppercase">{t('controls.engine.title')}</span>
+                          </div>
+                          {activeModels.map((model: any) => (
+                            <button
+                              key={model.modelId}
+                              type="button"
+                              onClick={() => {
+                                setSelectedModelId(model.modelId);
+                                setModelDropdownOpen(false);
+                              }}
+                              className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                            >
+                              <div className="flex flex-col gap-1 min-w-0 pr-4">
+                                <span className={`text-[15px] font-medium truncate ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
+                                <span className="text-[13px] text-muted font-light truncate">{model.description || t('controls.engine.defaultDesc')}</span>
+                              </div>
+                              {selectedModelId === model.modelId && (
+                                <div className="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
+                                  <Check className="w-3 h-3 text-brand" />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Thinking Level Dropdown */}
+                  <div className="relative" ref={thinkingRef}>
+                    <button
+                      type="button"
+                      onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
+                      disabled={isRecording || isAutonomousMode}
+                      className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${thinkingDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
+                    >
+                      <span className="text-[14px] font-medium">{t(`controls.reasoning.levels.${selectedThinkingId}`)}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    <AnimatePresence>
+                      {thinkingDropdownOpen && !isRecording && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full right-0 mb-3 w-[260px] sm:w-[300px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col"
+                        >
+                          <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1">
+                            <span className="text-[12px] font-medium text-muted tracking-widest uppercase">{t('controls.reasoning.title')}</span>
+                          </div>
+                          {THINKING_LEVELS.map((level) => (
+                            <button
+                              key={level.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedThinkingId(level.id);
+                                setThinkingDropdownOpen(false);
+                              }}
+                              className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedThinkingId === level.id ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                            >
+                              <div className="flex flex-col gap-1 pr-4 min-w-0">
+                                <span className={`text-[15px] font-medium truncate ${selectedThinkingId === level.id ? 'text-foreground' : 'text-foreground/80'}`}>{t(`controls.reasoning.levels.${level.id}`)}</span>
+                                <span className="text-[13px] text-muted font-light truncate">{t(`controls.reasoning.descriptions.${level.id}`)}</span>
+                              </div>
+                              {selectedThinkingId === level.id && (
+                                <div className="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
+                                  <Check className="w-3 h-3 text-brand" />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
                   {/* Submit / Loader */}
                   <button
