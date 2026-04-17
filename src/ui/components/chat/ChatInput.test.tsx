@@ -16,7 +16,11 @@ vi.mock('convex/react', async (importOriginal) => {
 // 2. Mock Generated APIs
 vi.mock('@/convex/_generated/api', () => ({
   api: { 
-    chat: { sendMessage: 'mock_api_send' },
+    chat: { 
+      sendMessage: 'mock_api_send',
+      generateChatUploadUrl: 'mock_generate_upload_url'
+    },
+    knowledge: { saveChatDocument: 'mock_save_chat_document' },
     aiModels: { getModels: 'mock_get_models' }
   },
 }))
