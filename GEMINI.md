@@ -48,7 +48,9 @@
   - **MANDATORY**: NEVER use or mention the word "Vercel". Sonae is NOT hosted on Vercel.
   - Sonae deploys to **Google Cloud Run** via **GitHub Actions** (`.github/workflows/deploy.yml`).
   - Convex deploys natively alongside the Github Actions pipeline.
-  - **BRANCHING PROTOCOL**: All daily coding and new features MUST be written on the `dev` branch. `main` is strictly protected for production. Merge `dev` to `main` locally to trigger a live auto-deployment.
+  - **BRANCHING PROTOCOL**: All daily coding and new features MUST be written on the `dev` branch. `main` is strictly protected for production deployments only. Over time, AI agents naturally forget their branch context. 
+    - **CRITICAL VERIFICATION**: Before mapping out architecture, modifying files, or creating new features, YOU MUST explicitly use a terminal tool to run `git branch --show-current` and strictly verify you are on `dev`. If you are on `main`, stop and checkout `dev` immediately.
+    - **MERGE & BOUNCE**: When completing a task and deploying via `git merge dev` onto `main`, you MUST follow it immediately with `git checkout dev`. Never linger on `main` to build new features.
   - **PRE-FLIGHT SWEEP (CRITICAL)**: Because Google Cloud CI operates with strict production TypeScript bounds, you MUST intercept compiler errors locally before pushing to `main` by executing: `source ~/.zshrc && npm run build`. Ensure a `100%` clean output to prevent consecutive broken pipeline loops.
 
 ## 🚀 Local Development
