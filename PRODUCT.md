@@ -33,6 +33,7 @@ Sonae does not rely on a single, massive prompt. It operates a dynamic assembly 
 Sonae features a fully integrated Retrieval-Augmented Generation (RAG) pipeline, ensuring the AI can answer granular questions based on private company PDFs, documents, or logs.
 
 *   **Data Isolation Matrix:** Uploaded documents are parsed into 768-dimensional Vector Embeddings. Sonae algorithmically segregates "Global Baseline" knowledge (which all tenants can ask the AI about) from "Tenant Isolated" knowledge (which is only accessible if the user belongs to that exact Workspace).
+*   **Ephemeral Thread RAG:** For large-scale data ingestion, Sonae provisions temporary, thread-scoped Vector pipelines. Files (up to 50MB) are ingested and vectorized strictly for the duration of a single conversation, physically shielding private conversational intelligence from broader generic agent access.
 *   **Live Context Injection:** The AI autonomously queries the RAG database against every user message, extracts the top 50 highly relevant internal data points, and uses it to construct a tailored response, heavily limiting hallucination.
 
 ---
@@ -48,10 +49,11 @@ Sonae's intelligence goes beyond text-based chat strings. It features a profound
 
 ## 6. Financial Telemetry & AI Billing
 
-Sonae calculates computing resources natively on the edge to support robust tenant billing or tracking models.
+Sonae calculates computing resources natively on the edge to support robust tenant billing or tracking models, structured strictly around a SaaS B2B subscription foundation.
 
+*   **B2B Subscription Plans:** The platform operates a dynamic, global "Subscription Plan" mapping system. Workspaces are assigned explicit tiers (e.g., Enterprise, Unlimited) that dictate their core computing quotas.
+*   **Dynamic MRR & Telemetry:** Super Admins have access to a real-time, interactive analytics dashboard tracking exact Monthly Recurring Revenue (MRR) based directly on active plan assignments, alongside live tracking of how much GBP (£) a specific Company or Public Chat Widget has consumed on the platform over the last 30 days.
 *   **Granular Cost Resolution:** Every outbound and inbound request to Vertex API is measured. `inputTokens` and `outputTokens` are aggregated, multiplied by the specific model's API cost per million, and logged dynamically into `agentTransactions`.
-*   **Dashboard Attribution:** Super Admins can physically see exactly how much GBP (£) a specific Company or Public Chat Widget has consumed on the platform over the last 30 days to enforce margin boundaries.
 
 ---
 

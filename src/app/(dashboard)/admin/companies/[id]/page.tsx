@@ -22,7 +22,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TimeframeOption = "7d" | "30d" | "90d" | "ytd" | "custom";
+type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
 
 // Reusable Animated Component mapping standard integers
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (

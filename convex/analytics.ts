@@ -352,6 +352,13 @@ export const getCompanyMetrics = query({
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number }> = {};
 
+    const companyObj = await ctx.db.get(args.companyId);
+    let mrr = 0;
+    if (companyObj?.planId) {
+       const planObj = await ctx.db.get(companyObj.planId);
+       if (planObj && planObj.isActive) mrr = planObj.priceGBP || 0;
+    }
+
     const agents = await ctx.db.query("agents").collect();
     const agentMap = new Map(agents.map((a: any) => [a._id, a]));
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
@@ -534,7 +541,7 @@ export const getCompanyMetrics = query({
           costPerActiveUser: Number(costPerActiveUser.toFixed(4)),
           avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
           aggregationType,
-          mrr: 0,
+          mrr: Number(mrr.toFixed(2)),
           mau: 0
        },
        topUsers,
@@ -795,7 +802,9 @@ export const getGlobalAnalytics = query({
     const costPerActiveUser = users.length > 0 ? (totalCostGBP / users.length) : 0;
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
-    const plans = await ctx.db.query("plans").collect();
+    const plans = await ctx.db.query("plans")
+       .withIndex("by_active", q => q.eq("isActive", true))
+       .collect();
     const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
 
     let mrr = 0;
@@ -806,11 +815,6 @@ export const getGlobalAnalytics = query({
         }
     });
 
-    users.forEach(user => {
-        if (user.planOverrideId && planMap.has(user.planOverrideId)) {
-             mrr += planMap.get(user.planOverrideId) || 0;
-        }
-    });
     return {
        timeline,
        aggregates: {
@@ -846,3 +850,12 @@ export const debugTime = query({
   }
 });
 
+
+export const debugDb = query({
+  args: {},
+  handler: async (ctx) => {
+    const plans = await ctx.db.query("plans").collect();
+    const companies = await ctx.db.query("companies").collect();
+    return { plans, companies };
+  }
+});

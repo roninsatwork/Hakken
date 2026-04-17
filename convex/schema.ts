@@ -18,6 +18,9 @@ export default defineSchema({
   
   systemSettings: defineTable({
     platformName: v.string(),
+    currencySymbol: v.optional(v.string()),
+    monthlyBasePrice: v.optional(v.number()),
+    monthlySeatPrice: v.optional(v.number()),
     logoUrlLight: v.optional(v.string()),
     logoUrlDark: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),

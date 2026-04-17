@@ -76,10 +76,11 @@ The Swarm is a real-time, LangChain-style orchestrator capable of chaining dynam
 The platform ingests multimodal documents and processes them into conversational memory chunks using high-fidelity Vector Embeddings.
 
 - **Storage Pipeline:** User Auth -> Convex Storage `fileId` -> Backend ID Generation -> Background Heavy Action Execution -> Context chunks embedded via LLM -> Persisted into `knowledgeChunks` index.
-- **Data Isolation Matrix:** Documents (and their child chunks) are strictly bound to one of three hierarchical contexts:
+- **Data Isolation Matrix:** Documents (and their child chunks) are strictly bound to one of four hierarchical contexts:
   1. **Global Base:** Defined by `companyId: undefined`. This context is accessible to all users platform-wide.
   2. **Company Tenant:** Linked to an explicit `companyId`. This knowledge is completely invisible and isolated from users outside that tenant.
   3. **Agent Local:** Explicitly linked to a functional `agentId`. This guarantees execution tool autonomy for that particular sandbox.
+  4. **Ephemeral Thread:** Explicitly linked to a functional `threadId`. Designed for real-time background ingestion with a strict 50MB ceiling, physically walling off private user uploads from cross-thread hallucination risks.
 
 ---
 

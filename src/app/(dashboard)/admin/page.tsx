@@ -23,12 +23,12 @@ import { useTranslations } from "next-intl";
 type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
 
 // Reusable Animated Component mapping standard integers
-const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
+const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
-    className="flex flex-col gap-3 p-6 rounded-[20px] bg-card/40 backdrop-blur-2xl border border-border-dim shadow-sm relative overflow-hidden group hover:border-brand/30 transition-colors"
+    className={`flex flex-col gap-3 p-6 rounded-[20px] bg-card/40 backdrop-blur-2xl border border-border-dim shadow-sm relative overflow-hidden group hover:border-brand/30 transition-colors ${className}`}
   >
     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 blur-[40px] rounded-full pointer-events-none -translate-y-10 translate-x-10 group-hover:bg-brand/10 transition-colors" />
     <div className="flex items-center gap-3 text-secondary">
@@ -36,7 +36,7 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
       <span className="text-[13px] font-medium tracking-wide">{title}</span>
     </div>
     <div className="flex flex-col gap-1 z-10">
-      <span className="text-3xl font-bold tracking-tight text-foreground">{value}</span>
+      <span className={`${largeText ? 'text-5xl lg:text-7xl mb-2 mt-4' : 'text-3xl'} font-bold tracking-tight text-foreground`}>{value}</span>
       <span className="text-[11px] font-mono tracking-widest uppercase text-muted/80">{sub}</span>
     </div>
   </motion.div>
@@ -132,23 +132,52 @@ export default function AdminDashboard() {
           animate={{ opacity: 1 }}
           className="flex flex-col gap-8 w-full"
         >
-          {/* SaaS Core Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Bento UI Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Main Hero Metric (MRR) */}
             <MetricBlock
+              className="md:col-span-2 lg:col-span-2 md:row-span-2 flex flex-col justify-center min-h-[220px]"
+              largeText={true}
               icon={CreditCard}
               title={t('metrics.mrr')}
               value={`£${(data.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               sub={t('metrics.mrrSub')}
               delay={0}
             />
+
+            {/* Standard Metrics flowing around it */}
+            <MetricBlock
+              icon={Building2}
+              title="Registered Companies"
+              value={(data.systemIntegrity?.totalProvisionedCompanies ?? 0).toLocaleString()}
+              sub="TOTAL ORGANIZATIONS"
+              delay={0.1}
+            />
             <MetricBlock
               icon={Target}
               title={t('metrics.mau')}
               value={(data.aggregates.mau ?? 0).toLocaleString()}
               sub={t('metrics.mauSub')}
-              delay={0.1}
+              delay={0.15}
             />
             <MetricBlock
+              icon={PoundSterling}
+              title={t('metrics.logisticBurn')}
+              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
+              sub={t('metrics.burnSub')}
+              delay={0.2}
+            />
+            <MetricBlock
+              icon={Users}
+              title={t('metrics.activeContext')}
+              value={(data.aggregates.activeUsers ?? 0).toLocaleString()}
+              sub={t('metrics.activeSub')}
+              delay={0.25}
+            />
+
+            {/* Bottom Spans */}
+            <MetricBlock
+              className="md:col-span-2 lg:col-span-2"
               icon={Activity}
               title={t('metrics.compute')}
               value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
@@ -156,32 +185,15 @@ export default function AdminDashboard() {
                 input: (data.aggregates.totalInputTokens ?? 0).toLocaleString(), 
                 output: (data.aggregates.totalOutputTokens ?? 0).toLocaleString() 
               })}
-              delay={0.2}
-            />
-          </div>
-
-          {/* Logistics Analysis Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-[-12px]">
-            <MetricBlock
-              icon={Users}
-              title={t('metrics.activeContext')}
-              value={(data.aggregates.activeUsers ?? 0).toLocaleString()}
-              sub={t('metrics.activeSub')}
               delay={0.3}
             />
             <MetricBlock
-              icon={PoundSterling}
-              title={t('metrics.logisticBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
-              sub={t('metrics.burnSub')}
-              delay={0.4}
-            />
-            <MetricBlock
+              className="md:col-span-2 lg:col-span-2"
               icon={MessageSquare}
               title={t('metrics.messagesSent')}
               value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
               sub={t('metrics.messagesSub')}
-              delay={0.5}
+              delay={0.35}
             />
           </div>
 
@@ -280,8 +292,9 @@ export default function AdminDashboard() {
           </div>
 
           {/* Deep Dark Leaderboards */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
-            {/* Left: Top Companies */}
+          <div className="flex flex-col gap-6 mt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left: Top Companies */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
               className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
@@ -365,11 +378,12 @@ export default function AdminDashboard() {
                 )}
               </div>
             </motion.section>
+            </div>
 
-            {/* Right: Top Agents */}
+            {/* Bottom: Top Agents (Full Width) */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
-              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl w-full"
             >
               <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
