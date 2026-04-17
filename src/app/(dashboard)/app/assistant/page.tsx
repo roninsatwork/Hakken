@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -12,11 +13,15 @@ import {
   Settings2,
   ChevronDown,
   Check,
-  ArrowUp,
   Square,
+  ArrowUp,
   Mic,
   MicOff,
-  AlertTriangle
+  AlertTriangle,
+  Target,
+  Paperclip,
+  FileText,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -39,6 +44,13 @@ export default function AssistantWelcomePage() {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [greetingKey, setGreetingKey] = useState("default");
+  
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isRecording, isTranscribing, toggleRecording, permissionError, setPermissionError } = useVoiceToText({
     onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
@@ -53,6 +65,7 @@ export default function AssistantWelcomePage() {
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [selectedThinkingId, setSelectedThinkingId] = useState(THINKING_LEVELS[0].id);
 
+  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
 
   const modelRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
@@ -60,6 +73,8 @@ export default function AssistantWelcomePage() {
 
   const createThread = useMutation(api.chat.createThread);
   const sendMessage = useMutation(api.chat.sendMessage);
+  const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
+  const saveChatDocument = useMutation(api.knowledge.saveChatDocument);
   const user = useQuery(api.users.getMe);
   const router = useRouter();
 
@@ -98,25 +113,119 @@ export default function AssistantWelcomePage() {
     else setGreetingKey("night");
   }, []);
 
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const allowedTypes = [
+      "application/pdf", 
+      "text/csv", 
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain"
+    ];
+    
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+    Array.from(files).forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+         invalidFiles.push(`${file.name} (exceeds 50MB limit)`);
+      } else if (allowedTypes.includes(file.type) || file.name.endsWith(".csv") || file.name.endsWith(".txt") || file.name.endsWith(".docx")) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (invalidFiles.length > 0) {
+      setUploadError(`Unsupported file(s): ${invalidFiles.join(", ")}. Please upload PDF, CSV, Excel, Word, or Text files under 50MB.`);
+    }
+
+    if (validFiles.length > 0) {
+      setPendingFiles(prev => [...prev, ...validFiles]);
+    }
+    
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || isSubmitting) return;
+    if ((!content.trim() && pendingFiles.length === 0) || isSubmitting) return;
 
     if (isRecording) toggleRecording(); // Clean detach stream early
 
     setIsSubmitting(true);
+    const textSnapshot = content.trim();
+    const filesSnapshot = [...pendingFiles];
+    setContent("");
+    setPendingFiles([]);
+
     try {
       const threadId = await createThread({});
+      
+      let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
+
+      if (filesSnapshot.length > 0) {
+        setUploadStatus(`Encrypting & Uploading ${filesSnapshot.length} file(s)...`);
+        uploadedFileIds = [];
+        for (const file of filesSnapshot) {
+           const postUrl = await generateUploadUrl();
+           const result = await fetch(postUrl, {
+             method: "POST",
+             headers: { "Content-Type": file.type },
+             body: file,
+           });
+           const { storageId } = await result.json();
+           
+           await saveChatDocument({
+               storageId,
+               threadId,
+               title: file.name,
+               format: file.type
+           });
+
+           uploadedFileIds.push(storageId);
+        }
+        setUploadStatus("Parsing Intelligence Data...");
+      } else {
+        setUploadStatus("Connecting to Agent...");
+      }
+
       await sendMessage({
         threadId,
-        content: content.trim(),
+        content: textSnapshot || "Analyzed attached documents.",
         modelId: selectedModelId || undefined,
-        thinkingLevel: selectedThinkingId
+        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinkingId,
+        fileIds: uploadedFileIds,
       });
       router.push(`/app/assistant/${threadId}`);
     } catch (error) {
       console.error(error);
+      setContent(textSnapshot);
+      setPendingFiles(filesSnapshot);
       setIsSubmitting(false); // Reset boundary on rejection
+      setUploadStatus(null);
     }
   };
 
@@ -145,11 +254,67 @@ export default function AssistantWelcomePage() {
       {/* Universal Injection Input */}
       <div className="w-full flex justify-center z-10 absolute bottom-[10vh]">
         <div className="w-full flex items-center justify-center flex-col px-4 sm:px-8">
+          
+          {/* Transcript-styled Upload Indicator (Moved out of input) */}
+          <AnimatePresence>
+            {uploadStatus && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex w-full justify-end mb-6 max-w-4xl"
+              >
+                <div className="px-4 py-2 rounded-full bg-brand/10 border border-brand/20 flex items-center gap-2 self-end shadow-sm">
+                  <Loader2 className="w-3.5 h-3.5 text-brand animate-spin" />
+                  <span className="text-[12px] font-semibold tracking-wide text-brand uppercase">{uploadStatus}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <form
             onSubmit={handleStart}
             className="w-full relative"
           >
-            <div className="relative flex flex-col bg-card dark:bg-[#1e1e20] border border-border-dim dark:border-white/5 rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] focus-within:bg-card/70 dark:focus-within:bg-[#252528] transition-colors duration-300">
+            <div 
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative flex flex-col bg-card dark:bg-[#1e1e20] border rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 ${
+              isDragging 
+                 ? "border-brand shadow-[0_0_40px_-5px_rgba(var(--brand),0.5)] border-dashed bg-card/80 dark:bg-[#2a2a2d] scale-[1.01]"
+                 : isRecording 
+                 ? "border-brand shadow-[0_0_30px_-5px_rgba(var(--brand),0.3)] bg-card/70 dark:bg-[#252528]" 
+                 : "border-border-dim dark:border-white/5 focus-within:bg-card/70 dark:focus-within:bg-[#252528]"
+            }`}>
+              
+              {/* Pending Files Area */}
+              {pendingFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3 px-1">
+                  {pendingFiles.map((file, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-foreground/5 dark:bg-white/10 px-3 py-1.5 rounded-full relative group">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-[13px] font-medium text-foreground max-w-[120px] truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(i)}
+                        className="w-4 h-4 rounded-full bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center transition-colors -mr-1"
+                      >
+                        <X className="w-3 h-3 text-foreground" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                multiple 
+                accept=".pdf,.csv,.xlsx,.docx,.txt"
+                onChange={(e) => handleFileSelect(e.target.files)} 
+              />
 
               {/* Top Row: Icon + Input */}
               <div className="flex items-start gap-3 w-full pl-1">
@@ -172,7 +337,36 @@ export default function AssistantWelcomePage() {
               </div>
 
               {/* Bottom Row: Controls */}
-              <div className="flex flex-wrap items-center justify-end w-full mt-3 gap-2 relative">
+              <div className="flex flex-wrap items-center justify-between w-full mt-3 gap-2 relative">
+
+                {/* Left Controls */}
+                <div className="flex items-center gap-1">
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting || isRecording}
+                    className="w-10 h-10 flex items-center justify-center rounded-full transition-all hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground group"
+                    title="Upload File"
+                  >
+                    <Plus className="w-[20px] h-[20px] transition-transform group-hover:scale-110" />
+                  </button>
+                  <button type="button" className="h-10 px-4 flex items-center gap-2 rounded-full hover:bg-foreground/5 dark:hover:bg-white/10 text-muted transition-colors hidden sm:flex" disabled={isRecording}>
+                    <Settings2 className="w-[18px] h-[18px]" />
+                    <span className="text-[14px] font-medium tracking-wide">{t('controls.tools')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAutonomousMode(!isAutonomousMode)}
+                    className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 hidden sm:flex ${isAutonomousMode ? 'bg-foreground/10 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
+                    disabled={isRecording}
+                  >
+                    <Target className={`w-[18px] h-[18px] flex-shrink-0 ${isAutonomousMode ? 'text-brand' : ''}`} />
+                    <span className="text-[14px] font-medium tracking-wide">{t('controls.autonomous')}</span>
+                  </button>
+                </div>
+
+                {/* Right Controls */}
+                <div className="flex flex-wrap items-center justify-end gap-2">
 
                   {/* Voice Dictation (Mic) */}
                   <button
@@ -197,7 +391,7 @@ export default function AssistantWelcomePage() {
                     <button
                       type="button"
                       onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
-                      disabled={isRecording || activeModels.length === 0}
+                      disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
                       className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                     >
                       <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : t('controls.engine.label')}</span>
@@ -247,7 +441,7 @@ export default function AssistantWelcomePage() {
                     <button
                       type="button"
                       onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
-                      disabled={isRecording}
+                      disabled={isRecording || isAutonomousMode}
                       className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${thinkingDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                     >
                       <span className="text-[14px] font-medium">{t(`controls.reasoning.levels.${selectedThinkingId}`)}</span>
@@ -309,6 +503,7 @@ export default function AssistantWelcomePage() {
                       <ArrowUp className="w-5 h-5" />
                     )}
                   </button>
+                </div>
               </div>
             </div>
           </form>
@@ -347,6 +542,36 @@ export default function AssistantWelcomePage() {
               className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
             >
               {tCommon('actions.dismiss')}
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
+      {/* File Upload Error Matrix */}
+      <SonaeModal 
+        isOpen={!!uploadError} 
+        onClose={() => setUploadError(null)}
+        title="File Upload Invalid"
+      >
+        <div className="flex flex-col gap-5 pt-2">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
+            <AlertTriangle className="w-6 h-6 text-red-500 opacity-80" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-[16px] font-semibold tracking-wide">Unsupported File Format</span>
+            <p className="text-[14px] text-secondary font-light leading-relaxed">
+              {uploadError}
+            </p>
+          </div>
+          <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4 text-[13px] text-muted font-mono tracking-wide mt-2">
+            Tip: Convert documents to pure text formats (CSV or standard PDF) for stable execution.
+          </div>
+          <div className="w-full flex justify-end mt-2">
+            <button 
+              onClick={() => setUploadError(null)}
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-6 py-2.5 rounded-full text-[13px] font-bold tracking-widest uppercase transition-colors"
+            >
+              Clear Alert
             </button>
           </div>
         </div>

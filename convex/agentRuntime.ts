@@ -4,12 +4,14 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI } from "@google/genai";
 import { internal } from "./_generated/api";
+import { parseDocuments } from "./utils/fileParser";
 
 export const generateAgentResponse = internalAction({
   args: {
     threadId: v.id("threads"),
     agentId: v.id("agents"),
     content: v.string(),
+    fileIds: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
     // Escaping Edge runtime limits. Using implicit Node env parsing.
@@ -58,9 +60,18 @@ export const generateAgentResponse = internalAction({
         });
 
         // Add the current user prompt
+        let currentUserContent = args.content;
+        
+        if (args.fileIds && args.fileIds.length > 0) {
+            const documentText = await parseDocuments(ctx, args.fileIds);
+            if (documentText) {
+                currentUserContent += `\n\n====================\n[ATTACHED DOCUMENTS FOR THIS PROMPT]\nThe user has provided the following temporary documents. You MUST refer to these when answering.\n${documentText}\n====================\n`;
+            }
+        }
+
         conversationHistory.push({
             role: "user",
-            parts: [{ text: args.content }]
+            parts: [{ text: currentUserContent }]
         });
 
         // 3. Fetch Assigned Connectors (Tools)

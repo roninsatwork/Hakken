@@ -60,6 +60,17 @@ export const getThreadInternal = internalQuery({
   },
 });
 
+export const generateChatUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const createThread = mutation({
   args: {
     agentId: v.optional(v.id("agents")),
@@ -94,6 +105,7 @@ export const sendMessage = mutation({
     modelId: v.optional(v.string()),
     thinkingLevel: v.optional(v.string()),
     dynamicAgentId: v.optional(v.union(v.id("agents"), v.null())),
+    fileIds: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -128,6 +140,7 @@ export const sendMessage = mutation({
       role: "user",
       content: safeContent,
       createdAt: now,
+      attachments: args.fileIds,
     });
 
     // 2. Update Thread timestamp
@@ -148,6 +161,7 @@ export const sendMessage = mutation({
          threadId: args.threadId,
          agentId: targetAgentId,
          content: safeContent,
+         fileIds: args.fileIds,
        });
     } else if (args.thinkingLevel === "SWARM") {
        await ctx.scheduler.runAfter(0, internal.swarmActions.executeSwarmObjective, {
@@ -160,6 +174,7 @@ export const sendMessage = mutation({
          content: safeContent,
          modelId: args.modelId,
          thinkingLevel: args.thinkingLevel,
+         fileIds: args.fileIds,
        });
     }
 

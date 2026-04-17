@@ -184,11 +184,13 @@ export default defineSchema({
     textContent: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
+    threadId: v.optional(v.id("threads")),
     status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")),
     format: v.string(), // "application/pdf", "text/plain", "url"
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
+    .index("by_thread", ["threadId", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"]),
 
   // Knowledge Base Vector Store
@@ -196,13 +198,14 @@ export default defineSchema({
     documentId: v.id("knowledgeDocuments"),
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
+    threadId: v.optional(v.id("threads")),
     isGlobal: v.boolean(),
     text: v.string(),
     embedding: v.array(v.number()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
     dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
-    filterFields: ["companyId", "agentId", "documentId", "isGlobal"],
+    filterFields: ["companyId", "agentId", "documentId", "isGlobal", "threadId"],
   }).index("by_document", ["documentId"]),
 
   // Sonae Assistant Tables
@@ -227,7 +230,8 @@ export default defineSchema({
     // Sonae AI Logistics
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    modelUsed: v.optional(v.string())
+    modelUsed: v.optional(v.string()),
+    attachments: v.optional(v.array(v.id("_storage"))),
   }).index("by_thread", ["threadId", "createdAt"]),
 
   // Agent Orchestration Engine

@@ -67,7 +67,7 @@ export const ingestDocument = internalAction({
 
       if (!rawText.trim()) throw new Error("No text content could be extracted from the intelligence file.");
 
-      await embedAndStoreDoc(ctx, args.documentId, doc.companyId, doc.agentId, rawText);
+      await embedAndStoreDoc(ctx, args.documentId, doc.companyId, doc.agentId, doc.threadId, rawText);
 
     } catch (error) {
        console.error("Critical Failure in Knowledge Ingestion:", error);
@@ -130,7 +130,7 @@ export const processWebsiteQueue = internalAction({
 
        if (!markdownText) throw new Error("No extracted markdown text from URL.");
 
-       await embedAndStoreDoc(ctx, nextDoc._id, nextDoc.companyId, nextDoc.agentId, markdownText);
+       await embedAndStoreDoc(ctx, nextDoc._id, nextDoc.companyId, nextDoc.agentId, nextDoc.threadId, markdownText);
      } catch (e) {
        console.error("Queue Scrape Error", e);
        await ctx.runMutation(internal.knowledge.markDocFailedInternal, { documentId: nextDoc._id });
@@ -142,7 +142,7 @@ export const processWebsiteQueue = internalAction({
   }
 });
 
-async function embedAndStoreDoc(ctx: any, documentId: string, companyId: any, agentId: any, rawText: string) {
+async function embedAndStoreDoc(ctx: any, documentId: string, companyId: any, agentId: any, threadId: any, rawText: string) {
       const chunks = chunkText(rawText);
 
       const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
@@ -186,6 +186,7 @@ async function embedAndStoreDoc(ctx: any, documentId: string, companyId: any, ag
          documentId,
          ...(companyId ? { companyId: companyId } : {}),
          ...(agentId ? { agentId: agentId } : {}),
+         ...(threadId ? { threadId: threadId } : {}),
          chunks: embeddedChunks,
       });
 }

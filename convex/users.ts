@@ -393,6 +393,30 @@ export const getUserLogins = query({
   }
 });
 
+export const getMyLoginsCount = query({
+  args: { searchTerm: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return 0;
+    
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+       const logins = await ctx.db
+        .query("logins")
+        .withSearchIndex("search_device", (q) => 
+           q.search("device", args.searchTerm!).eq("userId", userId)
+        )
+        .collect();
+       return logins.length;
+    }
+    
+    const logins = await ctx.db
+      .query("logins")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    return logins.length;
+  }
+});
+
 export const recordLogin = mutation({
   args: {
     device: v.string(),
