@@ -21,6 +21,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
+import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
 
@@ -50,7 +51,7 @@ export default function CompanyOverviewPage() {
   const t = useTranslations('admin.companyDetails');
   const tCommon = useTranslations('common');
 
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
 
@@ -174,11 +175,12 @@ export default function CompanyOverviewPage() {
 
           {/* Main Analytical Dynamic Recharts Span */}
           <div className="flex flex-col gap-6 mt-[-12px]">
+            <ChartExportWrapper exportName={`company-${companyId}-daily`} className="w-full flex">
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
-              className="w-full flex flex-col p-6 rounded-[24px] bg-card/20 border border-border-dim shadow-inner min-h-[400px]"
+              className="w-full flex flex-col p-6 rounded-[24px] bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim shadow-lg min-h-[400px]"
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
@@ -254,15 +256,16 @@ export default function CompanyOverviewPage() {
                 )}
               </div>
             </motion.div>
+            </ChartExportWrapper>
           </div>
 
           {/* Deep Dark Leaderboards (Full Width Top Users) */}
           <div className="w-full mt-2">
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Users className="w-4 h-4 text-brand opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">{t('leaderboard.title')}</h2>

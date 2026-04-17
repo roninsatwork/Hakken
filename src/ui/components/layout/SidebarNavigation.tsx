@@ -191,6 +191,8 @@ export default function SidebarNavigation() {
     if (pathname === '/app') return 'Dashboard';
     if (pathname.startsWith('/app/reports')) return 'Reports';
     if (pathname.startsWith('/app/profile')) return 'Profile';
+    if (pathname === '/app/settings') return 'Organization Dashboard';
+    if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
     return isAdmin ? 'Admin Dashboard' : '';
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -204,7 +206,8 @@ export default function SidebarNavigation() {
     workflows: false,
     users: false,
     settings: false,
-    reports: false
+    reports: false,
+    organization: false
   });
 
   const toggleSection = (section: string) => {
@@ -232,6 +235,8 @@ export default function SidebarNavigation() {
     else if (pathname === '/admin/settings/analytics') setActiveItem('Analytics');
     else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
     else if (pathname.startsWith('/app/reports')) setActiveItem('Reports');
+    else if (pathname === '/app/settings') setActiveItem('Organization Dashboard');
+    else if (pathname.startsWith('/app/settings/team')) setActiveItem('Organization Team');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -364,21 +369,6 @@ export default function SidebarNavigation() {
                       </NavItem>
                     )}
 
-                    {!isSuperAdmin && (
-                      <NavItem
-                        icon={ShieldCheck}
-                        label={t('users')}
-                        isActive={activeItem === 'Users' || activeItem === 'Manage Users' || activeItem === 'Invitations'}
-                        onClick={() => setActiveItem('Users')}
-                        hasChildren
-                        isOpen={openSections.users}
-                        onToggle={() => toggleSection('users')}
-                      >
-                        <SubNavItem label={t('manageUsers')} href="/admin/users" isActive={activeItem === 'Manage Users' && pathname === '/admin/users'} onClick={() => setActiveItem('Manage Users')} />
-                        <SubNavItem label={t('invitations')} href="/admin/users/invite" isActive={activeItem === 'Invitations' || pathname.startsWith('/admin/users/invite')} onClick={() => setActiveItem('Invitations')} />
-                      </NavItem>
-                    )}
-
                     {isSuperAdmin && (
                       <>
                         <NavItem
@@ -444,6 +434,21 @@ export default function SidebarNavigation() {
                     >
                       <SubNavItem label="Sales Report" href="/app/reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
+
+                    {!isSuperAdmin && user?.role === "ADMIN" && (
+                      <NavItem
+                        icon={Building2}
+                        label="Organization"
+                        isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team'}
+                        onClick={() => setActiveItem('Organization Dashboard')}
+                        hasChildren
+                        isOpen={openSections.organization}
+                        onToggle={() => toggleSection('organization')}
+                      >
+                        <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
+                        <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                      </NavItem>
+                    )}
 
                   </>
                 )}

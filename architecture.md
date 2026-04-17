@@ -144,6 +144,11 @@ To secure downstream rendering performance and guard against edge cases, Sonae i
 - **Payload Truncation:** To defend against autonomous Resource Exhaustion ("Denial of Wallet") attacks, `ai.ts` actions strictly hard-cap structural lengths natively at `10,000` chars before transmission to paid APIs.
 - **XSS Neutralization:** All AI-rendered markdown in the client must parse linearly utilizing `react-markdown` strictly stripping and rejecting `script` or foreign `html` hooks generated via prompt-injections natively.
 
+### D. Chart Exporting & Tailwind v4 Constraints
+- Components leveraging the `ChartExportWrapper` physically rasterize DOM nodes to PNGs using `html2canvas`.
+- **The oklab Crash:** Tailwind CSS v4 auto-compiles all custom CSS variable opacity shorthands (e.g., `bg-card/20`, `text-muted/60`, `shadow-inner`) into `color-mix(in oklab, ...)` dynamically. `html2canvas` strictly fails to parse `oklab`, crashing the export workflow instantly.
+- **The Mitigation Mandate:** Any components residing inside an exported border must exclusively use standard opacity styles (`opacity-60`) or explicit Hex strings with native alpha channels (`bg-[#ffffff05]`) for translucency to securely bypass the `oklab` renderer limitation.
+
 ---
 
 ## 9. Edge Interfaces & Telemetry Systems

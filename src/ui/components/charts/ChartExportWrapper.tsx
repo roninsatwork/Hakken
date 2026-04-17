@@ -43,8 +43,7 @@ export default function ChartExportWrapper({ children, exportName, className = "
           e.stopPropagation();
           handleExport();
         }}
-        title="Download Chart"
-        className="absolute top-4 right-4 z-50 p-2.5 rounded-xl bg-background/50 backdrop-blur-md border border-border-dim/50 shadow-lg opacity-0 outline-none hover:bg-brand/10 hover:border-brand/30 hover:text-brand transition-all duration-300 group-hover:opacity-100 flex items-center justify-center cursor-pointer text-muted"
+        className="absolute top-4 right-4 z-50 p-2.5 rounded-xl bg-[#0000000d] dark:bg-[#ffffff0d] backdrop-blur-md border border-[#0000001a] dark:border-[#ffffff1a] shadow-lg opacity-0 outline-none hover:bg-[#0000001a] dark:hover:bg-[#ffffff1a] hover:text-brand transition-all duration-300 group-hover:opacity-100 flex items-center justify-center cursor-pointer text-muted"
       >
         <Download className="w-4 h-4" />
       </button>

@@ -350,7 +350,8 @@ export const getCompanyMetrics = query({
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
-    const timelineMap: Record<string, { cost: number; messages: number }> = {};
+    const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
+    const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
 
     const companyObj = await ctx.db.get(args.companyId);
     let mrr = 0;
@@ -460,9 +461,17 @@ export const getCompanyMetrics = query({
            dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
        }
 
-       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
        timelineMap[dateGroup].cost += gbpCost;
        timelineMap[dateGroup].messages += 1;
+       timelineMap[dateGroup].inputTokens += inputs;
+       timelineMap[dateGroup].outputTokens += outputs;
+
+       if (!modelDistribution[model]) {
+          modelDistribution[model] = { name: model, cost: 0, calls: 0 };
+       }
+       modelDistribution[model].cost += gbpCost;
+       modelDistribution[model].calls += 1;
 
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
@@ -515,7 +524,9 @@ export const getCompanyMetrics = query({
     const timeline = Object.keys(timelineMap).map(k => ({
        date: k,
        cost: Number(timelineMap[k].cost.toFixed(4)),
-       messages: timelineMap[k].messages
+       messages: timelineMap[k].messages,
+       inputTokens: timelineMap[k].inputTokens,
+       outputTokens: timelineMap[k].outputTokens
     }));
 
     const topUsers = Object.values(userLeaderboard)
@@ -594,7 +605,8 @@ export const getGlobalAnalytics = query({
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
-    const timelineMap: Record<string, { cost: number; messages: number }> = {};
+    const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
+    const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
     for (const c of companies) {
        companyLeaderboard[c._id] = { id: c._id, name: c.name, logo: c.logo || "", cost: 0, messages: 0 };
@@ -711,9 +723,20 @@ export const getGlobalAnalytics = query({
            dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
        }
 
-       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0 };
+       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
        timelineMap[dateGroup].cost += gbpCost;
        timelineMap[dateGroup].messages += 1;
+       timelineMap[dateGroup].inputTokens += inputs;
+       timelineMap[dateGroup].outputTokens += outputs;
+
+       const modelObj = modelMap.get(model);
+       if (modelObj) {
+           if (!modelDistribution[model]) {
+              modelDistribution[model] = { name: modelObj.friendlyName || modelObj.name || model, cost: 0, calls: 0 };
+           }
+           modelDistribution[model].cost += gbpCost;
+           modelDistribution[model].calls += 1;
+       }
 
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
@@ -784,7 +807,9 @@ export const getGlobalAnalytics = query({
     const timeline = Object.keys(timelineMap).map(k => ({
        date: k,
        cost: Number(timelineMap[k].cost.toFixed(4)),
-       messages: timelineMap[k].messages
+       messages: timelineMap[k].messages,
+       inputTokens: timelineMap[k].inputTokens,
+       outputTokens: timelineMap[k].outputTokens
     }));
 
     const topCompanies = Object.values(companyLeaderboard)
@@ -806,14 +831,31 @@ export const getGlobalAnalytics = query({
        .withIndex("by_active", q => q.eq("isActive", true))
        .collect();
     const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
+    const planNameMap = new Map(plans.map(p => [p._id, p.name || "Unknown Plan"]));
 
     let mrr = 0;
+    const planDistributionMap: Record<string, { planId: string; name: string; mrr: number; companies: number }> = {};
     
     companies.forEach(company => {
         if (company.planId && planMap.has(company.planId)) {
-             mrr += planMap.get(company.planId) || 0;
+             const planPrice = planMap.get(company.planId) || 0;
+             mrr += planPrice;
+             
+             if (!planDistributionMap[company.planId]) {
+                 planDistributionMap[company.planId] = {
+                     planId: company.planId,
+                     name: planNameMap.get(company.planId) || "Unknown Plan",
+                     mrr: 0,
+                     companies: 0
+                 };
+             }
+             planDistributionMap[company.planId].mrr += planPrice;
+             planDistributionMap[company.planId].companies += 1;
         }
     });
+
+    const planDistribution = Object.values(planDistributionMap).sort((a,b) => b.mrr - a.mrr);
+    const modelBreakdown = Object.values(modelDistribution).sort((a,b) => b.cost - a.cost);
 
     return {
        timeline,
@@ -833,6 +875,8 @@ export const getGlobalAnalytics = query({
        topCompanies,
        topUsers,
        topAgents,
+       modelDistribution: modelBreakdown,
+       planDistribution,
        systemIntegrity: {
           totalProvisionedUsers: users.length,
           totalProvisionedCompanies: companies.length

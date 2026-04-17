@@ -5,6 +5,9 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   ShieldCheck,
+  PieChart as PieChartIcon,
+  BarChart3,
+  Wallet,
   Users,
   Activity,
   MessageSquare,
@@ -17,7 +20,8 @@ import {
   Target
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
 import { useTranslations } from "next-intl";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
@@ -45,7 +49,7 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
 export default function AdminDashboard() {
   const t = useTranslations('admin.overview');
   const tCommon = useTranslations('common');
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
 
@@ -100,7 +104,7 @@ export default function AdminDashboard() {
                 initial={{ opacity: 0, height: 0, y: -10 }}
                 animate={{ opacity: 1, height: 'auto', y: 0 }}
                 exit={{ opacity: 0, height: 0, y: -10 }}
-                className="flex items-center gap-3 bg-card/20 p-2 rounded-[12px] border border-border-dim origin-top"
+                className="flex items-center gap-3 bg-[#00000005] dark:bg-[#ffffff05] p-2 rounded-[12px] border border-border-dim origin-top"
               >
                 <input
                   type="date"
@@ -132,78 +136,14 @@ export default function AdminDashboard() {
           animate={{ opacity: 1 }}
           className="flex flex-col gap-8 w-full"
         >
-          {/* Bento UI Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Main Hero Metric (MRR) */}
-            <MetricBlock
-              className="md:col-span-2 lg:col-span-2 md:row-span-2 flex flex-col justify-center min-h-[220px]"
-              largeText={true}
-              icon={CreditCard}
-              title={t('metrics.mrr')}
-              value={`£${(data.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              sub={t('metrics.mrrSub')}
-              delay={0}
-            />
-
-            {/* Standard Metrics flowing around it */}
-            <MetricBlock
-              icon={Building2}
-              title="Registered Companies"
-              value={(data.systemIntegrity?.totalProvisionedCompanies ?? 0).toLocaleString()}
-              sub="TOTAL ORGANIZATIONS"
-              delay={0.1}
-            />
-            <MetricBlock
-              icon={Target}
-              title={t('metrics.mau')}
-              value={(data.aggregates.mau ?? 0).toLocaleString()}
-              sub={t('metrics.mauSub')}
-              delay={0.15}
-            />
-            <MetricBlock
-              icon={PoundSterling}
-              title={t('metrics.logisticBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
-              sub={t('metrics.burnSub')}
-              delay={0.2}
-            />
-            <MetricBlock
-              icon={Users}
-              title={t('metrics.activeContext')}
-              value={(data.aggregates.activeUsers ?? 0).toLocaleString()}
-              sub={t('metrics.activeSub')}
-              delay={0.25}
-            />
-
-            {/* Bottom Spans */}
-            <MetricBlock
-              className="md:col-span-2 lg:col-span-2"
-              icon={Activity}
-              title={t('metrics.compute')}
-              value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
-              sub={t('metrics.computeSub', { 
-                input: (data.aggregates.totalInputTokens ?? 0).toLocaleString(), 
-                output: (data.aggregates.totalOutputTokens ?? 0).toLocaleString() 
-              })}
-              delay={0.3}
-            />
-            <MetricBlock
-              className="md:col-span-2 lg:col-span-2"
-              icon={MessageSquare}
-              title={t('metrics.messagesSent')}
-              value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
-              sub={t('metrics.messagesSub')}
-              delay={0.35}
-            />
-          </div>
-
           {/* Main Analytical Dynamic Recharts Span */}
           <div className="flex flex-col gap-6">
+            <ChartExportWrapper exportName="admin-daily-activity" className="w-full flex">
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="w-full flex flex-col p-6 rounded-[24px] bg-card/20 border border-border-dim shadow-inner min-h-[400px]"
+              className="w-full flex flex-col p-6 rounded-[24px] bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim shadow-lg min-h-[400px]"
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
@@ -289,6 +229,160 @@ export default function AdminDashboard() {
                 )}
               </div>
             </motion.div>
+            </ChartExportWrapper>
+          </div>
+
+          {/* Bento UI Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Main Hero Metric (MRR) */}
+            <MetricBlock
+              className="md:col-span-2 lg:col-span-2 md:row-span-2 flex flex-col justify-center min-h-[220px]"
+              largeText={true}
+              icon={CreditCard}
+              title={t('metrics.mrr')}
+              value={`£${(data.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              sub={t('metrics.mrrSub')}
+              delay={0}
+            />
+
+            {/* Standard Metrics flowing around it */}
+            <MetricBlock
+              icon={Building2}
+              title="Registered Companies"
+              value={(data.systemIntegrity?.totalProvisionedCompanies ?? 0).toLocaleString()}
+              sub="TOTAL ORGANIZATIONS"
+              delay={0.1}
+            />
+            <MetricBlock
+              icon={Target}
+              title={t('metrics.mau')}
+              value={(data.aggregates.mau ?? 0).toLocaleString()}
+              sub={t('metrics.mauSub')}
+              delay={0.15}
+            />
+            <MetricBlock
+              icon={PoundSterling}
+              title={t('metrics.logisticBurn')}
+              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
+              sub={t('metrics.burnSub')}
+              delay={0.2}
+            />
+            <MetricBlock
+              icon={Users}
+              title={t('metrics.activeContext')}
+              value={(data.aggregates.activeUsers ?? 0).toLocaleString()}
+              sub={t('metrics.activeSub')}
+              delay={0.25}
+            />
+
+            {/* Bottom Spans */}
+            <MetricBlock
+              className="md:col-span-2 lg:col-span-2"
+              icon={Activity}
+              title={t('metrics.compute')}
+              value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
+              sub={t('metrics.computeSub', { 
+                input: (data.aggregates.totalInputTokens ?? 0).toLocaleString(), 
+                output: (data.aggregates.totalOutputTokens ?? 0).toLocaleString() 
+              })}
+              delay={0.3}
+            />
+            <MetricBlock
+              className="md:col-span-2 lg:col-span-2"
+              icon={MessageSquare}
+              title={t('metrics.messagesSent')}
+              value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
+              sub={t('metrics.messagesSub')}
+              delay={0.35}
+            />
+          </div>
+
+          {/* Advanced Analytics Grid */}
+          <div className="flex flex-col gap-6 mt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Model Distribution (Donut) */}
+              <ChartExportWrapper exportName="admin-model-logistics" className="lg:col-span-1 flex flex-col h-full w-full">
+              <motion.section
+                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+                className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
+              >
+                <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
+                  <div className="flex items-center gap-3">
+                    <PieChartIcon className="w-4 h-4 text-[#8b5cf6] opacity-80" />
+                    <h2 className="text-[14px] font-bold text-foreground">Model Logistics</h2>
+                  </div>
+                  <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Invocations by LLM</span>
+                </div>
+                <div className="flex-1 w-full flex items-center justify-center p-4">
+                  {(!data.modelDistribution || data.modelDistribution.length === 0) ? (
+                    <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Data</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={data.modelDistribution}
+                          cx="50%"
+                          cy="45%"
+                          innerRadius={65}
+                          outerRadius={85}
+                          paddingAngle={5}
+                        dataKey="calls"
+                        stroke="none"
+                      >
+                        {data.modelDistribution.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#8b5cf6', '#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#14b8a6'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
+                        formatter={(value: any) => `${Number(value).toLocaleString()} Calls`}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
+            </ChartExportWrapper>
+
+            {/* Token Flux (Stacked Bar) */}
+            <ChartExportWrapper exportName="admin-token-flux" className="lg:col-span-1 flex flex-col h-full w-full">
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="w-4 h-4 text-[#10b981] opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">Token Flux</h2>
+                </div>
+                <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Input vs Output</span>
+              </div>
+              <div className="flex-1 w-full flex items-center justify-center p-4">
+                {(!data.timeline || data.timeline.length === 0) ? (
+                  <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Data</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.timeline}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888' }} dy={10} hide />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} width={40} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888' }} />
+                      <Bar dataKey="inputTokens" name="Input (Context)" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
+                      <Bar dataKey="outputTokens" name="Output (Gen)" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
+            </ChartExportWrapper>
+            </div>
           </div>
 
           {/* Deep Dark Leaderboards */}
@@ -297,9 +391,9 @@ export default function AdminDashboard() {
               {/* Left: Top Companies */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Building2 className="w-4 h-4 text-[#10b981] opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">{t('leaderboards.tenants')}</h2>
@@ -310,13 +404,13 @@ export default function AdminDashboard() {
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
                   data.topCompanies.map((c: any, i: number) => (
-                    <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                    <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{i + 1}</span>
                         {c.logo ? (
-                          <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50" />
+                          <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]" />
                         ) : (
-                          <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-border-dim/50 flex items-center justify-center text-[10px] text-foreground font-bold">
+                          <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] flex items-center justify-center text-[10px] text-foreground font-bold">
                             {c.name.substring(0, 2).toUpperCase()}
                           </div>
                         )}
@@ -341,9 +435,9 @@ export default function AdminDashboard() {
             {/* Middle: Top Users */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-4 h-4 text-brand opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">{t('leaderboards.initiators')}</h2>
@@ -354,10 +448,10 @@ export default function AdminDashboard() {
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
                   data.topUsers.map((u: any, i: number) => (
-                    <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                    <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.companyName}</span>
@@ -380,12 +474,47 @@ export default function AdminDashboard() {
             </motion.section>
             </div>
 
+            {/* Plan MRR Distribution (Bar Chart) */}
+            <ChartExportWrapper exportName="admin-mrr-spread" className="w-full flex">
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
+              className="w-full bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px]"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-[24px]">
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-4 h-4 text-[#f43f5e] opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">MRR Spread</h2>
+                </div>
+                <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Revenue by Tier</span>
+              </div>
+              <div className="flex-1 w-full flex items-center justify-center p-4">
+                {(!data.planDistribution || data.planDistribution.length === 0) ? (
+                  <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Packages Active</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.planDistribution} layout="vertical" margin={{ left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ffffff10" />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
+                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#ccc', fontWeight: 600 }} width={80} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        formatter={(value: any) => `£${Number(value).toLocaleString('en-GB')}`}
+                      />
+                      <Bar dataKey="mrr" name="MRR" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
+            </ChartExportWrapper>
+
             {/* Bottom: Top Agents (Full Width) */}
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
-              className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl w-full"
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl w-full"
             >
-              <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Activity className="w-4 h-4 text-brand opacity-80" />
                   <h2 className="text-[14px] font-bold text-foreground">Top Agents</h2>
@@ -396,10 +525,10 @@ export default function AdminDashboard() {
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
                   data.topAgents.map((a: any, i: number) => (
-                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
