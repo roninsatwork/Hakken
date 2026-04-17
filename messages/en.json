@@ -440,6 +440,11 @@
                     "timestamp": "Timestamp",
                     "noLogs": "No execution logs recorded."
                 },
+                "status": {
+                    "success": "Success",
+                    "failed": "Failed",
+                    "running": "Running"
+                },
                 "report": {
                     "title": "Execution Report",
                     "description": "Details about this execution run.",
