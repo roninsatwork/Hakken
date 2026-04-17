@@ -18,8 +18,7 @@ describe("OWASP: Broken Access Control - Settings", () => {
 
     await expect(
       maliciousClient.mutation(api.settings.update, {
-        platformName: "Hacked Platform",
-        monthlyBasePrice: 0
+        platformName: "Hacked Platform"
       })
     ).rejects.toThrow("Unauthorized");
   });

@@ -118,7 +118,62 @@ export const sendMessage = mutation({
       throw new Error("Unauthorized");
     }
 
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("Unauthorized");
+
+    let messagesUsed = 0;
+    let messageLimit = -1; // -1 represents unlimited
+    let isUserOverride = false;
+    const resolvingCompanyId = user.companyId || thread.companyId;
+    
+    // 1. Check User Override
+    if (user.planOverrideId) {
+       const userPlan = await ctx.db.get(user.planOverrideId);
+       if (userPlan) {
+           messageLimit = userPlan.messageLimit;
+           messagesUsed = user.messagesUsedThisPeriod || 0;
+           isUserOverride = true;
+       }
+    } 
+    // 2. Check Company Pool
+    else if (resolvingCompanyId) {
+       const company = await ctx.db.get(resolvingCompanyId);
+       if (company && company.planId) {
+           const companyPlan = await ctx.db.get(company.planId);
+           if (companyPlan) {
+               messageLimit = companyPlan.messageLimit;
+               messagesUsed = company.messagesUsedThisPeriod || 0;
+           }
+       }
+    }
+
     const now = Date.now();
+
+    // 3. Evaluate Limit
+    if (messageLimit !== -1 && messagesUsed >= messageLimit) {
+       // Sonae Rejection Soft Block
+       await ctx.db.insert("messages", {
+          threadId: args.threadId,
+          role: "user",
+          content: args.content,
+          createdAt: now,
+       });
+       await ctx.db.insert("messages", {
+          threadId: args.threadId,
+          role: "assistant",
+          content: "I apologise, but your company has exhausted its AI allocation for this period. Please ask your administrator to review your plan.",
+          createdAt: now + 1,
+       });
+       await ctx.db.patch(args.threadId, { updatedAt: now + 1 });
+       return true;
+    }
+
+    // 4. Increment appropriate tracker since limit passed
+    if (isUserOverride) {
+        await ctx.db.patch(userId, { messagesUsedThisPeriod: messagesUsed + 1 });
+    } else if (resolvingCompanyId) {
+        await ctx.db.patch(resolvingCompanyId, { messagesUsedThisPeriod: messagesUsed + 1 });
+    }
 
     // -- PII FIREWALL EXTRACTION --
     const piiConfigEntry = await ctx.db

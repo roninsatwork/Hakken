@@ -170,7 +170,9 @@
                 "activeContext": "Iniziatori Attivi",
                 "activeSub": "Interazione protocollo live",
                 "logisticBurn": "Network Burn",
-                "burnSub": "OPEX mensile approssimativo"
+                "burnSub": "OPEX mensile approssimativo",
+                "messagesSent": "Messaggi",
+                "messagesSub": "Generazioni totali IA"
             },
             "leaderboards": {
                 "tenants": "Workspace a Maggior Consumo",
@@ -222,10 +224,48 @@
                 "deleteFailed": "Impossibile purgare il tenant dal protocollo."
             }
         },
+        "plans": {
+            "title": "Piani di Abbonamento",
+            "subtitle": "Gestisci i livelli di abbonamento e le quote mensili di IA.",
+            "newPlan": "Crea Piano",
+            "nameLabel": "Nome Piani",
+            "namePlaceholder": "es. Livello Pro",
+            "descLabel": "Descrizione",
+            "descPlaceholder": "Descrizione opzionale di cosa include questo piano",
+            "limitLabel": "Limite Messaggi Mensili",
+            "limitPlaceholder": "Inserisci numero o -1 per illimitato",
+            "priceLabel": "Prezzo (GBP)",
+            "pricePlaceholder": "Costo mensile in GBP",
+            "activeLabel": "Piano Attivo",
+            "savePlan": "Salva Piano",
+            "createTitle": "Crea Piano",
+            "createSubtitle": "Definisci un nuovo livello di abbonamento.",
+            "editTitle": "Modifica Piano",
+            "editSubtitle": "Modifica i limiti e i dettagli di questo piano.",
+            "deleteTitle": "Elimina Piano",
+            "deleteConfirm": "Sei sicuro di voler eliminare il piano {name}?",
+            "deleteWarning": "Non puoi eliminare un piano attualmente assegnato a delle aziende.",
+            "emptyState": "Nessun piano creato.",
+            "searchPlaceholder": "Cerca piani...",
+            "table": {
+                "name": "Nome",
+                "limit": "Limite",
+                "price": "Prezzo",
+                "status": "Stato",
+                "actions": "Azioni"
+            },
+            "unlimited": "Illimitato",
+            "errors": {
+                "saveFailed": "Errore nel salvataggio.",
+                "deleteFailed": "Errore nell'eliminazione. Verifica che non sia assegnato."
+            }
+        },
         "companyDetails": {
             "title": "Telemetria Tenant",
             "overview": "Analisi approfondite e utilizzo delle risorse per questo workspace isolato.",
             "timeframe": {
+                "today": "Oggi",
+                "yesterday": "Ieri",
                 "7d": "7 Giorni",
                 "30d": "30 Giorni",
                 "90d": "90 Giorni",
@@ -240,7 +280,7 @@
                 "messageInferences": "Inferenze",
                 "instructionsDesc": "Azioni protocollo completate",
                 "activeIndividuals": "Accesso Attivo",
-                "loginsDesc": "Iniziatori unici"
+                "loginsDesc": "Utenti con Interazioni IA"
             },
             "aggregation": {
                 "day": "Risoluzione Giornaliera",

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Header from "@/src/ui/components/layout/Header";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { UserCircle, Save, CheckCircle } from "lucide-react";
+import { UserCircle, Save, CheckCircle, Activity } from "lucide-react";
 import ProfileTabs from "./ProfileTabs";
 import { useTranslations } from "next-intl";
 
@@ -29,6 +29,8 @@ export default function MyProfilePage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const planStatus = useQuery(api.plans.getMyCompanyPlanStatus);
 
   useEffect(() => {
     if (user) {
@@ -204,6 +206,42 @@ export default function MyProfilePage() {
 
           </form>
         </div>
+
+        {/* Company AI Usage Tracker */}
+        {planStatus && (
+          <div className="w-full mt-4 bg-sidebar/30 border border-border-dim rounded-[16px] p-6 shadow-sm overflow-hidden relative">
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div className="flex items-center gap-3 w-full">
+                <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center shrink-0 border border-brand/20">
+                  <Activity className="w-5 h-5 text-brand" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <div className="flex justify-between items-end w-full">
+                    <span className="text-[14px] font-bold tracking-wide text-foreground">AI Messaging Pool</span>
+                    <span className="text-[12px] font-mono font-medium text-foreground">
+                      {planStatus.messagesUsed.toLocaleString()} / {planStatus.messageLimit === -1 ? 'Unlimited' : planStatus.messageLimit.toLocaleString()}
+                    </span>
+                  </div>
+                  <span className="text-[12px] text-secondary mt-0.5 tracking-wide">
+                    Plan: <span className="text-foreground/80 font-medium">{planStatus.planName}</span> (Resets monthly)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {planStatus.messageLimit !== -1 && (
+              <div className="relative w-full h-2 rounded-full overflow-hidden bg-background border border-border-dim/50 z-10 shadow-inner">
+                <div 
+                  className={`absolute top-0 bottom-0 left-0 bg-brand/80 transition-all duration-1000 ease-out`}
+                  style={{ width: `${Math.min((planStatus.messagesUsed / planStatus.messageLimit) * 100, 100)}%` }}
+                />
+              </div>
+            )}
+            {planStatus.messageLimit !== -1 && (planStatus.messagesUsed >= planStatus.messageLimit) && (
+              <p className="text-[11px] text-red-500 mt-2 font-medium z-10 relative">Usage limit reached. All non-critical AI interactions are paused until the next billing cycle.</p>
+            )}
+          </div>
+        )}
 
         {/* Profile Tabs Section */}
         <ProfileTabs />

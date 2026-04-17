@@ -230,3 +230,19 @@ export const updateCompanyProfile = mutation({
     return args.id;
   },
 });
+
+export const assignPlanToCompany = mutation({
+  args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthenticated Admin Request");
+
+    const admin = await ctx.db.get(adminId);
+    if (!admin || admin.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized: System level clearance required.");
+    }
+
+    await ctx.db.patch(args.id, { planId: args.planId });
+    return args.id;
+  },
+});

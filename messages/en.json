@@ -170,7 +170,9 @@
                 "activeContext": "Active Now",
                 "activeSub": "Currently online",
                 "logisticBurn": "Estimated Cost",
-                "burnSub": "Approximate monthly OPEX"
+                "burnSub": "Approximate monthly OPEX",
+                "messagesSent": "Messages",
+                "messagesSub": "Total AI Generations"
             },
             "leaderboards": {
                 "tenants": "Top Companies by Usage",
@@ -222,10 +224,48 @@
                 "deleteFailed": "Failed to purge tenant from protocol."
             }
         },
+        "plans": {
+            "title": "Subscription Plans",
+            "subtitle": "Manage subscription tiers and monthly AI quotas.",
+            "newPlan": "Create Plan",
+            "nameLabel": "Plan Name",
+            "namePlaceholder": "e.g. Pro Tier",
+            "descLabel": "Description",
+            "descPlaceholder": "Optional description of what this plan includes",
+            "limitLabel": "Monthly Message Limit",
+            "limitPlaceholder": "Enter number or -1 for unlimited",
+            "priceLabel": "Price (GBP)",
+            "pricePlaceholder": "Monthly cost in GBP",
+            "activeLabel": "Plan is Active",
+            "savePlan": "Save Plan",
+            "createTitle": "Create Plan",
+            "createSubtitle": "Define a new subscription tier with associated limits.",
+            "editTitle": "Edit Plan",
+            "editSubtitle": "Modify this subscription plan's limits or details.",
+            "deleteTitle": "Delete Plan",
+            "deleteConfirm": "Are you sure you want to delete the plan {name}?",
+            "deleteWarning": "You cannot delete a plan that is actively assigned to companies.",
+            "emptyState": "No subscription plans created yet.",
+            "searchPlaceholder": "Search plans...",
+            "table": {
+                "name": "Plan Name",
+                "limit": "Message Limit",
+                "price": "Price",
+                "status": "Status",
+                "actions": "Actions"
+            },
+            "unlimited": "Unlimited",
+            "errors": {
+                "saveFailed": "Failed to save plan.",
+                "deleteFailed": "Failed to delete plan. Ensure it is not assigned."
+            }
+        },
         "companyDetails": {
             "title": "Dashboard",
             "overview": "Analytics and resource usage for this company.",
             "timeframe": {
+                "today": "Today",
+                "yesterday": "Yesterday",
                 "7d": "7 Days",
                 "30d": "30 Days",
                 "90d": "90 Days",
@@ -240,7 +280,7 @@
                 "messageInferences": "Generations",
                 "instructionsDesc": "Successful AI generations",
                 "activeIndividuals": "Active Users",
-                "loginsDesc": "Unique active users"
+                "loginsDesc": "Users with AI Interactions"
             },
             "aggregation": {
                 "day": "Daily",

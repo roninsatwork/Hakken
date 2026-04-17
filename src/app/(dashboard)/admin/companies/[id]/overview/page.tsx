@@ -13,10 +13,16 @@ export default function CompanyOverviewPage() {
   
   const company = useQuery(api.companies.getCompanyById, { id: companyId });
   const updateProfile = useMutation(api.companies.updateCompanyProfile);
+  const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
+
+  const user = useQuery(api.users.getMe);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const activePlans = useQuery(api.plans.getActivePlans) || [];
 
   const [nameVal, setNameVal] = useState("");
   const [descVal, setDescVal] = useState("");
   const [overviewVal, setOverviewVal] = useState("");
+  const [planIdVal, setPlanIdVal] = useState("");
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ text: "", type: "" });
@@ -26,6 +32,7 @@ export default function CompanyOverviewPage() {
       setNameVal(company.name || "");
       setDescVal(company.description || "");
       setOverviewVal(company.overview || "");
+      setPlanIdVal(company.planId || "");
     }
   }, [company]);
 
@@ -40,6 +47,10 @@ export default function CompanyOverviewPage() {
           description: descVal,
           overview: overviewVal
       });
+      if (isSuperAdmin) {
+         if (planIdVal) await assignPlanToCompany({ id: companyId, planId: planIdVal as Id<"plans"> });
+         else await assignPlanToCompany({ id: companyId, planId: undefined });
+      }
       setSaveMessage({ text: "Profile successfully updated.", type: "success" });
       setTimeout(() => setSaveMessage({ text: "", type: "" }), 3000);
     } catch (e: any) {
@@ -59,7 +70,8 @@ export default function CompanyOverviewPage() {
 
   const isPristine = (company.name || "") === nameVal && 
                      (company.description || "") === descVal && 
-                     (company.overview || "") === overviewVal;
+                     (company.overview || "") === overviewVal &&
+                     (!isSuperAdmin || (company.planId || "") === planIdVal);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -102,6 +114,27 @@ export default function CompanyOverviewPage() {
                 placeholder="Enter the company description, mission, structure, or massive background knowledge here..."
               />
             </div>
+
+            {isSuperAdmin && (
+              <div className="flex flex-col gap-2.5 mt-2 pt-4 border-t border-border-dim/50">
+                <div className="flex items-center justify-between">
+                  <label className="text-[12px] font-medium text-secondary tracking-widest uppercase">Subscription Plan Override</label>
+                  <span className="text-[11px] text-brand/80 font-mono tracking-widest uppercase">Super Admin Only</span>
+                </div>
+                <select
+                   value={planIdVal}
+                   onChange={e => setPlanIdVal(e.target.value)}
+                   className="w-full py-2.5 px-4 bg-background/50 border border-border-dim rounded-[10px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all appearance-none cursor-pointer"
+                >
+                    <option value="">No Plan (Unlimited / System Default)</option>
+                    {activePlans.map((plan: any) => (
+                       <option key={plan._id} value={plan._id}>
+                           {plan.name} {plan.messageLimit === -1 ? '(Unlimited)' : `(${plan.messageLimit} msgs)`} - £{plan.priceGBP}
+                       </option>
+                    ))}
+                </select>
+              </div>
+            )}
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t border-border-dim/50 mt-0">

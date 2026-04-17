@@ -15,7 +15,8 @@ import {
   PoundSterling,
   CalendarDays,
   BrainCircuit,
-  Calendar
+  Calendar,
+  Layers
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
@@ -49,7 +50,7 @@ export default function CompanyOverviewPage() {
   const t = useTranslations('admin.companyDetails');
   const tCommon = useTranslations('common');
 
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
 
@@ -59,6 +60,8 @@ export default function CompanyOverviewPage() {
     customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
     customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined
   });
+
+  const planStatus = useQuery(api.plans.getCompanyPlanStatus, { companyId });
 
   const getAggregationLabel = (agg: string) => {
     if (agg === "month") return t('aggregation.month');
@@ -89,6 +92,8 @@ export default function CompanyOverviewPage() {
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as TimeframeOption)}
             >
+              <option value="today">{t('timeframe.today')}</option>
+              <option value="yesterday">{t('timeframe.yesterday')}</option>
               <option value="7d">{t('timeframe.7d')}</option>
               <option value="30d">{t('timeframe.30d')}</option>
               <option value="90d">{t('timeframe.90d')}</option>
@@ -148,14 +153,14 @@ export default function CompanyOverviewPage() {
               icon={Activity}
               title={t('metrics.tokenVolume')}
               value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
-              sub={t('metrics.computeDesc')}
+              sub={`${(data.aggregates.totalInputTokens ?? 0).toLocaleString()} IN • ${(data.aggregates.totalOutputTokens ?? 0).toLocaleString()} OUT`}
               delay={0.1}
             />
             <MetricBlock
-              icon={MessageSquare}
-              title={t('metrics.messageInferences')}
-              value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
-              sub={t('metrics.instructionsDesc')}
+              icon={Layers}
+              title={"Monthly Quota"}
+              value={planStatus ? planStatus.messagesUsed.toLocaleString() : "0"}
+              sub={planStatus ? `Limit: ${planStatus.messageLimit === -1 ? 'Unlimited' : planStatus.messageLimit.toLocaleString()}` : "Fetching..."}
               delay={0.2}
             />
             <MetricBlock
@@ -277,9 +282,15 @@ export default function CompanyOverviewPage() {
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.email}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{u.cost.toFixed(4)}</span>
-                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{u.messages.toLocaleString()} inf</span>
+                      <div className="flex items-center gap-8 shrink-0 pr-2">
+                        <div className="flex flex-col items-end w-[70px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{u.messages.toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col items-end w-[70px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{u.cost.toFixed(4)}</span>
+                        </div>
                       </div>
                     </div>
                   ))

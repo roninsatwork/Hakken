@@ -161,7 +161,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Logistics Analysis Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-[-12px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-[-12px]">
             <MetricBlock
               icon={Users}
               title={t('metrics.activeContext')}
@@ -175,6 +175,13 @@ export default function AdminDashboard() {
               value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
               sub={t('metrics.burnSub')}
               delay={0.4}
+            />
+            <MetricBlock
+              icon={MessageSquare}
+              title={t('metrics.messagesSent')}
+              value={(data.aggregates.totalMessages ?? 0).toLocaleString()}
+              sub={t('metrics.messagesSub')}
+              delay={0.5}
             />
           </div>
 
@@ -302,9 +309,15 @@ export default function AdminDashboard() {
                         )}
                         <span className="text-[13px] font-semibold tracking-wide text-foreground">{c.name}</span>
                       </div>
-                      <div className="flex flex-col items-end min-w-[80px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{c.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: c.messages.toLocaleString() })}</span>
+                      <div className="flex items-center gap-6 shrink-0 pr-2">
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{c.messages.toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{c.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -337,9 +350,15 @@ export default function AdminDashboard() {
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.companyName}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: u.messages.toLocaleString() })}</span>
+                      <div className="flex items-center gap-6 shrink-0 pr-2">
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{u.messages.toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -372,9 +391,15 @@ export default function AdminDashboard() {
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end shrink-0 min-w-[70px]">
-                        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">£{a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                        <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase">{tCommon('inf', { count: (a.interactions || a.messages || 0).toLocaleString() })}</span>
+                      <div className="flex items-center gap-6 shrink-0 pr-2">
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{(a.interactions || a.messages || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex flex-col items-end w-[65px]">
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                        </div>
                       </div>
                     </div>
                   ))

@@ -11,6 +11,8 @@ export default defineSchema({
     description: v.optional(v.string()),
     overview: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
+    planId: v.optional(v.id("plans")),
+    messagesUsedThisPeriod: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_name", ["name"]),
   
@@ -47,13 +49,17 @@ export default defineSchema({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
-    darkRing: v.optional(v.string()),
-
-    currencySymbol: v.optional(v.string()),
-    monthlySeatPrice: v.number(),
-    monthlyBasePrice: v.number()
+    darkRing: v.optional(v.string())
   }),
   
+  plans: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    messageLimit: v.number(), // -1 indicates unlimited
+    priceGBP: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_active", ["isActive"]),
 
   users: defineTable({
     name: v.optional(v.string()),
@@ -66,6 +72,8 @@ export default defineSchema({
     // Sonae Custom Fields
     companyId: v.optional(v.id("companies")),
     role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
+    planOverrideId: v.optional(v.id("plans")),
+    messagesUsedThisPeriod: v.optional(v.number()),
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
   }).index("email", ["email"])

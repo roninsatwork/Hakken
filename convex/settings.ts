@@ -4,9 +4,6 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const DEFAULT_SETTINGS = {
   platformName: "Sonae",
-  currencySymbol: "£",
-  monthlySeatPrice: 49,
-  monthlyBasePrice: 199,
   brandColorHex: "#E26D28", // Sonae brand default
   fontFamily: undefined as string | undefined, // Deprecated
   headingFontFamily: undefined as string | undefined,
@@ -103,11 +100,7 @@ export const update = mutation({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
-    darkRing: v.optional(v.string()),
-
-    currencySymbol: v.optional(v.string()),
-    monthlySeatPrice: v.optional(v.number()),
-    monthlyBasePrice: v.optional(v.number())
+    darkRing: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);

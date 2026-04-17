@@ -20,4 +20,12 @@ crons.hourly(
   {}
 );
 
+// Monthly Subscription Quota Reset
+crons.monthly(
+  "reset-billing-cycles",
+  { day: 1, hourUTC: 0, minuteUTC: 0 },
+  internal.plans.resetBillingCycle,
+  {}
+);
+
 export default crons;

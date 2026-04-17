@@ -95,7 +95,7 @@ export default function SystemSettingsPage() {
 
   const searchParams = useSearchParams();
   const initTab = (searchParams.get("tab") as any) || "identity";
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "economics" | "security" | "audit">(initTab);
+  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit">(initTab);
 
   const router = useRouter();
 
@@ -246,7 +246,6 @@ export default function SystemSettingsPage() {
         {[
           { id: 'identity', label: t('tabs.identity'), icon: Building2 },
           { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
-          { id: 'economics', label: t('tabs.economics'), icon: CreditCard },
           { id: 'security', label: t('tabs.security'), icon: ShieldCheck },
           { id: 'audit', label: t('tabs.audit'), icon: History }
         ].map(tab => {
@@ -431,61 +430,6 @@ export default function SystemSettingsPage() {
                 <ColorInput label={t('appearance.brandColor')} value={formData.brandColorHex || ""} onChange={(v) => setFormData({ ...formData, brandColorHex: v })} />
               </div>
             </SettingBlock>
-          </section>
-        )}
-
-        {/* Global Economics Engine */}
-        {activeTab === "economics" && (
-          <section className="flex flex-col gap-6">
-            <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
-              <CreditCard className="w-3.5 h-3.5" /> {t('economics.title')}
-            </h3>
-
-            <SettingBlock title={t('economics.mrrMultipliers')} sub={t('economics.mrrSub')}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                <div className="flex flex-col gap-2 relative">
-                  <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('economics.symbolMatrix')}</span>
-                  <select
-                    value={formData.currencySymbol || "£"}
-                    onChange={(e) => setFormData({ ...formData, currencySymbol: e.target.value })}
-                    className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3.5 text-[15px] font-bold text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
-                  >
-                    <option value="£">{t('economics.currencies.gbp')}</option>
-                    <option value="$">{t('economics.currencies.usd')}</option>
-                    <option value="€">{t('economics.currencies.eur')}</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2 relative">
-                  <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('economics.baseOrg')}</span>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold">{formData.currencySymbol || "£"}</span>
-                    <input
-                      type="number"
-                      value={formData.monthlyBasePrice || 0}
-                      onChange={(e) => setFormData({ ...formData, monthlyBasePrice: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-background/50 border border-border-dim rounded-[12px] pl-9 pr-4 py-3 text-[18px] text-foreground outline-none focus:border-brand transition-colors font-bold font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 relative">
-                  <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('economics.unitLicense')}</span>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold">{formData.currencySymbol || "£"}</span>
-                    <input
-                      type="number"
-                      value={formData.monthlySeatPrice || 0}
-                      onChange={(e) => setFormData({ ...formData, monthlySeatPrice: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-background/50 border border-border-dim rounded-[12px] pl-9 pr-4 py-3 text-[18px] text-foreground outline-none focus:border-brand transition-colors font-bold font-mono"
-                    />
-                  </div>
-                </div>
-
-              </div>
-            </SettingBlock>
-
           </section>
         )}
 

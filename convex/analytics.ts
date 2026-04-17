@@ -795,9 +795,22 @@ export const getGlobalAnalytics = query({
     const costPerActiveUser = users.length > 0 ? (totalCostGBP / users.length) : 0;
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
 
-    const settings = await ctx.db.query("systemSettings").first() || { monthlyBasePrice: 199, monthlySeatPrice: 49 };
-    const mrr = (companies.length * settings.monthlyBasePrice) + (users.length * settings.monthlySeatPrice);
+    const plans = await ctx.db.query("plans").collect();
+    const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
 
+    let mrr = 0;
+    
+    companies.forEach(company => {
+        if (company.planId && planMap.has(company.planId)) {
+             mrr += planMap.get(company.planId) || 0;
+        }
+    });
+
+    users.forEach(user => {
+        if (user.planOverrideId && planMap.has(user.planOverrideId)) {
+             mrr += planMap.get(user.planOverrideId) || 0;
+        }
+    });
     return {
        timeline,
        aggregates: {

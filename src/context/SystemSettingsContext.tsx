@@ -7,9 +7,6 @@ import { useTheme } from "next-themes";
 
 type SettingsType = {
   platformName: string;
-  currencySymbol: string;
-  monthlySeatPrice: number;
-  monthlyBasePrice: number;
   brandColorHex: string;
   fontFamily?: string;
   headingFontFamily?: string;
