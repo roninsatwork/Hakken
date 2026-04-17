@@ -118,10 +118,7 @@ export const generateSonaeResponse = internalAction({
                       ? ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                           vector: queryVector as number[],
                           limit: 50,
-                          filter: (q) => q.and(
-                             q.eq("companyId", thread.companyId!),
-                             q.eq("agentId", undefined)
-                          )
+                          filter: (q) => q.eq("companyId", thread.companyId!)
                       })
                       : Promise.resolve([]),
                     ctx.vectorSearch("knowledgeChunks", "by_embedding", {
@@ -142,7 +139,7 @@ export const generateSonaeResponse = internalAction({
                     ragContext = "\n\n====================\n[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]\nBelow is raw context retrieved from the global system and the company's private documents. You MUST use this data to answer the user's prompt. Be EXHAUSTIVE and list EVERY detail found here. DO NOT summarize broadly; extract specific bullet points and data.\n\n<context_data>\n";
                     for (const res of allChunks) {
                        const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
-                       if (chunk) {
+                       if (chunk && !chunk.agentId) {
                           ragContext += `---\n${chunk.text}\n`;
                        }
                     }
