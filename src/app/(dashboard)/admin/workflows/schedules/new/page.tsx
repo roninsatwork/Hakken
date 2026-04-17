@@ -321,11 +321,11 @@ export default function NewSchedulePage() {
                 <div className="flex flex-col gap-2 w-[200px]">
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase flex items-center justify-between">
                     {t('fields.interval.everyXHours')}
-                    <span className="text-secondary/50 font-sans tracking-normal capitalize">{hourlyInterval === "1" ? "Hourly" : "Interval"}</span>
                   </label>
                   <select
                     value={hourlyInterval} onChange={e => setHourlyInterval(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono"
+                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono appearance-none"
+                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
                     {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
                       <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>
@@ -339,7 +339,8 @@ export default function NewSchedulePage() {
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfWeek')}</label>
                   <select
                     value={dayOfWeek} onChange={e => setDayOfWeek(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30"
+                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 appearance-none"
+                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
                     {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => (
                       <option key={d} value={d}>{d}</option>
@@ -353,7 +354,8 @@ export default function NewSchedulePage() {
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfMonth')}</label>
                   <select
                     value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 flex-shrink-0"
+                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 flex-shrink-0 appearance-none"
+                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
                       <option key={d} value={d}>{d}</option>
