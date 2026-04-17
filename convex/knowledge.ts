@@ -67,6 +67,20 @@ export const getDocuments = query({
   },
 });
 
+export const getThreadDocuments = query({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return []; // Fallback empty for anonymous/edge cases
+
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .order("asc")
+      .collect();
+  }
+});
+
 export const saveDocument = mutation({
   args: {
     storageId: v.id("_storage"),
@@ -115,6 +129,43 @@ export const saveDocument = mutation({
       entityId: documentId,
       timestamp: Date.now(),
       metadata: JSON.stringify({ title: args.title, format: args.format, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+    });
+
+    return documentId;
+  },
+});
+
+export const saveChatDocument = mutation({
+  args: {
+    storageId: v.id("_storage"),
+    threadId: v.id("threads"),
+    title: v.string(),
+    format: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
+    // Secure Gate: Prevent malicious injection by verifying thread ownership
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+      throw new Error("Unauthorized access to thread");
+    }
+
+    const documentId = await ctx.db.insert("knowledgeDocuments", {
+      title: args.title,
+      fileId: args.storageId,
+      threadId: args.threadId,
+      status: "processing",
+      format: args.format,
+      createdBy: userId,
+      createdAt: Date.now(),
+    });
+
+    // Fire ephemeral doc ingestion job
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
+      documentId,
+      storageId: args.storageId,
     });
 
     return documentId;
@@ -170,6 +221,48 @@ export const getDocInternal = internalQuery({
   args: { id: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
       return await ctx.db.get(args.id);
+  }
+});
+
+export const getThreadDocumentsInternal = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .order("asc")
+      .collect();
+  }
+});
+
+export const garbageCollectThreadVectors = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // 24 Hours in milliseconds
+    const expirationThreshold = Date.now() - 24 * 60 * 60 * 1000;
+    
+    // Find all thread-scoped documents that have expired
+    const expiredDocs = await ctx.db
+      .query("knowledgeDocuments")
+      .filter(q => q.and(
+         q.neq(q.field("threadId"), undefined),
+         q.lt(q.field("createdAt"), expirationThreshold)
+      ))
+      .collect();
+
+    let purgeCount = 0;
+    for (const doc of expiredDocs) {
+        if (doc.fileId) {
+            await ctx.storage.delete(doc.fileId).catch(() => {});
+        }
+        await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
+        await ctx.db.delete(doc._id);
+        purgeCount++;
+    }
+    
+    if (purgeCount > 0) {
+        console.log(`[Vector GC] Purged ${purgeCount} expired ephemeral thread vectors.`);
+    }
   }
 });
 
@@ -349,6 +442,7 @@ export const saveChunksInternal = internalMutation({
       documentId: v.id("knowledgeDocuments"),
       companyId: v.optional(v.id("companies")),
       agentId: v.optional(v.id("agents")),
+      threadId: v.optional(v.id("threads")),
       chunks: v.array(v.object({
           text: v.string(),
           embedding: v.array(v.number()),
@@ -363,8 +457,10 @@ export const saveChunksInternal = internalMutation({
       for (const chunk of args.chunks) {
          await ctx.db.insert("knowledgeChunks", {
              documentId: args.documentId,
-             ...(args.companyId ? { companyId: args.companyId, isGlobal: false } : { isGlobal: true }),
+             ...((args.companyId || args.agentId || args.threadId) ? { isGlobal: false } : { isGlobal: true }),
+             ...(args.companyId ? { companyId: args.companyId } : {}),
              ...(args.agentId ? { agentId: args.agentId } : {}),
+             ...(args.threadId ? { threadId: args.threadId } : {}),
              text: chunk.text,
              embedding: chunk.embedding,
          });

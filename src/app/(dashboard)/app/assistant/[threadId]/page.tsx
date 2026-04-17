@@ -7,16 +7,23 @@ import { useEffect, useRef } from "react";
 import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import ChatInput from "@/src/ui/components/chat/ChatInput";
 import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
-import { Loader2, Sparkles } from "lucide-react";
-import { use } from "react";
+import { Loader2, Sparkles, User, RefreshCw, Check } from "lucide-react";
+import { use, useState } from "react";
 
 export default function ActiveThreadPage({ params }: { params: Promise<{ threadId: string }> }) {
   const resolvedParams = use(params);
   const threadId = resolvedParams.threadId as Id<"threads">;
   
   const messages = useQuery(api.chat.getMessages, { threadId });
+  const threadDocs = useQuery(api.knowledge.getThreadDocuments, { threadId });
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const pendingDocs = threadDocs?.filter(d => d.status === "processing" || d.status === "pending");
+  const isVectorizing = pendingDocs && pendingDocs.length > 0;
+
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [optimisticMessage, setOptimisticMessage] = useState<string | null>(null);
 
   // Auto-scroll seamlessly using native browser viewport
   useEffect(() => {
@@ -51,6 +58,29 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                 
                 {/* Swarm Live Execution Visualizer */}
                 <SwarmStatusCard threadId={threadId} />
+                
+                {/* Optimistic Message & Loader */}
+                {optimisticMessage && (
+                  <div className="flex w-full justify-end mb-6">
+                    <div className="flex flex-col items-end gap-2 max-w-[85%] sm:max-w-[70%]">
+                      <div className="flex items-center gap-3 w-full justify-end">
+                        <div className="bg-muted-foreground/10 text-foreground px-6 py-4 rounded-[24px] rounded-br-[6px] shadow-sm backdrop-blur-md opacity-70">
+                          <p className="text-[15px] font-light leading-relaxed whitespace-pre-wrap">{optimisticMessage}</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-[12px] bg-card border border-border-dim flex flex-shrink-0 items-center justify-center opacity-70">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                      
+                      {uploadStatus && (
+                        <div className="px-4 py-2 rounded-full bg-brand/10 border border-brand/20 flex items-center gap-2 mt-2 self-end">
+                          <RefreshCw className="w-3.5 h-3.5 text-brand animate-spin" />
+                          <span className="text-[12px] font-semibold tracking-wide text-brand uppercase">{uploadStatus}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Live Model Thinking Indicator */}
                 {messages.length > 0 && messages[messages.length - 1].role === "user" && (
@@ -58,11 +88,34 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                     <div className="w-8 h-8 rounded-[10px] bg-brand flex-shrink-0 flex items-center justify-center shadow-lg shadow-brand/20 mt-1 animate-pulse">
                       <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <div className="bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-[20px] rounded-tl-[4px] px-5 py-4 w-fit flex items-center gap-2 shadow-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_0ms]"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_200ms]"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_400ms]"></span>
-                    </div>
+                    {isVectorizing ? (
+                       <div className="flex flex-col gap-3 p-5 bg-card/60 backdrop-blur-2xl border border-border-dim rounded-[24px] rounded-tl-[8px] shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                           <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                                <Check className="w-3.5 h-3.5 text-green-500" />
+                              </div>
+                              <span className="text-[13px] font-medium text-muted">Payload safely uploaded to isolated Thread scope</span>
+                           </div>
+                           <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center border border-brand/20">
+                                <RefreshCw className="w-3.5 h-3.5 text-brand animate-spin" />
+                              </div>
+                              <span className="text-[13px] font-semibold tracking-wide text-foreground animate-pulse">Vectorizing intelligence chunks ({pendingDocs.length} remaining)...</span>
+                           </div>
+                           <div className="flex items-center gap-3 opacity-40">
+                              <div className="w-6 h-6 rounded-full bg-muted/10 flex items-center justify-center border border-border-dim">
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted" />
+                              </div>
+                              <span className="text-[13px] font-medium text-muted">Establishing core Agent connection</span>
+                           </div>
+                       </div>
+                    ) : (
+                       <div className="bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-[20px] rounded-tl-[4px] px-5 py-4 w-fit flex items-center gap-2 shadow-md">
+                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_0ms]"></span>
+                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_200ms]"></span>
+                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_400ms]"></span>
+                       </div>
+                    )}
                   </div>
                 )}
                 
@@ -80,7 +133,11 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       {/* Floating Viewport Bottom Composer Input */}
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/90 to-transparent pt-32 pb-0 z-40 px-4 sm:px-8 pointer-events-none flex justify-center">
         <div className="pointer-events-auto w-full">
-            <ChatInput threadId={threadId} />
+            <ChatInput 
+              threadId={threadId} 
+              onUploadStateChange={setUploadStatus}
+              onOptimisticMessage={setOptimisticMessage}
+            />
         </div>
       </div>
     </div>

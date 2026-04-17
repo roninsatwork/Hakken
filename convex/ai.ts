@@ -11,6 +11,7 @@ export const generateSonaeResponse = internalAction({
     content: v.string(),
     modelId: v.optional(v.string()),
     thinkingLevel: v.optional(v.string()),
+    fileIds: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
     // Escaping Edge runtime limits. Using implicit Node env parsing.
@@ -42,6 +43,24 @@ export const generateSonaeResponse = internalAction({
     });
     
     try {
+        // --- Vector Pipeline Synchronization Guard ---
+        // Sleep the action loop natively until async chunking completes
+        let docsReady = false;
+        let loopCount = 0;
+        
+        while (!docsReady && loopCount < 30) { // Max wait 60 seconds (30 * 2000ms)
+            const threadDocs = await ctx.runQuery(internal.knowledge.getThreadDocumentsInternal, { threadId: args.threadId });
+            const pendingDocs = threadDocs.filter((d: any) => d.status === "processing" || d.status === "pending");
+            
+            if (pendingDocs.length === 0) {
+               docsReady = true;
+               break;
+            }
+            
+            loopCount++;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
         // Fetch up to 20 previous messages to pass as context
         const messages = await ctx.runQuery(internal.chat.getMessagesForAI, {
             threadId: args.threadId,
@@ -88,23 +107,31 @@ export const generateSonaeResponse = internalAction({
             const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
             
             if (queryVector && queryVector.length === 768) {
-                // Execute dual-vector RAG search
-                const [companyChunks, globalChunks] = await Promise.all([
+                // Execute multi-tier RAG search
+                const [companyChunks, globalChunks, threadChunks] = await Promise.all([
                     thread?.companyId 
                       ? ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                           vector: queryVector as number[],
                           limit: 50,
-                          filter: (q) => q.eq("companyId", thread.companyId!)
+                          filter: (q) => q.and(
+                             q.eq("companyId", thread.companyId!),
+                             q.eq("agentId", undefined)
+                          )
                       })
                       : Promise.resolve([]),
                     ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                         vector: queryVector as number[],
                         limit: 50,
                         filter: (q) => q.eq("isGlobal", true)
+                    }),
+                    ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                        vector: queryVector as number[],
+                        limit: 50,
+                        filter: (q) => q.eq("threadId", args.threadId)
                     })
                 ]);
                 
-                const allChunks = [...globalChunks, ...companyChunks];
+                const allChunks = [...globalChunks, ...companyChunks, ...threadChunks];
                 
                 if (allChunks.length > 0) {
                     ragContext = "\n\n====================\n[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]\nBelow is raw context retrieved from the global system and the company's private documents. You MUST use this data to answer the user's prompt. Be EXHAUSTIVE and list EVERY detail found here. DO NOT summarize broadly; extract specific bullet points and data.\n\n<context_data>\n";
@@ -130,12 +157,43 @@ User Prompt: ${args.content}`;
             combinedPrompt += ragContext;
         }
 
+        // --- Ad-hoc File Parsing for Chat Uploads ---
+        const payloadContents: any[] = [];
+        
+        if (args.fileIds && args.fileIds.length > 0) {
+            for (const fileId of args.fileIds) {
+                try {
+                    const fileUrl = await ctx.storage.getUrl(fileId);
+                    if (fileUrl) {
+                        const fileResponse = await fetch(fileUrl);
+                        if (fileResponse.ok) {
+                            const mimeType = fileResponse.headers.get("content-type") || "application/octet-stream";
+                            const arrayBuffer = await fileResponse.arrayBuffer();
+                            const buffer = Buffer.from(arrayBuffer);
+                            
+                            payloadContents.push({
+                                inlineData: {
+                                    data: buffer.toString('base64'),
+                                    mimeType: mimeType
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to parse attached file for Generation Context:", fileId, e);
+                }
+            }
+        }
+        
+        // Push the main textual context
+        payloadContents.push(combinedPrompt);
+
         // Dynamically inject rules into generation architecture
         generationConfig.systemInstruction = activeSystemInstruction;
 
         const response = await ai.models.generateContent({
             model: actualModelStr, // Dynamically use Sonae user preference
-            contents: combinedPrompt,
+            contents: payloadContents,
             config: generationConfig
         });
 

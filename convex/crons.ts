@@ -12,4 +12,12 @@ crons.hourly(
   {}
 );
 
+// Wipe expired ephemeral Vector docs attached to Threads
+crons.hourly(
+  "vector-garbage-collection",
+  { minuteUTC: 30 },
+  internal.knowledge.garbageCollectThreadVectors,
+  {}
+);
+
 export default crons;

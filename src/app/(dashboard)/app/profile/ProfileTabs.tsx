@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { usePaginatedQuery } from "convex/react";
+import React, { useState, useEffect } from "react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Search, Loader2, MonitorSmartphone, Shield, MapPin, Activity } from "lucide-react";
+import { Search, Loader2, MonitorSmartphone, Shield, MapPin, Activity, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export default function ProfileTabs() {
@@ -11,12 +11,40 @@ export default function ProfileTabs() {
   const tCommon = useTranslations('common');
   const [activeTab, setActiveTab] = useState("logins");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.users.getLogins,
     { searchTerm },
-    { initialNumItems: 20 }
+    { initialNumItems: 15 }
   );
+
+  const loginCount = useQuery(api.users.getMyLoginsCount, { searchTerm }) || 0;
+  const totalItems = Math.max(results.length, loginCount);
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const paginatedItems = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      const next = currentPage + 1;
+      setCurrentPage(next);
+      if (next * itemsPerPage > results.length && status === "CanLoadMore") {
+         loadMore(15);
+      }
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => Math.max(1, prev - 1));
+    }
+  };
+
+  React.useEffect(() => {
+     setCurrentPage(1);
+  }, [searchTerm]);
 
   const parseUserAgent = (ua: string) => {
     if (ua.includes("Mac OS")) return t('devices.macos');
@@ -68,19 +96,19 @@ export default function ProfileTabs() {
           </div>
 
           {/* Table Container */}
-          <div className="w-full bg-sidebar/20 border border-border-dim/50 rounded-[16px] overflow-hidden">
+          <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border-dim/50 bg-sidebar/40">
-                    <th className="px-5 py-3 text-[11px] font-mono tracking-widest text-muted uppercase">{t('table.device')}</th>
-                    <th className="px-5 py-3 text-[11px] font-mono tracking-widest text-muted uppercase">{t('table.location')}</th>
-                    <th className="px-5 py-3 text-[11px] font-mono tracking-widest text-muted uppercase">{t('table.status')}</th>
-                    <th className="px-5 py-3 text-[11px] font-mono tracking-widest text-muted uppercase text-right">{t('table.timestamp')}</th>
+                  <tr className="border-b border-border-dim/50 bg-sidebar/20">
+                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.device')}</th>
+                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.location')}</th>
+                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.status')}</th>
+                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">{t('table.timestamp')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {status === "LoadingFirstPage" && (
+                <tbody className="divide-y divide-border-dim/30">
+                  {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary">
                         <Loader2 className="w-5 h-5 animate-spin mx-auto opacity-50" />
@@ -88,7 +116,7 @@ export default function ProfileTabs() {
                     </tr>
                   )}
 
-                  {results.length === 0 && status === "CanLoadMore" && (
+                  {paginatedItems.length === 0 && status === "CanLoadMore" && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary text-[13px]">
                         {t('table.empty')}
@@ -96,7 +124,7 @@ export default function ProfileTabs() {
                     </tr>
                   )}
 
-                  {results.map((login, idx) => (
+                  {paginatedItems.map((login, idx) => (
                     <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -139,15 +167,33 @@ export default function ProfileTabs() {
               </table>
             </div>
 
-            {/* Pagination Bound */}
-            {status === "CanLoadMore" && (
-              <div className="w-full p-3 border-t border-border-dim/50 flex justify-center bg-sidebar/20">
-                <button
-                  onClick={() => loadMore(20)}
-                  className="px-4 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all"
-                >
-                  {t('table.loadMore')}
-                </button>
+            {totalItems > 0 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
+                <div className="flex items-center gap-2 text-[12px] text-muted">
+                    <span>Showing</span>
+                    <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
+                    <span>to</span>
+                    <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
+                    <span>of</span>
+                    <span className="font-medium text-foreground">{totalItems}</span>
+                    <span>logins</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button 
+                      disabled={currentPage === 1}
+                      onClick={handlePrevPage}
+                      className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                      disabled={currentPage >= totalPages}
+                      onClick={handleNextPage}
+                      className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
               </div>
             )}
           </div>
