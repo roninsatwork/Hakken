@@ -27,38 +27,45 @@ describe("AI Rules Validation", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("aiRules", {
         name: "Legit Rule",
+        trigger: "test",
         instruction: "Do it",
+        priority: "NORMAL",
         isActive: true,
-        isGlobal: false,
-        companyId: companyId
+        companyId: companyId,
+        createdBy: userId,
+        createdAt: Date.now()
       });
       await ctx.db.insert("aiRules", {
         name: "Foreign Rule",
+        trigger: "test",
         instruction: "Do it too",
+        priority: "NORMAL",
         isActive: true,
-        isGlobal: false,
-        companyId: foreignCompanyId
+        companyId: foreignCompanyId,
+        createdBy: userId,
+        createdAt: Date.now()
       });
     });
 
     const client = t.withIdentity({ subject: userId });
 
-    // Should work for own company
     const page = await client.query(api.aiRules.getOffsetPaginatedRules, {
       companyId: companyId,
       searchTerm: "",
-      page: 1
+      page: 1,
+      pageSize: 15
     });
     expect(page.data.length).toBe(1);
     expect(page.data[0].name).toBe("Legit Rule");
 
     // Should FAIL for foreign company
-    await expect(
-      client.query(api.aiRules.getOffsetPaginatedRules, {
-        companyId: foreignCompanyId,
-        searchTerm: "",
-        page: 1
-      })
-    ).rejects.toThrow("Unauthorized");
+    // Should FAIL for foreign company (returns empty array)
+    const foreignPage = await client.query(api.aiRules.getOffsetPaginatedRules, {
+      companyId: foreignCompanyId,
+      searchTerm: "",
+      page: 1,
+      pageSize: 15
+    });
+    expect(foreignPage.data.length).toBe(0);
   });
 });

@@ -18,7 +18,7 @@ describe("OWASP: Broken Access Control - Chat Logs", () => {
 
     // The pagination validator allows an empty paginated obj argument
     await expect(
-      maliciousClient.query(api.chatAdmin.getAllThreadsAdmin, { paginationOpts: { numItems: 10, cursor: null } })
+      maliciousClient.query(api.chatAdmin.getOffsetPaginatedThreads, { page: 1, pageSize: 15 })
     ).rejects.toThrow("Unauthorized");
 
     const dummyThreadId = await t.run(async (ctx) => {

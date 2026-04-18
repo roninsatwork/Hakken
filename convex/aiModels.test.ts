@@ -105,7 +105,8 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const page = await client.query(api.aiModels.getOffsetPaginatedModels, {
       searchTerm: "",
-      page: 1
+      page: 1,
+      pageSize: 15
     });
     
     // Sort logic validation: Default -> Active -> Disabled

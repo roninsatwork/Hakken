@@ -48,7 +48,7 @@ describe("Message Quotas Enforcements", () => {
     });
 
     // We verify what was inserted into the database
-    const finalMessages = await t.query(api.chat.getMessages, { threadId });
+    const finalMessages = await client.query(api.chat.getMessages, { threadId });
     expect(finalMessages).not.toBeNull();
     
     // There should be exactly two messages: user input + rejection warning

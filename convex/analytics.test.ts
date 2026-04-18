@@ -82,9 +82,9 @@ describe("Analytics MRR Strict Isolation", () => {
     });
 
     // Run Analytics
-    const analytics = await client.query(api.dashboard.getGlobalAnalytics, {});
+    const analytics = await client.query(api.analytics.getGlobalAnalytics, { timeframe: "30d" });
     
     // MRR should be exactly 2 * 100 = 200 (Active Corp + Another Active Corp)
-    expect(analytics.mrrGBP).toBe(200);
+    expect(analytics.aggregates.mrr).toBe(200);
   });
 });
