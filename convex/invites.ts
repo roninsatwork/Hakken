@@ -88,14 +88,19 @@ export const getPendingInvites = query({
        throw new Error("Unauthorized");
     }
 
-    const allInvites = await ctx.db
-      .query("invitations")
-      .order("desc")
-      .take(200); // Take more to allow filtering
-
-    if (user.role === "SUPER_ADMIN") return allInvites.filter(i => i.status === "PENDING").slice(0, 50);
+    if (user.role === "SUPER_ADMIN") {
+      return await ctx.db
+        .query("invitations")
+        .filter(q => q.eq(q.field("status"), "PENDING"))
+        .order("desc")
+        .take(50);
+    }
     
-    return allInvites.filter(i => i.companyId === user.companyId && i.status === "PENDING").slice(0, 50);
+    return await ctx.db
+      .query("invitations")
+      .withIndex("by_company_status", q => q.eq("companyId", user.companyId).eq("status", "PENDING"))
+      .order("desc")
+      .take(50);
   },
 });
 
@@ -111,8 +116,11 @@ export const getInvitesByCompany = query({
     }
 
     if (user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && user.companyId === args.companyId)) {
-        const allInvites = await ctx.db.query("invitations").order("desc").collect();
-        return allInvites.filter(i => i.companyId === args.companyId && i.status === "PENDING");
+        return await ctx.db
+          .query("invitations")
+          .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
+          .order("desc")
+          .collect();
     }
 
     throw new Error("Unauthorized");

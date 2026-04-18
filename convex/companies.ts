@@ -21,7 +21,7 @@ export const getCompanies = query({
       companies.map(async (company) => {
         const users = await ctx.db
           .query("users")
-          .filter(q => q.eq(q.field("companyId"), company._id))
+          .withIndex("by_company", (q) => q.eq("companyId", company._id))
           .collect();
           
         return {
@@ -129,7 +129,7 @@ export const deleteCompany = mutation({
     // Loop over all bound users and nuke them
     const users = await ctx.db
       .query("users")
-      .filter(q => q.eq(q.field("companyId"), args.id))
+      .withIndex("by_company", (q) => q.eq("companyId", args.id))
       .collect();
       
     for (const user of users) {
@@ -139,7 +139,7 @@ export const deleteCompany = mutation({
     // Eliminate all pending system invitations targeting this company
     const invites = await ctx.db
       .query("invitations")
-      .filter(q => q.eq(q.field("companyId"), args.id))
+      .withIndex("by_company_status", (q) => q.eq("companyId", args.id))
       .collect();
       
     for (const invite of invites) {

@@ -54,7 +54,7 @@ export const getPaginatedUsers = query({
       } else {
         return await ctx.db
           .query("users")
-          .filter(q => q.eq(q.field("companyId"), caller.companyId))
+          .withIndex("by_company", (q) => q.eq("companyId", caller.companyId))
           .order("desc")
           .paginate(args.paginationOpts);
       }
@@ -90,8 +90,11 @@ export const getAllUsers = query({
       return await ctx.db.query("users").order("desc").collect();
     } else if (caller.role === "ADMIN") {
       if (!caller.companyId) return [];
-      const allUsers = await ctx.db.query("users").order("desc").collect();
-      return allUsers.filter(u => u.companyId === caller.companyId);
+      return await ctx.db
+        .query("users")
+        .withIndex("by_company", (q) => q.eq("companyId", caller.companyId))
+        .order("desc")
+        .collect();
     }
     
     throw new Error("Unauthorized");
@@ -108,8 +111,11 @@ export const getUsersByCompany = query({
     if (!caller || !caller.role) throw new Error("Unauthorized");
 
     if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && caller.companyId === args.companyId)) {
-       const allUsers = await ctx.db.query("users").order("desc").collect();
-       return allUsers.filter(u => u.companyId === args.companyId);
+       return await ctx.db
+         .query("users")
+         .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+         .order("desc")
+         .collect();
     }
     
     throw new Error("Unauthorized");
@@ -125,8 +131,11 @@ export const getSuperAdmins = query({
     const caller = await ctx.db.get(callerId);
     if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
-    const allUsers = await ctx.db.query("users").order("desc").collect();
-    return allUsers.filter(u => u.role === "SUPER_ADMIN");
+    return await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "SUPER_ADMIN"))
+      .order("desc")
+      .collect();
   },
 });
 

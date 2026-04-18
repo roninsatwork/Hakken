@@ -80,6 +80,7 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
   }).index("email", ["email"])
+    .index("by_company", ["companyId"])
     .index("by_token", ["tokenIdentifier"])
     .searchIndex("search_email", { searchField: "email" }),
   
@@ -108,6 +109,7 @@ export default defineSchema({
     acceptedAt: v.optional(v.number()),
   })
     .index("by_email", ["email"])
+    .index("by_company_status", ["companyId", "status"])
     .index("by_token", ["token"]),
     
   emailTemplates: defineTable({
@@ -154,7 +156,9 @@ export default defineSchema({
     costGBP: v.number(), // Processed cost for this transaction
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
     createdAt: v.number(),
-  }).index("by_agent", ["agentId", "createdAt"]),
+  })
+    .index("by_agent", ["agentId", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"]),
 
   // Agent Raw Debug Logs (Execution Payload Storage)
   agentLogs: defineTable({
@@ -243,7 +247,9 @@ export default defineSchema({
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),
     attachments: v.optional(v.array(v.id("_storage"))),
-  }).index("by_thread", ["threadId", "createdAt"]),
+  })
+    .index("by_thread", ["threadId", "createdAt"])
+    .index("by_role_created", ["role", "createdAt"]),
 
   // Agent Orchestration Engine
   agents: defineTable({

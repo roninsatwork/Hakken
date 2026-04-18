@@ -35,8 +35,14 @@ export const getRules = query({
         .collect();
     } else {
        // Manual filter for undefined companyId & agentId (Global)
-       const allRules = await ctx.db.query("aiRules").order("desc").collect();
-       return allRules.filter(r => r.companyId === undefined && r.agentId === undefined);
+       return await ctx.db
+         .query("aiRules")
+         .filter(q => q.and(
+            q.eq(q.field("companyId"), undefined),
+            q.eq(q.field("agentId"), undefined)
+         ))
+         .order("desc")
+         .collect();
     }
   },
 });
@@ -71,15 +77,21 @@ export const getOffsetPaginatedRules = query({
         .order("desc")
         .take(1000); // UI performance cap limit
     } else if (args.companyId) {
-       const allCompanyRules = await ctx.db
+       rawResults = await ctx.db
         .query("aiRules")
+        .withIndex("by_company_active", q => q.eq("companyId", args.companyId))
         .order("desc")
         .take(1000);
-       rawResults = allCompanyRules.filter(r => r.companyId === args.companyId);
     } else {
        // Global
-       const allRules = await ctx.db.query("aiRules").order("desc").take(1000);
-       rawResults = allRules.filter(r => r.companyId === undefined && r.agentId === undefined);
+       rawResults = await ctx.db
+         .query("aiRules")
+         .filter(q => q.and(
+            q.eq(q.field("companyId"), undefined),
+            q.eq(q.field("agentId"), undefined)
+         ))
+         .order("desc")
+         .take(1000);
     }
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {

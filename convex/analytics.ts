@@ -43,8 +43,11 @@ export const getGlobalAICosts = query({
     if (args.timeframe === "custom" && args.customEnd) endDate = args.customEnd;
 
     // Filter target threads natively against timeframe parameters
-        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
-    const messages = rawMessages.filter(m => m.createdAt >= startDate && m.createdAt <= endDate);
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startDate))
+      .filter(q => q.lte(q.field("createdAt"), endDate))
+      .collect();
     
     // Relational Map
     const threads = await ctx.db.query("threads").collect();
@@ -150,11 +153,13 @@ export const getPlatformOverview = query({
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
-        const rawMessages = await ctx.db.query("messages").filter(q => q.eq(q.field("role"), "assistant")).collect();
-    const avgInteractionDepth = totalThreads > 0 ? (rawMessages.length / totalThreads) : 1.0;
+    const recentMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
+      .collect();
+    const avgInteractionDepth = totalThreads > 0 ? (recentMessages.length / totalThreads) : 1.0;
 
     // 4. Financial Calculation Engine
-    const recentMessages = rawMessages.filter(m => m.createdAt >= thirtyDaysAgo);
     let total30DCostUSD = 0;
     
     // Unique user trackers
@@ -369,22 +374,30 @@ export const getCompanyMetrics = query({
     // Also inject the system assistant
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
-    const companyUsers = await ctx.db.query("users").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
+    const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).collect();
     const companyUserIds = new Set(companyUsers.map((u: any) => u._id));
     
-    const threads = await ctx.db.query("threads").collect();
-    const companyThreads = threads.filter((t: any) => companyUserIds.has(t.userId));
+    // Natively fetch only threads related to this tenant
+    const companyThreads = await ctx.db.query("threads").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).collect();
     const companyThreadIds = new Set(companyThreads.map((t: any) => t._id));
-
-    const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
-    const rawAgentTxs = await ctx.db.query("agentTransactions").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
-    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
 
     const startTimeStamp = startDate.getTime();
     const endTimeStamp = endDate.getTime();
-    
-    const periodRawMessages = rawMessages.filter((m: any) => companyThreadIds.has(m.threadId) && m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
-    const periodAgentTxs = rawAgentTxs.filter((t: any) => t.createdAt >= startTimeStamp && t.createdAt <= endTimeStamp);
+
+    // Bound Message and Tx retrieval natively to temporal bounds and indexes
+    const rawMessages = await ctx.db.query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTimeStamp))
+      .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
+      .collect();
+      
+    const periodRawMessages = rawMessages.filter((m: any) => companyThreadIds.has(m.threadId));
+
+    const periodAgentTxs = await ctx.db.query("agentTransactions")
+       .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", startTimeStamp))
+       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
+       .collect();
+       
+    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).collect();
 
     const threadUserMap = new Map(companyThreads.map((t: any) => [t._id, t.userId]));
     const threadAgentMap = new Map(companyThreads.map((t: any) => [t._id, t.agentId]));
@@ -631,24 +644,33 @@ export const getGlobalAnalytics = query({
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
     const threads = await ctx.db.query("threads").collect();
-    const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
-    const rawAgentTxs = await ctx.db.query("agentTransactions").collect();
     
     const startTimeStamp = startDate.getTime();
     const endTimeStamp = endDate.getTime();
     
-    const periodRawMessages = rawMessages.filter((m: any) => m.createdAt >= startTimeStamp && m.createdAt <= endTimeStamp);
-    const periodAgentTxs = rawAgentTxs.filter((t: any) => t.createdAt >= startTimeStamp && t.createdAt <= endTimeStamp);
-    
+    const periodRawMessages = await ctx.db.query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTimeStamp))
+      .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
+      .collect();
+      
+    const periodAgentTxs = await ctx.db.query("agentTransactions")
+      .filter((q: any) => q.gte(q.field("createdAt"), startTimeStamp))
+      .filter((q: any) => q.lte(q.field("createdAt"), endTimeStamp))
+      .collect();
+      
     const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
-    const thirtyDayMessages = rawMessages.filter((m: any) => m.createdAt >= thirtyDaysAgo);
+    const thirtyDayMessages = await ctx.db.query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
+      .collect();
     const threadUserMapAll = new Map(threads.map((t: any) => [t._id, t.userId]));
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
        const uId = threadUserMapAll.get(msg.threadId);
        if (uId) mauSet.add(uId);
     }
-    const thirtyDayTxs = rawAgentTxs.filter((t: any) => t.createdAt >= thirtyDaysAgo);
+    const thirtyDayTxs = await ctx.db.query("agentTransactions")
+       .filter((q: any) => q.gte(q.field("createdAt"), thirtyDaysAgo))
+       .collect();
     for (const tx of thirtyDayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
