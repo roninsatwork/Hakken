@@ -456,7 +456,7 @@ export default function SidebarNavigation() {
                       </NavItem>
                     )}
 
-                    {settings.diagnosticRoutingEnabled && (
+                    {(settings as any).diagnosticRoutingEnabled && (
                       <NavItem
                         icon={Gamepad2}
                         label="Arcade"

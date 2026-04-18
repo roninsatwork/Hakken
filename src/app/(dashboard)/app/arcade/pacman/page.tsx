@@ -1,18 +1,66 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
+import PacmanCanvas from "./PacmanCanvas";
+import { AudioEngine } from "./engine/AudioEngine";
 
 const pressStart = Press_Start_2P({ weight: '400', subsets: ['latin'] });
 
 export default function PacmanArcadePage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+  const [audioEngine] = useState(() => typeof window !== 'undefined' ? new AudioEngine() : null);
   const itemsPerPage = 15;
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      if (audioEngine && !isPlaying) {
+        audioEngine.playMenuAmbience();
+      }
+    };
+    
+    if (!isPlaying) {
+      document.addEventListener('click', handleInteraction, { once: true });
+      document.addEventListener('keydown', handleInteraction, { once: true });
+    } else {
+      if (audioEngine) audioEngine.stopMenuAmbience();
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+    };
+  }, [audioEngine, isPlaying]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const handleFullscreenToggle = () => {
+    if (!document.fullscreenElement) {
+      gameContainerRef.current?.requestFullscreen().catch(err => {
+        console.error("Error attempting to enable fullscreen:", err);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const submitScore = useMutation(api.arcade.submitScore);
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.arcade.getPaginatedLeaderboard,
@@ -42,13 +90,22 @@ export default function PacmanArcadePage() {
     }
   };
 
+  const handleGameOver = async (score: number) => {
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      if (score > 0) {
+        await submitScore({ game: "pacman", score });
+      }
+    } catch (e) {
+      console.error("Failed to submit score", e);
+    }
+  };
+
   return (
-    <div className="flex flex-col">
-      <Header 
-        title="Arcade | Pacman" 
-        subtitle="Classic arcade action on the Sonae matrix."
-        icon={<Gamepad2 className="w-5 h-5" />}
-      />
+    <div className="flex flex-col h-full">
+      <Header />
 
       <div className="flex flex-col gap-5 pb-8 mt-2">
         
@@ -145,38 +202,85 @@ export default function PacmanArcadePage() {
           }
         `}} />
 
-        {/* Game Container (Placeholder) */}
-        <div className="w-full bg-card border-[3px] border-[#2121ff]/50 rounded-[24px] overflow-hidden shadow-sm flex flex-col relative min-h-[400px]">
+        {/* Game Container */}
+        <div 
+          ref={gameContainerRef}
+          className={`w-full bg-[#0b0b0f] overflow-hidden shadow-sm flex flex-col relative ${
+            isPlaying 
+              ? (isFullscreen ? 'h-screen w-screen rounded-none' : 'h-[calc(100vh-140px)] rounded-[24px] border-[3px] border-[#2121ff]/50') 
+              : 'min-h-[500px] rounded-[24px] border-[3px] border-[#2121ff]/50 bg-card'
+          }`}
+        >
           <div className="absolute inset-0 arcade-maze-bg z-0" />
           
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
-             <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#FFEB3B] drop-shadow-[0_0_15px_rgba(255,235,59,0.5)] ${pressStart.className}`}>PACMAN</h2>
-             <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
-               INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE BROADCASTED TO THE ORGANIZATIONAL LEDGER.
-             </p>
-             
-             <button className={`relative px-8 py-5 bg-[#FFD700] border-b-[6px] border-[#B8860B] rounded-lg active:border-b-0 active:translate-y-[6px] transition-all hover:brightness-110 shadow-[0_0_20px_rgba(255,215,0,0.2)] ${pressStart.className}`}>
-                <div className="flex items-center gap-4 text-black">
-                  <Play className="w-5 h-5 fill-current" />
-                  <span className="text-[14px] leading-none blink-text mt-1">INSERT COIN</span>
-                </div>
-             </button>
-          </div>
+          {isPlaying ? (
+            <div className="relative w-full h-full flex flex-col flex-1 z-10 bg-black/60 backdrop-blur-sm justify-center items-center">
+               <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+                 <button 
+                   onClick={handleFullscreenToggle} 
+                   className="p-2.5 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-[10px] text-white/70 hover:text-white transition-all border border-white/5"
+                 >
+                   {isFullscreen ? <Minimize2 className="w-5 h-5"/> : <Maximize2 className="w-5 h-5" />}
+                 </button>
+                 <button 
+                   onClick={() => { 
+                     setIsPlaying(false); 
+                     if (document.fullscreenElement) document.exitFullscreen(); 
+                   }} 
+                   className="p-2.5 bg-red-500/10 hover:bg-red-500/20 backdrop-blur-md rounded-[10px] text-red-400 hover:text-red-300 transition-all border border-red-500/10"
+                 >
+                   <X className="w-5 h-5" />
+                 </button>
+               </div>
+               <PacmanCanvas isFullscreen={isFullscreen} onGameOver={score => { setIsPlaying(false); setIsFullscreen(false); handleGameOver(score); }} />
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
+                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#FFEB3B] drop-shadow-[0_0_15px_rgba(255,235,59,0.5)] ${pressStart.className}`}>PACMAN</h2>
+                 <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
+                   INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.
+                 </p>
+                 
+                 <button 
+                    onClick={() => {
+                      if (audioEngine) {
+                        audioEngine.playCoinInsert();
+                        audioEngine.stopMenuAmbience();
+                      }
+                      setTimeout(() => setIsPlaying(true), 600);
+                    }}
+                    className={`relative px-8 py-5 bg-[#FFD700] border-b-[6px] border-[#B8860B] rounded-lg active:border-b-0 active:translate-y-[6px] transition-all hover:brightness-110 shadow-[0_0_20px_rgba(255,215,0,0.2)] ${pressStart.className}`}
+                 >
+                    <div className="flex items-center gap-4 text-black">
+                      <Play className="w-5 h-5 fill-current" />
+                      <span className="text-[14px] leading-none tracking-wide mt-1">PLAY NOW</span>
+                    </div>
+                 </button>
+                 
+                 <div className="mt-8 flex items-center justify-center gap-3 text-secondary/60">
+                   <Gamepad2 className="w-4 h-4" />
+                   <span className="text-[11px] font-mono tracking-widest uppercase">USE ARROW KEYS TO MOVE</span>
+                 </div>
+              </div>
 
-          {/* Infinite Animation Track */}
-          <div className="absolute bottom-0 left-0 w-full h-[60px] overflow-hidden z-20 pointer-events-none bg-black/40 border-t border-[#2121ff]/30 backdrop-blur-sm">
-             <div className="dot-track"></div>
-             <div className="sprite-track absolute bottom-3 flex items-center gap-10">
-                <div className="pacman-sprite"></div>
-                <div className="ghost-sprite">
-                   <div className="ghost-eyes"><div className="ghost-pupils"></div></div>
-                </div>
-             </div>
-          </div>
+              {/* Infinite Animation Track */}
+              <div className="absolute bottom-0 left-0 w-full h-[60px] overflow-hidden z-20 pointer-events-none bg-black/40 border-t border-[#2121ff]/30 backdrop-blur-sm">
+                 <div className="dot-track"></div>
+                 <div className="sprite-track absolute bottom-3 flex items-center gap-10">
+                    <div className="pacman-sprite"></div>
+                    <div className="ghost-sprite">
+                       <div className="ghost-eyes"><div className="ghost-pupils"></div></div>
+                    </div>
+                 </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Leaderboard Table */}
-        <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl">
+        {/* Leaderboard Table (Hidden when playing) */}
+        {!isPlaying && (
+          <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl">
            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-border-dim/50 bg-background/50">
              <div className="flex items-center gap-3">
                <Trophy className="w-5 h-5 text-brand" />
@@ -279,8 +383,9 @@ export default function PacmanArcadePage() {
                    <ChevronRight className="w-4 h-4" />
                  </button>
              </div>
-           </div>
-        </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
