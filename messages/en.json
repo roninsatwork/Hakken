@@ -947,7 +947,8 @@
                 "appearance": "Global Aesthetics",
                 "economics": "Economic Engine",
                 "security": "System Security",
-                "audit": "Audit Ledger"
+                "audit": "Audit Ledger",
+                "options": "System Options"
             },
             "identity": {
                 "title": "Platform Identity",
@@ -1056,6 +1057,11 @@
                     "timestamp": "Timestamp",
                     "actions": "Actions"
                 }
+            },
+            "options": {
+                "title": "System Diagnostic Protocols",
+                "routingMatrix": "Diagnostic Routing Matrix",
+                "routingMatrixSub": "Enable developer backdoor debugging paths and cache systems."
             }
         },
         "auditLogs": {

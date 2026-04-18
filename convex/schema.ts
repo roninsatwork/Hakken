@@ -52,9 +52,19 @@ export default defineSchema({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
-    darkRing: v.optional(v.string())
+    darkRing: v.optional(v.string()),
+    diagnosticRoutingEnabled: v.optional(v.boolean())
   }),
   
+  arcadeScores: defineTable({
+    userId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
+    game: v.string(), // e.g., "pacman"
+    score: v.number(),
+    playedAt: v.number(),
+  }).index("by_game_score", ["game", "score"])
+    .index("by_user", ["userId"]),
+
   plans: defineTable({
     name: v.string(),
     description: v.optional(v.string()),

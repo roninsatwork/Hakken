@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS = {
   darkSuccess: undefined as string | undefined,
   darkDestructive: undefined as string | undefined,
   darkRing: undefined as string | undefined,
+  diagnosticRoutingEnabled: false as boolean,
 };
 
 export const get = query({
@@ -69,6 +70,9 @@ export const get = query({
 export const update = mutation({
   args: {
     platformName: v.optional(v.string()),
+    currencySymbol: v.optional(v.string()),
+    monthlyBasePrice: v.optional(v.number()),
+    monthlySeatPrice: v.optional(v.number()),
     logoUrlLight: v.optional(v.string()),
     logoUrlDark: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
@@ -100,7 +104,8 @@ export const update = mutation({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
-    darkRing: v.optional(v.string())
+    darkRing: v.optional(v.string()),
+    diagnosticRoutingEnabled: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);

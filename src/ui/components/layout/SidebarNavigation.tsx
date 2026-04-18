@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Gamepad2,
   LayoutDashboard,
   FolderKanban,
   Building2,
@@ -193,6 +194,8 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/app/profile')) return 'Profile';
     if (pathname === '/app/settings') return 'Organization Dashboard';
     if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
+    if (pathname.startsWith('/app/arcade/pacman')) return 'Pacman';
+    if (pathname.startsWith('/app/arcade')) return 'Arcade';
     return isAdmin ? 'Admin Dashboard' : '';
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -207,7 +210,8 @@ export default function SidebarNavigation() {
     users: false,
     settings: false,
     reports: false,
-    organization: false
+    organization: false,
+    arcade: false
   });
 
   const toggleSection = (section: string) => {
@@ -237,6 +241,8 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/app/reports')) setActiveItem('Reports');
     else if (pathname === '/app/settings') setActiveItem('Organization Dashboard');
     else if (pathname.startsWith('/app/settings/team')) setActiveItem('Organization Team');
+    else if (pathname.startsWith('/app/arcade/pacman')) setActiveItem('Pacman');
+    else if (pathname.startsWith('/app/arcade')) setActiveItem('Arcade');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -447,6 +453,20 @@ export default function SidebarNavigation() {
                       >
                         <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
                         <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                      </NavItem>
+                    )}
+
+                    {settings.diagnosticRoutingEnabled && (
+                      <NavItem
+                        icon={Gamepad2}
+                        label="Arcade"
+                        isActive={activeItem === 'Arcade' || activeItem === 'Pacman'}
+                        onClick={() => setActiveItem('Arcade')}
+                        hasChildren
+                        isOpen={openSections.arcade}
+                        onToggle={() => toggleSection('arcade')}
+                      >
+                        <SubNavItem label="Pacman" href="/app/arcade/pacman" isActive={activeItem === 'Pacman'} onClick={() => setActiveItem('Pacman')} />
                       </NavItem>
                     )}
 

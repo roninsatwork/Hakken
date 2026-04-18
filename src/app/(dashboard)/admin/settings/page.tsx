@@ -95,7 +95,7 @@ export default function SystemSettingsPage() {
 
   const searchParams = useSearchParams();
   const initTab = (searchParams.get("tab") as any) || "identity";
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit">(initTab);
+  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit" | "options">(initTab);
 
   const router = useRouter();
 
@@ -247,7 +247,8 @@ export default function SystemSettingsPage() {
           { id: 'identity', label: t('tabs.identity'), icon: Building2 },
           { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
           { id: 'security', label: t('tabs.security'), icon: ShieldCheck },
-          { id: 'audit', label: t('tabs.audit'), icon: History }
+          { id: 'audit', label: t('tabs.audit'), icon: History },
+          { id: 'options', label: t('tabs.options'), icon: SettingsIcon }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -594,6 +595,32 @@ export default function SystemSettingsPage() {
             </h3>
 
             <AuditLogsTable logs={recentLogs} />
+          </section>
+        )}
+
+        {/* Global Options Engine */}
+        {activeTab === "options" && (
+          <section className="flex flex-col gap-6">
+            <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
+              <SettingsIcon className="w-3.5 h-3.5" /> {t('options.title')}
+            </h3>
+
+            <SettingBlock title={t('options.routingMatrix')} sub={t('options.routingMatrixSub')}>
+              <div className="flex flex-col gap-0 border border-border-dim rounded-[16px] overflow-hidden">
+                <div className="flex items-center justify-between p-5 bg-background/50 border-b border-border-dim">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[14px] text-foreground font-semibold">{t('options.routingMatrix')}</span>
+                    <span className="text-[12px] text-muted">{t('options.routingMatrixSub')}</span>
+                  </div>
+                  <button
+                    onClick={() => setFormData({ ...formData, diagnosticRoutingEnabled: !formData.diagnosticRoutingEnabled })}
+                    className={`transition-colors flex-shrink-0 ${formData.diagnosticRoutingEnabled ? "text-brand" : "text-muted"}`}
+                  >
+                    {formData.diagnosticRoutingEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                  </button>
+                </div>
+              </div>
+            </SettingBlock>
           </section>
         )}
       </div>

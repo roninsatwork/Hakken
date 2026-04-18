@@ -947,7 +947,8 @@
                 "appearance": "Aspetto Globale",
                 "economics": "Motore Economico",
                 "security": "Sicurezza di Sistema",
-                "audit": "Cronologia Audit"
+                "audit": "Cronologia Audit",
+                "options": "Opzioni di Sistema"
             },
             "identity": {
                 "title": "Identità della Piattaforma",
@@ -1056,6 +1057,11 @@
                     "timestamp": "Periodo",
                     "actions": "Azioni"
                 }
+            },
+            "options": {
+                "title": "Protocolli Diagnostici di Sistema",
+                "routingMatrix": "Matrice di Routing Diagnostico",
+                "routingMatrixSub": "Abilita i percorsi di debug per sviluppatori e sistemi di cache backdoor."
             }
         },
         "auditLogs": {
