@@ -27,11 +27,17 @@ export default function ChartExportWrapper({ children, exportName, className = "
       backgroundColor: bgColor,
     });
     
-    const url = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.download = `${exportName}-${new Date().toISOString().split("T")[0]}.png`;
-    link.href = url;
-    link.click();
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${exportName}-${new Date().toISOString().split("T")[0]}.png`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, "image/png");
   };
 
   return (

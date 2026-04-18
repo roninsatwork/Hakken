@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -143,6 +144,17 @@ export default function SubscriptionPlansPage() {
           <Plus className="w-4 h-4" />
           <span>{t('newPlan')}</span>
         </button>
+      </div>
+
+      {/* Explanation Notice */}
+      <div className="flex items-start gap-4 p-4 bg-foreground/[0.015] border border-border-dim/50 rounded-[12px] text-secondary">
+         <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted" />
+         <div className="flex flex-col gap-0.5">
+            <h3 className="text-[13px] font-medium text-foreground tracking-wide">{t('infoTitle')}</h3>
+            <p className="text-[12.5px] leading-relaxed text-secondary opacity-80 tracking-wide">
+              {t('infoDesc')}
+            </p>
+         </div>
       </div>
 
       {/* Control Bar */}

@@ -41,6 +41,68 @@ export const getRules = query({
   },
 });
 
+export const getOffsetPaginatedRules = query({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return { data: [], totalCount: 0, totalPages: 1 };
+
+    const user = await ctx.db.get(userId);
+    if (!user) return { data: [], totalCount: 0, totalPages: 1 };
+
+    if (user.role !== "SUPER_ADMIN") {
+        if (args.companyId && args.companyId !== user.companyId) {
+            return { data: [], totalCount: 0, totalPages: 1 };
+        }
+    }
+
+    let rawResults = [];
+
+    if (args.agentId) {
+       rawResults = await ctx.db
+        .query("aiRules")
+        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+        .order("desc")
+        .take(1000); // UI performance cap limit
+    } else if (args.companyId) {
+       const allCompanyRules = await ctx.db
+        .query("aiRules")
+        .order("desc")
+        .take(1000);
+       rawResults = allCompanyRules.filter(r => r.companyId === args.companyId);
+    } else {
+       // Global
+       const allRules = await ctx.db.query("aiRules").order("desc").take(1000);
+       rawResults = allRules.filter(r => r.companyId === undefined && r.agentId === undefined);
+    }
+
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+       const term = args.searchTerm.toLowerCase();
+       rawResults = rawResults.filter(r => 
+           (r.name || "").toLowerCase().includes(term) ||
+           r.trigger.toLowerCase().includes(term) ||
+           r.instruction.toLowerCase().includes(term)
+       );
+    }
+
+    const totalCount = rawResults.length;
+    const offset = (args.page - 1) * args.pageSize;
+    const pageData = rawResults.slice(offset, offset + args.pageSize);
+
+    return {
+      data: pageData,
+      totalCount,
+      totalPages: Math.max(1, Math.ceil(totalCount / args.pageSize)),
+    };
+  },
+});
+
 export const getActiveRulesInternal = internalQuery({
   args: {
      companyId: v.optional(v.id("companies")),

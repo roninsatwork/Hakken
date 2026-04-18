@@ -2,7 +2,7 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { api, internal } from "./_generated/api";
 
 export const generateSonaeResponse = internalAction({
@@ -304,6 +304,83 @@ export const generateThreadTitle = internalAction({
       }
     } catch (error) {
       console.error("Failed to generate thread title:", error);
+    }
+  }
+});
+
+export const generateNodeConfig = action({
+  args: {
+    prompt: v.string(),
+    nodeType: v.string(),
+    availableNodes: v.array(v.object({
+      id: v.string(),
+      type: v.string(),
+      label: v.optional(v.string()),
+    }))
+  },
+  handler: async (ctx, args) => {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
+    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
+    
+    const ai = new GoogleGenAI({ 
+        project: projectId, 
+        location: location,
+        vertexai: true,
+        googleAuthOptions: {
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          }
+        }
+    });
+
+    try {
+      const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+      
+      const nodesContext = args.availableNodes.map(n => `- ID: ${n.id} (Type: ${n.type}, Label: ${n.label || 'Unnamed'})`).join("\n");
+      
+      const response = await ai.models.generateContent({
+        model: defaultModel,
+        contents: `User Prompt: "${args.prompt}"`,
+        config: {
+          systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
+The user wants to configure an isolated logic node of type: ${args.nodeType}.
+
+Available upstream node context in the graph (You MUST use these explicit IDs when mathematically binding variables):
+---
+${nodesContext}
+---
+
+Your job is to translate the user's plain-English intent into exact system payload configuration.
+- To mathematically bind data from an upstream node into the mapping, you MUST use the EXACT bracket syntax: {{nodes.<UPSTREAM_NODE_ID>.output.<FIELD_NAME>}}
+- NEVER hallucinate node IDs. Only use the IDs explicitly listed above.
+- The 'mapping' object must be a valid JSON representation (stringify it) of the required input mapping payload for the current node. Generate reasonable keys (like "text", "summary_data", "table_id") based on the implied nodeType.
+- The 'template' object is a raw string layout if the node expects a raw string payload. You can inject variables directly into the text (e.g. "We received: {{nodes...}}").
+- If the required mapping or template is empty based on intent, return an empty string.`,
+          temperature: 0.1,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              mapping: { type: Type.STRING, description: "A valid JSON string representing the exact JSON Data mapping to apply, usually containing mathematical {{nodes...}} variable injections." },
+              template: { type: Type.STRING, description: "Raw block string layout/template, if applicable." }
+            },
+            required: ["mapping", "template"]
+          }
+        }
+      });
+
+      if (!response.text) {
+          throw new Error("No payload mapped.");
+      }
+      
+      const jsonStr = response.text;
+      const parsed = JSON.parse(jsonStr);
+      return parsed as { mapping: string, template: string };
+      
+    } catch (error) {
+      console.error("Failed to generate node configuration via Vertex AI:", error);
+      throw new Error("Generative Payload creation failed.");
     }
   }
 });

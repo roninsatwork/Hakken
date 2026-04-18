@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { BrainCircuit, Plus, Loader2, Power, Trash2, Edit2, Search } from "lucide-react";
+import { BrainCircuit, Plus, Loader2, Power, Trash2, Edit2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -13,16 +13,32 @@ export default function CompanyAiRulesPage() {
   const router = useRouter();
   const companyId = params.id as Id<"companies">;
   
-  const rules = useQuery(api.aiRules.getRules, { companyId });
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
 
-  const filteredRules = rules?.filter(
-    rule => (rule.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rule.trigger.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rule.instruction.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const rulesData = useQuery(api.aiRules.getOffsetPaginatedRules, {
+    companyId,
+    searchTerm: debouncedSearch,
+    page,
+    pageSize
+  });
+
+  const isLoading = rulesData === undefined;
+  const filteredRules = rulesData?.data || [];
+  const totalCount = rulesData?.totalCount || 0;
+  const totalPages = rulesData?.totalPages || 1;
 
   const getPriorityColor = (p: string) => {
     if (p === "CRITICAL") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
@@ -68,66 +84,118 @@ export default function CompanyAiRulesPage() {
         </div>
       </div>
       
-      {rules === undefined ? (
-        <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>
-      ) : rules.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
-          <BrainCircuit className="w-10 h-10 text-brand mb-4 opacity-80" />
-          <h3 className="text-sm font-medium text-foreground mb-1">No Rules Yet</h3>
-          <p className="text-[13px] text-secondary max-w-sm">
-            Create rules to customize how the AI responds to specific questions or topics.
-          </p>
+      {/* Listing Area */}
+      <div className="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr className="border-b border-border-dim/50 bg-sidebar/40">
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[120px]">Priority</th>
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[250px]">Rule Name / Trigger</th>
+                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[100px] text-right">Status</th>
+                <th className="w-[100px] px-5 py-3.5"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-16 text-center text-secondary">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-brand opacity-80" />
+                    </td>
+                  </tr>
+                ) : filteredRules.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-16 text-center">
+                       <div className="flex flex-col items-center justify-center gap-4 w-full">
+                         <BrainCircuit className="w-8 h-8 text-muted/30" />
+                         <span className="text-muted text-[13px] font-medium tracking-widest uppercase">No Rules Yet</span>
+                       </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRules.map((rule) => (
+                    <tr 
+                      key={rule._id} 
+                      onClick={() => router.push(`/admin/companies/${companyId}/rules/${rule._id}`)}
+                      className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
+                    >
+                      <td className="px-5 py-4 align-middle">
+                        <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
+                          {rule.priority}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 align-middle">
+                        <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
+                          {rule.name || `"${rule.trigger}"`}
+                        </h3>
+                      </td>
+                      <td className="px-5 py-4 align-middle text-right border-r border-white/5">
+                         <button
+                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleActive({ id: rule._id, isActive: !rule.isActive }); }}
+                           className="hover:text-foreground transition-colors p-1 flex justify-end w-full"
+                         >
+                           <Power className={`w-4 h-4 ${rule.isActive ? 'text-orange-500' : 'opacity-40'}`} />
+                         </button>
+                      </td>
+                      <td className="px-5 py-4 align-middle text-right">
+                        <div className="flex items-center justify-end gap-3 text-secondary">
+                          <Link
+                            href={`/admin/companies/${companyId}/rules/${rule._id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-foreground transition-colors p-1"
+                          >
+                            <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
+                          </Link>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteRuleMutation({ id: rule._id }); }}
+                            className="transition-colors group/trash p-1"
+                          >
+                            <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {filteredRules.map((rule) => (
-            <div key={rule._id} className="flex flex-col gap-2 justify-center p-4 sm:p-5 rounded-[12px] bg-sidebar/40 border border-border-dim transition-all hover:bg-sidebar/60 group cursor-pointer" onClick={() => router.push(`/admin/companies/${companyId}/rules/${rule._id}`)}>
-               <div className="flex items-center justify-between gap-4 w-full">
-                 <div className="flex items-center gap-3 min-w-0 pr-4">
-                   <div className={`mt-[1px] px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
-                     {rule.priority}
-                   </div>
-                   <h3 className="text-[14px] font-bold text-foreground truncate group-hover:text-brand transition-colors">
-                     {rule.name || `"${rule.trigger}"`}
-                   </h3>
-                 </div>
-                 
-                 <div className="flex items-center gap-4 flex-shrink-0 text-secondary ml-4 pr-1">
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleActive({ id: rule._id, isActive: !rule.isActive }); }}
-                      className="hover:text-foreground transition-colors"
-                    >
-                      <Power className={`w-4 h-4 ${rule.isActive ? 'text-orange-500' : 'opacity-40'}`} />
-                    </button>
-                    
-                    <div className="h-4 w-px bg-border-dim" />
-                    
-                    <Link
-                      href={`/admin/companies/${companyId}/rules/${rule._id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="hover:text-foreground transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
-                    </Link>
 
-                    <div className="h-4 w-px bg-border-dim" />
+        {/* Numbered Pagination Footer */}
+        <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+          <div className="text-[12px] font-medium text-secondary">
+            {totalCount > 0 ? (
+              <span>Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalCount)} of {totalCount}</span>
+            ) : (
+              <span>No entries found</span>
+            )}
+          </div>
 
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteRuleMutation({ id: rule._id }); }}
-                      className="transition-colors group/trash"
-                    >
-                      <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
-                    </button>
-                 </div>
-               </div>
-               
-               <p className={`text-[12.5px] line-clamp-1 font-mono tracking-wide opacity-50 ${rule.isActive ? 'text-muted' : 'text-muted/50'}`}>
-                 {rule.instruction}
-               </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            <div className="flex items-center justify-center min-w-[100px] text-[12px] font-medium tracking-wide">
+              Page {page} of {totalPages}
             </div>
-          ))}
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

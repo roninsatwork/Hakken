@@ -4,8 +4,12 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 
 // Secure API endpoint to fetch all threads across the platform with user data joined
-export const getAllThreadsAdmin = query({
-  args: { paginationOpts: paginationOptsValidator, searchTerm: v.optional(v.string()) },
+export const getOffsetPaginatedThreads = query({
+  args: { 
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number()
+  },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated Admin Request");
@@ -13,15 +17,46 @@ export const getAllThreadsAdmin = query({
     const admin = await ctx.db.get(adminId);
     if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized: Top level clearance required.");
 
-    // Fetch the raw paginated threads
-    const pagedThreads = await ctx.db
+    // Fetch the raw threads
+    const allThreads = await ctx.db
       .query("threads")
       .order("desc")
-      .paginate(args.paginationOpts);
+      .collect();
 
-    // Map over the threads to manually join the user identity
+    // Setup payload
+    let finalPayload = allThreads;
+
+    // Filter post-fetch if a search term is provided
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+        const term = args.searchTerm.toLowerCase();
+        
+        // Only enrich the minimal attributes inside filter evaluation
+        finalPayload = [];
+        for (const t of allThreads) {
+            let uName = "";
+            let uEmail = "";
+            if (t.userId) {
+                const u = await ctx.db.get(t.userId);
+                if (u) { uName = (u.name || "").toLowerCase(); uEmail = (u.email || "").toLowerCase(); }
+            }
+            if (
+                (t.title && t.title.toLowerCase().includes(term)) ||
+                (uName.includes(term)) ||
+                (uEmail.includes(term))
+            ) {
+                finalPayload.push(t);
+            }
+        }
+    }
+
+    const totalCount = finalPayload.length;
+    const totalPages = Math.ceil(totalCount / args.pageSize) || 1;
+    const startIndex = (args.page - 1) * args.pageSize;
+    const pageSlice = finalPayload.slice(startIndex, startIndex + args.pageSize);
+
+    // Map over the chunk to manually join the user identity
     const enrichedThreads = await Promise.all(
-      pagedThreads.page.map(async (thread) => {
+      pageSlice.map(async (thread) => {
         const user = await ctx.db.get(thread.userId);
         return {
           ...thread,
@@ -34,30 +69,20 @@ export const getAllThreadsAdmin = query({
       })
     );
 
-    // Filter post-fetch if a search term is provided
-    // Note: In an extreme scaling scenario, search should be handled by Convex full-text search index, but for this volume, array filtering works.
-    let finalPayload = enrichedThreads;
-    if (args.searchTerm && args.searchTerm.trim() !== "") {
-        const term = args.searchTerm.toLowerCase();
-        finalPayload = enrichedThreads.filter(t => 
-             (t.title && t.title.toLowerCase().includes(term)) ||
-             (t.user && t.user.name.toLowerCase().includes(term)) ||
-             (t.user && t.user.email.toLowerCase().includes(term))
-        );
-    }
-
     return {
-      ...pagedThreads,
-      page: finalPayload,
+      data: enrichedThreads,
+      totalPages,
+      totalCount
     };
   },
 });
 
-export const getCompanyThreadsAdmin = query({
+export const getOffsetPaginatedCompanyThreads = query({
   args: { 
     companyId: v.id("companies"), 
-    paginationOpts: paginationOptsValidator, 
-    searchTerm: v.optional(v.string()) 
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number()
   },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
@@ -70,14 +95,43 @@ export const getCompanyThreadsAdmin = query({
         }
     }
 
-    const pagedThreads = await ctx.db
+    const allThreads = await ctx.db
       .query("threads")
       .withIndex("by_company", q => q.eq("companyId", args.companyId))
       .order("desc")
-      .paginate(args.paginationOpts);
+      .collect();
+
+    let finalPayload = allThreads;
+
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+        const term = args.searchTerm.toLowerCase();
+        
+        finalPayload = [];
+        for (const t of allThreads) {
+            let uName = "";
+            let uEmail = "";
+            if (t.userId) {
+                const u = await ctx.db.get(t.userId);
+                if (u) { uName = (u.name || "").toLowerCase(); uEmail = (u.email || "").toLowerCase(); }
+            }
+            if (
+                (t.title && t.title.toLowerCase().includes(term)) ||
+                (uName.includes(term)) ||
+                (uEmail.includes(term)) ||
+                (t.sourceUrl && t.sourceUrl.toLowerCase().includes(term))
+            ) {
+                finalPayload.push(t);
+            }
+        }
+    }
+
+    const totalCount = finalPayload.length;
+    const totalPages = Math.ceil(totalCount / args.pageSize) || 1;
+    const startIndex = (args.page - 1) * args.pageSize;
+    const pageSlice = finalPayload.slice(startIndex, startIndex + args.pageSize);
 
     const enrichedThreads = await Promise.all(
-      pagedThreads.page.map(async (thread) => {
+      pageSlice.map(async (thread) => {
         let user = null;
         if (thread.userId) {
             user = await ctx.db.get(thread.userId);
@@ -93,20 +147,10 @@ export const getCompanyThreadsAdmin = query({
       })
     );
 
-    let finalPayload = enrichedThreads;
-    if (args.searchTerm && args.searchTerm.trim() !== "") {
-        const term = args.searchTerm.toLowerCase();
-        finalPayload = enrichedThreads.filter(t => 
-             (t.title && t.title.toLowerCase().includes(term)) ||
-             (t.user && t.user.name.toLowerCase().includes(term)) ||
-             (t.user && t.user.email.toLowerCase().includes(term)) ||
-             (t.sourceUrl && t.sourceUrl.toLowerCase().includes(term))
-        );
-    }
-
     return {
-      ...pagedThreads,
-      page: finalPayload,
+      data: enrichedThreads,
+      totalPages,
+      totalCount
     };
   },
 });

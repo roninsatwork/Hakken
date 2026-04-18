@@ -255,6 +255,8 @@
                 "actions": "Azioni"
             },
             "unlimited": "Illimitato",
+            "infoTitle": "Come Funzionano le Quote",
+            "infoDesc": "Un singolo \"Messaggio\" scalato da un'allocazione costituisce un ciclo di interazione completo: 1 Prompt dell'Utente + 1 Risposta dell'IA.",
             "errors": {
                 "saveFailed": "Errore nel salvataggio.",
                 "deleteFailed": "Errore nell'eliminazione. Verifica che non sia assegnato."

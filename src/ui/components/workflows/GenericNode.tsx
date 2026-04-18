@@ -1,0 +1,48 @@
+import React from 'react';
+import { Handle, Position } from '@xyflow/react';
+import { Zap, Webhook, ArrowRightLeft, Settings2 } from 'lucide-react';
+
+export function GenericNode({ data, type }: { data: any; type: string }) {
+  let Icon = Settings2;
+  let color = 'text-foreground';
+  let border = 'border-border-dim';
+  let bg = 'bg-background';
+
+  if (type === 'triggerNode') {
+    Icon = Zap; color = 'text-yellow-500'; border = 'border-yellow-500/30'; bg = 'bg-yellow-500/10';
+  } else if (type === 'actionNode') {
+    Icon = Webhook; color = 'text-blue-500'; border = 'border-blue-500/30'; bg = 'bg-blue-500/10';
+  } else if (type === 'logicNode') {
+    Icon = ArrowRightLeft; color = 'text-purple-500'; border = 'border-purple-500/30'; bg = 'bg-purple-500/10';
+  }
+
+  return (
+    <div className={`flex flex-col w-[300px] bg-sidebar rounded-[24px] border ${border} shadow-2xl relative overflow-hidden backdrop-blur-3xl group transition-all duration-300`}>
+      {type !== 'triggerNode' && (
+        <Handle type="target" position={Position.Left} className="w-2 h-6 !bg-border-dim !border-0 !rounded-[4px] -ml-1 transition-all" />
+      )}
+      
+      <div className={`p-4 flex items-center gap-4 border-b border-border-dim/50`}>
+        <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${bg} ${color}`}>
+            <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex flex-col">
+            <span className="font-bold text-[14px] text-foreground tracking-wide leading-tight">
+                {data.label || 'Unnamed Node'}
+            </span>
+            <span className="text-[11px] uppercase tracking-widest text-muted mt-0.5">
+                {type.replace('Node', '')} Module
+            </span>
+        </div>
+      </div>
+
+      <div className="p-5 flex flex-col items-center justify-center min-h-[80px]">
+         <span className="text-[12px] text-secondary italic">
+             {data._inputMapping ? "Data schema bound" : "No I/O schemas defined"}
+         </span>
+      </div>
+
+      <Handle type="source" position={Position.Right} className="w-2 h-6 !bg-brand !border-0 !rounded-[4px] -mr-1 shadow-[0_0_12px_rgba(var(--brand),0.5)] transition-all" />
+    </div>
+  );
+}

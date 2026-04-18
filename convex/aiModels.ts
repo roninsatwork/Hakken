@@ -10,6 +10,45 @@ export const getModels = query({
   },
 });
 
+export const getOffsetPaginatedModels = query({
+  args: {
+    searchTerm: v.optional(v.string()),
+    page: v.number(),
+    pageSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    let models = await ctx.db.query("aiModels").order("asc").collect();
+
+    if (args.searchTerm) {
+      const term = args.searchTerm.toLowerCase();
+      models = models.filter((m) =>
+        (m.displayName || "").toLowerCase().includes(term) ||
+        (m.modelId || "").toLowerCase().includes(term)
+      );
+    }
+
+    models.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      if (a.isEnabled && !b.isEnabled) return -1;
+      if (!a.isEnabled && b.isEnabled) return 1;
+      return 0;
+    });
+
+    const totalCount = models.length;
+    const totalPages = Math.ceil(totalCount / args.pageSize) || 1;
+    const startIndex = (args.page - 1) * args.pageSize;
+    const endIndex = startIndex + args.pageSize;
+
+    return {
+      data: models.slice(startIndex, endIndex),
+      totalCount,
+      totalPages,
+      page: args.page,
+    };
+  },
+});
+
 export const resolveModelForExecution = internalQuery({
   args: { requestedModelId: v.optional(v.string()) },
   handler: async (ctx, args) => {

@@ -59,9 +59,11 @@ Agents define behavioral context, tools, and processing capabilities.
 - **Model Resolution Configuration:** Agents query the `aiModels` system config. If their specified LLM is inactive or invalid, it gracefully shifts to the active default, and eventually hard-fails to the explicit system default fallback (`gemini-3.1-pro-preview`).
 
 ### B. Workflows (The Routes)
-The Visual Node-Flow Builder interfaces multi-agent orchestration dynamically.
+The Visual Node-Flow Builder interfaces multi-agent orchestration dynamically within a Turing-complete Directed Acyclic Graph (DAG) architecture.
 - **Trigger Types:** Webhook payloads, Manual invocation, and Scheduled chron integrations.
-- Nodes process linearly on a visual canvas canvas, handing context and JSON envelopes sequentially between attached Inline Agents.
+- **DAG Execution Engine:** Workflows support true asynchronous execution across 11 distinct operational nodes. The backend scheduler seamlessly handles internal routing (Logic branching, Iterator loops, Merge syncs), deterministic payload manipulation (V8 Code execution sandboxes, external Action REST fetching, Database mutations), and explicit system halts (Wait timers run natively off the zero-cost convex `runAfter` parameters, and Human-in-the-Loop `approvalNode` checkpointing).
+- **Generative Node Configuration:** To bridge the complexity gap, the visual orchestrator utilizes a Dual-Mode UX (Standard/Developer). In Standard mode, administrators supply plain English commands; the platform natively traverses the DAG topology and calls `generateNodeConfig` via Vertex AI. The AI deterministicly translates the intent into secure `{{nodes.<ID>.output.<FIELD>}}` computational templates and injects them directly into the JSON configuration engine.
+- **Topological Integrity:** A strict Depth-First Search (DFS) topology algorithm maps out visual components on the React Flow front-end during save interactions, violently rejecting saves if infinite cyclical loops are created to protect execution pipelines.
 
 ### C. The Autonomous Swarm Engine
 The Swarm is a real-time, LangChain-style orchestrator capable of chaining dynamic agent interactions autonomously.

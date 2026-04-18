@@ -174,7 +174,7 @@ export const triggerManualRun = mutation({
     });
 
     // 2. Schedule the execution in the background
-    await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeWorkflow, {
+    await ctx.scheduler.runAfter(0, internal.workflowRuntime.startWorkflow, {
       workflowId: args.id,
       executionId: executionId,
       initialInput: args.initialInput,
@@ -205,7 +205,7 @@ export const runManualSync = action({
     });
 
     // 2. Run the workflow
-    return await ctx.runAction(internal.workflowRuntime.executeWorkflow, {
+    return await ctx.runAction(internal.workflowRuntime.startWorkflow, {
       workflowId: args.workflowId,
       executionId: executionId,
       initialInput: args.initialInput,

@@ -24,15 +24,50 @@ export default function WidgetIframePage() {
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Gateway State
+  const [hasPassedGateway, setHasPassedGateway] = useState(false);
+  const [visitorName, setVisitorName] = useState("");
+  const [visitorEmail, setVisitorEmail] = useState("");
 
   const messages = useQuery(
     api.chat.getMessages,
-    threadId ? { threadId } : "skip" // Wait, getMessages enforces getAuthUserId(ctx). 
-    // Wait, since we are doing an anonymous interaction, we need the user to be authenticated anonymously.
-    // Let's assume Convex Auth provides a JWT for anonymous users if we use useAuth(), but we haven't set that up yet here.
-    // For this brainstorm MVP, we'll bypass strict auth on a new specific query `getWidgetMessages` or temporarily allow it.
-    // Since `api.chat.getMessages` relies on userId, we need an anonymous auth flow.
+    threadId ? { threadId } : "skip"
   );
+
+  const prevMessagesCount = useRef(0);
+
+  // Audio Preload
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        audioRef.current = new Audio("/sounds/pop.mp3"); // Ensure this file exists, or it just silently fails
+        audioRef.current.volume = 0.5;
+    }
+  }, []);
+
+  // PostMessage for Embed Config
+  useEffect(() => {
+      if (widget) {
+           window.parent.postMessage({ 
+               type: 'SONAE_WIDGET_CONFIG', 
+               showPopup: widget.showPopupPreview && widget.enableGreeting, 
+               themeGreeting: widget.themeGreeting,
+               primaryColor: widget.themePrimaryColor || "#000000"
+           }, '*');
+      }
+  }, [widget]);
+
+  // Sound Effect logic
+  useEffect(() => {
+      if (messages && messages.length > prevMessagesCount.current) {
+          const latestMessage = messages[messages.length - 1];
+          if (latestMessage.role !== "user" && widget?.enableSounds) {
+              audioRef.current?.play().catch(e => console.log("Audio play blocked by browser", e));
+          }
+          prevMessagesCount.current = messages.length;
+      }
+  }, [messages, widget?.enableSounds]);
 
   // Auto-scroll
   useEffect(() => {
@@ -47,20 +82,17 @@ export default function WidgetIframePage() {
     }
 
     if (widget !== undefined) {
-       // Validate Domain via document.referrer
        const referrer = document.referrer;
        let isAllowed = false;
 
-       // If allowedDomains contains "*", allow all (dev only), else check host
        if (widget.allowedDomains && widget.allowedDomains.length > 0) {
            for (const domain of widget.allowedDomains) {
                if (referrer.includes(domain) || domain === "*") isAllowed = true;
            }
        } else {
-           isAllowed = true; // Fallback if none set
+           isAllowed = true;
        }
 
-       // Provide a native bypass for Sonae's own sandbox environments
        const platformHost = window.location.hostname;
        if (referrer.includes(platformHost)) {
            isAllowed = true;
@@ -68,30 +100,32 @@ export default function WidgetIframePage() {
 
        if (!isAllowed && process.env.NODE_ENV !== "development") {
            setIsInitializing(false);
-           // Show access denied
            return;
        }
 
-       // Try to load existing thread from localStorage
        const existingThreadKey = `sonae_widget_${widgetId}_thread`;
        const storedThreadId = localStorage.getItem(existingThreadKey) as Id<"threads"> | null;
        
        if (storedThreadId) {
            setThreadId(storedThreadId);
+           setHasPassedGateway(true);
            setIsInitializing(false);
        } else {
-           // We'll create the thread lazily when they send the first message to avoid spamming the DB
+           // Decide if gateway is needed
+           if (!widget.requireName && !widget.requireEmail) {
+               setHasPassedGateway(true);
+           }
            setIsInitializing(false);
        }
     }
   }, [widget, widgetId]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isSending || !widget) return;
+  const handleSend = async (overrideContent?: string) => {
+    const content = overrideContent || inputValue;
+    if (!content.trim() || isSending || !widget) return;
     
     setIsSending(true);
-    const content = inputValue;
-    setInputValue("");
+    if (!overrideContent) setInputValue("");
     
     try {
         let activeThreadId = threadId;
@@ -107,18 +141,24 @@ export default function WidgetIframePage() {
            localStorage.setItem(`sonae_widget_${widgetId}_thread`, newThreadId);
         }
 
+        // Apply Gateway System Mask
+        const isFirstMessage = !threadId;
+        let finalContent = content;
+
+        if (isFirstMessage && (visitorName || visitorEmail)) {
+            finalContent = `[System Gateway: User ${visitorName || 'unknown'} <${visitorEmail || 'unknown'}>]\n\n${content}`;
+        }
+
         // Send message
         await sendMessageQuery({
             threadId: activeThreadId,
-            content,
-            // Provide explicit dynamic agent override if the widget has an agent bound
+            content: finalContent,
             dynamicAgentId: widget.agentId
         });
 
     } catch (e) {
         console.error("Message failed", e);
-        // We'll reset the input if it failed
-        setInputValue(content);
+        if (!overrideContent) setInputValue(content);
     } finally {
         setIsSending(false);
     }
@@ -127,6 +167,13 @@ export default function WidgetIframePage() {
   const handleReset = () => {
      localStorage.removeItem(`sonae_widget_${widgetId}_thread`);
      setThreadId(null);
+     
+     // Reset gateway state if rules dictate
+     if (widget?.requireName || widget?.requireEmail) {
+         setHasPassedGateway(false);
+         setVisitorName("");
+         setVisitorEmail("");
+     }
   };
 
   // Loading State
@@ -136,7 +183,6 @@ export default function WidgetIframePage() {
       </div>
   );
 
-  // Not Found State
   if (widget === null) return (
        <div className="w-full h-screen bg-transparent flex items-center justify-center p-6 text-center">
            <div className="bg-card backdrop-blur-xl border border-destructive/20 rounded-[16px] p-6 shadow-2xl">
@@ -149,7 +195,7 @@ export default function WidgetIframePage() {
   const primaryColor = widget.themePrimaryColor || "#000000";
 
   return (
-    <div className="w-full h-screen flex flex-col bg-card/80 backdrop-blur-3xl overflow-hidden font-sans border border-border-dim rounded-[24px] shadow-2xl">
+    <div className="w-full h-screen flex flex-col bg-card/80 backdrop-blur-3xl overflow-hidden font-sans border border-border-dim rounded-[24px] shadow-2xl relative">
         
        {/* Widget Header */}
        <header 
@@ -157,8 +203,12 @@ export default function WidgetIframePage() {
           style={{ backgroundColor: `${primaryColor}10` }}
        >
            <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white/20 shadow-sm" style={{ backgroundColor: primaryColor }}>
-                   <Bot className="w-4 h-4 text-white" />
+               <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-white/20 shadow-sm" style={{ backgroundColor: primaryColor }}>
+                   {widget.themeLogoUrl ? (
+                       <img src={widget.themeLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+                   ) : (
+                       <Bot className="w-4 h-4 text-white" />
+                   )}
                </div>
                <div className="flex flex-col">
                    <h2 className="text-[14px] font-bold text-foreground">{widget.name || "Sonae Assistant"}</h2>
@@ -175,59 +225,106 @@ export default function WidgetIframePage() {
            )}
        </header>
 
-       {/* Chat Area */}
-       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-6">
-           
-           {/* Static Greeting Message */}
-           <div className="flex flex-col gap-1 w-full self-start max-w-[90%]">
-               <div className="p-4 rounded-[16px] rounded-tl-sm text-[13px] leading-[1.6] bg-foreground/5 border border-border-dim/50 text-foreground/90 shadow-sm">
-                   {widget.themeGreeting || "Hello! How can I help you today?"}
-               </div>
-           </div>
+       {/* Chat Area & Engine Canvas */}
+       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-6 relative">
+            
+           {!hasPassedGateway ? (
+               <div className="flex flex-col gap-4 my-auto p-4 max-w-[280px] w-full self-center">
+                    <h3 className="font-semibold text-foreground text-[15px]">Before we begin...</h3>
+                    <div className="flex flex-col gap-3">
+                        {widget.requireName && <input type="text" value={visitorName} onChange={e => setVisitorName(e.target.value)} placeholder="Full Name" className="w-full bg-background border border-border-dim shadow-sm rounded-[10px] px-4 py-3 text-[14px] focus:outline-none focus:border-brand/50 transition-colors" />}
+                        {widget.requireEmail && <input type="email" value={visitorEmail} onChange={e => setVisitorEmail(e.target.value)} placeholder="Email Address" className="w-full bg-background border border-border-dim shadow-sm rounded-[10px] px-4 py-3 text-[14px] focus:outline-none focus:border-brand/50 transition-colors" />}
+                        <button 
+                            disabled={
+                                (widget.requireName && !visitorName.trim()) || 
+                                (widget.requireEmail && !visitorEmail.trim() || (widget.requireEmail && !visitorEmail.includes('@')))
+                            } 
+                            onClick={() => setHasPassedGateway(true)} 
+                            style={{ backgroundColor: primaryColor }} 
+                            className="w-full py-3 rounded-[10px] text-white font-medium text-[14px] mt-2 shadow-md hover:opacity-90 disabled:opacity-50 transition-all"
+                        >
+                            Start Chat
+                        </button>
+                    </div>
+                </div>
+           ) : (
+                <>
+                   {/* Static Greeting Message */}
+                   {widget.enableGreeting && widget.themeGreeting && (!messages || messages.length === 0) && (
+                       <div className="flex flex-col gap-1 w-full self-start max-w-[90%]">
+                           <div className="p-4 rounded-[16px] rounded-tl-sm text-[13px] leading-[1.6] bg-foreground/5 border border-border-dim/50 text-foreground/90 shadow-sm">
+                               {widget.themeGreeting}
+                           </div>
+                       </div>
+                   )}
 
-           {/* Real Output Messages */}
-           <AnimatePresence>
-               {messages && messages.map((message) => {
-                   const isUser = message.role === "user";
-                   return (
-                      <motion.div
-                         key={message._id}
-                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                         className={`flex flex-col gap-1 max-w-[90%] ${isUser ? "self-end" : "self-start"}`}
-                      >
-                          <div 
-                             className={`p-4 rounded-[16px] text-[13px] leading-[1.6] shadow-sm ${
-                                 isUser 
-                                  ? "rounded-tr-sm text-white" 
-                                  : "rounded-tl-sm bg-foreground/5 border border-border-dim/50 text-foreground/90"
-                             }`}
-                             style={isUser ? { backgroundColor: primaryColor } : undefined}
-                          >
-                               {isUser ? message.content : <SonaeMarkdown content={message.content} />}
-                          </div>
-                      </motion.div>
-                   )
-               })}
-               
-               {/* Loading Indicator */}
-               {messages && messages.length > 0 && messages[messages.length - 1].role === "user" && (
-                   <motion.div
-                       initial={{ opacity: 0, y: 10 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       className="self-start p-4 rounded-[16px] rounded-tl-sm bg-foreground/5 border border-border-dim/50 flex items-center gap-2"
-                   >
-                       <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" />
-                       <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style={{ animationDelay: "0.2s" }} />
-                       <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style={{ animationDelay: "0.4s" }} />
-                   </motion.div>
-               )}
-           </AnimatePresence>
-           <div ref={messagesEndRef} />
+                   {/* Real Output Messages */}
+                   <AnimatePresence>
+                       {messages && messages.map((message) => {
+                           const isUser = message.role === "user";
+                           
+                           // Strip the hidden System Gateway prefix for UI rendering so they don't see it
+                           const displayContent = isUser && message.content.startsWith("[System Gateway")
+                                ? message.content.replace(/\[System Gateway:.*?\]\n\n/, "")
+                                : message.content;
+
+                           return (
+                              <motion.div
+                                 key={message._id}
+                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 className={`flex flex-col gap-1 max-w-[90%] ${isUser ? "self-end" : "self-start"}`}
+                              >
+                                  <div 
+                                     className={`p-4 rounded-[16px] text-[13px] leading-[1.6] shadow-sm ${
+                                         isUser 
+                                          ? "rounded-tr-sm text-white" 
+                                          : "rounded-tl-sm bg-foreground/5 border border-border-dim/50 text-foreground/90"
+                                     }`}
+                                     style={isUser ? { backgroundColor: primaryColor } : undefined}
+                                  >
+                                       {isUser ? displayContent : <SonaeMarkdown content={displayContent} />}
+                                  </div>
+                              </motion.div>
+                           )
+                       })}
+                       
+                       {/* Loading Indicator */}
+                       {messages && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+                           <motion.div
+                               initial={{ opacity: 0, y: 10 }}
+                               animate={{ opacity: 1, y: 0 }}
+                               className="self-start p-4 rounded-[16px] rounded-tl-sm bg-foreground/5 border border-border-dim/50 flex items-center gap-2"
+                           >
+                               <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" />
+                               <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style={{ animationDelay: "0.2s" }} />
+                               <span className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style={{ animationDelay: "0.4s" }} />
+                           </motion.div>
+                       )}
+                   </AnimatePresence>
+
+                   {/* Conversation Starters (Only show if no messages and no greeting rules conflict) */}
+                   {(!messages || messages.length === 0) && !widget.enableGreeting && widget.conversationStarters && widget.conversationStarters.length > 0 && (
+                        <div className="flex flex-col gap-2 mt-auto pb-2 self-end items-end w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+                            {widget.conversationStarters.map((starter, i) => (
+                                <button 
+                                    key={i} 
+                                    onClick={() => handleSend(starter)}
+                                    className="px-4 py-2.5 rounded-full border border-border-dim bg-background shadow-sm text-[13px] text-foreground font-medium max-w-[90%] text-right hover:border-brand/50 hover:bg-foreground/5 transition-all outline-none"
+                                    style={{ color: primaryColor }}
+                                >
+                                    {starter}
+                                </button>
+                            ))}
+                        </div>
+                   )}
+                   <div ref={messagesEndRef} />
+                </>
+           )}
        </div>
 
        {/* Input Area */}
-       <div className="p-4 border-t border-border-dim/50 bg-background/50 shrink-0">
+       <div className={`p-4 border-t border-border-dim/50 bg-background/50 shrink-0 transition-opacity ${!hasPassedGateway ? 'opacity-30 pointer-events-none' : ''}`}>
            <form 
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="flex items-center gap-2 relative bg-foreground/5 border border-border-dim rounded-[24px] px-2 py-2 focus-within:border-brand/40 transition-colors shadow-inner"
@@ -236,13 +333,13 @@ export default function WidgetIframePage() {
                    type="text"
                    value={inputValue}
                    onChange={(e) => setInputValue(e.target.value)}
-                   disabled={isSending}
-                   placeholder="Type your message..."
+                   disabled={isSending || !hasPassedGateway}
+                   placeholder={widget.themePlaceholder || "Type your message..."}
                    className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-muted/60 pl-4 py-1"
                />
                <button
                    type="submit"
-                   disabled={!inputValue.trim() || isSending}
+                   disabled={!inputValue.trim() || isSending || !hasPassedGateway}
                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-opacity disabled:opacity-50"
                    style={{ backgroundColor: primaryColor }}
                >

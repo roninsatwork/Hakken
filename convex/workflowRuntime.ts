@@ -1,137 +1,214 @@
 "use node";
 
-import { internalAction } from "./_generated/server";
+import { internalAction, action } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { resolveTemplate } from "./utils/templateParser";
 
-export const executeWorkflow = internalAction({
+export const startWorkflow = internalAction({
   args: {
     workflowId: v.id("workflows"),
     executionId: v.id("workflowExecutions"),
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const workflow = await ctx.runQuery((internal as any).workflows.internalGet, { id: args.workflowId });
-    if (!workflow) throw new Error("Workflow not found");
-
-    const nodes = JSON.parse(workflow.nodes || "[]");
-    const edges = JSON.parse(workflow.edges || "[]");
-
-    if (nodes.length === 0) {
-      await ctx.runMutation(internal.workflowExecutions.updateExecutionStatus, {
-        id: args.executionId,
-        status: "SUCCESS",
-        state: JSON.stringify({ message: "No nodes to execute" }),
-      });
-      return;
-    }
-
-    // 1. Resolve Execution Order (Simple linear path for now)
-    const targetNodes = new Set(edges.map((e: any) => e.target));
-    let currentNode = nodes.find((n: any) => !targetNodes.has(n.id));
-
-    if (!currentNode && nodes.length > 0) {
-      currentNode = nodes[0];
-    }
-
-    const sequence: any[] = [];
-    const visited = new Set();
-    
-    while (currentNode && !visited.has(currentNode.id)) {
-      sequence.push(currentNode);
-      visited.add(currentNode.id);
-      
-      const outgoingEdge = edges.find((e: any) => e.source === currentNode.id);
-      if (outgoingEdge) {
-        currentNode = nodes.find((n: any) => n.id === outgoingEdge.target);
-      } else {
-        currentNode = null;
-      }
-    }
-
-    // 2. Fetch existing steps to support Resuming
-    const existingSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, {
+    // 1. Initialize the Execution state and Global Payload
+    const startingNodes = await ctx.runMutation(internal.workflowEngine.initExecution, {
+      workflowId: args.workflowId,
       executionId: args.executionId,
+      initialInput: args.initialInput,
     });
-    const stepMap = new Map<string, any>(existingSteps.map((s: any) => [s.nodeId, s]));
 
-    let lastOutput = args.initialInput || "{}";
+    // 2. Schedule the execution of all start nodes immediately
+    for (const nodeId of startingNodes) {
+      await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNode, {
+        workflowId: args.workflowId,
+        executionId: args.executionId,
+        nodeId: nodeId
+      });
+    }
+  },
+});
 
-    // 3. Execution Loop
-    for (const node of sequence) {
-      const existingStep = stepMap.get(node.id) as any;
-      
-      // If step already succeeded, we skip and use its output for the next one
-      if (existingStep?.status === "SUCCESS") {
-        lastOutput = existingStep.output || "{}";
-        continue;
+export const executeNode = internalAction({
+  args: {
+    workflowId: v.id("workflows"),
+    executionId: v.id("workflowExecutions"),
+    nodeId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, { id: args.executionId });
+      if (!execution || execution.status === "FAILED") {
+        console.warn(`Execution ${args.executionId} is failed or missing. Halting node ${args.nodeId}.`);
+        return;
       }
+      
+      const workflow = await ctx.runQuery((internal as any).workflows.internalGet, { id: args.workflowId });
+      if (!workflow) throw new Error("Workflow not found");
 
-      // Prepare Step in DB
+      const nodes = JSON.parse(workflow.nodes || "[]");
+      const node = nodes.find((n: any) => n.id === args.nodeId);
+      if (!node) throw new Error(`Node ${args.nodeId} not found in graph topology`);
+
+      // Mark Step as Running
       await ctx.runMutation(internal.workflowExecutions.upsertStep, {
         executionId: args.executionId,
-        nodeId: node.id,
+        nodeId: args.nodeId,
         agentId: node.data?._agentId,
-        input: lastOutput,
+        input: execution.state || "{}",
         status: "RUNNING",
       });
 
-      try {
-        if (node.type === "agentNode" && node.data?._agentId) {
-          const result = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
-            agentId: node.data._agentId,
-            input: lastOutput,
-          });
+      // Execute based on Node Type (In Phase 1 we only have Agent nodes natively supported)
+      let outputPayload = "{}";
 
-          // Mark Step as Success BEFORE updating lastOutput to keep track of what went into it
-          await ctx.runMutation(internal.workflowExecutions.upsertStep, {
-            executionId: args.executionId,
-            nodeId: node.id,
-            agentId: node.data._agentId,
-            input: lastOutput,
-            output: result.output,
-            status: "SUCCESS",
-          });
+      const globalStatePayload = JSON.parse(execution.state || "{}");
+      let resolvedInput = execution.state || "{}"; // Default to raw state dump
 
-          lastOutput = result.output;
-        } else {
-          // Non-agent nodes or unconfigured nodes
-          await ctx.runMutation(internal.workflowExecutions.upsertStep, {
-            executionId: args.executionId,
-            nodeId: node.id,
-            input: lastOutput,
-            output: lastOutput,
-            status: "SUCCESS",
-          });
-        }
-      } catch (error: any) {
-        console.error(`Workflow execution failed at node ${node.id}:`, error);
-        
-        await ctx.runMutation(internal.workflowExecutions.upsertStep, {
-          executionId: args.executionId,
-          nodeId: node.id,
-          input: lastOutput,
-          status: "FAILED",
-          error: error.message || "Unknown error during node execution",
-        });
-
-        await ctx.runMutation(internal.workflowExecutions.updateExecutionStatus, {
-          id: args.executionId,
-          status: "FAILED",
-          state: JSON.stringify({ failedAt: node.id, error: error.message }),
-        });
-        
-        throw error;
+      if (node.data?._inputMapping) {
+        resolvedInput = JSON.stringify(resolveTemplate(node.data._inputMapping, globalStatePayload));
+      } else if (node.data?._inputTemplate) {
+        resolvedInput = resolveTemplate(node.data._inputTemplate, globalStatePayload);
       }
-    }
 
-    // 4. Finalize Execution
-    await ctx.runMutation(internal.workflowExecutions.updateExecutionStatus, {
-      id: args.executionId,
-      status: "SUCCESS",
-      state: lastOutput,
+      const currentNodeData = node.data || {};
+
+      if (node.type === "agentNode" && currentNodeData._agentId) {
+        const result = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
+          agentId: currentNodeData._agentId,
+          input: resolvedInput,
+        });
+        outputPayload = result.output;
+      } 
+      else if (node.type === "actionNode") {
+        try {
+          const config = JSON.parse(resolvedInput);
+          const method = config.method || 'GET';
+          const url = config.url;
+          if (!url) throw new Error("Missing URL for Action Node");
+          const headers = config.headers || {};
+          let body = config.body;
+          if (typeof body === 'object') body = JSON.stringify(body);
+          
+          const res = await fetch(url, { method, headers, body });
+          const text = await res.text();
+          try { outputPayload = JSON.stringify({ status: res.status, data: JSON.parse(text) }); }
+          catch { outputPayload = JSON.stringify({ status: res.status, data: text }); }
+        } catch (error: any) {
+          throw new Error('Action Fetch failed: ' + error.message);
+        }
+      }
+      else if (node.type === "codeNode") {
+        try {
+          // Extremely basic sandbox format using V8
+          const fn = new Function('input', `
+            try {
+               ${currentNodeData._inputTemplate || 'return input;'}
+            } catch(e) { return { error: e.message }; }
+          `);
+          let parseCtx = resolvedInput;
+          try { parseCtx = JSON.parse(resolvedInput) } catch (e) {}
+          const result = fn(parseCtx);
+          outputPayload = JSON.stringify(result);
+        } catch (error: any) {
+          throw new Error("Code execution failed: " + error.message);
+        }
+      }
+      else if (node.type === "waitNode") {
+        let delayMs = 5000; // default 5s
+        try {
+           const parsed = JSON.parse(resolvedInput);
+           if (parsed.delayMs) delayMs = parseInt(parsed.delayMs);
+        } catch(e) {}
+        outputPayload = JSON.stringify({ waitedMs: delayMs, _system: { delayMs } });
+      }
+      else if (node.type === "approvalNode") {
+        outputPayload = JSON.stringify({ _system: { halt: true, status: 'PENDING_APPROVAL' } });
+      }
+      else if (node.type === "logicNode") {
+        // Logic router checks input against bound conditions
+        outputPayload = JSON.stringify({ evaluated: resolvedInput });
+      }
+      else if (node.type === "databaseNode") {
+        outputPayload = JSON.stringify({ _system: { db: true }, payload: resolvedInput });
+      }
+      else if (node.type === "subWorkflowNode") {
+        outputPayload = JSON.stringify({ _system: { triggerSubWorkflow: true }, payload: resolvedInput });
+      }
+      else if (node.type === "iteratorNode" || node.type === "mergeNode") {
+        outputPayload = JSON.stringify({ _system: { structurallyHandled: true }, received: resolvedInput });
+      }
+      else {
+        // Dummy/Bypass execution for unsupported node types
+        outputPayload = JSON.stringify({ bypassed: true, nodeType: node.type, received: resolvedInput });
+      }
+
+      // Finalize the step, append to State memory, and find downstream tasks
+      const downstreamNodesToSchedule = await ctx.runMutation(internal.workflowEngine.finalizeNodeStep, {
+        executionId: args.executionId,
+        nodeId: args.nodeId,
+        outputData: outputPayload,
+      });
+
+      // Extract System commands
+      let delayMs = 0;
+      let halt = false;
+      try {
+         const outObj = JSON.parse(outputPayload);
+         if (outObj._system?.delayMs) delayMs = outObj._system.delayMs;
+         if (outObj._system?.halt) halt = true;
+      } catch(e) {}
+
+      if (halt) return; // Do not schedule next steps, workflow suspended.
+
+      // Recursively Schedule the next unlocked steps
+      for (const nextNodeId of downstreamNodesToSchedule) {
+        await ctx.scheduler.runAfter(delayMs, internal.workflowRuntime.executeNode, {
+          workflowId: args.workflowId,
+          executionId: args.executionId,
+          nodeId: nextNodeId
+        });
+      }
+
+    } catch (error: any) {
+      console.error(`Workflow execution failed at node ${args.nodeId}:`, error);
+      
+      await ctx.runMutation(internal.workflowEngine.failNodeStep, {
+        executionId: args.executionId,
+        nodeId: args.nodeId,
+        error: error.message || "Unknown error during node execution",
+      });
+      // The fail mutation marks the global execution as FAILED, halting further steps
+    }
+  },
+});
+
+export const resumeApprovalStep = action({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    nodeId: v.string(),
+    workflowId: v.id("workflows"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    // Manually force unlocked DAG path
+    const downstreamNodesToSchedule = await ctx.runMutation(internal.workflowEngine.resumeNodeStep, {
+      executionId: args.executionId,
+      nodeId: args.nodeId,
     });
 
-    return JSON.parse(lastOutput);
-  },
+    for (const nextNodeId of downstreamNodesToSchedule) {
+      await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNode, {
+        workflowId: args.workflowId,
+        executionId: args.executionId,
+        nodeId: nextNodeId
+      });
+    }
+
+    return true;
+  }
 });

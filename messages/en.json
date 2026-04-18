@@ -255,6 +255,8 @@
                 "actions": "Actions"
             },
             "unlimited": "Unlimited",
+            "infoTitle": "How Quotas Work",
+            "infoDesc": "A single \"Message\" deducted from an allocation constitutes one complete interaction cycle: 1 User Prompt + 1 AI Response.",
             "errors": {
                 "saveFailed": "Failed to save plan.",
                 "deleteFailed": "Failed to delete plan. Ensure it is not assigned."

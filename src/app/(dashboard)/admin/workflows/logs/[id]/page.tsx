@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   ArrowLeft,
@@ -13,7 +13,10 @@ import {
   Terminal,
   Code,
   Copy,
-  Check
+  Check,
+  Clock,
+  Unlock,
+  PlayCircle
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -26,7 +29,21 @@ export default function WorkflowExecutionLogPage() {
   const executionId = params.id as string;
 
   const exec = useQuery((api as any).scheduler.getWorkflowExecution, { executionId: executionId as any });
+  const resumeApprovalStep = useMutation((api as any).workflowRuntime.resumeApprovalStep);
   const [copied, setCopied] = useState(false);
+  const [isResuming, setIsResuming] = useState<string | null>(null);
+
+  const handleApprove = async (nodeId: string, workflowId: string) => {
+    setIsResuming(nodeId);
+    try {
+      await resumeApprovalStep({ executionId: executionId as any, nodeId, workflowId: workflowId as any });
+      alert("Workflow Resumed! The sub-systems will now proceed.");
+    } catch {
+      alert("Resume Failed. An error occurred unblocking the flow.");
+    } finally {
+      setIsResuming(null);
+    }
+  };
 
   const handleCopy = () => {
     if (!exec?.state) return;
@@ -108,8 +125,59 @@ export default function WorkflowExecutionLogPage() {
 
       <div className="w-full h-[1px] bg-border-dim/50 my-2" />
 
+      {/* Visual Execution Steps */}
+      {exec.steps && exec.steps.length > 0 && (
+        <div className="flex flex-col gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-secondary" />
+            <span className="text-[13px] font-bold tracking-widest uppercase text-foreground">Execution Steps</span>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {exec.steps.map((step: any, idx: number) => (
+              <div key={step._id} className="flex flex-col gap-3 p-5 rounded-[16px] bg-sidebar/30 border border-border-dim/50 transition-all hover:bg-sidebar/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-border-dim/30 text-[11px] font-mono font-bold text-muted">
+                      {idx + 1}
+                    </span>
+                    <span className="font-semibold text-foreground text-[14px]">Node: {step.nodeId}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {step.status === "SUCCESS" && <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-500 rounded-full font-bold text-[11px] uppercase"><CheckCircle2 className="w-3.5 h-3.5" /> SUCCESS</span>}
+                    {step.status === "FAILED" && <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-500 rounded-full font-bold text-[11px] uppercase"><XCircle className="w-3.5 h-3.5" /> FAILED</span>}
+                    {step.status === "RUNNING" && <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full font-bold text-[11px] uppercase"><Loader2 className="w-3.5 h-3.5 animate-spin" /> RUNNING</span>}
+                    {step.status === "PENDING" && <span className="flex items-center gap-1.5 px-3 py-1 bg-gray-500/10 text-gray-500 rounded-full font-bold text-[11px] uppercase"><Clock className="w-3.5 h-3.5" /> PENDING</span>}
+                    {step.status === "PENDING_APPROVAL" && <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 text-orange-500 rounded-full font-bold text-[11px] uppercase"><Unlock className="w-3.5 h-3.5" /> NEEDS APPROVAL</span>}
+                  </div>
+                </div>
+
+                {step.error && (
+                  <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-[8px] text-[13px] text-red-400 font-mono">
+                    {step.error}
+                  </div>
+                )}
+                
+                {step.status === "PENDING_APPROVAL" && (
+                  <div className="mt-2 flex">
+                    <button
+                      onClick={() => handleApprove(step.nodeId, exec.workflowId)}
+                      disabled={isResuming === step.nodeId}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-brand text-background rounded-full font-bold text-[13px] hover:bg-brand/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-brand/20"
+                    >
+                      {isResuming === step.nodeId ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                      Approve & Resume Flow
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Execution State Payload */}
-      <div className="flex flex-col gap-4 relative">
+      <div className="flex flex-col gap-4 relative mt-4">
         <div className="flex items-center gap-2">
           <Terminal className="w-5 h-5 text-secondary" />
           <span className="text-[13px] font-bold tracking-widest uppercase text-foreground">{t('output.title')}</span>

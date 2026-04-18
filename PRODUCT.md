@@ -24,7 +24,8 @@ Sonae does not rely on a single, massive prompt. It operates a dynamic assembly 
 
 *   **Dynamic Model Resolution:** Admins can effortlessly toggle which Vertex LLM model powers the platform globally (e.g., routing from a fast, cheap model to a highly cognitive model like `gemini-1.5-pro-preview`) without requiring code deployments.
 *   **The Behavioral Rule Engine:** Workspaces can configure explicit "Rules" (e.g., `"IF USER ASKS ABOUT PRICING -> NEVER REVEAL THE COST, DIRECT TO SALES"`). During message processing, these active rules are dynamically aggregated and forcefully injected into the AI's system instruction, violently overriding its baseline training.
-*   **Swarm Agent Workflows:** Allows the creation of visually structured workflows where multiple distinct AI specialized agents interact, handing JSON context downstream sequentially (e.g., A categorization agent feeds into a drafting agent, which feeds into a compliance checker).
+*   **Turing-Complete Workflow Orchestrator:** Allows the creation of expansive, visually structured Directed Acyclic Graphs (DAG) where internal AI agents natively interconnect with programmatic logic. The built-in runtime natively executes Javascript V8 Sandboxes, HTTP API boundaries, database mutations, and human-in-the-loop checkpoints asynchronously, allowing you to sequence thousands of dynamic computational loops without exhausting server limits.
+*   **Generative Flow Configuration:** An integrated AI copilot completely removes the low-code barrier for executives. Rather than writing manual JSON array logic to link complex graph connections together, users simply instruct the nodes in plain English. Sonae algorithmically scrapes the visual acyclic structure and commands Vertex AI to securely compile and inject the computational state map automatically.
 
 ---
 

@@ -363,7 +363,7 @@ export default defineSchema({
     agentId: v.optional(v.id("agents")),
     input: v.string(), // JSON stringified
     output: v.optional(v.string()), // JSON stringified
-    status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING_APPROVAL")),
     error: v.optional(v.string()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
@@ -439,6 +439,14 @@ export default defineSchema({
     allowedDomains: v.array(v.string()), // Security boundary e.g., ["https://acmecorp.com"]
     themePrimaryColor: v.optional(v.string()),
     themeGreeting: v.optional(v.string()),
+    themeLogoUrl: v.optional(v.string()),
+    themePlaceholder: v.optional(v.string()),
+    enableSounds: v.optional(v.boolean()),
+    showPopupPreview: v.optional(v.boolean()),
+    requireName: v.optional(v.boolean()),
+    requireEmail: v.optional(v.boolean()),
+    conversationStarters: v.optional(v.array(v.string())),
+    enableGreeting: v.optional(v.boolean()),
     isActive: v.boolean(),
     isGlobal: v.optional(v.boolean()),
     createdBy: v.id("users"),

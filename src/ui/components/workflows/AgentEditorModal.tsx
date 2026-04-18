@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Bot, BrainCircuit, Globe, Key, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 
 export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
   const t = useTranslations('admin.workflows.designer.editor');
@@ -14,8 +15,10 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
   const tCommon = useTranslations('common');
   const allModels = useQuery(api.aiModels.getModels) || [];
   const activeModels = allModels.filter((m) => m.isEnabled);
+  const params = useParams();
 
   const updateAgent = useMutation(api.agents.updateAgent);
+  const createInlineAgent = useMutation(api.agents.createInlineAgent);
   const promoteToGlobal = useMutation((api as any).agents.promoteToGlobal);
 
   const [formData, setFormData] = useState<any>({
@@ -51,11 +54,16 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agent) return;
     setIsSaving(true);
+    let targetAgentId = agentId;
+
     try {
+      if (!targetAgentId) {
+         targetAgentId = await createInlineAgent({ workflowId: params.id as any });
+      }
+
       await updateAgent({
-        id: agent._id,
+        id: targetAgentId,
         name: formData.name,
         systemPrompt: formData.systemPrompt,
         inputSchema: formData.inputSchema,
@@ -75,6 +83,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
         inputSchema: formData.inputSchema,
         outputSchema: formData.outputSchema,
         modelId: formData.modelId,
+        _agentId: targetAgentId,
       });
 
       onClose();
@@ -97,10 +106,11 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
   };
 
   if (!node) return null;
+  const isLoading = agentId && agent === undefined;
 
   return (
     <SonaeModal size="xl" isOpen={!!node} onClose={onClose} title={formData.name || t('configureAgent')}>
-      {!agent ? (
+      {isLoading ? (
         <div className="py-8 text-center text-muted text-sm border border-border-dim rounded-[12px]">{t('loading')}</div>
       ) : (
         <form onSubmit={handleSave} className="flex flex-col gap-6">
@@ -257,7 +267,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
 
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 pt-6 border-t border-border-dim gap-4">
             <div>
-              {agent.isGlobal === false && (
+              {agent?.isGlobal === false && (
                 <button
                   type="button"
                   onClick={handlePromote}
@@ -281,7 +291,7 @@ export function AgentEditorModal({ node, onClose, onUpdateNode }: any) {
                 disabled={isSaving}
                 className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-md shadow-foreground/10 text-sm disabled:opacity-50"
               >
-                {isSaving ? tCommon('saving') : (agent.isGlobal ? tCommon('save') : t('save'))}
+                {isSaving ? tCommon('saving') : (agent?.isGlobal ? tCommon('save') : t('save'))}
               </button>
             </div>
           </div>

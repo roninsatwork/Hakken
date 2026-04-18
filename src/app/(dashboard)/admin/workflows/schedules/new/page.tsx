@@ -178,18 +178,18 @@ export default function NewSchedulePage() {
             {payloadType === "workflow" && (
               formData.workflowId ? (
                 // Selected State
-                <div className="flex items-center justify-between p-4 rounded-[12px] bg-brand/10 border border-brand/30 shadow-inner group transition-all">
+                <div className="flex items-center justify-between p-4 rounded-[12px] bg-sidebar/50 border border-border-dim shadow-inner group transition-all">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[14px] font-bold text-brand flex items-center gap-2">
+                    <span className="text-[14px] font-bold text-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       {workflows.find((w: any) => w._id === formData.workflowId)?.name}
                     </span>
-                    <span className="text-[12px] text-brand/70 font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
+                    <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, workflowId: "" })}
-                    className="px-4 py-2 rounded-[8px] bg-brand/20 text-brand text-[11px] font-bold tracking-widest uppercase hover:bg-brand hover:text-white transition-all"
+                    className="px-4 py-2 rounded-[8px] bg-foreground/10 text-foreground text-[11px] font-bold tracking-widest uppercase hover:bg-foreground hover:text-background transition-all"
                   >
                     {t('fields.workflow.change')}
                   </button>
@@ -233,18 +233,18 @@ export default function NewSchedulePage() {
             {payloadType === "agent" && (
               formData.agentId ? (
                 // Selected Agent State (matching screenshot style)
-                <div className="flex items-center justify-between p-4 rounded-[12px] bg-[#d97736]/10 border border-[#d97736]/30 shadow-inner group transition-all">
+                <div className="flex items-center justify-between p-4 rounded-[12px] bg-sidebar/50 border border-border-dim shadow-inner group transition-all">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[14px] font-bold text-[#d97736] flex items-center gap-2">
+                    <span className="text-[14px] font-bold text-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       {agents.find((a: any) => a._id === formData.agentId)?.name}
                     </span>
-                    <span className="text-[12px] text-[#d97736]/70 font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
+                    <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, agentId: "" })}
-                    className="px-4 py-2 rounded-[8px] bg-[#d97736]/20 text-[#d97736] text-[11px] font-bold tracking-widest uppercase hover:bg-[#d97736] hover:text-white transition-all"
+                    className="px-4 py-2 rounded-[8px] bg-foreground/10 text-foreground text-[11px] font-bold tracking-widest uppercase hover:bg-foreground hover:text-background transition-all"
                   >
                     {t('fields.agent.change')}
                   </button>

@@ -228,10 +228,19 @@ export const getWorkflowExecution = query({
     const wf = exec.workflowId ? await ctx.db.get(exec.workflowId) : null;
     const user = exec.startedBy ? await ctx.db.get(exec.startedBy) : null;
 
+    const steps = await ctx.db
+      .query("workflowExecutionSteps")
+      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
+      .collect();
+
+    // Sort steps chronologically
+    steps.sort((a, b) => a.startedAt - b.startedAt);
+
     return {
       ...exec,
       workflowName: wf?.name || "Deleted Workflow",
-      startedByName: user?.name || user?.email || "System"
+      startedByName: user?.name || user?.email || "System",
+      steps
     };
   }
 });

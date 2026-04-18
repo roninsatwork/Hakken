@@ -11,6 +11,8 @@ import {
   ShieldAlert,
   Bot,
   User as UserIcon,
+  ChevronLeft,
+  ChevronRight,
   Database,
   Copy,
   Check
@@ -27,12 +29,21 @@ export default function CompanyChatLogsDashboard() {
   const [selectedThreadId, setSelectedThreadId] = useState<Id<"threads"> | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
   // Pagination bounds scoped to company
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.chatAdmin.getCompanyThreadsAdmin,
-    { companyId, searchTerm },
-    { initialNumItems: 50 }
-  );
+  const paginatedData = useQuery(api.chatAdmin.getOffsetPaginatedCompanyThreads, {
+    companyId,
+    searchTerm,
+    page: currentPage,
+    pageSize: itemsPerPage,
+  });
+
+  const results = paginatedData?.data || [];
+  const status = paginatedData === undefined ? "LoadingFirstPage" : "Done";
+  const totalCount = paginatedData?.totalCount || 0;
+  const totalPages = paginatedData?.totalPages || 1;
 
   // Message Extractor securely bound to current selection
   const messages = useQuery(
@@ -161,7 +172,10 @@ export default function CompanyChatLogsDashboard() {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Search transcripts or IPs..."
                 className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-muted/60 tracking-wide"
               />
@@ -231,20 +245,30 @@ export default function CompanyChatLogsDashboard() {
               ))}
             </AnimatePresence>
 
-            {/* Pagination Gate */}
-            {status === "CanLoadMore" && (
-              <button
-                onClick={() => loadMore(50)}
-                className="w-full mt-4 py-3 rounded-[12px] bg-foreground/5 border border-border-dim text-[12px] uppercase font-bold tracking-[0.2em] text-secondary hover:text-foreground transition-colors hover:bg-foreground/10"
-              >
-                LOAD MORE
-              </button>
-            )}
-            {status === "LoadingMore" && (
-              <div className="w-full mt-4 py-3 flex justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-muted" />
-              </div>
-            )}
+          </div>
+
+          {/* Pagination Footer constraints adapted for 320px sidebar */}
+          <div className="flex items-center justify-between p-3 border-t border-border-dim bg-background/50 shrink-0">
+             <div className="text-[11px] text-muted tracking-wide flex flex-col xl:flex-row xl:gap-1">
+                 <span>Showing <strong className="text-foreground">{totalCount === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong></span>
+                 <span>to <strong className="text-foreground">{Math.min(currentPage * itemsPerPage, totalCount)}</strong> of <strong className="text-foreground">{totalCount}</strong></span>
+             </div>
+             <div className="flex items-center gap-1.5">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+             </div>
           </div>
         </div>
 

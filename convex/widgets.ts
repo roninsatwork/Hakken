@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 export const getWidgetsByCompany = query({
   args: { companyId: v.id("companies") },
@@ -61,6 +62,14 @@ export const getWidgetById = query({
       allowedDomains: widget.allowedDomains,
       themePrimaryColor: widget.themePrimaryColor,
       themeGreeting: widget.themeGreeting,
+      themeLogoUrl: widget.themeLogoUrl,
+      themePlaceholder: widget.themePlaceholder,
+      enableSounds: widget.enableSounds,
+      showPopupPreview: widget.showPopupPreview,
+      requireName: widget.requireName,
+      requireEmail: widget.requireEmail,
+      enableGreeting: widget.enableGreeting,
+      conversationStarters: widget.conversationStarters,
       agentAvatar: agentAvatar,
     };
   },
@@ -75,6 +84,14 @@ export const saveWidget = mutation({
     allowedDomains: v.array(v.string()),
     themePrimaryColor: v.optional(v.string()),
     themeGreeting: v.optional(v.string()),
+    themeLogoUrl: v.optional(v.string()),
+    themePlaceholder: v.optional(v.string()),
+    enableSounds: v.optional(v.boolean()),
+    showPopupPreview: v.optional(v.boolean()),
+    requireName: v.optional(v.boolean()),
+    requireEmail: v.optional(v.boolean()),
+    conversationStarters: v.optional(v.array(v.string())),
+    enableGreeting: v.optional(v.boolean()),
     isActive: v.boolean(),
     isGlobal: v.optional(v.boolean()),
   },
@@ -95,6 +112,14 @@ export const saveWidget = mutation({
 
     const now = Date.now();
 
+    let finalLogoUrl = args.themeLogoUrl;
+    if (finalLogoUrl && !finalLogoUrl.startsWith("http")) {
+       const url = await ctx.storage.getUrl(finalLogoUrl as Id<"_storage">);
+       if (url) {
+           finalLogoUrl = url;
+       }
+    }
+
     if (args.widgetId) {
       // Update
       const existing = await ctx.db.get(args.widgetId);
@@ -107,6 +132,14 @@ export const saveWidget = mutation({
         allowedDomains: args.allowedDomains,
         themePrimaryColor: args.themePrimaryColor,
         themeGreeting: args.themeGreeting,
+        themeLogoUrl: finalLogoUrl,
+        themePlaceholder: args.themePlaceholder,
+        enableSounds: args.enableSounds,
+        showPopupPreview: args.showPopupPreview,
+        requireName: args.requireName,
+        requireEmail: args.requireEmail,
+        conversationStarters: args.conversationStarters,
+        enableGreeting: args.enableGreeting,
         isActive: args.isActive,
         isGlobal: args.isGlobal,
       });
@@ -131,6 +164,14 @@ export const saveWidget = mutation({
         allowedDomains: args.allowedDomains,
         themePrimaryColor: args.themePrimaryColor,
         themeGreeting: args.themeGreeting,
+        themeLogoUrl: finalLogoUrl,
+        themePlaceholder: args.themePlaceholder,
+        enableSounds: args.enableSounds,
+        showPopupPreview: args.showPopupPreview,
+        requireName: args.requireName,
+        requireEmail: args.requireEmail,
+        conversationStarters: args.conversationStarters,
+        enableGreeting: args.enableGreeting,
         isActive: args.isActive,
         isGlobal: args.isGlobal,
         createdBy: userId,
@@ -185,6 +226,17 @@ export const deleteWidget = mutation({
     });
 
     return true;
+  },
+});
+
+export const generateWidgetUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized");
+    }
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
