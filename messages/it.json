@@ -234,7 +234,7 @@
             "descPlaceholder": "Descrizione opzionale di cosa include questo piano",
             "limitLabel": "Limite Messaggi Mensili",
             "limitPlaceholder": "Inserisci numero o -1 per illimitato",
-            "priceLabel": "Prezzo (GBP)",
+            "priceLabel": "Prezzo Mensile (GBP)",
             "pricePlaceholder": "Costo mensile in GBP",
             "activeLabel": "Piano Attivo",
             "savePlan": "Salva Piano",

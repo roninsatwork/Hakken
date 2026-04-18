@@ -52,10 +52,10 @@ Sonae's intelligence goes beyond text-based chat strings. It features a profound
 
 Sonae calculates computing resources natively on the edge to support robust tenant billing or tracking models, structured strictly around a SaaS B2B subscription foundation.
 
-*   **B2B Subscription Plans:** The platform operates a dynamic, global "Subscription Plan" mapping system. Workspaces are assigned explicit tiers (e.g., Enterprise, Unlimited) that dictate their core computing quotas.
-*   **Dynamic MRR & Telemetry:** Super Admins have access to a real-time, interactive analytics dashboard tracking exact Monthly Recurring Revenue (MRR) dynamically aggregated off active tenant plans. The optics provide live tracking of how much GBP (£) a specific Company or Public Chat Widget has consumed on the platform over the last 30 days.
-*   **Granular Cost Resolution:** Every outbound and inbound request to Vertex API is measured. `inputTokens` and `outputTokens` are aggregated, multiplied by the specific model's API cost per million, and logged dynamically into `agentTransactions`.
-*   **Telemetric Exporting:** Critical Sonae analytics (MRR Distribution, Logistic Invocations, Token Flux) are structurally decoupled for corporate reporting. Authorized administrators can dynamically extract vector-perfect `.png` snapshots of live charts directly from the dashboard, natively syncing with the active Light/Dark OS theme.
+*   **Subscription Usage & Limits:** The platform operates a dynamic, B2B "Subscription Plan" system. Workspaces are assigned explicit tiers (e.g., Enterprise, Unlimited) that dictate their core computing quotas (message limits).
+*   **Value-Focused Dashboard Analytics:** Rather than exposing internal API fractional costs, the dashboard highlights structural automation value. Administrators can securely view Action interaction volumes (Internal AI Ops vs. External Widget interactions) alongside their proprietary "Knowledge Assets" utilization in real-time.
+*   **Token & Operations Telemetry:** `inputTokens` and `outputTokens` are aggregated transparently to prove system load and efficiency without translating it into raw backend AWS/Google compute costs for the client.
+*   **Telemetric Exporting:** Critical Sonae analytics (Traffic Pipelines, Interaction Feeds, Plan Usage) are structurally decoupled for corporate reporting. Authorized administrators can dynamically extract vector-perfect `.png` snapshots of live charts directly from the dashboard, natively syncing with the active Light/Dark OS theme.
 
 ---
 

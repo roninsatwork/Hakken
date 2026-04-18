@@ -350,7 +350,7 @@ export const getCompanyMetrics = query({
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
-    const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
+    const timelineMap: Record<string, { cost: number; messages: number; internalMessages: number; externalMessages: number; inputTokens: number; outputTokens: number }> = {};
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
 
     const companyObj = await ctx.db.get(args.companyId);
@@ -378,6 +378,7 @@ export const getCompanyMetrics = query({
 
     const rawMessages = await ctx.db.query("messages").filter((q: any) => q.eq(q.field("role"), "assistant")).collect();
     const rawAgentTxs = await ctx.db.query("agentTransactions").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
+    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").filter((q: any) => q.eq(q.field("companyId"), args.companyId)).collect();
 
     const startTimeStamp = startDate.getTime();
     const endTimeStamp = endDate.getTime();
@@ -461,9 +462,16 @@ export const getCompanyMetrics = query({
            dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
        }
 
-       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
+       if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
        timelineMap[dateGroup].cost += gbpCost;
        timelineMap[dateGroup].messages += 1;
+       
+       if (msg.widgetId) {
+          timelineMap[dateGroup].externalMessages += 1;
+       } else {
+          timelineMap[dateGroup].internalMessages += 1;
+       }
+       
        timelineMap[dateGroup].inputTokens += inputs;
        timelineMap[dateGroup].outputTokens += outputs;
 
@@ -525,6 +533,8 @@ export const getCompanyMetrics = query({
        date: k,
        cost: Number(timelineMap[k].cost.toFixed(4)),
        messages: timelineMap[k].messages,
+       internalMessages: timelineMap[k].internalMessages,
+       externalMessages: timelineMap[k].externalMessages,
        inputTokens: timelineMap[k].inputTokens,
        outputTokens: timelineMap[k].outputTokens
     }));
@@ -534,7 +544,7 @@ export const getCompanyMetrics = query({
        .slice(0, 10);
 
     const topAgents = Object.values(agentLeaderboard)
-       .sort((a,b) => b.cost - a.cost)
+       .sort((a,b) => b.interactions - a.interactions)
        .slice(0, 10);
 
     const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
@@ -553,6 +563,7 @@ export const getCompanyMetrics = query({
           avgCostPerMessage: Number(avgCostPerMessage.toFixed(4)),
           aggregationType,
           mrr: Number(mrr.toFixed(2)),
+          knowledgeDocuments: knowledgeDocs.length,
           mau: 0
        },
        topUsers,

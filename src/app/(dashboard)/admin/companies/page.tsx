@@ -287,7 +287,7 @@ export default function CompaniesPage() {
                   <option value="">No Plan (Unlimited / System Default)</option>
                   {activePlans.map(plan => (
                      <option key={plan._id} value={plan._id}>
-                         {plan.name} {plan.messageLimit === -1 ? '(Unlimited)' : `(${plan.messageLimit} msgs)`} - £{plan.priceGBP}
+                         {plan.name} {plan.messageLimit === -1 ? '(Unlimited)' : `(${plan.messageLimit} msgs)`} - £{plan.priceGBP}/mo
                      </option>
                   ))}
              </select>

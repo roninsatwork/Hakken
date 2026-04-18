@@ -157,9 +157,9 @@ To secure downstream rendering performance and guard against edge cases, Sonae i
 
 Sonae operates several unauthenticated and automated tracking interfaces that require specific structural considerations when modifying data pipelines.
 
-### A. Analytics & Financial Telemetry
-- **Granular Cost Resolution:** Every single interaction hitting the `generateSonaeResponse` proxy natively pipes a detailed logging footprint to `agentTransactions`.
-- **Scope:** Variables including `inputTokens`, `outputTokens`, `modelUsed`, and `costGBP` are mathematically calculated on the fly and aggregated into the Admin Dashboards. This allows Sonae to strictly bill and track AI usage separated intrinsically by `companyId` (Tenant) or `widgetId` (Anonymous Traffic).
+### A. Value & Interaction Telemetry
+- **Granular Execution Resolution:** Every single interaction hitting the `generateSonaeResponse` proxy natively pipes a detailed logging footprint to `agentTransactions`.
+- **Scope:** Variables including `inputTokens`, `outputTokens`, `modelUsed`, and total executions are aggregated into the Admin Dashboards. This allows Sonae to strictly correlate system usage with Active Subscription limits, separating traffic intrinsically by `companyId` (Internal Tenant) or `widgetId` (External Anonymous Traffic).
 
 ### B. Encrypted Widget Architecture
 - **Boundary Defenses:** Sonae extends AI functionality to external consumer websites via public Chat Widgets. Public ingestion points operate completely unauthenticated but are strictly hardened via `allowedDomains` cross-origin enforcement matrices.

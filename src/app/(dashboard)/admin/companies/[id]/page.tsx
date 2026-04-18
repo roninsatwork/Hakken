@@ -144,13 +144,6 @@ export default function CompanyOverviewPage() {
           {/* SaaS Core Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricBlock
-              icon={PoundSterling}
-              title={t('metrics.grossBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toFixed(4)}`}
-              sub={t('metrics.tenantAiCost')}
-              delay={0}
-            />
-            <MetricBlock
               icon={Activity}
               title={t('metrics.tokenVolume')}
               value={(data.aggregates.totalTokens ?? 0).toLocaleString()}
@@ -165,11 +158,18 @@ export default function CompanyOverviewPage() {
               delay={0.2}
             />
             <MetricBlock
+              icon={BrainCircuit}
+              title={"Knowledge Assets"}
+              value={(data.aggregates.knowledgeDocuments ?? 0).toLocaleString()}
+              sub={"PROPRIETARY RAG VECTORS"}
+              delay={0.3}
+            />
+            <MetricBlock
               icon={Users}
               title={t('metrics.activeIndividuals')}
               value={(data.aggregates.activeUsers ?? 0).toLocaleString()}
               sub={t('metrics.loginsDesc')}
-              delay={0.3}
+              delay={0.4}
             />
           </div>
 
@@ -194,13 +194,13 @@ export default function CompanyOverviewPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data.timeline}>
                       <defs>
-                        <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorMsg" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorInternal" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
                           <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorExternal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis
@@ -215,8 +215,7 @@ export default function CompanyOverviewPage() {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 11, fill: '#888888' }}
-                        tickFormatter={(val) => `£${Number(val || 0).toFixed(4)}`}
-                        width={80}
+                        width={40}
                       />
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                       <Tooltip
@@ -224,27 +223,28 @@ export default function CompanyOverviewPage() {
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
                         formatter={(value: any, name: any) => [
-                          name === 'cost' ? `£${Number(value || 0).toFixed(4)}` : value,
-                          name === 'cost' ? t('chart.estimatedAiCost') : t('chart.workspaceActions')
+                          value,
+                          name === "internalMessages" ? "Internal Executions" : "External Widget Traffic"
                         ]}
                       />
+
                       <Area
                         yAxisId="left"
                         type="monotone"
-                        dataKey="cost"
-                        stroke="#f43f5e"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorCost)"
-                      />
-                      <Area
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="messages"
+                        dataKey="internalMessages"
                         stroke="#8b5cf6"
                         strokeWidth={3}
                         fillOpacity={1}
-                        fill="url(#colorMsg)"
+                        fill="url(#colorInternal)"
+                      />
+                      <Area
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="externalMessages"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorExternal)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -259,8 +259,8 @@ export default function CompanyOverviewPage() {
             </ChartExportWrapper>
           </div>
 
-          {/* Deep Dark Leaderboards (Full Width Top Users) */}
-          <div className="w-full mt-2">
+          {/* Deep Dark Leaderboards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
             <motion.section
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
               className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
@@ -285,14 +285,46 @@ export default function CompanyOverviewPage() {
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.email}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-8 shrink-0 pr-2">
+                      <div className="flex items-center justify-end shrink-0 pr-2">
                         <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Actions</span>
                           <span className="text-[13px] font-bold text-foreground tracking-tight">{u.messages.toLocaleString()}</span>
                         </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.section>
+
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <BrainCircuit className="w-4 h-4 text-brand opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">Top Orchestrators</h2>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                {data.topAgents.length === 0 ? (
+                  <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">NO RAG DATA</div>
+                ) : (
+                  data.topAgents.map((a, i) => (
+                    <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
+                      <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
+                        <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
+                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
+                          <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Workflow Agent</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end shrink-0 pr-2">
                         <div className="flex flex-col items-end w-[70px]">
-                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{u.cost.toFixed(4)}</span>
+                          <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Actions</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{a.interactions.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
