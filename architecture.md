@@ -134,19 +134,25 @@ To secure downstream rendering performance and guard against edge cases, Sonae i
 ### A. Strict Edge-Pagination (15-Row Constraints)
 - **The Mega Array Threat:** Administrative feeds (e.g. `getAllUsers`) must NEVER aggregate entire database pools into UI memory via standard `.collect()` or `useQuery` commands.
 - **Protocol:** All dynamic tables and data feeds must utilize Edge-constrained `.paginate()` hooks native to Convex. Front-end components invoke `usePaginatedQuery` tightly coupled with a `15-row` mapping threshold and an interactive "Load More" interface node.
-- **Server-Side Searching:** Rather than iterating huge JS arrays locally, searches must be piped straight to the backend via `.withSearchIndex()` parameters to map directly against Convex vectors instantly.
 
-### B. Internationalization (i18n) Parity Locking
+### B. V8 Memory Safety (Banning `.collect().filter()`)
+- **JavaScript Linear Scans:** Backend internal functions fetching data must NEVER extract tables into RAM using `.collect()` just to filter them using JavaScript methods (e.g., `rawMessages.filter(m => m.companyId === id)`).
+- **Index Primacy:** All internal logic filtering schemas by tenant identity or timestamps must be natively executed via database B-Trees using explicitly generated indexes. e.g., `ctx.db.query("users").withIndex("by_company", q => q.eq("companyId", id)).collect()`.
+
+### C. Server-Side Searching
+- Rather than iterating huge JS arrays locally, searches must be piped straight to the backend via `.withSearchIndex()` parameters to map directly against Convex vectors instantly.
+
+### D. Internationalization (i18n) Parity Locking
 - Sonae's structural localization framework runs dynamically off `/messages/en.json` and `/messages/it.json`.
 - **Structural Integrity:** These JSON trees must perfectly map one another. Dropping keys or creating unmapped variables breaks the Next-Intl parser silently. 
 - **The Parity Test:** Component integrity is proven mechanically via the `i18n.test.ts` loop to violently fail builds if keys ever orphan.
 
-### C. Ring 3 LLM Defenses & Denial-of-Wallet
+### E. Ring 3 LLM Defenses & Denial-of-Wallet
 - Under no circumstances will Google GenAI/Vertex execution nodes (`generateSonaeResponse`) ingest unbounded text streams from the client.
 - **Payload Truncation:** To defend against autonomous Resource Exhaustion ("Denial of Wallet") attacks, `ai.ts` actions strictly hard-cap structural lengths natively at `10,000` chars before transmission to paid APIs.
 - **XSS Neutralization:** All AI-rendered markdown in the client must parse linearly utilizing `react-markdown` strictly stripping and rejecting `script` or foreign `html` hooks generated via prompt-injections natively.
 
-### D. Chart Exporting & Tailwind v4 Constraints
+### F. Chart Exporting & Tailwind v4 Constraints
 - Components leveraging the `ChartExportWrapper` physically rasterize DOM nodes to PNGs using `html2canvas`.
 - **The oklab Crash:** Tailwind CSS v4 auto-compiles all custom CSS variable opacity shorthands (e.g., `bg-card/20`, `text-muted/60`, `shadow-inner`) into `color-mix(in oklab, ...)` dynamically. `html2canvas` strictly fails to parse `oklab`, crashing the export workflow instantly.
 - **The Mitigation Mandate:** Any components residing inside an exported border must exclusively use standard opacity styles (`opacity-60`) or explicit Hex strings with native alpha channels (`bg-[#ffffff05]`) for translucency to securely bypass the `oklab` renderer limitation.
