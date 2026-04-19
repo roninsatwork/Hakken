@@ -27,48 +27,50 @@ export class AudioEngine {
     }
   }
 
-  // Authentic Arcade Waka-Waka (Synthesized)
+  // Hyoshigi Wooden Clack (Replaces chomp)
   public playChomp() {
     if (!this.ctx || this.isMuted) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.03);
     
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    // very short, sharp envelope for a wood block strike
+    gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
     
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     
     osc.start();
-    osc.stop(this.ctx.currentTime + 0.1);
+    osc.stop(this.ctx.currentTime + 0.05);
   }
 
-  // Fired when a Power Pellet is eaten
+  // Kiai / Katana focus hum
   public playPowerPelletLoop() {
     if (!this.ctx || this.isMuted) return;
-    this.stopSiren(); // Replace ambient loop
+    this.stopSiren(); 
 
     this.sirenOsc = this.ctx.createOscillator();
     this.sirenGain = this.ctx.createGain();
     
-    this.sirenOsc.type = 'sine';
+    this.sirenOsc.type = 'triangle';
+    this.sirenOsc.frequency.value = 400; // High frequency tension
     
-    // Synthesize the characteristic wavering alarm
+    // Subtly ascending tension
     const lfo = this.ctx.createOscillator();
     const lfoGain = this.ctx.createGain();
-    lfo.type = 'triangle';
-    lfo.frequency.value = 5; // 5Hz waver
-    lfoGain.gain.value = 100;
+    lfo.type = 'sine';
+    lfo.frequency.value = 6; 
+    lfoGain.gain.value = 50;
     
     lfo.connect(lfoGain);
     lfoGain.connect(this.sirenOsc.frequency);
-    this.sirenOsc.frequency.value = 600;
 
-    this.sirenGain.gain.value = 0.05;
+    this.sirenGain.gain.value = 0.02;
 
     this.sirenOsc.connect(this.sirenGain);
     this.sirenGain.connect(this.ctx.destination);
@@ -78,26 +80,27 @@ export class AudioEngine {
     this.sirenActive = true;
   }
 
-  // The deep background pulse during standard gameplay
+  // Taiko Heartbeat Drone
   public playSiren(levelIntensity: number) {
     if (!this.ctx || this.isMuted || this.sirenActive) return;
     
     this.sirenOsc = this.ctx.createOscillator();
     this.sirenGain = this.ctx.createGain();
     
-    this.sirenOsc.type = 'triangle';
+    this.sirenOsc.type = 'sine';
     
+    // Deep rhythmic pulse
     const lfo = this.ctx.createOscillator();
     const lfoGain = this.ctx.createGain();
     lfo.type = 'square';
-    lfo.frequency.value = 2 + (levelIntensity * 0.5); // Beats faster on higher levels
-    lfoGain.gain.value = 50;
+    lfo.frequency.value = 1.5 + (levelIntensity * 0.2); 
+    lfoGain.gain.value = 0.03;
     
-    lfo.connect(lfoGain);
-    lfoGain.connect(this.sirenOsc.frequency);
-    this.sirenOsc.frequency.value = 250 + (levelIntensity * 10);
+    lfo.connect(this.sirenGain.gain);
+    
+    this.sirenOsc.frequency.value = 60 + (levelIntensity * 2); // Very low pitch
 
-    this.sirenGain.gain.value = 0.03;
+    this.sirenGain.gain.value = 0.04;
 
     this.sirenOsc.connect(this.sirenGain);
     this.sirenGain.connect(this.ctx.destination);
@@ -123,18 +126,25 @@ export class AudioEngine {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 1.5);
+    osc.type = 'sine';
+    // Deep Gong/Bell sound
+    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 2.0);
 
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.5);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 2.0);
 
-    osc.connect(gain);
+    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 2.0);
+
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(this.ctx.destination);
 
     osc.start();
-    osc.stop(this.ctx.currentTime + 1.5);
+    osc.stop(this.ctx.currentTime + 2.0);
   }
 
   public toggleMute() {
@@ -143,26 +153,26 @@ export class AudioEngine {
     return this.isMuted;
   }
 
-  public playEatGhost() {
+  public playEatEnemy() {
     if (!this.ctx || this.isMuted) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    osc.type = 'sine';
-    // Retro rapid descending "zipp" sound
-    osc.frequency.setValueAtTime(1000, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.4);
+    osc.type = 'triangle';
+    // Sword slash "shing!" ring
+    osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(2000, this.ctx.currentTime + 0.1);
 
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
 
     osc.connect(gain);
     gain.connect(this.ctx.destination);
 
     osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.4);
+    osc.stop(this.ctx.currentTime + 0.2);
   }
 
   public playCoinInsert() {

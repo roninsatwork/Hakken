@@ -7,12 +7,12 @@ import { api } from "@/convex/_generated/api";
 import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
-import PacmanCanvas from "./PacmanCanvas";
+import RoninCanvas from "./RoninCanvas";
 import { AudioEngine } from "./engine/AudioEngine";
 
 const pressStart = Press_Start_2P({ weight: '400', subsets: ['latin'] });
 
-export default function PacmanArcadePage() {
+export default function RoninArcadePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -64,11 +64,11 @@ export default function PacmanArcadePage() {
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.arcade.getPaginatedLeaderboard,
-    { game: "pacman" },
+    { game: "ronin" },
     { initialNumItems: 15 }
   );
 
-  const scoreCount = useQuery(api.arcade.getScoresCount, { game: "pacman" }) || 0;
+  const scoreCount = useQuery(api.arcade.getScoresCount, { game: "ronin" }) || 0;
   const totalItems = Math.max(results.length, scoreCount);
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
@@ -96,7 +96,7 @@ export default function PacmanArcadePage() {
         document.exitFullscreen();
       }
       if (score > 0) {
-        await submitScore({ game: "pacman", score });
+        await submitScore({ game: "ronin", score });
       }
     } catch (e) {
       console.error("Failed to submit score", e);
@@ -111,14 +111,23 @@ export default function PacmanArcadePage() {
         
         <style dangerouslySetInnerHTML={{__html: `
           .arcade-maze-bg {
-            background-color: #0b0b0f;
+            background-color: #2a2118; /* Dim ambient Shoji paper lighting */
             background-image: 
-              linear-gradient(rgba(33, 33, 255, 0.4) 2px, transparent 2px),
-              linear-gradient(90deg, rgba(33, 33, 255, 0.4) 2px, transparent 2px),
-              linear-gradient(rgba(33, 33, 255, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(33, 33, 255, 0.1) 1px, transparent 1px);
-            background-size: 50px 50px, 50px 50px, 10px 10px, 10px 10px;
-            background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+              /* Main Dojo Wooden Framework (Shoji Lattice) */
+              linear-gradient(90deg, #120d09 14px, transparent 14px),
+              linear-gradient(#120d09 14px, transparent 14px);
+            background-size: 180px 180px, 180px 180px;
+            background-position: center;
+          }
+          
+          /* Ambient Vignette - Darkens the wooden frame edges heavily so text pops in the illuminated center */
+          .arcade-maze-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center 40%, rgba(0,0,0,0) 15%, #0f0a05 85%);
+            pointer-events: none;
+            z-index: 1;
           }
           
           @keyframes moveTrack {
@@ -126,61 +135,145 @@ export default function PacmanArcadePage() {
             100% { transform: translateX(100vw); }
           }
 
-          @keyframes chomp {
-            0%, 100% { clip-path: polygon(100% 74%, 44% 48%, 100% 21%, 100% 0, 0 0, 0 100%, 100% 100%); }
-            50% { clip-path: polygon(100% 60%, 44% 48%, 100% 40%, 100% 0, 0 0, 0 100%, 100% 100%); }
+          @keyframes bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
           }
           
+          @keyframes spinShuriken {
+            100% { transform: rotate(360deg); }
+          }
+
           .sprite-track {
             animation: moveTrack 10s linear infinite;
             will-change: transform;
           }
           
-          .pacman-sprite {
+          .cursor-sprite {
             width: 24px;
             height: 24px;
-            background: #FFEB3B;
-            border-radius: 50%;
-            animation: chomp 0.3s infinite;
+            background: #E0E0E0;
+            clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+            animation: spinShuriken 0.5s linear infinite;
           }
-
-          .ghost-sprite {
-            width: 24px;
-            height: 24px;
-            background: #FF0000;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            position: relative;
-          }
-          .ghost-sprite::after {
+          .cursor-sprite::after {
             content: '';
             position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 100%;
-            height: 8px;
-            background: radial-gradient(circle at 4px 4px, transparent 4px, #FF0000 5px);
-            background-size: 8px 8px;
-          }
-          .ghost-eyes {
-            position: absolute;
-            top: 6px;
-            left: 4px;
+            top: 50%;
+            left: 50%;
             width: 6px;
-            height: 8px;
-            background: white;
+            height: 6px;
+            background: #241D17;
             border-radius: 50%;
-            box-shadow: 10px 0 0 white;
+            transform: translate(-50%, -50%);
           }
-          .ghost-pupils {
+
+          .ninja {
+            position: relative;
+            width: 24px;
+            height: 28px;
+            animation: ninja-bob 0.25s infinite alternate ease-in-out;
+            --ncolor: #DC143C; /* Default Red (Blinky) */
+          }
+          @keyframes ninja-bob {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-3px); }
+          }
+          .n-body {
+            position: absolute;
+            bottom: 6px;
+            left: 0px;
+            width: 14px;
+            height: 12px;
+            background: var(--ncolor);
+            border-radius: 10px 10px 4px 4px;
+            transform: rotate(15deg);
+          }
+          .n-head {
+            position: absolute;
+            top: 0;
+            left: 6px;
+            width: 14px;
+            height: 14px;
+            background: var(--ncolor);
+            border-radius: 50%;
+          }
+          .n-face {
+            position: absolute;
+            top: 2px;
+            right: -2px;
+            width: 8px;
+            height: 10px;
+            background: #FFE4C4;
+            border-radius: 3px;
+          }
+          .n-eye {
             position: absolute;
             top: 3px;
-            left: 4px;
-            width: 3px;
-            height: 3px;
-            background: blue;
+            right: 0px;
+            width: 2px;
+            height: 2px;
+            background: #000;
             border-radius: 50%;
-            box-shadow: 10px 0 0 blue;
+          }
+          .n-band {
+            position: absolute;
+            top: 5px;
+            right: -3px;
+            width: 16px;
+            height: 1.5px;
+            background: #111;
+          }
+          .n-ribbon {
+             position: absolute;
+             left: -7px;
+             top: 4px;
+             width: 0;
+             height: 0;
+             border-top: 3px solid transparent;
+             border-bottom: 3px solid transparent;
+             border-right: 12px solid var(--ncolor);
+             transform: rotate(-10deg);
+          }
+          .n-arm {
+            position: absolute;
+            top: 10px;
+            left: -4px;
+            width: 12px;
+            height: 3px;
+            background: var(--ncolor);
+            border-radius: 2px;
+            transform: rotate(160deg);
+          }
+          .n-leg-f {
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            width: 3.5px;
+            height: 8px;
+            background: var(--ncolor);
+            border-radius: 2px;
+            transform-origin: top center;
+            animation: n-scissor-f 0.3s infinite alternate linear;
+          }
+          .n-leg-b {
+            position: absolute;
+            bottom: 0;
+            left: 4px;
+            width: 3.5px;
+            height: 8px;
+            background: var(--ncolor);
+            border-radius: 2px;
+            transform-origin: top center;
+            animation: n-scissor-b 0.3s infinite alternate linear;
+          }
+          @keyframes n-scissor-f {
+            0% { transform: rotate(30deg); }
+            100% { transform: rotate(-30deg); }
+          }
+          @keyframes n-scissor-b {
+            0% { transform: rotate(-30deg); }
+            100% { transform: rotate(30deg); }
           }
           
           .dot-track {
@@ -205,10 +298,10 @@ export default function PacmanArcadePage() {
         {/* Game Container */}
         <div 
           ref={gameContainerRef}
-          className={`w-full bg-[#0b0b0f] overflow-hidden shadow-sm flex flex-col relative ${
+          className={`w-full bg-[#1C1714] overflow-hidden shadow-sm flex flex-col relative ${
             isPlaying 
-              ? (isFullscreen ? 'h-screen w-screen rounded-none' : 'h-[calc(100vh-140px)] rounded-[24px] border-[3px] border-[#2121ff]/50') 
-              : 'min-h-[500px] rounded-[24px] border-[3px] border-[#2121ff]/50 bg-card'
+              ? (isFullscreen ? 'h-screen w-screen rounded-none' : 'h-[calc(100vh-140px)] rounded-[24px] border-[4px] border-[#8B5A2B]/80') 
+              : 'min-h-[500px] rounded-[24px] border-[4px] border-[#8B5A2B]/80 bg-[#1C1714]'
           }`}
         >
           <div className="absolute inset-0 arcade-maze-bg z-0" />
@@ -232,12 +325,12 @@ export default function PacmanArcadePage() {
                    <X className="w-5 h-5" />
                  </button>
                </div>
-               <PacmanCanvas isFullscreen={isFullscreen} onGameOver={score => { setIsPlaying(false); setIsFullscreen(false); handleGameOver(score); }} />
+               <RoninCanvas isFullscreen={isFullscreen} onGameOver={score => { setIsPlaying(false); setIsFullscreen(false); handleGameOver(score); }} />
             </div>
           ) : (
             <>
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
-                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#FFEB3B] drop-shadow-[0_0_15px_rgba(255,235,59,0.5)] ${pressStart.className}`}>PACMAN</h2>
+                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>RONIN'S RUN</h2>
                  <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
                    INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.
                  </p>
@@ -265,13 +358,26 @@ export default function PacmanArcadePage() {
               </div>
 
               {/* Infinite Animation Track */}
-              <div className="absolute bottom-0 left-0 w-full h-[60px] overflow-hidden z-20 pointer-events-none bg-black/40 border-t border-[#2121ff]/30 backdrop-blur-sm">
+              <div className="absolute bottom-0 left-0 w-full h-[60px] overflow-hidden z-20 pointer-events-none bg-black/50 border-t border-[#8B5A2B]/40 backdrop-blur-sm">
                  <div className="dot-track"></div>
-                 <div className="sprite-track absolute bottom-3 flex items-center gap-10">
-                    <div className="pacman-sprite"></div>
-                    <div className="ghost-sprite">
-                       <div className="ghost-eyes"><div className="ghost-pupils"></div></div>
-                    </div>
+                 <div className="sprite-track absolute bottom-3 flex items-center gap-8">
+                    <div className="cursor-sprite"></div>
+                    {/* The 4 Ninja Ghosts chasing the Shuriken */}
+                    {['#DC143C', '#FF69B4', '#00FFFF', '#FFA500'].map((color, i) => (
+                      <div key={i} className="ninja shrink-0" style={{ '--ncolor': color } as React.CSSProperties}>
+                        <div className="n-arm"></div>
+                        <div className="n-leg-b"></div>
+                        <div className="n-body"></div>
+                        <div className="n-leg-f"></div>
+                        <div className="n-ribbon"></div>
+                        <div className="n-head">
+                          <div className="n-face">
+                            <div className="n-band"></div>
+                            <div className="n-eye"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                  </div>
               </div>
             </>

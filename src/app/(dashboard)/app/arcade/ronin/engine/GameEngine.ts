@@ -1,6 +1,6 @@
 import { PACMAN_GRID, MAP_SETTINGS } from "./MapData";
 import { Player } from "./Player";
-import { Ghost } from "./Ghost";
+import { Enemy } from "./Enemy";
 import { AudioEngine } from "./AudioEngine";
 
 interface GameEngineCallbacks {
@@ -16,7 +16,7 @@ export class GameEngine {
   
   // Entities
   private player!: Player;
-  private ghosts: Ghost[] = [];
+  private enemies: Enemy[] = [];
   private audio: AudioEngine;
 
   // Game State
@@ -52,22 +52,22 @@ export class GameEngine {
     // Spawn Player at standard pos (col 13.5, row 23)
     this.player = new Player(13.5, 23);
     
-    // Spawn Ghosts
-    this.ghosts = [
-      new Ghost(13.5, 11, '#FF0000'), // Blinky
-      new Ghost(13.5, 14, '#FFB8FF'), // Pinky
-      new Ghost(11.5, 14, '#00FFFF'), // Inky
-      new Ghost(15.5, 14, '#FFB852')  // Clyde
+    // Spawn Enemies
+    this.enemies = [
+      new Enemy(13.5, 11, '#DC143C'), // Crimson
+      new Enemy(13.5, 14, '#00A86B'), // Jade
+      new Enemy(11.5, 14, '#4B0082'), // Indigo
+      new Enemy(15.5, 14, '#FFBF00')  // Amber
     ];
   }
 
   private resetRound() {
     this.player = new Player(13.5, 23);
-    this.ghosts = [
-      new Ghost(13.5, 11, '#FF0000'), 
-      new Ghost(13.5, 14, '#FFB8FF'), 
-      new Ghost(11.5, 14, '#00FFFF'), 
-      new Ghost(15.5, 14, '#FFB852')  
+    this.enemies = [
+      new Enemy(13.5, 11, '#DC143C'), 
+      new Enemy(13.5, 14, '#00A86B'), 
+      new Enemy(11.5, 14, '#4B0082'), 
+      new Enemy(15.5, 14, '#FFBF00')  
     ];
   }
 
@@ -129,7 +129,7 @@ export class GameEngine {
         this.grid[row][col] = 0; // eaten power pellet
         this.score += 50;
         this.powerTimer = 500 - (this.currentLevel * 20); // ticks
-        this.ghosts.forEach(g => { if (g.state !== 2) g.state = 1; });
+        this.enemies.forEach(e => { if (e.state !== 2) e.state = 1; });
         this.audio.playPowerPelletLoop();
       }
     }
@@ -150,23 +150,23 @@ export class GameEngine {
     if (this.powerTimer > 0) {
        this.powerTimer--;
        if (this.powerTimer === 0) {
-          this.ghosts.forEach(g => { if (g.state === 1) g.state = 0; });
+          this.enemies.forEach(e => { if (e.state === 1) e.state = 0; });
           this.audio.playSiren(this.currentLevel);
        }
     }
 
     const collisionDist = Math.pow(MAP_SETTINGS.TILE_SIZE * 0.8, 2);
 
-    this.ghosts.forEach(ghost => {
-      ghost.update(this.grid, this.player.gridPos);
+    this.enemies.forEach(enemy => {
+      enemy.update(this.grid, this.player.gridPos);
       
-      const dist = Math.pow(this.player.pos.x - ghost.pos.x, 2) + Math.pow(this.player.pos.y - ghost.pos.y, 2);
+      const dist = Math.pow(this.player.pos.x - enemy.pos.x, 2) + Math.pow(this.player.pos.y - enemy.pos.y, 2);
       if (dist < collisionDist) {
-        if (ghost.state === 1) { // Eat ghost
-           ghost.state = 2; // Dead eyes
+        if (enemy.state === 1) { // Eat enemy
+           enemy.state = 2; // Dead eyes
            this.score += 200;
-           this.audio.playEatGhost(); 
-        } else if (ghost.state === 0) {
+           this.audio.playEatEnemy(); 
+        } else if (enemy.state === 0) {
            // Pacman dies
            this.audio.playDeath();
            this.lives--;
@@ -183,8 +183,8 @@ export class GameEngine {
   private drawMap() {
     const { TILE_SIZE } = MAP_SETTINGS;
     
-    // Fill background
-    this.ctx.fillStyle = '#000000';
+    // Fill background (Wooden floor/parchment)
+    this.ctx.fillStyle = '#2a2420';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     for (let row = 0; row < MAP_SETTINGS.ROWS; row++) {
@@ -194,29 +194,55 @@ export class GameEngine {
         const y = row * TILE_SIZE;
 
         if (tile === 1) {
-          // Wall
-          this.ctx.fillStyle = '#2121ff'; // Neon blue border
+          // Bamboo / Wooden Wall
+          this.ctx.fillStyle = '#8B5A2B'; // Wood border
           this.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
           
-          // Inner hollow to look like original pipes
-          this.ctx.fillStyle = '#000000';
+          // Inner hollow
+          this.ctx.fillStyle = '#5A3A1B'; // Darker wood core
           this.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         } else if (tile === 2) {
-          // Regular dot
-          this.ctx.fillStyle = '#ffb8ae';
+          // Rice Grain (Mon coin)
+          this.ctx.fillStyle = '#FFD700'; // Gold coin
           this.ctx.beginPath();
-          this.ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 3, 0, Math.PI * 2);
+          this.ctx.ellipse(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 2, 4, 0, 0, Math.PI * 2);
           this.ctx.fill();
         } else if (tile === 3) {
-          // Power pellet (could blink logic here later)
-          this.ctx.fillStyle = '#ffb8ae';
+          // Ronin Edge (Power Pellet) - A glowing sharpened blade
+          const cx = x + TILE_SIZE / 2;
+          const cy = y + TILE_SIZE / 2;
+          
+          this.ctx.save();
+          this.ctx.translate(cx, cy);
+          // Slight rotating bob animation so the blade constantly glimmers
+          const hoverOffset = Math.sin((Date.now() % 3000) / 477) * 0.05;
+          this.ctx.rotate(Math.PI / 4 + hoverOffset); 
+
+          // Deep energetic glow matching the company "Edge" solution
+          this.ctx.shadowBlur = 12;
+          this.ctx.shadowColor = '#00FFFF'; // Intense cyan pulse
+          
+          // Sharp Katana Blade Front
+          this.ctx.fillStyle = '#FFFFFF';
           this.ctx.beginPath();
-          this.ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 8, 0, Math.PI * 2);
+          this.ctx.moveTo(0, -TILE_SIZE * 0.45); // Pointy tip top
+          this.ctx.quadraticCurveTo(TILE_SIZE * 0.25, -TILE_SIZE * 0.1, TILE_SIZE * 0.1, TILE_SIZE * 0.4); // Curved cutting edge
+          this.ctx.lineTo(-TILE_SIZE * 0.1, TILE_SIZE * 0.4); // Flat base
+          this.ctx.lineTo(-TILE_SIZE * 0.05, -TILE_SIZE * 0.45); // Flat back spine
+          this.ctx.closePath();
           this.ctx.fill();
-        } else if (tile === 4) {
-          // Ghost door
-          this.ctx.fillStyle = '#ffb8ff'; // Pink gate
-          this.ctx.fillRect(x, y + TILE_SIZE / 2 - 2, TILE_SIZE, 4);
+
+          // Slate/darker back-edge for metallic depth (Shinogi-ji groove)
+          this.ctx.shadowBlur = 0; // Disable shadow for inner detailing
+          this.ctx.fillStyle = '#64748B'; 
+          this.ctx.beginPath();
+          this.ctx.moveTo(-TILE_SIZE * 0.05, -TILE_SIZE * 0.45);
+          this.ctx.lineTo(-TILE_SIZE * 0.1, TILE_SIZE * 0.4);
+          this.ctx.lineTo(0, TILE_SIZE * 0.4);
+          this.ctx.closePath();
+          this.ctx.fill();
+
+          this.ctx.restore();
         }
       }
     }
@@ -224,7 +250,7 @@ export class GameEngine {
 
   private drawEntities() {
     this.player.draw(this.ctx);
-    this.ghosts.forEach(ghost => ghost.draw(this.ctx));
+    this.enemies.forEach(enemy => enemy.draw(this.ctx));
   }
 
   private drawUI() {
@@ -237,13 +263,20 @@ export class GameEngine {
     this.ctx.textAlign = 'right';
     this.ctx.fillText(`LEVEL: ${this.currentLevel}`, this.canvas.width - 10, 25);
 
-    // Draw Lives
-    this.ctx.fillStyle = '#FFEB3B';
+    // Draw Lives (Roningasa icons)
+    this.ctx.fillStyle = '#D2B48C';
     for(let i=0; i < this.lives; i++) {
+       const x = 20 + (i * 25);
+       const y = this.canvas.height - 20;
+       const radius = 8;
        this.ctx.beginPath();
-       this.ctx.arc(20 + (i * 25), this.canvas.height - 20, 10, 0.2*Math.PI, 1.8*Math.PI);
-       this.ctx.lineTo(20 + (i * 25), this.canvas.height - 20);
+       this.ctx.arc(x, y + 2, radius, Math.PI, 0); // Hat curve
+       this.ctx.closePath();
        this.ctx.fill();
+       
+       this.ctx.fillStyle = '#8B5A2B'; // Hat band
+       this.ctx.fillRect(x - radius - 2, y + 2, radius * 2 + 4, 2);
+       this.ctx.fillStyle = '#D2B48C'; // reset for next
     }
 
     if (this.levelTransitionTimer > 0) {

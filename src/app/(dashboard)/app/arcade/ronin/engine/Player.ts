@@ -15,8 +15,8 @@ export class Player {
   public nextDirection: number = 0;
   
   private speed = 1.25; 
-  private mouthOpen = 0;
-  private mouthDir = 1;
+  private pulseState = 0;
+  private pulseDir = 1;
 
   constructor(startX: number, startY: number) {
     this.pos = { x: startX * MAP_SETTINGS.TILE_SIZE + MAP_SETTINGS.TILE_SIZE / 2, y: startY * MAP_SETTINGS.TILE_SIZE + MAP_SETTINGS.TILE_SIZE / 2 };
@@ -28,10 +28,10 @@ export class Player {
     this.gridPos.x = Math.floor(this.pos.x / MAP_SETTINGS.TILE_SIZE);
     this.gridPos.y = Math.floor(this.pos.y / MAP_SETTINGS.TILE_SIZE);
 
-    // Mouth animation (chomping)
-    this.mouthOpen += 0.1 * this.mouthDir;
-    if (this.mouthOpen >= 0.4 || this.mouthOpen <= 0) {
-      this.mouthDir *= -1;
+    // Pulsting energy animation
+    this.pulseState += 0.05 * this.pulseDir;
+    if (this.pulseState >= 1 || this.pulseState <= 0) {
+      this.pulseDir *= -1;
     }
 
     // Grid snapping context for cornering cleanly
@@ -98,21 +98,33 @@ export class Player {
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
     
-    // Rotate canvas context based on direction
-    if (this.direction === 1) ctx.rotate(Math.PI / 2);
-    else if (this.direction === 2) ctx.rotate(Math.PI);
-    else if (this.direction === 3) ctx.rotate(-Math.PI / 2);
+    // Constantly rotating Shuriken
+    // Use modulo to cap the radian value, preventing float precision loss that stops spinning over time
+    const time = (Date.now() % 10000) / 150;
+    ctx.rotate(time);
+
+    ctx.fillStyle = '#E0E0E0';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#FFFFFF';
+
+    // Draw 4 sharp metallic blades (diamond shapes from center)
+    for (let i = 0; i < 4; i++) {
+       ctx.beginPath();
+       ctx.moveTo(0, this.radius * 0.3); // inner width
+       ctx.lineTo(this.radius * 1.4, 0); // long point
+       ctx.lineTo(0, -this.radius * 0.3);
+       ctx.closePath();
+       ctx.fill();
+       ctx.rotate(Math.PI / 2);
+    }
     
-    ctx.fillStyle = '#FFEB3B';
+    // Core ring
+    ctx.fillStyle = '#111';
     ctx.beginPath();
-    
-    // The chomp arc logic
-    const startAngle = this.mouthOpen * Math.PI;
-    const endAngle = (2 - this.mouthOpen) * Math.PI;
-    
-    ctx.arc(0, 0, this.radius, startAngle, endAngle);
-    ctx.lineTo(0, 0);
+    ctx.arc(0, 0, this.radius * 0.3, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 }

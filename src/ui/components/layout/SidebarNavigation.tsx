@@ -194,7 +194,7 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/app/profile')) return 'Profile';
     if (pathname === '/app/settings') return 'Organization Dashboard';
     if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
-    if (pathname.startsWith('/app/arcade/pacman')) return 'Pacman';
+    if (pathname.startsWith('/app/arcade/ronin')) return 'RoninsRun';
     if (pathname.startsWith('/app/arcade')) return 'Arcade';
     return isAdmin ? 'Admin Dashboard' : '';
   });
@@ -241,7 +241,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/app/reports')) setActiveItem('Reports');
     else if (pathname === '/app/settings') setActiveItem('Organization Dashboard');
     else if (pathname.startsWith('/app/settings/team')) setActiveItem('Organization Team');
-    else if (pathname.startsWith('/app/arcade/pacman')) setActiveItem('Pacman');
+    else if (pathname.startsWith('/app/arcade/ronin')) setActiveItem('RoninsRun');
     else if (pathname.startsWith('/app/arcade')) setActiveItem('Arcade');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
@@ -460,13 +460,13 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={Gamepad2}
                         label="Arcade"
-                        isActive={activeItem === 'Arcade' || activeItem === 'Pacman'}
+                        isActive={activeItem === 'Arcade' || activeItem === 'RoninsRun'}
                         onClick={() => setActiveItem('Arcade')}
                         hasChildren
                         isOpen={openSections.arcade}
                         onToggle={() => toggleSection('arcade')}
                       >
-                        <SubNavItem label="Pacman" href="/app/arcade/pacman" isActive={activeItem === 'Pacman'} onClick={() => setActiveItem('Pacman')} />
+                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronin" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
                       </NavItem>
                     )}
 

@@ -1,7 +1,7 @@
 import { MAP_SETTINGS } from "./MapData";
 import { Position } from "./Player";
 
-export class Ghost {
+export class Enemy {
   public pos: Position;
   public gridPos: Position;
   public color: string;
@@ -11,6 +11,7 @@ export class Ghost {
   private speed = 1;
   // 0: chase, 1: frightened, 2: dead (eyes)
   public state: number = 0;
+  public facing: number = 1; // 1 = Right, -1 = Left
 
   constructor(startX: number, startY: number, color: string) {
     this.pos = { x: startX * MAP_SETTINGS.TILE_SIZE + MAP_SETTINGS.TILE_SIZE / 2, y: startY * MAP_SETTINGS.TILE_SIZE + MAP_SETTINGS.TILE_SIZE / 2 };
@@ -80,9 +81,9 @@ export class Ghost {
     }
 
     if (this.canMove(this.direction, grid)) {
-      if (this.direction === 0) this.pos.x += this.speed;
+      if (this.direction === 0) { this.pos.x += this.speed; this.facing = 1; }
       if (this.direction === 1) this.pos.y += this.speed;
-      if (this.direction === 2) this.pos.x -= this.speed;
+      if (this.direction === 2) { this.pos.x -= this.speed; this.facing = -1; }
       if (this.direction === 3) this.pos.y -= this.speed;
     } else {
        if (this.direction === 0 || this.direction === 2) {
@@ -120,46 +121,106 @@ export class Ghost {
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
 
+    let isFrightened = false;
     if (this.state === 1) {
-      ctx.fillStyle = '#0000FF'; // Frightened blue
-    } else if (this.state === 2) {
-      ctx.fillStyle = 'rgba(255,255,255,0)'; // Dead (invisible body)
-    } else {
-      ctx.fillStyle = this.color;
+      isFrightened = true;
     }
 
-    // Draw body
-    ctx.beginPath();
-    ctx.arc(0, -2, this.radius, Math.PI, 0);
-    ctx.lineTo(this.radius, this.radius);
-    
-    // Bottom wavy skirt
-    ctx.lineTo(this.radius/2, this.radius - 2);
-    ctx.lineTo(0, this.radius);
-    ctx.lineTo(-this.radius/2, this.radius - 2);
-    ctx.lineTo(-this.radius, this.radius);
-    ctx.fill();
+    if (this.state === 2) {
+      // Dead (fleeing spirit/smoke)
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (isFrightened) {
+      // Substitution Log (Kawarimi no Jutsu)
+      ctx.fillStyle = '#8B5A2B'; // Wood
+      ctx.fillRect(-this.radius + 2, -this.radius * 0.8, this.radius * 2 - 4, this.radius * 1.6);
+      
+      // Log rings
+      ctx.strokeStyle = '#5A3A1B';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(-this.radius + 2, 0, this.radius * 0.6, Math.PI * -0.5, Math.PI * 0.5);
+      ctx.stroke();
+    } else {
+      // True Side-Profile Ninja Body
+      // We flip horizontally based on facing direction, but NEVER rotate for vertical movement
+      // to maintain a true side-scrolling platformer perspective.
+      ctx.scale(this.facing, 1);
 
-    // Eyes
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(-3, -2, 2.5, 0, Math.PI * 2);
-    ctx.arc(3, -2, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Pupils
-    let pupilOffsetX = 0;
-    let pupilOffsetY = 0;
-    if (this.direction === 0) pupilOffsetX = 1;
-    if (this.direction === 1) pupilOffsetY = 1;
-    if (this.direction === 2) pupilOffsetX = -1;
-    if (this.direction === 3) pupilOffsetY = -1;
-    
-    ctx.fillStyle = 'blue';
-    ctx.beginPath();
-    ctx.arc(-3 + pupilOffsetX, -2 + pupilOffsetY, 1, 0, Math.PI * 2);
-    ctx.arc(3 + pupilOffsetX, -2 + pupilOffsetY, 1, 0, Math.PI * 2);
-    ctx.fill();
+      // Simple run cycle animation based on map position
+      const runCycle = Math.sin((this.pos.x + this.pos.y) * 0.3);
+      const bounce = Math.abs(runCycle) * 2;
+      
+      // Shift everything slightly based on running bounce
+      ctx.translate(0, -bounce + this.radius * 0.2); // slight downward adjust to anchor feet
+
+      // 1. Torso (Leaning forward in ninja run)
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.ellipse(-this.radius * 0.15, this.radius * 0.3, this.radius * 0.4, this.radius * 0.5, Math.PI / 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Head
+      ctx.beginPath();
+      ctx.arc(0, -this.radius * 0.3, this.radius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Face Opening (Profile cut-out)
+      ctx.fillStyle = '#FFE4C4'; // Skin tone
+      ctx.beginPath();
+      ctx.arc(this.radius * 0.25, -this.radius * 0.3, this.radius * 0.35, -Math.PI * 0.4, Math.PI * 0.45);
+      ctx.fill();
+
+      // 4. Headband Ribbon (blowing straight back)
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.moveTo(-this.radius * 0.45, -this.radius * 0.3);
+      ctx.lineTo(-this.radius * 1.4, -this.radius * 0.5 + runCycle * 2);
+      ctx.lineTo(-this.radius * 0.9, -this.radius * 0.3);
+      ctx.lineTo(-this.radius * 1.3, -this.radius * 0.1 - runCycle * 2);
+      ctx.fill();
+      
+      // 5. Headband Tie
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-this.radius * 0.4, -this.radius * 0.5);
+      ctx.lineTo(this.radius * 0.5, -this.radius * 0.5);
+      ctx.stroke();
+
+      // 6. Eye (Side profile)
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(this.radius * 0.3, -this.radius * 0.4, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 7. Arms (Thrown back for aggressive sprint)
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-this.radius * 0.1, this.radius * 0.1);
+      ctx.lineTo(-this.radius * 1.0, -this.radius * 0.1 + (runCycle * 1.5));
+      ctx.stroke();
+
+      // 8. Legs (Animated scissoring spread)
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 3.5;
+      
+      // Front Leg
+      ctx.beginPath();
+      ctx.moveTo(0, this.radius * 0.6);
+      ctx.lineTo(this.radius * 0.4 * runCycle + 2, this.radius * 1.1);
+      ctx.stroke();
+
+      // Back Leg
+      ctx.beginPath();
+      ctx.moveTo(-this.radius * 0.2, this.radius * 0.6);
+      ctx.lineTo(-this.radius * 0.4 * runCycle - 2, this.radius * 1.1);
+      ctx.stroke();
+    }
     
     ctx.restore();
   }
