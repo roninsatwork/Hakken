@@ -127,17 +127,7 @@ export const executeNode = internalAction({
           throw new Error("Code execution failed: " + error.message);
         }
       }
-      else if (node.type === "waitNode") {
-        let delayMs = 5000; // default 5s
-        try {
-           const parsed = JSON.parse(resolvedInput);
-           if (parsed.delayMs) delayMs = parseInt(parsed.delayMs);
-        } catch(e) {}
-        outputPayload = JSON.stringify({ waitedMs: delayMs, _system: { delayMs } });
-      }
-      else if (node.type === "approvalNode") {
-        outputPayload = JSON.stringify({ _system: { halt: true, status: 'PENDING_APPROVAL' } });
-      }
+
       else if (node.type === "logicNode") {
         try {
           const config = node.data?._logicConfig || { rules: [], fallbackBranch: "default" };
@@ -194,6 +184,7 @@ export const executeNode = internalAction({
         } catch (error: any) {
           throw new Error('Database Action failed: ' + error.message);
         }
+      }
       else if (node.type === "waitNode") {
         try {
           const config = node.data?._waitConfig || { delaySeconds: 5 };
