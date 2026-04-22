@@ -84,34 +84,45 @@ export const executeNode = internalAction({
       } 
       else if (node.type === "actionNode") {
         try {
-          const config = JSON.parse(resolvedInput);
+          if (!node.data?._actionConfig) throw new Error("API Node is missing configuration");
+          const config = resolveTemplate(node.data._actionConfig, globalStatePayload);
           const method = config.method || 'GET';
           const url = config.url;
           if (!url) throw new Error("Missing URL for Action Node");
-          const headers = config.headers || {};
-          let body = config.body;
-          if (typeof body === 'object') body = JSON.stringify(body);
           
-          const res = await fetch(url, { method, headers, body });
+          const headers: Record<string, string> = {};
+          if (Array.isArray(config.headers)) {
+             config.headers.forEach((h: any) => {
+               if (h.key) headers[h.key] = h.value;
+             });
+          }
+
+          const fetchOptions: RequestInit = { method, headers };
+          
+          let body = config.body;
+          if (method !== 'GET' && method !== 'HEAD' && body) {
+             fetchOptions.body = typeof body === 'object' ? JSON.stringify(body) : String(body);
+          }
+          
+          const res = await fetch(url, fetchOptions);
           const text = await res.text();
           try { outputPayload = JSON.stringify({ status: res.status, data: JSON.parse(text) }); }
           catch { outputPayload = JSON.stringify({ status: res.status, data: text }); }
         } catch (error: any) {
-          throw new Error('Action Fetch failed: ' + error.message);
+          throw new Error('API Action request failed: ' + error.message);
         }
       }
       else if (node.type === "codeNode") {
         try {
           // Extremely basic sandbox format using V8
-          const fn = new Function('input', `
+          // Pass the global nodes state directly so developers can map JSON effectively without tricky string interpolations
+          const fn = new Function('nodes', `
             try {
-               ${currentNodeData._inputTemplate || 'return input;'}
-            } catch(e) { return { error: e.message }; }
+               ${currentNodeData._inputTemplate || 'return nodes;'}
+            } catch(e) { return { error: e.message, stack: e.stack }; }
           `);
-          let parseCtx = resolvedInput;
-          try { parseCtx = JSON.parse(resolvedInput) } catch (e) {}
-          const result = fn(parseCtx);
-          outputPayload = JSON.stringify(result);
+          const result = fn(globalStatePayload.nodes || {});
+          outputPayload = typeof result === 'object' ? JSON.stringify(result) : String(result);
         } catch (error: any) {
           throw new Error("Code execution failed: " + error.message);
         }
@@ -128,17 +139,178 @@ export const executeNode = internalAction({
         outputPayload = JSON.stringify({ _system: { halt: true, status: 'PENDING_APPROVAL' } });
       }
       else if (node.type === "logicNode") {
-        // Logic router checks input against bound conditions
-        outputPayload = JSON.stringify({ evaluated: resolvedInput });
+        try {
+          const config = node.data?._logicConfig || { rules: [], fallbackBranch: "default" };
+          let evaluatedBranch = config.fallbackBranch;
+          
+          for (const rule of config.rules) {
+             const resolvedVar = resolveTemplate(rule.variable, globalStatePayload);
+             const resolvedVal = rule.value ? resolveTemplate(rule.value, globalStatePayload) : rule.value;
+             
+             let match = false;
+             switch(rule.operator) {
+                case "EQUALS": match = String(resolvedVar) === String(resolvedVal); break;
+                case "NOT_EQUALS": match = String(resolvedVar) !== String(resolvedVal); break;
+                case "CONTAINS": match = String(resolvedVar).includes(String(resolvedVal)); break;
+                case "GREATER_THAN": match = parseFloat(resolvedVar) > parseFloat(resolvedVal); break;
+                case "LESS_THAN": match = parseFloat(resolvedVar) < parseFloat(resolvedVal); break;
+                case "IS_EMPTY": match = !resolvedVar || String(resolvedVar).trim() === ''; break;
+                case "NOT_EMPTY": match = !!resolvedVar && String(resolvedVar).trim() !== ''; break;
+             }
+             if (match) {
+                 evaluatedBranch = rule.branch;
+                 break;
+             }
+          }
+          outputPayload = JSON.stringify({ evaluated: evaluatedBranch });
+        } catch(error: any) {
+          throw new Error('Logic routing failed: ' + error.message);
+        }
       }
       else if (node.type === "databaseNode") {
-        outputPayload = JSON.stringify({ _system: { db: true }, payload: resolvedInput });
+        try {
+          if (!node.data?._dbConfig) throw new Error("Database Node is missing configuration");
+          const { tableName, operation, docId } = node.data._dbConfig;
+          if (!tableName) throw new Error("Database table not specified");
+          
+          let resolvedDocId = docId;
+          if (docId) resolvedDocId = resolveTemplate(docId, globalStatePayload);
+
+          let resolvedData = {};
+          if (node.data._inputMapping && Object.keys(node.data._inputMapping).length > 0) {
+             resolvedData = resolveTemplate(node.data._inputMapping, globalStatePayload);
+          } else if (node.data._inputTemplate) {
+             try { resolvedData = JSON.parse(resolveTemplate(node.data._inputTemplate, globalStatePayload)); } catch(e) {}
+          }
+
+          const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
+            tableName,
+            operation,
+            docId: resolvedDocId,
+            data: resolvedData,
+          });
+
+          outputPayload = JSON.stringify({ _system: { db: true }, operation, tableName, result });
+        } catch (error: any) {
+          throw new Error('Database Action failed: ' + error.message);
+        }
+      else if (node.type === "waitNode") {
+        try {
+          const config = node.data?._waitConfig || { delaySeconds: 5 };
+          const resolvedDelay = resolveTemplate(String(config.delaySeconds), globalStatePayload);
+          let delayMs = parseInt(resolvedDelay) * 1000;
+          if (isNaN(delayMs) || delayMs < 0) delayMs = 0;
+          
+          outputPayload = JSON.stringify({ 
+             _system: { delayMs: delayMs, structurallyHandled: true }, 
+             waitedSeconds: delayMs / 1000 
+          });
+        } catch(error: any) {
+          throw new Error('Wait config failed: ' + error.message);
+        }
       }
-      else if (node.type === "subWorkflowNode") {
-        outputPayload = JSON.stringify({ _system: { triggerSubWorkflow: true }, payload: resolvedInput });
+      else if (node.type === "approvalNode") {
+        try {
+          const config = node.data?._approvalConfig || { message: 'Action requires manual sign-off' };
+          const previewValue = config.previewTarget ? resolveTemplate(config.previewTarget, globalStatePayload) : null;
+          
+          outputPayload = JSON.stringify({ 
+             _system: { halt: true, structurallyHandled: true }, 
+             message: config.message,
+             previewData: previewValue
+          });
+        } catch(error: any) {
+          throw new Error('Approval execution failed: ' + error.message);
+        }
       }
-      else if (node.type === "iteratorNode" || node.type === "mergeNode") {
-        outputPayload = JSON.stringify({ _system: { structurallyHandled: true }, received: resolvedInput });
+      else if (node.type === "iteratorNode") {
+        try {
+          const config = node.data?._iteratorConfig || {};
+          let resolvedArray = resolveTemplate(config.listVariable || "", globalStatePayload);
+          let parsedArray = typeof resolvedArray === 'string' ? JSON.parse(resolvedArray) : resolvedArray;
+          if (!Array.isArray(parsedArray)) parsedArray = [parsedArray];
+          
+          outputPayload = JSON.stringify({ 
+             _system: { isIterator: true }, 
+             items: parsedArray 
+          });
+        } catch(error: any) {
+          throw new Error('Iterator logic failed: ' + error.message);
+        }
+      }
+      else if (node.type === "mergeNode") {
+        try {
+          const executionSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, { executionId: args.executionId });
+          const workflowData = await ctx.db.get(args.workflowId);
+          const edges = JSON.parse(workflowData?.edges || "[]");
+          const incomingEdges = edges.filter((e: any) => e.target === args.nodeId);
+          
+          let mergedPayload: any = {};
+          
+          for (const edge of incomingEdges) {
+             const upstreamSteps = executionSteps.filter((s:any) => s.nodeId === edge.source && s.status === 'SUCCESS');
+             
+             if (upstreamSteps.length > 1) {
+                 // Array aggregation from Fan-out Iterator upstream
+                 mergedPayload[edge.source] = upstreamSteps.map((s: any) => JSON.parse(s.output || "{}"));
+             } else if (upstreamSteps.length === 1) {
+                 // Standard singular upstream
+                 mergedPayload[edge.source] = JSON.parse(upstreamSteps[0].output || "{}");
+             }
+          }
+
+          outputPayload = JSON.stringify({ 
+             _system: { isMerge: true, structurallyHandled: true }, 
+             mergedContexts: mergedPayload
+          });
+        } catch(error: any) {
+          throw new Error('Merge / Sync processing failed: ' + error.message);
+        }
+      }
+      else if (node.type === "emailNode") {
+        try {
+          const config = node.data?._emailConfig || {};
+          const resolvedToRaw = resolveTemplate(config.to || "", globalStatePayload);
+          const resolvedFrom = resolveTemplate(config.from || "", globalStatePayload);
+          const resolvedSubject = resolveTemplate(config.subject || "No Subject", globalStatePayload);
+          const resolvedBody = resolveTemplate(config.body || "", globalStatePayload);
+
+          const fromAddress = resolvedFrom.trim() !== '' ? resolvedFrom : (process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>");
+          
+          let toAddresses: string[] | string = resolvedToRaw;
+          if (resolvedToRaw.includes(',')) {
+             toAddresses = resolvedToRaw.split(',').map((e: string) => e.trim()).filter(Boolean);
+          }
+          
+          if (!process.env.RESEND_API_KEY) {
+             console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject: resolvedSubject });
+             outputPayload = JSON.stringify({ success: true, simulated: true, to: toAddresses, subject: resolvedSubject, bodyPreview: resolvedBody.substring(0, 100) });
+          } else {
+             const response = await fetch("https://api.resend.com/emails", {
+               method: "POST",
+               headers: {
+                 "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+                 "Content-Type": "application/json"
+               },
+               body: JSON.stringify({
+                 from: fromAddress,
+                 to: toAddresses,
+                 subject: resolvedSubject,
+                 html: resolvedBody
+               })
+             });
+
+             if (!response.ok) {
+               const errText = await response.text();
+               throw new Error(`Resend API Rejection: ${errText}`);
+             }
+             
+             const data = await response.json();
+             outputPayload = JSON.stringify({ success: true, dispatchId: data?.id, to: toAddresses, subject: resolvedSubject });
+          }
+        } catch(error: any) {
+             throw new Error("Email dispatch failed: " + error.message);
+        }
       }
       else {
         // Dummy/Bypass execution for unsupported node types
@@ -190,10 +362,20 @@ export const resumeApprovalStep = action({
     executionId: v.id("workflowExecutions"),
     nodeId: v.string(),
     workflowId: v.id("workflows"),
+    action: v.union(v.literal("APPROVED"), v.literal("REJECTED"))
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+
+    if (args.action === "REJECTED") {
+        await ctx.runMutation(internal.workflowEngine.failNodeStep, {
+            executionId: args.executionId,
+            nodeId: args.nodeId,
+            error: "Administrator explicitly rejected the operation. Branch terminated.",
+        });
+        return false;
+    }
 
     // Manually force unlocked DAG path
     const downstreamNodesToSchedule = await ctx.runMutation(internal.workflowEngine.resumeNodeStep, {

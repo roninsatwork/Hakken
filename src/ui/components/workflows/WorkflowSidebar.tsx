@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Webhook, Zap, ArrowRightLeft, X, Code2, Clock, Database, UserCheck, RefreshCcw, GitMerge, Network } from 'lucide-react';
+import { Bot, Webhook, Zap, ArrowRightLeft, X, Code2, Clock, Database, UserCheck, RefreshCcw, GitMerge, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
@@ -23,7 +23,7 @@ export const WorkflowSidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose:
     { type: 'databaseNode', label: 'Database Action', icon: Database, color: 'text-indigo-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
     { type: 'waitNode', label: 'Wait / Delay', icon: Clock, color: 'text-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-500/20' },
     { type: 'approvalNode', label: 'Human Approval', icon: UserCheck, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
-    { type: 'subWorkflowNode', label: 'Sub-Workflow', icon: Network, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }
+    { type: 'emailNode', label: 'Send Email', icon: Mail, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' }
   ];
 
   return (

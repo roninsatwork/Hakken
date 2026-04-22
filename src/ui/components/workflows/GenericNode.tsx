@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Zap, Webhook, ArrowRightLeft, Settings2 } from 'lucide-react';
+import { Zap, Webhook, ArrowRightLeft, Settings2, Mail } from 'lucide-react';
 
 export function GenericNode({ data, type }: { data: any; type: string }) {
   let Icon = Settings2;
@@ -14,12 +14,14 @@ export function GenericNode({ data, type }: { data: any; type: string }) {
     Icon = Webhook; color = 'text-blue-500'; border = 'border-blue-500/30'; bg = 'bg-blue-500/10';
   } else if (type === 'logicNode') {
     Icon = ArrowRightLeft; color = 'text-purple-500'; border = 'border-purple-500/30'; bg = 'bg-purple-500/10';
+  } else if (type === 'emailNode') {
+    Icon = Mail; color = 'text-rose-500'; border = 'border-rose-500/30'; bg = 'bg-rose-500/10';
   }
 
   return (
-    <div className={`flex flex-col w-[300px] bg-sidebar rounded-[24px] border ${border} shadow-2xl relative overflow-hidden backdrop-blur-3xl group transition-all duration-300`}>
+    <div className={`flex flex-col w-[300px] bg-sidebar rounded-[24px] border ${border} shadow-2xl relative backdrop-blur-3xl group transition-all duration-300`}>
       {type !== 'triggerNode' && (
-        <Handle type="target" position={Position.Left} className="w-2 h-6 !bg-border-dim !border-0 !rounded-[4px] -ml-1 transition-all" />
+        <Handle type="target" position={Position.Left} className="!w-5 !h-5 !bg-card !border-[4px] !border-border-dim !rounded-full !-ml-[10px] transition-transform hover:scale-125" />
       )}
       
       <div className={`p-4 flex items-center gap-4 border-b border-border-dim/50`}>
@@ -42,7 +44,7 @@ export function GenericNode({ data, type }: { data: any; type: string }) {
          </span>
       </div>
 
-      <Handle type="source" position={Position.Right} className="w-2 h-6 !bg-brand !border-0 !rounded-[4px] -mr-1 shadow-[0_0_12px_rgba(var(--brand),0.5)] transition-all" />
+      <Handle type="source" position={Position.Right} className="!w-5 !h-5 !bg-brand/80 !border-[4px] !border-brand/50 !rounded-full !-mr-[10px] shadow-[0_0_12px_rgba(var(--brand),0.6)] transition-transform hover:scale-125" />
     </div>
   );
 }

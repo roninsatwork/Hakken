@@ -306,10 +306,20 @@ export const executeAgentNode = internalAction({
 
     const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
     
+    // Check if tools or internet access are enabled
+    const tools: any[] = [];
+    if (agent.allowInternetAccess) {
+        tools.push({ googleSearch: {} });
+    }
+    
     const config: any = {
         systemInstruction: systemInstruction,
-        temperature: 0.1,
+        temperature: agent.temperature !== undefined ? agent.temperature : 0.1,
     };
+    
+    if (tools.length > 0) {
+        config.tools = tools;
+    }
 
     if (agent.outputSchema) {
         try {

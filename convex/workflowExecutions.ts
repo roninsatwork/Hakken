@@ -44,12 +44,13 @@ export const upsertStep = internalMutation({
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    const existingSteps = await ctx.db
       .query("workflowExecutionSteps")
       .withIndex("by_execution", (q) =>
         q.eq("executionId", args.executionId).eq("nodeId", args.nodeId)
       )
-      .unique();
+      .collect();
+    const existing = existingSteps.sort((a,b) => b.startedAt - a.startedAt)[0];
 
     if (existing) {
       await ctx.db.patch(existing._id, {

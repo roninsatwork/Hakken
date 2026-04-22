@@ -38,7 +38,7 @@ const nodeTypes: NodeTypes = {
   approvalNode: GenericNode as any,
   iteratorNode: GenericNode as any,
   mergeNode: GenericNode as any,
-  subWorkflowNode: GenericNode as any,
+  emailNode: GenericNode as any,
 };
 
 function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, handleManualRun }: any) {
@@ -210,6 +210,8 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
         {editingNode?.type === 'agentNode' ? (
           <AgentEditorModal
             node={editingNode}
+            allNodes={nodes}
+            edges={edges}
             onClose={() => setEditingNode(null)}
             onUpdateNode={handleUpdateNodeData}
           />
@@ -217,6 +219,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
           <ConfigDrawer
             node={editingNode}
             allNodes={nodes}
+            edges={edges}
             onClose={() => setEditingNode(null)}
             onUpdateNode={handleUpdateNodeData}
           />
@@ -281,8 +284,12 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
     }
 
     try {
+      const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
+      const triggerType = triggerNode?.data?._triggerType || 'MANUAL';
+
       await updateWorkflow({
         id: workflow._id as any,
+        triggerType: triggerType,
         nodes: JSON.stringify(nodes),
         edges: JSON.stringify(edges)
       });

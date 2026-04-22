@@ -356,14 +356,20 @@ Your job is to translate the user's plain-English intent into exact system paylo
 - NEVER hallucinate node IDs. Only use the IDs explicitly listed above.
 - The 'mapping' object must be a valid JSON representation (stringify it) of the required input mapping payload for the current node. Generate reasonable keys (like "text", "summary_data", "table_id") based on the implied nodeType.
 - The 'template' object is a raw string layout if the node expects a raw string payload. You can inject variables directly into the text (e.g. "We received: {{nodes...}}").
-- If the required mapping or template is empty based on intent, return an empty string.`,
+- If the nodeType is 'codeNode', the 'template' MUST be raw Javascript code (without markdown backticks) for a V8 sandboxed function. The script has access to the global 'nodes' variable (e.g., nodes['NODE-ID'].output). It MUST contain a valid return statement. Do not use JSON mapping syntax in JS. Let 'mapping' be empty.
+- If the nodeType is 'agentNode', you MUST fully configure the agent's identity using the agent* variables. Set 'agentAllowInternet' to true if the prompt implies searching or getting live/current info.`,
           temperature: 0.1,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
               mapping: { type: Type.STRING, description: "A valid JSON string representing the exact JSON Data mapping to apply, usually containing mathematical {{nodes...}} variable injections." },
-              template: { type: Type.STRING, description: "Raw block string layout/template, if applicable." }
+              template: { type: Type.STRING, description: "Raw block string layout/template, if applicable." },
+              agentName: { type: Type.STRING, description: "A concise name for the agent (only if nodeType is agentNode)." },
+              agentSystemPrompt: { type: Type.STRING, description: "The core system instructions/directives for the AI agent (only if nodeType is agentNode)." },
+              agentInputFields: { type: Type.STRING, description: "Comma separated expected variables for the input schema, e.g. 'url, data' (only if nodeType is agentNode)." },
+              agentOutputFields: { type: Type.STRING, description: "Comma separated expected variables for the output schema, e.g. 'summary, classification' (only if nodeType is agentNode)." },
+              agentAllowInternet: { type: Type.BOOLEAN, description: "Set to true if the agent's task requires searching the live internet (only if nodeType is agentNode)." }
             },
             required: ["mapping", "template"]
           }
@@ -376,7 +382,7 @@ Your job is to translate the user's plain-English intent into exact system paylo
       
       const jsonStr = response.text;
       const parsed = JSON.parse(jsonStr);
-      return parsed as { mapping: string, template: string };
+      return parsed as { mapping: string, template: string, agentName?: string, agentSystemPrompt?: string, agentInputFields?: string, agentOutputFields?: string, agentAllowInternet?: boolean };
       
     } catch (error) {
       console.error("Failed to generate node configuration via Vertex AI:", error);

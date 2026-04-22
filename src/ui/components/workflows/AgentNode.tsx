@@ -64,7 +64,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
-        className="w-3 h-3 bg-card border-2 border-border-dim rounded-full -ml-[7px]"
+        className="!w-5 !h-5 !bg-card !border-[4px] !border-border-dim !rounded-full !-ml-[10px] transition-transform hover:scale-125"
       />
 
       <div className="flex flex-col">
@@ -126,7 +126,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className="w-3 h-3 bg-brand/80 border-2 border-brand/30 rounded-full -mr-[7px]"
+        className="!w-5 !h-5 !bg-brand/80 !border-[4px] !border-brand/50 !rounded-full !-mr-[10px] shadow-[0_0_12px_rgba(var(--brand),0.6)] transition-transform hover:scale-125"
       />
     </div>
   );
