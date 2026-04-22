@@ -45,7 +45,7 @@ export const executeNode = internalAction({
         return;
       }
       
-      const workflow = await ctx.runQuery((internal as any).workflows.internalGet, { id: args.workflowId });
+      const workflow = await ctx.runQuery(internal.workflows.internalGet, { id: args.workflowId });
       if (!workflow) throw new Error("Workflow not found");
 
       const nodes = JSON.parse(workflow.nodes || "[]");
@@ -232,8 +232,7 @@ export const executeNode = internalAction({
       else if (node.type === "mergeNode") {
         try {
           const executionSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, { executionId: args.executionId });
-          const workflowData = await ctx.db.get(args.workflowId);
-          const edges = JSON.parse(workflowData?.edges || "[]");
+          const edges = JSON.parse(workflow?.edges || "[]");
           const incomingEdges = edges.filter((e: any) => e.target === args.nodeId);
           
           let mergedPayload: any = {};
