@@ -38,6 +38,7 @@ export const executeNode = internalAction({
     nodeId: v.string(),
   },
   handler: async (ctx, args) => {
+    let lockedStepId: any = undefined;
     try {
       const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, { id: args.executionId });
       if (!execution || execution.status === "FAILED") {
@@ -52,20 +53,25 @@ export const executeNode = internalAction({
       const node = nodes.find((n: any) => n.id === args.nodeId);
       if (!node) throw new Error(`Node ${args.nodeId} not found in graph topology`);
 
-      // Mark Step as Running
-      await ctx.runMutation(internal.workflowExecutions.upsertStep, {
+      // Safely claim a PENDING execution step (prevents collision in iterator fan-outs)
+      const claimedStep = await ctx.runMutation(internal.workflowExecutions.claimNextPendingStep, {
         executionId: args.executionId,
-        nodeId: args.nodeId,
-        agentId: node.data?._agentId,
-        input: execution.state || "{}",
-        status: "RUNNING",
+        nodeId: args.nodeId
       });
+
+      if (!claimedStep) {
+         console.warn(`No pending step found for node ${args.nodeId}. It might have already run.`);
+         return; // Safely abort if another concurrent worker grabbed it
+      }
+
+      const stepInput = claimedStep.input || execution.state || "{}";
+      lockedStepId = claimedStep.stepId;
 
       // Execute based on Node Type (In Phase 1 we only have Agent nodes natively supported)
       let outputPayload = "{}";
 
-      const globalStatePayload = JSON.parse(execution.state || "{}");
-      let resolvedInput = execution.state || "{}"; // Default to raw state dump
+      const globalStatePayload = JSON.parse(stepInput);
+      let resolvedInput = stepInput; // Default to raw state dump
 
       if (node.data?._inputMapping) {
         resolvedInput = JSON.stringify(resolveTemplate(node.data._inputMapping, globalStatePayload));
@@ -172,6 +178,21 @@ export const executeNode = internalAction({
           } else if (node.data._inputTemplate) {
              try { resolvedData = JSON.parse(resolveTemplate(node.data._inputTemplate, globalStatePayload)); } catch(e) {}
           }
+
+          const sanitizeForConvex = (obj: any): any => {
+             if (Array.isArray(obj)) return obj.map(sanitizeForConvex);
+             if (obj !== null && typeof obj === 'object') {
+                 const clean: any = {};
+                 for (const key in obj) {
+                     const safeKey = key.startsWith('$') ? key.substring(1) : key;
+                     clean[safeKey] = sanitizeForConvex(obj[key]);
+                 }
+                 return clean;
+             }
+             return obj;
+          };
+
+          resolvedData = sanitizeForConvex(resolvedData);
 
           const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
             tableName,
@@ -311,6 +332,7 @@ export const executeNode = internalAction({
       const downstreamNodesToSchedule = await ctx.runMutation(internal.workflowEngine.finalizeNodeStep, {
         executionId: args.executionId,
         nodeId: args.nodeId,
+        stepId: lockedStepId,
         outputData: outputPayload,
       });
 
@@ -340,6 +362,7 @@ export const executeNode = internalAction({
       await ctx.runMutation(internal.workflowEngine.failNodeStep, {
         executionId: args.executionId,
         nodeId: args.nodeId,
+        stepId: lockedStepId,
         error: error.message || "Unknown error during node execution",
       });
       // The fail mutation marks the global execution as FAILED, halting further steps

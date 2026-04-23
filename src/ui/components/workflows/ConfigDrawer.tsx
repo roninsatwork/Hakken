@@ -38,7 +38,12 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
     _inputMapping: "",
     _inputTemplate: "",
     _triggerType: "MANUAL",
-    _scheduleInterval: "daily",
+    _scheduleMode: "interval",
+    _scheduleIntervalValue: 15,
+    _scheduleIntervalUnit: "minutes",
+    _scheduleTime: "09:00",
+    _scheduleDayOfWeek: 1,
+    _scheduleDayOfMonth: 1,
     _webhookSecret: "",
     _actionConfig: { method: 'GET', url: '', headers: [], body: '' },
     _dbConfig: { operation: 'INSERT', tableName: '', docId: '' },
@@ -57,12 +62,37 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
   useEffect(() => {
     if (node) {
-      setFormData({
-        label: node.data?.label || "",
-        _inputMapping: typeof node.data?._inputMapping === 'object' ? JSON.stringify(node.data._inputMapping, null, 2) : node.data?._inputMapping || "",
-        _inputTemplate: node.data?._inputTemplate || "",
-        _triggerType: node.data?._triggerType || "MANUAL",
-        _scheduleInterval: node.data?._scheduleInterval || "daily",
+        const existingSchedule = node.data?._scheduleInterval;
+        let pMode = "interval", pVal = 15, pUnit = "minutes", pTime = "09:00", pDow = 1, pDom = 1;
+        if (existingSchedule) {
+           try {
+              const parsed = JSON.parse(existingSchedule);
+              if (parsed.mode) pMode = parsed.mode;
+              if (parsed.intervalVal) pVal = parsed.intervalVal;
+              if (parsed.intervalUnit) pUnit = parsed.intervalUnit;
+              if (parsed.time) pTime = parsed.time;
+              if (parsed.dayOfWeek) pDow = parsed.dayOfWeek;
+              if (parsed.dayOfMonth) pDom = parsed.dayOfMonth;
+           } catch(e) {
+              const parts = existingSchedule.split(" ");
+              if (parts.length === 2 && !isNaN(parseInt(parts[0]))) {
+                 pVal = parseInt(parts[0]);
+                 pUnit = parts[1];
+              }
+           }
+        }
+        
+        setFormData({
+          label: node.data?.label || "",
+          _inputMapping: typeof node.data?._inputMapping === 'object' ? JSON.stringify(node.data._inputMapping, null, 2) : node.data?._inputMapping || "",
+          _inputTemplate: node.data?._inputTemplate || "",
+          _triggerType: node.data?._triggerType || "MANUAL",
+          _scheduleMode: pMode,
+          _scheduleIntervalValue: pVal,
+          _scheduleIntervalUnit: pUnit,
+          _scheduleTime: pTime,
+          _scheduleDayOfWeek: pDow,
+          _scheduleDayOfMonth: pDom,
         _webhookSecret: node.data?._webhookSecret || "",
         _actionConfig: node.data?._actionConfig || { method: 'GET', url: '', headers: [], body: '' },
         _dbConfig: node.data?._dbConfig || { operation: 'INSERT', tableName: '', docId: '' },
@@ -119,7 +149,20 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
       _inputMapping: parsedMapping,
       _inputTemplate: formData._inputTemplate,
       _triggerType: formData._triggerType,
-      _scheduleInterval: formData._scheduleInterval,
+      _scheduleInterval: JSON.stringify({
+         mode: formData._scheduleMode,
+         intervalVal: formData._scheduleIntervalValue,
+         intervalUnit: formData._scheduleIntervalUnit,
+         time: formData._scheduleTime,
+         dayOfWeek: formData._scheduleDayOfWeek,
+         dayOfMonth: formData._scheduleDayOfMonth
+      }),
+      _scheduleMode: formData._scheduleMode,
+      _scheduleIntervalValue: formData._scheduleIntervalValue,
+      _scheduleIntervalUnit: formData._scheduleIntervalUnit,
+      _scheduleTime: formData._scheduleTime,
+      _scheduleDayOfWeek: formData._scheduleDayOfWeek,
+      _scheduleDayOfMonth: formData._scheduleDayOfMonth,
       _webhookSecret: formData._webhookSecret,
       _actionConfig: formData._actionConfig,
       _dbConfig: formData._dbConfig,
@@ -218,19 +261,87 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
                  {formData._triggerType === 'SCHEDULE' && (
                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex flex-col gap-2 overflow-hidden">
-                     <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Run Interval</label>
-                     <div className="grid grid-cols-2 gap-2 mt-1">
-                        {['hourly', 'daily', 'weekly'].map((interval) => (
-                           <button
-                             key={interval}
-                             type="button"
-                             onClick={() => setFormData({ ...formData, _scheduleInterval: interval })}
-                             className={`py-2 px-3 text-xs font-medium rounded-lg border transition-all capitalize ${formData._scheduleInterval === interval ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-background border-border-dim text-secondary hover:text-foreground'}`}
+                     <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Run Frequency</label>
+                     <select 
+                        value={formData._scheduleMode} 
+                        onChange={(e) => setFormData({ ...formData, _scheduleMode: e.target.value })}
+                        className="w-full px-4 py-3 bg-background border border-border-dim rounded-[12px] text-sm outline-none focus:border-brand/50 text-foreground cursor-pointer"
+                     >
+                        <option value="interval">Custom Interval</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                     </select>
+                     
+                     {formData._scheduleMode === 'interval' && (
+                        <div className="flex items-center gap-2 mt-2">
+                           <span className="text-[12px] text-muted font-medium ml-1">Every</span>
+                           <input
+                              type="number"
+                              min="1"
+                              max="999"
+                              value={formData._scheduleIntervalValue || 1}
+                              onChange={(e) => setFormData({ ...formData, _scheduleIntervalValue: parseInt(e.target.value) || 1 })}
+                              className="w-20 px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50 text-foreground text-center"
+                           />
+                           <select
+                              value={formData._scheduleIntervalUnit || 'minutes'}
+                              onChange={(e) => setFormData({ ...formData, _scheduleIntervalUnit: e.target.value })}
+                              className="flex-1 px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50 text-secondary cursor-pointer"
                            >
-                              {interval}
-                           </button>
-                        ))}
-                     </div>
+                              <option value="minutes">Minutes</option>
+                              <option value="hours">Hours</option>
+                              <option value="days">Days</option>
+                           </select>
+                        </div>
+                     )}
+
+                     {formData._scheduleMode !== 'interval' && (
+                        <div className="flex flex-col gap-3 mt-2 p-3 bg-background/50 border border-border-dim rounded-[12px]">
+                           {formData._scheduleMode === 'weekly' && (
+                              <div className="flex flex-col gap-1.5">
+                                 <label className="text-[10px] text-secondary uppercase tracking-wider font-semibold">Day of Week</label>
+                                 <select 
+                                    value={formData._scheduleDayOfWeek} 
+                                    onChange={(e) => setFormData({ ...formData, _scheduleDayOfWeek: parseInt(e.target.value) })}
+                                    className="px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50 text-foreground"
+                                 >
+                                    <option value={1}>Monday</option>
+                                    <option value={2}>Tuesday</option>
+                                    <option value={3}>Wednesday</option>
+                                    <option value={4}>Thursday</option>
+                                    <option value={5}>Friday</option>
+                                    <option value={6}>Saturday</option>
+                                    <option value={0}>Sunday</option>
+                                 </select>
+                              </div>
+                           )}
+
+                           {formData._scheduleMode === 'monthly' && (
+                              <div className="flex flex-col gap-1.5">
+                                 <label className="text-[10px] text-secondary uppercase tracking-wider font-semibold">Day of Month</label>
+                                 <input
+                                    type="number"
+                                    min="1"
+                                    max="31"
+                                    value={formData._scheduleDayOfMonth}
+                                    onChange={(e) => setFormData({ ...formData, _scheduleDayOfMonth: parseInt(e.target.value) || 1 })}
+                                    className="px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50 text-foreground"
+                                 />
+                              </div>
+                           )}
+
+                           <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] text-secondary uppercase tracking-wider font-semibold">Time (UTC)</label>
+                              <input
+                                 type="time"
+                                 value={formData._scheduleTime}
+                                 onChange={(e) => setFormData({ ...formData, _scheduleTime: e.target.value })}
+                                 className="px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50 text-foreground"
+                              />
+                           </div>
+                        </div>
+                     )}
                    </motion.div>
                  )}
                </AnimatePresence>
@@ -362,7 +473,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                     onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, operation: e.target.value } })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                  >
-                    {['INSERT', 'UPDATE', 'DELETE'].map(m => <option key={m} value={m}>{m}</option>)}
+                    {['INSERT', 'UPDATE', 'DELETE', 'SELECT'].map(m => <option key={m} value={m}>{m}</option>)}
                  </select>
                </div>
 
@@ -380,12 +491,14 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
                {formData._dbConfig?.operation !== 'INSERT' && (
                  <div className="flex flex-col gap-2">
-                   <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Target Document ID</label>
+                   <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">
+                      {formData._dbConfig?.operation === 'SELECT' ? "Target Document ID (Optional)" : "Target Document ID"}
+                   </label>
                    <input
                       type="text"
                       value={formData._dbConfig?.docId || ''}
                       onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, docId: e.target.value } })}
-                      placeholder="e.g. {{nodes.agent-123.output.docId}} or jd7abcd..."
+                      placeholder={formData._dbConfig?.operation === 'SELECT' ? "Leave blank to fetch all records" : "e.g. {{nodes.agent-123.output.docId}} or jd7abcd..."}
                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[12px] font-mono outline-none focus:border-brand/50"
                    />
                  </div>

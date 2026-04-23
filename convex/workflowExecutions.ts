@@ -85,3 +85,26 @@ export const getExecution = internalQuery({
     return await ctx.db.get(args.id);
   },
 });
+
+export const claimNextPendingStep = internalMutation({
+  args: { executionId: v.id("workflowExecutions"), nodeId: v.string() },
+  handler: async (ctx, args) => {
+    const steps = await ctx.db
+      .query("workflowExecutionSteps")
+      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
+      .collect();
+      
+    const pendingStep = steps
+      .filter((s) => s.status === "PENDING")
+      .sort((a, b) => a.startedAt - b.startedAt)[0]; // Oldest first to process sequentially
+      
+    if (!pendingStep) return null;
+    
+    await ctx.db.patch(pendingStep._id, {
+        status: "RUNNING",
+        startedAt: Date.now()
+    });
+    
+    return { stepId: pendingStep._id, input: pendingStep.input };
+  }
+});

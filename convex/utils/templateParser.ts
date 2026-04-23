@@ -15,7 +15,7 @@ export function resolveTemplate(template: string | object, globalPayload: Record
 
   // If template is a string, replace {{ }} interpolations
   if (typeof template === "string") {
-    return template.replace(/\{\{\s*([\w\.\[\]]+)\s*\}\}/g, (match, path) => {
+    return template.replace(/\{\{\s*([\w\.\[\]\-]+)\s*\}\}/g, (match, path) => {
       const value = getNestedValue(globalPayload, path);
       if (value === undefined || value === null) return "";
       if (typeof value === "object") return JSON.stringify(value);

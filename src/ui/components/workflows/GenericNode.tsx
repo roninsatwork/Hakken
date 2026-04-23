@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Zap, Webhook, ArrowRightLeft, Settings2, Mail } from 'lucide-react';
+import { Zap, Webhook, ArrowRightLeft, Settings2, Mail, Database } from 'lucide-react';
 
 export function GenericNode({ data, type }: { data: any; type: string }) {
   let Icon = Settings2;
@@ -16,6 +16,8 @@ export function GenericNode({ data, type }: { data: any; type: string }) {
     Icon = ArrowRightLeft; color = 'text-purple-500'; border = 'border-purple-500/30'; bg = 'bg-purple-500/10';
   } else if (type === 'emailNode') {
     Icon = Mail; color = 'text-rose-500'; border = 'border-rose-500/30'; bg = 'bg-rose-500/10';
+  } else if (type === 'databaseNode') {
+    Icon = Database; color = 'text-green-500'; border = 'border-green-500/30'; bg = 'bg-green-500/10';
   }
 
   return (
@@ -38,10 +40,36 @@ export function GenericNode({ data, type }: { data: any; type: string }) {
         </div>
       </div>
 
-      <div className="p-5 flex flex-col items-center justify-center min-h-[80px]">
-         <span className="text-[12px] text-secondary italic">
-             {data._inputMapping ? "Data schema bound" : "No I/O schemas defined"}
-         </span>
+      <div className="p-5 flex flex-col min-h-[80px] gap-3">
+         {type === 'databaseNode' ? (
+             data._dbConfig?.tableName ? (
+               <div className="flex flex-col gap-3">
+                 <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">Configuration</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] text-foreground font-mono">{data._dbConfig.operation || 'INSERT'}</span>
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] text-foreground font-mono">{data._dbConfig.tableName || 'N/A'}</span>
+                    </div>
+                 </div>
+                 <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] uppercase text-secondary font-semibold tracking-widest">Outputs</span>
+                    <div className="flex flex-wrap gap-1">
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">result</span>
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">operation</span>
+                       <span className="px-1.5 py-0.5 rounded-[4px] bg-brand/10 border border-brand/20 text-[10px] font-mono text-brand/80">tableName</span>
+                    </div>
+                 </div>
+               </div>
+             ) : (
+                 <span className="text-[12px] text-secondary italic text-center w-full mt-2">Unconfigured Database Node</span>
+             )
+         ) : (
+             <div className="flex w-full h-full items-center justify-center">
+                 <span className="text-[12px] text-secondary italic">
+                     {data._inputMapping ? "Data schema bound" : "No I/O schemas defined"}
+                 </span>
+             </div>
+         )}
       </div>
 
       <Handle type="source" position={Position.Right} className="!w-5 !h-5 !bg-brand/80 !border-[4px] !border-brand/50 !rounded-full !-mr-[10px] shadow-[0_0_12px_rgba(var(--brand),0.6)] transition-transform hover:scale-125" />

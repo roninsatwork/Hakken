@@ -355,6 +355,7 @@ Your job is to translate the user's plain-English intent into exact system paylo
 - To mathematically bind data from an upstream node into the mapping, you MUST use the EXACT bracket syntax: {{nodes.<UPSTREAM_NODE_ID>.output.<FIELD_NAME>}}
 - NEVER hallucinate node IDs. Only use the IDs explicitly listed above.
 - The 'mapping' object must be a valid JSON representation (stringify it) of the required input mapping payload for the current node. Generate reasonable keys (like "text", "summary_data", "table_id") based on the implied nodeType.
+- CRITICAL DATABASE RULE: Never generate JSON keys that start with a dollar sign (e.g. "$in", "$eq", "$set"). Convex explicitly rejects '$' prefixes in document keys.
 - The 'template' object is a raw string layout if the node expects a raw string payload. You can inject variables directly into the text (e.g. "We received: {{nodes...}}").
 - If the nodeType is 'codeNode', the 'template' MUST be raw Javascript code (without markdown backticks) for a V8 sandboxed function. The script has access to the global 'nodes' variable (e.g., nodes['NODE-ID'].output). It MUST contain a valid return statement. Do not use JSON mapping syntax in JS. Let 'mapping' be empty.
 - If the nodeType is 'agentNode', you MUST fully configure the agent's identity using the agent* variables. Set 'agentAllowInternet' to true if the prompt implies searching or getting live/current info.`,

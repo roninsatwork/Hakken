@@ -4,6 +4,14 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 
+// Run workflow schedule dispatcher every minute
+crons.interval(
+  "workflow-schedule-dispatcher",
+  { minutes: 1 },
+  internal.workflowEngine.scheduleDispatcher,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",
