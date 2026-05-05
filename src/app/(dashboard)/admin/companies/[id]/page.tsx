@@ -22,8 +22,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 
-type TimeframeOption = "today" | "yesterday" | "7d" | "30d" | "90d" | "ytd" | "custom";
+type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
 // Reusable Animated Component mapping standard integers
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
@@ -86,47 +87,14 @@ export default function CompanyOverviewPage() {
 
         {/* Date Filters native block */}
         <div className="flex flex-col items-end gap-3 z-20">
-          <div className="flex items-center bg-card/40 backdrop-blur-lg border border-border-dim p-1.5 rounded-[12px] shadow-sm transition-all hover:bg-card/60">
-            <Calendar className="w-4 h-4 text-muted ml-3 mr-2" />
-            <select
-              className="bg-transparent border-none outline-none text-[13px] font-medium text-foreground pr-4 pl-2 py-1 appearance-none cursor-pointer"
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as TimeframeOption)}
-            >
-              <option value="today">{t('timeframe.today')}</option>
-              <option value="yesterday">{t('timeframe.yesterday')}</option>
-              <option value="7d">{t('timeframe.7d')}</option>
-              <option value="30d">{t('timeframe.30d')}</option>
-              <option value="90d">{t('timeframe.90d')}</option>
-              <option value="ytd">{t('timeframe.ytd')}</option>
-              <option value="custom">{t('timeframe.custom')}</option>
-            </select>
-          </div>
-
-          <AnimatePresence>
-            {timeframe === "custom" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, y: -10 }}
-                animate={{ opacity: 1, height: 'auto', y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -10 }}
-                className="flex items-center gap-3 bg-card/20 p-2 rounded-[12px] border border-border-dim origin-top"
-              >
-                <input
-                  type="date"
-                  className="bg-background/50 border border-border-dim rounded-[8px] text-[12px] px-3 py-1.5 outline-none focus:border-brand text-muted uppercase font-mono tracking-wider"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                />
-                <span className="text-muted/50">-</span>
-                <input
-                  type="date"
-                  className="bg-background/50 border border-border-dim rounded-[8px] text-[12px] px-3 py-1.5 outline-none focus:border-brand text-muted uppercase font-mono tracking-wider"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <TimeframeDropdown
+            timeframe={timeframe}
+            setTimeframe={setTimeframe}
+            customStart={customStart}
+            setCustomStart={setCustomStart}
+            customEnd={customEnd}
+            setCustomEnd={setCustomEnd}
+          />
         </div>
       </header>
 
