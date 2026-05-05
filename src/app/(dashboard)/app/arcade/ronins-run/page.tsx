@@ -109,7 +109,8 @@ export default function RoninArcadePage() {
 
       <div className="flex flex-col gap-5 pb-8 mt-2">
         
-        <style dangerouslySetInnerHTML={{__html: `
+        <style>
+          {`
           .arcade-maze-bg {
             background-color: #2a2118; /* Dim ambient Shoji paper lighting */
             background-image: 
@@ -293,7 +294,8 @@ export default function RoninArcadePage() {
           .blink-text {
             animation: blinkText 1.5s infinite;
           }
-        `}} />
+          `}
+        </style>
 
         {/* Game Container */}
         <div 

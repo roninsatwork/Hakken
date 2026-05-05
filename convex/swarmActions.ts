@@ -133,7 +133,8 @@ export const executeSwarmObjective = internalAction({
                threadId: args.threadId,
                interactionType: "SWARM MICRO-EXECUTION",
                promptContent: "SWARM MEMORY PAYLOAD OVERRIDDEN",
-               responseContent: output
+               responseContent: output,
+               companyId: tenantContext.companyId ?? undefined
            });
 
            memoryPayload += `\n\n==============================\n[INTELLIGENCE FROM: ${agent.name.toUpperCase()}]\n${output}\n==============================\n`;

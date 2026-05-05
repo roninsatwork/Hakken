@@ -3,9 +3,17 @@ import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { GoogleGenAI } from "@google/genai";
 
+import { getAuthUserId } from "@convex-dev/auth/server";
+
 export const syncVertexModels = action({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    
+    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
 

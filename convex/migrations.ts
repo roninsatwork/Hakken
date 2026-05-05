@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 import { auth } from "./auth";
 
 /**
@@ -8,7 +8,7 @@ import { auth } from "./auth";
  * 2. Elevates the root anthony@ronins.co.uk account to SUPER_ADMIN.
  * 3. Sweeps all other users and legacy threads into the ACME company for analytics continuity.
  */
-export const runSaaSMigration = mutation({
+export const runSaaSMigration = internalMutation({
   args: {},
   handler: async (ctx) => {
     // 1. Create ACME Inc.

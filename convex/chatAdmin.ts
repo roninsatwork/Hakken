@@ -57,7 +57,7 @@ export const getOffsetPaginatedThreads = query({
     // Map over the chunk to manually join the user identity
     const enrichedThreads = await Promise.all(
       pageSlice.map(async (thread) => {
-        const user = await ctx.db.get(thread.userId);
+        const user = thread.userId ? await ctx.db.get(thread.userId) : null;
         return {
           ...thread,
           user: user ? {

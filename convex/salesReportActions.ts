@@ -215,6 +215,7 @@ Total length: 600-900 words. Never pad.
         interactionType: "BATCH_GENERATION_START",
         promptContent: prompt,
         responseContent: "Initiating remote generation...",
+        companyId: args.companyId
     });
 
     try {
@@ -237,6 +238,7 @@ Total length: 600-900 words. Never pad.
             interactionType: "BATCH_GENERATION_SUCCESS",
             promptContent: "N/A [Execution Completion]",
             responseContent: jsonText,
+            companyId: args.companyId
         });
 
         const reportData = JSON.parse(jsonText);
@@ -287,6 +289,7 @@ Total length: 600-900 words. Never pad.
             interactionType: "ERROR",
             promptContent: "N/A [Execution Failure]",
             responseContent: e.message || "Unknown error during AI Generation",
+            companyId: args.companyId
         });
         throw e;
     }

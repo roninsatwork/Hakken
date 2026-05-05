@@ -177,6 +177,7 @@ export default defineSchema({
     interactionType: v.string(), // "Tool Execution", "Generation", "Error"
     promptContent: v.string(), // What the Agent was sent
     responseContent: v.string(), // What the Agent replied or did
+    companyId: v.optional(v.id("companies")), // Strict tenant isolation
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])
@@ -235,7 +236,7 @@ export default defineSchema({
 
   // Sonae Assistant Tables
   threads: defineTable({
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")), // Sandbox tracking
     widgetId: v.optional(v.id("widgets")), // To link threads directly to a widget

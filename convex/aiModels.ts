@@ -6,6 +6,8 @@ import { auth } from "./auth";
 export const getModels = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
     return await ctx.db.query("aiModels").order("asc").collect();
   },
 });
@@ -17,6 +19,10 @@ export const getOffsetPaginatedModels = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
     let models = await ctx.db.query("aiModels").order("asc").collect();
 
     if (args.searchTerm) {
@@ -186,6 +192,8 @@ export const internalBatchUpsert = internalMutation({
 export const getModel = query({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
     return await ctx.db.get(args.modelId);
   },
 });

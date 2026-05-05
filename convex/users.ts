@@ -22,6 +22,8 @@ export const getUserInternal = internalQuery({
 });
 
 export const generateUploadUrl = mutation(async (ctx) => {
+  const userId = await auth.getUserId(ctx);
+  if (!userId) throw new Error("Unauthenticated request");
   return await ctx.storage.generateUploadUrl();
 });
 
@@ -180,6 +182,9 @@ export const addUser = mutation({
       if (caller.role !== "ADMIN" || caller.companyId !== args.companyId) {
         throw new Error("Unauthorized");
       }
+      if (args.role === "SUPER_ADMIN") {
+        throw new Error("Unauthorized: Insufficient privileges");
+      }
     }
 
     // Basic implementation: manually created users get a distinct token pattern
@@ -228,6 +233,9 @@ export const updateUser = mutation({
     if (caller.role !== "SUPER_ADMIN") {
       if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
         throw new Error("Unauthorized");
+      }
+      if (targetUser.role === "SUPER_ADMIN") {
+        throw new Error("Unauthorized: Cannot modify a Super Administrator");
       }
       if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== caller.companyId)) {
         throw new Error("Unauthorized: Insufficient privileges");
@@ -285,6 +293,9 @@ export const deleteUser = mutation({
     if (caller.role !== "SUPER_ADMIN") {
       if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
         throw new Error("Unauthorized");
+      }
+      if (targetUser.role === "SUPER_ADMIN") {
+        throw new Error("Unauthorized: Cannot delete a Super Administrator");
       }
     }
 

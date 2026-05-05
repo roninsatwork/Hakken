@@ -1,3 +1,4 @@
+import { auth } from "./auth";
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 
@@ -9,23 +10,28 @@ export const getOffsetPaginated = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
     let rawResults = [];
 
-    // Text search vs Index scan
+    let q: any = ctx.db.query("agentLogs");
+    
     if (args.searchTerm && args.searchTerm.trim() !== "") {
-      rawResults = await ctx.db
-        .query("agentLogs")
-        .withSearchIndex("search_content", (q) =>
-          q.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
-        )
-        .take(1000);
+       q = ctx.db.query("agentLogs").withSearchIndex("search_content", (searchQ) =>
+          searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
+       );
     } else {
-      rawResults = await ctx.db
-        .query("agentLogs")
-        .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-        .order("desc")
-        .take(1000); // hard limit to keep it fast and responsive for UI counting
+       q = ctx.db.query("agentLogs").withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
     }
+
+    if (user.role === "ADMIN") {
+       if (!user.companyId) throw new Error("Unauthorized");
+       q = q.filter((filterQ: any) => filterQ.eq(filterQ.field("companyId"), user.companyId));
+    }
+
+    rawResults = await q.take(1000);
 
     const totalCount = rawResults.length;
     const offset = (args.page - 1) * args.pageSize;
@@ -39,7 +45,7 @@ export const getOffsetPaginated = query({
   },
 });
 
-export const seedForAgent = mutation({
+export const seedForAgent = internalMutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
     const interactionTypes = [
@@ -88,6 +94,7 @@ export const insertAgentLogInternal = internalMutation({
     interactionType: v.string(),
     promptContent: v.string(),
     responseContent: v.string(),
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("agentLogs", {
@@ -96,6 +103,7 @@ export const insertAgentLogInternal = internalMutation({
       interactionType: args.interactionType,
       promptContent: args.promptContent,
       responseContent: args.responseContent,
+      companyId: args.companyId,
       createdAt: Date.now(),
     });
   },
@@ -104,13 +112,37 @@ export const insertAgentLogInternal = internalMutation({
 export const getLogById = query({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const log = await ctx.db.get(args.id);
+    if (!log) return null;
+    
+    if (user.role === "ADMIN") {
+      if (!user.companyId || log.companyId !== user.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
+    return log;
   },
 });
 
 export const deleteLog = mutation({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const log = await ctx.db.get(args.id);
+    if (!log) throw new Error("Log not found");
+    
+    if (user.role === "ADMIN") {
+      if (!user.companyId || log.companyId !== user.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
     return await ctx.db.delete(args.id);
   },
 });

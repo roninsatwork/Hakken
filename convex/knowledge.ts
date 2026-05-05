@@ -32,11 +32,16 @@ export const getDocuments = query({
     
     // Agent-isolated Knowledge Scope (Highest Priority)
     if (args.agentId) {
-      return await ctx.db
+      let results = await ctx.db
         .query("knowledgeDocuments")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
         .collect();
+        
+      if (user?.role === "ADMIN") {
+          results = results.filter(r => r.companyId === user.companyId);
+      }
+      return results;
     }
     
     // Global Knowledge Check
@@ -75,7 +80,12 @@ export const getThreadDocuments = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
-    if (!userId) return []; // Fallback empty for anonymous/edge cases
+    if (!userId) return []; 
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== userId) {
+       return [];
+    }
 
     return await ctx.db
       .query("knowledgeDocuments")
@@ -187,7 +197,13 @@ export const deleteDocument = mutation({
 
     const user = await ctx.db.get(userId);
     
-    if (!doc.companyId) {
+    // Allow users to delete their own thread-scoped documents
+    if (doc.threadId) {
+        const thread = await ctx.db.get(doc.threadId);
+        if (!thread || thread.userId !== userId) {
+            throw new Error("Unauthorized to delete this document");
+        }
+    } else if (!doc.companyId) {
        if (!user || user.role !== "SUPER_ADMIN") {
          throw new Error("Unauthorized to delete global documents");
        }
@@ -497,7 +513,7 @@ export const markDocFailedInternal = internalMutation({
   }
 });
 
-export const debugCount = query({
+export const debugCount = internalQuery({
   args: {},
   handler: async (ctx) => {
     const chunks = await ctx.db.query("knowledgeChunks").collect();

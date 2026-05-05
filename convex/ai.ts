@@ -2,7 +2,8 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
 
 export const generateSonaeResponse = internalAction({
@@ -228,6 +229,9 @@ export const transcribeAudio = action({
     mimeType: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = "us-central1"; // Enforce central routing for stable multimodal models
     
@@ -319,6 +323,9 @@ export const generateNodeConfig = action({
     }))
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     

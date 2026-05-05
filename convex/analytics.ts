@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -370,8 +370,12 @@ export const getCompanyMetrics = query({
     if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
     else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
     else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    else if (args.timeframe === "14d") startDate.setDate(now.getDate() - 14);
     else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
+    else if (args.timeframe === "60d") startDate.setDate(now.getDate() - 60);
     else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
+    else if (args.timeframe === "180d") startDate.setDate(now.getDate() - 180);
+    else if (args.timeframe === "365d") startDate.setDate(now.getDate() - 365);
     else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
     else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
 
@@ -735,8 +739,12 @@ export const getGlobalAnalytics = query({
     if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
     else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
     else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
+    else if (args.timeframe === "14d") startDate.setDate(now.getDate() - 14);
     else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
+    else if (args.timeframe === "60d") startDate.setDate(now.getDate() - 60);
     else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
+    else if (args.timeframe === "180d") startDate.setDate(now.getDate() - 180);
+    else if (args.timeframe === "365d") startDate.setDate(now.getDate() - 365);
     else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
     else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
 
@@ -1155,7 +1163,7 @@ export const getGlobalAnalytics = query({
 });
 
 
-export const debugTime = query({
+export const debugTime = internalQuery({
   args: {},
   handler: async (ctx) => {
     const rawAgentTxs = await ctx.db.query("agentTransactions").order("desc").take(5);
@@ -1164,7 +1172,7 @@ export const debugTime = query({
 });
 
 
-export const debugDb = query({
+export const debugDb = internalQuery({
   args: {},
   handler: async (ctx) => {
     const plans = await ctx.db.query("plans").collect();

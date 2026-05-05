@@ -1,11 +1,11 @@
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 /**
  * seedSuperAdmins
  * Manually inserts or updates the critical Super Admin accounts.
  * This bypasses the "invite-only" restriction by pre-populating the users table.
  */
-export const seedSuperAdmins = mutation({
+export const seedSuperAdmins = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
