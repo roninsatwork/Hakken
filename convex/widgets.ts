@@ -232,10 +232,7 @@ export const deleteWidget = mutation({
 export const generateWidgetUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
+    // Generate an upload URL for widget file attachments (supports anonymous visitors)
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -247,10 +244,8 @@ export const createWidgetThread = mutation({
     sourceUrl: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized"); // Even anonymous users get a userId via Convex Auth
-    }
+    // For anonymous widget interactions, the user might not be authenticated.
+    const userId = await getAuthUserId(ctx) || undefined;
     
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");

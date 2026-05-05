@@ -6,11 +6,16 @@ export const getSwarmLogs = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
     
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) {
-      return [];
+    if (!thread) return [];
+
+    if (thread.widgetId && !thread.userId) {
+       // Allow access
+    } else {
+       if (!userId || thread.userId !== userId) {
+         return [];
+       }
     }
 
     return await ctx.db

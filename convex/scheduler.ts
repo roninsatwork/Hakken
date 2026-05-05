@@ -8,6 +8,8 @@ export const getSchedules = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
     
     // We fetch all schedules. Assume admin access or scoped later.
     const schedules = await ctx.db.query("schedules").order("desc").collect();
@@ -50,6 +52,8 @@ export const createSchedule = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
@@ -72,6 +76,8 @@ export const getSchedule = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
     return await ctx.db.get(args.scheduleId);
   },
 });
@@ -88,6 +94,8 @@ export const updateSchedule = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
 
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
@@ -112,6 +120,8 @@ export const toggleSchedule = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
 
     await ctx.db.patch(args.scheduleId, {
       isActive: args.isActive
@@ -127,6 +137,8 @@ export const deleteSchedule = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
 
     await ctx.db.delete(args.scheduleId);
     return true;
@@ -141,6 +153,8 @@ export const manualRunSchedule = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Cannot run: no target specified.");
@@ -198,6 +212,8 @@ export const getWorkflowExecutions = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
 
     const execs = await ctx.db.query("workflowExecutions").order("desc").take(50);
     
@@ -221,12 +237,14 @@ export const getWorkflowExecution = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
 
     const exec = await ctx.db.get(args.executionId);
     if (!exec) return null;
 
     const wf = exec.workflowId ? await ctx.db.get(exec.workflowId) : null;
-    const user = exec.startedBy ? await ctx.db.get(exec.startedBy) : null;
+    const startedByUser = exec.startedBy ? await ctx.db.get(exec.startedBy) : null;
 
     const steps = await ctx.db
       .query("workflowExecutionSteps")
@@ -239,7 +257,7 @@ export const getWorkflowExecution = query({
     return {
       ...exec,
       workflowName: wf?.name || "Deleted Workflow",
-      startedByName: user?.name || user?.email || "System",
+      startedByName: startedByUser?.name || startedByUser?.email || "System",
       steps
     };
   }

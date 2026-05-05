@@ -168,7 +168,8 @@ export const generateAgentResponse = internalAction({
                    threadId: args.threadId,
                    interactionType: `TOOL DISPATCH: ${funcCall.name}`,
                    promptContent: args.content,
-                   responseContent: `{"functionCall": {"name": "${funcCall.name}", "args": ${JSON.stringify(funcCall.args)}}}`
+                   responseContent: `{"functionCall": {"name": "${funcCall.name}", "args": ${JSON.stringify(funcCall.args)}}}`,
+                   companyId: thread.companyId
                });
             }
 
@@ -236,7 +237,8 @@ export const generateAgentResponse = internalAction({
                 threadId: args.threadId,
                 interactionType: "LLM SYNTHESIS",
                 promptContent: args.content,
-                responseContent: assistantReply
+                responseContent: assistantReply,
+                companyId: thread.companyId
             });
 
             if (thread.userId) {

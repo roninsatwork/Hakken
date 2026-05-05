@@ -36,6 +36,11 @@
 - **Vector Bulk limits**: NEVER loop through and delete or load multiple heavy vector chunks (`knowledgeChunks`) inside a single linear mutation context. The massive 768-dimensional float arrays will rapidly breach Convex's strict 16MB function transaction limit. Always cleanly delegate bulk chunk operations to a staggered `ctx.scheduler` scheduled mutation queue to execute iteratively.
 - **Dynamic AI Models**: NEVER hardcode model literal strings (e.g., `gemini-3.1-pro-preview`) into backend server actions when orchestrating Agents or processing Generations. ALWAYS extract and resolve the assigned LLM dynamically from the user's configuration in the database (e.g., `agent.modelId`). This ensures any Model adjustments made via the Admin Dashboard seamlessly flow into the workflow.
 
+### 🔒 Security & Authorization (Zero-Trust)
+- **Strict Tenant Isolation (BOLA Prevention)**: ALL backend database queries (especially `collect()`, `filter()`, and aggregation loops) MUST enforce `companyId` validation. Never rely solely on UI filtering. If a user is not a `SUPER_ADMIN`, you must implicitly scope their read/write boundaries to `user.companyId === entity.companyId`.
+- **Privilege Escalation Traps**: Any mutation that creates, modifies, or deletes user accounts MUST include mathematical traps against privilege escalation. A standard `ADMIN` must NEVER be able to assign the `"SUPER_ADMIN"` role, nor should they be allowed to modify or delete an existing `SUPER_ADMIN` profile, even if they share the same `companyId`.
+- **Global Actions**: System-wide configuration mutations or Google Cloud infrastructure actions (like Vertex Model syncing or Global Agent management) MUST be protected by a strict `if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");` check at the very top of the function.
+
 ---
 
 ## 🛑 SOCRATIC GATE (TIER 0)

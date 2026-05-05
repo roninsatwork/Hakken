@@ -10,6 +10,9 @@ export const getPaginatedLeaderboard = query({
     paginationOpts: paginationOptsValidator
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
     // Fetch paginated scores for the given game
     const scoresPage = await ctx.db
       .query("arcadeScores")
@@ -36,6 +39,9 @@ export const getPaginatedLeaderboard = query({
 export const getScoresCount = query({
   args: { game: v.string() },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+
     const scores = await ctx.db
       .query("arcadeScores")
       .withIndex("by_game_score", (q) => q.eq("game", args.game))

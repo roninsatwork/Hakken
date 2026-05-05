@@ -48,7 +48,6 @@ export default function AgentLogsDashboard() {
   };
 
   const logData = useQuery(api.agentLogs.getOffsetPaginated, queryParams);
-  const seedMutation = useMutation(api.agentLogs.seedForAgent);
   const deleteLogMutation = useMutation(api.agentLogs.deleteLog);
 
   const handleDelete = async (logId: Id<"agentLogs">) => {
@@ -59,13 +58,7 @@ export default function AgentLogsDashboard() {
     }
   };
 
-  const handleSeed = async () => {
-    try {
-      await seedMutation({ agentId });
-    } catch (e) {
-      console.error("Failed to seed dummy logs", e);
-    }
-  };
+
 
   const isLoading = logData === undefined;
   const logs = logData?.data || [];
@@ -132,19 +125,12 @@ export default function AgentLogsDashboard() {
                         </span>
                       </div>
 
-                      {!debouncedSearch && (
-                        <button
-                          onClick={handleSeed}
-                          className="mt-4 px-4 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-white rounded-[8px] text-[12px] font-bold tracking-widest uppercase transition-colors"
-                        >
-                          {t("table.empty.seedButton")}
-                        </button>
-                      )}
+
                     </div>
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
+                logs.map((log: any) => {
                   const isFailed = log.interactionType.toUpperCase().includes("ERROR") || log.interactionType.toUpperCase().includes("FAIL");
                   return (
                     <tr 

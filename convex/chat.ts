@@ -24,13 +24,17 @@ export const getMessages = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
-
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) {
-      return null;
+    if (!thread) return null;
+
+    // Zero-Trust Enforcer: Allow anonymous capability-based access ONLY if it's a widget thread with no owner.
+    if (thread.widgetId && !thread.userId) {
+      // Access granted via unguessable ID
+    } else {
+      // Standard strict authentication for internal threads
+      if (!userId || thread.userId !== userId) {
+        return null;
+      }
     }
 
     return await ctx.db
@@ -109,32 +113,41 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
-
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) {
-      throw new Error("Unauthorized");
+    if (!thread) {
+      throw new Error("Thread not found");
     }
 
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("Unauthorized");
+    // Zero-Trust Enforcer: Allow anonymous capability-based write ONLY if it's a widget thread with no owner.
+    if (thread.widgetId && !thread.userId) {
+      // Access granted via unguessable ID
+    } else {
+      // Standard strict authentication for internal threads
+      if (!userId || thread.userId !== userId) {
+        throw new Error("Unauthorized");
+      }
+    }
+
+    let user = null;
+    if (userId) {
+       user = await ctx.db.get(userId);
+       if (!user && !thread.widgetId) throw new Error("Unauthorized");
+    }
 
     let messagesUsed = 0;
     let messageLimit = -1; // -1 represents unlimited
     let isUserOverride = false;
-    const resolvingCompanyId = user.companyId || thread.companyId;
+    const resolvingCompanyId = user?.companyId || thread.companyId;
     
     // 1. Check User Override
-    if (user.planOverrideId) {
+    if (user?.planOverrideId) {
        const userPlan = await ctx.db.get(user.planOverrideId);
        if (userPlan) {
            messageLimit = userPlan.messageLimit;
            messagesUsed = user.messagesUsedThisPeriod || 0;
            isUserOverride = true;
        }
-    } 
+    }
     // 2. Check Company Pool
     else if (resolvingCompanyId) {
        const company = await ctx.db.get(resolvingCompanyId);
@@ -169,7 +182,7 @@ export const sendMessage = mutation({
     }
 
     // 4. Increment appropriate tracker since limit passed
-    if (isUserOverride) {
+    if (isUserOverride && userId) {
         await ctx.db.patch(userId, { messagesUsedThisPeriod: messagesUsed + 1 });
     } else if (resolvingCompanyId) {
         await ctx.db.patch(resolvingCompanyId, { messagesUsedThisPeriod: messagesUsed + 1 });

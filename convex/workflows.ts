@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
@@ -37,7 +37,7 @@ export const get = query({
   },
 });
 
-export const internalGet = query({
+export const internalGet = internalQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);

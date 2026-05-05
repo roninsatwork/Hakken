@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export const enableAllModels = mutation({
+export const enableAllModels = internalMutation({
   args: {},
   handler: async (ctx) => {
     const allModels = await ctx.db.query("aiModels").collect();

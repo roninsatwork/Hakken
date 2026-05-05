@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -995,7 +995,7 @@ export const getGlobalAnalytics = query({
 });
 
 
-export const debugTime = query({
+export const debugTime = internalQuery({
   args: {},
   handler: async (ctx) => {
     const rawAgentTxs = await ctx.db.query("agentTransactions").order("desc").take(5);
@@ -1004,7 +1004,7 @@ export const debugTime = query({
 });
 
 
-export const debugDb = query({
+export const debugDb = internalQuery({
   args: {},
   handler: async (ctx) => {
     const plans = await ctx.db.query("plans").collect();

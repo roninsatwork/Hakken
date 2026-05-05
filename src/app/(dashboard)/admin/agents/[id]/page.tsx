@@ -23,7 +23,7 @@ export default function AgentDashboard() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
-  const seedMutation = useMutation(api.agentTransactions.seedForAgent);
+
   const activeModels = useQuery(api.aiModels.getModels) || [];
 
   const stats = useQuery(api.agentTransactions.getStatsForAgent, { agentId });
@@ -34,13 +34,7 @@ export default function AgentDashboard() {
     { initialNumItems: 20 }
   );
 
-  const handleSeed = async () => {
-    try {
-      await seedMutation({ agentId });
-    } catch (e) {
-      console.error("Failed to seed dummy data", e);
-    }
-  };
+
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 pb-12 w-full max-w-6xl">
@@ -131,13 +125,7 @@ export default function AgentDashboard() {
                         <span className="text-[14px] font-medium text-foreground tracking-wide">{t("table.noTransactions")}</span>
                         <span className="text-muted text-[12px]">{t("table.noTransactionsDesc")}</span>
                       </div>
-                      {/* Dev Tool: Data Seeder */}
-                      <button
-                        onClick={handleSeed}
-                        className="mt-4 px-4 py-2 bg-brand/10 text-brand border border-brand/20 hover:bg-brand hover:text-white rounded-[8px] text-[12px] font-bold tracking-widest uppercase transition-colors"
-                      >
-                        {t("table.seedButton")}
-                      </button>
+
                     </div>
                   </td>
                 </tr>

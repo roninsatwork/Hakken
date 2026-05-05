@@ -1,7 +1,7 @@
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const seedAcmeWorkflow = mutation({
+export const seedAcmeWorkflow = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();

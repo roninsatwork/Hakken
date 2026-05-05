@@ -4,7 +4,7 @@ import { GenericActionCtx } from "convex/server";
 import { Id } from "../_generated/dataModel";
 // @ts-ignore
 import pdfExtraction from "pdf-extraction";
-import * as xlsx from "xlsx";
+import * as ExcelJS from "exceljs";
 import mammoth from "mammoth";
 
 export async function parseDocuments(ctx: GenericActionCtx<any>, fileIds: Id<"_storage">[]): Promise<string> {
@@ -37,12 +37,16 @@ export async function parseDocuments(ctx: GenericActionCtx<any>, fileIds: Id<"_s
         mimeType === "application/vnd.ms-excel"
       ) {
          try {
-           const workbook = xlsx.read(buffer, { type: "buffer" });
+           const workbook = new ExcelJS.Workbook();
+           await workbook.xlsx.load(buffer as any);
            // Extract text from the first sheet
-           if (workbook.SheetNames.length > 0) {
-              const firstSheetName = workbook.SheetNames[0];
-              const worksheet = workbook.Sheets[firstSheetName];
-              extractedText = xlsx.utils.sheet_to_csv(worksheet, { strip: true, blankrows: false });
+           if (workbook.worksheets.length > 0) {
+              const worksheet = workbook.worksheets[0];
+              const rows: string[] = [];
+              worksheet.eachRow((row, rowNumber) => {
+                 rows.push(row.values.toString());
+              });
+              extractedText = rows.join('\n');
            } else {
               extractedText = "[Excel workbook was empty]";
            }

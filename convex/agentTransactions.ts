@@ -1,3 +1,4 @@
+import { auth } from "./auth";
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
@@ -8,21 +9,40 @@ export const getForAgent = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    let q: any = ctx.db
       .query("agentTransactions")
-      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .order("desc")
-      .paginate(args.paginationOpts);
+      .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
+      
+    if (user.role === "ADMIN") {
+      if (!user.companyId) throw new Error("Unauthorized");
+      q = q.filter((filterQ: any) => filterQ.eq(filterQ.field("companyId"), user.companyId));
+    }
+
+    return await q.order("desc").paginate(args.paginationOpts);
   },
 });
 
 export const getStatsForAgent = query({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const txs = await ctx.db
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    let q: any = ctx.db
       .query("agentTransactions")
-      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .collect();
+      .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
+      
+    if (user.role === "ADMIN") {
+      if (!user.companyId) throw new Error("Unauthorized");
+      q = q.filter((filterQ: any) => filterQ.eq(filterQ.field("companyId"), user.companyId));
+    }
+
+    const txs = await q.collect();
       
     const totalGenerations = txs.length;
     let totalTokensIngested = 0;
@@ -48,7 +68,7 @@ export const getStatsForAgent = query({
 });
 
 // Seed data mutation for testing
-export const seedForAgent = mutation({
+export const seedForAgent = internalMutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

@@ -22,11 +22,18 @@ export const getRules = query({
     }
 
     if (args.agentId) {
-       return await ctx.db
+       // Agents are global. But an ADMIN can only see rules for an agent if the rule ALSO has their companyId.
+       // So we filter the results below if they are an ADMIN.
+       let results = await ctx.db
         .query("aiRules")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
         .collect();
+       
+       if (user.role === "ADMIN") {
+           results = results.filter(r => r.companyId === user.companyId);
+       }
+       return results;
     } else if (args.companyId) {
        return await ctx.db
         .query("aiRules")
@@ -76,6 +83,10 @@ export const getOffsetPaginatedRules = query({
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
         .take(1000); // UI performance cap limit
+
+       if (user.role === "ADMIN") {
+           rawResults = rawResults.filter(r => r.companyId === user.companyId);
+       }
     } else if (args.companyId) {
        rawResults = await ctx.db
         .query("aiRules")
@@ -163,7 +174,30 @@ export const getRuleById = query({
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
-    return await ctx.db.get(args.id);
+    const user = await ctx.db.get(userId);
+    const rule = await ctx.db.get(args.id);
+    
+    if (!user || !rule) return null;
+
+    if (user.role !== "SUPER_ADMIN") {
+        if (rule.companyId && rule.companyId !== user.companyId) {
+            throw new Error("Unauthorized");
+        }
+        // If it's a global rule (no companyId), only SUPER_ADMIN can view it in the admin panel
+        if (!rule.companyId && !rule.agentId) {
+             throw new Error("Unauthorized");
+        }
+        // If it's an agent rule, we must ensure the agent belongs to the user's company
+        if (rule.agentId) {
+             // Agents are global, but if the rule is scoped to an agent AND a company, we verified company above.
+             // If the rule is scoped to an agent but NOT a company, it's a global agent rule, so throw.
+             if (!rule.companyId) {
+                 throw new Error("Unauthorized");
+             }
+        }
+    }
+
+    return rule;
   },
 });
 
@@ -187,6 +221,10 @@ export const createRule = mutation({
     if (user.role !== "SUPER_ADMIN") {
         if (!args.companyId || user.companyId !== args.companyId || user.role !== "ADMIN") {
             throw new Error("Unauthorized: System Protocol creation requires valid permissions.");
+        }
+        if (args.agentId) {
+             // Agents are global in Sonae. If an ADMIN creates a rule for an agent, 
+             // it must still be strictly scoped by their companyId (which we verified above).
         }
     }
 

@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
-export const injectDemoAgents = mutation({
+export const injectDemoAgents = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Delete existing demo agents so we can repeatedly test
