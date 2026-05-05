@@ -469,4 +469,47 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_company", ["companyId"])
     .index("by_global", ["isGlobal"]),
+
+  // Aggregated Analytics Snapshots
+  analyticsDailySnapshots: defineTable({
+    date: v.string(), // "YYYY-MM-DD"
+    type: v.union(v.literal("global"), v.literal("company"), v.literal("user")),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    metrics: v.object({
+      totalMessages: v.number(),
+      totalInputTokens: v.number(),
+      totalOutputTokens: v.number(),
+      costGBP: v.number(),
+      activeUsersCount: v.optional(v.number()),
+    }),
+    uniqueUserIds: v.optional(v.array(v.string())), // Array of user IDs (strings to allow WIDGET_USER_GROUP)
+    modelMetrics: v.optional(v.array(v.object({
+      model: v.string(),
+      cost: v.number(),
+      calls: v.number()
+    }))),
+    leaderboards: v.optional(v.object({
+      topAgents: v.array(v.object({
+        id: v.string(),
+        name: v.string(),
+        avatar: v.string(),
+        cost: v.number(),
+        interactions: v.number(),
+      })),
+      topUsers: v.array(v.object({
+        id: v.string(),
+        name: v.string(),
+        image: v.string(),
+        email: v.optional(v.string()),
+        companyName: v.optional(v.string()),
+        cost: v.number(),
+        messages: v.number(),
+      })),
+    })),
+  })
+    .index("by_date", ["date"])
+    .index("by_type_date", ["type", "date"])
+    .index("by_company_date", ["companyId", "date"])
+    .index("by_user_date", ["userId", "date"]),
 });

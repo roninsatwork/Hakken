@@ -36,4 +36,12 @@ crons.monthly(
   {}
 );
 
+// Daily Analytics Snapshot Generator
+crons.daily(
+  "generate-daily-analytics-snapshots",
+  { hourUTC: 0, minuteUTC: 5 },
+  internal.analyticsCron.generateDailySnapshots,
+  {}
+);
+
 export default crons;

@@ -11,7 +11,13 @@ export function computeCostFromMap(model: string, inputs: number, outputs: numbe
 
 export const getGlobalAICosts = query({
   args: {
-    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(
+      v.literal("today"),
+      v.literal("7d"),
+      v.literal("30d"),
+      v.literal("ytd"),
+      v.literal("custom")
+    ),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
@@ -30,14 +36,8 @@ export const getGlobalAICosts = query({
     let startDate = 0;
     
     if (args.timeframe === "today") startDate = new Date().setHours(0,0,0,0);
-    else if (args.timeframe === "yesterday") startDate = new Date(now).setHours(0,0,0,0) - (24 * 60 * 60 * 1000);
     else if (args.timeframe === "7d") startDate = now - (7 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "14d") startDate = now - (14 * 24 * 60 * 60 * 1000);
     else if (args.timeframe === "30d") startDate = now - (30 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "60d") startDate = now - (60 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "90d") startDate = now - (90 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "180d") startDate = now - (180 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "365d") startDate = now - (365 * 24 * 60 * 60 * 1000);
     else if (args.timeframe === "ytd") startDate = new Date(new Date().getFullYear(), 0, 1).getTime();
     else if (args.timeframe === "custom" && args.customStart) startDate = args.customStart;
 
@@ -67,28 +67,6 @@ export const getGlobalAICosts = query({
     const durationDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
     const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
     const timelineMap: Record<string, { costGBP: number }> = {};
-
-    let currentDate = new Date(startDate);
-    while (currentDate.getTime() <= endDate) {
-        let dateGroup = "";
-        if (aggregationType === "month") {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(currentDate.valueOf());
-           const dayNr = (currentDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}, ${currentDate.getFullYear()}`;
-        } else {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
-        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { costGBP: 0 };
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
 
     messages.forEach(msg => {
        const inputs = msg.inputTokens || 0;
@@ -343,7 +321,7 @@ export const getUserCostOverview = query({
 export const getCompanyMetrics = query({
   args: { 
     companyId: v.id("companies"), 
-    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
@@ -386,28 +364,6 @@ export const getCompanyMetrics = query({
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number; internalMessages: number; externalMessages: number; inputTokens: number; outputTokens: number }> = {};
-
-    let currentDate = new Date(startDate.getTime());
-    while (currentDate.getTime() <= endDate.getTime()) {
-        let dateGroup = "";
-        if (aggregationType === "month") {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(currentDate.valueOf());
-           const dayNr = (currentDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-        } else {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
-        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
 
     const companyObj = await ctx.db.get(args.companyId);
@@ -434,8 +390,72 @@ export const getCompanyMetrics = query({
     const companyThreadIds = new Set(companyThreads.map((t: any) => t._id));
 
     const startTimeStamp = startDate.getTime();
+
     const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
+    const snapshotStartTs = startDate.getTime();
+
+    const snapshots = await ctx.db.query("analyticsDailySnapshots")
+        .withIndex("by_type_date", q => q.eq("type", "global"))
+        .collect();
+        
+    const validSnapshots = snapshots.filter(s => {
+        const t = new Date(s.date).getTime();
+        return t >= snapshotStartTs && t < todayStartTs;
+    });
+
+    validSnapshots.forEach(s => {
+        totalMessages += s.metrics.totalMessages;
+        totalTokens += (s.metrics.totalInputTokens + s.metrics.totalOutputTokens);
+        totalInputTokens += s.metrics.totalInputTokens;
+        totalOutputTokens += s.metrics.totalOutputTokens;
+        totalCostGBP += s.metrics.costGBP;
+        
+        let dateGroup = s.date;
+        const metricDate = new Date(s.date);
+        if (aggregationType === "month") {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        } else if (aggregationType === "week") {
+           const target = new Date(metricDate.valueOf());
+           const dayNr = (metricDate.getDay() + 6) % 7;
+           target.setDate(target.getDate() - dayNr + 3);
+           const firstThursday = target.valueOf();
+           target.setMonth(0, 1);
+           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+           dateGroup = `Wk ${weekNum}`;
+        } else {
+           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        }
+
+        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
+        timelineMap[dateGroup].cost += s.metrics.costGBP;
+        timelineMap[dateGroup].messages += s.metrics.totalMessages;
+        timelineMap[dateGroup].inputTokens += s.metrics.totalInputTokens;
+        timelineMap[dateGroup].outputTokens += s.metrics.totalOutputTokens;
+
+        if (s.leaderboards?.topAgents) {
+            s.leaderboards.topAgents.forEach(a => {
+                if (agentLeaderboard[a.id]) {
+                    agentLeaderboard[a.id].cost += a.cost;
+                    agentLeaderboard[a.id].interactions += a.interactions;
+                }
+            });
+        }
+        if (s.leaderboards?.topUsers) {
+            s.leaderboards.topUsers.forEach(u => {
+                if (userLeaderboard[u.id]) {
+                    userLeaderboard[u.id].cost += u.cost;
+                    userLeaderboard[u.id].messages += u.messages;
+                }
+            });
+        }
+        if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
+    });
+
+    // Company snaps not tracked per tenant view
+
     const realStartTimeStamp = Math.max(startTimeStamp, todayStartTs);
+
     const endTimeStamp = endDate.getTime();
 
     // Bound Message and Tx retrieval natively to temporal bounds and indexes
@@ -498,78 +518,6 @@ export const getCompanyMetrics = query({
           createdAt: t.createdAt
        }))
     ];
-
-
-    const snapshotStartTs = startDate.getTime();
-    const snapshots = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_company_date", q => q.eq("companyId", args.companyId))
-        .collect();
-        
-    const validSnapshots = snapshots.filter(s => {
-        const t = new Date(s.date).getTime();
-        return t >= snapshotStartTs && t < todayStartTs;
-    });
-
-    validSnapshots.forEach(s => {
-        totalMessages += s.metrics.totalMessages;
-        totalTokens += (s.metrics.totalInputTokens + s.metrics.totalOutputTokens);
-        totalInputTokens += s.metrics.totalInputTokens;
-        totalOutputTokens += s.metrics.totalOutputTokens;
-        totalCostGBP += s.metrics.costGBP;
-        
-        let dateGroup = s.date;
-        const metricDate = new Date(s.date);
-        if (aggregationType === "month") {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(metricDate.valueOf());
-           const dayNr = (metricDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-        } else {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
-
-        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
-        timelineMap[dateGroup].cost += s.metrics.costGBP;
-        timelineMap[dateGroup].messages += s.metrics.totalMessages;
-        timelineMap[dateGroup].internalMessages += s.metrics.totalMessages; 
-        timelineMap[dateGroup].inputTokens += s.metrics.totalInputTokens;
-        timelineMap[dateGroup].outputTokens += s.metrics.totalOutputTokens;
-
-        if (s.leaderboards?.topAgents) {
-            s.leaderboards.topAgents.forEach(a => {
-                if (agentLeaderboard[a.id]) {
-                    agentLeaderboard[a.id].cost += a.cost;
-                    agentLeaderboard[a.id].interactions += a.interactions;
-                }
-            });
-        }
-        if (s.leaderboards?.topUsers) {
-            s.leaderboards.topUsers.forEach((u: any) => {
-                if (userLeaderboard[u.id]) {
-                    userLeaderboard[u.id].cost += u.cost;
-                    userLeaderboard[u.id].messages += u.messages;
-                }
-            });
-        }
-        if (s.modelMetrics) {
-            s.modelMetrics.forEach((m: any) => {
-                if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model) || {};
-                    modelDistribution[m.model] = { name: modelObj.friendlyName || modelObj.name || m.model, cost: 0, calls: 0 };
-                }
-                modelDistribution[m.model].cost += m.cost;
-                modelDistribution[m.model].calls += m.calls;
-            });
-        }
-        if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
-    });
-
 
     for (const msg of unifiedInteractions) {
        const inputs = msg.inputTokens || 0;
@@ -714,7 +662,7 @@ export const getCompanyMetrics = query({
 
 export const getGlobalAnalytics = query({
   args: { 
-    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
+    timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
     customEnd: v.optional(v.number())
   },
@@ -758,28 +706,6 @@ export const getGlobalAnalytics = query({
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
-
-    let currentDate = new Date(startDate.getTime());
-    while (currentDate.getTime() <= endDate.getTime()) {
-        let dateGroup = "";
-        if (aggregationType === "month") {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(currentDate.valueOf());
-           const dayNr = (currentDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-        } else {
-           dateGroup = currentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
-        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
     for (const c of companies) {
@@ -796,17 +722,15 @@ export const getGlobalAnalytics = query({
     const threads = await ctx.db.query("threads").collect();
     
     const startTimeStamp = startDate.getTime();
-    const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
-    const realStartTimeStamp = Math.max(startTimeStamp, todayStartTs);
     const endTimeStamp = endDate.getTime();
     
     const periodRawMessages = await ctx.db.query("messages")
-      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", realStartTimeStamp))
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
       .collect();
       
     const periodAgentTxs = await ctx.db.query("agentTransactions")
-      .filter((q: any) => q.gte(q.field("createdAt"), realStartTimeStamp))
+      .filter((q: any) => q.gte(q.field("createdAt"), startTimeStamp))
       .filter((q: any) => q.lte(q.field("createdAt"), endTimeStamp))
       .collect();
       
@@ -877,90 +801,6 @@ export const getGlobalAnalytics = query({
           createdAt: t.createdAt
        }))
     ];
-
-
-    const snapshotStartTs = startDate.getTime();
-    const snapshots = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_type_date", q => q.eq("type", "global"))
-        .collect();
-        
-    const validSnapshots = snapshots.filter(s => {
-        const t = new Date(s.date).getTime();
-        return t >= snapshotStartTs && t < todayStartTs;
-    });
-
-    validSnapshots.forEach(s => {
-        totalMessages += s.metrics.totalMessages;
-        totalTokens += (s.metrics.totalInputTokens + s.metrics.totalOutputTokens);
-        totalInputTokens += s.metrics.totalInputTokens;
-        totalOutputTokens += s.metrics.totalOutputTokens;
-        totalCostGBP += s.metrics.costGBP;
-        
-        let dateGroup = s.date;
-        const metricDate = new Date(s.date);
-        if (aggregationType === "month") {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(metricDate.valueOf());
-           const dayNr = (metricDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-        } else {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
-
-        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
-        timelineMap[dateGroup].cost += s.metrics.costGBP;
-        timelineMap[dateGroup].messages += s.metrics.totalMessages;
-        timelineMap[dateGroup].inputTokens += s.metrics.totalInputTokens;
-        timelineMap[dateGroup].outputTokens += s.metrics.totalOutputTokens;
-
-        if (s.leaderboards?.topAgents) {
-            s.leaderboards.topAgents.forEach(a => {
-                if (agentLeaderboard[a.id]) {
-                    agentLeaderboard[a.id].cost += a.cost;
-                    agentLeaderboard[a.id].interactions += a.interactions;
-                }
-            });
-        }
-        if (s.leaderboards?.topUsers) {
-            s.leaderboards.topUsers.forEach((u: any) => {
-                if (userLeaderboard[u.id]) {
-                    userLeaderboard[u.id].cost += u.cost;
-                    userLeaderboard[u.id].messages += u.messages;
-                }
-            });
-        }
-        if (s.modelMetrics) {
-            s.modelMetrics.forEach((m: any) => {
-                if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model) || {};
-                    modelDistribution[m.model] = { name: modelObj.friendlyName || modelObj.name || m.model, cost: 0, calls: 0 };
-                }
-                modelDistribution[m.model].cost += m.cost;
-                modelDistribution[m.model].calls += m.calls;
-            });
-        }
-        if (s.uniqueUserIds) s.uniqueUserIds.forEach(id => activePeriodUsers.add(id));
-    });
-
-    const companySnaps = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_type_date", q => q.eq("type", "company"))
-        .collect();
-    companySnaps.filter(s => {
-        const t = new Date(s.date).getTime();
-        return t >= snapshotStartTs && t < todayStartTs;
-    }).forEach(s => {
-        if (s.companyId && companyLeaderboard[s.companyId]) {
-            companyLeaderboard[s.companyId].cost += s.metrics.costGBP;
-            companyLeaderboard[s.companyId].messages += s.metrics.totalMessages;
-        }
-    });
-
 
     for (const msg of unifiedInteractions) {
        const inputs = msg.inputTokens || 0;

@@ -65,7 +65,9 @@ export const seedForAgent = mutation({
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
     const activeModels = await ctx.db.query("aiModels").collect();
     const modelMap = new Map(activeModels.map(m => [m.modelId, m]));
-    const models = activeModels.length > 0 ? activeModels.map(m => m.modelId) : ["gemini-1.5-flash"];
+    const defaultModelObj = activeModels.find((m: any) => m.isDefault);
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const models = activeModels.length > 0 ? activeModels.map(m => m.modelId) : [defaultModelId];
     
     for (let i = 0; i < 15; i++) {
         const inputTokens = Math.floor(Math.random() * 8000) + 200;
