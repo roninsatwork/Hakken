@@ -71,15 +71,11 @@ export const getStatsForAgent = query({
 export const seedForAgent = internalMutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .first();
-    
-    if (!user) throw new Error("User not found");
+    const user = await ctx.db.get(userId);
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
 
     // Generate 15 dummy transactions
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];

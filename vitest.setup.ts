@@ -6,4 +6,5 @@ vi.mock('convex/react', () => ({
   useMutation: vi.fn(() => vi.fn()),
   useAction: vi.fn(() => vi.fn()),
   useConvexAuth: vi.fn(() => ({ isAuthenticated: true, isLoading: false })),
+  usePaginatedQuery: vi.fn(() => ({ results: [], status: "Exhausted", loadMore: vi.fn() })),
 }));

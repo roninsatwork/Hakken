@@ -29,7 +29,9 @@ export const getMessages = query({
 
     // Zero-Trust Enforcer: Allow anonymous capability-based access ONLY if it's a widget thread with no owner.
     if (thread.widgetId && !thread.userId) {
-      // Access granted via unguessable ID
+      // Access granted via unguessable ID, but must verify widget is active
+      const widget = await ctx.db.get(thread.widgetId);
+      if (!widget || !widget.isActive) return null;
     } else {
       // Standard strict authentication for internal threads
       if (!userId || thread.userId !== userId) {
@@ -120,12 +122,29 @@ export const sendMessage = mutation({
 
     // Zero-Trust Enforcer: Allow anonymous capability-based write ONLY if it's a widget thread with no owner.
     if (thread.widgetId && !thread.userId) {
-      // Access granted via unguessable ID
+      // Access granted via unguessable ID, but must verify widget is active
+      const widget = await ctx.db.get(thread.widgetId);
+      if (!widget || !widget.isActive) throw new Error("Unauthorized: Widget is inactive");
     } else {
       // Standard strict authentication for internal threads
       if (!userId || thread.userId !== userId) {
         throw new Error("Unauthorized");
       }
+    }
+
+    // 🛡️ SECURITY: Rate Limiting (Prevent Denial of Wallet / Spam)
+    // Max 10 user messages per minute per thread
+    const oneMinuteAgo = Date.now() - 60000;
+    const recentMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("desc")
+      .take(15); // Only need to look at the last 15 to find 10 user messages
+
+    const recentUserMessages = recentMessages.filter(m => m.role === "user" && m.createdAt >= oneMinuteAgo);
+    
+    if (recentUserMessages.length >= 10) {
+      throw new Error("429 Too Many Requests: Please wait a moment before sending more messages.");
     }
 
     let user = null;

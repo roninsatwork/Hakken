@@ -286,7 +286,7 @@ export const dispatchInviteEmail = action({
     }
 
     try {
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Team <anthony@ronins.co.uk>";
+      const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Team <noreply@ronins.co.uk>";
 
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",

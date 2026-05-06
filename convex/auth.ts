@@ -12,7 +12,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     }),
     Resend({
       apiKey: process.env.RESEND_API_KEY,
-      from: process.env.RESEND_FROM_EMAIL || "anthony@ronins.co.uk",
+      from: process.env.RESEND_FROM_EMAIL || "noreply@ronins.co.uk",
     }),
   ],
 
@@ -33,11 +33,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         .withIndex("email", (q: any) => q.eq("email", email))
         .first();
 
-      const isSuperAdmin = email === "anthony@ronins.co.uk";
+      const isInitialSuperAdmin = !!process.env.INITIAL_SUPER_ADMIN_EMAIL && email === process.env.INITIAL_SUPER_ADMIN_EMAIL.toLowerCase();
 
       if (!existingUser) {
-        // If not the hardcoded admin, check for pending invites!
-        if (!isSuperAdmin) {
+        // If not the initial super admin, check for pending invites!
+        if (!isInitialSuperAdmin) {
           const pendingInvite = await ctx.db
             .query("invitations")
             .withIndex("by_email", (q: any) => q.eq("email", email))
@@ -46,6 +46,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
 
           if (!pendingInvite) {
             throw new Error("Access Denied: This is an invite-only platform. Please contact your administrator.");
+          }
+
+          // Enforce 7-day expiration (7 * 24 * 60 * 60 * 1000 = 604800000 ms)
+          if (Date.now() - pendingInvite.invitedAt > 604800000) {
+            throw new Error("Access Denied: Your invitation has expired. Please request a new one.");
           }
 
           // If they have a pending invite, provision them securely
@@ -67,7 +72,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           return newUserId;
         }
 
-        // Auto-provision the primary admin
+        // Auto-provision the primary admin ONLY ONCE on creation
         return await ctx.db.insert("users", {
           email,
           name,
@@ -79,10 +84,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
 
       // If user exists (was invited or registered before)
       // We update their profile details silently (from OAuth) but KEEP their role mapping
-      if (isSuperAdmin && existingUser.role !== "SUPER_ADMIN") {
-        await ctx.db.patch(existingUser._id, { role: "SUPER_ADMIN" });
-      }
-
       return existingUser._id;
     },
   },

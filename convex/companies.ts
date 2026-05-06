@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query, internalQuery } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { cascadeDeleteUserAction } from "./users";
+import { internal } from "./_generated/api";
 
 export const getCompanies = query({
   args: {},
@@ -125,26 +125,7 @@ export const deleteCompany = mutation({
        throw new Error("Unauthorized");
     }
 
-    // HARD CASCADE DELETE: GDPR Compliance Nuke
-    // Loop over all bound users and nuke them
-    const users = await ctx.db
-      .query("users")
-      .withIndex("by_company", (q) => q.eq("companyId", args.id))
-      .take(10000);
-      
-    for (const user of users) {
-      await cascadeDeleteUserAction(ctx, user._id);
-    }
-
-    // Eliminate all pending system invitations targeting this company
-    const invites = await ctx.db
-      .query("invitations")
-      .withIndex("by_company_status", (q) => q.eq("companyId", args.id))
-      .take(10000);
-      
-    for (const invite of invites) {
-      await ctx.db.delete(invite._id);
-    }
+    await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
 
     const company = await ctx.db.get(args.id);
     // Erase the company entity representation globally
@@ -245,4 +226,38 @@ export const assignPlanToCompany = mutation({
     await ctx.db.patch(args.id, { planId: args.planId });
     return args.id;
   },
+});
+
+export const purgeCompanyEntitiesInternal = internalMutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    let hasMore = false;
+    
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(100);
+      
+    for (const user of users) {
+       await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: user._id });
+       await ctx.db.delete(user._id);
+    }
+    
+    if (users.length === 100) hasMore = true;
+
+    const invites = await ctx.db
+      .query("invitations")
+      .withIndex("by_company_status", (q) => q.eq("companyId", args.companyId))
+      .take(100);
+      
+    for (const invite of invites) {
+      await ctx.db.delete(invite._id);
+    }
+    
+    if (invites.length === 100) hasMore = true;
+
+    if (hasMore) {
+       await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.companyId });
+    }
+  }
 });

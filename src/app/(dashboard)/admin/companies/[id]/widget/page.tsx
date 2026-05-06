@@ -16,7 +16,7 @@ export default function CompanyWidgetPage() {
   
   const widgets = useConvexQuery(api.widgets.getWidgetsByCompany, { companyId });
   const saveWidget = useConvexMutation(api.widgets.saveWidget);
-  const generateUploadUrl = useConvexMutation(api.widgets.generateWidgetUploadUrl);
+  const generateUploadUrl = useConvexMutation(api.users.generateUploadUrl);
 
   // We'll manage the first widget in the list for simplicity in this MVP
   const widget = widgets && widgets.length > 0 ? widgets[0] : null;

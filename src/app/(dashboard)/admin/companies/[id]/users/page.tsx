@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { 
@@ -12,8 +12,7 @@ import {
   User,
   Trash2,
   Edit2,
-  ChevronLeft,
-  ChevronRight
+  Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -32,7 +31,12 @@ export default function CompanyUsersPage() {
 
   const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || "System Level";
 
-  const users = useQuery(api.users.getUsersByCompany, { companyId }) || [];
+  const { results: paginatedUsers, status, loadMore } = usePaginatedQuery(
+    api.users.getUsersByCompany,
+    { companyId },
+    { initialNumItems: 15 }
+  );
+
   const pendingInvites = useQuery(api.invites.getInvitesByCompany, { companyId }) || [];
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
@@ -49,10 +53,7 @@ export default function CompanyUsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
-
-  const filteredUsers = users.filter((u: any) => 
+  const filteredUsers = paginatedUsers.filter((u: any) => 
     (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
     (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -61,18 +62,8 @@ export default function CompanyUsersPage() {
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const allItems = [
-    ...filteredInvites.map((i: any) => ({ ...i, IS_INVITE: true })),
-    ...filteredUsers
-  ];
-
-  const totalItems = allItems.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedItems = allItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-    setCurrentPage(1);
   };
 
   const handleOpenAdd = () => {
@@ -187,7 +178,7 @@ export default function CompanyUsersPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {paginatedItems.length === 0 ? (
+                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
                       No users or pending invitations found matching your search.
@@ -195,10 +186,9 @@ export default function CompanyUsersPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedItems.map((item) => (
-                      item.IS_INVITE ? (
+                    {filteredInvites.map((inv: any) => (
                         <motion.tr 
-                          key={`inv-${item._id}`}
+                          key={`inv-${inv._id}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
@@ -213,30 +203,32 @@ export default function CompanyUsersPage() {
                                 <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
                                   Pending Invitation
                                 </span>
-                                <span className="text-[12px] text-secondary">{item.email}</span>
+                                <span className="text-[12px] text-secondary">{inv.email}</span>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
                               <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                                PENDING {item.role}
+                                PENDING {inv.role}
                               </span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-[12px] text-secondary">
-                            {item.invitedAt ? new Date(item.invitedAt).toLocaleDateString() : 'N/A'}
+                            {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
-                               <button onClick={() => setDeletingInvite(item)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
+                               <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
                                  <Trash2 className="w-4 h-4" />
                                </button>
                             </div>
                           </td>
                         </motion.tr>
-                      ) : (
+                    ))}
+
+                    {filteredUsers.map((item: any) => (
                         <motion.tr 
                           key={`user-${item._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -282,7 +274,6 @@ export default function CompanyUsersPage() {
                             </div>
                           </td>
                         </motion.tr>
-                      )
                     ))}
                   </>
                 )}
@@ -291,34 +282,14 @@ export default function CompanyUsersPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-            <div className="flex items-center gap-2 text-[12px] text-muted">
-                <span>Showing</span>
-                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                <span>to</span>
-                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                <span>of</span>
-                <span className="font-medium text-foreground">{totalItems}</span>
-                <span>users</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <button 
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button 
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-            </div>
+        {status === "CanLoadMore" && (
+          <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
+            <button
+              onClick={() => loadMore(15)}
+              className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
+            >
+              Load More Users
+            </button>
           </div>
         )}
       </div>

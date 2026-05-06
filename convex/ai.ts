@@ -170,8 +170,18 @@ User Prompt: ${args.content}`;
                     if (fileUrl) {
                         const fileResponse = await fetch(fileUrl);
                         if (fileResponse.ok) {
+                            const contentLength = fileResponse.headers.get("content-length");
+                            if (contentLength && parseInt(contentLength, 10) > 5242880) { // 5MB
+                                throw new Error(`File exceeds the maximum allowed size of 5MB for inline processing.`);
+                            }
+                            
                             const mimeType = fileResponse.headers.get("content-type") || "application/octet-stream";
                             const arrayBuffer = await fileResponse.arrayBuffer();
+                            
+                            if (arrayBuffer.byteLength > 5242880) { // 5MB fallback check
+                                throw new Error(`File exceeds the maximum allowed size of 5MB for inline processing.`);
+                            }
+                            
                             const buffer = Buffer.from(arrayBuffer);
                             
                             payloadContents.push({

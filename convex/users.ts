@@ -1,8 +1,9 @@
-import { mutation, query, internalQuery, MutationCtx } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { auth } from "./auth";
+import { internal } from "./_generated/api";
 
 export const getMe = query({
   args: {},
@@ -40,23 +41,25 @@ export const getPaginatedUsers = query({
     
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
     // Dynamic Database Query Object
     const userQuery = ctx.db.query("users");
 
-    if (caller.role === "ADMIN") {
-      if (!caller.companyId) throw new Error("Unauthorized");
+    if (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId)) {
+      if (!activeCompanyId) throw new Error("Unauthorized");
       // Admins are locked to their specific tenant scope
       if (args.searchTerm && args.searchTerm.trim() !== "") {
         return await ctx.db
           .query("users")
           .withSearchIndex("search_email", (q) => q.search("email", args.searchTerm!))
-          .filter(q => q.eq(q.field("companyId"), caller.companyId))
+          .filter(q => q.eq(q.field("companyId"), activeCompanyId))
           .paginate(args.paginationOpts);
       } else {
         return await ctx.db
           .query("users")
-          .withIndex("by_company", (q) => q.eq("companyId", caller.companyId))
+          .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
           .order("desc")
           .paginate(args.paginationOpts);
       }
@@ -87,14 +90,16 @@ export const getAllUsers = query({
     
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
-    if (caller.role === "SUPER_ADMIN") {
+    if (caller.role === "SUPER_ADMIN" && !caller.impersonatingCompanyId) {
       return await ctx.db.query("users").order("desc").take(1000);
-    } else if (caller.role === "ADMIN") {
-      if (!caller.companyId) return [];
+    } else if (caller.role === "ADMIN" || caller.impersonatingCompanyId) {
+      if (!activeCompanyId) return [];
       return await ctx.db
         .query("users")
-        .withIndex("by_company", (q) => q.eq("companyId", caller.companyId))
+        .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
         .order("desc")
         .take(1000);
     }
@@ -104,20 +109,25 @@ export const getAllUsers = query({
 });
 
 export const getUsersByCompany = query({
-  args: { companyId: v.id("companies") },
+  args: { 
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator
+  },
   handler: async (ctx, args) => {
     const callerId = await auth.getUserId(ctx);
     if (!callerId) throw new Error("Unauthenticated");
     
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
-    if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && caller.companyId === args.companyId)) {
+    if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && activeCompanyId === args.companyId)) {
        return await ctx.db
          .query("users")
          .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
          .order("desc")
-         .take(1000);
+         .paginate(args.paginationOpts);
     }
     
     throw new Error("Unauthorized");
@@ -125,8 +135,8 @@ export const getUsersByCompany = query({
 });
 
 export const getSuperAdmins = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     const callerId = await auth.getUserId(ctx);
     if (!callerId) throw new Error("Unauthenticated");
     
@@ -137,7 +147,7 @@ export const getSuperAdmins = query({
       .query("users")
       .filter((q) => q.eq(q.field("role"), "SUPER_ADMIN"))
       .order("desc")
-      .take(1000);
+      .paginate(args.paginationOpts);
   },
 });
 
@@ -149,6 +159,8 @@ export const getUserById = query({
     const caller = await ctx.db.get(callerId);
     if (!caller) throw new Error("Unauthorized");
     
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) return null;
 
@@ -156,7 +168,7 @@ export const getUserById = query({
        return targetUser;
     }
     
-    if (caller.companyId === targetUser.companyId) {
+    if (activeCompanyId === targetUser.companyId) {
        return targetUser;
     }
 
@@ -168,7 +180,7 @@ export const addUser = mutation({
   args: {
     name: v.string(),
     email: v.string(),
-    role: v.string(),
+    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
@@ -177,9 +189,11 @@ export const addUser = mutation({
     if (!callerId) throw new Error("Unauthenticated");
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
-    if (caller.role !== "SUPER_ADMIN") {
-      if (caller.role !== "ADMIN" || caller.companyId !== args.companyId) {
+    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
+      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== args.companyId) {
         throw new Error("Unauthorized");
       }
       if (args.role === "SUPER_ADMIN") {
@@ -217,7 +231,7 @@ export const updateUser = mutation({
     id: v.id("users"),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
-    role: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
@@ -226,18 +240,20 @@ export const updateUser = mutation({
     if (!callerId) throw new Error("Unauthenticated");
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) throw new Error("User not found");
 
-    if (caller.role !== "SUPER_ADMIN") {
-      if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
+    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
+      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== targetUser.companyId) {
         throw new Error("Unauthorized");
       }
       if (targetUser.role === "SUPER_ADMIN") {
         throw new Error("Unauthorized: Cannot modify a Super Administrator");
       }
-      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== caller.companyId)) {
+      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== activeCompanyId)) {
         throw new Error("Unauthorized: Insufficient privileges");
       }
     }
@@ -262,22 +278,37 @@ export const updateUser = mutation({
   },
 });
 
-export const cascadeDeleteUserAction = async (ctx: MutationCtx, userId: Id<"users">) => {
-  const logins = await ctx.db.query("logins").withIndex("by_user", q => q.eq("userId", userId)).take(1000);
-  for (const login of logins) await ctx.db.delete(login._id);
+export const purgeUserEntitiesInternal = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    let hasMore = false;
+    
+    const logins = await ctx.db.query("logins").withIndex("by_user", q => q.eq("userId", args.userId)).take(100);
+    for (const login of logins) await ctx.db.delete(login._id);
+    if (logins.length === 100) hasMore = true;
 
-  const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", userId)).take(1000);
-  for (const thread of threads) {
-    const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).take(1000);
-    for (const msg of messages) await ctx.db.delete(msg._id);
-    await ctx.db.delete(thread._id);
+    const rules = await ctx.db.query("aiRules").filter(q => q.eq(q.field("createdBy"), args.userId)).take(100);
+    for (const rule of rules) await ctx.db.delete(rule._id);
+    if (rules.length === 100) hasMore = true;
+
+    const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", args.userId)).take(10);
+    for (const thread of threads) {
+      const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).take(100);
+      for (const msg of messages) await ctx.db.delete(msg._id);
+      
+      if (messages.length === 100) {
+          hasMore = true;
+      } else {
+          await ctx.db.delete(thread._id);
+      }
+    }
+    if (threads.length === 10) hasMore = true;
+
+    if (hasMore) {
+       await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: args.userId });
+    }
   }
-
-  const rules = await ctx.db.query("aiRules").filter(q => q.eq(q.field("createdBy"), userId)).take(1000);
-  for (const rule of rules) await ctx.db.delete(rule._id);
-
-  await ctx.db.delete(userId);
-};
+});
 
 export const deleteUser = mutation({
   args: { id: v.id("users") },
@@ -286,12 +317,14 @@ export const deleteUser = mutation({
     if (!callerId) throw new Error("Unauthenticated");
     const caller = await ctx.db.get(callerId);
     if (!caller || !caller.role) throw new Error("Unauthorized");
+    
+    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
 
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) return false;
 
-    if (caller.role !== "SUPER_ADMIN") {
-      if (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId) {
+    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
+      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== targetUser.companyId) {
         throw new Error("Unauthorized");
       }
       if (targetUser.role === "SUPER_ADMIN") {
@@ -299,7 +332,8 @@ export const deleteUser = mutation({
       }
     }
 
-    await cascadeDeleteUserAction(ctx, args.id);
+    await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: args.id });
+    await ctx.db.delete(args.id);
 
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_USER",
@@ -390,8 +424,10 @@ export const getUserLogins = query({
       const caller = await ctx.db.get(callerId);
       if (!caller || !caller.role) throw new Error("Unauthorized");
       
+      const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+      
       const targetUser = await ctx.db.get(args.userId);
-      if (!targetUser || (caller.role !== "SUPER_ADMIN" && (caller.role !== "ADMIN" || caller.companyId !== targetUser.companyId))) {
+      if (!targetUser || (caller.role !== "SUPER_ADMIN" && activeCompanyId !== targetUser.companyId)) {
         throw new Error("Unauthorized");
       }
     }
@@ -519,7 +555,7 @@ export const impersonateCompany = mutation({
       throw new Error("Unauthorized: Only super admins can impersonate tenants");
     }
 
-    await ctx.db.patch(userId, { companyId: args.companyId });
+    await ctx.db.patch(userId, { impersonatingCompanyId: args.companyId === undefined ? undefined : args.companyId });
 
     await ctx.db.insert("auditLogs", {
       actionType: "IMPERSONATE_COMPANY",
