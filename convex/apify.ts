@@ -28,8 +28,8 @@ export const startRightmoveScrape = action({
         "propertyUrls": [],
         "monitoringMode": false,
         "deduplicateAtTaskLevel": false,
-        "fullPropertyDetails": false,
-        "includePriceHistory": false,
+        "fullPropertyDetails": true,
+        "includePriceHistory": true,
         "includeNearestSchools": false,
         "enableDelistingTracker": false,
         "addEmptyTrackerRecord": false,
@@ -84,4 +84,49 @@ export const fetchDatasetAndStore = internalAction({
       items: items.map(item => JSON.stringify(item)),
     });
   },
+});
+
+export const syncRunStatus = action({
+  args: { runId: v.string() },
+  handler: async (ctx, args) => {
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken) throw new Error("Apify token not configured");
+    
+    const client = new ApifyClient({ token: apifyToken });
+    const run = await client.run(args.runId).get();
+    
+    if (!run) throw new Error("Run not found on Apify");
+
+    // If it's still running, just update the status to PENDING
+    if (run.status !== "SUCCEEDED") {
+      await ctx.runMutation(internal.webhooks.updateRunStatus, {
+        runId: args.runId,
+        status: run.status,
+      });
+      return run.status;
+    }
+    
+    const dataset = await client.dataset(run.defaultDatasetId).listItems();
+    
+    await ctx.runMutation(internal.webhooks.storeRightmoveData, {
+      runId: args.runId,
+      status: "SUCCEEDED",
+      items: dataset.items.map((item: any) => JSON.stringify(item)),
+    });
+    
+    return "SUCCEEDED";
+  }
+});
+
+export const debugDatasetItem = action({
+  args: { runId: v.string() },
+  handler: async (ctx, args) => {
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    const client = new ApifyClient({ token: apifyToken });
+    const run = await client.run(args.runId).get();
+    
+    if (!run) throw new Error("Run not found");
+    const dataset = await client.dataset(run.defaultDatasetId).listItems({ limit: 1 });
+    return dataset.items[0];
+  }
 });

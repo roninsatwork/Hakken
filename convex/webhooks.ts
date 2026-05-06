@@ -44,9 +44,23 @@ export const updateRunStatus = internalMutation({
       .unique();
 
     if (run) {
+      let newStatus: "PENDING" | "COMPLETED" | "FAILED" = "PENDING";
+      let completedAt = run.completedAt;
+
+      if (args.status === "FAILED" || args.status === "ABORTED" || args.status === "TIMED-OUT") {
+        newStatus = "FAILED";
+        completedAt = Date.now();
+      } else if (args.status === "SUCCEEDED") {
+        newStatus = "COMPLETED";
+        completedAt = Date.now();
+      } else {
+        newStatus = "PENDING";
+        completedAt = undefined;
+      }
+
       await ctx.db.patch(run._id, {
-        status: args.status === "FAILED" || args.status === "ABORTED" ? "FAILED" : "COMPLETED",
-        completedAt: Date.now(),
+        status: newStatus,
+        completedAt,
       });
     }
   },
@@ -86,9 +100,17 @@ export const storeRightmoveData = internalMutation({
 
     for (const itemStr of args.items) {
       const item = JSON.parse(itemStr);
-      await ctx.db.insert("properties", {
+      const rightmoveId = String(item.id || item.url || Date.now());
+      
+      // Check for existing property to prevent duplicates
+      const existing = await ctx.db.query("properties")
+        .withIndex("by_rightmoveId", q => q.eq("rightmoveId", rightmoveId))
+        .filter(q => q.eq(q.field("companyId"), run.companyId))
+        .first();
+
+      const propertyData = {
         runId: args.runId,
-        rightmoveId: String(item.id || item.url || Date.now()),
+        rightmoveId,
         address: item.address || item.displayAddress || "Unknown",
         price: typeof item.price === 'number' ? item.price : parseInt(String(item.price).replace(/[^0-9]/g, '')) || 0,
         currency: "GBP",
@@ -96,13 +118,35 @@ export const storeRightmoveData = internalMutation({
         bathrooms: item.bathrooms || 0,
         propertyType: item.propertyType || "Unknown",
         url: item.url || "",
-        imageUrl: item.images?.[0]?.url || item.mainImage || "",
+        imageUrl: (Array.isArray(item.images) && item.images.length > 0) ? (item.images[0].url || item.images[0]) : (item.mainImage || ""),
+        images: Array.isArray(item.images) ? item.images.map((img: any) => img.url || img).filter(Boolean) : [],
         description: item.description || item.summary || "",
-        agentName: item.branch?.name || item.agent?.name || "",
-        agentPhone: item.branch?.phone || item.agent?.phone || "",
+        features: Array.isArray(item.features) ? item.features : [],
+        floorplans: Array.isArray(item.floorplans) ? item.floorplans.map((fp: any) => fp.url || fp).filter(Boolean) : [],
+        epcRating: item.epcRating || item.epc?.rating || "",
+        latitude: item.coordinates?.latitude || item.location?.latitude || undefined,
+        longitude: item.coordinates?.longitude || item.location?.longitude || undefined,
+        agentName: item.agent?.name || item.branch?.name || (typeof item.agent === 'string' ? item.agent : ""),
+        agentPhone: item.agentPhone || item.agent?.phone || item.branch?.phone || "",
+        agentProfileUrl: item.agentProfileUrl || "",
+        addedOn: item.addedOn || "",
+        firstVisibleDate: item.firstVisibleDate || "",
+        listingUpdateDate: item.listingUpdateDate || "",
+        listingUpdateReason: item.listingUpdateReason || "",
+        productLabel: item.productLabel || "",
+        sizeSqFeetMin: String(item.sizeSqFeetMin || ""),
+        sizeSqFeetMax: String(item.sizeSqFeetMax || ""),
         companyId: run.companyId,
         scrapedAt: Date.now(),
-      });
+      };
+
+      if (existing) {
+        // Upsert: Update existing property with fresh data
+        await ctx.db.patch(existing._id, propertyData);
+      } else {
+        // Insert: Brand new property
+        await ctx.db.insert("properties", propertyData);
+      }
     }
 
     await ctx.db.patch(run._id, {

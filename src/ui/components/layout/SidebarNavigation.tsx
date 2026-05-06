@@ -458,6 +458,7 @@ export default function SidebarNavigation() {
                     >
                       <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
+                      <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (
