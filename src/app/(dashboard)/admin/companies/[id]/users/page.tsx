@@ -85,6 +85,7 @@ export default function CompanyUsersPage() {
     setIsSubmitting(true);
     const payload = {
       ...formData,
+      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       companyId
     };
     try {

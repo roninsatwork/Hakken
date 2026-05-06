@@ -71,6 +71,7 @@ export default function ManageUsersPage() {
     e.preventDefault();
     const payload = {
       ...formData,
+      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       companyId: isSuperAdmin && formData.companyId ? (formData.companyId as Id<"companies">) : undefined
     };
     if (editingUser) {
