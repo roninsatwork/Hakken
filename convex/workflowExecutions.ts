@@ -75,7 +75,7 @@ export const getSteps = internalQuery({
     return await ctx.db
       .query("workflowExecutionSteps")
       .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-      .collect();
+      .take(10000);
   },
 });
 

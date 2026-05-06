@@ -2,6 +2,7 @@ import { mutation, query, internalMutation, internalQuery } from "./_generated/s
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
+import { validateSafeUrl } from "./utils/security";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -36,7 +37,7 @@ export const getDocuments = query({
         .query("knowledgeDocuments")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
-        .collect();
+        .take(10000);
         
       if (user?.role === "ADMIN") {
           results = results.filter(r => r.companyId === user.companyId);
@@ -57,7 +58,7 @@ export const getDocuments = query({
             q.eq(q.field("threadId"), undefined)
         ))
         .order("desc")
-        .collect();
+        .take(10000);
     }
 
     if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
@@ -72,7 +73,7 @@ export const getDocuments = query({
           q.eq(q.field("threadId"), undefined)
       ))
       .order("desc")
-      .collect();
+      .take(10000);
   },
 });
 
@@ -83,15 +84,24 @@ export const getThreadDocuments = query({
     if (!userId) return []; 
 
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) {
-       return [];
+    if (!thread) return [];
+
+    if (thread.userId !== userId) {
+         const user = await ctx.db.get(userId);
+         if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+           return [];
+         }
+         // BOLA Protection: Ensure standard ADMIN cannot view cross-tenant thread documents
+         if (user.role === "ADMIN" && thread.companyId !== user.companyId) {
+           return [];
+         }
     }
 
     return await ctx.db
       .query("knowledgeDocuments")
       .withIndex("by_thread", q => q.eq("threadId", args.threadId))
       .order("asc")
-      .collect();
+      .take(10000);
   }
 });
 
@@ -251,7 +261,7 @@ export const getThreadDocumentsInternal = internalQuery({
       .query("knowledgeDocuments")
       .withIndex("by_thread", q => q.eq("threadId", args.threadId))
       .order("asc")
-      .collect();
+      .take(10000);
   }
 });
 
@@ -268,7 +278,7 @@ export const garbageCollectThreadVectors = internalMutation({
          q.neq(q.field("threadId"), undefined),
          q.lt(q.field("createdAt"), expirationThreshold)
       ))
-      .collect();
+      .take(10000);
 
     let purgeCount = 0;
     for (const doc of expiredDocs) {
@@ -369,16 +379,11 @@ export const queueWebsiteUrls = mutation({
 
     const docIds = [];
     for (const url of args.urls) {
-        // 🛡️ SECURITY: SSRF Prevention Shield
+        // 🛡️ SECURITY: Central SSRF Prevention Shield
         try {
-           const parsed = new URL(url);
-           const host = parsed.hostname;
-           // Block traversal and internal network lookups
-           if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.") || parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-               throw new Error(`SSRF Prevention: Cannot scrape internal or restricted URL (${url})`);
-           }
-        } catch(e) {
-           throw new Error(`SSRF Prevention: Malformed URL provided.`);
+           validateSafeUrl(url, "Knowledge Base Import");
+        } catch (e: any) {
+           throw e;
         }
 
         // Simple duplicates check
@@ -437,8 +442,8 @@ export const deleteWebsiteBulk = mutation({
 
     // Query documents scoped to company or agent safely satisfying TypeScript's QueryInitializer
     const docs = args.companyId 
-        ? await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).collect()
-        : await ctx.db.query("knowledgeDocuments").collect();
+        ? await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(10000)
+        : await ctx.db.query("knowledgeDocuments").take(10000);
 
     let count = 0;
     for (const doc of docs) {
@@ -455,9 +460,13 @@ export const deleteWebsiteBulk = mutation({
 export const purgeDocumentChunksInternal = internalMutation({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
-     const chunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).collect();
+     const chunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).take(100);
      for (const chunk of chunks) {
          await ctx.db.delete(chunk._id);
+     }
+     
+     if (chunks.length === 100) {
+         await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: args.documentId });
      }
   }
 });
@@ -481,7 +490,7 @@ export const saveChunksInternal = internalMutation({
         })),
   },
   handler: async (ctx, args) => {
-      const existingChunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).collect();
+      const existingChunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).take(500);
       for (const chunk of existingChunks) {
          await ctx.db.delete(chunk._id);
       }
@@ -516,8 +525,8 @@ export const markDocFailedInternal = internalMutation({
 export const debugCount = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const chunks = await ctx.db.query("knowledgeChunks").collect();
-    const docs = await ctx.db.query("knowledgeDocuments").collect();
+    const chunks = await ctx.db.query("knowledgeChunks").take(10000);
+    const docs = await ctx.db.query("knowledgeDocuments").take(10000);
     return {
       totalChunks: chunks.length,
       totalDocs: docs.length,

@@ -326,6 +326,11 @@ export const generateNodeConfig = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
 
+    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+        throw new Error("Unauthorized: Only administrators can configure workflow nodes.");
+    }
+
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
     

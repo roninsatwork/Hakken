@@ -200,7 +200,7 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
       const allSteps = await ctx.db
         .query("workflowExecutionSteps")
         .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId))
-        .collect();
+        .take(10000);
       
       const incompleteSteps = allSteps.filter((s: any) => s.status === "PENDING" || s.status === "RUNNING");
       if (incompleteSteps.length === 0) {

@@ -42,7 +42,7 @@ export const getStatsForAgent = query({
       q = q.filter((filterQ: any) => filterQ.eq(filterQ.field("companyId"), user.companyId));
     }
 
-    const txs = await q.collect();
+    const txs = await q.take(10000);
       
     const totalGenerations = txs.length;
     let totalTokensIngested = 0;
@@ -83,10 +83,10 @@ export const seedForAgent = internalMutation({
 
     // Generate 15 dummy transactions
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
-    const activeModels = await ctx.db.query("aiModels").collect();
+    const activeModels = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map(activeModels.map(m => [m.modelId, m]));
     const defaultModelObj = activeModels.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     const models = activeModels.length > 0 ? activeModels.map(m => m.modelId) : [defaultModelId];
     
     for (let i = 0; i < 15; i++) {

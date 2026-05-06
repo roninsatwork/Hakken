@@ -21,7 +21,7 @@ export const getOffsetPaginatedThreads = query({
     const allThreads = await ctx.db
       .query("threads")
       .order("desc")
-      .collect();
+      .take(10000);
 
     // Setup payload
     let finalPayload = allThreads;
@@ -99,7 +99,7 @@ export const getOffsetPaginatedCompanyThreads = query({
       .query("threads")
       .withIndex("by_company", q => q.eq("companyId", args.companyId))
       .order("desc")
-      .collect();
+      .take(10000);
 
     let finalPayload = allThreads;
 
@@ -175,6 +175,6 @@ export const getAdminThreadMessages = query({
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc")
-      .collect();
+      .take(10000);
   },
 });

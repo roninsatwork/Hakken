@@ -22,10 +22,10 @@ export const getGlobalAICosts = query({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized AI Logistics query");
     const admin = await ctx.db.get(adminId);
@@ -49,10 +49,10 @@ export const getGlobalAICosts = query({
       .query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startDate))
       .filter(q => q.lte(q.field("createdAt"), endDate))
-      .collect();
+      .take(10000);
     
     // Relational Map
-    const threads = await ctx.db.query("threads").collect();
+    const threads = await ctx.db.query("threads").take(10000);
     const threadUserHashed = new Map(threads.map(t => [t._id, t.userId]));
 
     // Execution Variables
@@ -136,10 +136,10 @@ export const getGlobalAICosts = query({
 export const getPlatformOverview = query({
   args: {},
   handler: async (ctx) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     // 1. Core Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -147,9 +147,9 @@ export const getPlatformOverview = query({
     if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
 
     // 2. Base Structural Telemetry
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     const totalUsers = users.length;
-    const threads = await ctx.db.query("threads").collect();
+    const threads = await ctx.db.query("threads").take(10000);
     const totalThreads = threads.length;
 
     // 3. Map Aggregation Parameters (Last 30 Days & Last 7 Days)
@@ -160,7 +160,7 @@ export const getPlatformOverview = query({
     const recentMessages = await ctx.db
       .query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
-      .collect();
+      .take(10000);
     const avgInteractionDepth = totalThreads > 0 ? (recentMessages.length / totalThreads) : 1.0;
 
     // 4. Financial Calculation Engine
@@ -229,10 +229,10 @@ export const getPlatformOverview = query({
 export const getUserCostOverview = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     // 1. Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -254,7 +254,7 @@ export const getUserCostOverview = query({
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(10000);
 
     let totalCostUSD = 0;
     let totalTokens = 0;
@@ -266,7 +266,7 @@ export const getUserCostOverview = query({
         const messages = await ctx.db
           .query("messages")
           .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
-          .collect();
+          .take(10000);
           
         let threadCostUSD = 0;
         let threadTokens = 0;
@@ -326,10 +326,10 @@ export const getCompanyMetrics = query({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -373,7 +373,7 @@ export const getCompanyMetrics = query({
        if (planObj && planObj.isActive) mrr = planObj.priceGBP || 0;
     }
 
-    const agents = await ctx.db.query("agents").collect();
+    const agents = await ctx.db.query("agents").take(10000);
     const agentMap = new Map(agents.map((a: any) => [a._id, a]));
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
     for (const a of agents) {
@@ -382,11 +382,11 @@ export const getCompanyMetrics = query({
     // Also inject the system assistant
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
-    const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).collect();
+    const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
     const companyUserIds = new Set(companyUsers.map((u: any) => u._id));
     
     // Natively fetch only threads related to this tenant
-    const companyThreads = await ctx.db.query("threads").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).collect();
+    const companyThreads = await ctx.db.query("threads").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
     const companyThreadIds = new Set(companyThreads.map((t: any) => t._id));
 
     const startTimeStamp = startDate.getTime();
@@ -396,7 +396,7 @@ export const getCompanyMetrics = query({
 
     const snapshots = await ctx.db.query("analyticsDailySnapshots")
         .withIndex("by_type_date", q => q.eq("type", "global"))
-        .collect();
+        .take(10000);
         
     const validSnapshots = snapshots.filter(s => {
         const t = new Date(s.date).getTime();
@@ -462,16 +462,16 @@ export const getCompanyMetrics = query({
     const rawMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", realStartTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-      .collect();
+      .take(10000);
       
     const periodRawMessages = rawMessages.filter((m: any) => companyThreadIds.has(m.threadId));
 
     const periodAgentTxs = await ctx.db.query("agentTransactions")
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
        .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-       .collect();
+       .take(10000);
        
-    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).collect();
+    const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(10000);
 
     const threadUserMap = new Map(companyThreads.map((t: any) => [t._id, t.userId]));
     const threadAgentMap = new Map(companyThreads.map((t: any) => [t._id, t.agentId]));
@@ -667,10 +667,10 @@ export const getGlobalAnalytics = query({
     customEnd: v.optional(v.number())
   },
   handler: async (ctx, args) => {
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -693,11 +693,11 @@ export const getGlobalAnalytics = query({
     const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
 
-    const users = await ctx.db.query("users").collect();
-    const companies = await ctx.db.query("companies").collect();
+    const users = await ctx.db.query("users").take(10000);
+    const companies = await ctx.db.query("companies").take(10000);
     const companyMap = new Map(companies.map((c: any) => [c._id, c]));
 
-    const agents = await ctx.db.query("agents").collect();
+    const agents = await ctx.db.query("agents").take(10000);
     const agentMap = new Map(agents.map((a: any) => [a._id, a]));
 
     let totalMessages = 0;
@@ -719,7 +719,7 @@ export const getGlobalAnalytics = query({
     // Also inject the system assistant
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
-    const threads = await ctx.db.query("threads").collect();
+    const threads = await ctx.db.query("threads").take(10000);
     
     const startTimeStamp = startDate.getTime();
     const endTimeStamp = endDate.getTime();
@@ -727,17 +727,17 @@ export const getGlobalAnalytics = query({
     const periodRawMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-      .collect();
+      .take(10000);
       
     const periodAgentTxs = await ctx.db.query("agentTransactions")
       .filter((q: any) => q.gte(q.field("createdAt"), startTimeStamp))
       .filter((q: any) => q.lte(q.field("createdAt"), endTimeStamp))
-      .collect();
+      .take(10000);
       
     const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
     const thirtyDayMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
-      .collect();
+      .take(10000);
     const threadUserMapAll = new Map(threads.map((t: any) => [t._id, t.userId]));
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
@@ -746,7 +746,7 @@ export const getGlobalAnalytics = query({
     }
     const thirtyDayTxs = await ctx.db.query("agentTransactions")
        .filter((q: any) => q.gte(q.field("createdAt"), thirtyDaysAgo))
-       .collect();
+       .take(10000);
     for (const tx of thirtyDayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
@@ -938,7 +938,7 @@ export const getGlobalAnalytics = query({
 
     const plans = await ctx.db.query("plans")
        .withIndex("by_active", q => q.eq("isActive", true))
-       .collect();
+       .take(10000);
     const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
     const planNameMap = new Map(plans.map(p => [p._id, p.name || "Unknown Plan"]));
 
@@ -1007,8 +1007,8 @@ export const debugTime = internalQuery({
 export const debugDb = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const plans = await ctx.db.query("plans").collect();
-    const companies = await ctx.db.query("companies").collect();
+    const plans = await ctx.db.query("plans").take(10000);
+    const companies = await ctx.db.query("companies").take(10000);
     return { plans, companies };
   }
 });

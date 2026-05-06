@@ -103,7 +103,7 @@ export const getPlans = query({
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
 
-    return await ctx.db.query("plans").order("asc").collect();
+    return await ctx.db.query("plans").order("asc").take(10000);
   },
 });
 
@@ -117,7 +117,7 @@ export const getActivePlans = query({
       .query("plans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .order("asc")
-      .collect();
+      .take(10000);
   },
 });
 
@@ -171,7 +171,7 @@ export const deletePlan = mutation({
     const companiesAssigned = await ctx.db
       .query("companies")
       .filter((q) => q.eq(q.field("planId"), args.id))
-      .collect();
+      .take(10000);
 
     if (companiesAssigned.length > 0) {
       throw new Error(`Cannot delete this plan. It is actively assigned to ${companiesAssigned.length} companies.`);
@@ -187,7 +187,7 @@ export const resetBillingCycle = internalMutation({
     // Reset all pool counters to 0 smoothly without deleting data
     
     // 1. Reset all companies (Shared Pools)
-    const companies = await ctx.db.query("companies").collect();
+    const companies = await ctx.db.query("companies").take(10000);
     for (const c of companies) {
       if (c.messagesUsedThisPeriod !== 0) {
           await ctx.db.patch(c._id, { messagesUsedThisPeriod: 0 });
@@ -198,7 +198,7 @@ export const resetBillingCycle = internalMutation({
     const usersWithOverrides = await ctx.db
       .query("users")
       .filter((q) => q.neq(q.field("planOverrideId"), undefined))
-      .collect();
+      .take(10000);
       
     for (const u of usersWithOverrides) {
         if (u.messagesUsedThisPeriod !== 0) {

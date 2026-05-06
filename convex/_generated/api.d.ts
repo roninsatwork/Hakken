@@ -50,6 +50,7 @@ import type * as testQuery from "../testQuery.js";
 import type * as users from "../users.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_pii from "../utils/pii.js";
+import type * as utils_security from "../utils/security.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
 import type * as widgets from "../widgets.js";
 import type * as workflowEngine from "../workflowEngine.js";
@@ -106,6 +107,7 @@ declare const fullApi: ApiFromModules<{
   users: typeof users;
   "utils/fileParser": typeof utils_fileParser;
   "utils/pii": typeof utils_pii;
+  "utils/security": typeof utils_security;
   "utils/templateParser": typeof utils_templateParser;
   widgets: typeof widgets;
   workflowEngine: typeof workflowEngine;

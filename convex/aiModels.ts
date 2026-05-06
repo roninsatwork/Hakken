@@ -8,7 +8,7 @@ export const getModels = query({
   handler: async (ctx) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
-    return await ctx.db.query("aiModels").order("asc").collect();
+    return await ctx.db.query("aiModels").order("asc").take(10000);
   },
 });
 
@@ -23,7 +23,7 @@ export const getOffsetPaginatedModels = query({
     if (!userId) throw new Error("Unauthenticated request");
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
-    let models = await ctx.db.query("aiModels").order("asc").collect();
+    let models = await ctx.db.query("aiModels").order("asc").take(10000);
 
     if (args.searchTerm) {
       const term = args.searchTerm.toLowerCase();
@@ -128,7 +128,7 @@ export const setDefaultModel = mutation({
     const currentDefaults = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
-      .collect();
+      .take(10000);
 
     for (const model of currentDefaults) {
       if (model._id !== args.modelId) {
@@ -234,6 +234,6 @@ export const updatePricingConfig = mutation({
 export const getAllModelsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("aiModels").collect();
+    return await ctx.db.query("aiModels").take(10000);
   },
 });

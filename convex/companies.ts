@@ -14,7 +14,7 @@ export const getCompanies = query({
        throw new Error("Unauthorized: System level clearance required.");
     }
 
-    const companies = await ctx.db.query("companies").order("desc").collect();
+    const companies = await ctx.db.query("companies").order("desc").take(10000);
     
     // Attach basic stats dynamically
     const enrichedCompanies = await Promise.all(
@@ -22,7 +22,7 @@ export const getCompanies = query({
         const users = await ctx.db
           .query("users")
           .withIndex("by_company", (q) => q.eq("companyId", company._id))
-          .collect();
+          .take(10000);
           
         return {
           ...company,
@@ -130,7 +130,7 @@ export const deleteCompany = mutation({
     const users = await ctx.db
       .query("users")
       .withIndex("by_company", (q) => q.eq("companyId", args.id))
-      .collect();
+      .take(10000);
       
     for (const user of users) {
       await cascadeDeleteUserAction(ctx, user._id);
@@ -140,7 +140,7 @@ export const deleteCompany = mutation({
     const invites = await ctx.db
       .query("invitations")
       .withIndex("by_company_status", (q) => q.eq("companyId", args.id))
-      .collect();
+      .take(10000);
       
     for (const invite of invites) {
       await ctx.db.delete(invite._id);
