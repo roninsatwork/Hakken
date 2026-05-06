@@ -7,7 +7,7 @@ async function getCurrentUser(ctx: any) {
   if (!identity) return null;
   return await ctx.db
     .query("users")
-    .withIndex("by_tokenIdentifier", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
     .unique();
 }
 
