@@ -514,4 +514,54 @@ export default defineSchema({
     .index("by_type_date", ["type", "date"])
     .index("by_company_date", ["companyId", "date"])
     .index("by_user_date", ["userId", "date"]),
+
+  apifyRuns: defineTable({
+    runId: v.string(), // The Apify run ID
+    actorId: v.string(),
+    status: v.union(v.literal("PENDING"), v.literal("COMPLETED"), v.literal("FAILED")),
+    startedBy: v.id("users"),
+    companyId: v.optional(v.id("companies")),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    propertiesScraped: v.optional(v.number()),
+  }).index("by_runId", ["runId"])
+    .index("by_company", ["companyId", "startedAt"]),
+
+  properties: defineTable({
+    runId: v.optional(v.string()), // The Apify run ID that scraped this
+    rightmoveId: v.string(), // The unique Rightmove property ID
+    address: v.string(),
+    price: v.number(),
+    currency: v.optional(v.string()),
+    bedrooms: v.optional(v.number()),
+    bathrooms: v.optional(v.number()),
+    propertyType: v.optional(v.string()),
+    url: v.string(),
+    imageUrl: v.optional(v.string()),
+    description: v.optional(v.string()),
+    features: v.optional(v.array(v.string())),
+    images: v.optional(v.array(v.string())),
+    floorplans: v.optional(v.array(v.string())),
+    epcRating: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    agentName: v.optional(v.string()),
+    agentPhone: v.optional(v.string()),
+    agentProfileUrl: v.optional(v.string()),
+    addedOn: v.optional(v.string()),
+    firstVisibleDate: v.optional(v.string()),
+    listingUpdateDate: v.optional(v.string()),
+    listingUpdateReason: v.optional(v.string()),
+    productLabel: v.optional(v.string()),
+    sizeSqFeetMin: v.optional(v.string()),
+    sizeSqFeetMax: v.optional(v.string()),
+    companyId: v.optional(v.id("companies")), // Which tenant triggered the scrape
+    scrapedAt: v.number(),
+  }).index("by_rightmoveId", ["rightmoveId"])
+    .index("by_company", ["companyId", "scrapedAt"])
+    .index("by_runId", ["runId"])
+    .searchIndex("search_address", {
+      searchField: "address",
+      filterFields: ["companyId"],
+    }),
 });

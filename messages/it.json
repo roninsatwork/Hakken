@@ -142,7 +142,10 @@
         "analytics": "Analytics",
         "workspace": "Workspace",
         "assistant": "Assistente",
-        "agenticTesting": "Test Agentico"
+        "agenticTesting": "Test Agentico",
+        "properties": "Proprietà",
+        "propertiesSearch": "Ricerca",
+        "propertiesScrapedData": "Dati Estratti"
     },
     "header": {
         "adminOverview": "Protocollo Infrastruttura",

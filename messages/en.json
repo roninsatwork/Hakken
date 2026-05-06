@@ -142,7 +142,10 @@
         "analytics": "Analytics",
         "workspace": "Workspace",
         "assistant": "Assistant",
-        "agenticTesting": "Agentic Testing"
+        "agenticTesting": "Agentic Testing",
+        "properties": "Properties",
+        "propertiesSearch": "Search",
+        "propertiesScrapedData": "Scraped Data"
     },
     "header": {
         "adminOverview": "Platform Management",
