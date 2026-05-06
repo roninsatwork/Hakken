@@ -3,12 +3,9 @@ import { v } from "convex/values";
 import { auth } from "./auth";
 
 async function getCurrentUser(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  return await ctx.db
-    .query("users")
-    .withIndex("by_token", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-    .unique();
+  const userId = await auth.getUserId(ctx);
+  if (!userId) return null;
+  return await ctx.db.get(userId);
 }
 
 export const listProperties = query({
