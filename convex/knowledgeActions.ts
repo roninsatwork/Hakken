@@ -8,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 // @ts-ignore
 import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
+import { validateSafeUrl } from "./utils/security";
 
 function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
   const chunks: string[] = [];
@@ -82,8 +83,16 @@ export const mapWebsite = action({
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthenticated request");
 
+    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+        throw new Error("Unauthorized: Only administrators can map new external sites.");
+    }
+
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
     if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY environment variable not set");
+
+    // 🛡️ SECURITY: Prevent internal SSRF scans via Firecrawl
+    validateSafeUrl(args.url, "Firecrawl Map Dispatcher");
 
     const response = await fetch("https://api.firecrawl.dev/v1/map", {
        method: "POST",
@@ -124,7 +133,14 @@ export const processWebsiteQueue = internalAction({
            body: JSON.stringify({ url: nextDoc.sourceUrl, formats: ["markdown"] })
        });
 
-       if (!response.ok) throw new Error("Scrape failed: " + await response.text());
+       if (!response.ok) {
+           if (response.status === 429) {
+               console.warn("Firecrawl Rate Limit Hit (429). Executing exponential backoff.");
+               await ctx.scheduler.runAfter(10000, internal.knowledgeActions.processWebsiteQueue);
+               return; 
+           }
+           throw new Error("Scrape failed: " + await response.text());
+       }
        const data = await response.json();
        const markdownText = data.data?.markdown || "";
 
@@ -182,11 +198,16 @@ async function embedAndStoreDoc(ctx: any, documentId: string, companyId: any, ag
          }
       }
 
-      await ctx.runMutation(internal.knowledge.saveChunksInternal, {
-         documentId,
-         ...(companyId ? { companyId: companyId } : {}),
-         ...(agentId ? { agentId: agentId } : {}),
-         ...(threadId ? { threadId: threadId } : {}),
-         chunks: embeddedChunks,
-      });
+      // Stagger insertions to avoid 16MB limit
+      const chunkSize = 50;
+      for (let i = 0; i < embeddedChunks.length; i += chunkSize) {
+          const batch = embeddedChunks.slice(i, i + chunkSize);
+          await ctx.runMutation(internal.knowledge.saveChunksInternal, {
+             documentId,
+             ...(companyId ? { companyId: companyId } : {}),
+             ...(agentId ? { agentId: agentId } : {}),
+             ...(threadId ? { threadId: threadId } : {}),
+             chunks: batch,
+          });
+      }
 }

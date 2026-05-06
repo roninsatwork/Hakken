@@ -5,6 +5,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { resolveTemplate } from "./utils/templateParser";
+import { validateSafeUrl } from "./utils/security";
 
 export const startWorkflow = internalAction({
   args: {
@@ -88,6 +89,10 @@ export const executeNode = internalAction({
           const method = config.method || 'GET';
           const url = config.url;
           if (!url) throw new Error("Missing URL for Action Node");
+          
+          // 🛡️ SECURITY: SSRF Prevention Shield
+          validateSafeUrl(url, "Action Node");
+          
           const headers = config.headers || {};
           let body = config.body;
           if (typeof body === 'object') body = JSON.stringify(body);
@@ -102,18 +107,20 @@ export const executeNode = internalAction({
       }
       else if (node.type === "codeNode") {
         try {
-          // Extremely basic sandbox format using V8
-          const fn = new Function('input', `
-            try {
-               ${currentNodeData._inputTemplate || 'return input;'}
-            } catch(e) { return { error: e.message }; }
-          `);
+          // 🛡️ SECURITY: Replaced dangerous RCE (new Function) with safe templating logic
           let parseCtx = resolvedInput;
-          try { parseCtx = JSON.parse(resolvedInput) } catch (e) {}
-          const result = fn(parseCtx);
-          outputPayload = JSON.stringify(result);
+          try { parseCtx = JSON.parse(resolvedInput); } catch (e) {}
+          
+          // Fallback to safe templating resolution using the execution context
+          let templatePayload = parseCtx;
+          if (currentNodeData._inputTemplate && typeof currentNodeData._inputTemplate === "string") {
+              const safeGlobalPayload = { input: parseCtx, execution: execution.state ? JSON.parse(execution.state) : {} };
+              templatePayload = resolveTemplate(currentNodeData._inputTemplate, safeGlobalPayload);
+          }
+          
+          outputPayload = JSON.stringify(templatePayload);
         } catch (error: any) {
-          throw new Error("Code execution failed: " + error.message);
+          throw new Error("Safe code transformation failed: " + error.message);
         }
       }
       else if (node.type === "waitNode") {

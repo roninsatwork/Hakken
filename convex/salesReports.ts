@@ -12,12 +12,13 @@ export const getLatestReport = query({
       const user = await ctx.db.get(userId);
       if (!user) throw new Error("User not found");
 
-      // Find the most recently generated report
-      // Security: Only fetch reports belonging to the user's company
-      // Or if SUPER_ADMIN, maybe they can see any, but typically it should be scoped.
-      // Wait, let's see if salesReports has companyId.
+      if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
+          throw new Error("Unauthorized: Insufficient privileges to view executive reports.");
+      }
+
       let reports;
-      if (user.role !== "SUPER_ADMIN" && user.companyId) {
+      if (user.role !== "SUPER_ADMIN") {
+          if (!user.companyId) throw new Error("Unauthorized: Orphaned administrator account.");
           reports = await ctx.db.query("salesReports")
             .withIndex("by_company", q => q.eq("companyId", user.companyId as any))
             .order("desc")
@@ -44,7 +45,7 @@ export const getAgentKnowledgeDocumentsQuery = internalQuery({
       return await ctx.db.query("knowledgeDocuments")
           .withIndex("by_agent", q => q.eq("agentId", args.agentId))
           .order("desc") // Get newest first
-          .collect();
+          .take(10000);
   }
 });
 

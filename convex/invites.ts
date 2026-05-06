@@ -120,7 +120,7 @@ export const getInvitesByCompany = query({
           .query("invitations")
           .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
           .order("desc")
-          .collect();
+          .take(10000);
     }
 
     throw new Error("Unauthorized");

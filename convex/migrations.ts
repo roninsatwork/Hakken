@@ -28,7 +28,7 @@ export const runSaaSMigration = internalMutation({
     }
 
     // 2. Fetch all users
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(10000);
     let migratedUsers = 0;
 
     for (const user of allUsers) {
@@ -43,7 +43,7 @@ export const runSaaSMigration = internalMutation({
     }
 
     // 3. Migrate Threads for Cost Tracking
-    const allThreads = await ctx.db.query("threads").collect();
+    const allThreads = await ctx.db.query("threads").take(10000);
     let migratedThreads = 0;
 
     for (const thread of allThreads) {

@@ -4,7 +4,7 @@ export const injectDemoAgents = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Delete existing demo agents so we can repeatedly test
-    const existingAgents = await ctx.db.query("agents").collect();
+    const existingAgents = await ctx.db.query("agents").take(10000);
     const demoNames = [
         "Market Sourcing Agent", 
         "Internal Platform Architect", 

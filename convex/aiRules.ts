@@ -28,7 +28,7 @@ export const getRules = query({
         .query("aiRules")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
-        .collect();
+        .take(10000);
        
        if (user.role === "ADMIN") {
            results = results.filter(r => r.companyId === user.companyId);
@@ -39,7 +39,7 @@ export const getRules = query({
         .query("aiRules")
         .withIndex("by_company_active", q => q.eq("companyId", args.companyId))
         .order("desc")
-        .collect();
+        .take(10000);
     } else {
        // Manual filter for undefined companyId & agentId (Global)
        return await ctx.db
@@ -49,7 +49,7 @@ export const getRules = query({
             q.eq(q.field("agentId"), undefined)
          ))
          .order("desc")
-         .collect();
+         .take(10000);
     }
   },
 });
@@ -136,7 +136,7 @@ export const getActiveRulesInternal = internalQuery({
       .query("aiRules")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .order("desc")
-      .collect();
+      .take(10000);
       
     // Filter to global rules, company rules, or agent specific rules depending on context
     return activeRules.filter(r => 

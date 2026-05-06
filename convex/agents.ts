@@ -13,7 +13,7 @@ export const list = query({
        throw new Error("Unauthorized: System level clearance required.");
     }
 
-    const allAgents = await ctx.db.query("agents").order("desc").collect();
+    const allAgents = await ctx.db.query("agents").order("desc").take(10000);
     return allAgents.filter(a => a.isGlobal !== false);
   },
 });
@@ -165,7 +165,7 @@ export const deleteAgent = mutation({
     const toolBindings = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.id))
-       .collect();
+       .take(10000);
        
     for (const binding of toolBindings) {
         await ctx.db.delete(binding._id);
@@ -199,7 +199,7 @@ export const getAgentToolsInternal = internalQuery({
     return await ctx.db
       .query("agentTools")
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .collect();
+      .take(10000);
   },
 });
 
@@ -210,7 +210,7 @@ export const getForCompanyInternal = internalQuery({
     return await ctx.db
       .query("agents")
       .filter(q => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(10000);
   },
 });
 

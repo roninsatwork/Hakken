@@ -10,7 +10,7 @@ export const getTools = query({
     if (!userId) return [];
     
     // Tools are strictly globally configured by admins
-    return await ctx.db.query("aiTools").order("desc").collect();
+    return await ctx.db.query("aiTools").order("desc").take(10000);
   },
 });
 
@@ -94,7 +94,7 @@ export const deleteTool = mutation({
     const bindings = await ctx.db
        .query("agentTools")
        .withIndex("by_tool", q => q.eq("toolId", args.id))
-       .collect();
+       .take(10000);
        
     for (const binding of bindings) {
         await ctx.db.delete(binding._id);
@@ -115,7 +115,7 @@ export const getAgentTools = query({
     const bindings = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
-       .collect();
+       .take(10000);
 
     // Map tools
     const tools = [];

@@ -40,21 +40,21 @@ export const generateDailySnapshots = internalMutation({
         return;
     }
 
-    const aiModelsFetch = await ctx.db.query("aiModels").collect();
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
     const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-1.5-flash";
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
 
     // Fetch all interaction data for the 24h window
     const rawMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startTs))
       .filter(q => q.lte(q.field("createdAt"), endTs))
-      .collect();
+      .take(10000);
 
     const agentTxs = await ctx.db.query("agentTransactions")
       .filter(q => q.gte(q.field("createdAt"), startTs))
       .filter(q => q.lte(q.field("createdAt"), endTs))
-      .collect();
+      .take(10000);
 
     if (rawMessages.length === 0 && agentTxs.length === 0) {
        console.log(`[Analytics] No activity on ${dateString}. Creating empty global snapshot.`);
@@ -68,18 +68,18 @@ export const generateDailySnapshots = internalMutation({
     }
 
     // Helper caches
-    const threads = await ctx.db.query("threads").collect(); // In a huge DB, this would need to be paginated, but for now we rely on the same architecture
+    const threads = await ctx.db.query("threads").take(10000); // In a huge DB, this would need to be paginated, but for now we rely on the same architecture
     const threadUserMap = new Map(threads.map(t => [t._id, t.userId]));
     const threadAgentMap = new Map(threads.map(t => [t._id, t.agentId]));
     const threadWidgetMap = new Map(threads.map(t => [t._id, t.widgetId]));
 
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     const userMap = new Map(users.map(u => [u._id, u]));
 
-    const companies = await ctx.db.query("companies").collect();
+    const companies = await ctx.db.query("companies").take(10000);
     const companyMap = new Map(companies.map(c => [c._id, c]));
 
-    const agents = await ctx.db.query("agents").collect();
+    const agents = await ctx.db.query("agents").take(10000);
     const agentMap = new Map(agents.map(a => [a._id, a]));
 
     const unifiedInteractions = [
@@ -325,7 +325,7 @@ export const seedHistoricalSnapshots = internalAction({
 export const wipeSnapshots = internalMutation({
     args: {},
     handler: async (ctx) => {
-        const snaps = await ctx.db.query("analyticsDailySnapshots").collect();
+        const snaps = await ctx.db.query("analyticsDailySnapshots").take(10000);
         for (const s of snaps) {
             await ctx.db.delete(s._id);
         }

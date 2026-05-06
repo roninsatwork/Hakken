@@ -16,7 +16,7 @@ export const getThreads = query({
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc") // newest first
-      .collect();
+      .take(10000);
   },
 });
 
@@ -41,7 +41,7 @@ export const getMessages = query({
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc") // chronological order for rendering UI
-      .collect();
+      .take(10000);
   },
 });
 
@@ -53,7 +53,7 @@ export const getMessagesForAI = internalQuery({
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc")
-      .collect();
+      .take(10000);
   },
 });
 
@@ -310,7 +310,7 @@ export const deleteThread = mutation({
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
-      .collect();
+      .take(10000);
       
     for (const msg of messages) {
       await ctx.db.delete(msg._id);

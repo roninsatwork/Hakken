@@ -94,6 +94,7 @@ export const updateSystemPrompt = mutation({
 export const getAnalyticsId = query({
   args: {},
   handler: async (ctx) => {
+    /* intentionally public: required for frontend analytics mounting */
     const config = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", "GOOGLE_ANALYTICS_ID"))
@@ -165,6 +166,11 @@ export const updateAnalyticsId = mutation({
 export const getPiiConfig = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "SUPER_ADMIN" && user?.role !== "ADMIN") throw new Error("Unauthorized");
+
     const config = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))

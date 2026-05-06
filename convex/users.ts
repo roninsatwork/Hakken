@@ -89,14 +89,14 @@ export const getAllUsers = query({
     if (!caller || !caller.role) throw new Error("Unauthorized");
 
     if (caller.role === "SUPER_ADMIN") {
-      return await ctx.db.query("users").order("desc").collect();
+      return await ctx.db.query("users").order("desc").take(1000);
     } else if (caller.role === "ADMIN") {
       if (!caller.companyId) return [];
       return await ctx.db
         .query("users")
         .withIndex("by_company", (q) => q.eq("companyId", caller.companyId))
         .order("desc")
-        .collect();
+        .take(1000);
     }
     
     throw new Error("Unauthorized");
@@ -117,7 +117,7 @@ export const getUsersByCompany = query({
          .query("users")
          .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
          .order("desc")
-         .collect();
+         .take(1000);
     }
     
     throw new Error("Unauthorized");
@@ -137,7 +137,7 @@ export const getSuperAdmins = query({
       .query("users")
       .filter((q) => q.eq(q.field("role"), "SUPER_ADMIN"))
       .order("desc")
-      .collect();
+      .take(1000);
   },
 });
 
@@ -263,17 +263,17 @@ export const updateUser = mutation({
 });
 
 export const cascadeDeleteUserAction = async (ctx: MutationCtx, userId: Id<"users">) => {
-  const logins = await ctx.db.query("logins").withIndex("by_user", q => q.eq("userId", userId)).collect();
+  const logins = await ctx.db.query("logins").withIndex("by_user", q => q.eq("userId", userId)).take(1000);
   for (const login of logins) await ctx.db.delete(login._id);
 
-  const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", userId)).collect();
+  const threads = await ctx.db.query("threads").withIndex("by_user", q => q.eq("userId", userId)).take(1000);
   for (const thread of threads) {
-    const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).collect();
+    const messages = await ctx.db.query("messages").withIndex("by_thread", q => q.eq("threadId", thread._id)).take(1000);
     for (const msg of messages) await ctx.db.delete(msg._id);
     await ctx.db.delete(thread._id);
   }
 
-  const rules = await ctx.db.query("aiRules").filter(q => q.eq(q.field("createdBy"), userId)).collect();
+  const rules = await ctx.db.query("aiRules").filter(q => q.eq(q.field("createdBy"), userId)).take(1000);
   for (const rule of rules) await ctx.db.delete(rule._id);
 
   await ctx.db.delete(userId);
@@ -425,14 +425,14 @@ export const getMyLoginsCount = query({
         .withSearchIndex("search_device", (q) => 
            q.search("device", args.searchTerm!).eq("userId", userId)
         )
-        .collect();
+        .take(10000);
        return logins.length;
     }
     
     const logins = await ctx.db
       .query("logins")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .take(10000);
     return logins.length;
   }
 });

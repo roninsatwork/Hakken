@@ -15,7 +15,7 @@ export const list = query({
        throw new Error("Unauthorized: System level clearance required.");
     }
 
-    return await ctx.db.query("workflows").order("desc").collect();
+    return await ctx.db.query("workflows").order("desc").take(10000);
   },
 });
 

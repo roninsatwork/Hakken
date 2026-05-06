@@ -45,7 +45,7 @@ export const getScoresCount = query({
     const scores = await ctx.db
       .query("arcadeScores")
       .withIndex("by_game_score", (q) => q.eq("game", args.game))
-      .collect();
+      .take(10000);
     return scores.length;
   },
 });

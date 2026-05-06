@@ -18,7 +18,7 @@ export const getWidgetsByCompany = query({
     return await ctx.db
       .query("widgets")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .collect();
+      .take(10000);
   },
 });
 
@@ -36,7 +36,7 @@ export const getGlobalWidgets = query({
     return await ctx.db
       .query("widgets")
       .withIndex("by_global", (q) => q.eq("isGlobal", true))
-      .collect();
+      .take(10000);
   },
 });
 

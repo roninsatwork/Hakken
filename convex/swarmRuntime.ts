@@ -22,7 +22,7 @@ export const getSwarmLogs = query({
       .query("swarmLogs")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc")
-      .collect();
+      .take(10000);
   },
 });
 
@@ -62,7 +62,7 @@ export const clearSwarmLogs = internalMutation({
     const logs = await ctx.db
       .query("swarmLogs")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
-      .collect();
+      .take(10000);
     for (const log of logs) {
       await ctx.db.delete(log._id);
     }
@@ -79,7 +79,7 @@ export const getDemoAgents = internalQuery({
       "Financial Modeler", 
       "Executive Synthesis Agent"
     ];
-    const all = await ctx.db.query("agents").collect();
+    const all = await ctx.db.query("agents").take(10000);
     return names.map(n => all.find(a => a.name === n)).filter(Boolean);
   }
 });

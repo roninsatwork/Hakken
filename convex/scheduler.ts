@@ -12,7 +12,7 @@ export const getSchedules = query({
     if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
     
     // We fetch all schedules. Assume admin access or scoped later.
-    const schedules = await ctx.db.query("schedules").order("desc").collect();
+    const schedules = await ctx.db.query("schedules").order("desc").take(10000);
     
     // Enrich with workflow or agent names
     return await Promise.all(
@@ -249,7 +249,7 @@ export const getWorkflowExecution = query({
     const steps = await ctx.db
       .query("workflowExecutionSteps")
       .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-      .collect();
+      .take(10000);
 
     // Sort steps chronologically
     steps.sort((a, b) => a.startedAt - b.startedAt);
