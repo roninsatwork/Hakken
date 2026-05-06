@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Settings,
   Workflow,
-  Network
+  Network,
+  Home
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
@@ -190,6 +191,7 @@ export default function SidebarNavigation() {
     if (pathname === '/admin/settings/analytics') return 'Analytics';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
+    if (pathname.startsWith('/app/properties')) return 'Properties';
     if (pathname.startsWith('/app/reports')) return 'Reports';
     if (pathname.startsWith('/app/profile')) return 'Profile';
     if (pathname === '/app/settings') return 'Organization Dashboard';
@@ -212,7 +214,8 @@ export default function SidebarNavigation() {
     settings: false,
     reports: false,
     organization: false,
-    arcade: false
+    arcade: false,
+    properties: false
   });
 
   const toggleSection = (section: string) => {
@@ -246,6 +249,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/app/arcade/ronins-run')) setActiveItem('RoninsRun');
     else if (pathname.startsWith('/app/ai/rules')) setActiveItem('AIRules');
     else if (pathname === '/app') setActiveItem('Dashboard');
+    else if (pathname.startsWith('/app/properties')) setActiveItem('Properties');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
 
@@ -441,6 +445,19 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('reports')}
                     >
                       <SubNavItem label="Sales Report" href="/app/reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
+                    </NavItem>
+
+                    <NavItem
+                      icon={Home}
+                      label={t('properties')}
+                      isActive={activeItem === 'Properties' || pathname.startsWith('/app/properties')}
+                      onClick={() => setActiveItem('Properties')}
+                      hasChildren
+                      isOpen={openSections.properties}
+                      onToggle={() => toggleSection('properties')}
+                    >
+                      <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
+                      <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (
