@@ -68,6 +68,7 @@ export default function CompanyTeamPage() {
     e.preventDefault();
     const payload = {
       ...formData,
+      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       companyId: currentUser?.companyId
     };
     if (editingUser) {

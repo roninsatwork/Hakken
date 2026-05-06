@@ -189,3 +189,22 @@ convex/
 ---
 
 > **Remember:** Convex is deterministic. Keep your database pure and reactive, and push the messy side effects into Actions.
+
+---
+
+## 11. Zero-Trust Security Patterns
+
+### BOLA & Impersonation Prevention
+- **Never Overwrite Primary Tenant IDs:** When building administrative impersonation logic, NEVER destructively overwrite the `user.companyId` or primary tenant boundaries of the admin user. This causes lingering capabilities and data pollution.
+- **Session-Scoped Scopes:** Use a distinct volatile or session-specific field (e.g., `impersonatingCompanyId`). All backend read/write boundaries must dynamically resolve the active scope: `const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;`.
+
+### SSRF (Server-Side Request Forgery) in Convex
+- **No Node `dns` Module:** Convex query and mutation isolates do NOT have access to Node core modules like `dns`.
+- **Strict String Validation:** For URLs validated in mutations/queries, you must rely on strict regex validation against the hostname to block Cloud Metadata (`metadata.google.internal`), Private IP blocks (IPv4 and IPv6), and malicious alternate representations (hex/octal/integer).
+- **Push Fetching to Actions:** All actual fetching must occur inside an `action`.
+
+### Capability Revocation
+- Even when providing unguessable, capability-based URLs (like shared thread IDs or widget tokens), you MUST still explicitly verify that the parent entity is active (e.g., `if (!widget.isActive) throw Error()`) on every read/write to allow admins to instantly and deterministically revoke access.
+
+### Environment Variables for Operations
+- Avoid hardcoding operational fallback strings (like sender emails or genesis admin accounts) directly into the Convex logic. Rely entirely on explicitly defined `process.env` lookups (e.g., `process.env.INITIAL_SUPER_ADMIN_EMAIL`).
