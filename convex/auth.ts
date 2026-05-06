@@ -12,7 +12,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     }),
     Resend({
       apiKey: process.env.RESEND_API_KEY,
-      from: process.env.RESEND_FROM_EMAIL || "anthony@ronins.co.uk",
+      from: process.env.RESEND_FROM_EMAIL || "noreply@ronins.co.uk",
     }),
   ],
 

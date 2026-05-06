@@ -180,7 +180,7 @@ export const addUser = mutation({
   args: {
     name: v.string(),
     email: v.string(),
-    role: v.string(),
+    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
@@ -231,7 +231,7 @@ export const updateUser = mutation({
     id: v.id("users"),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
-    role: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
