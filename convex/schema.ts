@@ -84,6 +84,7 @@ export default defineSchema({
     isAnonymous: v.optional(v.boolean()),
     // Sonae Custom Fields
     companyId: v.optional(v.id("companies")),
+    impersonatingCompanyId: v.optional(v.id("companies")),
     role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
     planOverrideId: v.optional(v.id("plans")),
     messagesUsedThisPeriod: v.optional(v.number()),

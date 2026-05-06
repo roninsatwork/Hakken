@@ -31,7 +31,7 @@ describe("OWASP: Broken Access Control - Users", () => {
     ).rejects.toThrow("Unauthorized");
 
     await expect(
-      maliciousClient.query(api.users.getSuperAdmins)
+      maliciousClient.query(api.users.getSuperAdmins, { paginationOpts: { numItems: 10, cursor: null } })
     ).rejects.toThrow("Unauthorized");
   });
 

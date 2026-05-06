@@ -230,8 +230,11 @@ export const deleteWidget = mutation({
 });
 
 export const generateWidgetUploadUrl = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { widgetId: v.id("widgets") },
+  handler: async (ctx, args) => {
+    const widget = await ctx.db.get(args.widgetId);
+    if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+
     // Generate an upload URL for widget file attachments (supports anonymous visitors)
     return await ctx.storage.generateUploadUrl();
   },
@@ -249,6 +252,27 @@ export const createWidgetThread = mutation({
     
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+
+    // Zero-Trust Enforcer: Validate origin against allowed domains
+    if (widget.allowedDomains && widget.allowedDomains.length > 0) {
+        if (!widget.allowedDomains.includes("*")) {
+            let parsedOrigin;
+            try {
+                parsedOrigin = new URL(args.sourceUrl).hostname.toLowerCase();
+            } catch (e) {
+                throw new Error("Invalid source URL");
+            }
+
+            const isAllowed = widget.allowedDomains.some(domain => {
+                const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                return parsedOrigin === normalizedDomain || parsedOrigin.endsWith("." + normalizedDomain);
+            });
+            
+            if (!isAllowed) {
+                throw new Error("Unauthorized: Source origin is not authorized for this widget.");
+            }
+        }
+    }
 
     const now = Date.now();
     

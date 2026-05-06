@@ -75,7 +75,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
     });
     
     expect(transactions.page.length).toBe(5);
-    transactions.page.forEach(t => {
+    transactions.page.forEach((t: any) => {
       expect(t.companyId).toBe(companyAId);
     });
   });

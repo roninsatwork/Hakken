@@ -10,7 +10,7 @@ type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting
 export default function GlobalWidgetPage() {
   const widgets = useQuery(api.widgets.getGlobalWidgets);
   const saveWidget = useMutation(api.widgets.saveWidget);
-  const generateUploadUrl = useMutation(api.widgets.generateWidgetUploadUrl);
+  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
   const widget = widgets && widgets.length > 0 ? widgets[0] : null;
 
