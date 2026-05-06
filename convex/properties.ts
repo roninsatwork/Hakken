@@ -1,7 +1,15 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
-import { api } from "./_generated/api";
+
+async function getCurrentUser(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_tokenIdentifier", (q: any) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+    .unique();
+}
 
 export const listProperties = query({
   args: {
@@ -9,7 +17,7 @@ export const listProperties = query({
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getMe);
+    const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -32,7 +40,7 @@ export const listProperties = query({
 export const getPropertiesCount = query({
   args: { searchTerm: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getMe);
+    const user = await getCurrentUser(ctx);
     if (!user) return 0;
     
     if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -56,7 +64,7 @@ export const getPropertiesCount = query({
 export const getProperty = query({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getMe);
+    const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
     const property = await ctx.db.get(args.id);
@@ -73,7 +81,7 @@ export const getProperty = query({
 export const deleteProperty = mutation({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getMe);
+    const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Unauthenticated");
 
     const property = await ctx.db.get(args.id);
@@ -88,7 +96,7 @@ export const deleteProperty = mutation({
 });
 
 export const getLatestRuns = query(async (ctx) => {
-  const user = await ctx.runQuery(api.users.getMe);
+  const user = await getCurrentUser(ctx);
   if (!user) return [];
   return await ctx.db.query("apifyRuns")
     .withIndex("by_company", q => q.eq("companyId", user.companyId))
