@@ -35,6 +35,7 @@ import type * as invites from "../invites.js";
 import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
 import type * as migrations from "../migrations.js";
+import type * as movements from "../movements.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as plans from "../plans.js";
 import type * as properties from "../properties.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   knowledge: typeof knowledge;
   knowledgeActions: typeof knowledgeActions;
   migrations: typeof migrations;
+  movements: typeof movements;
   orchestrator: typeof orchestrator;
   plans: typeof plans;
   properties: typeof properties;
