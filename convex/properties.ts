@@ -78,10 +78,6 @@ export const deleteProperty = mutation({
     const property = await ctx.db.get(args.id);
     if (!property) throw new Error("Property not found");
 
-    if (user.role !== "SUPER_ADMIN" && property.companyId !== user.companyId) {
-      throw new Error("Unauthorized");
-    }
-
     await ctx.db.delete(args.id);
   },
 });
@@ -90,7 +86,6 @@ export const getLatestRuns = query(async (ctx) => {
   const user = await getCurrentUser(ctx);
   if (!user) return [];
   return await ctx.db.query("apifyRuns")
-    .withIndex("by_company", q => q.eq("companyId", user.companyId))
     .order("desc")
     .take(5);
 });
