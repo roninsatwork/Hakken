@@ -21,14 +21,13 @@ export const listProperties = query({
       return await ctx.db
         .query("properties")
         .withSearchIndex("search_address", (q) => 
-          q.search("address", args.searchTerm!).eq("companyId", user.companyId)
+          q.search("address", args.searchTerm!)
         )
         .paginate(args.paginationOpts);
     }
 
     return await ctx.db
       .query("properties")
-      .withIndex("by_company", q => q.eq("companyId", user.companyId))
       .order("desc")
       .paginate(args.paginationOpts);
   },
@@ -44,7 +43,7 @@ export const getPropertiesCount = query({
        const properties = await ctx.db
         .query("properties")
         .withSearchIndex("search_address", (q) => 
-           q.search("address", args.searchTerm!).eq("companyId", user.companyId)
+           q.search("address", args.searchTerm!)
         )
         .take(10000);
        return properties.length;
@@ -52,7 +51,6 @@ export const getPropertiesCount = query({
     
     const properties = await ctx.db
       .query("properties")
-      .withIndex("by_company", (q) => q.eq("companyId", user.companyId))
       .take(10000);
     return properties.length;
   }
@@ -66,10 +64,6 @@ export const getProperty = query({
 
     const property = await ctx.db.get(args.id);
     if (!property) return null;
-
-    if (user.role !== "SUPER_ADMIN" && property.companyId !== user.companyId) {
-      throw new Error("Unauthorized");
-    }
 
     return property;
   },
