@@ -14,9 +14,12 @@ import Link from "next/link";
 import Typography from "@/src/ui/atoms/typography";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, useGLTF, Environment } from "@react-three/drei";
+import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { OrbitControls, ContactShadows, useGLTF, Environment, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { VRMLoaderPlugin, VRMUtils, VRM } from "@pixiv/three-vrm";
+import * as Kalidokit from "kalidokit";
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import Webcam from "react-webcam";
@@ -52,8 +55,9 @@ const Sparkles = ({ landmarksRef, jointIndices, syncRef }: {
     }
     pointsRef.current.visible = true;
     
-    const lms = landmarksRef.current || [];
-    if (lms.length < 33) return;
+    const rawRef = landmarksRef.current;
+    const lms = Array.isArray(rawRef) ? rawRef : rawRef?.landmarks || [];
+    if (!lms || lms.length < 33) return;
 
     const time = state.clock.getElapsedTime();
     const posAttr = pointsRef.current.geometry.attributes.position;
@@ -98,6 +102,244 @@ const Sparkles = ({ landmarksRef, jointIndices, syncRef }: {
         depthWrite={false}
       />
     </points>
+  );
+};
+
+// 3D VRM Avatar powered by Kalidokit Kinematics
+const VRMAvatar = ({ 
+  landmarksRef, 
+  positionOffset,
+  isPlayer = false,
+  syncRef
+}: { 
+  landmarksRef: React.MutableRefObject<any>, 
+  positionOffset: [number, number, number],
+  isPlayer?: boolean,
+  syncRef?: React.MutableRefObject<number>
+}) => {
+  const group = useRef<THREE.Group>(null);
+  const vrmRef = useRef<VRM | null>(null);
+  const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
+
+  // useLoader cache keys are just the URL, so to load two separate instances:
+  const url = isPlayer ? "/models/MoonGirl.vrm?player" : "/models/MoonGirl.vrm";
+  
+  const gltf = useLoader(GLTFLoader, url, (loader) => {
+    loader.register((parser) => new VRMLoaderPlugin(parser));
+  });
+
+  useEffect(() => {
+    if (gltf && gltf.userData.vrm) {
+      const vrm = gltf.userData.vrm;
+      vrmRef.current = vrm;
+      // Note: We rotate the parent Group, not the internal scene, to keep bone math stable.
+      
+      // Setup ghost material if player
+      if (isPlayer) {
+        vrm.scene.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const m = child as THREE.Mesh;
+            m.material = new THREE.MeshBasicMaterial({
+              color: "#00f2ff",
+              transparent: true,
+              opacity: 0.8, // More visible
+              depthWrite: false,
+              wireframe: true
+            });
+          }
+        });
+      }
+    }
+  }, [gltf, isPlayer]);
+
+  useFrame((state, delta) => {
+    if (!vrmRef.current || !group.current) return;
+    vrmRef.current.update(delta);
+    
+    // 1. Resolve Landmarks Array
+    // 1. Resolve Landmarks Array
+    const lms = landmarksRef.current;
+    if (!lms) return;
+    const raw = Array.isArray(lms) ? lms : lms?.landmarks || [];
+    if (!raw || raw.length < 33) return;
+
+    // Standard Decoder
+    const format = (lm: any) => ({
+      x: typeof lm.x === "number" ? lm.x : (Array.isArray(lm) ? lm[0] : 0.5),
+      y: typeof lm.y === "number" ? lm.y : (Array.isArray(lm) ? lm[1] : 0.5),
+      z: typeof lm.z === "number" ? lm.z : (Array.isArray(lm) ? lm[2] : 0),
+      visibility: lm.visibility || 0.8
+    });
+
+    const mirror = (lm: any) => ({ ...lm, x: -lm.x });
+
+    let imageLms = raw.map(format);
+    let solverLms;
+
+    // Use high-fidelity 3D depth (World Landmarks) for BOTH Ghost and Instructor if available
+    if ((lms as any).worldLandmarks) {
+       // We must mirror the 2D image data first, so Kalidokit doesn't receive conflicting L/R data
+       imageLms = imageLms.map(mirror);
+       solverLms = (lms as any).worldLandmarks.map(format).map(mirror);
+    } else {
+       // Fallback: 2D Projection (Centered & Scaled)
+       // Do NOT mirror 2D fallback data, as it breaks Kalidokit's left/right depth heuristics
+       const hipX = (imageLms[23].x + imageLms[24].x) / 2;
+       const hipY = (imageLms[23].y + imageLms[24].y) / 2;
+       solverLms = imageLms.map(lm => ({
+         x: -(lm.x - hipX) * 3.0,  // Native orientation
+         y: (lm.y - hipY) * 3.0,  
+         z: lm.z * 3.0,           
+         visibility: 0.9
+       }));
+    }
+
+    // Solve IK for core body
+    let riggedPose;
+    try {
+      riggedPose = Kalidokit.Pose.solve(solverLms, imageLms, {
+        runtime: "mediapipe",
+        video: null,
+        imageSize: { width: 640, height: 480 },
+      });
+    } catch (e) { return; }
+
+    if (riggedPose && vrmRef.current.humanoid) {
+      // Dynamic Interpolation: Ghost needs instant snap (0.95), Instructor needs smooth 30fps bridging (0.3)
+      const slerpFactor = isPlayer ? 0.95 : 0.3;
+
+      const applyRot = (boneName: string, euler: any, overrideFactor?: number) => {
+        if (!euler) return;
+        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
+        if (bone) {
+          let targetEuler = new THREE.Euler(euler.x, euler.y, euler.z, euler.rotationOrder || "XYZ");
+          if (boneName === "hips") { targetEuler.y = 0; targetEuler.z = 0; }
+          bone.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetEuler), overrideFactor ?? slerpFactor);
+        }
+      };
+
+      const rp = riggedPose;
+      
+      // 1. Core Physics Path: Body, Legs, Head
+      if (rp.Hips) applyRot("hips", rp.Hips.rotation);
+      applyRot("spine", rp.Spine);
+      applyRot("chest", rp.Chest);
+      applyRot("upperChest", rp.UpperChest);
+      applyRot("neck", rp.Neck);
+      applyRot("head", rp.Head);
+      
+      // Only apply Kalidokit collarbone physics if we have true 3D depth. 
+      // Faked 2D depth causes collarbones to twist inward, making arms look short.
+      if ((lms as any).worldLandmarks) {
+        applyRot("rightShoulder", rp.RightShoulder);
+        applyRot("leftShoulder", rp.LeftShoulder);
+      }
+      
+      applyRot("rightUpperArm", rp.RightUpperArm);
+      applyRot("rightLowerArm", rp.RightLowerArm);
+      applyRot("rightHand", rp.RightHand);
+      
+      applyRot("leftUpperArm", rp.LeftUpperArm);
+      applyRot("leftLowerArm", rp.LeftLowerArm);
+      applyRot("leftHand", rp.LeftHand);
+      
+      applyRot("rightUpperLeg", rp.RightUpperLeg);
+      applyRot("rightLowerLeg", rp.RightLowerLeg);
+      applyRot("rightFoot", rp.RightFoot);
+      
+      applyRot("leftUpperLeg", rp.LeftUpperLeg);
+      applyRot("leftLowerLeg", rp.LeftLowerLeg);
+      applyRot("leftFoot", rp.LeftFoot);
+      
+      const hips = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
+      if (hips && rp.Hips.position) {
+         hips.position.y = rp.Hips.position.y * 0.1;
+      }
+
+      // Ensure matrices are updated after Kalidokit applies the base pose
+      if (vrmRef.current.scene) {
+        vrmRef.current.scene.updateMatrixWorld(true);
+      }
+
+      // 2. Vector-Based Forward Kinematics (FK) for Arms
+      // This forces the mesh arms to perfectly match the directional vectors of the raw 'sticks'
+      const aimBone = (boneName: string, childName: string, p1Idx: number, p2Idx: number) => {
+        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
+        const child = vrmRef.current?.humanoid?.getNormalizedBoneNode(childName as any);
+        if (!bone || !child) return;
+
+        // Ensure matrices are fresh to read accurate world positions
+        bone.updateWorldMatrix(true, false);
+        child.updateWorldMatrix(true, false);
+
+        const boneW = new THREE.Vector3();
+        bone.getWorldPosition(boneW);
+
+        const childW = new THREE.Vector3();
+        child.getWorldPosition(childW);
+
+        // Current bone direction
+        const currentDir = childW.clone().sub(boneW).normalize();
+
+        // Target stick direction
+        const p1 = solverLms[p1Idx];
+        const p2 = solverLms[p2Idx];
+        
+        let dz = p2.z - p1.z;
+        // If using 2D fallback, the estimated Z-depth is wildly inaccurate for extreme poses like raised arms.
+        // It causes the arms to point forward (foreshortening) instead of up. 
+        // We heavily flatten the Z-axis to force the arms to stay parallel to the screen's X/Y plane.
+        if (!((lms as any).worldLandmarks)) {
+           dz *= 0.1;
+        }
+
+        // MediaPipe Y is down, Three.js Y is up. MediaPipe Z is away, Three.js Z is towards.
+        // X is already correctly mapped via the mirror step earlier.
+        const desiredDir = new THREE.Vector3(
+          p2.x - p1.x, 
+          -(p2.y - p1.y), 
+          -dz
+        ).normalize();
+
+        // Calculate absolute world rotation needed
+        const qOffset = new THREE.Quaternion().setFromUnitVectors(currentDir, desiredDir);
+
+        const currentWorldQ = new THREE.Quaternion();
+        bone.getWorldQuaternion(currentWorldQ);
+
+        const targetWorldQ = qOffset.multiply(currentWorldQ);
+
+        // Convert world rotation back to bone's local parent space
+        if (bone.parent) {
+            const parentWorldQ = new THREE.Quaternion();
+            bone.parent.getWorldQuaternion(parentWorldQ);
+            const localQ = parentWorldQ.invert().multiply(targetWorldQ);
+            bone.quaternion.slerp(localQ, slerpFactor);
+        }
+        
+        // Commit rotation so the next bone in the chain reads correctly
+        bone.updateMatrixWorld(true);
+      };
+
+      // Force arm bones to perfectly match MediaPipe sticks
+      // Shoulders
+      aimBone("rightShoulder", "rightUpperArm", 11, 13); // Optional, but helps collarbone reach
+      aimBone("leftShoulder", "leftUpperArm", 12, 14);
+      // Arms
+      aimBone("rightUpperArm", "rightLowerArm", 11, 13);
+      aimBone("rightLowerArm", "rightHand", 13, 15);
+      aimBone("leftUpperArm", "leftLowerArm", 12, 14);
+      aimBone("leftLowerArm", "leftHand", 14, 16);
+    }
+  });
+
+  return (
+    <primitive 
+      ref={group}
+      object={gltf.scene}
+      scale={3.5}
+      position={[positionOffset[0], -1, positionOffset[2]]}
+    />
   );
 };
 
@@ -315,6 +557,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const syncRef = useRef(0); // Live sync percentage for 3D materials
   
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
+  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
 
   // 1. Fetch Data
@@ -384,20 +627,22 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         if (results && results.landmarks && results.landmarks.length > 0) {
           // Smooth the live tracking
           const raw = results.landmarks[0];
+          const worldRaw = results.worldLandmarks ? results.worldLandmarks[0] : null;
+          
           const smoothed = poseFilterRef.current.filter(raw, startTimeMs);
-          playerLiveLmRef.current = smoothed;
+          const smoothedWorld = worldRaw ? worldPoseFilterRef.current.filter(worldRaw, startTimeMs) : null;
+          
+          // Store both normalized for UI and world for 3D physics
+          playerLiveLmRef.current = {
+            landmarks: smoothed,
+            worldLandmarks: smoothedWorld
+          };
 
-          // Mirror Phase Calibration UI update
+          // Calibration UI update - simplified for seated use
           const calElem = document.getElementById("calibration-status");
           if (calElem) {
-             const isCalib = raw[11]?.visibility > 0.3 && raw[12]?.visibility > 0.3 && raw[23]?.visibility > 0.3 && raw[24]?.visibility > 0.3;
-             if (isCalib) {
-                calElem.innerText = "CALIBRATED - READY";
-                calElem.className = "text-sm font-semibold tracking-wider text-green-400";
-             } else {
-                calElem.innerText = "STAND IN FRAME...";
-                calElem.className = "text-sm font-semibold tracking-wider text-yellow-500 animate-pulse";
-             }
+            calElem.innerText = "READY";
+            calElem.className = "text-sm font-semibold tracking-wider text-green-400";
           }
         }
       }
@@ -438,12 +683,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           frameIndexRef.current = frameIndexRef.current + 1 >= totalFrames ? 0 : frameIndexRef.current + 1;
           
           const frameData = frames[frameIndexRef.current];
-          const iL = frameData.pose ? frameData.pose : Array.isArray(frameData) ? frameData : (frameData?.landmarks || []);
-          instructorCurrentLmRef.current = iL;
+          // Pass the complete object so VRMAvatar can extract the high-fidelity worldLandmarks
+          instructorCurrentLmRef.current = frameData;
         }
 
         // Calculate Score (Basic Distance Math)
-        const currentPL = playerLiveLmRef.current;
+        const plRef = playerLiveLmRef.current;
+        const currentPL = Array.isArray(plRef) ? plRef : plRef?.landmarks || [];
         
         if (currentPL && currentPL.length >= 33) {
           // 1. Get Reaction-Compensated Instructor Frame (Temporal Slack)
@@ -583,27 +829,26 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           
           <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 2} />
           
-          {/* Floor grid for depth */}
-          <gridHelper args={[50, 50, '#112233', '#0a0a1a']} position={[0, -8, 0]} />
+          
           
           <React.Suspense fallback={null}>
             {/* The Instructor (Core Character) */}
-            <CartoonAvatar 
+            <VRMAvatar 
               landmarksRef={instructorCurrentLmRef} 
-              positionOffset={[0, 0, 0]} 
-              baseOpacity={1} 
+              positionOffset={[-5, 0, 0]} 
             />
             
-            {/* The Player (Live) - Snapped for visual satisfaction */}
-            <CartoonAvatar 
-              landmarksRef={snappedPlayerLmRef} 
-              positionOffset={[0, 0, 0]} 
+            {/* The Player (Live) - Reacts directly to raw webcam feed */}
+            <VRMAvatar 
+              landmarksRef={playerLiveLmRef} 
+              positionOffset={[5, 0, 0]} 
               isPlayer={true}
               syncRef={syncRef}
             />
 
             {/* Magic Sparkles on high performance */}
-            <Sparkles landmarksRef={snappedPlayerLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
+            {/* Magic Sparkles on high performance - Use live feed */}
+            <Sparkles landmarksRef={playerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
           </React.Suspense>
         </Canvas>
       </div>
@@ -672,10 +917,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                 </button>
                 <div className="flex flex-col">
                   <span className="text-white font-medium text-lg">
-                    {isPlaying ? "Match Sequence" : "Standby Mode"}
+                    {isPlaying ? "Match Sequence" : "System Ready"}
                   </span>
-                  <span className="text-sm font-semibold tracking-wider text-zinc-500" id="calibration-status">
-                    {isPlaying ? "STATUS: ACTIVE" : "AWAITING CALIBRATION..."}
+                  <span className="text-sm font-semibold tracking-wider text-green-500" id="calibration-status">
+                    {isPlaying ? "STATUS: ACTIVE" : "READY"}
                   </span>
                 </div>
               </div>

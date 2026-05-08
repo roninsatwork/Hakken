@@ -10,6 +10,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AvatarPreview from "./_components/AvatarPreview";
 
 export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,6 +68,11 @@ export default function MovementsLibraryPage() {
           <Plus className="w-4 h-4" />
           <span>New Capture</span>
         </Link>
+      </div>
+
+      {/* 3D Avatar Preview */}
+      <div className="mb-4">
+        <AvatarPreview />
       </div>
 
       {/* Control Bar */}
