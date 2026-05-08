@@ -103,7 +103,6 @@ const CartoonAvatar = ({
   landmarksRef, 
   positionOffset, 
   isPlayer = false,
-  baseOpacity = 0.8,
   syncRef
 }: { 
   landmarksRef: React.MutableRefObject<any>, 
@@ -205,11 +204,12 @@ const CartoonAvatar = ({
           // Power Glow logic for Player
           if (isPlayer && syncRef) {
             const syncValue = syncRef.current / 100;
+            const isJointSnapped = lms[seg[1]]?.isSnapped;
             const baseCol = new THREE.Color("#00f2ff");
-            const peakCol = new THREE.Color("#ffb800"); // Hot Gold
-            limbMaterial.emissive.lerpColors(baseCol, peakCol, Math.max(0, (syncValue - 0.4) * 1.6));
-            limbMaterial.emissiveIntensity = 3 + (syncValue * 20);
-            limbMaterial.opacity = 0.2 + (syncValue * 0.6);
+            const peakCol = new THREE.Color(isJointSnapped ? "#ffffff" : "#ffb800"); // White pulse for snap
+            limbMaterial.emissive.lerpColors(baseCol, peakCol, isJointSnapped ? 1 : Math.max(0, (syncValue - 0.4) * 1.6));
+            limbMaterial.emissiveIntensity = isJointSnapped ? 30 : (3 + (syncValue * 20));
+            limbMaterial.opacity = isJointSnapped ? 0.9 : (0.2 + (syncValue * 0.6));
           }
         } else if (ref) {
           ref.visible = false;
@@ -304,6 +304,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const instructorFramesRef = useRef<any>([]);
   const instructorCurrentLmRef = useRef<any>([]);
   const playerLiveLmRef = useRef<any>([]);
+  const snappedPlayerLmRef = useRef<any>([]);
   const frameIndexRef = useRef(0);
   const scoreRef = useRef(0);
   const comboRef = useRef(0); // Add Combo Counter
@@ -439,77 +440,100 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
         // Calculate Score (Basic Distance Math)
         const currentPL = playerLiveLmRef.current;
-        const currentIL = instructorCurrentLmRef.current;
         
-        if (currentPL && currentPL.length >= 33 && currentIL && currentIL.length >= 33) {
-          // 1. Calculate Scale Factor (Height) for both
-          const getH = (lms: any) => {
-            const head = lms[0];
-            const ankleL = lms[27], ankleR = lms[28];
-            const ankleY = (ankleL.y + ankleR.y) / 2;
-            return Math.abs(ankleY - head.y);
-          };
-          
-          const pHeight = getH(currentPL) || 0.5;
-          const iHeight = getH(currentIL) || 0.5;
-          
-          // 2. Hip Center (Reference Point)
-          const getHip = (lms: any) => ({
-            x: (lms[23].x + lms[24].x) / 2,
-            y: (lms[23].y + lms[24].y) / 2
-          });
-          
-          const pHip = getHip(currentPL);
-          const iHip = getHip(currentIL);
+        if (currentPL && currentPL.length >= 33) {
+          // 1. Get Reaction-Compensated Instructor Frame (Temporal Slack)
+          // Look back ~200ms (6 frames at 30fps) to account for human reaction time
+          const frames = instructorFramesRef.current || [];
+          const lagCompIndex = Math.max(0, frameIndexRef.current - 6);
+          const lagFrameData = frames[lagCompIndex];
+          const iL = lagFrameData.pose ? lagFrameData.pose : Array.isArray(lagFrameData) ? lagFrameData : (lagFrameData?.landmarks || []);
 
-          // 3. Compare Wrists and Ankles (Normalized)
-          let delta = 0;
-          [15, 16, 27, 28].forEach(idx => {
-             if (currentPL[idx] && currentIL[idx]) {
-               // Offset to hip and scale to match instructor's height
-               const px = (currentPL[idx].x - pHip.x) * (iHeight / pHeight);
-               const py = (currentPL[idx].y - pHip.y) * (iHeight / pHeight);
-               
-               const ix = currentIL[idx].x - iHip.x;
-               const iy = currentIL[idx].y - iHip.y;
-               
-               const dx = px - ix;
-               const dy = py - iy;
-               delta += Math.sqrt(dx*dx + dy*dy);
-             }
-          });
-          
-          const avgDelta = delta / 4;
-          let currentSync = 100 - (avgDelta * 400); // More sensitive normalization
-          if (currentSync < 0) currentSync = 0;
-          if (currentSync > 100) currentSync = 100;
-
-          syncRef.current = currentSync;
-
-          // Combo & Scoring Math
-          if (currentSync > 85) {
-            comboRef.current++;
+          if (iL && iL.length >= 33) {
+            // 2. Calculate Scale Factor (Height) for both
+            const getH = (lms: any) => {
+              const head = lms[0];
+              const ankleL = lms[27], ankleR = lms[28];
+              const ankleY = (ankleL.y + ankleR.y) / 2;
+              return Math.abs(ankleY - head.y);
+            };
             
-            // Pop-up Feedback Triggers
-            if (comboRef.current === 10) setFeedbackMsg("GREAT!");
-            if (comboRef.current === 25) setFeedbackMsg("AMAZING!");
-            if (comboRef.current === 45) setFeedbackMsg("PILATES MASTER!");
+            const pHeight = getH(currentPL) || 0.5;
+            const iHeight = getH(iL) || 0.5;
+            
+            // 3. Hip Center (Reference Point)
+            const getHip = (lms: any) => ({
+              x: (lms[23].x + lms[24].x) / 2,
+              y: (lms[23].y + lms[24].y) / 2
+            });
+            
+            const pHip = getHip(currentPL);
+            const iHip = getHip(iL);
 
-            const multiplier = Math.floor(comboRef.current / 10) + 1;
-            const frameScore = 10 * multiplier;
-            scoreRef.current += frameScore;
-          } else if (currentSync < 65) {
-            // Break combo
-            comboRef.current = 0;
-            if (feedbackMsg) setFeedbackMsg("");
+            // 4. Compare Wrists and Ankles (Normalized)
+            let delta = 0;
+            const snappedLM = currentPL.map((lm: any) => ({ ...lm })); // Clone for Magnetism
+
+            [15, 16, 27, 28].forEach(idx => {
+               if (currentPL[idx] && iL[idx]) {
+                 // Offset to hip and scale to match instructor's height
+                 const px = (currentPL[idx].x - pHip.x) * (iHeight / pHeight);
+                 const py = (currentPL[idx].y - pHip.y) * (iHeight / pHeight);
+                 
+                 const ix = iL[idx].x - iHip.x;
+                 const iy = iL[idx].y - iHip.y;
+                 
+                 const dx = px - ix;
+                 const dy = py - iy;
+                 const jointDist = Math.sqrt(dx*dx + dy*dy);
+                 delta += jointDist;
+
+                 // STICKY SNAP: If close enough, lock the ghost to the instructor
+                 if (jointDist < 0.12) {
+                   const targetX = pHip.x + (ix * pHeight / iHeight);
+                   const targetY = pHip.y + (iy * pHeight / iHeight);
+                   snappedLM[idx].x = THREE.MathUtils.lerp(currentPL[idx].x, targetX, 0.8);
+                   snappedLM[idx].y = THREE.MathUtils.lerp(currentPL[idx].y, targetY, 0.8);
+                   snappedLM[idx].isSnapped = true;
+                 }
+               }
+            });
+            
+            snappedPlayerLmRef.current = snappedLM;
+
+            const avgDelta = delta / 4;
+            // Comfort Math: Gaussian/Exponential decay for forgiving scores
+            let currentSync = 100 * Math.exp(-avgDelta * 3.5);
+            if (currentSync < 5) currentSync = 0;
+            if (currentSync > 100) currentSync = 100;
+
+            syncRef.current = currentSync;
+
+            // Combo & Scoring Math
+            if (currentSync > 85) {
+              comboRef.current++;
+              
+              // Pop-up Feedback Triggers
+              if (comboRef.current === 10) setFeedbackMsg("GREAT!");
+              if (comboRef.current === 25) setFeedbackMsg("AMAZING!");
+              if (comboRef.current === 45) setFeedbackMsg("PILATES MASTER!");
+
+              const multiplier = Math.floor(comboRef.current / 10) + 1;
+              const frameScore = 10 * multiplier;
+              scoreRef.current += frameScore;
+            } else if (currentSync < 65) {
+              // Break combo
+              comboRef.current = 0;
+              if (feedbackMsg) setFeedbackMsg("");
+            }
+
+            // Update Score UI safely without thrashing React State
+            const rateElem = document.getElementById("sync-rate");
+            if (rateElem) rateElem.innerText = `${Math.round(currentSync)}%`;
+
+            const scoreElem = document.getElementById("score-display");
+            if (scoreElem) scoreElem.innerText = scoreRef.current.toString();
           }
-
-          // Update Score UI safely without thrashing React State
-          const rateElem = document.getElementById("sync-rate");
-          if (rateElem) rateElem.innerText = `${Math.round(currentSync)}%`;
-
-          const scoreElem = document.getElementById("score-display");
-          if (scoreElem) scoreElem.innerText = scoreRef.current.toString();
         }
       }
     };
@@ -566,33 +590,34 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               baseOpacity={1} 
             />
             
-            {/* The Player (Live) - Re-activated as Ghost */}
+            {/* The Player (Live) - Snapped for visual satisfaction */}
             <CartoonAvatar 
-              landmarksRef={playerLiveLmRef} 
+              landmarksRef={snappedPlayerLmRef} 
               positionOffset={[0, 0, 0]} 
               isPlayer={true}
-              baseOpacity={0.8}
               syncRef={syncRef}
             />
 
             {/* Magic Sparkles on high performance */}
-            <Sparkles landmarksRef={playerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
+            <Sparkles landmarksRef={snappedPlayerLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
           </React.Suspense>
         </Canvas>
       </div>
 
       {/* Cyberpunk HUD Overlay */}
-      <div className="relative z-10 p-8 flex flex-col h-full pointer-events-none">
+      <div className="relative z-10 p-8 flex flex-col h-full pointer-events-none" style={{ isolation: 'isolate' }}>
         
         {/* Combo Feedback Pop-up */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
           <AnimatePresence>
             {feedbackMsg && (
               <motion.div
-                initial={{ scale: 0, rotate: -20, opacity: 0 }}
+                initial={{ scale: 0.1, rotate: -20, opacity: 0 }}
                 animate={{ scale: 1.5, rotate: 0, opacity: 1 }}
                 exit={{ scale: 2, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
                 className="text-white font-black italic text-7xl drop-shadow-[0_0_30px_rgba(255,184,0,0.8)]"
+                style={{ WebkitBackfaceVisibility: 'hidden' }}
               >
                 {feedbackMsg}
               </motion.div>
