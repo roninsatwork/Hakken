@@ -4,7 +4,7 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Activity, Loader2, CheckCircle2, XCircle, RefreshCcw } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function PropertiesLogsPage() {
   const latestRuns = useQuery(api.properties.getLatestRuns) || [];
@@ -21,6 +21,24 @@ export default function PropertiesLogsPage() {
       setSyncingId(null);
     }
   };
+
+  // Auto-sync PENDING runs every 30 seconds
+  useEffect(() => {
+    const syncPending = () => {
+      latestRuns.forEach((run: any) => {
+        if (run.status === "PENDING") {
+          handleSync(run.runId);
+        }
+      });
+    };
+
+    // Initial check
+    syncPending();
+
+    // Set up interval
+    const interval = setInterval(syncPending, 30000);
+    return () => clearInterval(interval);
+  }, [latestRuns]);
 
   return (
     <>

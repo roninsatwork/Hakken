@@ -147,6 +147,41 @@
         "propertiesSearch": "Ricerca",
         "propertiesScrapedData": "Dati Estratti"
     },
+    "properties": {
+        "search": {
+            "title": "Scegli la tua area di ricerca",
+            "description": "Per iniziare, vai su Rightmove, esegui la ricerca desiderata e incolla l'indirizzo web (URL) qui sotto. Eventuali filtri impostati su Rightmove (come parcheggio o tipo di contratto) verranno acquisiti automaticamente.",
+            "fetchingDetailsTitle": "Recupero Dettagli Completi",
+            "fetchingDetailsDesc": "Non ci limitiamo a scorrere i risultati della ricerca: il nostro sistema apre accuratamente ogni singolo annuncio immobiliare per raccogliere gallerie fotografiche complete, planimetrie e caratteristiche principali. Per farlo in sicurezza e garantire l'acquisizione di tutti i dati, questo processo può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire il progresso live nella scheda Log.",
+            "step1": "Incolla URL Sorgente",
+            "urlPlaceholder": "https://www.rightmove.co.uk/property-for-sale/find.html?...",
+            "step2": "Limite Globale",
+            "limitDesc": "Scegli quante proprietà raccogliere (Massimo 1000).",
+            "gatherButton": "Raccogli Proprietà",
+            "startingSearch": "Avvio Ricerca...",
+            "urlError": "Errore: Incolla prima un URL di ricerca Rightmove valido.",
+            "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
+        },
+        "meta": {
+            "title": "Proprietà - Sonae"
+        }
+    },
+    "properties": {
+        "search": {
+            "title": "Scegli la tua area di ricerca",
+            "description": "Per iniziare, vai su Rightmove, esegui la ricerca desiderata e incolla l'indirizzo web (URL) qui sotto. Eventuali filtri impostati su Rightmove (come parcheggio o tipo di contratto) verranno acquisiti automaticamente.",
+            "fetchingDetailsTitle": "Recupero Dettagli Completi",
+            "fetchingDetailsDesc": "Non ci limitiamo a scorrere i risultati della ricerca: il nostro sistema apre accuratamente ogni singolo annuncio immobiliare per raccogliere gallerie fotografiche complete, planimetrie e caratteristiche principali. Per farlo in sicurezza e garantire l'acquisizione di tutti i dati, questo processo può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire il progresso live nella scheda Log.",
+            "step1": "Incolla URL Sorgente",
+            "urlPlaceholder": "https://www.rightmove.co.uk/property-for-sale/find.html?...",
+            "step2": "Limite Globale",
+            "limitDesc": "Scegli quante proprietà raccogliere (Massimo 1000).",
+            "gatherButton": "Raccogli Proprietà",
+            "startingSearch": "Avvio Ricerca...",
+            "urlError": "Errore: Incolla prima un URL di ricerca Rightmove valido.",
+            "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
+        }
+    },
     "header": {
         "adminOverview": "Protocollo Infrastruttura",
         "exitWorkspace": "Esci dal Tenant"

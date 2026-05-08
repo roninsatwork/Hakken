@@ -59,7 +59,36 @@ export const startRightmoveScrape = action({
       companyId: user.companyId,
     });
 
+    // Start the background watchdog to ensure status updates even if webhooks fail
+    await ctx.scheduler.runAfter(60000, internal.apify.pollRunStatus, {
+      runId: run.id,
+    });
+
     return run.id;
+  },
+});
+
+export const pollRunStatus = internalAction({
+  args: { runId: v.string() },
+  handler: async (ctx, args) => {
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken) return;
+    
+    const client = new ApifyClient({ token: apifyToken });
+    const run = await client.run(args.runId).get();
+    
+    if (!run) return;
+
+    // If finished, sync the data
+    if (run.status === "SUCCEEDED" || run.status === "FAILED" || run.status === "ABORTED" || run.status === "TIMED-OUT") {
+      await ctx.runAction(api.apify.syncRunStatus, { runId: args.runId });
+      return;
+    }
+
+    // Otherwise, check again in 60 seconds
+    await ctx.scheduler.runAfter(60000, internal.apify.pollRunStatus, {
+      runId: args.runId,
+    });
   },
 });
 
