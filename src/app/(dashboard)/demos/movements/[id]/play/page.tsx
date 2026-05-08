@@ -1,4 +1,8 @@
 "use client";
+/**
+ * Sonae Movement Demo - Gamified Pilates Interface
+ * Last Updated: 2026-05-08 - v1.2.0 (Stability & Magnetism)
+ */
 
 import React, { useState, useEffect, useRef, use, useMemo } from "react";
 import Header from "@/src/ui/components/layout/Header";
