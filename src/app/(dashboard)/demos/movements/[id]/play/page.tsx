@@ -8,6 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, Play, Pause, Crosshair, Flame } from "lucide-react";
 import Link from "next/link";
 import Typography from "@/src/ui/atoms/typography";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, useGLTF, Environment } from "@react-three/drei";
@@ -30,18 +31,88 @@ const POSE_CONNECTIONS = [
   [23, 25], [25, 27], [27, 29], [27, 31], [31, 29]
 ];
 
+// High-performance Stardust/Sparkle particles for high-score feedback
+const Sparkles = ({ landmarksRef, jointIndices, syncRef }: { 
+  landmarksRef: React.MutableRefObject<any>, 
+  jointIndices: number[],
+  syncRef: React.MutableRefObject<number>
+}) => {
+  const pointsRef = useRef<THREE.Points>(null);
+  const count = 30;
+  const positions = useMemo(() => new Float32Array(count * 3 * jointIndices.length), [jointIndices]);
+  
+  useFrame((state) => {
+    if (!pointsRef.current || syncRef.current < 85) {
+      if (pointsRef.current) pointsRef.current.visible = false;
+      return;
+    }
+    pointsRef.current.visible = true;
+    
+    const lms = landmarksRef.current || [];
+    if (lms.length < 33) return;
+
+    const time = state.clock.getElapsedTime();
+    const posAttr = pointsRef.current.geometry.attributes.position;
+    const array = posAttr.array as Float32Array;
+    
+    jointIndices.forEach((jointIdx, i) => {
+      const lm = lms[jointIdx];
+      if (!lm) return;
+      
+      const baseX = (lm.x - 0.5) * -15;
+      const baseY = (0.5 - lm.y) * 15;
+      const baseZ = (lm.z || 0) * -15 * 0.5;
+
+      for (let j = 0; j < count; j++) {
+        const idx = (i * count + j) * 3;
+        const angle = j + time * 3;
+        const dist = 0.3 + Math.sin(time * 8 + j) * 0.2;
+        array[idx] = baseX + Math.cos(angle) * dist;
+        array[idx+1] = baseY + Math.sin(angle) * dist;
+        array[idx+2] = baseZ + (Math.sin(time * 10 + j) * 0.1);
+      }
+    });
+    
+    posAttr.needsUpdate = true;
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute 
+          attach="attributes-position" 
+          count={positions.length / 3} 
+          array={positions} 
+          itemSize={3} 
+        />
+      </bufferGeometry>
+      <pointsMaterial 
+        size={0.15} 
+        color="#ffb800" 
+        transparent 
+        opacity={0.8} 
+        blending={THREE.AdditiveBlending} 
+        sizeAttenuation 
+        depthWrite={false}
+      />
+    </points>
+  );
+};
+
 // 3D Cartoon Avatar (Rayman / VR Style using authentic Robot meshes)
 // 100% Reliable Procedural Cyberpunk Avatar (Glassmorphism & Neon)
 const CartoonAvatar = ({ 
   landmarksRef, 
   positionOffset, 
   isPlayer = false,
-  baseOpacity = 0.8
+  baseOpacity = 0.8,
+  syncRef
 }: { 
   landmarksRef: React.MutableRefObject<any>, 
   positionOffset: [number, number, number],
   isPlayer?: boolean,
-  baseOpacity?: number
+  baseOpacity?: number,
+  syncRef?: React.MutableRefObject<number>
 }) => {
   const headRef = useRef<THREE.Group>(null);
   const torsoRef = useRef<THREE.Group>(null);
@@ -51,19 +122,30 @@ const CartoonAvatar = ({
   const neonColor = isPlayer ? "#00f2ff" : "#ff0080";
   const glassColor = "#1a1a2e";
 
+  // CLONE MATERIAL for player to enable unique "Power Glow" without breaking instructor
+  const limbMaterial = useMemo(() => new THREE.MeshStandardMaterial({
+    color: neonColor,
+    emissive: neonColor,
+    emissiveIntensity: isPlayer ? 3 : 8,
+    transparent: true,
+    opacity: isPlayer ? 0.25 : 0.8,
+    depthWrite: !isPlayer,
+    blending: isPlayer ? THREE.AdditiveBlending : THREE.NormalBlending
+  }), [isPlayer, neonColor]);
+
   useFrame(() => {
     const currentRef = landmarksRef.current;
     const lms = Array.isArray(currentRef) ? currentRef : (currentRef?.landmarks || []);
     
     if (lms && lms.length >= 33) {
-      const mirrorX = isPlayer ? -1 : 1;
+      const mirrorX = 1;
       const anchorX = 0.5;
       const anchorY = 0.5;
       const scaleMult = 15;
 
       const getVec = (idx: number) => {
         const lm = lms[idx];
-        if (!lm || (typeof lm.visibility !== 'undefined' && lm.visibility < 0.2)) return null;
+        if (!lm || (typeof lm.visibility !== 'undefined' && lm.visibility < 0.05)) return null;
         return new THREE.Vector3(
           (lm.x - anchorX) * -scaleMult * mirrorX,
           (anchorY - lm.y) * scaleMult,
@@ -73,24 +155,32 @@ const CartoonAvatar = ({
 
       // 1. Position Head (Nose)
       const hPos = getVec(0);
-      if (headRef.current && hPos) {
-        // Offset head slightly up from the nose landmark for better appearance
-        headRef.current.position.set(hPos.x, hPos.y + 0.3, hPos.z);
-        headRef.current.visible = true;
+      if (headRef.current) {
+        if (hPos) {
+          // Offset head slightly up from the nose landmark for better appearance
+          headRef.current.position.set(hPos.x, hPos.y + 0.3, hPos.z);
+          headRef.current.visible = true;
+        } else {
+          headRef.current.visible = false;
+        }
       }
 
       // 2. Position Torso (Shoulder-Hip midpoint)
       const sL = getVec(11), sR = getVec(12), hL = getVec(23), hR = getVec(24);
-      if (torsoRef.current && sL && sR && hL && hR) {
-        const center = new THREE.Vector3().addVectors(sL, sR).add(hL).add(hR).multiplyScalar(0.25);
-        torsoRef.current.position.copy(center);
-        torsoRef.current.visible = true;
-        
-        // Face forward
-        const spine = new THREE.Vector3().subVectors(new THREE.Vector3().addVectors(sL, sR).multiplyScalar(0.5), center).normalize();
-        const shoulderVec = new THREE.Vector3().subVectors(sR, sL).normalize();
-        const forward = new THREE.Vector3().crossVectors(shoulderVec, spine).normalize();
-        torsoRef.current.lookAt(new THREE.Vector3().addVectors(center, forward));
+      if (torsoRef.current) {
+        if (sL && sR && hL && hR) {
+          const center = new THREE.Vector3().addVectors(sL, sR).add(hL).add(hR).multiplyScalar(0.25);
+          torsoRef.current.position.copy(center);
+          torsoRef.current.visible = true;
+          
+          // Face forward
+          const spine = new THREE.Vector3().subVectors(new THREE.Vector3().addVectors(sL, sR).multiplyScalar(0.5), center).normalize();
+          const shoulderVec = new THREE.Vector3().subVectors(sR, sL).normalize();
+          const forward = new THREE.Vector3().crossVectors(shoulderVec, spine).normalize();
+          torsoRef.current.lookAt(new THREE.Vector3().addVectors(center, forward));
+        } else {
+          torsoRef.current.visible = false;
+        }
       }
 
       // 3. Position Limbs (Segments)
@@ -113,6 +203,16 @@ const CartoonAvatar = ({
           ref.lookAt(end);
           ref.scale.set(1, 1, dist);
           ref.visible = true;
+
+          // Power Glow logic for Player
+          if (isPlayer && syncRef) {
+            const syncValue = syncRef.current / 100;
+            const baseCol = new THREE.Color("#00f2ff");
+            const peakCol = new THREE.Color("#ffb800"); // Hot Gold
+            limbMaterial.emissive.lerpColors(baseCol, peakCol, Math.max(0, (syncValue - 0.4) * 1.6));
+            limbMaterial.emissiveIntensity = 3 + (syncValue * 20);
+            limbMaterial.opacity = 0.2 + (syncValue * 0.6);
+          }
         } else if (ref) {
           ref.visible = false;
         }
@@ -132,12 +232,15 @@ const CartoonAvatar = ({
             thickness={2} 
             roughness={0.1} 
             metalness={0.9}
+            transparent={isPlayer}
+            opacity={isPlayer ? 0.3 : 1}
+            depthWrite={!isPlayer}
           />
         </mesh>
         {/* Digital Visor */}
         <mesh position={[0, 0.05, 0.36]}>
           <boxGeometry args={[0.55, 0.15, 0.05]} />
-          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={5} />
+          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={isPlayer ? 2 : 5} transparent={isPlayer} opacity={isPlayer ? 0.5 : 1} depthWrite={!isPlayer} />
         </mesh>
         {/* Glowing Head Detail */}
         <mesh position={[0, 0.36, 0]}>
@@ -156,12 +259,15 @@ const CartoonAvatar = ({
             thickness={3} 
             roughness={0.2}
             metalness={0.9}
+            transparent={isPlayer}
+            opacity={isPlayer ? 0.3 : 1}
+            depthWrite={!isPlayer}
           />
         </mesh>
         {/* Power Core */}
         <mesh position={[0, 0.2, 0.36]}>
           <sphereGeometry args={[0.2, 16, 16]} />
-          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={10} />
+          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={isPlayer ? 4 : 10} transparent={isPlayer} opacity={isPlayer ? 0.6 : 1} depthWrite={!isPlayer} />
         </mesh>
         <pointLight color={neonColor} intensity={10} distance={3} />
       </group>
@@ -169,15 +275,8 @@ const CartoonAvatar = ({
       {/* Limbs: Armored Struts */}
       {[...Array(10)].map((_, i) => (
         <group key={i} ref={(el) => { if (el) limbRefs.current[i] = el; }}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} material={limbMaterial}>
             <cylinderGeometry args={[0.12, 0.12, 1, 8]} />
-            <meshStandardMaterial 
-              color={neonColor} 
-              emissive={neonColor} 
-              emissiveIntensity={8} 
-              transparent 
-              opacity={0.8}
-            />
           </mesh>
           {/* Hydraulic Joints */}
           <mesh position={[0, 0, 0.5]}>
@@ -202,6 +301,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
   const [syncRate, setSyncRate] = useState(100);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
 
   const instructorFramesRef = useRef<any>([]);
   const instructorCurrentLmRef = useRef<any>([]);
@@ -209,8 +309,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const frameIndexRef = useRef(0);
   const scoreRef = useRef(0);
   const comboRef = useRef(0); // Add Combo Counter
+  const syncRef = useRef(0); // Live sync percentage for 3D materials
   
-  const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 1.0, 0.05));
+  const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
 
   // 1. Fetch Data
@@ -342,32 +443,67 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         const currentPL = playerLiveLmRef.current;
         const currentIL = instructorCurrentLmRef.current;
         
-        if (currentPL && currentPL.length > 0 && currentIL && currentIL.length > 0) {
-          // Sample wrists (15, 16) and ankles (27, 28)
+        if (currentPL && currentPL.length >= 33 && currentIL && currentIL.length >= 33) {
+          // 1. Calculate Scale Factor (Height) for both
+          const getH = (lms: any) => {
+            const head = lms[0];
+            const ankleL = lms[27], ankleR = lms[28];
+            const ankleY = (ankleL.y + ankleR.y) / 2;
+            return Math.abs(ankleY - head.y);
+          };
+          
+          const pHeight = getH(currentPL) || 0.5;
+          const iHeight = getH(currentIL) || 0.5;
+          
+          // 2. Hip Center (Reference Point)
+          const getHip = (lms: any) => ({
+            x: (lms[23].x + lms[24].x) / 2,
+            y: (lms[23].y + lms[24].y) / 2
+          });
+          
+          const pHip = getHip(currentPL);
+          const iHip = getHip(currentIL);
+
+          // 3. Compare Wrists and Ankles (Normalized)
           let delta = 0;
           [15, 16, 27, 28].forEach(idx => {
              if (currentPL[idx] && currentIL[idx]) {
-               const dx = (1 - currentPL[idx].x) - currentIL[idx].x; // Mirrored X
-               const dy = currentPL[idx].y - currentIL[idx].y;
+               // Offset to hip and scale to match instructor's height
+               const px = (currentPL[idx].x - pHip.x) * (iHeight / pHeight);
+               const py = (currentPL[idx].y - pHip.y) * (iHeight / pHeight);
+               
+               const ix = currentIL[idx].x - iHip.x;
+               const iy = currentIL[idx].y - iHip.y;
+               
+               const dx = px - ix;
+               const dy = py - iy;
                delta += Math.sqrt(dx*dx + dy*dy);
              }
           });
           
-          // Lower delta is better. Average distance per joint.
           const avgDelta = delta / 4;
-          let currentSync = 100 - (avgDelta * 200); 
+          let currentSync = 100 - (avgDelta * 400); // More sensitive normalization
           if (currentSync < 0) currentSync = 0;
           if (currentSync > 100) currentSync = 100;
 
+          syncRef.current = currentSync;
+
           // Combo & Scoring Math
           if (currentSync > 85) {
-            comboRef.current = Math.min(comboRef.current + 1, 50); // Max combo 5x (50 ticks)
-            const multiplier = Math.floor(comboRef.current / 10) + 1; // 1x, 2x, 3x, 4x, 5x
+            comboRef.current++;
+            
+            // Pop-up Feedback Triggers
+            if (comboRef.current === 10) setFeedbackMsg("GREAT!");
+            if (comboRef.current === 25) setFeedbackMsg("AMAZING!");
+            if (comboRef.current === 45) setFeedbackMsg("PILATES MASTER!");
+
+            const multiplier = Math.floor(comboRef.current / 10) + 1;
             const frameScore = 10 * multiplier;
             scoreRef.current += frameScore;
-          } else if (currentSync < 60) {
+          } else if (currentSync < 65) {
             // Break combo
             comboRef.current = 0;
+            if (feedbackMsg) setFeedbackMsg("");
           }
 
           // Update Score UI safely without thrashing React State
@@ -432,21 +568,39 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               baseOpacity={1} 
             />
             
-            {/* The Player (Live) - Ready for Re-activation */}
-            {/* 
+            {/* The Player (Live) - Re-activated as Ghost */}
             <CartoonAvatar 
               landmarksRef={playerLiveLmRef} 
               positionOffset={[0, 0, 0]} 
               isPlayer={true}
               baseOpacity={0.8}
+              syncRef={syncRef}
             />
-            */}
+
+            {/* Magic Sparkles on high performance */}
+            <Sparkles landmarksRef={playerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
           </React.Suspense>
         </Canvas>
       </div>
 
       {/* Cyberpunk HUD Overlay */}
       <div className="relative z-10 p-8 flex flex-col h-full pointer-events-none">
+        
+        {/* Combo Feedback Pop-up */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <AnimatePresence>
+            {feedbackMsg && (
+              <motion.div
+                initial={{ scale: 0, rotate: -20, opacity: 0 }}
+                animate={{ scale: 1.5, rotate: 0, opacity: 1 }}
+                exit={{ scale: 2, opacity: 0 }}
+                className="text-white font-black italic text-7xl drop-shadow-[0_0_30px_rgba(255,184,0,0.8)]"
+              >
+                {feedbackMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         
         {/* Top Bar */}
         <div className="flex justify-between items-start">
@@ -511,15 +665,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
         </div>
-        {/* Webcam Picture-in-Picture - TEMPORARILY DISABLED 
-        <div className="absolute bottom-6 right-6 w-80 h-48 bg-black/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
+        {/* Webcam Picture-in-Picture */}
+        <div className="absolute bottom-6 right-6 w-80 h-48 bg-black/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md pointer-events-auto">
           <Webcam
             ref={webcamRef}
             audio={false}
             className="w-full h-full object-cover transform scale-x-[-1]"
           />
         </div>
-        */}
       </div>
     </div>
   );

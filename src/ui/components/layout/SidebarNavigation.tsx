@@ -474,7 +474,7 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('demos')}
                     >
                       <SubNavItem label="Movement Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Match Movement" href="#" isActive={pathname === '/demos/match-movement'} onClick={() => setActiveItem('Demos')} />
+
                     </NavItem>
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (
