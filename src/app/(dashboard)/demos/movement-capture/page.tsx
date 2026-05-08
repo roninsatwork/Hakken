@@ -22,6 +22,7 @@ export default function MovementCapturePage() {
   const [isRecording, setIsRecording] = useState(false);
   const recordedFramesRef = useRef<any[]>([]);
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 1.0, 0.05));
+  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 30, 1.0, 0.05));
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState("Beginner");
@@ -96,10 +97,18 @@ export default function MovementCapturePage() {
           if (results.landmarks && results.landmarks.length > 0) {
             // Apply 1€ Filter to smooth out stationary jitter
             const smoothedLandmarks = poseFilterRef.current.filter(results.landmarks[0], startTimeMs);
+            
+            // Extract and smooth worldLandmarks (3D Depth) if available
+            const rawWorld = results.worldLandmarks ? results.worldLandmarks[0] : null;
+            const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
 
             // Record if active
             if (isRecording) {
-              recordedFramesRef.current.push({ timestamp: startTimeMs, landmarks: smoothedLandmarks });
+              recordedFramesRef.current.push({ 
+                timestamp: startTimeMs, 
+                landmarks: smoothedLandmarks,
+                worldLandmarks: smoothedWorld
+              });
             }
 
             // Draw Neon Skeleton

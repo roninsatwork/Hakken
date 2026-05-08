@@ -172,20 +172,20 @@ const VRMAvatar = ({
 
     let imageLms = raw.map(format);
     let solverLms;
-    const mirror = (lm: any) => ({ ...lm, x: 1 - lm.x });
     
-    // Mirror the 2D data to tell Kalidokit the person is facing the camera
-    imageLms = imageLms.map(mirror);
-
-    // Use high-fidelity 3D depth (World Landmarks) for BOTH Ghost and Instructor if available
+    // Pass raw, perfectly unmirrored data directly into Kalidokit.
+    // This allows Kalidokit's heuristics to natively detect 'Facing Camera',
+    // which unlocks the spine solver and inherently prevents leg-crossing.
+    
     if ((lms as any).worldLandmarks) {
-       solverLms = (lms as any).worldLandmarks.map(format).map(mirror);
+       solverLms = (lms as any).worldLandmarks.map(format);
     } else {
        // Fallback: 2D Projection (Centered & Scaled)
+       // This natively mimics the unmirrored physical coordinate space of true 3D data.
        const hipX = (imageLms[23].x + imageLms[24].x) / 2;
        const hipY = (imageLms[23].y + imageLms[24].y) / 2;
        solverLms = imageLms.map((lm: any) => ({
-         x: (lm.x - hipX) * 3.0,  // Already mirrored above, just scale
+         x: (lm.x - hipX) * 3.0, 
          y: (lm.y - hipY) * 3.0,  
          z: lm.z * 3.0,           
          visibility: 0.9
@@ -217,7 +217,7 @@ const VRMAvatar = ({
       };
 
       const rp = riggedPose;
-      
+
       // 1. Core Physics Path: Body, Legs, Head
       if (rp.Hips) applyRot("hips", rp.Hips.rotation);
       applyRot("spine", rp.Spine);
@@ -241,6 +241,8 @@ const VRMAvatar = ({
       applyRot("leftLowerArm", rp.LeftLowerArm);
       applyRot("leftHand", rp.LeftHand);
       
+      // Because we passed pure data, Kalidokit natively handles the 180-degree reflection
+      // without needing custom manual swaps or euler inversions.
       applyRot("rightUpperLeg", rp.RightUpperLeg);
       applyRot("rightLowerLeg", rp.RightLowerLeg);
       applyRot("rightFoot", (rp as any).RightFoot);
@@ -292,9 +294,10 @@ const VRMAvatar = ({
         }
 
         // MediaPipe Y is down, Three.js Y is up. MediaPipe Z is away, Three.js Z is towards.
-        // X is already correctly mapped via the mirror step earlier.
+        // We removed the manual -(X) inversion because the avatar's root group is now 
+        // rotated 180 degrees, natively mirroring the physical geometry.
         const desiredDir = new THREE.Vector3(
-          p2.x - p1.x, 
+          (p2.x - p1.x), 
           -(p2.y - p1.y), 
           -dz
         ).normalize();
@@ -319,25 +322,30 @@ const VRMAvatar = ({
         bone.updateMatrixWorld(true);
       };
 
-      // Force arm bones to perfectly match MediaPipe sticks
+      // Force arm bones to perfectly match MediaPipe sticks using raw unmirrored assignments
+      // 11 = Physical Left Arm -> Maps to leftUpperArm (Avatar's Physical Left, visually Screen Right)
+      // 12 = Physical Right Arm -> Maps to rightUpperArm (Avatar's Physical Right, visually Screen Left)
+      
       // Shoulders
-      aimBone("rightShoulder", "rightUpperArm", 11, 13); // Optional, but helps collarbone reach
-      aimBone("leftShoulder", "leftUpperArm", 12, 14);
+      aimBone("rightShoulder", "rightUpperArm", 12, 14); 
+      aimBone("leftShoulder", "leftUpperArm", 11, 13);
       // Arms
-      aimBone("rightUpperArm", "rightLowerArm", 11, 13);
-      aimBone("rightLowerArm", "rightHand", 13, 15);
-      aimBone("leftUpperArm", "leftLowerArm", 12, 14);
-      aimBone("leftLowerArm", "leftHand", 14, 16);
+      aimBone("rightUpperArm", "rightLowerArm", 12, 14);
+      aimBone("rightLowerArm", "rightHand", 14, 16);
+      aimBone("leftUpperArm", "leftLowerArm", 11, 13);
+      aimBone("leftLowerArm", "leftHand", 13, 15);
     }
   });
 
   return (
-    <primitive 
-      ref={group}
-      object={gltf.scene}
+    <group 
+      ref={group} 
+      position={[positionOffset[0], -1, positionOffset[2]]} 
+      rotation={[0, Math.PI, 0]}
       scale={3.5}
-      position={[positionOffset[0], -1, positionOffset[2]]}
-    />
+    >
+      <primitive object={vrmRef.current ? vrmRef.current.scene : gltf.scene} />
+    </group>
   );
 };
 
@@ -762,9 +770,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               comboRef.current++;
               
               // Pop-up Feedback Triggers
-              if (comboRef.current === 10) setFeedbackMsg("GREAT!");
-              if (comboRef.current === 25) setFeedbackMsg("AMAZING!");
-              if (comboRef.current === 45) setFeedbackMsg("PILATES MASTER!");
+              if (comboRef.current === 10) { setFeedbackMsg("GREAT!"); setTimeout(() => setFeedbackMsg(""), 2000); }
+              if (comboRef.current === 25) { setFeedbackMsg("AMAZING!"); setTimeout(() => setFeedbackMsg(""), 2000); }
+              if (comboRef.current === 45) { setFeedbackMsg("PILATES MASTER!"); setTimeout(() => setFeedbackMsg(""), 2000); }
 
               const multiplier = Math.floor(comboRef.current / 10) + 1;
               const frameScore = 10 * multiplier;

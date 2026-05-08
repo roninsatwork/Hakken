@@ -10,7 +10,6 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AvatarPreview from "./_components/AvatarPreview";
 
 export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,10 +69,7 @@ export default function MovementsLibraryPage() {
         </Link>
       </div>
 
-      {/* 3D Avatar Preview */}
-      <div className="mb-4">
-        <AvatarPreview />
-      </div>
+
 
       {/* Control Bar */}
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
