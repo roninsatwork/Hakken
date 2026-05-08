@@ -157,10 +157,9 @@ const VRMAvatar = ({
     vrmRef.current.update(delta);
     
     // 1. Resolve Landmarks Array
-    // 1. Resolve Landmarks Array
     const lms = landmarksRef.current;
     if (!lms) return;
-    const raw = Array.isArray(lms) ? lms : lms?.landmarks || [];
+    const raw = Array.isArray(lms) ? lms : (lms?.pose || lms?.landmarks || []);
     if (!raw || raw.length < 33) return;
 
     // Standard Decoder
@@ -171,23 +170,22 @@ const VRMAvatar = ({
       visibility: lm.visibility || 0.8
     });
 
-    const mirror = (lm: any) => ({ ...lm, x: -lm.x });
-
     let imageLms = raw.map(format);
     let solverLms;
+    const mirror = (lm: any) => ({ ...lm, x: 1 - lm.x });
+    
+    // Mirror the 2D data to tell Kalidokit the person is facing the camera
+    imageLms = imageLms.map(mirror);
 
     // Use high-fidelity 3D depth (World Landmarks) for BOTH Ghost and Instructor if available
     if ((lms as any).worldLandmarks) {
-       // We must mirror the 2D image data first, so Kalidokit doesn't receive conflicting L/R data
-       imageLms = imageLms.map(mirror);
        solverLms = (lms as any).worldLandmarks.map(format).map(mirror);
     } else {
        // Fallback: 2D Projection (Centered & Scaled)
-       // Do NOT mirror 2D fallback data, as it breaks Kalidokit's left/right depth heuristics
        const hipX = (imageLms[23].x + imageLms[24].x) / 2;
        const hipY = (imageLms[23].y + imageLms[24].y) / 2;
        solverLms = imageLms.map((lm: any) => ({
-         x: -(lm.x - hipX) * 3.0,  // Native orientation
+         x: (lm.x - hipX) * 3.0,  // Already mirrored above, just scale
          y: (lm.y - hipY) * 3.0,  
          z: lm.z * 3.0,           
          visibility: 0.9
