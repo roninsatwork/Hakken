@@ -13,9 +13,11 @@ import { ArrowLeft, Play, Pause, Crosshair, Flame } from "lucide-react";
 import Link from "next/link";
 import Typography from "@/src/ui/atoms/typography";
 import { motion, AnimatePresence } from "framer-motion";
+import AvatarSelectorLobby from "./_components/AvatarSelectorLobby";
+import { AVATAR_ROSTER } from "@/src/lib/constants/avatars";
 
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, useGLTF, Environment, useAnimations } from "@react-three/drei";
+import { OrbitControls, ContactShadows, useGLTF, Environment, useAnimations, Html, Grid } from "@react-three/drei";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, VRM } from "@pixiv/three-vrm";
@@ -110,21 +112,25 @@ const VRMAvatar = ({
   landmarksRef, 
   positionOffset,
   isPlayer = false,
-  syncRef
+  syncRef,
+  vrmUrl,
+  name,
 }: { 
   landmarksRef: React.MutableRefObject<any>, 
   positionOffset: [number, number, number],
   isPlayer?: boolean,
-  syncRef?: React.MutableRefObject<number>
+  syncRef?: React.MutableRefObject<number>,
+  vrmUrl: string,
+  name: string,
 }) => {
   const group = useRef<THREE.Group>(null);
   const vrmRef = useRef<VRM | null>(null);
   const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
 
   // useLoader cache keys are just the URL, so to load two separate instances:
-  const url = isPlayer ? "/models/MoonGirl.vrm?player" : "/models/MoonGirl.vrm";
+  const urlToLoad = isPlayer ? `${vrmUrl}?player` : vrmUrl;
   
-  const gltf = useLoader(GLTFLoader, url, (loader) => {
+  const gltf = useLoader(GLTFLoader, urlToLoad, (loader) => {
     loader.register((parser) => new VRMLoaderPlugin(parser as any) as any);
   });
 
@@ -133,22 +139,7 @@ const VRMAvatar = ({
       const vrm = gltf.userData.vrm;
       vrmRef.current = vrm;
       // Note: We rotate the parent Group, not the internal scene, to keep bone math stable.
-      
-      // Setup ghost material if player
-      if (isPlayer) {
-        vrm.scene.traverse((child: THREE.Object3D) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const m = child as THREE.Mesh;
-            m.material = new THREE.MeshBasicMaterial({
-              color: "#00f2ff",
-              transparent: true,
-              opacity: 0.8, // More visible
-              depthWrite: false,
-              wireframe: true
-            });
-          }
-        });
-      }
+      // Both the Instructor and the Player now render using their native 3D materials.
     }
   }, [gltf, isPlayer]);
 
@@ -345,6 +336,15 @@ const VRMAvatar = ({
       scale={3.5}
     >
       <primitive object={vrmRef.current ? vrmRef.current.scene : gltf.scene} />
+      
+      {/* Dynamic Nameplate */}
+      <Html position={[0, 1.85, 0]} center zIndexRange={[100, 0]}>
+        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-6 py-1.5 rounded-full shadow-2xl">
+          <span className={`font-black tracking-[0.2em] uppercase text-xs ${isPlayer ? "text-[#CCFF00]" : "text-[#FF3300]"}`}>
+            {name}
+          </span>
+        </div>
+      </Html>
     </group>
   );
 };
@@ -547,11 +547,25 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const isStorageId = typeof movement?.poseData === "string" && !movement.poseData.startsWith("[");
   const fileUrl = useQuery(api.movements.getFileUrl, isStorageId ? { storageId: movement.poseData as Id<"_storage"> } : "skip");
 
+  const [isLobby, setIsLobby] = useState(true);
+  const [playerAvatarUrl, setPlayerAvatarUrl] = useState("/models/VIPE_Hero__949.vrm");
+  const [instructorAvatarUrl, setInstructorAvatarUrl] = useState("/models/Eugenia.vrm");
+
+  // Helper to get names
+  const getAvatarName = (url: string) => AVATAR_ROSTER.find(a => a.path === url)?.name || "Unknown";
+
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
   const [syncRate, setSyncRate] = useState(100);
-  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [feedbackMsg, setFeedbackMsg] = useState<{text: string, id: number} | null>(null);
+
+  useEffect(() => {
+    if (feedbackMsg) {
+      const t = setTimeout(() => setFeedbackMsg(null), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [feedbackMsg]);
 
   const instructorFramesRef = useRef<any>([]);
   const instructorCurrentLmRef = useRef<any>([]);
@@ -770,9 +784,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               comboRef.current++;
               
               // Pop-up Feedback Triggers
-              if (comboRef.current === 10) { setFeedbackMsg("GREAT!"); setTimeout(() => setFeedbackMsg(""), 2000); }
-              if (comboRef.current === 25) { setFeedbackMsg("AMAZING!"); setTimeout(() => setFeedbackMsg(""), 2000); }
-              if (comboRef.current === 45) { setFeedbackMsg("PILATES MASTER!"); setTimeout(() => setFeedbackMsg(""), 2000); }
+              if (comboRef.current === 10) { setFeedbackMsg({ text: "GREAT!", id: Date.now() }); }
+              if (comboRef.current === 25) { setFeedbackMsg({ text: "AMAZING!", id: Date.now() }); }
+              if (comboRef.current === 45) { setFeedbackMsg({ text: "PILATES MASTER!", id: Date.now() }); }
 
               const multiplier = Math.floor(comboRef.current / 10) + 1;
               const frameScore = 10 * multiplier;
@@ -780,7 +794,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             } else if (currentSync < 65) {
               // Break combo
               comboRef.current = 0;
-              if (feedbackMsg) setFeedbackMsg("");
+              setFeedbackMsg(null);
             }
 
             // Update Score UI safely without thrashing React State
@@ -810,6 +824,18 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     );
   }
 
+  if (isLobby) {
+    return (
+      <AvatarSelectorLobby
+        playerAvatarUrl={playerAvatarUrl}
+        setPlayerAvatarUrl={setPlayerAvatarUrl}
+        instructorAvatarUrl={instructorAvatarUrl}
+        setInstructorAvatarUrl={setInstructorAvatarUrl}
+        onStart={() => setIsLobby(false)}
+      />
+    );
+  }
+
   return (
     <div className="h-screen w-full bg-black overflow-hidden flex flex-col relative">
       {/* Hidden Webcam for MediaPipe Tracking */}
@@ -826,6 +852,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <div className="absolute inset-0 z-0">
         <Canvas camera={{ position: [0, 2, 25], fov: 45 }}>
           <color attach="background" args={['#050510']} />
+          <fog attach="fog" args={['#050510', 35, 65]} />
           
           {/* Studio Lighting Rig */}
           <ambientLight intensity={0.6} />
@@ -835,6 +862,20 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           
           <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 2} />
           
+          {/* Cyberpunk Training Grid */}
+          <Grid 
+            position={[0, -2.8, 0]} 
+            args={[50, 50]} 
+            cellColor="#ffffff" 
+            cellThickness={0.5} 
+            sectionColor="#ffffff" 
+            sectionThickness={1} 
+            sectionSize={3} 
+            fadeDistance={30} 
+            fadeStrength={1}
+            infiniteGrid
+          />
+          
           
           
           <React.Suspense fallback={null}>
@@ -842,6 +883,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             <VRMAvatar 
               landmarksRef={instructorCurrentLmRef} 
               positionOffset={[-5, 0, 0]} 
+              vrmUrl={instructorAvatarUrl}
+              name={getAvatarName(instructorAvatarUrl)}
             />
             
             {/* The Player (Live) - Reacts directly to raw webcam feed */}
@@ -850,6 +893,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               positionOffset={[5, 0, 0]} 
               isPlayer={true}
               syncRef={syncRef}
+              vrmUrl={playerAvatarUrl}
+              name={getAvatarName(playerAvatarUrl)}
             />
 
             {/* Magic Sparkles on high performance */}
@@ -864,9 +909,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         
         {/* Combo Feedback Pop-up */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {feedbackMsg && (
               <motion.div
+                key={feedbackMsg.id}
                 initial={{ scale: 0.1, rotate: -20, opacity: 0 }}
                 animate={{ scale: 1.5, rotate: 0, opacity: 1 }}
                 exit={{ scale: 2, opacity: 0 }}
@@ -874,38 +920,40 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                 className="text-white font-black italic text-7xl drop-shadow-[0_0_30px_rgba(255,184,0,0.8)]"
                 style={{ WebkitBackfaceVisibility: 'hidden' }}
               >
-                {feedbackMsg}
+                {feedbackMsg.text}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
         
-        {/* Top Bar */}
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col gap-4 pointer-events-auto">
-            <Link href="/demos/movements" className="flex items-center gap-2 text-[13px] font-medium text-white/70 hover:text-white transition-colors bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 w-fit">
-              <ArrowLeft className="w-4 h-4" /> Exit Match
-            </Link>
-            
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-5 rounded-2xl flex flex-col gap-1 min-w-[240px]">
-              <Typography className="text-[11px] font-bold tracking-widest text-cyan-400 uppercase">
+        {/* Top Bar (Horizontal Cockpit) */}
+        <div className="flex justify-between items-center bg-white/5 backdrop-blur-3xl border border-white/10 p-3 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
+          
+          <Link href="/demos/movements" className="flex items-center justify-center gap-2 text-[12px] font-bold text-white/70 hover:text-white transition-colors bg-black/40 px-5 py-3 rounded-2xl border border-white/5">
+            <ArrowLeft className="w-4 h-4" /> EXIT MATCH
+          </Link>
+          
+          <div className="flex items-center gap-6 px-8">
+            <div className="flex flex-col items-end">
+              <Typography className="text-[10px] font-bold tracking-widest text-cyan-400 uppercase">
                 Instructor Routine
               </Typography>
-              <Typography className="text-xl font-medium text-white">
+              <Typography className="text-xl font-black text-white uppercase tracking-tight leading-none mt-1">
                 {movement.title || "Unknown"}
               </Typography>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-bold text-white/70 uppercase">
-                  {movement.difficulty || "Beginner"}
-                </span>
-              </div>
             </div>
+            <div className="h-8 w-px bg-white/20"></div>
+            <span className="px-3 py-1.5 bg-white/10 rounded-md text-[10px] font-bold text-white/90 uppercase tracking-widest">
+              {movement.difficulty || "Beginner"}
+            </span>
           </div>
 
-          <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl flex flex-col items-center min-w-[140px] shadow-2xl">
-            <Flame className="w-6 h-6 text-fuchsia-500 mb-2 drop-shadow-[0_0_15px_rgba(217,70,239,0.8)]" />
-            <Typography className="text-[11px] font-bold tracking-widest text-fuchsia-400 uppercase mb-1">Total Score</Typography>
-            <Typography className="text-4xl font-black text-white drop-shadow-md" id="score-display">0</Typography>
+          <div className="flex items-center gap-4 bg-black/40 px-6 py-2 rounded-2xl border border-white/5">
+            <Flame className="w-6 h-6 text-[#FF3300] drop-shadow-[0_0_15px_rgba(255,51,0,0.8)]" />
+            <div className="flex flex-col">
+              <Typography className="text-[10px] font-bold tracking-widest text-[#FF3300] uppercase">Total Score</Typography>
+              <Typography className="text-3xl font-black text-white leading-none mt-1" id="score-display">0</Typography>
+            </div>
           </div>
         </div>
 
@@ -913,33 +961,33 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         <div className="mt-auto flex justify-between items-end pointer-events-auto">
           
           {/* Playback Controls */}
-          <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-2 pr-6 rounded-full flex items-center gap-4">
-              <div className="flex items-center gap-3">
+          <div className="bg-white/5 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/10 p-2 pr-8 rounded-full flex items-center gap-4">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-14 h-14 bg-cyan-400 hover:bg-cyan-300 rounded-2xl flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95"
+                  className="w-16 h-16 bg-[#CCFF00] hover:bg-white rounded-full flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95"
                 >
-                  {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
+                  {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current" />}
                 </button>
                 <div className="flex flex-col">
-                  <span className="text-white font-medium text-lg">
+                  <span className="text-white font-bold tracking-wide text-lg">
                     {isPlaying ? "Match Sequence" : "System Ready"}
                   </span>
-                  <span className="text-sm font-semibold tracking-wider text-green-500" id="calibration-status">
-                    {isPlaying ? "STATUS: ACTIVE" : "READY"}
+                  <span className="text-xs font-black tracking-[0.2em] text-[#CCFF00] uppercase" id="calibration-status">
+                    {isPlaying ? "Active" : "Ready"}
                   </span>
                 </div>
               </div>
           </div>
 
           {/* Real-time Sync Rate */}
-          <div className="flex items-center gap-4 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full pr-8 pl-4 py-3">
-            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
-              <Crosshair className="w-6 h-6 text-cyan-400" />
+          <div className="flex items-center gap-5 bg-white/5 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/10 rounded-full pr-10 pl-5 py-4">
+            <div className="w-12 h-12 rounded-full bg-[#CCFF00]/20 flex items-center justify-center border border-[#CCFF00]/50">
+              <Crosshair className="w-6 h-6 text-[#CCFF00]" />
             </div>
             <div className="flex flex-col">
-              <Typography className="text-[11px] font-bold tracking-widest text-cyan-400 uppercase">Sync Rate</Typography>
-              <Typography className="text-3xl font-black text-white" id="sync-rate">0%</Typography>
+              <Typography className="text-[11px] font-bold tracking-widest text-[#CCFF00] uppercase">Sync Rate</Typography>
+              <Typography className="text-4xl font-black text-white" id="sync-rate">0%</Typography>
             </div>
           </div>
         </div>
