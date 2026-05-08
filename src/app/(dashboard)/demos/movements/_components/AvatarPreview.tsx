@@ -13,7 +13,7 @@ function Model() {
   
   // Load the Moon Girl VRM
   const gltf = useLoader(GLTFLoader, "/models/MoonGirl.vrm", (loader) => {
-    loader.register((parser) => new VRMLoaderPlugin(parser));
+    loader.register((parser) => new VRMLoaderPlugin(parser as any) as any);
   });
 
   useEffect(() => {
@@ -22,7 +22,7 @@ function Model() {
       VRMUtils.removeUnnecessaryJoints(gltf.scene);
       
       // Fix VRM Materials (disable frustum culling and ensure transparent materials render back faces)
-      gltf.scene.traverse((obj) => {
+      gltf.scene.traverse((obj: THREE.Object3D) => {
         obj.frustumCulled = false;
         if ((obj as THREE.Mesh).isMesh) {
           const mesh = obj as THREE.Mesh;

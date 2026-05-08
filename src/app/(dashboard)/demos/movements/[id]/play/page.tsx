@@ -125,7 +125,7 @@ const VRMAvatar = ({
   const url = isPlayer ? "/models/MoonGirl.vrm?player" : "/models/MoonGirl.vrm";
   
   const gltf = useLoader(GLTFLoader, url, (loader) => {
-    loader.register((parser) => new VRMLoaderPlugin(parser));
+    loader.register((parser) => new VRMLoaderPlugin(parser as any) as any);
   });
 
   useEffect(() => {
@@ -136,7 +136,7 @@ const VRMAvatar = ({
       
       // Setup ghost material if player
       if (isPlayer) {
-        vrm.scene.traverse((child) => {
+        vrm.scene.traverse((child: THREE.Object3D) => {
           if ((child as THREE.Mesh).isMesh) {
             const m = child as THREE.Mesh;
             m.material = new THREE.MeshBasicMaterial({
@@ -186,7 +186,7 @@ const VRMAvatar = ({
        // Do NOT mirror 2D fallback data, as it breaks Kalidokit's left/right depth heuristics
        const hipX = (imageLms[23].x + imageLms[24].x) / 2;
        const hipY = (imageLms[23].y + imageLms[24].y) / 2;
-       solverLms = imageLms.map(lm => ({
+       solverLms = imageLms.map((lm: any) => ({
          x: -(lm.x - hipX) * 3.0,  // Native orientation
          y: (lm.y - hipY) * 3.0,  
          z: lm.z * 3.0,           
@@ -223,16 +223,16 @@ const VRMAvatar = ({
       // 1. Core Physics Path: Body, Legs, Head
       if (rp.Hips) applyRot("hips", rp.Hips.rotation);
       applyRot("spine", rp.Spine);
-      applyRot("chest", rp.Chest);
-      applyRot("upperChest", rp.UpperChest);
-      applyRot("neck", rp.Neck);
-      applyRot("head", rp.Head);
+      applyRot("chest", (rp as any).Chest);
+      applyRot("upperChest", (rp as any).UpperChest);
+      applyRot("neck", (rp as any).Neck);
+      applyRot("head", (rp as any).Head);
       
       // Only apply Kalidokit collarbone physics if we have true 3D depth. 
       // Faked 2D depth causes collarbones to twist inward, making arms look short.
       if ((lms as any).worldLandmarks) {
-        applyRot("rightShoulder", rp.RightShoulder);
-        applyRot("leftShoulder", rp.LeftShoulder);
+        applyRot("rightShoulder", (rp as any).RightShoulder);
+        applyRot("leftShoulder", (rp as any).LeftShoulder);
       }
       
       applyRot("rightUpperArm", rp.RightUpperArm);
@@ -245,11 +245,11 @@ const VRMAvatar = ({
       
       applyRot("rightUpperLeg", rp.RightUpperLeg);
       applyRot("rightLowerLeg", rp.RightLowerLeg);
-      applyRot("rightFoot", rp.RightFoot);
+      applyRot("rightFoot", (rp as any).RightFoot);
       
       applyRot("leftUpperLeg", rp.LeftUpperLeg);
       applyRot("leftLowerLeg", rp.LeftLowerLeg);
-      applyRot("leftFoot", rp.LeftFoot);
+      applyRot("leftFoot", (rp as any).LeftFoot);
       
       const hips = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
       if (hips && rp.Hips.position) {
