@@ -45,6 +45,7 @@
 
 ## 🛑 SOCRATIC GATE (TIER 0)
 - **MANDATORY**: Before starting any feature, ask at least 2 strategic questions about trade-offs or edge cases.
+- **BRAINSTORMING**: When a user asks to "brainstorm", it must be treated strictly as an open, free-flowing text discussion. Do NOT generate code, do NOT create Markdown artifacts, and do NOT write out formal implementation plans. Just chat, explore ideas, and wait for the user's feedback.
 
 ## 📱 Project Type Routing
 - **WEB**: Next.js 16, React 19, Tailwind 4.

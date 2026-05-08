@@ -34,7 +34,7 @@ import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 
 interface NavItemProps {
-  icon: React.ElementType;
+  icon: React.ElementType<{ className?: string }>;
   label: string;
   isActive?: boolean;
   hasChildren?: boolean;
@@ -199,6 +199,7 @@ export default function SidebarNavigation() {
     if (pathname.startsWith('/app/agents')) return 'Agents';
     if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
     if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
+    if (pathname.startsWith('/demos')) return 'Demos';
     return isAdmin ? 'Admin Dashboard' : '';
   });
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -215,7 +216,8 @@ export default function SidebarNavigation() {
     reports: false,
     organization: false,
     arcade: false,
-    properties: false
+    properties: false,
+    demos: false
   });
 
   const toggleSection = (section: string) => {
@@ -248,6 +250,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/app/agents')) setActiveItem('Agents');
     else if (pathname.startsWith('/app/arcade/ronins-run')) setActiveItem('RoninsRun');
     else if (pathname.startsWith('/app/ai/rules')) setActiveItem('AIRules');
+    else if (pathname.startsWith('/demos')) setActiveItem('Demos');
     else if (pathname === '/app') setActiveItem('Dashboard');
     else if (pathname.startsWith('/app/properties')) setActiveItem('Properties');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
@@ -459,6 +462,19 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
+                    </NavItem>
+
+                    <NavItem
+                      icon={Globe}
+                      label="Movement Demo"
+                      isActive={activeItem === 'Demos' || pathname.startsWith('/demos')}
+                      onClick={() => setActiveItem('Demos')}
+                      hasChildren
+                      isOpen={openSections.demos}
+                      onToggle={() => toggleSection('demos')}
+                    >
+                      <SubNavItem label="Movement Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
+
                     </NavItem>
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (

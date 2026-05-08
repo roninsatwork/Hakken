@@ -564,4 +564,11 @@ export default defineSchema({
       searchField: "address",
       filterFields: ["companyId"],
     }),
+
+  movements: defineTable({
+    title: v.string(),
+    difficulty: v.string(),
+    poseData: v.string(),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"]),
 });

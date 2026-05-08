@@ -11,6 +11,11 @@ export default function Header() {
         <Link href="/">
           <Typography>{t('projectName')}</Typography>
         </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/demos/movement-capture">
+            <Typography>Demos</Typography>
+          </Link>
+        </div>
       </div>
     </header>
   );
