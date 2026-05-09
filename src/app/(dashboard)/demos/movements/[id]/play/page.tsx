@@ -183,6 +183,30 @@ const VRMAvatar = ({
        }));
     }
 
+    if (!isPlayer) {
+      // Mirror the raw data computationally so Kalidokit naturally generates a mirrored pose
+      // This allows us to avoid negative group scaling which breaks 3D bone physics.
+      const swapPairs = [
+        [1, 4], [2, 5], [3, 6], [7, 8], [9, 10], // Face
+        [11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22], // Arms
+        [23, 24], [25, 26], [27, 28], [29, 30], [31, 32] // Legs
+      ];
+
+      const mirrorArray = (arr: any[], invertX: (x: number) => number) => {
+        arr.forEach(lm => { if (lm) lm.x = invertX(lm.x); });
+        swapPairs.forEach(([l, r]) => {
+          if (arr[l] && arr[r]) {
+            const temp = { ...arr[l] };
+            arr[l] = { ...arr[r] };
+            arr[r] = temp;
+          }
+        });
+      };
+
+      mirrorArray(imageLms, (x) => 1 - x);
+      mirrorArray(solverLms, (x) => -x); // World/fallback coordinates are zero-centered at hips
+    }
+
     // Solve IK for core body
     let riggedPose;
     try {
@@ -287,11 +311,16 @@ const VRMAvatar = ({
         // MediaPipe Y is down, Three.js Y is up. MediaPipe Z is away, Three.js Z is towards.
         // We removed the manual -(X) inversion because the avatar's root group is now 
         // rotated 180 degrees, natively mirroring the physical geometry.
-        const desiredDir = new THREE.Vector3(
+        const rawDir = new THREE.Vector3(
           (p2.x - p1.x), 
           -(p2.y - p1.y), 
           -dz
-        ).normalize();
+        );
+        
+        // Safety boundary: prevent zero-length math from exploding the physics solver
+        if (rawDir.length() < 0.001) return;
+        
+        const desiredDir = rawDir.normalize();
 
         // Calculate absolute world rotation needed
         const qOffset = new THREE.Quaternion().setFromUnitVectors(currentDir, desiredDir);
@@ -313,18 +342,23 @@ const VRMAvatar = ({
         bone.updateMatrixWorld(true);
       };
 
-      // Force arm bones to perfectly match MediaPipe sticks using raw unmirrored assignments
+      // Force arm/leg bones to perfectly match MediaPipe sticks using raw unmirrored assignments
       // 11 = Physical Left Arm -> Maps to leftUpperArm (Avatar's Physical Left, visually Screen Right)
       // 12 = Physical Right Arm -> Maps to rightUpperArm (Avatar's Physical Right, visually Screen Left)
       
-      // Shoulders
-      aimBone("rightShoulder", "rightUpperArm", 12, 14); 
-      aimBone("leftShoulder", "leftUpperArm", 11, 13);
-      // Arms
+      // Arms (Kalidokit natively solves collarbones, avoid overriding them)
       aimBone("rightUpperArm", "rightLowerArm", 12, 14);
       aimBone("rightLowerArm", "rightHand", 14, 16);
       aimBone("leftUpperArm", "leftLowerArm", 11, 13);
       aimBone("leftLowerArm", "leftHand", 13, 15);
+      
+      // Legs (Flat Paper / Vector Tracking to force individual limb independence)
+      // We apply this to BOTH avatars because Kalidokit's native 3D solver often groups the legs 
+      // together, causing both to raise when only one is lifted physically.
+      aimBone("rightUpperLeg", "rightLowerLeg", 24, 26);
+      aimBone("rightLowerLeg", "rightFoot", 26, 28);
+      aimBone("leftUpperLeg", "leftLowerLeg", 23, 25);
+      aimBone("leftLowerLeg", "leftFoot", 25, 27);
     }
   });
 
@@ -1059,7 +1093,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0C10] backdrop-blur-3xl"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-[#0B0C10] backdrop-blur-3xl"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
