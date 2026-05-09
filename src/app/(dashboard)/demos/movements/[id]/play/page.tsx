@@ -787,13 +787,23 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             const snappedLM = currentPL.map((lm: any) => ({ ...lm })); // Clone for Magnetism
 
             [15, 16, 27, 28].forEach(idx => {
-               if (currentPL[idx] && iL[idx]) {
+               // The instructor is mirrored computationally in the 3D physics engine.
+               // For scoring, we must cross-compare the joints: Player Left (15) matches Instructor Right (16)
+               let instructorIdx = idx;
+               if (idx === 15) instructorIdx = 16;
+               else if (idx === 16) instructorIdx = 15;
+               else if (idx === 27) instructorIdx = 28;
+               else if (idx === 28) instructorIdx = 27;
+
+               if (currentPL[idx] && iL[instructorIdx]) {
                  // Offset to hip and scale to match instructor's height
                  const px = (currentPL[idx].x - pHip.x) * (iHeight / pHeight);
                  const py = (currentPL[idx].y - pHip.y) * (iHeight / pHeight);
                  
-                 const ix = iL[idx].x - iHip.x;
-                 const iy = iL[idx].y - iHip.y;
+                 // Flip the instructor's X coordinate internally just for the math 
+                 // so the Sticky Snap correctly pulls the ghost to the mirrored position.
+                 const ix = -(iL[instructorIdx].x - iHip.x);
+                 const iy = iL[instructorIdx].y - iHip.y;
                  
                  const dx = px - ix;
                  const dy = py - iy;
@@ -825,10 +835,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             if (currentSync > 85) {
               comboRef.current++;
               
-              // Pop-up Feedback Triggers
-              if (comboRef.current === 10) { setFeedbackMsg({ text: "GREAT!", id: Date.now() }); }
-              if (comboRef.current === 25) { setFeedbackMsg({ text: "AMAZING!", id: Date.now() }); }
-              if (comboRef.current === 45) { setFeedbackMsg({ text: "PILATES MASTER!", id: Date.now() }); }
+              // Pop-up Feedback Triggers (Replaced "Pilates Master" with premium alignment phrases)
+              if (comboRef.current === 15) { setFeedbackMsg({ text: "PERFECT ALIGNMENT", id: Date.now() }); }
+              if (comboRef.current === 35) { setFeedbackMsg({ text: "BEAUTIFUL FORM", id: Date.now() }); }
+              if (comboRef.current === 60) { setFeedbackMsg({ text: "EXQUISITE CONTROL", id: Date.now() }); }
+              if (comboRef.current === 90) { setFeedbackMsg({ text: "FLAWLESS SYNCHRONIZATION", id: Date.now() }); }
+              if (comboRef.current === 120) { setFeedbackMsg({ text: "INCREDIBLE FLOW", id: Date.now() }); }
+              if (comboRef.current === 160) { setFeedbackMsg({ text: "TOTAL BODY HARMONY", id: Date.now() }); }
+              if (comboRef.current === 200) { setFeedbackMsg({ text: "UNSTOPPABLE MOMENTUM", id: Date.now() }); }
+              if (comboRef.current === 250) { setFeedbackMsg({ text: "PRECISION AND POWER", id: Date.now() }); }
 
               const multiplier = Math.floor(comboRef.current / 10) + 1;
               const frameScore = 10 * multiplier;
