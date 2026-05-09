@@ -331,14 +331,14 @@ const VRMAvatar = ({
   return (
     <group 
       ref={group} 
-      position={[positionOffset[0], -1, positionOffset[2]]} 
+      position={[positionOffset[0], -0.1, positionOffset[2]]} 
       rotation={[0, Math.PI, 0]}
-      scale={3.5}
+      scale={5.25}
     >
       <primitive object={vrmRef.current ? vrmRef.current.scene : gltf.scene} />
       
       {/* Dynamic Nameplate */}
-      <Html position={[0, 1.85, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, -1.05, 0]} center zIndexRange={[100, 0]}>
         <div className="bg-black/60 backdrop-blur-md border border-white/10 px-6 py-1.5 rounded-full shadow-2xl">
           <span className={`font-black tracking-[0.2em] uppercase text-xs ${isPlayer ? "text-[#CCFF00]" : "text-[#FF3300]"}`}>
             {name}
@@ -559,6 +559,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const [score, setScore] = useState(0);
   const [syncRate, setSyncRate] = useState(100);
   const [feedbackMsg, setFeedbackMsg] = useState<{text: string, id: number} | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
     if (feedbackMsg) {
@@ -700,8 +701,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         const totalFrames = frames.length;
         
         if (totalFrames > 0) {
-          frameIndexRef.current = frameIndexRef.current + 1 >= totalFrames ? 0 : frameIndexRef.current + 1;
+          if (frameIndexRef.current + 1 >= totalFrames) {
+            if (isPlaying) {
+              setIsPlaying(false);
+              setIsComplete(true);
+            }
+            return;
+          }
           
+          frameIndexRef.current += 1;
           const frameData = frames[frameIndexRef.current];
           // Pass the complete object so VRMAvatar can extract the high-fidelity worldLandmarks
           instructorCurrentLmRef.current = frameData;
@@ -926,6 +934,49 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           </AnimatePresence>
         </div>
         
+        {/* Session Complete Modal */}
+        {isComplete && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xl pointer-events-auto">
+            <div className="bg-white/5 border border-white/10 rounded-[32px] p-12 max-w-lg w-full shadow-[0_0_50px_rgba(0,242,255,0.2)] flex flex-col items-center">
+              <Typography className="text-[#CCFF00] font-black tracking-[0.3em] uppercase text-sm mb-2">
+                Session Complete
+              </Typography>
+              <Typography className="text-white font-black text-5xl uppercase tracking-tight mb-8 text-center">
+                {movement.title}
+              </Typography>
+              
+              <div className="flex flex-col items-center justify-center w-full bg-black/40 rounded-3xl p-8 mb-10 border border-white/5">
+                <Typography className="text-white/60 font-bold tracking-[0.2em] uppercase text-xs mb-2">Final Score</Typography>
+                <Typography className="text-[#FF3300] font-black text-7xl drop-shadow-[0_0_20px_rgba(255,51,0,0.6)]">
+                  {scoreRef.current}
+                </Typography>
+              </div>
+
+              <div className="flex w-full gap-4">
+                <Link href="/demos/movements" className="flex-1 text-center py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold tracking-widest uppercase transition-all">
+                  Exit Match
+                </Link>
+                <button 
+                  onClick={() => {
+                    scoreRef.current = 0;
+                    frameIndexRef.current = 0;
+                    comboRef.current = 0;
+                    const scoreElem = document.getElementById("score-display");
+                    if (scoreElem) scoreElem.innerText = "0";
+                    const rateElem = document.getElementById("sync-rate");
+                    if (rateElem) rateElem.innerText = "0%";
+                    setIsComplete(false);
+                    setIsPlaying(true);
+                  }}
+                  className="flex-1 py-4 rounded-2xl bg-[#CCFF00] text-black hover:bg-white font-black tracking-widest uppercase transition-all hover:scale-105"
+                >
+                  Rematch
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top Bar (Horizontal Cockpit) */}
         <div className="flex justify-between items-center bg-white/5 backdrop-blur-3xl border border-white/10 p-3 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
           
@@ -992,7 +1043,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
         {/* Webcam Picture-in-Picture */}
-        <div className="absolute bottom-6 right-6 w-80 h-48 bg-black/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md pointer-events-auto">
+        <div className="absolute bottom-6 right-6 w-40 h-24 bg-black/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md pointer-events-auto">
           <Webcam
             ref={webcamRef}
             audio={false}
