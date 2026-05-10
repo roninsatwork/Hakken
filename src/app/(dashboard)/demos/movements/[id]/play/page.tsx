@@ -447,8 +447,14 @@ const VRMAvatar = ({
           // Relaxed A-Pose for Lobby (drops arms 70 degrees)
           const rightArm = vrmRef.current.humanoid.getNormalizedBoneNode("rightUpperArm");
           const leftArm = vrmRef.current.humanoid.getNormalizedBoneNode("leftUpperArm");
+          const rightLowerArm = vrmRef.current.humanoid.getNormalizedBoneNode("rightLowerArm");
+          const leftLowerArm = vrmRef.current.humanoid.getNormalizedBoneNode("leftLowerArm");
+          
           if (rightArm) rightArm.rotation.set(0, 0, -1.2); 
           if (leftArm) leftArm.rotation.set(0, 0, 1.2); 
+          if (rightLowerArm) rightLowerArm.rotation.set(0, 0, 0);
+          if (leftLowerArm) leftLowerArm.rotation.set(0, 0, 0);
+          return; // Lock entire body in A-pose during standby
       } else {
           aimVector("rightUpperArm", "rightLowerArm", solverLms[12], solverLms[14]);
           aimVector("rightLowerArm", "rightHand", solverLms[14], solverLms[16]);
@@ -467,9 +473,10 @@ const VRMAvatar = ({
       aimVector("leftFoot", "leftToes", solverLms[29], solverLms[31]);
 
       // Head FK (Precise Pitch/Yaw/Roll using Ears and Nose)
-      const leftEar = solverLms[7];
-      const rightEar = solverLms[8];
-      const nose = solverLms[0];
+      // We MUST use imageLms (2D) for the Face, because MediaPipe's worldLandmarks (3D) for the face are extremely noisy and cause pitch explosions.
+      const leftEar = imageLms[7];
+      const rightEar = imageLms[8];
+      const nose = imageLms[0];
       
       if (leftEar && rightEar && nose && !forceStandby) {
           const headNode = vrmRef.current.humanoid.getNormalizedBoneNode("head");
@@ -812,8 +819,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const fileUrl = useQuery(api.movements.getFileUrl, isStorageId ? { storageId: movement.poseData as Id<"_storage"> } : "skip");
 
   const [isLobby, setIsLobby] = useState(true);
-  const [playerAvatarUrl, setPlayerAvatarUrl] = useState("/models/VIPE_Hero__949.vrm");
-  const [instructorAvatarUrl, setInstructorAvatarUrl] = useState("/models/Eugenia.vrm");
+  const [playerAvatarUrl, setPlayerAvatarUrl] = useState("/models/VIPE_Hero__1793.vrm");
+  const [instructorAvatarUrl, setInstructorAvatarUrl] = useState("/models/VIPE_Hero__1914.vrm");
 
   // Helper to get names
   const getAvatarName = (url: string) => AVATAR_ROSTER.find(a => a.path === url)?.name || "Unknown";
@@ -824,6 +831,18 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const [syncRate, setSyncRate] = useState(100);
   const [feedbackMsg, setFeedbackMsg] = useState<{text: string, id: number} | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+
+  // Suppress benign MediaPipe C++ info logs that trigger the Next.js Error Overlay
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('XNNPACK delegate')) return;
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   useEffect(() => {
     if (feedbackMsg) {
@@ -841,8 +860,19 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const comboRef = useRef(0); // Add Combo Counter
   const syncRef = useRef(0); // Live sync percentage for 3D materials
   
+  const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
+  const instructorWorldFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
+  const instructorLeftHandFilterRef = useRef(new PoseFilterWrapper(21, 30, 0.01, 0.0));
+  const instructorRightHandFilterRef = useRef(new PoseFilterWrapper(21, 30, 0.01, 0.0));
+  
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
+  
+  // Hand Jitter Filters
+  const leftHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.0, 0.005));
+  const rightHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.0, 0.005));
+  const leftHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.0, 0.005));
+  const rightHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.0, 0.005));
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
   const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
   const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
@@ -969,14 +999,37 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
         if (handResults && handResults.landmarks && handResults.landmarks.length > 0) {
             currentData.hands = { left: null, right: null };
-            handResults.handedness.forEach((handedness: any, index: number) => {
-                // Because we read raw video (unmirrored), the right hand is on the left side of the screen
-                const isRight = handedness[0].categoryName === "Left"; // Flipped by raw camera perspective
-                const side = isRight ? "right" : "left";
+            
+            const leftWristPose = currentData.landmarks ? currentData.landmarks[15] : null;
+            const rightWristPose = currentData.landmarks ? currentData.landmarks[16] : null;
+            
+            handResults.landmarks.forEach((handLms: any[], index: number) => {
+                const handWrist = handLms[0];
+                let side = "right"; 
                 
+                // Spatial Distance Matching: Stop relying on buggy categoryName, measure physical distance to wrists
+                if (leftWristPose && rightWristPose) {
+                    const distToLeft = Math.hypot(handWrist.x - leftWristPose.x, handWrist.y - leftWristPose.y);
+                    const distToRight = Math.hypot(handWrist.x - rightWristPose.x, handWrist.y - rightWristPose.y);
+                    if (distToLeft < distToRight) side = "left";
+                } else if (leftWristPose) {
+                    side = "left";
+                }
+                
+                // Apply High-Fidelity Jitter Filters
+                const filterRef = side === "left" ? leftHandFilterRef.current : rightHandFilterRef.current;
+                const worldFilterRef = side === "left" ? leftHandWorldFilterRef.current : rightHandWorldFilterRef.current;
+                
+                const smoothedHandLms = filterRef.filter(handLms, startTimeMs);
+                
+                let smoothedHandWorld = null;
+                if (handResults.worldLandmarks && handResults.worldLandmarks[index]) {
+                    smoothedHandWorld = worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs);
+                }
+
                 currentData.hands[side] = {
-                    landmarks: handResults.landmarks[index],
-                    worldLandmarks: handResults.worldLandmarks ? handResults.worldLandmarks[index] : null
+                    landmarks: smoothedHandLms,
+                    worldLandmarks: smoothedHandWorld
                 };
             });
         }
@@ -1000,36 +1053,57 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   useEffect(() => {
     let active = true;
     let animationFrameId: number;
-    let lastDrawTime = performance.now();
-    const fpsInterval = 1000 / 30; // 30 fps
-
     const gameLoop = (time: number) => {
       if (!active) return;
       animationFrameId = requestAnimationFrame(gameLoop);
       
       if (!isPlaying) return;
 
-      const elapsed = time - lastDrawTime;
+      const frames = instructorFramesRef.current || [];
+      const totalFrames = frames.length;
       
-      if (elapsed > fpsInterval) {
-        lastDrawTime = time - (elapsed % fpsInterval);
-
-        const frames = instructorFramesRef.current || [];
-        const totalFrames = frames.length;
+      if (totalFrames > 0) {
+        if (frameIndexRef.current + 1 >= totalFrames) {
+          if (isPlaying) {
+            setIsPlaying(false);
+            setIsComplete(true);
+          }
+          return;
+        }
         
-        if (totalFrames > 0) {
-          if (frameIndexRef.current + 1 >= totalFrames) {
-            if (isPlaying) {
-              setIsPlaying(false);
-              setIsComplete(true);
-            }
-            return;
+        frameIndexRef.current += 1;
+        const frameData = frames[frameIndexRef.current];
+          // Smooth the instructor's core body to absorb frame-skips from the lag compensator
+          const now = performance.now();
+          let filteredIL = frameData?.landmarks || [];
+          filteredIL = instructorFilterRef.current.filter(filteredIL, now);
+          
+          let filteredIWorld = frameData?.worldLandmarks || [];
+          if (filteredIWorld.length > 0) {
+              filteredIWorld = instructorWorldFilterRef.current.filter(filteredIWorld, now);
           }
           
-          frameIndexRef.current += 1;
-          const frameData = frames[frameIndexRef.current];
-          // Pass the complete object so VRMAvatar can extract the high-fidelity worldLandmarks
-          instructorCurrentLmRef.current = frameData;
+          let filteredIHands = frameData?.hands;
+          if (filteredIHands) {
+              // Deep-clone the hands so we don't accidentally mutate the cached JSON array in memory
+              filteredIHands = { 
+                  left: filteredIHands.left ? { ...filteredIHands.left, landmarks: [...filteredIHands.left.landmarks] } : null,
+                  right: filteredIHands.right ? { ...filteredIHands.right, landmarks: [...filteredIHands.right.landmarks] } : null
+              };
+              if (filteredIHands.left?.landmarks) {
+                  filteredIHands.left.landmarks = instructorLeftHandFilterRef.current.filter(filteredIHands.left.landmarks, now);
+              }
+              if (filteredIHands.right?.landmarks) {
+                  filteredIHands.right.landmarks = instructorRightHandFilterRef.current.filter(filteredIHands.right.landmarks, now);
+              }
+          }
+
+          instructorCurrentLmRef.current = {
+             ...frameData,
+             landmarks: filteredIL,
+             worldLandmarks: filteredIWorld.length > 0 ? filteredIWorld : frameData.worldLandmarks,
+             hands: filteredIHands
+          };
         }
 
         // Calculate Score (3D Angle-Based Engine / Law of Cosines)
@@ -1105,6 +1179,49 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                }
             }
             
+            // --- 1. Hand Posture Matching (Aperture) ---
+            // Highly efficient alternative to measuring 42 finger angles. Measures the spread/curl of the hand.
+            const calculateAperture = (handLms: any) => {
+                if (!handLms || handLms.length < 21) return null;
+                const p0 = handLms[0];
+                const tips = [handLms[8], handLms[12], handLms[16], handLms[20]];
+                let sumDist = 0;
+                tips.forEach(tip => {
+                    // Use fast Euclidean distance for spread
+                    sumDist += Math.hypot(tip.x - p0.x, tip.y - p0.y, tip.z - p0.z);
+                });
+                return sumDist / 4;
+            };
+
+            // Mirror Play mapping: Player Left vs Instructor Right
+            const pLeftHand = pData?.hands?.left?.worldLandmarks || pData?.hands?.left?.landmarks;
+            const iRightHand = iData?.hands?.right?.worldLandmarks || iData?.hands?.right?.landmarks;
+            const pRightHand = pData?.hands?.right?.worldLandmarks || pData?.hands?.right?.landmarks;
+            const iLeftHand = iData?.hands?.left?.worldLandmarks || iData?.hands?.left?.landmarks;
+
+            const pLAperture = calculateAperture(pLeftHand);
+            const iRAperture = calculateAperture(iRightHand);
+            const pRAperture = calculateAperture(pRightHand);
+            const iLAperture = calculateAperture(iLeftHand);
+
+            let apertureBonus = 0;
+            // If both hands are tracked and their aperture (e.g. Fist vs Open Palm) matches within a tight 0.08 threshold
+            if (pLAperture !== null && iRAperture !== null && Math.abs(pLAperture - iRAperture) < 0.08) apertureBonus += 2.5;
+            if (pRAperture !== null && iLAperture !== null && Math.abs(pRAperture - iLAperture) < 0.08) apertureBonus += 2.5;
+
+            currentSync = Math.min(100, currentSync + apertureBonus);
+
+            // --- 2. Facial Expression Bonus (Zen Multiplier) ---
+            let isZenActive = false;
+            if (pData?.blendshapes) {
+                const smileLeft = pData.blendshapes.find((b: any) => b.categoryName === "mouthSmileLeft")?.score || 0;
+                const smileRight = pData.blendshapes.find((b: any) => b.categoryName === "mouthSmileRight")?.score || 0;
+                // If the player holds a genuine smile during the movement
+                if ((smileLeft + smileRight) / 2 > 0.4) {
+                    isZenActive = true;
+                }
+            }
+            
             // Maintain legacy array structure to prevent crashes in other components
             snappedPlayerLmRef.current = pData?.landmarks || [];
             syncRef.current = currentSync;
@@ -1122,9 +1239,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               if (comboRef.current === 160) { setFeedbackMsg({ text: "TOTAL BODY HARMONY", id: Date.now() }); }
               if (comboRef.current === 200) { setFeedbackMsg({ text: "UNSTOPPABLE MOMENTUM", id: Date.now() }); }
               if (comboRef.current === 250) { setFeedbackMsg({ text: "PRECISION AND POWER", id: Date.now() }); }
+              
+              if (isZenActive && comboRef.current % 45 === 0) {
+                  setFeedbackMsg({ text: "ZEN BONUS ACTIVE ✨", id: Date.now() });
+              }
 
               const multiplier = Math.floor(comboRef.current / 10) + 1;
-              const frameScore = 10 * multiplier;
+              let frameScore = 10 * multiplier;
+              if (isZenActive) frameScore += 5; // Flat +5 point injection every frame for maintaining composure
+              
               scoreRef.current += frameScore;
             } else if (currentSync < 65) {
               // Break combo
@@ -1139,7 +1262,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             const scoreElem = document.getElementById("score-display");
             if (scoreElem) scoreElem.innerText = scoreRef.current.toString();
           }
-        }
     };
 
     animationFrameId = requestAnimationFrame(gameLoop);
