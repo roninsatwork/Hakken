@@ -269,6 +269,11 @@ const VRMAvatar = ({
             if (lastGoodQuatRef.current[boneName]) {
                 // Aggressive Freeze: Lock rotation instantly
                 bone.quaternion.copy(lastGoodQuatRef.current[boneName]);
+            } else {
+                // Graceful Fallback: If we've never seen the limb (e.g. initial load at a desk),
+                // don't leave it in the default VRM T-Pose. Drop it into a relaxed A-Pose.
+                if (boneName === "rightUpperArm") bone.rotation.set(0, 0, -1.2);
+                if (boneName === "leftUpperArm") bone.rotation.set(0, 0, 1.2);
             }
             return;
         }
@@ -423,6 +428,52 @@ const VRMAvatar = ({
       aimVector("rightLowerLeg", "rightFoot", solverLms[26], solverLms[28]);
       aimVector("leftUpperLeg", "leftLowerLeg", solverLms[23], solverLms[25]);
       aimVector("leftLowerLeg", "leftFoot", solverLms[25], solverLms[27]);
+      
+      // Feet FK (Ankle rotation pointing to toes)
+      aimVector("rightFoot", "rightToes", solverLms[30], solverLms[32]);
+      aimVector("leftFoot", "leftToes", solverLms[29], solverLms[31]);
+
+      // Head FK (Precise Pitch/Yaw/Roll using Ears and Nose)
+      const leftEar = solverLms[7];
+      const rightEar = solverLms[8];
+      const nose = solverLms[0];
+      
+      if (leftEar && rightEar && nose && !forceStandby) {
+          const headNode = vrmRef.current.humanoid.getNormalizedBoneNode("head");
+          if (headNode) {
+              // Always treat X distance as positive to avoid atan2 180-degree flips on unmirrored raw camera data
+              const dx = Math.abs(rightEar.x - leftEar.x);
+              const dy = -(rightEar.y - leftEar.y);
+              const dz = leftEar.z - rightEar.z;
+
+              // Safe trig using atan2 (handles dx approaching 0 when head turns 90 degrees)
+              // We invert Roll and Pitch to compensate for the 180-degree avatar rotation
+              const roll = -Math.atan2(dy, dx);
+              const yaw = Math.atan2(dz, dx) * 1.5; 
+              
+              // True 3D head size (invariant to rotation, prevents pitch explosion when turning)
+              const headSize = Math.sqrt(dx*dx + dy*dy + dz*dz) || 0.1;
+              const mEarsY = (leftEar.y + rightEar.y) / 2;
+              const normalizedY = (nose.y - mEarsY) / headSize;
+              const pitch = -(normalizedY - 0.2) * 2.0; 
+
+              // Clamp to prevent any extreme physics glitches
+              const clamp = (v: number, limit: number) => Math.max(-limit, Math.min(limit, v));
+              // Apply Math.PI to Yaw so the Head's "Zero" faces the camera
+              const worldEuler = new THREE.Euler(clamp(pitch, 1.0), clamp(yaw, 1.5) + Math.PI, clamp(roll, 1.0), "YXZ");
+              const targetWorldQuat = new THREE.Quaternion().setFromEuler(worldEuler);
+              
+              // Convert the camera-relative target into the bone's local space
+              if (headNode.parent) {
+                  const parentWorldQ = new THREE.Quaternion();
+                  headNode.parent.getWorldQuaternion(parentWorldQ);
+                  const targetLocalQuat = parentWorldQ.invert().multiply(targetWorldQuat);
+                  headNode.quaternion.slerp(targetLocalQuat, isPlayer ? 0.8 : 0.3);
+              } else {
+                  headNode.quaternion.slerp(targetWorldQuat, isPlayer ? 0.8 : 0.3);
+              }
+          }
+      }
 
       // Dynamic Floor Anchor (Bone-based)
       // Unlike SkinnedMesh bounding boxes which lag or fail, this precisely tracks the true 3D world position of the feet.
@@ -696,8 +747,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const comboRef = useRef(0); // Add Combo Counter
   const syncRef = useRef(0); // Live sync percentage for 3D materials
   
-  const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
-  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
+  const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
+  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
 
   // 1. Fetch Data
@@ -743,6 +794,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", delegate: "GPU" },
           runningMode: "VIDEO",
           numPoses: 1,
+          minPoseDetectionConfidence: 0.7,
+          minPosePresenceConfidence: 0.7,
+          minTrackingConfidence: 0.7,
         });
         if (active) setPoseLandmarker(landmarker);
       } catch (err) {

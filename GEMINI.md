@@ -13,6 +13,13 @@
 - **Glassmorphism**: Prioritize translucent, blurred backgrounds for all layered UI elements.
 - **Strict Page Margins**: ALL new frontend pages MUST render the standard `<Header />` component at the absolute top of their content flow. Do not forget to import it. immediately following the `<Header />`, you must wrap the main content in `<div className="flex flex-col gap-5">` (or `gap-6`). Do NOT use arbitrary `mt-*` or `h-screen` classes on inner wrappers. `Header` natively controls top spacing via `-mb-8` against the `FluidWorkspace` parent padding.
 
+### 💻 Hardware & Performance Targeting
+- **Strict MacBook Pro Baseline**: The Gamified Pilates Movement Visualizer is explicitly designed for enterprise clients using **MacBook Pros**. Do **NOT** attempt to downgrade or optimize the 3D physics engine, WebGL context, or MediaPipe AI models for mobile devices or low-end hardware.
+  - Always enforce `pose_landmarker_heavy.task` with `delegate: "GPU"`.
+  - Maintain the high-frequency `60Hz` OneEuro jitter filter.
+  - Enforce strict `0.7` AI confidence tracking thresholds.
+  - Never sacrifice visual fidelity or 3D coordinate accuracy for mobile framerates.
+
 ### 🛡️ UI & Feedback
 - **Modal Policy**: NEVER use system/native modals (alert/confirm/prompt).
 - **Sonae Modals Only**: All dialogs must be custom-built "Sonae Modals" using Framer Motion for premium animations and consistent visual styling (dark mode, glass textures, brand accents).
