@@ -910,6 +910,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     };
   }, []);
 
+  const webcamRef = useRef<Webcam>(null);
+
   // 3. Start Player Webcam Tracking
   useEffect(() => {
     let animationFrameId: number;
