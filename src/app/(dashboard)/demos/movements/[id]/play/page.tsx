@@ -538,15 +538,16 @@ const VRMAvatar = ({
 
       // Facial Expressions (Blendshapes)
       const blendshapes = (lms as any).blendshapes;
-      if (blendshapes && vrmRef.current.expressionManager && !forceStandby) {
+      const expressionManager = vrmRef.current?.expressionManager;
+      if (blendshapes && expressionManager && !forceStandby) {
           let smileScore = 0;
           blendshapes.forEach((b: any) => {
-              if (b.categoryName === "eyeBlinkLeft") vrmRef.current.expressionManager?.setValue("blinkLeft", b.score);
-              if (b.categoryName === "eyeBlinkRight") vrmRef.current.expressionManager?.setValue("blinkRight", b.score);
-              if (b.categoryName === "jawOpen") vrmRef.current.expressionManager?.setValue("aa", Math.min(1.0, b.score * 1.5));
+              if (b.categoryName === "eyeBlinkLeft") expressionManager.setValue("blinkLeft", b.score);
+              if (b.categoryName === "eyeBlinkRight") expressionManager.setValue("blinkRight", b.score);
+              if (b.categoryName === "jawOpen") expressionManager.setValue("aa", Math.min(1.0, b.score * 1.5));
               if (b.categoryName === "mouthSmileLeft" || b.categoryName === "mouthSmileRight") smileScore += (b.score / 2);
           });
-          vrmRef.current.expressionManager?.setValue("happy", smileScore);
+          expressionManager.setValue("happy", smileScore);
       }
 
       // Hand & Finger FK
@@ -567,9 +568,9 @@ const VRMAvatar = ({
               const rig = Kalidokit.Hand.solve(mirroredLandmarks, handednessStr);
               if (!rig) return;
 
-              const applyHandRot = (vrmName: string, rigKey: string) => {
-                  const bone = vrmRef.current.humanoid?.getNormalizedBoneNode(vrmName);
-                  const rot = rig[rigKey];
+              const applyHandRot = (vrmName: any, rigKey: string) => {
+                  const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(vrmName);
+                  const rot = (rig as any)[rigKey];
                   if (bone && rot) {
                       // Smooth the high-frequency finger jitter using slerp instead of hard set
                       const targetQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(rot.x, rot.y, rot.z));
