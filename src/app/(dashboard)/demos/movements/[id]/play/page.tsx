@@ -22,7 +22,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, VRM } from "@pixiv/three-vrm";
 import * as Kalidokit from "kalidokit";
-import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
+import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import Webcam from "react-webcam";
 
@@ -214,6 +214,34 @@ const VRMAvatar = ({
       mirrorArray(imageLms, (x) => 1 - x);
       mirrorArray(solverLms, (x) => -x); // World/fallback coordinates are zero-centered at hips
       mirrorArray(kdSolverLms, (x) => -x);
+      
+      // Mirror Hands & Blendshapes
+      if ((lms as any).hands) {
+          const rawHands = (lms as any).hands;
+          const mirroredHands: any = {};
+          if (rawHands.left) {
+              mirroredHands.right = { ...rawHands.left };
+              if (mirroredHands.right.worldLandmarks) {
+                  mirroredHands.right.worldLandmarks = mirroredHands.right.worldLandmarks.map((lm: any) => ({ ...lm, x: -lm.x }));
+              }
+          }
+          if (rawHands.right) {
+              mirroredHands.left = { ...rawHands.right };
+              if (mirroredHands.left.worldLandmarks) {
+                  mirroredHands.left.worldLandmarks = mirroredHands.left.worldLandmarks.map((lm: any) => ({ ...lm, x: -lm.x }));
+              }
+          }
+          (lms as any).hands = mirroredHands;
+      }
+      
+      if ((lms as any).blendshapes) {
+          (lms as any).blendshapes = (lms as any).blendshapes.map((b: any) => {
+              let name = b.categoryName;
+              if (name.includes("Left")) name = name.replace("Left", "Right");
+              else if (name.includes("Right")) name = name.replace("Right", "Left");
+              return { ...b, categoryName: name };
+          });
+      }
     }
 
     // Solve IK for core body
@@ -495,6 +523,51 @@ const VRMAvatar = ({
           
           hipsNode.position.y += (clampedDiff / 5.25) * 0.8; 
       }
+
+      // Facial Expressions (Blendshapes)
+      const blendshapes = (lms as any).blendshapes;
+      if (blendshapes && vrmRef.current.expressionManager && !forceStandby) {
+          let smileScore = 0;
+          blendshapes.forEach((b: any) => {
+              if (b.categoryName === "eyeBlinkLeft") vrmRef.current.expressionManager?.setValue("blinkLeft", b.score);
+              if (b.categoryName === "eyeBlinkRight") vrmRef.current.expressionManager?.setValue("blinkRight", b.score);
+              if (b.categoryName === "jawOpen") vrmRef.current.expressionManager?.setValue("aa", Math.min(1.0, b.score * 1.5));
+              if (b.categoryName === "mouthSmileLeft" || b.categoryName === "mouthSmileRight") smileScore += (b.score / 2);
+          });
+          vrmRef.current.expressionManager?.setValue("happy", smileScore);
+      }
+
+      // Hand & Finger FK
+      const hands = (lms as any).hands;
+      if (hands && !forceStandby) {
+          const mapFingers = (side: "left" | "right") => {
+              const handData = hands[side];
+              if (!handData || !handData.worldLandmarks) return;
+              
+              const hLms = handData.worldLandmarks;
+              const FINGERS = [
+                  { prefix: "Thumb", indices: [1, 2, 3] }, // Thumb has one less joint mapped cleanly in VRM
+                  { prefix: "Index", indices: [5, 6, 7] },
+                  { prefix: "Middle", indices: [9, 10, 11] },
+                  { prefix: "Ring", indices: [13, 14, 15] },
+                  { prefix: "Little", indices: [17, 18, 19] }
+              ];
+              
+              FINGERS.forEach(finger => {
+                  const [mcpIdx, pipIdx, dipIdx] = finger.indices;
+                  const proxName = `${side}${finger.prefix}Proximal`;
+                  const interName = `${side}${finger.prefix}Intermediate`;
+                  const distalName = `${side}${finger.prefix}Distal`;
+                  
+                  // Ignore visibility is TRUE because HandLandmarker points don't have explicit visibility scores
+                  aimVector(proxName, interName, hLms[mcpIdx], hLms[pipIdx], true);
+                  aimVector(interName, distalName, hLms[pipIdx], hLms[dipIdx], true);
+              });
+          };
+          
+          mapFingers("left");
+          mapFingers("right");
+      }
     }
   });
 
@@ -750,6 +823,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
+  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
 
   // 1. Fetch Data
   useEffect(() => {
@@ -784,73 +859,119 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     loadData();
   }, [movement, fileUrl, isStorageId]);
 
-  // 2. Init MediaPipe
+  // 2. Init MediaPipe Triad
   useEffect(() => {
     let active = true;
     const init = async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
-        const landmarker = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", delegate: "GPU" },
-          runningMode: "VIDEO",
-          numPoses: 1,
-          minPoseDetectionConfidence: 0.7,
-          minPosePresenceConfidence: 0.7,
-          minTrackingConfidence: 0.7,
-        });
-        if (active) setPoseLandmarker(landmarker);
+        
+        const [pose, face, hands] = await Promise.all([
+            PoseLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numPoses: 1,
+              minPoseDetectionConfidence: 0.7,
+              minPosePresenceConfidence: 0.7,
+              minTrackingConfidence: 0.7,
+            }),
+            FaceLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numFaces: 1,
+              outputFaceBlendshapes: true,
+              outputFacialTransformationMatrixes: false,
+            }),
+            HandLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numHands: 2,
+              minHandDetectionConfidence: 0.6,
+              minHandPresenceConfidence: 0.6,
+              minTrackingConfidence: 0.6,
+            })
+        ]);
+
+        if (active) {
+            setPoseLandmarker(pose);
+            setFaceLandmarker(face);
+            setHandLandmarker(hands);
+        }
       } catch (err) {
-        console.error("PoseLandmarker failed", err);
+        console.error("MediaPipe Vision Triad failed to initialize", err);
       }
     };
     init();
-    return () => { active = false; if (poseLandmarker) poseLandmarker.close(); };
+    return () => { 
+        active = false; 
+        if (poseLandmarker) poseLandmarker.close(); 
+        if (faceLandmarker) faceLandmarker.close();
+        if (handLandmarker) handLandmarker.close();
+    };
   }, []);
-
-  const webcamRef = useRef<Webcam>(null);
 
   // 3. Start Player Webcam Tracking
   useEffect(() => {
     let animationFrameId: number;
 
     const processVideo = () => {
-      if (poseLandmarker && webcamRef.current && webcamRef.current.video && webcamRef.current.video.readyState === 4) {
+      if (poseLandmarker && faceLandmarker && handLandmarker && webcamRef.current && webcamRef.current.video && webcamRef.current.video.readyState === 4) {
         const video = webcamRef.current.video;
         const startTimeMs = performance.now();
-        const results = poseLandmarker.detectForVideo(video, startTimeMs);
-        if (results && results.landmarks && results.landmarks.length > 0) {
-          // Smooth the live tracking
-          const raw = results.landmarks[0];
-          const worldRaw = results.worldLandmarks ? results.worldLandmarks[0] : null;
-          
-          const smoothed = poseFilterRef.current.filter(raw, startTimeMs);
-          const smoothedWorld = worldRaw ? worldPoseFilterRef.current.filter(worldRaw, startTimeMs) : null;
-          
-          // Store both normalized for UI and world for 3D physics
-          playerLiveLmRef.current = {
-            landmarks: smoothed,
-            worldLandmarks: smoothedWorld
-          };
+        
+        // Run all three models concurrently on the same video frame timestamp
+        const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
+        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
+        const handResults = handLandmarker.detectForVideo(video, startTimeMs);
+        
+        const currentData: any = {};
 
-          // Calibration UI update - simplified for seated use
+        if (poseResults && poseResults.landmarks && poseResults.landmarks.length > 0) {
+          const raw = poseResults.landmarks[0];
+          const worldRaw = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
+          
+          currentData.landmarks = poseFilterRef.current.filter(raw, startTimeMs);
+          currentData.worldLandmarks = worldRaw ? worldPoseFilterRef.current.filter(worldRaw, startTimeMs) : null;
+          
           const calElem = document.getElementById("calibration-status");
           if (calElem) {
             calElem.innerText = "READY";
             calElem.className = "text-sm font-semibold tracking-wider text-green-400";
           }
         }
+        
+        if (faceResults && faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
+            currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
+        }
+
+        if (handResults && handResults.landmarks && handResults.landmarks.length > 0) {
+            currentData.hands = { left: null, right: null };
+            handResults.handedness.forEach((handedness: any, index: number) => {
+                // Because we read raw video (unmirrored), the right hand is on the left side of the screen
+                const isRight = handedness[0].categoryName === "Left"; // Flipped by raw camera perspective
+                const side = isRight ? "right" : "left";
+                
+                currentData.hands[side] = {
+                    landmarks: handResults.landmarks[index],
+                    worldLandmarks: handResults.worldLandmarks ? handResults.worldLandmarks[index] : null
+                };
+            });
+        }
+        
+        // Store unified payload
+        playerLiveLmRef.current = currentData;
       }
       animationFrameId = requestAnimationFrame(processVideo);
     };
 
-    if (poseLandmarker) {
+    if (poseLandmarker && faceLandmarker && handLandmarker) {
       processVideo();
     }
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [poseLandmarker]);
+  }, [poseLandmarker, faceLandmarker, handLandmarker]);
 
   // 4. Playback Loop & Scoring Engine
   useEffect(() => {

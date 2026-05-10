@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import Header from "@/src/ui/components/layout/Header";
-import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
+import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker } from "@mediapipe/tasks-vision";
 import Typography from "@/src/ui/atoms/typography";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
@@ -19,10 +19,12 @@ export default function MovementCapturePage() {
   
   const [cameraError, setCameraError] = useState(false);
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
+  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const recordedFramesRef = useRef<any[]>([]);
-  const poseFilterRef = useRef(new PoseFilterWrapper(33, 30, 1.0, 0.05));
-  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 30, 1.0, 0.05));
+  const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
+  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState("Beginner");
@@ -32,38 +34,54 @@ export default function MovementCapturePage() {
   const generateUploadUrl = useMutation(api.movements.generateUploadUrl);
   const router = useRouter();
 
-  // Initialize MediaPipe PoseLandmarker
+  // Initialize MediaPipe Triad
   useEffect(() => {
     let active = true;
     const initModel = async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
         );
-        const landmarker = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
-            delegate: "GPU",
-          },
-          runningMode: "VIDEO",
-          numPoses: 1,
-          minPoseDetectionConfidence: 0.5,
-          minPosePresenceConfidence: 0.1,
-          minTrackingConfidence: 0.1,
-        });
+        const [pose, face, hands] = await Promise.all([
+            PoseLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numPoses: 1,
+              minPoseDetectionConfidence: 0.7,
+              minPosePresenceConfidence: 0.7,
+              minTrackingConfidence: 0.7,
+            }),
+            FaceLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numFaces: 1,
+              outputFaceBlendshapes: true,
+              outputFacialTransformationMatrixes: false,
+            }),
+            HandLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" },
+              runningMode: "VIDEO",
+              numHands: 2,
+              minHandDetectionConfidence: 0.6,
+              minHandPresenceConfidence: 0.6,
+              minTrackingConfidence: 0.6,
+            })
+        ]);
         if (active) {
-          setPoseLandmarker(landmarker);
+          setPoseLandmarker(pose);
+          setFaceLandmarker(face);
+          setHandLandmarker(hands);
         }
       } catch (err) {
-        console.error("Failed to load MediaPipe PoseLandmarker", err);
+        console.error("Failed to load MediaPipe Vision Triad", err);
       }
     };
     initModel();
     return () => {
       active = false;
-      if (poseLandmarker) {
-        poseLandmarker.close();
-      }
+      if (poseLandmarker) poseLandmarker.close();
+      if (faceLandmarker) faceLandmarker.close();
+      if (handLandmarker) handLandmarker.close();
     };
   }, []);
 
@@ -73,7 +91,7 @@ export default function MovementCapturePage() {
 
     const processVideo = () => {
       if (
-        poseLandmarker &&
+        poseLandmarker && faceLandmarker && handLandmarker &&
         webcamRef.current &&
         webcamRef.current.video &&
         webcamRef.current.video.readyState === 4 &&
@@ -87,28 +105,49 @@ export default function MovementCapturePage() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
-        // Perform pose estimation
+        // Perform concurrent multi-model inference
         const startTimeMs = performance.now();
-        const results = poseLandmarker.detectForVideo(video, startTimeMs);
+        const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
+        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
+        const handResults = handLandmarker.detectForVideo(video, startTimeMs);
 
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
-          if (results.landmarks && results.landmarks.length > 0) {
+          if (poseResults.landmarks && poseResults.landmarks.length > 0) {
             // Apply 1€ Filter to smooth out stationary jitter
-            const smoothedLandmarks = poseFilterRef.current.filter(results.landmarks[0], startTimeMs);
+            const smoothedLandmarks = poseFilterRef.current.filter(poseResults.landmarks[0], startTimeMs);
             
             // Extract and smooth worldLandmarks (3D Depth) if available
-            const rawWorld = results.worldLandmarks ? results.worldLandmarks[0] : null;
+            const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
             const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
+
+            // Construct unified payload
+            const currentData: any = {
+                timestamp: startTimeMs,
+                landmarks: smoothedLandmarks,
+                worldLandmarks: smoothedWorld
+            };
+
+            if (faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
+                currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
+            }
+
+            if (handResults.landmarks && handResults.landmarks.length > 0) {
+                currentData.hands = { left: null, right: null };
+                handResults.handedness.forEach((handedness: any, index: number) => {
+                    const isRight = handedness[0].categoryName === "Left"; // Unmirrored webcam flips L/R
+                    const side = isRight ? "right" : "left";
+                    currentData.hands[side] = {
+                        landmarks: handResults.landmarks[index],
+                        worldLandmarks: handResults.worldLandmarks ? handResults.worldLandmarks[index] : null
+                    };
+                });
+            }
 
             // Record if active
             if (isRecording) {
-              recordedFramesRef.current.push({ 
-                timestamp: startTimeMs, 
-                landmarks: smoothedLandmarks,
-                worldLandmarks: smoothedWorld
-              });
+              recordedFramesRef.current.push(currentData);
             }
 
             // Draw Neon Skeleton
@@ -119,7 +158,7 @@ export default function MovementCapturePage() {
       animationFrameId = requestAnimationFrame(processVideo);
     };
 
-    if (poseLandmarker) {
+    if (poseLandmarker && faceLandmarker && handLandmarker) {
       processVideo();
     }
 
@@ -128,7 +167,7 @@ export default function MovementCapturePage() {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [poseLandmarker, isRecording]);
+  }, [poseLandmarker, faceLandmarker, handLandmarker, isRecording]);
 
   const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: any[], width: number, height: number) => {
     ctx.strokeStyle = "#0ff"; // Cyan neon
