@@ -237,34 +237,18 @@ const VRMAvatar = ({
 
       const rp = riggedPose;
 
-      // 1. Core Physics Path: Body, Legs, Head
-      // We allow Kalidokit to establish the base Yaw (turning) and head/neck IK
-      if (rp.Hips) applyRot("hips", rp.Hips.rotation);
-      applyRot("spine", rp.Spine);
-      applyRot("chest", (rp as any).Chest);
-      applyRot("upperChest", (rp as any).UpperChest);
+      // 1. Kalidokit Purge: We only keep Kalidokit for Head, Neck, and Hands
       applyRot("neck", (rp as any).Neck);
       applyRot("head", (rp as any).Head);
-      
-      if ((lms as any).worldLandmarks) {
-        applyRot("rightShoulder", (rp as any).RightShoulder);
-        applyRot("leftShoulder", (rp as any).LeftShoulder);
-      }
-      
-      // Restore Kalidokit base human limits for arms
-      applyRot("rightUpperArm", rp.RightUpperArm);
-      applyRot("rightLowerArm", rp.RightLowerArm);
       applyRot("rightHand", rp.RightHand);
-      
-      applyRot("leftUpperArm", rp.LeftUpperArm);
-      applyRot("leftLowerArm", rp.LeftLowerArm);
       applyRot("leftHand", rp.LeftHand);
       
       // Removed Kalidokit leg physics to prevent the 'leg grouping/locking' heuristic bug
-      // Pure FK (aimVector) will handle leg movements with true 3D fidelity
       const hipsNode = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
       if (hipsNode && rp.Hips.position) {
-         hipsNode.position.y = rp.Hips.position.y * 0.1;
+         // All Kalidokit root translation (X, Y, Z) is explicitly ignored.
+         // Y is handled by the Dynamic Floor Anchor for perfect squats.
+         // X and Z are ignored because 2D bounding box depth estimation turns desk-users into giants.
       }
 
       if (vrmRef.current.scene) {
@@ -343,7 +327,68 @@ const VRMAvatar = ({
       const mHips = getMidpoint(23, 24);
       const mShoulders = getMidpoint(11, 12);
 
-      // Core Spine FK
+      // 3. Pure 3D Torso Matrix (Root Rotation)
+      // Completely bypasses 2D heuristics by mathematically calculating the exact 3D plane of the torso
+      const applyRootRotation = () => {
+         const hipsNode = vrmRef.current?.humanoid?.getNormalizedBoneNode("hips");
+         if (!hipsNode) return;
+         
+         const p23 = solverLms[23]; // Left Hip
+         const p24 = solverLms[24]; // Right Hip
+         const p11 = solverLms[11]; // Left Shoulder
+         const p12 = solverLms[12]; // Right Shoulder
+         
+         // Strict Occlusion Safety Net
+         if (!p23 || !p24 || !p11 || !p12 || p23.visibility < 0.2 || p24.visibility < 0.2) {
+             if (lastGoodQuatRef.current["hips"]) {
+                 hipsNode.quaternion.copy(lastGoodQuatRef.current["hips"]);
+                 hipsNode.updateMatrixWorld(true);
+             }
+             return;
+         }
+         
+         const leftHip = new THREE.Vector3(p23.x, -p23.y, -p23.z);
+         const rightHip = new THREE.Vector3(p24.x, -p24.y, -p24.z);
+         
+         // 1. Force a perfectly upright foundation to prevent 'Matrix Dodge' back-bending
+         // MediaPipe Z-depth for desk users is highly corrupted, causing the hips to think they are lying flat.
+         const up = new THREE.Vector3(0, 1, 0);
+         
+         // 2. Calculate true Yaw (turning around) while ignoring Y/Z distortion
+         // To make the avatar face the camera, Right must point to the Avatar's Local Right (-X).
+         const right = new THREE.Vector3(rightHip.x - leftHip.x, 0, rightHip.z - leftHip.z);
+         
+         if (right.lengthSq() < 0.0001) return;
+         right.normalize();
+         
+         // 3. Calculate Forward
+         const forward = new THREE.Vector3().crossVectors(right, up);
+         if (forward.lengthSq() < 0.0001) return;
+         forward.normalize();
+         
+         const trueRight = new THREE.Vector3().crossVectors(up, forward);
+         if (trueRight.lengthSq() < 0.0001) return;
+         trueRight.normalize();
+         
+         const mat = new THREE.Matrix4().makeBasis(trueRight, up, forward);
+         const targetWorldQ = new THREE.Quaternion().setFromRotationMatrix(mat);
+         
+         if (hipsNode.parent) {
+             const parentWorldQ = new THREE.Quaternion();
+             hipsNode.parent.getWorldQuaternion(parentWorldQ);
+             const localQ = parentWorldQ.clone().invert().multiply(targetWorldQ);
+             hipsNode.quaternion.slerp(localQ, slerpFactor);
+         } else {
+             hipsNode.quaternion.slerp(targetWorldQ, slerpFactor);
+         }
+         
+         lastGoodQuatRef.current["hips"] = hipsNode.quaternion.clone();
+         hipsNode.updateMatrixWorld(true);
+      };
+      
+      applyRootRotation();
+
+      // 4. Core Spine FK
       // We pass 'true' to safely bypass visibility checks, relying on MediaPipe's inferred spatial depth 
       // to track torso bending even when seated at a desk.
       if (mHips && mShoulders) {
@@ -363,15 +408,24 @@ const VRMAvatar = ({
       aimVector("leftUpperLeg", "leftLowerLeg", solverLms[23], solverLms[25]);
       aimVector("leftLowerLeg", "leftFoot", solverLms[25], solverLms[27]);
 
-      // Dynamic Floor Anchor
-      if (vrmRef.current.scene && hipsNode) {
-         const box = new THREE.Box3().setFromObject(vrmRef.current.scene);
-         if (isFinite(box.min.y)) {
-             // Local floor is roughly at world -0.1. We gently anchor the lowest mesh point there.
-             const diff = -0.1 - box.min.y;
-             const clampedDiff = Math.max(-1.0, Math.min(1.0, diff));
-             hipsNode.position.y += (clampedDiff / 5.25) * 0.5; 
-         }
+      // Dynamic Floor Anchor (Bone-based)
+      // Unlike SkinnedMesh bounding boxes which lag or fail, this precisely tracks the true 3D world position of the feet.
+      // If the knees bend (squat), the feet try to lift off the floor. This anchor instantly forces the hips down to keep them planted.
+      const leftFoot = vrmRef.current.humanoid.getNormalizedBoneNode("leftFoot");
+      const rightFoot = vrmRef.current.humanoid.getNormalizedBoneNode("rightFoot");
+      if (hipsNode && leftFoot && rightFoot) {
+          leftFoot.updateMatrixWorld(true);
+          rightFoot.updateMatrixWorld(true);
+          
+          const lfW = new THREE.Vector3(); leftFoot.getWorldPosition(lfW);
+          const rfW = new THREE.Vector3(); rightFoot.getWorldPosition(rfW);
+          const lowestFootY = Math.min(lfW.y, rfW.y);
+          
+          // Local floor is roughly at world -0.1.
+          const diff = -0.1 - lowestFootY;
+          const clampedDiff = Math.max(-1.0, Math.min(1.0, diff));
+          
+          hipsNode.position.y += (clampedDiff / 5.25) * 0.8; 
       }
     }
   });
