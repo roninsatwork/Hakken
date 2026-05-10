@@ -25,6 +25,12 @@ export default function MovementCapturePage() {
   const recordedFramesRef = useRef<any[]>([]);
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
+  
+  // Hand Jitter Filters
+  const leftHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 0.05, 0.1));
+  const rightHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 0.05, 0.1));
+  const leftHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 0.05, 0.1));
+  const rightHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 0.05, 0.1));
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState("Beginner");
@@ -33,6 +39,18 @@ export default function MovementCapturePage() {
   const createMovement = useMutation(api.movements.create);
   const generateUploadUrl = useMutation(api.movements.generateUploadUrl);
   const router = useRouter();
+
+  // Suppress benign MediaPipe C++ info logs that trigger the Next.js Error Overlay
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('XNNPACK delegate')) return;
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   // Initialize MediaPipe Triad
   useEffect(() => {
@@ -122,36 +140,72 @@ export default function MovementCapturePage() {
             const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
             const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
 
-            // Construct unified payload
-            const currentData: any = {
-                timestamp: startTimeMs,
-                landmarks: smoothedLandmarks,
-                worldLandmarks: smoothedWorld
-            };
+            // Visibility Gate: Guarantee 60% confidence on core anchors to prevent baking mangled AI hallucinations into the JSON
+            const p11 = smoothedLandmarks[11];
+            const p12 = smoothedLandmarks[12];
+            const p23 = smoothedLandmarks[23];
+            const p24 = smoothedLandmarks[24];
+            const avgCoreVis = ((p11?.visibility || 0) + (p12?.visibility || 0) + (p23?.visibility || 0) + (p24?.visibility || 0)) / 4;
 
-            if (faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
-                currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
+            if (avgCoreVis >= 0.6) {
+                // Construct unified payload
+                const currentData: any = {
+                    timestamp: startTimeMs,
+                    landmarks: smoothedLandmarks,
+                    worldLandmarks: smoothedWorld
+                };
+
+                if (faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
+                    currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
+                }
+
+                if (handResults.landmarks && handResults.landmarks.length > 0) {
+                    currentData.hands = { left: null, right: null };
+                    
+                    const leftWristPose = smoothedLandmarks[15];
+                    const rightWristPose = smoothedLandmarks[16];
+                    
+                    handResults.landmarks.forEach((handLms: any[], index: number) => {
+                        const handWrist = handLms[0];
+                        let side = "right"; 
+                        
+                        // Spatial Distance Matching: Stop relying on buggy categoryName, measure physical distance to wrists
+                        if (leftWristPose && rightWristPose) {
+                            const distToLeft = Math.hypot(handWrist.x - leftWristPose.x, handWrist.y - leftWristPose.y);
+                            const distToRight = Math.hypot(handWrist.x - rightWristPose.x, handWrist.y - rightWristPose.y);
+                            if (distToLeft < distToRight) side = "left";
+                        } else if (leftWristPose) {
+                            side = "left";
+                        }
+                        
+                        // Apply High-Fidelity Jitter Filters
+                        const filterRef = side === "left" ? leftHandFilterRef.current : rightHandFilterRef.current;
+                        const worldFilterRef = side === "left" ? leftHandWorldFilterRef.current : rightHandWorldFilterRef.current;
+                        
+                        const smoothedHandLms = filterRef.filter(handLms, startTimeMs);
+                        
+                        let smoothedHandWorld = null;
+                        if (handResults.worldLandmarks && handResults.worldLandmarks[index]) {
+                            smoothedHandWorld = worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs);
+                        }
+
+                        currentData.hands[side] = {
+                            landmarks: smoothedHandLms,
+                            worldLandmarks: smoothedHandWorld
+                        };
+                    });
+                }
+
+                // Record if active
+                if (isRecording) {
+                  recordedFramesRef.current.push(currentData);
+                }
+
+                // Draw Neon Skeleton
+                drawCyberZenSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
             }
 
-            if (handResults.landmarks && handResults.landmarks.length > 0) {
-                currentData.hands = { left: null, right: null };
-                handResults.handedness.forEach((handedness: any, index: number) => {
-                    const isRight = handedness[0].categoryName === "Left"; // Unmirrored webcam flips L/R
-                    const side = isRight ? "right" : "left";
-                    currentData.hands[side] = {
-                        landmarks: handResults.landmarks[index],
-                        worldLandmarks: handResults.worldLandmarks ? handResults.worldLandmarks[index] : null
-                    };
-                });
-            }
 
-            // Record if active
-            if (isRecording) {
-              recordedFramesRef.current.push(currentData);
-            }
-
-            // Draw Neon Skeleton
-            drawCyberZenSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
           }
         }
       }

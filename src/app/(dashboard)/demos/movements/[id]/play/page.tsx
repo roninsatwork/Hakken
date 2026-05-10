@@ -255,8 +255,8 @@ const VRMAvatar = ({
     } catch (e) { return; }
 
     if (riggedPose && vrmRef.current.humanoid) {
-      // Dynamic Interpolation: Ghost needs instant snap (0.95), Instructor needs smooth 30fps bridging (0.3)
-      const slerpFactor = isPlayer ? 0.95 : 0.3;
+      // Dynamic Interpolation: Ghost smoothed to 0.5 to absorb 1-frame AI glitches (preventing jerky snapping), Instructor at 0.3
+      const slerpFactor = isPlayer ? 0.5 : 0.3;
 
       const applyRot = (boneName: string, euler: any, overrideFactor?: number) => {
         if (!euler) return;
@@ -343,8 +343,10 @@ const VRMAvatar = ({
             bone.parent.getWorldQuaternion(parentWorldQ);
             const localQ = parentWorldQ.invert().multiply(targetWorldQ);
             bone.quaternion.slerp(localQ, slerpFactor);
-            // Cache this good rotation for the aggressive freeze
-            lastGoodQuatRef.current[boneName] = bone.quaternion.clone();
+            // Only cache highly confident frames to prevent permanently freezing into a mangled state if tracking drops
+            if (ignoreVisibility || (vStart.visibility > 0.6 && vEnd.visibility > 0.6)) {
+                lastGoodQuatRef.current[boneName] = bone.quaternion.clone();
+            }
         }
         
         bone.updateMatrixWorld(true);
@@ -394,10 +396,13 @@ const VRMAvatar = ({
          
          // 2. Calculate true Yaw (turning around) using SHOULDERS instead of HIPS
          // Hip Z-depth is wildly inaccurate for seated/occluded users and causes severe twisting.
-         // Shoulders remain highly accurate, ensuring the Torso Matrix stays perfectly square.
          const leftShoulder = new THREE.Vector3(p11.x, -p11.y, -p11.z);
          const rightShoulder = new THREE.Vector3(p12.x, -p12.y, -p12.z);
-         const right = new THREE.Vector3(rightShoulder.x - leftShoulder.x, 0, rightShoulder.z - leftShoulder.z);
+         
+         // Force DX to be NEGATIVE so the avatar can NEVER mathematically cross its shoulders and spin 180 degrees backward.
+         // (In unmirrored space, the Right Shoulder is on the left side of the screen, so right.x < left.x).
+         const dx = -Math.abs(rightShoulder.x - leftShoulder.x);
+         const right = new THREE.Vector3(dx, 0, rightShoulder.z - leftShoulder.z);
          
          if (right.lengthSq() < 0.0001) return;
          right.normalize();
