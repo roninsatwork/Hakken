@@ -112,6 +112,7 @@ const VRMAvatar = ({
   landmarksRef, 
   positionOffset,
   isPlayer = false,
+  isPlaying = true,
   syncRef,
   vrmUrl,
   name,
@@ -119,6 +120,7 @@ const VRMAvatar = ({
   landmarksRef: React.MutableRefObject<any>, 
   positionOffset: [number, number, number],
   isPlayer?: boolean,
+  isPlaying?: boolean,
   syncRef?: React.MutableRefObject<number>,
   vrmUrl: string,
   name: string,
@@ -138,11 +140,10 @@ const VRMAvatar = ({
   useEffect(() => {
     if (gltf && gltf.userData.vrm) {
       const vrm = gltf.userData.vrm;
+      VRMUtils.removeUnnecessaryJoints(gltf.scene);
       vrmRef.current = vrm;
-      // Note: We rotate the parent Group, not the internal scene, to keep bone math stable.
-      // Both the Instructor and the Player now render using their native 3D materials.
     }
-  }, [gltf, isPlayer]);
+  }, [gltf]);
 
   useFrame((state, delta) => {
     if (!vrmRef.current || !group.current) return;
@@ -154,12 +155,16 @@ const VRMAvatar = ({
     const raw = Array.isArray(lms) ? lms : (lms?.pose || lms?.landmarks || []);
     if (!raw || raw.length < 33) return;
 
+    // Standby Override: If the match hasn't started, force the instructor into a relaxed standing pose
+    // to match the live player's default occlusion state.
+    const forceStandby = !isPlayer && !isPlaying;
+
     // Standard Decoder
     const format = (lm: any) => ({
       x: typeof lm.x === "number" ? lm.x : (Array.isArray(lm) ? lm[0] : 0.5),
       y: typeof lm.y === "number" ? lm.y : (Array.isArray(lm) ? lm[1] : 0.5),
       z: typeof lm.z === "number" ? lm.z : (Array.isArray(lm) ? lm[2] : 0),
-      visibility: lm.visibility || 0.8
+      visibility: forceStandby ? 0 : (lm.visibility || 0.8)
     });
 
     let imageLms = raw.map(format);
@@ -180,7 +185,7 @@ const VRMAvatar = ({
          x: (lm.x - hipX) * 3.0, 
          y: (lm.y - hipY) * 3.0,  
          z: lm.z * 3.0,           
-         visibility: 0.9
+         visibility: lm.visibility || 0
        }));
     }
     
@@ -354,9 +359,12 @@ const VRMAvatar = ({
          // MediaPipe Z-depth for desk users is highly corrupted, causing the hips to think they are lying flat.
          const up = new THREE.Vector3(0, 1, 0);
          
-         // 2. Calculate true Yaw (turning around) while ignoring Y/Z distortion
-         // To make the avatar face the camera, Right must point to the Avatar's Local Right (-X).
-         const right = new THREE.Vector3(rightHip.x - leftHip.x, 0, rightHip.z - leftHip.z);
+         // 2. Calculate true Yaw (turning around) using SHOULDERS instead of HIPS
+         // Hip Z-depth is wildly inaccurate for seated/occluded users and causes severe twisting.
+         // Shoulders remain highly accurate, ensuring the Torso Matrix stays perfectly square.
+         const leftShoulder = new THREE.Vector3(p11.x, -p11.y, -p11.z);
+         const rightShoulder = new THREE.Vector3(p12.x, -p12.y, -p12.z);
+         const right = new THREE.Vector3(rightShoulder.x - leftShoulder.x, 0, rightShoulder.z - leftShoulder.z);
          
          if (right.lengthSq() < 0.0001) return;
          right.normalize();
@@ -391,16 +399,24 @@ const VRMAvatar = ({
       // 4. Core Spine FK
       // We pass 'true' to safely bypass visibility checks, relying on MediaPipe's inferred spatial depth 
       // to track torso bending even when seated at a desk.
-      if (mHips && mShoulders) {
+      if (mHips && mShoulders && !forceStandby) {
         aimVector("spine", "chest", mHips, mShoulders, true);
         aimVector("chest", "upperChest", mHips, mShoulders, true);
       }
 
       // Arms FK
-      aimVector("rightUpperArm", "rightLowerArm", solverLms[12], solverLms[14]);
-      aimVector("rightLowerArm", "rightHand", solverLms[14], solverLms[16]);
-      aimVector("leftUpperArm", "leftLowerArm", solverLms[11], solverLms[13]);
-      aimVector("leftLowerArm", "leftHand", solverLms[13], solverLms[15]);
+      if (forceStandby) {
+          // Relaxed A-Pose for Lobby (drops arms 70 degrees)
+          const rightArm = vrmRef.current.humanoid.getNormalizedBoneNode("rightUpperArm");
+          const leftArm = vrmRef.current.humanoid.getNormalizedBoneNode("leftUpperArm");
+          if (rightArm) rightArm.rotation.set(0, 0, -1.2); 
+          if (leftArm) leftArm.rotation.set(0, 0, 1.2); 
+      } else {
+          aimVector("rightUpperArm", "rightLowerArm", solverLms[12], solverLms[14]);
+          aimVector("rightLowerArm", "rightHand", solverLms[14], solverLms[16]);
+          aimVector("leftUpperArm", "leftLowerArm", solverLms[11], solverLms[13]);
+          aimVector("leftLowerArm", "leftHand", solverLms[13], solverLms[15]);
+      }
       
       // Legs FK
       aimVector("rightUpperLeg", "rightLowerLeg", solverLms[24], solverLms[26]);
@@ -421,8 +437,9 @@ const VRMAvatar = ({
           const rfW = new THREE.Vector3(); rightFoot.getWorldPosition(rfW);
           const lowestFootY = Math.min(lfW.y, rfW.y);
           
-          // Local floor is roughly at world -0.1.
-          const diff = -0.1 - lowestFootY;
+          // Move the floor down to -2.8 to center the 8-meter-tall avatars in the camera viewport
+          // Ankle bone is roughly 0.05 meters above the bottom of the shoe. Floor is at -2.8.
+          const diff = -2.75 - lowestFootY;
           const clampedDiff = Math.max(-1.0, Math.min(1.0, diff));
           
           hipsNode.position.y += (clampedDiff / 5.25) * 0.8; 
@@ -433,14 +450,14 @@ const VRMAvatar = ({
   return (
     <group 
       ref={group} 
-      position={[positionOffset[0], -0.1, positionOffset[2]]} 
+      position={[positionOffset[0], -2.8, positionOffset[2]]} 
       rotation={[0, Math.PI, 0]}
       scale={5.25}
     >
       <primitive object={vrmRef.current ? vrmRef.current.scene : gltf.scene} />
       
       {/* Dynamic Nameplate */}
-      <Html position={[0, -1.05, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, -0.45, 0]} center zIndexRange={[100, 0]}>
         <div className="bg-black/60 backdrop-blur-md border border-white/10 px-6 py-1.5 rounded-full shadow-2xl">
           <span className={`font-black tracking-[0.2em] uppercase text-xs ${isPlayer ? "text-[#CCFF00]" : "text-[#FF3300]"}`}>
             {name}
@@ -1002,6 +1019,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             <VRMAvatar 
               landmarksRef={instructorCurrentLmRef} 
               positionOffset={[-5, 0, 0]} 
+              isPlaying={isPlaying}
               vrmUrl={instructorAvatarUrl}
               name={getAvatarName(instructorAvatarUrl)}
             />
@@ -1011,6 +1029,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               landmarksRef={playerLiveLmRef} 
               positionOffset={[5, 0, 0]} 
               isPlayer={true}
+              isPlaying={isPlaying}
               syncRef={syncRef}
               vrmUrl={playerAvatarUrl}
               name={getAvatarName(playerAvatarUrl)}
