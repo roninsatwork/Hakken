@@ -546,7 +546,13 @@ const VRMAvatar = ({
               if (!handData || !handData.landmarks) return;
               
               const handednessStr = side === "left" ? "Left" : "Right";
-              const rig = Kalidokit.Hand.solve(handData.landmarks, handednessStr);
+              
+              // CRITICAL: MediaPipe reads the raw unmirrored webcam, meaning the X-axis is physically backwards.
+              // Kalidokit's complex 2D algorithm will violently mangle the rotations if it receives unmirrored coordinates.
+              // We MUST deeply clone and mirror the X-axis (1 - x) to restore the true physical shape of the hand.
+              const mirroredLandmarks = handData.landmarks.map((lm: any) => ({ ...lm, x: 1 - lm.x }));
+              
+              const rig = Kalidokit.Hand.solve(mirroredLandmarks, handednessStr);
               if (!rig) return;
 
               const applyHandRot = (vrmName: string, rigKey: string) => {
