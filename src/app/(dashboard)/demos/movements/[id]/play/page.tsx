@@ -125,6 +125,7 @@ const VRMAvatar = ({
 }) => {
   const group = useRef<THREE.Group>(null);
   const vrmRef = useRef<VRM | null>(null);
+  const lastGoodQuatRef = useRef<Record<string, THREE.Quaternion>>({});
   const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
 
   // useLoader cache keys are just the URL, so to load two separate instances:
@@ -182,6 +183,8 @@ const VRMAvatar = ({
          visibility: 0.9
        }));
     }
+    
+    let kdSolverLms = solverLms.map((lm: any) => ({...lm}));
 
     if (!isPlayer) {
       // Mirror the raw data computationally so Kalidokit naturally generates a mirrored pose
@@ -205,12 +208,13 @@ const VRMAvatar = ({
 
       mirrorArray(imageLms, (x) => 1 - x);
       mirrorArray(solverLms, (x) => -x); // World/fallback coordinates are zero-centered at hips
+      mirrorArray(kdSolverLms, (x) => -x);
     }
 
     // Solve IK for core body
     let riggedPose;
     try {
-      riggedPose = Kalidokit.Pose.solve(solverLms, imageLms, {
+      riggedPose = Kalidokit.Pose.solve(kdSolverLms, imageLms, {
         runtime: "mediapipe",
         video: null,
         imageSize: { width: 640, height: 480 },
@@ -226,7 +230,7 @@ const VRMAvatar = ({
         const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
         if (bone) {
           let targetEuler = new THREE.Euler(euler.x, euler.y, euler.z, euler.rotationOrder || "XYZ");
-          if (boneName === "hips") { targetEuler.y = 0; targetEuler.z = 0; }
+          // Unlocked Hips: allow full 6DOF pelvic tilt for Pilates floor work
           bone.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetEuler), overrideFactor ?? slerpFactor);
         }
       };
@@ -234,6 +238,7 @@ const VRMAvatar = ({
       const rp = riggedPose;
 
       // 1. Core Physics Path: Body, Legs, Head
+      // We allow Kalidokit to establish the base Yaw (turning) and head/neck IK
       if (rp.Hips) applyRot("hips", rp.Hips.rotation);
       applyRot("spine", rp.Spine);
       applyRot("chest", (rp as any).Chest);
@@ -241,13 +246,12 @@ const VRMAvatar = ({
       applyRot("neck", (rp as any).Neck);
       applyRot("head", (rp as any).Head);
       
-      // Only apply Kalidokit collarbone physics if we have true 3D depth. 
-      // Faked 2D depth causes collarbones to twist inward, making arms look short.
       if ((lms as any).worldLandmarks) {
         applyRot("rightShoulder", (rp as any).RightShoulder);
         applyRot("leftShoulder", (rp as any).LeftShoulder);
       }
       
+      // Restore Kalidokit base human limits for arms
       applyRot("rightUpperArm", rp.RightUpperArm);
       applyRot("rightLowerArm", rp.RightLowerArm);
       applyRot("rightHand", rp.RightHand);
@@ -256,73 +260,55 @@ const VRMAvatar = ({
       applyRot("leftLowerArm", rp.LeftLowerArm);
       applyRot("leftHand", rp.LeftHand);
       
-      // Because we passed pure data, Kalidokit natively handles the 180-degree reflection
-      // without needing custom manual swaps or euler inversions.
-      applyRot("rightUpperLeg", rp.RightUpperLeg);
-      applyRot("rightLowerLeg", rp.RightLowerLeg);
-      applyRot("rightFoot", (rp as any).RightFoot);
-      
-      applyRot("leftUpperLeg", rp.LeftUpperLeg);
-      applyRot("leftLowerLeg", rp.LeftLowerLeg);
-      applyRot("leftFoot", (rp as any).LeftFoot);
-      
-      const hips = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
-      if (hips && rp.Hips.position) {
-         hips.position.y = rp.Hips.position.y * 0.1;
+      // Removed Kalidokit leg physics to prevent the 'leg grouping/locking' heuristic bug
+      // Pure FK (aimVector) will handle leg movements with true 3D fidelity
+      const hipsNode = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
+      if (hipsNode && rp.Hips.position) {
+         hipsNode.position.y = rp.Hips.position.y * 0.1;
       }
 
-      // Ensure matrices are updated after Kalidokit applies the base pose
       if (vrmRef.current.scene) {
         vrmRef.current.scene.updateMatrixWorld(true);
       }
 
-      // 2. Vector-Based Forward Kinematics (FK) for Arms
-      // This forces the mesh arms to perfectly match the directional vectors of the raw 'sticks'
-      const aimBone = (boneName: string, childName: string, p1Idx: number, p2Idx: number) => {
+      // 2. Pure Forward Kinematics (FK)
+      const aimVector = (boneName: string, targetName: string, vStart: any, vEnd: any, ignoreVisibility = false) => {
         const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
-        const child = vrmRef.current?.humanoid?.getNormalizedBoneNode(childName as any);
-        if (!bone || !child) return;
-
-        // Ensure matrices are fresh to read accurate world positions
-        bone.updateWorldMatrix(true, false);
-        child.updateWorldMatrix(true, false);
+        if (!bone) return;
+        
+        if (!ignoreVisibility && (!vStart || !vEnd || vStart.visibility < 0.2 || vEnd.visibility < 0.2)) {
+            if (lastGoodQuatRef.current[boneName]) {
+                // Aggressive Freeze: Lock rotation instantly
+                bone.quaternion.copy(lastGoodQuatRef.current[boneName]);
+            }
+            return;
+        }
 
         const boneW = new THREE.Vector3();
         bone.getWorldPosition(boneW);
 
+        const childNode = vrmRef.current?.humanoid?.getNormalizedBoneNode(targetName as any);
+        if (!childNode) return;
         const childW = new THREE.Vector3();
-        child.getWorldPosition(childW);
+        childNode.getWorldPosition(childW);
 
-        // Current bone direction
         const currentDir = childW.clone().sub(boneW).normalize();
-
-        // Target stick direction
-        const p1 = solverLms[p1Idx];
-        const p2 = solverLms[p2Idx];
         
-        let dz = p2.z - p1.z;
-        // If using 2D fallback, the estimated Z-depth is wildly inaccurate for extreme poses like raised arms.
-        // It causes the arms to point forward (foreshortening) instead of up. 
-        // We heavily flatten the Z-axis to force the arms to stay parallel to the screen's X/Y plane.
+        let dz = vEnd.z - vStart.z;
         if (!((lms as any).worldLandmarks)) {
            dz *= 0.1;
         }
 
-        // MediaPipe Y is down, Three.js Y is up. MediaPipe Z is away, Three.js Z is towards.
-        // We removed the manual -(X) inversion because the avatar's root group is now 
-        // rotated 180 degrees, natively mirroring the physical geometry.
         const rawDir = new THREE.Vector3(
-          (p2.x - p1.x), 
-          -(p2.y - p1.y), 
+          (vEnd.x - vStart.x), 
+          -(vEnd.y - vStart.y), 
           -dz
         );
         
-        // Safety boundary: prevent zero-length math from exploding the physics solver
-        if (rawDir.length() < 0.001) return;
+        // Safety Net: Prevent NaN corruption during MediaPipe initialization frames (0,0,0)
+        if (rawDir.lengthSq() < 0.0001) return;
         
         const desiredDir = rawDir.normalize();
-
-        // Calculate absolute world rotation needed
         const qOffset = new THREE.Quaternion().setFromUnitVectors(currentDir, desiredDir);
 
         const currentWorldQ = new THREE.Quaternion();
@@ -330,35 +316,63 @@ const VRMAvatar = ({
 
         const targetWorldQ = qOffset.multiply(currentWorldQ);
 
-        // Convert world rotation back to bone's local parent space
         if (bone.parent) {
             const parentWorldQ = new THREE.Quaternion();
             bone.parent.getWorldQuaternion(parentWorldQ);
             const localQ = parentWorldQ.invert().multiply(targetWorldQ);
             bone.quaternion.slerp(localQ, slerpFactor);
+            // Cache this good rotation for the aggressive freeze
+            lastGoodQuatRef.current[boneName] = bone.quaternion.clone();
         }
         
-        // Commit rotation so the next bone in the chain reads correctly
         bone.updateMatrixWorld(true);
       };
 
-      // Force arm/leg bones to perfectly match MediaPipe sticks using raw unmirrored assignments
-      // 11 = Physical Left Arm -> Maps to leftUpperArm (Avatar's Physical Left, visually Screen Right)
-      // 12 = Physical Right Arm -> Maps to rightUpperArm (Avatar's Physical Right, visually Screen Left)
+      const getMidpoint = (idx1: number, idx2: number) => {
+        const p1 = solverLms[idx1];
+        const p2 = solverLms[idx2];
+        if (!p1 || !p2) return null;
+        return {
+          x: (p1.x + p2.x) / 2,
+          y: (p1.y + p2.y) / 2,
+          z: (p1.z + p2.z) / 2,
+          visibility: Math.min(p1.visibility || 1, p2.visibility || 1)
+        };
+      };
+
+      const mHips = getMidpoint(23, 24);
+      const mShoulders = getMidpoint(11, 12);
+
+      // Core Spine FK
+      // We pass 'true' to safely bypass visibility checks, relying on MediaPipe's inferred spatial depth 
+      // to track torso bending even when seated at a desk.
+      if (mHips && mShoulders) {
+        aimVector("spine", "chest", mHips, mShoulders, true);
+        aimVector("chest", "upperChest", mHips, mShoulders, true);
+      }
+
+      // Arms FK
+      aimVector("rightUpperArm", "rightLowerArm", solverLms[12], solverLms[14]);
+      aimVector("rightLowerArm", "rightHand", solverLms[14], solverLms[16]);
+      aimVector("leftUpperArm", "leftLowerArm", solverLms[11], solverLms[13]);
+      aimVector("leftLowerArm", "leftHand", solverLms[13], solverLms[15]);
       
-      // Arms (Kalidokit natively solves collarbones, avoid overriding them)
-      aimBone("rightUpperArm", "rightLowerArm", 12, 14);
-      aimBone("rightLowerArm", "rightHand", 14, 16);
-      aimBone("leftUpperArm", "leftLowerArm", 11, 13);
-      aimBone("leftLowerArm", "leftHand", 13, 15);
-      
-      // Legs (Flat Paper / Vector Tracking to force individual limb independence)
-      // We apply this to BOTH avatars because Kalidokit's native 3D solver often groups the legs 
-      // together, causing both to raise when only one is lifted physically.
-      aimBone("rightUpperLeg", "rightLowerLeg", 24, 26);
-      aimBone("rightLowerLeg", "rightFoot", 26, 28);
-      aimBone("leftUpperLeg", "leftLowerLeg", 23, 25);
-      aimBone("leftLowerLeg", "leftFoot", 25, 27);
+      // Legs FK
+      aimVector("rightUpperLeg", "rightLowerLeg", solverLms[24], solverLms[26]);
+      aimVector("rightLowerLeg", "rightFoot", solverLms[26], solverLms[28]);
+      aimVector("leftUpperLeg", "leftLowerLeg", solverLms[23], solverLms[25]);
+      aimVector("leftLowerLeg", "leftFoot", solverLms[25], solverLms[27]);
+
+      // Dynamic Floor Anchor
+      if (vrmRef.current.scene && hipsNode) {
+         const box = new THREE.Box3().setFromObject(vrmRef.current.scene);
+         if (isFinite(box.min.y)) {
+             // Local floor is roughly at world -0.1. We gently anchor the lowest mesh point there.
+             const diff = -0.1 - box.min.y;
+             const clampedDiff = Math.max(-1.0, Math.min(1.0, diff));
+             hipsNode.position.y += (clampedDiff / 5.25) * 0.5; 
+         }
+      }
     }
   });
 
@@ -655,7 +669,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       try {
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
         const landmarker = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", delegate: "GPU" },
+          baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", delegate: "GPU" },
           runningMode: "VIDEO",
           numPoses: 1,
         });
@@ -749,86 +763,81 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           instructorCurrentLmRef.current = frameData;
         }
 
-        // Calculate Score (Basic Distance Math)
-        const plRef = playerLiveLmRef.current;
-        const currentPL = Array.isArray(plRef) ? plRef : plRef?.landmarks || [];
+        // Calculate Score (3D Angle-Based Engine / Law of Cosines)
+        const pData = playerLiveLmRef.current as any;
+        const lagCompIndex = Math.max(0, frameIndexRef.current - 6);
+        const iData = frames[lagCompIndex] || {};
+
+        let currentPL = pData?.landmarks || [];
+        let iL = iData?.landmarks || [];
         
-        if (currentPL && currentPL.length >= 33) {
-          // 1. Get Reaction-Compensated Instructor Frame (Temporal Slack)
-          // Look back ~200ms (6 frames at 30fps) to account for human reaction time
-          const frames = instructorFramesRef.current || [];
-          const lagCompIndex = Math.max(0, frameIndexRef.current - 6);
-          const lagFrameData = frames[lagCompIndex];
-          const iL = lagFrameData.pose ? lagFrameData.pose : Array.isArray(lagFrameData) ? lagFrameData : (lagFrameData?.landmarks || []);
-
-          if (iL && iL.length >= 33) {
-            // 2. Calculate Scale Factor (Height) for both
-            const getH = (lms: any) => {
-              const head = lms[0];
-              const ankleL = lms[27], ankleR = lms[28];
-              const ankleY = (ankleL.y + ankleR.y) / 2;
-              return Math.abs(ankleY - head.y);
+        // Upgrade to True 3D depth angles if both feeds have high-fidelity worldLandmarks
+        if (pData?.worldLandmarks?.length === 33 && iData?.worldLandmarks?.length === 33) {
+            currentPL = pData.worldLandmarks;
+            iL = iData.worldLandmarks;
+        }
+        
+        if (currentPL && currentPL.length >= 33 && iL && iL.length >= 33) {
+            const getAngle = (a: any, b: any, c: any) => {
+              if (!a || !b || !c || a.visibility < 0.2 || b.visibility < 0.2 || c.visibility < 0.2) return null;
+              const ba = new THREE.Vector3(a.x - b.x, a.y - b.y, a.z - b.z).normalize();
+              const bc = new THREE.Vector3(c.x - b.x, c.y - b.y, c.z - b.z).normalize();
+              // Safety check for collinear points preventing NaN
+              const dot = Math.max(-1.0, Math.min(1.0, ba.dot(bc)));
+              return Math.acos(dot) * (180 / Math.PI);
             };
-            
-            const pHeight = getH(currentPL) || 0.5;
-            const iHeight = getH(iL) || 0.5;
-            
-            // 3. Hip Center (Reference Point)
-            const getHip = (lms: any) => ({
-              x: (lms[23].x + lms[24].x) / 2,
-              y: (lms[23].y + lms[24].y) / 2
-            });
-            
-            const pHip = getHip(currentPL);
-            const iHip = getHip(iL);
 
-            // 4. Compare Wrists and Ankles (Normalized)
-            let delta = 0;
-            const snappedLM = currentPL.map((lm: any) => ({ ...lm })); // Clone for Magnetism
+            // Player Left Side maps to Instructor Right Side (Mirror Play)
+            const anglesToTrack = [
+              { name: "L_Elbow", p: [12, 14, 16], i: [11, 13, 15] },
+              { name: "R_Elbow", p: [11, 13, 15], i: [12, 14, 16] },
+              { name: "L_Shoulder_Elev", p: [24, 12, 14], i: [23, 11, 13] },
+              { name: "R_Shoulder_Elev", p: [23, 11, 13], i: [24, 12, 14] },
+              { name: "L_Shoulder_Abd", p: [11, 12, 14], i: [12, 11, 13] },
+              { name: "R_Shoulder_Abd", p: [12, 11, 13], i: [11, 12, 14] },
+              { name: "L_Knee", p: [24, 26, 28], i: [23, 25, 27] },
+              { name: "R_Knee", p: [23, 25, 27], i: [24, 26, 28] },
+              { name: "L_Hip_Elev", p: [12, 24, 26], i: [11, 23, 25] },
+              { name: "R_Hip_Elev", p: [11, 23, 25], i: [12, 24, 26] },
+              { name: "L_Hip_Abd", p: [23, 24, 26], i: [24, 23, 25] },
+              { name: "R_Hip_Abd", p: [24, 23, 25], i: [23, 24, 26] }
+            ];
 
-            [15, 16, 27, 28].forEach(idx => {
-               // The instructor is mirrored computationally in the 3D physics engine.
-               // For scoring, we must cross-compare the joints: Player Left (15) matches Instructor Right (16)
-               let instructorIdx = idx;
-               if (idx === 15) instructorIdx = 16;
-               else if (idx === 16) instructorIdx = 15;
-               else if (idx === 27) instructorIdx = 28;
-               else if (idx === 28) instructorIdx = 27;
+            let totalDiff = 0;
+            let validAngles = 0;
 
-               if (currentPL[idx] && iL[instructorIdx]) {
-                 // Offset to hip and scale to match instructor's height
-                 const px = (currentPL[idx].x - pHip.x) * (iHeight / pHeight);
-                 const py = (currentPL[idx].y - pHip.y) * (iHeight / pHeight);
-                 
-                 // Flip the instructor's X coordinate internally just for the math 
-                 // so the Sticky Snap correctly pulls the ghost to the mirrored position.
-                 const ix = -(iL[instructorIdx].x - iHip.x);
-                 const iy = iL[instructorIdx].y - iHip.y;
-                 
-                 const dx = px - ix;
-                 const dy = py - iy;
-                 const jointDist = Math.sqrt(dx*dx + dy*dy);
-                 delta += jointDist;
-
-                 // STICKY SNAP: If close enough, lock the ghost to the instructor
-                 if (jointDist < 0.12) {
-                   const targetX = pHip.x + (ix * pHeight / iHeight);
-                   const targetY = pHip.y + (iy * pHeight / iHeight);
-                   snappedLM[idx].x = THREE.MathUtils.lerp(currentPL[idx].x, targetX, 0.8);
-                   snappedLM[idx].y = THREE.MathUtils.lerp(currentPL[idx].y, targetY, 0.8);
-                   snappedLM[idx].isSnapped = true;
-                 }
+            anglesToTrack.forEach(angle => {
+               const pA = currentPL[angle.p[0]], pB = currentPL[angle.p[1]], pC = currentPL[angle.p[2]];
+               const iA = iL[angle.i[0]], iB = iL[angle.i[1]], iC = iL[angle.i[2]];
+               
+               const pVal = getAngle(pA, pB, pC);
+               const iVal = getAngle(iA, iB, iC);
+               
+               // Dynamic Desktop Occlusion:
+               // If the player is at a desk and their knees are hidden, pVal returns null.
+               // We safely ignore it and only grade the visible upper body joints!
+               if (pVal !== null && iVal !== null) {
+                   totalDiff += Math.abs(pVal - iVal);
+                   validAngles += 1;
                }
             });
+
+            let currentSync = 0;
+            if (validAngles > 0) {
+               const avgDiff = totalDiff / validAngles;
+               
+               // 15-Degree Perfect Tolerance Window
+               if (avgDiff <= 15) {
+                   currentSync = 100;
+               } else {
+                   // Linearly decay score down to 0 if they are 45+ degrees off
+                   const maxTolerance = 45;
+                   currentSync = Math.max(0, 100 * (1 - ((avgDiff - 15) / (maxTolerance - 15))));
+               }
+            }
             
-            snappedPlayerLmRef.current = snappedLM;
-
-            const avgDelta = delta / 4;
-            // Comfort Math: Gaussian/Exponential decay for forgiving scores
-            let currentSync = 100 * Math.exp(-avgDelta * 3.5);
-            if (currentSync < 5) currentSync = 0;
-            if (currentSync > 100) currentSync = 100;
-
+            // Maintain legacy array structure to prevent crashes in other components
+            snappedPlayerLmRef.current = pData?.landmarks || [];
             syncRef.current = currentSync;
 
             // Combo & Scoring Math
@@ -862,7 +871,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             if (scoreElem) scoreElem.innerText = scoreRef.current.toString();
           }
         }
-      }
     };
 
     animationFrameId = requestAnimationFrame(gameLoop);
