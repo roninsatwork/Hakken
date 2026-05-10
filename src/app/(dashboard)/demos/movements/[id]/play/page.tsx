@@ -542,26 +542,36 @@ const VRMAvatar = ({
       if (hands && !forceStandby) {
           const mapFingers = (side: "left" | "right") => {
               const handData = hands[side];
-              if (!handData || !handData.worldLandmarks) return;
+              // Kalidokit specifically requires the 2D 'landmarks' array, not worldLandmarks
+              if (!handData || !handData.landmarks) return;
               
-              const hLms = handData.worldLandmarks;
-              const FINGERS = [
-                  { prefix: "Thumb", indices: [1, 2, 3] }, // Thumb has one less joint mapped cleanly in VRM
-                  { prefix: "Index", indices: [5, 6, 7] },
-                  { prefix: "Middle", indices: [9, 10, 11] },
-                  { prefix: "Ring", indices: [13, 14, 15] },
-                  { prefix: "Little", indices: [17, 18, 19] }
-              ];
+              const handednessStr = side === "left" ? "Left" : "Right";
+              const rig = Kalidokit.Hand.solve(handData.landmarks, handednessStr);
+              if (!rig) return;
+
+              const applyHandRot = (vrmName: string, rigKey: string) => {
+                  const bone = vrmRef.current.humanoid?.getNormalizedBoneNode(vrmName);
+                  const rot = rig[rigKey];
+                  if (bone && rot) {
+                      // Smooth the high-frequency finger jitter using slerp instead of hard set
+                      const targetQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(rot.x, rot.y, rot.z));
+                      bone.quaternion.slerp(targetQ, isPlayer ? 0.6 : 0.4);
+                  }
+              };
+              
+              // 1. Map Wrist (VRM bone is 'leftHand', Kalidokit output is 'LeftWrist')
+              applyHandRot(`${side}Hand`, `${handednessStr}Wrist`);
+              
+              // 2. Map Fingers natively
+              const FINGERS = ["Thumb", "Index", "Middle", "Ring", "Little"];
+              const JOINTS = ["Proximal", "Intermediate", "Distal"];
               
               FINGERS.forEach(finger => {
-                  const [mcpIdx, pipIdx, dipIdx] = finger.indices;
-                  const proxName = `${side}${finger.prefix}Proximal`;
-                  const interName = `${side}${finger.prefix}Intermediate`;
-                  const distalName = `${side}${finger.prefix}Distal`;
-                  
-                  // Ignore visibility is TRUE because HandLandmarker points don't have explicit visibility scores
-                  aimVector(proxName, interName, hLms[mcpIdx], hLms[pipIdx], true);
-                  aimVector(interName, distalName, hLms[pipIdx], hLms[dipIdx], true);
+                  JOINTS.forEach(joint => {
+                      const vrmName = `${side}${finger}${joint}`;
+                      const rigKey = `${handednessStr}${finger}${joint}`;
+                      applyHandRot(vrmName, rigKey);
+                  });
               });
           };
           
