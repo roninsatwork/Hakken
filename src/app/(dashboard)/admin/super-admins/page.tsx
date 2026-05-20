@@ -53,6 +53,7 @@ export default function ManageSuperAdminsPage() {
   );
 
   const filteredInvites = pendingInvites.filter((inv: any) => 
+    inv.role === "SUPER_ADMIN" &&
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
