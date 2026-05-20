@@ -30,3 +30,10 @@ Thumbs.db
 
 # Testing
 /coverage
+
+# Convex database exports and dumps
+dev-export/
+dev-export.zip
+*.jsonl
+movement_seed.json
+poseData.json

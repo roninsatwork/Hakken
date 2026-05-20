@@ -49,43 +49,49 @@ export default function WidgetIframePage() {
   // PostMessage for Embed Config
   useEffect(() => {
       if (widget) {
-           let targetOrigin = "*";
+           let targetOrigin: string | null = null;
            try {
                if (typeof document !== "undefined" && document.referrer) {
                    const referrerUrl = new URL(document.referrer);
                    const referrerOrigin = referrerUrl.origin;
+                   const referrerHost = referrerUrl.hostname.toLowerCase();
                    
                    let isAllowed = false;
                    if (widget.allowedDomains && widget.allowedDomains.length > 0) {
-                       for (const domain of widget.allowedDomains) {
-                           if (referrerOrigin.includes(domain) || domain === "*") {
-                               isAllowed = true;
-                               break;
-                           }
-                       }
+                       isAllowed = widget.allowedDomains.some(domain => {
+                           const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                           return normalizedDomain === "*" || referrerHost === normalizedDomain || referrerHost.endsWith("." + normalizedDomain);
+                       });
                    } else {
                        isAllowed = true;
                    }
                    
                    const platformHost = window.location.hostname;
-                   if (referrerOrigin.includes(platformHost)) {
+                   if (referrerHost === platformHost.toLowerCase() || referrerHost.endsWith("." + platformHost.toLowerCase())) {
                        isAllowed = true;
                    }
                    
                    if (isAllowed) {
                        targetOrigin = referrerOrigin;
                    }
+               } else {
+                   // If document.referrer is empty, check if we configured allowing all domains
+                   if (!widget.allowedDomains || widget.allowedDomains.length === 0 || widget.allowedDomains.includes("*")) {
+                       targetOrigin = "*";
+                   }
                }
            } catch (e) {
                console.error("Failed to parse referrer origin for postMessage", e);
            }
 
-           window.parent.postMessage({ 
-               type: 'SONAE_WIDGET_CONFIG', 
-               showPopup: widget.showPopupPreview && widget.enableGreeting, 
-               themeGreeting: widget.themeGreeting,
-               primaryColor: widget.themePrimaryColor || "#000000"
-           }, targetOrigin);
+           if (targetOrigin) {
+               window.parent.postMessage({ 
+                   type: 'SONAE_WIDGET_CONFIG', 
+                   showPopup: widget.showPopupPreview && widget.enableGreeting, 
+                   themeGreeting: widget.themeGreeting,
+                   primaryColor: widget.themePrimaryColor || "#000000"
+               }, targetOrigin);
+           }
       }
   }, [widget]);
 
@@ -117,16 +123,31 @@ export default function WidgetIframePage() {
        let isAllowed = false;
 
        if (widget.allowedDomains && widget.allowedDomains.length > 0) {
-           for (const domain of widget.allowedDomains) {
-               if (referrer.includes(domain) || domain === "*") isAllowed = true;
+           try {
+               const referrerUrl = new URL(referrer);
+               const referrerHost = referrerUrl.hostname.toLowerCase();
+               isAllowed = widget.allowedDomains.some(domain => {
+                   const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                   return normalizedDomain === "*" || referrerHost === normalizedDomain || referrerHost.endsWith("." + normalizedDomain);
+               });
+           } catch (e) {
+               isAllowed = false;
            }
        } else {
            isAllowed = true;
        }
 
        const platformHost = window.location.hostname;
-       if (referrer.includes(platformHost)) {
-           isAllowed = true;
+       try {
+           const referrerUrl = new URL(referrer);
+           const referrerHost = referrerUrl.hostname.toLowerCase();
+           if (referrerHost === platformHost.toLowerCase() || referrerHost.endsWith("." + platformHost.toLowerCase())) {
+               isAllowed = true;
+           }
+       } catch (e) {
+           if (referrer.includes(platformHost)) {
+               isAllowed = true;
+           }
        }
 
        if (!isAllowed && process.env.NODE_ENV !== "development") {

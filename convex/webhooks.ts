@@ -13,8 +13,7 @@ function constantTimeEqual(a: string, b: string) {
 
 export const processApifyWebhook = httpAction(async (ctx, request) => {
   // Validate dynamic shared webhook secret to prevent spoofing
-  const requestUrl = new URL(request.url);
-  const secretParam = requestUrl.searchParams.get("secret");
+  // 🛡️ SECURITY: Enforce webhook secret strictly via headers to prevent credential leak in proxy/server logs.
   const secretHeader = request.headers.get("X-Apify-Secret") || request.headers.get("x-apify-secret");
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
 
@@ -25,7 +24,7 @@ export const processApifyWebhook = httpAction(async (ctx, request) => {
       return constantTimeEqual(providedStr, webhookSecret);
     };
 
-    isSecretValid = checkSecret(secretHeader) || checkSecret(secretParam);
+    isSecretValid = checkSecret(secretHeader);
   }
 
   if (!isSecretValid) {
