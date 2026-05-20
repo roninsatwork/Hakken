@@ -191,6 +191,7 @@ export default function SidebarNavigation() {
     if (pathname === '/admin/settings/analytics') return 'Analytics';
     if (pathname.startsWith('/admin/settings')) return 'System Settings';
     if (pathname === '/app') return 'Dashboard';
+    if (pathname.startsWith('/app/assistant')) return 'Assistant';
     if (pathname.startsWith('/app/properties')) return 'Properties';
     if (pathname.startsWith('/app/reports')) return 'Reports';
     if (pathname.startsWith('/app/profile')) return 'Profile';
@@ -252,6 +253,7 @@ export default function SidebarNavigation() {
     else if (pathname.startsWith('/app/ai/rules')) setActiveItem('AIRules');
     else if (pathname.startsWith('/demos')) setActiveItem('Demos');
     else if (pathname === '/app') setActiveItem('Dashboard');
+    else if (pathname.startsWith('/app/assistant')) setActiveItem('Assistant');
     else if (pathname.startsWith('/app/properties')) setActiveItem('Properties');
     else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
   }, [pathname]);
@@ -426,17 +428,12 @@ export default function SidebarNavigation() {
                     />
 
                     <NavItem
-                      icon={FolderKanban}
-                      label={t('workspace')}
-                      isActive={activeItem === 'Workspace'}
-                      onClick={() => setActiveItem('Workspace')}
-                      hasChildren
-                      isOpen={openSections.workspace}
-                      onToggle={() => toggleSection('workspace')}
-                    >
-                      <SubNavItem label={`${settings.platformName} ${t('assistant')}`} href="/app/assistant" isActive={activeItem === 'Assistant'} onClick={() => setActiveItem('Assistant')} />
-                      <SubNavItem label={t('agenticTesting')} href="/app/agentic-testing" isActive={activeItem === 'Agentic Testing'} onClick={() => setActiveItem('Assistant')} />
-                    </NavItem>
+                      icon={Bot}
+                      label={`Ask ${settings.platformName}`}
+                      href="/app/assistant"
+                      isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
+                      onClick={() => setActiveItem('Assistant')}
+                    />
 
                     <NavItem
                       icon={LineChart}
