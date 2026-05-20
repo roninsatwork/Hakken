@@ -1503,5 +1503,17 @@
                 "label": "Workspace Language"
             }
         }
+    },
+    "companyUsers": {
+        "assignSystemAdmin": "ASSIGN SYSTEM ADMIN",
+        "attachExistingAdmin": "Attach an existing platform-level System Admin to this tenant workspace.",
+        "selectAdministrator": "SELECT ADMINISTRATOR",
+        "chooseAdmin": "Choose an admin...",
+        "assignToWorkspace": "Assign to Workspace",
+        "addSystemAdmin": "Add System Admin",
+        "detachSystemAdmin": "Detach System Admin",
+        "detachConfirm": "Are you sure you want to detach {name} from this company? They will retain their system admin account but will no longer be assigned to this workspace.",
+        "detach": "Detach",
+        "detaching": "Detaching..."
     }
 }

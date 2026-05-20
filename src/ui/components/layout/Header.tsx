@@ -203,14 +203,16 @@ export default function Header({ onOpenModal }: HeaderProps) {
                     <span>{tc('dashboard')}</span>
                   </Link>
 
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-left"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span>{tc('admin')}</span>
-                  </Link>
+                  {user?.role === "SUPER_ADMIN" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 w-full px-3 py-2 rounded-[10px] text-[13px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-left"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>{tc('admin')}</span>
+                    </Link>
+                  )}
 
                   <div className="h-px bg-border-dim my-1 mx-2" />
 

@@ -1522,5 +1522,17 @@
                 "label": "Lingua dell'Area di Lavoro"
             }
         }
+    },
+    "companyUsers": {
+        "assignSystemAdmin": "ASSEGNA AMMINISTRATORE DI SISTEMA",
+        "attachExistingAdmin": "Collega un amministratore di sistema esistente a livello di piattaforma a questo spazio di lavoro tenant.",
+        "selectAdministrator": "SELEZIONA AMMINISTRATORE",
+        "chooseAdmin": "Scegli un amministratore...",
+        "assignToWorkspace": "Assegna allo Spazio di Lavoro",
+        "addSystemAdmin": "Aggiungi Amministratore di Sistema",
+        "detachSystemAdmin": "Scollega Amministratore di Sistema",
+        "detachConfirm": "Sei sicuro di voler scollegare {name} da questa azienda? Manterrà il suo account amministratore di sistema ma non sarà più assegnato a questo spazio di lavoro.",
+        "detach": "Scollega",
+        "detaching": "Scollegamento in corso..."
     }
 }

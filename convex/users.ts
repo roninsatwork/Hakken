@@ -581,3 +581,77 @@ export const impersonateCompany = mutation({
     return true;
   }
 });
+
+export const getUnassignedSuperAdmins = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const superAdmins = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "SUPER_ADMIN"))
+      .collect();
+
+    // Filter out those already assigned to this specific company
+    return superAdmins.filter((user) => user.companyId !== args.companyId);
+  },
+});
+
+export const assignSuperAdminToCompany = mutation({
+  args: { userId: v.id("users"), companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser || targetUser.role !== "SUPER_ADMIN") {
+      throw new Error("Invalid target user");
+    }
+
+    await ctx.db.patch(args.userId, { companyId: args.companyId });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "ASSIGN_SUPER_ADMIN",
+      actorId: callerId as any,
+      entityType: "users",
+      entityId: args.userId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ companyId: args.companyId })
+    });
+
+    return true;
+  },
+});
+
+export const detachSuperAdminFromCompany = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const callerId = await auth.getUserId(ctx);
+    if (!callerId) throw new Error("Unauthenticated");
+    const caller = await ctx.db.get(callerId);
+    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser || targetUser.role !== "SUPER_ADMIN") {
+      throw new Error("Invalid target user");
+    }
+
+    await ctx.db.patch(args.userId, { companyId: undefined });
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DETACH_SUPER_ADMIN",
+      actorId: callerId as any,
+      entityType: "users",
+      entityId: args.userId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ detachedFrom: targetUser.companyId })
+    });
+
+    return true;
+  },
+});

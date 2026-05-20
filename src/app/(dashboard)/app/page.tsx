@@ -23,14 +23,26 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const user = useQuery(api.users.getMe);
   const [greeting, setGreeting] = useState("welcome");
+
+  useEffect(() => {
+    if (user && user.role === "SUPER_ADMIN") {
+      const redirected = sessionStorage.getItem("admin_redirected");
+      if (!redirected) {
+        sessionStorage.setItem("admin_redirected", "true");
+        router.push("/admin");
+      }
+    }
+  }, [user, router]);
 
   useEffect(() => {
     const hour = new Date().getHours();

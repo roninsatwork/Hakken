@@ -12,15 +12,19 @@ import {
   User,
   Trash2,
   Edit2,
-  Loader2
+  Loader2,
+  ChevronDown,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export default function CompanyUsersPage() {
+  const t = useTranslations('companyUsers');
   const params = useParams();
   const router = useRouter();
   const companyId = params.id as Id<"companies">;
@@ -43,15 +47,51 @@ export default function CompanyUsersPage() {
   const addUser = useMutation(api.users.addUser);
   const updateUser = useMutation(api.users.updateUser);
 
+  const unassignedSuperAdmins = useQuery(api.users.getUnassignedSuperAdmins, { companyId }) || [];
+  const assignSuperAdmin = useMutation(api.users.assignSuperAdminToCompany);
+  const detachSuperAdmin = useMutation(api.users.detachSuperAdminFromCompany);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedAdminId, setSelectedAdminId] = useState("");
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
+  const [detachingAdmin, setDetachingAdmin] = useState<any | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
 
   const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAdminId) return;
+    setIsSubmitting(true);
+    try {
+      await assignSuperAdmin({ userId: selectedAdminId as Id<"users">, companyId });
+      setIsAssignModalOpen(false);
+      setSelectedAdminId("");
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to assign system admin.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmDetach = async () => {
+    if (detachingAdmin) {
+      setIsSubmitting(true);
+      try {
+        await detachSuperAdmin({ userId: detachingAdmin._id });
+        setDetachingAdmin(null);
+      } catch (err: any) {
+        setSubmitError(err.message || "Failed to detach system admin.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
 
   const filteredUsers = paginatedUsers.filter((u: any) => 
     (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -142,13 +182,24 @@ export default function CompanyUsersPage() {
           <p className="text-[13px] text-secondary mt-1">Manage users strictly assigned to this tenant isolation.</p>
         </div>
         
-        <Link 
-          href={`/admin/companies/${companyId}/invites`}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Invite User</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <button 
+              onClick={() => { setSubmitError(""); setIsAssignModalOpen(true); }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-sidebar border border-border-dim hover:bg-foreground/5 text-foreground font-medium transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t("addSystemAdmin")}</span>
+            </button>
+          )}
+          <Link 
+            href={`/admin/companies/${companyId}/invites`}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Invite User</span>
+          </Link>
+        </div>
       </div>
 
       {/* Control Bar */}
@@ -266,12 +317,30 @@ export default function CompanyUsersPage() {
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); setDeletingUser(item); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {(item.role !== "SUPER_ADMIN" || isSuperAdmin) && (
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              )}
+                              {item.role === "SUPER_ADMIN" ? (
+                                isSuperAdmin && (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setDetachingAdmin(item); }} 
+                                    className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors"
+                                    title={t("detachSystemAdmin")}
+                                  >
+                                    <RefreshCw className="w-4 h-4" />
+                                  </button>
+                                )
+                              ) : (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setDeletingUser(item); }} 
+                                  className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors"
+                                  title="Delete User"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </motion.tr>
@@ -445,6 +514,92 @@ export default function CompanyUsersPage() {
             className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
             {isSubmitting ? "Revoking..." : "Revoke Access"}
+          </button>
+        </div>
+      </SonaeModal>
+
+      {/* Assign System Admin Modal */}
+      <SonaeModal
+        isOpen={isAssignModalOpen}
+        onClose={() => { setIsAssignModalOpen(false); setSubmitError(""); }}
+        title={t("assignSystemAdmin")}
+      >
+        <div className="flex flex-col gap-2 mb-6">
+          <p className="text-secondary text-[15px] leading-relaxed">
+            {t("attachExistingAdmin")}
+          </p>
+          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
+
+        <form onSubmit={handleAssignSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t("selectAdministrator")}</label>
+            <div className="relative">
+              <select
+                required
+                value={selectedAdminId}
+                onChange={(e) => setSelectedAdminId(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none pr-10"
+              >
+                <option value="">{t("chooseAdmin")}</option>
+                {unassignedSuperAdmins.map((admin: any) => (
+                  <option key={admin._id} value={admin._id}>
+                    {admin.name} ({admin.email})
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-secondary">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
+            <button
+              type="button"
+              onClick={() => setIsAssignModalOpen(false)}
+              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !selectedAdminId}
+              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
+            >
+              {isSubmitting ? "Assigning..." : t("assignToWorkspace")}
+            </button>
+          </div>
+        </form>
+      </SonaeModal>
+
+      {/* Detach System Admin Confirmation Modal */}
+      <SonaeModal
+        isOpen={!!detachingAdmin}
+        onClose={() => { setDetachingAdmin(null); setSubmitError(""); }}
+        title={t("detachSystemAdmin")}
+      >
+        <div className="flex flex-col gap-2 mb-6">
+          <p className="text-secondary text-[15px] leading-relaxed">
+            {t("detachConfirm", { name: detachingAdmin?.name || "" })}
+          </p>
+          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+        </div>
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
+          <button
+            type="button"
+            onClick={() => setDetachingAdmin(null)}
+            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDetach}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
+          >
+            {isSubmitting ? t("detaching") : t("detach")}
           </button>
         </div>
       </SonaeModal>
