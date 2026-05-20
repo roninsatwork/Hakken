@@ -592,7 +592,12 @@ export default defineSchema({
       v.literal("auditLogs")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
-    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("CANCELLED")
+    ),
     recordsPurged: v.number(),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),

@@ -23,6 +23,7 @@ import {
   Database,
   AlertTriangle,
   Play,
+  Square,
   Calendar,
   Settings2,
   Clock
@@ -111,10 +112,10 @@ export default function SystemSettingsPage() {
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
 
-  // Log Purges states and queries
   const purgeConfigs = useQuery(api.purges.getPipelineConfig);
   const updatePurgeConfigs = useMutation(api.purges.updatePipelineConfig);
   const manualPurgeMutation = useMutation(api.purges.runManualPurge);
+  const cancelPurgeMutation = useMutation(api.purges.cancelPurge);
   const recentPurges = useQuery(api.purges.getRecentPurges);
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -123,6 +124,11 @@ export default function SystemSettingsPage() {
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalPipeline, setConfirmModalPipeline] = useState<string | null>(null);
+
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelModalHistoryId, setCancelModalHistoryId] = useState<string | null>(null);
+  const [cancelModalPipeline, setCancelModalPipeline] = useState<string | null>(null);
+  const [isCancelRunning, setIsCancelRunning] = useState(false);
 
   const [purgesCurrentPage, setPurgesCurrentPage] = useState(1);
   const [isManualRunning, setIsManualRunning] = useState(false);
@@ -692,6 +698,10 @@ export default function SystemSettingsPage() {
                       ["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"].map(key => {
                         const conf = purgeConfigs[key] || {};
                         const isEnabled = conf.enabled;
+                        const runningLog = recentPurges?.find(
+                          (log: any) => log.pipelineKey === key && log.status === "RUNNING"
+                        );
+
                         return (
                           <tr key={key} className="group hover:bg-foreground/[0.03] transition-colors">
                             <td className="px-5 py-4">
@@ -736,17 +746,31 @@ export default function SystemSettingsPage() {
                                 >
                                   <Settings2 className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setConfirmModalPipeline(key);
-                                    setIsConfirmModalOpen(true);
-                                  }}
-                                  disabled={isManualRunning}
-                                  className="p-1.5 text-secondary hover:text-brand hover:bg-brand/5 rounded-[6px] transition-colors disabled:opacity-50"
-                                  title={t('purges.table.runNow')}
-                                >
-                                  <Play className="w-4 h-4" />
-                                </button>
+                                {runningLog ? (
+                                  <button
+                                    onClick={() => {
+                                      setCancelModalHistoryId(runningLog._id);
+                                      setCancelModalPipeline(key);
+                                      setIsCancelModalOpen(true);
+                                    }}
+                                    className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-[6px] transition-colors animate-pulse"
+                                    title={t('purges.table.stop')}
+                                  >
+                                    <Square className="w-4 h-4 fill-rose-500" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setConfirmModalPipeline(key);
+                                      setIsConfirmModalOpen(true);
+                                    }}
+                                    disabled={isManualRunning}
+                                    className="p-1.5 text-secondary hover:text-brand hover:bg-brand/5 rounded-[6px] transition-colors disabled:opacity-50"
+                                    title={t('purges.table.runNow')}
+                                  >
+                                    <Play className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -872,7 +896,7 @@ export default function SystemSettingsPage() {
             <div className="flex flex-col gap-2 relative">
               <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.retention')}</span>
               <select
-                value={[7, 14, 30, 60, 90, 180, 365].includes(configModalData.retentionDays) ? configModalData.retentionDays : "custom"}
+                value={[30, 60, 90, 180, 365].includes(configModalData.retentionDays) ? configModalData.retentionDays : "custom"}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val === "custom") {
@@ -883,21 +907,29 @@ export default function SystemSettingsPage() {
                 }}
                 className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
               >
-                {[7, 14, 30, 60, 90, 180, 365].map(d => (
+                {[30, 60, 90, 180, 365].map(d => (
                   <option key={d} value={d}>{t('purges.modals.config.days', { days: d })}</option>
                 ))}
                 <option value="custom">{t('purges.modals.config.custom')}</option>
               </select>
             </div>
 
-            {(configModalData.isCustom || (![7, 14, 30, 60, 90, 180, 365].includes(configModalData.retentionDays) && configModalData.retentionDays > 0)) && (
+            {(configModalData.isCustom || (![30, 60, 90, 180, 365].includes(configModalData.retentionDays) && configModalData.retentionDays > 0)) && (
               <div className="flex flex-col gap-2 relative">
                 <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.customLabel')}</span>
                 <input
                   type="number"
-                  min="1"
+                  min="30"
                   value={configModalData.retentionDays || ""}
-                  onChange={(e) => setConfigModalData({ ...configModalData, retentionDays: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value);
+                    setConfigModalData({ ...configModalData, retentionDays: isNaN(parsed) ? 30 : parsed });
+                  }}
+                  onBlur={() => {
+                    if (configModalData.retentionDays < 30) {
+                      setConfigModalData({ ...configModalData, retentionDays: 30 });
+                    }
+                  }}
                   className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
                   placeholder={t('purges.modals.config.customPlaceholder')}
                 />
@@ -983,9 +1015,10 @@ export default function SystemSettingsPage() {
             <button
               onClick={async () => {
                 if (configModalPipeline) {
+                  const retentionDays = Math.max(30, configModalData.retentionDays || 30);
                   const updated = { ...purgeConfigs, [configModalPipeline]: {
                     enabled: configModalData.enabled,
-                    retentionDays: configModalData.retentionDays,
+                    retentionDays,
                     interval: configModalData.interval,
                     hourUtc: configModalData.hourUtc,
                     dayOfWeek: configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0,
@@ -1052,6 +1085,60 @@ export default function SystemSettingsPage() {
             >
               {isManualRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               {t('purges.modals.confirm.confirm')}
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
+      {/* Cancel Purge Confirmation Modal */}
+      <SonaeModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title={t('purges.modals.cancelConfirm.title')}
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex items-start gap-4 p-5 bg-rose-500/10 border border-rose-500/20 rounded-[16px]">
+            <AlertTriangle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-2">
+              <p className="text-[14px] text-rose-500 font-medium">
+                {cancelModalPipeline ? t('purges.modals.cancelConfirm.body', {
+                  category: t(`purges.categories.${cancelModalPipeline}.title`),
+                }) : ""}
+              </p>
+              <p className="text-[13px] text-rose-500/80">
+                {t('purges.modals.cancelConfirm.warning')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
+            <button
+              onClick={() => setIsCancelModalOpen(false)}
+              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+            >
+              {t('purges.modals.cancelConfirm.cancel')}
+            </button>
+            <button
+              onClick={async () => {
+                if (cancelModalHistoryId) {
+                  setIsCancelRunning(true);
+                  try {
+                    await cancelPurgeMutation({ 
+                      historyId: cancelModalHistoryId as any
+                    });
+                    setIsCancelModalOpen(false);
+                  } catch (err) {
+                    console.error("Failed to cancel active purge execution:", err);
+                  } finally {
+                    setIsCancelRunning(false);
+                  }
+                }
+              }}
+              disabled={isCancelRunning}
+              className="px-6 py-2.5 rounded-[10px] bg-rose-500 text-white font-medium hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 text-[13px] flex items-center gap-2 disabled:opacity-50"
+            >
+              {isCancelRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-white" />}
+              {t('purges.modals.cancelConfirm.confirm')}
             </button>
           </div>
         </div>

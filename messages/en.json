@@ -1094,7 +1094,8 @@
                     "status": "Status",
                     "actions": "Actions",
                     "runNow": "Run Now",
-                    "configure": "Configure"
+                    "configure": "Configure",
+                    "stop": "Cancel Execution"
                 },
                 "categories": {
                     "agentLogs": {
@@ -1149,7 +1150,8 @@
                         "manual": "Manual",
                         "success": "Success",
                         "running": "Running",
-                        "failed": "Failed"
+                        "failed": "Failed",
+                        "cancelled": "Cancelled"
                     }
                 },
                 "modals": {
@@ -1159,6 +1161,13 @@
                         "warning": "This action is irreversible and will cascade-delete all child records and associated storage files.",
                         "cancel": "Cancel",
                         "confirm": "Trigger Purge"
+                    },
+                    "cancelConfirm": {
+                        "title": "Cancel Active Purge",
+                        "body": "Are you absolutely sure you want to stop the active purge for {category}? Already purged records will remain deleted, but the execution will cease immediately.",
+                        "warning": "This action will cleanly yield and halt all subsequent background recursions.",
+                        "cancel": "Cancel",
+                        "confirm": "Stop Execution"
                     },
                     "config": {
                         "title": "Configure Log Policy: {category}",

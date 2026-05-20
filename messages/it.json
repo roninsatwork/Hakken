@@ -1113,7 +1113,8 @@
                     "status": "Stato",
                     "actions": "Azioni",
                     "runNow": "Esegui Ora",
-                    "configure": "Configura"
+                    "configure": "Configura",
+                    "stop": "Annulla Esecuzione"
                 },
                 "categories": {
                     "agentLogs": {
@@ -1168,7 +1169,8 @@
                         "manual": "Manuale",
                         "success": "Successo",
                         "running": "In corso",
-                        "failed": "Fallito"
+                        "failed": "Fallito",
+                        "cancelled": "Annullato"
                     }
                 },
                 "modals": {
@@ -1178,6 +1180,13 @@
                         "warning": "Questa azione è irreversibile e cancellerà a cascata tutti i record correlati e i file di archiviazione associati.",
                         "cancel": "Annulla",
                         "confirm": "Avvia Purge"
+                    },
+                    "cancelConfirm": {
+                        "title": "Annulla Purgatura Attiva",
+                        "body": "Sei sicuro di voler interrompere la purgatura attiva per {category}? I record già eliminati rimarranno cancellati, ma l'esecuzione verrà interrotta immediatamente.",
+                        "warning": "Questa azione interromperà in sicurezza tutti i successivi cicli in background.",
+                        "cancel": "Annulla",
+                        "confirm": "Interrompi Esecuzione"
                     },
                     "config": {
                         "title": "Configura Politica Log: {category}",

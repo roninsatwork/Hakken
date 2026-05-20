@@ -166,6 +166,9 @@ export const updatePipelineConfig = mutation({
     for (const key of Object.keys(DEFAULT_CONFIGS)) {
       if (parsed[key]) {
         const conf = parsed[key];
+        if (typeof conf.retentionDays !== "number" || conf.retentionDays < 30) {
+          throw new Error(`Retention policy for category '${key}' must be at least 30 days.`);
+        }
         // If enabled and nextRunTimestamp is missing/zero or interval/hour changed, recalculate
         if (conf.enabled) {
           conf.nextRunTimestamp = calculateNextRun(conf.interval, conf.hourUtc, conf.dayOfWeek, conf.dayOfMonth);
@@ -293,6 +296,10 @@ export const runManualPurge = mutation({
       } catch {
         // Use default
       }
+    }
+
+    if (retentionDays < 30) {
+      throw new Error(`Retention policy for manual purge must be at least 30 days.`);
     }
 
     const cutoffTimestamp = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -424,27 +431,53 @@ export const executePurgeRecursive = internalMutation({
           .withIndex("by_updatedAt", (q) => q.lt("updatedAt", cutoffTimestamp))
           .take(100);
 
+        let filesDeletedCount = 0;
+        let threadsFullyDeleted = 0;
+        let reachedCap = false;
+
         for (const thread of batch) {
+          if (reachedCap) {
+            hasMore = true;
+            break;
+          }
+
           // 1. Messages and attachments
           const messages = await ctx.db
             .query("messages")
             .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
             .collect();
 
-          for (const message of messages) {
+          let messageIndex = 0;
+          for (; messageIndex < messages.length; messageIndex++) {
+            const message = messages[messageIndex];
             if (message.attachments) {
               for (const storageId of message.attachments) {
                 try {
                   await ctx.storage.delete(storageId);
+                  filesDeletedCount++;
                 } catch (err) {
                   console.error(
                     `Failed to delete storage file ${storageId} in chat purge:`,
                     err
                   );
                 }
+
+                if (filesDeletedCount >= 200) {
+                  reachedCap = true;
+                }
               }
             }
             await ctx.db.delete(message._id);
+            if (reachedCap) {
+              break;
+            }
+          }
+
+          // If we reached the cap, we broke out of the message loop early.
+          // In that case, we MUST NOT delete swarm logs or the thread itself yet.
+          if (reachedCap) {
+            hasMore = true;
+            continue;
           }
 
           // 2. Swarm logs
@@ -459,9 +492,10 @@ export const executePurgeRecursive = internalMutation({
 
           // 3. The thread itself
           await ctx.db.delete(thread._id);
+          threadsFullyDeleted++;
         }
-        currentDeleted = batch.length;
-        hasMore = batch.length === 100;
+        currentDeleted = threadsFullyDeleted;
+        hasMore = hasMore || batch.length === 100;
       }
 
       const newTotal = deletedCount + currentDeleted;
@@ -582,5 +616,48 @@ export const dispatcher = internalMutation({
         updatedAt: now,
       });
     }
+  },
+});
+
+export const cancelPurge = mutation({
+  args: {
+    historyId: v.id("purgeHistory"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Super Administrator privileges required.");
+    }
+
+    const history = await ctx.db.get(args.historyId);
+    if (!history) {
+      throw new Error("Purge execution history record not found.");
+    }
+
+    if (history.status !== "RUNNING") {
+      throw new Error(`Purge run ${args.historyId} is not actively running (status: ${history.status}).`);
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.historyId, {
+      status: "CANCELLED",
+      completedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: user._id,
+      actionType: "MANUAL_PURGE_CANCEL",
+      entityType: "purgeHistory",
+      entityId: args.historyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        pipelineKey: history.pipelineKey,
+        recordsPurgedSoFar: history.recordsPurged,
+      }),
+    });
+
+    return true;
   },
 });
