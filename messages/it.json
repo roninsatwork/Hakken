@@ -986,7 +986,8 @@
                 "economics": "Motore Economico",
                 "security": "Sicurezza di Sistema",
                 "audit": "Cronologia Audit",
-                "options": "Opzioni di Sistema"
+                "options": "Opzioni di Sistema",
+                "purges": "Ritenzione Log & Purge"
             },
             "identity": {
                 "title": "Identità della Piattaforma",
@@ -1100,6 +1101,92 @@
                 "title": "Protocolli Diagnostici di Sistema",
                 "routingMatrix": "Matrice di Routing Diagnostico",
                 "routingMatrixSub": "Abilita i percorsi di debug per sviluppatori e sistemi di cache backdoor."
+            },
+            "purges": {
+                "title": "Ritenzione Log & Politiche di Purge",
+                "subtitle": "Configura i periodi di conservazione e i cron di esecuzione per limitare il sovraccarico dei dati sulla piattaforma. Le purghe avvengono a livello globale.",
+                "table": {
+                    "category": "Categoria Dati",
+                    "description": "Descrizione",
+                    "retention": "Periodo di Conservazione",
+                    "interval": "Intervallo",
+                    "status": "Stato",
+                    "actions": "Azioni",
+                    "runNow": "Esegui Ora",
+                    "configure": "Configura"
+                },
+                "categories": {
+                    "agentLogs": {
+                        "title": "Log Esecuzione Agent",
+                        "description": "Payload grezzi di prompt e risposte generati durante le esecuzioni dei tool degli Agent e il ragionamento dell'IA."
+                    },
+                    "workflowLogs": {
+                        "title": "Log Esecuzione Workflow",
+                        "description": "Registri dettagliati, record di esecuzione, stati di approvazione e metadati per i flussi di lavoro Swarm automatizzati."
+                    },
+                    "userLogins": {
+                        "title": "Audit Accessi Utente",
+                        "description": "Indirizzi IP, posizioni, profili dei dispositivi e cronologie dei timestamp delle attività di accesso amministrativo."
+                    },
+                    "chatHistory": {
+                        "title": "Chat Clienti & Archiviazione",
+                        "description": "Thread di conversazione dei clienti, messaggi, log di tracciamento swarm e allegati di documenti caricati."
+                    },
+                    "auditLogs": {
+                        "title": "System Audit Ledger",
+                        "description": "Immutable security logging tracking admin events, impersonations, user modifications, and role changes."
+                    }
+                },
+                "intervals": {
+                    "Hourly": "Ogni ora",
+                    "Daily": "Giornaliero",
+                    "Weekly": "Settimanale",
+                    "Monthly": "Mensile"
+                },
+                "history": {
+                    "title": "Cronologia Purge Recenti",
+                    "subtitle": "Registro delle purghe di dati automatizzate e manuali eseguite nell'ecosistema.",
+                    "table": {
+                        "pipeline": "Pipeline",
+                        "trigger": "Origine",
+                        "status": "Stato",
+                        "purged": "Record Eliminati",
+                        "started": "Avviato il",
+                        "duration": "Durata",
+                        "actor": "Autore",
+                        "empty": "Nessun record di purge registrato.",
+                        "system": "Cron di Sistema",
+                        "manual": "Manuale",
+                        "success": "Successo",
+                        "running": "In corso",
+                        "failed": "Fallito"
+                    }
+                },
+                "modals": {
+                    "confirm": {
+                        "title": "Avvia Purge Manuale",
+                        "body": "Sei assolutamente sicuro di voler avviare una purge manuale per {category}? Questo eliminerà definitivamente tutti i record più vecchi del {cutoffDate} ({days} giorni di ritenzione).",
+                        "warning": "Questa azione è irreversibile e cancellerà a cascata tutti i record correlati e i file di archiviazione associati.",
+                        "cancel": "Annulla",
+                        "confirm": "Avvia Purge"
+                    },
+                    "config": {
+                        "title": "Configura Politica Log: {category}",
+                        "status": "Stato Pipeline",
+                        "enabled": "Abilitato",
+                        "disabled": "Disabilitato",
+                        "retention": "Finestra di Ritenzione",
+                        "days": "{days} Giorni",
+                        "custom": "Giorni Personalizzati",
+                        "customLabel": "Ritenzione Personalizzata (Giorni)",
+                        "customPlaceholder": "es. 90",
+                        "interval": "Intervallo di Esecuzione",
+                        "hour": "Ora di Esecuzione (UTC)",
+                        "cancel": "Annulla",
+                        "save": "Salva Politica",
+                        "success": "Politica aggiornata con successo."
+                    }
+                }
             }
         },
         "auditLogs": {

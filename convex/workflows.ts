@@ -3,7 +3,15 @@ import { mutation, query, internalQuery, action, httpAction } from "./_generated
 import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
-import { timingSafeEqual } from "node:crypto";
+
+function constantTimeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 export const list = query({
   args: {},
@@ -274,10 +282,7 @@ export const handleWebhook = httpAction(async (ctx, request) => {
     const providedSecret = secretParam || secretHeader || "";
 
     const expectedSecret = workflow.webhookSecret || "";
-    const provided = Buffer.from(providedSecret);
-    const expected = Buffer.from(expectedSecret);
-
-    const isSecretValid = expectedSecret !== "" && provided.length === expected.length && timingSafeEqual(provided, expected);
+    const isSecretValid = expectedSecret !== "" && constantTimeEqual(providedSecret, expectedSecret);
 
     if (!isSecretValid) {
        return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing webhook secret" }), { status: 401 });

@@ -19,11 +19,17 @@ import {
   ToggleLeft,
   ToggleRight,
   History,
-  Search
+  Search,
+  Database,
+  AlertTriangle,
+  Play,
+  Calendar,
+  Settings2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 const SettingBlock = ({ title, sub, children }: any) => (
   <motion.div
@@ -93,9 +99,26 @@ export default function SystemSettingsPage() {
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
 
+  // Log Purges states and queries
+  const purgeConfigs = useQuery(api.purges.getPipelineConfig);
+  const updatePurgeConfigs = useMutation(api.purges.updatePipelineConfig);
+  const manualPurgeMutation = useMutation(api.purges.runManualPurge);
+  const recentPurges = useQuery(api.purges.getRecentPurges);
+
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configModalPipeline, setConfigModalPipeline] = useState<string | null>(null);
+  const [configModalData, setConfigModalData] = useState<any>({});
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalPipeline, setConfirmModalPipeline] = useState<string | null>(null);
+
+  const [purgesCurrentPage, setPurgesCurrentPage] = useState(1);
+  const [isManualRunning, setIsManualRunning] = useState(false);
+  const [modalSuccessMsg, setModalSuccessMsg] = useState("");
+
   const searchParams = useSearchParams();
   const initTab = (searchParams.get("tab") as any) || "identity";
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit" | "options">(initTab);
+  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit" | "options" | "purges">(initTab);
 
   const router = useRouter();
 
@@ -248,6 +271,7 @@ export default function SystemSettingsPage() {
           { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
           { id: 'security', label: t('tabs.security'), icon: ShieldCheck },
           { id: 'audit', label: t('tabs.audit'), icon: History },
+          { id: 'purges', label: t('tabs.purges'), icon: Database },
           { id: 'options', label: t('tabs.options'), icon: SettingsIcon }
         ].map(tab => {
           const Icon = tab.icon;
@@ -623,13 +647,361 @@ export default function SystemSettingsPage() {
             </SettingBlock>
           </section>
         )}
+
+        {/* Global Purge Policies */}
+        {activeTab === "purges" && (
+          <section className="flex flex-col gap-6">
+            <div className="flex flex-col gap-1 ml-2">
+              <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase flex items-center gap-2">
+                <Database className="w-3.5 h-3.5" /> {t('purges.title')}
+              </h3>
+              <p className="text-[13px] text-secondary mt-1 max-w-2xl">{t('purges.subtitle')}</p>
+            </div>
+
+            <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl mt-2">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border-dim/50 bg-foreground/[0.02] whitespace-nowrap">
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.table.category')}</th>
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.table.description')}</th>
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.table.retention')}</th>
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.table.interval')}</th>
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.table.status')}</th>
+                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] text-right">{t('purges.table.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-dim/30">
+                    {purgeConfigs === undefined ? (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center"><Loader2 className="w-5 h-5 animate-spin text-brand mx-auto" /></td>
+                      </tr>
+                    ) : (
+                      ["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"].map(key => {
+                        const conf = purgeConfigs[key] || {};
+                        const isEnabled = conf.enabled;
+                        return (
+                          <tr key={key} className="group hover:bg-foreground/[0.03] transition-colors">
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${key}.title`)}</span>
+                            </td>
+                            <td className="px-5 py-4 max-w-xs">
+                              <span className="text-[12px] text-secondary leading-snug inline-block">{t(`purges.categories.${key}.description`)}</span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-mono font-medium text-foreground">{t('purges.modals.config.days', { days: conf.retentionDays || 0 })}</span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-mono font-medium text-foreground">{t(`purges.intervals.${conf.interval || "Daily"}`)}</span>
+                              {conf.interval !== "Hourly" && (
+                                <span className="text-[11px] text-muted ml-2">@{String(conf.hourUtc || 0).padStart(2, '0')}:00 UTC</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium tracking-wide uppercase ${isEnabled ? 'bg-brand/10 text-brand' : 'bg-foreground/5 text-muted'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-brand' : 'bg-muted'}`} />
+                                {isEnabled ? t('purges.modals.config.enabled') : t('purges.modals.config.disabled')}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setConfigModalPipeline(key);
+                                    setConfigModalData({ ...conf });
+                                    setIsConfigModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-secondary hover:text-foreground hover:bg-foreground/5 rounded-[6px] transition-colors"
+                                  title={t('purges.table.configure')}
+                                >
+                                  <Settings2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setConfirmModalPipeline(key);
+                                    setIsConfirmModalOpen(true);
+                                  }}
+                                  disabled={isManualRunning}
+                                  className="p-1.5 text-secondary hover:text-brand hover:bg-brand/5 rounded-[6px] transition-colors disabled:opacity-50"
+                                  title={t('purges.table.runNow')}
+                                >
+                                  <Play className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-6">
+              <div className="flex flex-col gap-1 ml-2">
+                <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase flex items-center gap-2">
+                  <History className="w-3.5 h-3.5" /> {t('purges.history.title')}
+                </h3>
+                <p className="text-[13px] text-secondary mt-1">{t('purges.history.subtitle')}</p>
+              </div>
+
+              <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-border-dim/50 bg-foreground/[0.02] whitespace-nowrap">
+                        <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.history.table.pipeline')}</th>
+                        <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.history.table.trigger')}</th>
+                        <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.history.table.status')}</th>
+                        <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">{t('purges.history.table.purged')}</th>
+                        <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] text-right">{t('purges.history.table.started')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-dim/30">
+                      {recentPurges === undefined ? (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center"><Loader2 className="w-5 h-5 animate-spin text-brand mx-auto" /></td>
+                        </tr>
+                      ) : recentPurges.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">{t('purges.history.table.empty')}</td>
+                        </tr>
+                      ) : (
+                        recentPurges.slice((purgesCurrentPage - 1) * 15, purgesCurrentPage * 15).map((log: any) => (
+                          <tr key={log._id} className="group hover:bg-foreground/[0.03] transition-colors">
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${log.pipelineKey}.title`)}</span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-medium text-secondary">
+                                {log.triggerType === "SCHEDULED" ? t('purges.history.table.system') : `${t('purges.history.table.manual')} (${log.actorName})`}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[10px] font-bold tracking-wide uppercase ${
+                                log.status === 'SUCCESS' ? 'bg-brand/10 text-brand' :
+                                log.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' :
+                                'bg-sky-500/10 text-sky-500'
+                              }`}>
+                                {log.status === 'RUNNING' && <Loader2 className="w-3 h-3 animate-spin" />}
+                                {t(`purges.history.table.${log.status.toLowerCase()}`)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="text-[13px] font-mono text-foreground">{log.recordsPurged.toLocaleString()}</span>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <span className="text-[12px] font-mono text-secondary">{new Date(log.startedAt).toLocaleString()}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {recentPurges && recentPurges.length > 15 && (
+                  <div className="flex items-center justify-between px-5 py-3 border-t border-border-dim/50 bg-background/50">
+                    <span className="text-[12px] text-secondary">
+                      Showing {(purgesCurrentPage - 1) * 15 + 1} to {Math.min(purgesCurrentPage * 15, recentPurges.length)} of {recentPurges.length} entries
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setPurgesCurrentPage(Math.max(1, purgesCurrentPage - 1))}
+                        disabled={purgesCurrentPage === 1}
+                        className="px-2.5 py-1 text-[12px] text-foreground bg-foreground/5 hover:bg-foreground/10 rounded-[6px] transition-colors disabled:opacity-30"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setPurgesCurrentPage(Math.min(Math.ceil(recentPurges.length / 15), purgesCurrentPage + 1))}
+                        disabled={purgesCurrentPage === Math.ceil(recentPurges.length / 15)}
+                        className="px-2.5 py-1 text-[12px] text-foreground bg-foreground/5 hover:bg-foreground/10 rounded-[6px] transition-colors disabled:opacity-30"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
+
+      {/* Purges Configuration Modal */}
+      <SonaeModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        title={configModalPipeline ? t('purges.modals.config.title', { category: t(`purges.categories.${configModalPipeline}.title`) }) : ""}
+      >
+        <div className="flex flex-col gap-8">
+          <div className="flex items-center justify-between p-5 bg-background border border-border-dim rounded-[16px]">
+            <div className="flex flex-col gap-1">
+              <span className="text-[14px] text-foreground font-semibold">{t('purges.modals.config.status')}</span>
+            </div>
+            <button
+              onClick={() => setConfigModalData({ ...configModalData, enabled: !configModalData.enabled })}
+              className={`transition-colors flex-shrink-0 ${configModalData.enabled ? "text-brand" : "text-muted"}`}
+            >
+              {configModalData.enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+            </button>
+          </div>
+
+          <div className={`flex flex-col gap-6 transition-all duration-300 ${configModalData.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <div className="flex flex-col gap-2 relative">
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.retention')}</span>
+              <select
+                value={[7, 14, 30, 60, 90, 180, 365].includes(configModalData.retentionDays) ? configModalData.retentionDays : "custom"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "custom") {
+                    setConfigModalData({ ...configModalData, retentionDays: 90, isCustom: true });
+                  } else {
+                    setConfigModalData({ ...configModalData, retentionDays: parseInt(val), isCustom: false });
+                  }
+                }}
+                className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+              >
+                {[7, 14, 30, 60, 90, 180, 365].map(d => (
+                  <option key={d} value={d}>{t('purges.modals.config.days', { days: d })}</option>
+                ))}
+                <option value="custom">{t('purges.modals.config.custom')}</option>
+              </select>
+            </div>
+
+            {(configModalData.isCustom || (![7, 14, 30, 60, 90, 180, 365].includes(configModalData.retentionDays) && configModalData.retentionDays > 0)) && (
+              <div className="flex flex-col gap-2 relative">
+                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.customLabel')}</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={configModalData.retentionDays || ""}
+                  onChange={(e) => setConfigModalData({ ...configModalData, retentionDays: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
+                  placeholder={t('purges.modals.config.customPlaceholder')}
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 relative">
+              <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.interval')}</span>
+              <select
+                value={configModalData.interval || "Daily"}
+                onChange={(e) => setConfigModalData({ ...configModalData, interval: e.target.value })}
+                className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+              >
+                {['Hourly', 'Daily', 'Weekly', 'Monthly'].map(int => (
+                  <option key={int} value={int}>{t(`purges.intervals.${int}`)}</option>
+                ))}
+              </select>
+            </div>
+
+            {configModalData.interval !== "Hourly" && (
+              <div className="flex flex-col gap-2 relative">
+                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.hour')}</span>
+                <select
+                  value={configModalData.hourUtc || 0}
+                  onChange={(e) => setConfigModalData({ ...configModalData, hourUtc: parseInt(e.target.value) })}
+                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                >
+                  {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                    const hh = hour.toString().padStart(2, '0');
+                    return <option key={hour} value={hour}>{hh}:00 UTC</option>;
+                  })}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
+            <button
+              onClick={() => setIsConfigModalOpen(false)}
+              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+            >
+              {t('purges.modals.config.cancel')}
+            </button>
+            <button
+              onClick={async () => {
+                if (configModalPipeline) {
+                  const updated = { ...purgeConfigs, [configModalPipeline]: {
+                    enabled: configModalData.enabled,
+                    retentionDays: configModalData.retentionDays,
+                    interval: configModalData.interval,
+                    hourUtc: configModalData.hourUtc
+                  }};
+                  await updatePurgeConfigs({ configStr: JSON.stringify(updated) });
+                  setIsConfigModalOpen(false);
+                }
+              }}
+              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-[13px]"
+            >
+              {t('purges.modals.config.save')}
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
+      {/* Manual Purge Confirmation Modal */}
+      <SonaeModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        title={t('purges.modals.confirm.title')}
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex items-start gap-4 p-5 bg-rose-500/10 border border-rose-500/20 rounded-[16px]">
+            <AlertTriangle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-2">
+              <p className="text-[14px] text-rose-500 font-medium">
+                {confirmModalPipeline ? t('purges.modals.confirm.body', {
+                  category: t(`purges.categories.${confirmModalPipeline}.title`),
+                  cutoffDate: new Date(Date.now() - (purgeConfigs?.[confirmModalPipeline]?.retentionDays || 90) * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                  days: purgeConfigs?.[confirmModalPipeline]?.retentionDays || 90
+                }) : ""}
+              </p>
+              <p className="text-[13px] text-rose-500/80">
+                {t('purges.modals.confirm.warning')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 mt-2 pt-6 border-t border-border-dim">
+            <button
+              onClick={() => setIsConfirmModalOpen(false)}
+              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-[13px] font-medium"
+            >
+              {t('purges.modals.confirm.cancel')}
+            </button>
+            <button
+              onClick={async () => {
+                if (confirmModalPipeline) {
+                  setIsManualRunning(true);
+                  try {
+                    await manualPurgeMutation({ pipelineKey: confirmModalPipeline });
+                    setIsConfirmModalOpen(false);
+                  } finally {
+                    setIsManualRunning(false);
+                  }
+                }
+              }}
+              disabled={isManualRunning}
+              className="px-6 py-2.5 rounded-[10px] bg-rose-500 text-white font-medium hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 text-[13px] flex items-center gap-2 disabled:opacity-50"
+            >
+              {isManualRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {t('purges.modals.confirm.confirm')}
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
     </div>
   );
 }
 
 function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
   const router = useRouter();
+  const t = useTranslations('admin.auditLogs');
+  const common = useTranslations('common');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 15;
@@ -683,9 +1055,6 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
-
-  const t = useTranslations('admin.auditLogs');
-  const common = useTranslations('common');
 
   return (
     <div className="w-full bg-sidebar/40 border border-border-dim/50 rounded-[20px] overflow-hidden shadow-sm backdrop-blur-xl mt-2">

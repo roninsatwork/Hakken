@@ -1,0 +1,547 @@
+import { mutation, query, internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+import { auth } from "./auth";
+import { internal } from "./_generated/api";
+import { paginationOptsValidator } from "convex/server";
+import { Id } from "./_generated/dataModel";
+
+interface PipelineConfig {
+  enabled: boolean;
+  retentionDays: number;
+  interval: "Hourly" | "Daily" | "Weekly" | "Monthly";
+  hourUtc: number; // 0 to 23
+  nextRunTimestamp: number;
+}
+
+const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
+  agentLogs: {
+    enabled: false,
+    retentionDays: 90,
+    interval: "Daily",
+    hourUtc: 2,
+    nextRunTimestamp: 0,
+  },
+  workflowLogs: {
+    enabled: false,
+    retentionDays: 90,
+    interval: "Daily",
+    hourUtc: 2,
+    nextRunTimestamp: 0,
+  },
+  userLogins: {
+    enabled: false,
+    retentionDays: 180,
+    interval: "Daily",
+    hourUtc: 2,
+    nextRunTimestamp: 0,
+  },
+  chatHistory: {
+    enabled: false,
+    retentionDays: 180,
+    interval: "Daily",
+    hourUtc: 2,
+    nextRunTimestamp: 0,
+  },
+  auditLogs: {
+    enabled: false,
+    retentionDays: 90,
+    interval: "Daily",
+    hourUtc: 2,
+    nextRunTimestamp: 0,
+  },
+};
+
+function calculateNextRun(
+  interval: "Hourly" | "Daily" | "Weekly" | "Monthly",
+  hourUtc: number
+): number {
+  const now = new Date();
+  // Clear milliseconds/seconds/minutes to make clean hour marks
+  const next = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      now.getUTCHours(),
+      0,
+      0,
+      0
+    )
+  );
+
+  if (interval === "Hourly") {
+    next.setUTCHours(next.getUTCHours() + 1);
+  } else if (interval === "Daily") {
+    next.setUTCHours(hourUtc);
+    if (next.getTime() <= now.getTime()) {
+      next.setUTCDate(next.getUTCDate() + 1);
+    }
+  } else if (interval === "Weekly") {
+    next.setUTCHours(hourUtc);
+    // Weekly on Sunday
+    const currentDay = next.getUTCDay(); // 0 is Sunday
+    const daysToAdd = currentDay === 0 ? 7 : 7 - currentDay;
+    next.setUTCDate(next.getUTCDate() + daysToAdd);
+    if (next.getTime() <= now.getTime()) {
+      next.setUTCDate(next.getUTCDate() + 7);
+    }
+  } else if (interval === "Monthly") {
+    next.setUTCHours(hourUtc);
+    next.setUTCDate(1); // First of the month
+    if (next.getTime() <= now.getTime()) {
+      next.setUTCMonth(next.getUTCMonth() + 1);
+    }
+  }
+  return next.getTime();
+}
+
+export const getPipelineConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Super Administrator privileges required.");
+    }
+
+    const config = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
+      .first();
+
+    if (!config || !config.value) {
+      return DEFAULT_CONFIGS;
+    }
+
+    try {
+      const parsed = JSON.parse(config.value);
+      return { ...DEFAULT_CONFIGS, ...parsed };
+    } catch {
+      return DEFAULT_CONFIGS;
+    }
+  },
+});
+
+export const updatePipelineConfig = mutation({
+  args: {
+    configStr: v.string(), // JSON string representing the config
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Super Administrator privileges required.");
+    }
+
+    // Validate configStr to ensure it is valid JSON
+    let parsed: Record<string, PipelineConfig>;
+    try {
+      parsed = JSON.parse(args.configStr);
+    } catch {
+      throw new Error("Invalid configuration JSON payload");
+    }
+
+    // Process and calculate nextRunTimestamp for enabled configs if necessary
+    const now = Date.now();
+    for (const key of Object.keys(DEFAULT_CONFIGS)) {
+      if (parsed[key]) {
+        const conf = parsed[key];
+        // If enabled and nextRunTimestamp is missing/zero or interval/hour changed, recalculate
+        if (conf.enabled) {
+          conf.nextRunTimestamp = calculateNextRun(conf.interval, conf.hourUtc);
+        } else {
+          conf.nextRunTimestamp = 0;
+        }
+      }
+    }
+
+    const finalConfigStr = JSON.stringify(parsed);
+
+    const existingConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
+      .first();
+
+    if (existingConfig) {
+      await ctx.db.patch(existingConfig._id, {
+        value: finalConfigStr,
+        updatedAt: now,
+        updatedBy: userId,
+      });
+    } else {
+      await ctx.db.insert("systemConfig", {
+        key: "PURGE_PIPELINES_CONFIG",
+        value: finalConfigStr,
+        updatedAt: now,
+        updatedBy: userId,
+      });
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_PURGE_PIPELINES",
+      actorId: user._id,
+      entityType: "systemConfig",
+      entityId: "PURGE_PIPELINES_CONFIG",
+      timestamp: now,
+      metadata: finalConfigStr,
+    });
+
+    return true;
+  },
+});
+
+export const getPurgeHistoryPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Super Administrator privileges required.");
+    }
+
+    return await ctx.db
+      .query("purgeHistory")
+      .withIndex("by_started")
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const getRecentPurges = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return [];
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") return [];
+
+    const logs = await ctx.db
+      .query("purgeHistory")
+      .withIndex("by_started")
+      .order("desc")
+      .take(500);
+
+    return await Promise.all(
+      logs.map(async (log) => {
+        let actorName = "System Cron";
+        if (log.actorId) {
+          const actor = await ctx.db.get(log.actorId);
+          actorName = actor?.name || actor?.email || "Unknown Admin";
+        }
+        return {
+          ...log,
+          actorName,
+        };
+      })
+    );
+  },
+});
+
+export const runManualPurge = mutation({
+  args: {
+    pipelineKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated request");
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: Super Administrator privileges required.");
+    }
+
+    const configDoc = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
+      .first();
+
+    let retentionDays = 90;
+    if (configDoc && configDoc.value) {
+      try {
+        const configs = JSON.parse(configDoc.value);
+        if (configs[args.pipelineKey]) {
+          retentionDays = configs[args.pipelineKey].retentionDays || 90;
+        }
+      } catch {
+        // Use default
+      }
+    }
+
+    const cutoffTimestamp = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+
+    // Create history record
+    const historyId = await ctx.db.insert("purgeHistory", {
+      pipelineKey: args.pipelineKey,
+      triggerType: "MANUAL",
+      status: "RUNNING",
+      recordsPurged: 0,
+      startedAt: Date.now(),
+      actorId: userId,
+    });
+
+    // Audit log
+    await ctx.db.insert("auditLogs", {
+      actionType: "MANUAL_PURGE_TRIGGER",
+      actorId: user._id,
+      entityType: "purgeHistory",
+      entityId: historyId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({
+        pipelineKey: args.pipelineKey,
+        retentionDays,
+        cutoffTimestamp,
+      }),
+    });
+
+    // Schedule background recursive deletion immediately (0ms delay)
+    await ctx.scheduler.runAfter(0, internal.purges.executePurgeRecursive, {
+      pipelineKey: args.pipelineKey,
+      cutoffTimestamp,
+      historyId,
+      deletedCount: 0,
+    });
+
+    return historyId;
+  },
+});
+
+export const executePurgeRecursive = internalMutation({
+  args: {
+    pipelineKey: v.string(),
+    cutoffTimestamp: v.number(),
+    historyId: v.id("purgeHistory"),
+    deletedCount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { pipelineKey, cutoffTimestamp, historyId, deletedCount } = args;
+
+    // Check if the history record exists and is still in RUNNING state
+    const history = await ctx.db.get(historyId);
+    if (!history || history.status !== "RUNNING") {
+      console.log(
+        `Purge run ${historyId} is not in RUNNING state (status: ${history?.status}). Aborting recursion.`
+      );
+      return;
+    }
+
+    try {
+      let currentDeleted = 0;
+      let hasMore = false;
+
+      if (pipelineKey === "agentLogs") {
+        const batch = await ctx.db
+          .query("agentLogs")
+          .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoffTimestamp))
+          .take(500);
+
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "userLogins") {
+        const batch = await ctx.db
+          .query("logins")
+          .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoffTimestamp))
+          .take(500);
+
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "auditLogs") {
+        const batch = await ctx.db
+          .query("auditLogs")
+          .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoffTimestamp))
+          .take(500);
+
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "workflowLogs") {
+        // Deleting executions and cascaded steps, cap at 200 executions
+        const batch = await ctx.db
+          .query("workflowExecutions")
+          .withIndex("by_startedAt", (q) => q.lt("startedAt", cutoffTimestamp))
+          .take(200);
+
+        for (const execution of batch) {
+          const steps = await ctx.db
+            .query("workflowExecutionSteps")
+            .withIndex("by_execution", (q) =>
+              q.eq("executionId", execution._id)
+            )
+            .collect();
+
+          for (const step of steps) {
+            await ctx.db.delete(step._id);
+          }
+          await ctx.db.delete(execution._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 200;
+      } else if (pipelineKey === "chatHistory") {
+        // Deleting threads, cascaded messages, storage files, and swarms, cap at 100 threads
+        const batch = await ctx.db
+          .query("threads")
+          .withIndex("by_updatedAt", (q) => q.lt("updatedAt", cutoffTimestamp))
+          .take(100);
+
+        for (const thread of batch) {
+          // 1. Messages and attachments
+          const messages = await ctx.db
+            .query("messages")
+            .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+            .collect();
+
+          for (const message of messages) {
+            if (message.attachments) {
+              for (const storageId of message.attachments) {
+                try {
+                  await ctx.storage.delete(storageId);
+                } catch (err) {
+                  console.error(
+                    `Failed to delete storage file ${storageId} in chat purge:`,
+                    err
+                  );
+                }
+              }
+            }
+            await ctx.db.delete(message._id);
+          }
+
+          // 2. Swarm logs
+          const swarms = await ctx.db
+            .query("swarmLogs")
+            .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+            .collect();
+
+          for (const swarm of swarms) {
+            await ctx.db.delete(swarm._id);
+          }
+
+          // 3. The thread itself
+          await ctx.db.delete(thread._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 100;
+      }
+
+      const newTotal = deletedCount + currentDeleted;
+
+      if (hasMore) {
+        // Update recordsPurged dynamically and schedule next batch in 1000ms
+        await ctx.db.patch(historyId, {
+          recordsPurged: newTotal,
+        });
+
+        await ctx.scheduler.runAfter(1000, internal.purges.executePurgeRecursive, {
+          pipelineKey,
+          cutoffTimestamp,
+          historyId,
+          deletedCount: newTotal,
+        });
+      } else {
+        // Complete the run successfully
+        await ctx.db.patch(historyId, {
+          status: "SUCCESS",
+          recordsPurged: newTotal,
+          completedAt: Date.now(),
+        });
+      }
+    } catch (err: any) {
+      console.error(`Error in executePurgeRecursive for ${pipelineKey}:`, err);
+      await ctx.db.patch(historyId, {
+        status: "FAILED",
+        error: err.message || String(err),
+        completedAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const dispatcher = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const configDoc = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
+      .first();
+
+    if (!configDoc || !configDoc.value) {
+      return;
+    }
+
+    let configs: Record<string, PipelineConfig>;
+    try {
+      configs = JSON.parse(configDoc.value);
+    } catch {
+      return;
+    }
+
+    const now = Date.now();
+    let configChanged = false;
+
+    for (const [pipelineKey, config] of Object.entries(configs)) {
+      if (!config.enabled) {
+        continue;
+      }
+
+      // If nextRunTimestamp is not set, initialize it
+      if (!config.nextRunTimestamp || config.nextRunTimestamp === 0) {
+        config.nextRunTimestamp = calculateNextRun(
+          config.interval,
+          config.hourUtc
+        );
+        configChanged = true;
+      }
+
+      if (now >= config.nextRunTimestamp) {
+        console.log(
+          `Scheduler: triggering scheduled purge for pipeline: ${pipelineKey}`
+        );
+
+        const cutoffTimestamp =
+          now - config.retentionDays * 24 * 60 * 60 * 1000;
+
+        // Insert history record
+        const historyId = await ctx.db.insert("purgeHistory", {
+          pipelineKey,
+          triggerType: "SCHEDULED",
+          status: "RUNNING",
+          recordsPurged: 0,
+          startedAt: now,
+        });
+
+        // Trigger execution asynchronously
+        await ctx.scheduler.runAfter(0, internal.purges.executePurgeRecursive, {
+          pipelineKey,
+          cutoffTimestamp,
+          historyId,
+          deletedCount: 0,
+        });
+
+        // Calculate next execution run
+        config.nextRunTimestamp = calculateNextRun(
+          config.interval,
+          config.hourUtc
+        );
+        configChanged = true;
+      }
+    }
+
+    if (configChanged) {
+      await ctx.db.patch(configDoc._id, {
+        value: JSON.stringify(configs),
+        updatedAt: now,
+      });
+    }
+  },
+});

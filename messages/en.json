@@ -967,7 +967,8 @@
                 "economics": "Economic Engine",
                 "security": "System Security",
                 "audit": "Audit Ledger",
-                "options": "System Options"
+                "options": "System Options",
+                "purges": "Log Retention & Purges"
             },
             "identity": {
                 "title": "Platform Identity",
@@ -1081,6 +1082,92 @@
                 "title": "System Diagnostic Protocols",
                 "routingMatrix": "Diagnostic Routing Matrix",
                 "routingMatrixSub": "Enable developer backdoor debugging paths and cache systems."
+            },
+            "purges": {
+                "title": "Log Retention & Purge Policies",
+                "subtitle": "Configure retention periods and execution crons to restrict platform data bloat. Purges run platform-wide.",
+                "table": {
+                    "category": "Data Category",
+                    "description": "Description",
+                    "retention": "Retention Period",
+                    "interval": "Interval",
+                    "status": "Status",
+                    "actions": "Actions",
+                    "runNow": "Run Now",
+                    "configure": "Configure"
+                },
+                "categories": {
+                    "agentLogs": {
+                        "title": "Agent Execution Logs",
+                        "description": "Raw prompt and response payloads generated during Agent tool executions and AI reasoning."
+                    },
+                    "workflowLogs": {
+                        "title": "Workflow Execution Logs",
+                        "description": "Step-by-step logs, execution records, approval states, and metadata for automated Swarm workflows."
+                    },
+                    "userLogins": {
+                        "title": "User Login Audits",
+                        "description": "IP addresses, locations, device profiles, and timestamp histories of administrative login activities."
+                    },
+                    "chatHistory": {
+                        "title": "Customer Chat & Storage",
+                        "description": "Customer conversation threads, messages, swarm tracking logs, and uploaded document attachments."
+                    },
+                    "auditLogs": {
+                        "title": "System Audit Ledger",
+                        "description": "Immutable security logging tracking admin events, impersonations, user modifications, and role changes."
+                    }
+                },
+                "intervals": {
+                    "Hourly": "Hourly",
+                    "Daily": "Daily",
+                    "Weekly": "Weekly",
+                    "Monthly": "Monthly"
+                },
+                "history": {
+                    "title": "Recent Purge History",
+                    "subtitle": "Ledger of automated and manual data cleanups executed across the ecosystem.",
+                    "table": {
+                        "pipeline": "Pipeline",
+                        "trigger": "Trigger",
+                        "status": "Status",
+                        "purged": "Purged Records",
+                        "started": "Started At",
+                        "duration": "Duration",
+                        "actor": "Actor",
+                        "empty": "No purge history entries recorded.",
+                        "system": "System Cron",
+                        "manual": "Manual",
+                        "success": "Success",
+                        "running": "Running",
+                        "failed": "Failed"
+                    }
+                },
+                "modals": {
+                    "confirm": {
+                        "title": "Trigger Manual Purge",
+                        "body": "Are you absolutely sure you want to trigger a manual purge for {category}? This will permanently delete all records older than {cutoffDate} ({days} days retention).",
+                        "warning": "This action is irreversible and will cascade-delete all child records and associated storage files.",
+                        "cancel": "Cancel",
+                        "confirm": "Trigger Purge"
+                    },
+                    "config": {
+                        "title": "Configure Log Policy: {category}",
+                        "status": "Pipeline Status",
+                        "enabled": "Enabled",
+                        "disabled": "Disabled",
+                        "retention": "Retention Window",
+                        "days": "{days} Days",
+                        "custom": "Custom Days",
+                        "customLabel": "Custom Retention (Days)",
+                        "customPlaceholder": "e.g. 90",
+                        "interval": "Execution Interval",
+                        "hour": "Execution Hour (UTC)",
+                        "cancel": "Cancel",
+                        "save": "Save Policy",
+                        "success": "Policy successfully updated."
+                    }
+                }
             }
         },
         "auditLogs": {

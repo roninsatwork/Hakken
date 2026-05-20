@@ -104,6 +104,7 @@ export default defineSchema({
     timestamp: v.number(),
   })
     .index("by_user", ["userId", "timestamp"])
+    .index("by_timestamp", ["timestamp"])
     .searchIndex("search_device", {
       searchField: "device",
       filterFields: ["userId"],
@@ -182,6 +183,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])
+    .index("by_createdAt", ["createdAt"])
     .searchIndex("search_content", {
       searchField: "promptContent",
       filterFields: ["agentId"]
@@ -247,7 +249,8 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId", "updatedAt"])
     .index("by_widget", ["widgetId", "updatedAt"])
-    .index("by_company", ["companyId", "updatedAt"]),
+    .index("by_company", ["companyId", "updatedAt"])
+    .index("by_updatedAt", ["updatedAt"]),
 
   messages: defineTable({
     threadId: v.id("threads"),
@@ -334,7 +337,8 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
     startedBy: v.id("users"),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
-  }).index("by_workflow", ["workflowId", "startedAt"]),
+  }).index("by_workflow", ["workflowId", "startedAt"])
+    .index("by_startedAt", ["startedAt"]),
   schedules: defineTable({
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
@@ -578,4 +582,17 @@ export default defineSchema({
     size: v.number(),
     contentType: v.optional(v.string()),
   }).index("by_storageId", ["storageId"]),
+
+  purgeHistory: defineTable({
+    pipelineKey: v.string(), // "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory"
+    triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
+    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    recordsPurged: v.number(),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    actorId: v.optional(v.id("users")), // Super Admin who manually triggered it
+  })
+    .index("by_started", ["startedAt"])
+    .index("by_pipeline_started", ["pipelineKey", "startedAt"]),
 });

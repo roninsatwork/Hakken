@@ -20,6 +20,14 @@ crons.hourly(
   {}
 );
 
+// Run hourly dispatcher to evaluate unified scheduled data purges
+crons.hourly(
+  "unified-data-purge-dispatcher",
+  { minuteUTC: 15 },
+  internal.purges.dispatcher,
+  {}
+);
+
 // Wipe expired ephemeral Vector docs attached to Threads
 crons.hourly(
   "vector-garbage-collection",

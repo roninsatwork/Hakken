@@ -1,7 +1,15 @@
 import { httpAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { timingSafeEqual } from "node:crypto";
+
+function constantTimeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 export const processApifyWebhook = httpAction(async (ctx, request) => {
   // Validate dynamic shared webhook secret to prevent spoofing
@@ -12,13 +20,9 @@ export const processApifyWebhook = httpAction(async (ctx, request) => {
 
   let isSecretValid = false;
   if (webhookSecret) {
-    const expected = Buffer.from(webhookSecret);
-    const expectedLen = expected.length;
-
     const checkSecret = (providedStr: string | null) => {
       if (!providedStr) return false;
-      const provided = Buffer.from(providedStr);
-      return provided.length === expectedLen && timingSafeEqual(provided, expected);
+      return constantTimeEqual(providedStr, webhookSecret);
     };
 
     isSecretValid = checkSecret(secretHeader) || checkSecret(secretParam);
