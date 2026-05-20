@@ -4,6 +4,7 @@ import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
 import { ApifyClient } from "apify-client";
+import { validateSafeUrl } from "./utils/security";
 
 export const startRightmoveScrape = action({
   args: {
@@ -14,14 +15,22 @@ export const startRightmoveScrape = action({
     const user = await ctx.runQuery(api.users.getMe);
     if (!user) throw new Error("Unauthenticated");
 
+    // SSRF Safety Check - validate all user-supplied scrape targets
+    for (const url of args.listUrls) {
+      validateSafeUrl(url, "Rightmove Scraper");
+    }
+
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) throw new Error("Apify API Token not configured.");
 
     const siteUrl = process.env.CONVEX_SITE_URL;
     if (!siteUrl) throw new Error("Convex Site URL not configured.");
 
+    const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
+    if (!webhookSecret) throw new Error("APIFY_WEBHOOK_SECRET environment variable is missing.");
+
     const client = new ApifyClient({ token: apifyToken });
-    const webhookUrl = `${siteUrl}/apify-webhook`;
+    const webhookUrl = `${siteUrl}/apify-webhook?secret=${webhookSecret}`;
 
     const input = {
         "listUrls": args.listUrls.map(url => ({ url })),

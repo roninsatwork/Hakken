@@ -20,7 +20,7 @@ export default function AdminLayout({
     }
   }, [user, router]);
 
-  if (user === undefined) return null; // Or a loading spinner
+  if (user === undefined || user?.role !== "SUPER_ADMIN") return null; // Prevent UI flashing during auth checks/redirects
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-[calc(100vh-64px)] w-full relative">

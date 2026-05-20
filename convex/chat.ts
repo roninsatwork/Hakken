@@ -114,6 +114,10 @@ export const sendMessage = mutation({
     fileIds: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
+    if (args.content.length > 10000) {
+      throw new Error("Payload size limit exceeded: Message cannot exceed 10000 characters.");
+    }
+
     const userId = await getAuthUserId(ctx);
     const thread = await ctx.db.get(args.threadId);
     if (!thread) {

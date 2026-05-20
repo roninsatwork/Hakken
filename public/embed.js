@@ -225,7 +225,7 @@
             iframeWrapper.classList.add('sonae-open');
             button.classList.add('sonae-open');
             buttonContainer.classList.add('sonae-open');
-            iframe.contentWindow.postMessage({ type: 'WIDGET_OPENED' }, '*');
+            iframe.contentWindow.postMessage({ type: 'WIDGET_OPENED' }, hostUrl);
         } else {
             iframeWrapper.classList.remove('sonae-open');
             button.classList.remove('sonae-open');
@@ -235,7 +235,9 @@
 
     // Listen for events from the Iframe
     window.addEventListener('message', (event) => {
-        // Simple security check (could be hardened based on exact origin)
+        // Strict security check: ensure origin matches the trusted Sonae deployment
+        if (event.origin !== hostUrl) return;
+        
         if (event.data && event.data.type === 'SONAE_WIDGET_CONFIG') {
             widgetConfig = event.data;
             

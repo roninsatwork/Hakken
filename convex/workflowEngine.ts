@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -291,27 +291,104 @@ export const executeDatabaseOperation = internalMutation({
     operation: v.union(v.literal("INSERT"), v.literal("UPDATE"), v.literal("DELETE"), v.literal("SELECT")),
     docId: v.optional(v.string()),
     data: v.optional(v.any()),
+    workflowId: v.id("workflows"),
   },
   handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) throw new ConvexError("Workflow not found.");
+
+    const user = await ctx.db.get(workflow.createdBy);
     const table = args.tableName as any;
-    if (args.operation === "SELECT") {
-       if (args.docId) {
-          const doc = await ctx.db.get(args.docId as any);
-          return doc || { error: "Document not found" };
-       } else {
-          return await ctx.db.query(table).order("desc").collect();
-       }
-    } else if (args.operation === "INSERT") {
-      const id = await ctx.db.insert(table, args.data || {});
-      return { id };
-    } else if (args.operation === "UPDATE") {
-       if (!args.docId) throw new Error("Document ID required for UPDATE");
-       await ctx.db.patch(args.docId as any, args.data || {});
-       return { id: args.docId };
-    } else if (args.operation === "DELETE") {
-       if (!args.docId) throw new Error("Document ID required for DELETE");
-       await ctx.db.delete(args.docId as any);
-       return { deletedId: args.docId };
+
+    if (!user || user.role !== "SUPER_ADMIN") {
+      // 🛡️ BOLA Enforcer: Restrict non-SUPER_ADMIN workflows from accessing system tables
+      const systemTables = [
+        "systemSettings",
+        "plans",
+        "users",
+        "auditLogs",
+        "aiModels",
+        "companies",
+        "workflows",
+        "workflowExecutions",
+        "workflowExecutionSteps",
+        "schedules"
+      ];
+      if (systemTables.includes(args.tableName)) {
+        throw new ConvexError(`Unauthorized: Access to system table '${args.tableName}' is strictly restricted.`);
+      }
+
+      const companyId = user?.companyId;
+      if (!companyId) {
+        throw new ConvexError("Unauthorized: Workflow creator has no company tenant context.");
+      }
+
+      // Enforce tenant boundary on operations
+      if (args.operation === "SELECT") {
+        if (args.docId) {
+          const doc = (await ctx.db.get(args.docId as any)) as any;
+          if (!doc) return { error: "Document not found" };
+          if (doc.companyId !== companyId) {
+            throw new ConvexError("Unauthorized: Access denied to foreign company document.");
+          }
+          return doc;
+        } else {
+          const docs = await ctx.db.query(table).collect();
+          return docs.filter((d: any) => d.companyId === companyId);
+        }
+      } else if (args.operation === "INSERT") {
+        const insertData = args.data || {};
+        if (insertData.companyId && insertData.companyId !== companyId) {
+          throw new ConvexError("Unauthorized: Cannot insert records for a foreign company.");
+        }
+        insertData.companyId = companyId; // Force correct tenant ID
+        const id = await ctx.db.insert(table, insertData);
+        return { id };
+      } else if (args.operation === "UPDATE") {
+        if (!args.docId) throw new ConvexError("Document ID required for UPDATE");
+        const doc = (await ctx.db.get(args.docId as any)) as any;
+        if (!doc) throw new ConvexError("Document not found");
+        if (doc.companyId !== companyId) {
+          throw new ConvexError("Unauthorized: Cannot update a foreign company document.");
+        }
+        const updateData = args.data || {};
+        if (updateData.companyId && updateData.companyId !== companyId) {
+          throw new ConvexError("Unauthorized: Cannot modify company association.");
+        }
+        updateData.companyId = companyId; // Safeguard company Id mapping
+        await ctx.db.patch(args.docId as any, updateData);
+        return { id: args.docId };
+      } else if (args.operation === "DELETE") {
+        if (!args.docId) throw new ConvexError("Document ID required for DELETE");
+        const doc = (await ctx.db.get(args.docId as any)) as any;
+        if (!doc) throw new ConvexError("Document not found");
+        if (doc.companyId !== companyId) {
+          throw new ConvexError("Unauthorized: Cannot delete a foreign company document.");
+        }
+        await ctx.db.delete(args.docId as any);
+        return { deletedId: args.docId };
+      }
+    } else {
+      // SUPER_ADMIN has unrestricted database access
+      if (args.operation === "SELECT") {
+         if (args.docId) {
+            const doc = await ctx.db.get(args.docId as any);
+            return doc || { error: "Document not found" };
+         } else {
+            return await ctx.db.query(table).order("desc").collect();
+         }
+      } else if (args.operation === "INSERT") {
+        const id = await ctx.db.insert(table, args.data || {});
+        return { id };
+      } else if (args.operation === "UPDATE") {
+         if (!args.docId) throw new Error("Document ID required for UPDATE");
+         await ctx.db.patch(args.docId as any, args.data || {});
+         return { id: args.docId };
+      } else if (args.operation === "DELETE") {
+         if (!args.docId) throw new Error("Document ID required for DELETE");
+         await ctx.db.delete(args.docId as any);
+         return { deletedId: args.docId };
+      }
     }
   }
 });

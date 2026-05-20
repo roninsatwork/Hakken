@@ -116,9 +116,14 @@ export const executeSwarmObjective = internalAction({
 
            const targetModel = agent.modelId || await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});  
            
+           let safePayload = memoryPayload;
+           if (safePayload.length > 10000) {
+               safePayload = safePayload.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
+           }
+
            const response = await ai.models.generateContent({
               model: targetModel,
-              contents: memoryPayload,
+              contents: safePayload,
               config
            });
 

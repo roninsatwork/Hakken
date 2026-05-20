@@ -230,13 +230,69 @@ export const deleteWidget = mutation({
 });
 
 export const generateWidgetUploadUrl = mutation({
-  args: { widgetId: v.id("widgets") },
+  args: { 
+    widgetId: v.id("widgets"),
+    threadId: v.id("threads")
+  },
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
 
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.widgetId !== args.widgetId) {
+      throw new Error("Invalid thread mapping for target widget");
+    }
+
+    // Rate limiting: Count the number of messages with attachments in this thread
+    const threadMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .collect();
+
+    const totalUploads = threadMessages.filter((m) => m.attachments && m.attachments.length > 0).length;
+    if (totalUploads >= 10) {
+      throw new Error("Upload quota exceeded for this conversation thread");
+    }
+
     // Generate an upload URL for widget file attachments (supports anonymous visitors)
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const finalizeWidgetUpload = mutation({
+  args: {
+    widgetId: v.id("widgets"),
+    threadId: v.id("threads"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const widget = await ctx.db.get(args.widgetId);
+    if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.widgetId !== args.widgetId) {
+      throw new Error("Invalid thread mapping for target widget");
+    }
+
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded file not found");
+    }
+
+    // Enforce 1MB limit (1024 * 1024 bytes)
+    const maxBytes = 1024 * 1024;
+    if (metadata.size > maxBytes) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("File exceeds the maximum size limit of 1MB");
+    }
+
+    // Enforce MIME type limit: strictly images only
+    if (!metadata.contentType || !metadata.contentType.startsWith("image/")) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Invalid file type: strictly images only are allowed");
+    }
+
+    return { success: true, storageId: args.storageId };
   },
 });
 
@@ -254,24 +310,62 @@ export const createWidgetThread = mutation({
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
 
     // Zero-Trust Enforcer: Validate origin against allowed domains
-    if (widget.allowedDomains && widget.allowedDomains.length > 0) {
-        if (!widget.allowedDomains.includes("*")) {
-            let parsedOrigin;
-            try {
-                parsedOrigin = new URL(args.sourceUrl).hostname.toLowerCase();
-            } catch (e) {
-                throw new Error("Invalid source URL");
-            }
-
-            const isAllowed = widget.allowedDomains.some(domain => {
-                const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return parsedOrigin === normalizedDomain || parsedOrigin.endsWith("." + normalizedDomain);
+    let isAllowed = false;
+    
+    if (widget.allowedDomains && widget.allowedDomains.includes("*")) {
+        isAllowed = true;
+    } else if (widget.allowedDomains && widget.allowedDomains.length > 0) {
+        // Enforce strict absolute URL syntax (prevent tricks or path traversal)
+        if (!args.sourceUrl.startsWith("http://") && !args.sourceUrl.startsWith("https://")) {
+            await ctx.db.insert("auditLogs", {
+              actorId: widget.createdBy,
+              actionType: "BLOCKED_WIDGET_ACCESS",
+              entityId: args.widgetId.toString(),
+              entityType: "widgets",
+              companyId: widget.companyId,
+              timestamp: Date.now(),
+              metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "URL protocol must be http:// or https://" })
             });
-            
-            if (!isAllowed) {
-                throw new Error("Unauthorized: Source origin is not authorized for this widget.");
-            }
+            throw new Error("Unauthorized: Invalid source URL format. Protocol must be http:// or https://");
         }
+
+        let parsedOrigin;
+        try {
+            const urlObj = new URL(args.sourceUrl);
+            if (urlObj.username || urlObj.password) {
+                throw new Error("URL contains credentials");
+            }
+            parsedOrigin = urlObj.hostname.toLowerCase();
+        } catch (e) {
+            await ctx.db.insert("auditLogs", {
+              actorId: widget.createdBy,
+              actionType: "BLOCKED_WIDGET_ACCESS",
+              entityId: args.widgetId.toString(),
+              entityType: "widgets",
+              companyId: widget.companyId,
+              timestamp: Date.now(),
+              metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "URL contains credentials or invalid syntax" })
+            });
+            throw new Error("Unauthorized: Invalid source URL.");
+        }
+
+        isAllowed = widget.allowedDomains.some(domain => {
+            const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+            return parsedOrigin === normalizedDomain || parsedOrigin.endsWith("." + normalizedDomain);
+        });
+    }
+
+    if (!isAllowed) {
+        await ctx.db.insert("auditLogs", {
+          actorId: widget.createdBy,
+          actionType: "BLOCKED_WIDGET_ACCESS",
+          entityId: args.widgetId.toString(),
+          entityType: "widgets",
+          companyId: widget.companyId,
+          timestamp: Date.now(),
+          metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "Domain origin is not whitelisted" })
+        });
+        throw new Error("Unauthorized: Source origin is not authorized for this widget.");
     }
 
     const now = Date.now();

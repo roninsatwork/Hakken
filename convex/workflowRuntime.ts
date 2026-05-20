@@ -205,6 +205,7 @@ export const executeNode = internalAction({
             operation,
             docId: resolvedDocId,
             data: resolvedData,
+            workflowId: args.workflowId,
           });
 
           outputPayload = JSON.stringify({ _system: { db: true }, operation, tableName, result });

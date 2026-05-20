@@ -105,9 +105,18 @@ export const updateWorkflow = mutation({
     }
 
     const { id, ...updates } = args;
+
+    const workflow = await ctx.db.get(id);
+    if (!workflow) throw new Error("Workflow not found");
+
+    let webhookSecret = workflow.webhookSecret;
+    if ((updates.triggerType === "WEBHOOK" || (workflow.triggerType === "WEBHOOK" && !updates.triggerType)) && !webhookSecret) {
+       webhookSecret = crypto.randomUUID();
+    }
     
     await ctx.db.patch(id, { 
       ...updates,
+      ...(webhookSecret && { webhookSecret }),
       updatedAt: Date.now()
     });
     
@@ -258,6 +267,15 @@ export const handleWebhook = httpAction(async (ctx, request) => {
        return new Response(JSON.stringify({ error: "Workflow not found or not configured for webhooks" }), { status: 404 });
     }
 
+    // 🛡️ SECURITY: Webhook secret verification (prevent trigger spoofing)
+    const secretParam = url.searchParams.get("secret");
+    const secretHeader = request.headers.get("x-sonae-secret");
+    const providedSecret = secretParam || secretHeader;
+
+    if (!workflow.webhookSecret || providedSecret !== workflow.webhookSecret) {
+       return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing webhook secret" }), { status: 401 });
+    }
+
     const payload = await request.text();
     
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
@@ -279,9 +297,27 @@ export const handleWebhook = httpAction(async (ctx, request) => {
     return new Response(JSON.stringify({ success: true, executionId }), {
        status: 200,
        headers: { "Content-Type": "application/json" }
-    });
+     });
   } catch (error: any) {
     console.error("Webhook error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
+});
+
+export const getWebhookSecret = query({
+  args: { id: v.id("workflows") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated Admin Request");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+       throw new Error("Unauthorized");
+    }
+
+    const workflow = await ctx.db.get(args.id);
+    if (!workflow) throw new Error("Workflow not found");
+
+    return workflow.webhookSecret || null;
+  },
 });

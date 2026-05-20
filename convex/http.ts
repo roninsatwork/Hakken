@@ -17,25 +17,11 @@ http.route({
 // This enables OAuth callbacks and Magic Link verification endpoints
 auth.addHttpRoutes(http);
 
+
 http.route({
   path: "/apify-webhook",
   method: "POST",
   handler: processApifyWebhook,
-});
-
-http.route({
-  path: "/api/movements",
-  method: "GET",
-  handler: httpAction(async (ctx, request) => {
-    const movements = await ctx.runQuery(api.movements.list);
-    return new Response(JSON.stringify(movements), {
-      status: 200,
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-    });
-  }),
 });
 
 export default http;

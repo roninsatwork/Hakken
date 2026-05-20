@@ -322,6 +322,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     createdBy: v.id("users"),
+    webhookSecret: v.optional(v.string()),
   }).index("by_name", ["name"]),
 
   workflowExecutions: defineTable({

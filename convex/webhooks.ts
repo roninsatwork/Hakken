@@ -3,6 +3,18 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 export const processApifyWebhook = httpAction(async (ctx, request) => {
+  // Validate dynamic shared webhook secret to prevent spoofing
+  const requestUrl = new URL(request.url);
+  const secretParam = requestUrl.searchParams.get("secret");
+  const secretHeader = request.headers.get("X-Apify-Secret") || request.headers.get("x-apify-secret");
+  const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
+
+  const isSecretValid = webhookSecret && (secretParam === webhookSecret || secretHeader === webhookSecret);
+
+  if (!isSecretValid) {
+    return new Response("Unauthorized request origin", { status: 401 });
+  }
+
   const payloadStr = await request.text();
   let payload;
   try {
