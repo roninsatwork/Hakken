@@ -1143,6 +1143,15 @@
                     "Weekly": "Settimanale",
                     "Monthly": "Mensile"
                 },
+                "daysOfWeek": {
+                    "0": "Domenica",
+                    "1": "Lunedì",
+                    "2": "Martedì",
+                    "3": "Mercoledì",
+                    "4": "Giovedì",
+                    "5": "Venerdì",
+                    "6": "Sabato"
+                },
                 "history": {
                     "title": "Cronologia Purge Recenti",
                     "subtitle": "Registro delle purghe di dati automatizzate e manuali eseguite nell'ecosistema.",
@@ -1182,6 +1191,9 @@
                         "customPlaceholder": "es. 90",
                         "interval": "Intervallo di Esecuzione",
                         "hour": "Ora di Esecuzione (UTC)",
+                        "dayOfWeek": "Giorno della Settimana di Esecuzione",
+                        "dayOfMonth": "Giorno del Mese di Esecuzione (1-28)",
+                        "ukTimeDual": "Ora Locale UK: {gmt} GMT (Inverno) / {bst} BST (Estate)",
                         "cancel": "Annulla",
                         "save": "Salva Politica",
                         "success": "Politica aggiornata con successo."

@@ -1124,6 +1124,15 @@
                     "Weekly": "Weekly",
                     "Monthly": "Monthly"
                 },
+                "daysOfWeek": {
+                    "0": "Sunday",
+                    "1": "Monday",
+                    "2": "Tuesday",
+                    "3": "Wednesday",
+                    "4": "Thursday",
+                    "5": "Friday",
+                    "6": "Saturday"
+                },
                 "history": {
                     "title": "Recent Purge History",
                     "subtitle": "Ledger of automated and manual data cleanups executed across the ecosystem.",
@@ -1163,6 +1172,9 @@
                         "customPlaceholder": "e.g. 90",
                         "interval": "Execution Interval",
                         "hour": "Execution Hour (UTC)",
+                        "dayOfWeek": "Execution Day of Week",
+                        "dayOfMonth": "Execution Day of Month (1st-28th)",
+                        "ukTimeDual": "UK Local: {gmt} GMT (Winter) / {bst} BST (Summer)",
                         "cancel": "Cancel",
                         "save": "Save Policy",
                         "success": "Policy successfully updated."

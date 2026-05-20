@@ -10,6 +10,8 @@ interface PipelineConfig {
   retentionDays: number;
   interval: "Hourly" | "Daily" | "Weekly" | "Monthly";
   hourUtc: number; // 0 to 23
+  dayOfWeek?: number; // 0 (Sunday) to 6 (Saturday) - for Weekly
+  dayOfMonth?: number; // 1 to 28 - for Monthly
   nextRunTimestamp: number;
 }
 
@@ -19,6 +21,8 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
     retentionDays: 90,
     interval: "Daily",
     hourUtc: 2,
+    dayOfWeek: 0,
+    dayOfMonth: 1,
     nextRunTimestamp: 0,
   },
   workflowLogs: {
@@ -26,6 +30,8 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
     retentionDays: 90,
     interval: "Daily",
     hourUtc: 2,
+    dayOfWeek: 0,
+    dayOfMonth: 1,
     nextRunTimestamp: 0,
   },
   userLogins: {
@@ -33,6 +39,8 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
     retentionDays: 180,
     interval: "Daily",
     hourUtc: 2,
+    dayOfWeek: 0,
+    dayOfMonth: 1,
     nextRunTimestamp: 0,
   },
   chatHistory: {
@@ -40,6 +48,8 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
     retentionDays: 180,
     interval: "Daily",
     hourUtc: 2,
+    dayOfWeek: 0,
+    dayOfMonth: 1,
     nextRunTimestamp: 0,
   },
   auditLogs: {
@@ -47,13 +57,17 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
     retentionDays: 90,
     interval: "Daily",
     hourUtc: 2,
+    dayOfWeek: 0,
+    dayOfMonth: 1,
     nextRunTimestamp: 0,
   },
 };
 
 function calculateNextRun(
   interval: "Hourly" | "Daily" | "Weekly" | "Monthly",
-  hourUtc: number
+  hourUtc: number,
+  dayOfWeek?: number,
+  dayOfMonth?: number
 ): number {
   const now = new Date();
   // Clear milliseconds/seconds/minutes to make clean hour marks
@@ -78,18 +92,22 @@ function calculateNextRun(
     }
   } else if (interval === "Weekly") {
     next.setUTCHours(hourUtc);
-    // Weekly on Sunday
-    const currentDay = next.getUTCDay(); // 0 is Sunday
-    const daysToAdd = currentDay === 0 ? 7 : 7 - currentDay;
-    next.setUTCDate(next.getUTCDate() + daysToAdd);
-    if (next.getTime() <= now.getTime()) {
-      next.setUTCDate(next.getUTCDate() + 7);
+    const targetDay = dayOfWeek !== undefined ? dayOfWeek : 0; // 0 = Sunday
+    const currentDay = next.getUTCDay();
+    let daysToAdd = targetDay - currentDay;
+    if (daysToAdd < 0) {
+      daysToAdd += 7;
+    } else if (daysToAdd === 0 && next.getTime() <= now.getTime()) {
+      daysToAdd = 7;
     }
+    next.setUTCDate(next.getUTCDate() + daysToAdd);
   } else if (interval === "Monthly") {
     next.setUTCHours(hourUtc);
-    next.setUTCDate(1); // First of the month
+    const targetDate = dayOfMonth !== undefined ? dayOfMonth : 1;
+    next.setUTCDate(targetDate);
     if (next.getTime() <= now.getTime()) {
       next.setUTCMonth(next.getUTCMonth() + 1);
+      next.setUTCDate(targetDate);
     }
   }
   return next.getTime();
@@ -150,7 +168,7 @@ export const updatePipelineConfig = mutation({
         const conf = parsed[key];
         // If enabled and nextRunTimestamp is missing/zero or interval/hour changed, recalculate
         if (conf.enabled) {
-          conf.nextRunTimestamp = calculateNextRun(conf.interval, conf.hourUtc);
+          conf.nextRunTimestamp = calculateNextRun(conf.interval, conf.hourUtc, conf.dayOfWeek, conf.dayOfMonth);
         } else {
           conf.nextRunTimestamp = 0;
         }
@@ -515,7 +533,9 @@ export const dispatcher = internalMutation({
       if (!config.nextRunTimestamp || config.nextRunTimestamp === 0) {
         config.nextRunTimestamp = calculateNextRun(
           config.interval,
-          config.hourUtc
+          config.hourUtc,
+          config.dayOfWeek,
+          config.dayOfMonth
         );
         configChanged = true;
       }
@@ -548,7 +568,9 @@ export const dispatcher = internalMutation({
         // Calculate next execution run
         config.nextRunTimestamp = calculateNextRun(
           config.interval,
-          config.hourUtc
+          config.hourUtc,
+          config.dayOfWeek,
+          config.dayOfMonth
         );
         configChanged = true;
       }

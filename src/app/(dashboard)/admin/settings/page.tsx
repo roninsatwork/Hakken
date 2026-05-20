@@ -24,11 +24,12 @@ import {
   AlertTriangle,
   Play,
   Calendar,
-  Settings2
+  Settings2,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 const SettingBlock = ({ title, sub, children }: any) => (
@@ -77,6 +78,17 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
 export default function SystemSettingsPage() {
   const t = useTranslations('admin.settings');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
+
+  const getOrdinalSuffix = (day: number) => {
+    if (locale === "it") return `${day}°`;
+    const j = day % 10, k = day % 100;
+    if (j === 1 && k !== 11) return `${day}st`;
+    if (j === 2 && k !== 12) return `${day}nd`;
+    if (j === 3 && k !== 13) return `${day}rd`;
+    return `${day}th`;
+  };
+
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);
   const generateUploadUrl = useMutation(api.settings.generateUploadUrl);
@@ -692,7 +704,15 @@ export default function SystemSettingsPage() {
                               <span className="text-[13px] font-mono font-medium text-foreground">{t('purges.modals.config.days', { days: conf.retentionDays || 0 })}</span>
                             </td>
                             <td className="px-5 py-4">
-                              <span className="text-[13px] font-mono font-medium text-foreground">{t(`purges.intervals.${conf.interval || "Daily"}`)}</span>
+                              <span className="text-[13px] font-mono font-medium text-foreground">
+                                {conf.interval === "Weekly" ? (
+                                  `${t('purges.intervals.Weekly')} (${t(`purges.daysOfWeek.${conf.dayOfWeek !== undefined ? conf.dayOfWeek : 0}`)})`
+                                ) : conf.interval === "Monthly" ? (
+                                  `${t('purges.intervals.Monthly')} (${getOrdinalSuffix(conf.dayOfMonth || 1)})`
+                                ) : (
+                                  t(`purges.intervals.${conf.interval || "Daily"}`)
+                                )}
+                              </span>
                               {conf.interval !== "Hourly" && (
                                 <span className="text-[11px] text-muted ml-2">@{String(conf.hourUtc || 0).padStart(2, '0')}:00 UTC</span>
                               )}
@@ -897,6 +917,36 @@ export default function SystemSettingsPage() {
               </select>
             </div>
 
+            {configModalData.interval === "Weekly" && (
+              <div className="flex flex-col gap-2 relative">
+                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.dayOfWeek')}</span>
+                <select
+                  value={configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0}
+                  onChange={(e) => setConfigModalData({ ...configModalData, dayOfWeek: parseInt(e.target.value) })}
+                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                >
+                  {Array.from({ length: 7 }, (_, i) => i).map(day => (
+                    <option key={day} value={day}>{t(`purges.daysOfWeek.${day}`)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {configModalData.interval === "Monthly" && (
+              <div className="flex flex-col gap-2 relative">
+                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.dayOfMonth')}</span>
+                <select
+                  value={configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1}
+                  onChange={(e) => setConfigModalData({ ...configModalData, dayOfMonth: parseInt(e.target.value) })}
+                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
+                >
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map(date => (
+                    <option key={date} value={date}>{getOrdinalSuffix(date)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {configModalData.interval !== "Hourly" && (
               <div className="flex flex-col gap-2 relative">
                 <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.hour')}</span>
@@ -910,6 +960,15 @@ export default function SystemSettingsPage() {
                     return <option key={hour} value={hour}>{hh}:00 UTC</option>;
                   })}
                 </select>
+                <div className="mt-1 ml-1 text-[12px] text-secondary/80 font-medium flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-brand/70" />
+                  <span>
+                    {t('purges.modals.config.ukTimeDual', {
+                      gmt: String(configModalData.hourUtc || 0).padStart(2, '0') + ":00",
+                      bst: String(((configModalData.hourUtc || 0) + 1) % 24).padStart(2, '0') + ":00"
+                    })}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -928,7 +987,9 @@ export default function SystemSettingsPage() {
                     enabled: configModalData.enabled,
                     retentionDays: configModalData.retentionDays,
                     interval: configModalData.interval,
-                    hourUtc: configModalData.hourUtc
+                    hourUtc: configModalData.hourUtc,
+                    dayOfWeek: configModalData.dayOfWeek !== undefined ? configModalData.dayOfWeek : 0,
+                    dayOfMonth: configModalData.dayOfMonth !== undefined ? configModalData.dayOfMonth : 1
                   }};
                   await updatePurgeConfigs({ configStr: JSON.stringify(updated) });
                   setIsConfigModalOpen(false);
