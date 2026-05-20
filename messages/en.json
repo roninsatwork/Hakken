@@ -1461,7 +1461,8 @@
         },
         "logins": {
             "tabs": {
-                "security": "Security & Logins"
+                "security": "Security & Logins",
+                "preferences": "Preferences"
             },
             "header": {
                 "title": "Recent Login Activity",
@@ -1482,6 +1483,24 @@
                 "iphone": "iPhone",
                 "android": "Android Device",
                 "unknown": "Unknown Device"
+            }
+        },
+        "preferences": {
+            "title": "Account Preferences",
+            "description": "Customize your visual appearance and localized workspace settings.",
+            "theme": {
+                "title": "Visual Theme",
+                "description": "Choose between light, dark, or system-adaptive visual layout themes.",
+                "light": "Light Mode",
+                "dark": "Dark Mode",
+                "system": "System Default"
+            },
+            "language": {
+                "title": "System Language",
+                "description": "Select your preferred language for the administration workspace.",
+                "en": "English (UK)",
+                "it": "Italiano (IT)",
+                "label": "Workspace Language"
             }
         }
     }

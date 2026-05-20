@@ -1480,7 +1480,8 @@
         },
         "logins": {
             "tabs": {
-                "security": "Sicurezza e Accessi"
+                "security": "Sicurezza e Accessi",
+                "preferences": "Preferenze"
             },
             "header": {
                 "title": "Attività di Accesso Recente",
@@ -1501,6 +1502,24 @@
                 "iphone": "iPhone",
                 "android": "Dispositivo Android",
                 "unknown": "Dispositivo Sconosciuto"
+            }
+        },
+        "preferences": {
+            "title": "Preferenze Account",
+            "description": "Personalizza l'aspetto visivo e le impostazioni localizzate dell'area di lavoro.",
+            "theme": {
+                "title": "Tema Visivo",
+                "description": "Scegli tra temi con layout visivo chiaro, scuro o adattivo al sistema.",
+                "light": "Modalità Chiara",
+                "dark": "Modalità Scura",
+                "system": "Predefinito di Sistema"
+            },
+            "language": {
+                "title": "Lingua di Sistema",
+                "description": "Seleziona la tua lingua preferita per l'area di lavoro amministrativa.",
+                "en": "English (UK)",
+                "it": "Italiano (IT)",
+                "label": "Lingua dell'Area di Lavoro"
             }
         }
     }
