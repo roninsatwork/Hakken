@@ -977,7 +977,9 @@ export default function SystemSettingsPage() {
                 if (confirmModalPipeline) {
                   setIsManualRunning(true);
                   try {
-                    await manualPurgeMutation({ pipelineKey: confirmModalPipeline });
+                    await manualPurgeMutation({ 
+                      pipelineKey: confirmModalPipeline as "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs"
+                    });
                     setIsConfirmModalOpen(false);
                   } finally {
                     setIsManualRunning(false);

@@ -244,7 +244,13 @@ export const getRecentPurges = query({
 
 export const runManualPurge = mutation({
   args: {
-    pipelineKey: v.string(),
+    pipelineKey: v.union(
+      v.literal("agentLogs"),
+      v.literal("workflowLogs"),
+      v.literal("userLogins"),
+      v.literal("chatHistory"),
+      v.literal("auditLogs")
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
@@ -311,7 +317,13 @@ export const runManualPurge = mutation({
 
 export const executePurgeRecursive = internalMutation({
   args: {
-    pipelineKey: v.string(),
+    pipelineKey: v.union(
+      v.literal("agentLogs"),
+      v.literal("workflowLogs"),
+      v.literal("userLogins"),
+      v.literal("chatHistory"),
+      v.literal("auditLogs")
+    ),
     cutoffTimestamp: v.number(),
     historyId: v.id("purgeHistory"),
     deletedCount: v.number(),
@@ -490,6 +502,11 @@ export const dispatcher = internalMutation({
     let configChanged = false;
 
     for (const [pipelineKey, config] of Object.entries(configs)) {
+      const typedKey = pipelineKey as "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs";
+      if (!["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"].includes(typedKey)) {
+        continue;
+      }
+
       if (!config.enabled) {
         continue;
       }
@@ -505,7 +522,7 @@ export const dispatcher = internalMutation({
 
       if (now >= config.nextRunTimestamp) {
         console.log(
-          `Scheduler: triggering scheduled purge for pipeline: ${pipelineKey}`
+          `Scheduler: triggering scheduled purge for pipeline: ${typedKey}`
         );
 
         const cutoffTimestamp =
@@ -513,7 +530,7 @@ export const dispatcher = internalMutation({
 
         // Insert history record
         const historyId = await ctx.db.insert("purgeHistory", {
-          pipelineKey,
+          pipelineKey: typedKey,
           triggerType: "SCHEDULED",
           status: "RUNNING",
           recordsPurged: 0,
@@ -522,7 +539,7 @@ export const dispatcher = internalMutation({
 
         // Trigger execution asynchronously
         await ctx.scheduler.runAfter(0, internal.purges.executePurgeRecursive, {
-          pipelineKey,
+          pipelineKey: typedKey,
           cutoffTimestamp,
           historyId,
           deletedCount: 0,

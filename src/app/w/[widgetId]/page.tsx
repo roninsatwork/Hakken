@@ -49,12 +49,43 @@ export default function WidgetIframePage() {
   // PostMessage for Embed Config
   useEffect(() => {
       if (widget) {
+           let targetOrigin = "*";
+           try {
+               if (typeof document !== "undefined" && document.referrer) {
+                   const referrerUrl = new URL(document.referrer);
+                   const referrerOrigin = referrerUrl.origin;
+                   
+                   let isAllowed = false;
+                   if (widget.allowedDomains && widget.allowedDomains.length > 0) {
+                       for (const domain of widget.allowedDomains) {
+                           if (referrerOrigin.includes(domain) || domain === "*") {
+                               isAllowed = true;
+                               break;
+                           }
+                       }
+                   } else {
+                       isAllowed = true;
+                   }
+                   
+                   const platformHost = window.location.hostname;
+                   if (referrerOrigin.includes(platformHost)) {
+                       isAllowed = true;
+                   }
+                   
+                   if (isAllowed) {
+                       targetOrigin = referrerOrigin;
+                   }
+               }
+           } catch (e) {
+               console.error("Failed to parse referrer origin for postMessage", e);
+           }
+
            window.parent.postMessage({ 
                type: 'SONAE_WIDGET_CONFIG', 
                showPopup: widget.showPopupPreview && widget.enableGreeting, 
                themeGreeting: widget.themeGreeting,
                primaryColor: widget.themePrimaryColor || "#000000"
-           }, '*');
+           }, targetOrigin);
       }
   }, [widget]);
 

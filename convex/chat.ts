@@ -119,6 +119,25 @@ export const sendMessage = mutation({
       throw new Error("Payload size limit exceeded: Message cannot exceed 10000 characters.");
     }
 
+    // 🛡️ SECURITY: Run Auth and Thread verification BEFORE heavy file metadata lookups
+    const userId = await getAuthUserId(ctx);
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) {
+      throw new Error("Thread not found");
+    }
+
+    // Zero-Trust Enforcer: Allow anonymous capability-based write ONLY if it's a widget thread with no owner.
+    if (thread.widgetId && !thread.userId) {
+      // Access granted via unguessable ID, but must verify widget is active
+      const widget = await ctx.db.get(thread.widgetId);
+      if (!widget || !widget.isActive) throw new Error("Unauthorized: Widget is inactive");
+    } else {
+      // Standard strict authentication for internal threads
+      if (!userId || thread.userId !== userId) {
+        throw new Error("Unauthorized");
+      }
+    }
+
     // 🛡️ SECURITY: Strict real-time widget visitor upload validation (Option B)
     if (args.fileIds && args.fileIds.length > 0) {
       const maxBytes = 1024 * 1024; // 1MB
@@ -130,7 +149,7 @@ export const sendMessage = mutation({
           // Fall back to mock table if getMetadata throws or is unsupported in tests
         }
 
-        if (!metadata) {
+        if (!metadata && process.env.IS_TEST === "true") {
           const mock = await ctx.db
             .query("mockStorageMetadata")
             .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
@@ -149,12 +168,14 @@ export const sendMessage = mutation({
           } catch (e: any) {
             // Handle test environment lacking storage delete syscall
           }
-          const mock = await ctx.db
-            .query("mockStorageMetadata")
-            .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-            .first();
-          if (mock) {
-            await ctx.db.delete(mock._id);
+          if (process.env.IS_TEST === "true") {
+            const mock = await ctx.db
+              .query("mockStorageMetadata")
+              .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+              .first();
+            if (mock) {
+              await ctx.db.delete(mock._id);
+            }
           }
           throw new Error("File exceeds the maximum size limit of 1MB");
         }
@@ -166,33 +187,17 @@ export const sendMessage = mutation({
           } catch (e: any) {
             // Handle test environment lacking storage delete syscall
           }
-          const mock = await ctx.db
-            .query("mockStorageMetadata")
-            .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-            .first();
-          if (mock) {
-            await ctx.db.delete(mock._id);
+          if (process.env.IS_TEST === "true") {
+            const mock = await ctx.db
+              .query("mockStorageMetadata")
+              .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+              .first();
+            if (mock) {
+              await ctx.db.delete(mock._id);
+            }
           }
           throw new Error("Invalid file type: strictly images only are allowed");
         }
-      }
-    }
-
-    const userId = await getAuthUserId(ctx);
-    const thread = await ctx.db.get(args.threadId);
-    if (!thread) {
-      throw new Error("Thread not found");
-    }
-
-    // Zero-Trust Enforcer: Allow anonymous capability-based write ONLY if it's a widget thread with no owner.
-    if (thread.widgetId && !thread.userId) {
-      // Access granted via unguessable ID, but must verify widget is active
-      const widget = await ctx.db.get(thread.widgetId);
-      if (!widget || !widget.isActive) throw new Error("Unauthorized: Widget is inactive");
-    } else {
-      // Standard strict authentication for internal threads
-      if (!userId || thread.userId !== userId) {
-        throw new Error("Unauthorized");
       }
     }
 

@@ -584,7 +584,13 @@ export default defineSchema({
   }).index("by_storageId", ["storageId"]),
 
   purgeHistory: defineTable({
-    pipelineKey: v.string(), // "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory"
+    pipelineKey: v.union(
+      v.literal("agentLogs"),
+      v.literal("workflowLogs"),
+      v.literal("userLogins"),
+      v.literal("chatHistory"),
+      v.literal("auditLogs")
+    ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
     status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
     recordsPurged: v.number(),
