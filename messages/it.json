@@ -68,8 +68,8 @@
     "landing": {
         "getStarted": "Inizia ora",
         "toBePrepared": "Prepararsi al futuro",
-        "frameworkTitle": "Framework per l'Autonomia Intelligente",
-        "frameworkDescription": "Sonae è la piattaforma di orchestrazione agentica più sofisticata al mondo, progettata per distribuire, monitorare e scalare flotta AI specializzate.",
+        "frameworkTitle": "Sonae: La base premium per prodotti eccezionali",
+        "frameworkDescription": "Salta la configurazione iniziale e inizia a costruire. Sonae offre una base altamente rifinita e ad alte prestazioni che ti consente di lanciare applicazioni splendide, sicure e scalabili in una frazione di tempo.",
         "copyright": "© {year} Sonae. Tutti i diritti riservati."
     },
     "dashboard": {
