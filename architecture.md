@@ -104,6 +104,7 @@ The platform ingests multimodal documents and processes them into conversational
 
 > [!WARNING]
 > **Local Server Collision (Pre-Flight Hazard):** Executing `npm run build` or `npm install` actively deletes the `.next` development cache and reorganizes `node_modules`. If the Next.js local development server (`npm run dev`) is concurrently running, these commands will instantly hard-crash the active server, resulting in a persistent `ERR_CONNECTION_REFUSED` on localhost until the Next.js process is manually restarted. Always shut down `npm run dev` before running the Pre-Flight Sweep locally.
+> **RESTART REQUIREMENT:** If you stop the Next.js dev server or Convex server to perform this sweep, you **MUST ALWAYS** immediately restart it as a background task (`source ~/.zshrc && npm run dev`) before concluding your turn to keep the local development environment active.
 
 ---
 
