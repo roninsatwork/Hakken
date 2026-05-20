@@ -149,7 +149,7 @@ export const sendMessage = mutation({
           // Fall back to mock table if getMetadata throws or is unsupported in tests
         }
 
-        if (!metadata && process.env.IS_TEST === "true") {
+        if (!metadata && (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test")) {
           const mock = await ctx.db
             .query("mockStorageMetadata")
             .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
@@ -168,7 +168,7 @@ export const sendMessage = mutation({
           } catch (e: any) {
             // Handle test environment lacking storage delete syscall
           }
-          if (process.env.IS_TEST === "true") {
+          if (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
             const mock = await ctx.db
               .query("mockStorageMetadata")
               .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
@@ -187,7 +187,7 @@ export const sendMessage = mutation({
           } catch (e: any) {
             // Handle test environment lacking storage delete syscall
           }
-          if (process.env.IS_TEST === "true") {
+          if (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
             const mock = await ctx.db
               .query("mockStorageMetadata")
               .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
