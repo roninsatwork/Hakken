@@ -90,10 +90,11 @@ export const createThread = mutation({
     const user = await ctx.db.get(userId);
 
     const now = Date.now();
+    const activeCompanyId = user?.impersonatingCompanyId || user?.companyId;
     
     const threadId = await ctx.db.insert("threads", {
       userId,
-      companyId: user?.companyId,
+      companyId: activeCompanyId,
       agentId: args.agentId,
       title: "New Conversation",
       createdAt: now,
@@ -219,7 +220,7 @@ export const sendMessage = mutation({
     let messagesUsed = 0;
     let messageLimit = -1; // -1 represents unlimited
     let isUserOverride = false;
-    const resolvingCompanyId = user?.companyId || thread.companyId;
+    const resolvingCompanyId = user?.impersonatingCompanyId || user?.companyId || thread.companyId;
     
     // 1. Check User Override
     if (user?.planOverrideId) {
