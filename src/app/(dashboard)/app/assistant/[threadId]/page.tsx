@@ -9,6 +9,7 @@ import ChatInput from "@/src/ui/components/chat/ChatInput";
 import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
 import { Loader2, Sparkles, User, RefreshCw, Check } from "lucide-react";
 import { use, useState } from "react";
+import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
 
 export default function ActiveThreadPage({ params }: { params: Promise<{ threadId: string }> }) {
   const resolvedParams = use(params);
@@ -21,6 +22,10 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
 
   const pendingDocs = threadDocs?.filter(d => d.status === "processing" || d.status === "pending");
   const isVectorizing = pendingDocs && pendingDocs.length > 0;
+
+  const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+  const isThinking = lastMessage?.role === "user";
+  const progressiveText = useProgressiveLoading(!!isThinking && !isVectorizing);
 
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [optimisticMessage, setOptimisticMessage] = useState<string | null>(null);
@@ -110,12 +115,11 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                            </div>
                        </div>
                     ) : (
-                       <div className="bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-[20px] rounded-tl-[4px] px-5 py-4 w-fit flex items-center gap-2 shadow-md">
-                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_0ms]"></span>
-                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_200ms]"></span>
-                         <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-[bounce_1s_infinite_400ms]"></span>
-                       </div>
-                    )}
+                        <div className="bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-[24px] rounded-tl-[6px] px-6 py-4 max-w-[85%] sm:max-w-[70%] flex items-center gap-3 shadow-md">
+                          <Loader2 className="w-4 h-4 text-brand animate-spin flex-shrink-0" />
+                          <span className="text-[14px] text-foreground/90 font-light tracking-wide">{progressiveText || "Thinking..."}</span>
+                        </div>
+                     )}
                   </div>
                 )}
                 

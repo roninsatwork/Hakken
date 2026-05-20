@@ -52,6 +52,9 @@ Agent activated → Check frontmatter "skills:" field
 
 ## TIER 0: UNIVERSAL RULES (Always Active)
 
+### 🗣️ Conversational Style & Answering (MANDATORY)
+- **Plain, Direct Language**: Always communicate with the USER in simple, conversational, clear English (or their chosen language). Avoid confusing engineering jargon, long-winded software architecture lectures, complex terminology, or over-explanations. Keep answers concise and direct.
+
 ### 🌐 Language Handling
 
 When user's prompt is NOT in English:

@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -48,6 +49,21 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  
+  const progressiveText = useProgressiveLoading(isSubmitting);
+
+  // Sync progressive text to uploadStatus when submitting (and not actively uploading files)
+  useEffect(() => {
+    if (isSubmitting) {
+      const isUploading = uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
+      if (!isUploading && progressiveText) {
+        setUploadStatus(progressiveText);
+        if (onUploadStateChange) {
+          onUploadStateChange(progressiveText);
+        }
+      }
+    }
+  }, [progressiveText, isSubmitting, uploadStatus, onUploadStateChange]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -208,10 +224,9 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
           const parsingText = "Parsing Intelligence Data...";
           setUploadStatus(parsingText);
           if (onUploadStateChange) onUploadStateChange(parsingText);
-        } else {
-          const connectingText = "Connecting to Agent...";
-          setUploadStatus(connectingText);
-          if (onUploadStateChange) onUploadStateChange(connectingText);
+          
+          // Clear file upload status to allow progressive loading hook to take over
+          setUploadStatus(null);
         }
   
         await sendMessage({ 

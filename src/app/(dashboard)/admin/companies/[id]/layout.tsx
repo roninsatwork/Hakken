@@ -22,7 +22,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
     setIsImpersonating(true);
     try {
       await impersonateCompany({ companyId });
-      router.push("/app/assistant");
+      router.push("/app");
     } catch (e) {
       console.error(e);
       setIsImpersonating(false);

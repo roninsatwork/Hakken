@@ -43,6 +43,11 @@ vi.mock('@/src/context/SystemSettingsContext', () => ({
   })),
 }))
 
+vi.mock('next-intl', () => ({
+  useTranslations: vi.fn(() => (key: string) => key),
+  useLocale: vi.fn(() => 'en'),
+}))
+
 // 4. Mock complex nested components if necessary (like Modals)
 vi.mock('../feedback/SonaeModal', () => ({
   default: ({ isOpen, children }: any) => (isOpen ? <div data-testid="mock-modal">{children}</div> : null),

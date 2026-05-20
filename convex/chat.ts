@@ -355,24 +355,10 @@ export const saveAssistantMessage = internalMutation({
     modelUsed: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    
-    // -- PII FIREWALL EXTRACTION (OUTBOUND) --
-    const piiConfigEntry = await ctx.db
-      .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
-      .first();
-      
-    let piiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
-    if (piiConfigEntry && piiConfigEntry.value) {
-        piiConfig = JSON.parse(piiConfigEntry.value);
-    }
-    
-    const safeContent = redactPII(args.content, piiConfig as any);
-
     await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
-      content: safeContent,
+      content: args.content,
       createdAt: Date.now(),
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,

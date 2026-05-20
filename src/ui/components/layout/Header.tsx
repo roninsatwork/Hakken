@@ -38,13 +38,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const user = useQuery(api.users.getMe);
   const recordLogin = useMutation(api.users.recordLogin);
   const recordLogout = useMutation(api.users.recordLogout);
-  const impersonateCompany = useMutation(api.users.impersonateCompany);
   const profileRef = useRef<HTMLDivElement>(null);
-
-  const handleExitWorkspace = async () => {
-    await impersonateCompany({ companyId: undefined });
-    router.push("/admin/companies");
-  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -128,30 +122,6 @@ export default function Header({ onOpenModal }: HeaderProps) {
 
       {/* Profile & Utility Actions */}
       <div className="flex items-center gap-6">
-
-        {/* Utility Group */}
-        {user?.role === "SUPER_ADMIN" && user?.companyId ? (
-          <>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleExitWorkspace}
-                className="relative w-11 h-11 flex items-center justify-center rounded-[14px] bg-red-500/5 backdrop-blur-3xl border border-red-500/20 hover:text-red-400 hover:bg-red-500/10 text-red-500/80 transition-all group overflow-visible"
-              >
-                <LogOut className="w-5 h-5 z-10" />
-                <div className="absolute inset-0 bg-radial-at-tl from-red-500/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity rounded-[14px] overflow-hidden" />
-
-                {/* Tooltip */}
-                <div className="absolute top-full mt-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-2 group-hover:translate-y-0">
-                  <div className="bg-card dark:bg-[#1a1a1c] border border-border-dim text-[11px] font-medium text-foreground px-3 py-1.5 rounded-[8px] whitespace-nowrap shadow-xl">
-                    {t('exitWorkspace')}
-                  </div>
-                </div>
-              </button>
-            </div>
-            <div className="h-8 w-px bg-border-dim/50 ml-2" />
-          </>
-        ) : null}
-
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}

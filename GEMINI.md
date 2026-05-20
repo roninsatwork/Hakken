@@ -30,6 +30,7 @@
   
 ### 🗣️ Terminology & Localization
 - **Friendly SaaS Language**: Avoid overly technical or "sci-fi" jargon in the UI. Use clear, accessible, standard SaaS terminology to keep the administrative environments approachable.
+- **AI Conversation Style (MANDATORY)**: Always use simple, clear, plain, and direct language when explaining things to the USER. NEVER use overly technical jargon, academic vocabulary, complex engineering lectures, or long-winded essays. Keep responses concise, direct, and extremely easy to understand.
 - **Strict Locale Parity**: Always maintain full parity between English (`en.json`) and Italian (`it.json`) dictionaries. Any new UI label, tooltip, or description must be localized simultaneously.
 - **AI Page Footers**: Ensure AI workspaces or chatbot interfaces always display a standardized footer containing liability/verification disclaimers (e.g., instructing users to double-check AI generations).
 

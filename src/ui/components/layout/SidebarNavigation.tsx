@@ -25,11 +25,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useUI } from "@/src/context/UIContext";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useTheme } from "next-themes";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 
@@ -169,6 +169,17 @@ export default function SidebarNavigation() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const router = useRouter();
+  const impersonateCompany = useMutation(api.users.impersonateCompany);
+  const impersonatedCompany = useQuery(
+    api.companies.getCompanyById,
+    user?.impersonatingCompanyId ? { id: user.impersonatingCompanyId } : "skip"
+  );
+
+  const handleExitImpersonation = async () => {
+    await impersonateCompany({ companyId: undefined });
+    router.push("/admin/companies");
+  };
 
   const [activeItem, setActiveItem] = useState(() => {
     if (pathname === '/admin') return 'Admin Dashboard';
@@ -522,7 +533,26 @@ export default function SidebarNavigation() {
               </nav>
             </section>
 
-
+            {user?.role === "SUPER_ADMIN" && user?.impersonatingCompanyId && (
+              <div className="mt-auto border-t border-border-dim/30 pt-4 flex flex-col gap-3">
+                <div className="p-3.5 rounded-[16px] bg-foreground/[0.02] border border-border-dim/50 flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-mono tracking-widest text-secondary uppercase">
+                      {t('impersonatingLabel')}
+                    </span>
+                    <span className="text-[13px] font-light text-foreground tracking-wide truncate">
+                      {impersonatedCompany?.name || "Loading..."}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleExitImpersonation}
+                    className="w-full text-center py-2 px-3 rounded-[8px] bg-foreground/5 hover:bg-foreground/10 text-foreground text-[11px] font-medium tracking-[0.08em] transition-all border border-border-dim/50 hover:scale-[1.02]"
+                  >
+                    {t('exitWorkspace')}
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         </motion.aside>

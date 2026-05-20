@@ -73,21 +73,10 @@
         "copyright": "© {year} Sonae. All rights reserved."
     },
     "dashboard": {
-        "heroDesc": "You are currently within the Sonae core protocol. Your agentic fleet is operational and synchronized with the multi-tenant context.",
-        "quickStart": "Quick Start",
-        "exploreWorkspace": "Explore your workspace",
-        "meetAssistant": "Meet your AI Assistant",
-        "meetAssistantDesc": "Start a conversation with Sonae Core to orchestrate workflows or analyze data.",
-        "agenticTesting": "Agentic Testing Lab",
-        "agenticTestingDesc": "Simulate agent interactions and validate your knowledge graphs.",
-        "exploreKnowledge": "Explore Knowledge",
-        "exploreKnowledgeDesc": "Review and update the documents and data that power your agents' intelligence.",
-        "relationshipContext": "Relationship Intelligence",
-        "relationshipContextDesc": "Sonae understands the complex relationships between your entities and users.",
-        "alwaysAvailable": "Continuity of Protocol",
-        "alwaysAvailableDesc": "Your agents continue processing and learning even when you are offline.",
-        "security": "Secure by Design",
-        "securityDesc": "End-to-end encryption and multi-tenant isolation ensure your data remains your own.",
+        "blueprintLabel": "System Blueprint",
+        "blueprintTitle": "The Blueprint for Your Next Product",
+        "blueprintBody": "Sonae is the blueprint for your next great product. It is our custom starter framework, designed to give your new application a beautiful, high-performance foundation from day one. You are currently exploring the core canvas where we assemble layouts, styles, and structures before tailoring them specifically to your product's unique mission.",
+        "exploreButton": "Explore Workspace",
         "intelLayer": "{sonae} provides a sophisticated layer of agentic orchestration for your protocol.",
         "securityProtocol": "Security Protocol",
         "securityProtocolDesc": "Verify your identity using multi-factor authentication for sensitive operations."
@@ -145,7 +134,9 @@
         "agenticTesting": "Agentic Testing",
         "properties": "Properties",
         "propertiesSearch": "Search",
-        "propertiesScrapedData": "Scraped Data"
+        "propertiesScrapedData": "Scraped Data",
+        "impersonatingLabel": "Impersonating Workspace",
+        "exitWorkspace": "Exit Workspace"
     },
     "properties": {
         "search": {
@@ -1036,17 +1027,17 @@
             },
             "security": {
                 "title": "Data Security",
-                "redaction": "Data Privacy & Masking",
-                "redactionSub": "Automatic data masking to protect user privacy.",
+                "redaction": "Inbound Prompt Masking",
+                "redactionSub": "Automatic PII shielding for incoming user prompts before they reach the model.",
                 "mfaPolicy": "System MFA Policy",
                 "mfaSub": "Force multi-factor authentication for all users.",
                 "masterToggle": "Enable Data Masking Engine",
-                "masterToggleSub": "Turn on privacy masking for sensitive fields.",
+                "masterToggleSub": "Turn on privacy masking for sensitive fields in incoming user queries.",
                 "maskEmails": "Mask Email Addresses",
                 "maskCreditCards": "Mask Credit Card Numbers",
                 "maskNi": "Mask National ID Numbers",
                 "maskPhones": "Mask Phone Numbers",
-                "maskPhonesSub": "Hide mobile and landline numbers anywhere they appear.",
+                "maskPhonesSub": "Hide mobile and landline numbers in incoming prompts.",
                 "purgeEngine": "Automated Data Retention",
                 "purgeSub": "Automatically delete old logs and records according to schedule.",
                 "purgeToggle": "Enable Data Retention Policies",
@@ -1355,6 +1346,28 @@
                 "transcribing": "Transcribing perfectly...",
                 "inputPlaceholder": "Enter a prompt for {platformName}",
                 "footer": "{platformName} Assistant is AI and can make mistakes, please check all responses."
+            },
+            "loadingStages": {
+                "stage1": {
+                    "0": "Waking up assistant...",
+                    "1": "Reading your prompt...",
+                    "2": "Analyzing requirements..."
+                },
+                "stage2": {
+                    "0": "Gathering context...",
+                    "1": "Consulting Sonae rules...",
+                    "2": "Reviewing reference data..."
+                },
+                "stage3": {
+                    "0": "Structuring response...",
+                    "1": "Synthesizing knowledge...",
+                    "2": "Double-checking facts..."
+                },
+                "stage4": {
+                    "0": "Polishing explanation...",
+                    "1": "Applying final details...",
+                    "2": "Delivering response..."
+                }
             },
             "controls": {
                 "tools": "Tools",

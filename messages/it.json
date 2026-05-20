@@ -73,21 +73,10 @@
         "copyright": "© {year} Sonae. Tutti i diritti riservati."
     },
     "dashboard": {
-        "heroDesc": "Ti trovi attualmente all'interno del protocollo principale Sonae. La tua flotta di agenti è operativa e sincronizzata con il contesto multi-tenant.",
-        "quickStart": "Inizio Rapido",
-        "exploreWorkspace": "Esplora il tuo workspace",
-        "meetAssistant": "Incontra il tuo Assistente AI",
-        "meetAssistantDesc": "Inizia una conversazione con Sonae Core per orchestrare i workflow o analizzare i dati.",
-        "agenticTesting": "Laboratorio di Test Agentico",
-        "agenticTestingDesc": "Simula le interazioni degli agenti e convalida i tuoi grafi di conoscenza.",
-        "exploreKnowledge": "Esplora la Conoscenza",
-        "exploreKnowledgeDesc": "Rivedi e aggiorna i documenti e i dati che alimentano l'intelligenza dei tuoi agenti.",
-        "relationshipContext": "Intelligenza Relazionale",
-        "relationshipContextDesc": "Sonae comprende le complesse relazioni tra le tue entità e i tuoi utenti.",
-        "alwaysAvailable": "Continuità del Protocollo",
-        "alwaysAvailableDesc": "I tuoi agenti continuano a elaborare e apprendere anche quando sei offline.",
-        "security": "Sicuro per Progettazione",
-        "securityDesc": "La crittografia end-to-end e l'isolamento multi-tenant garantiscono che i tuoi dati rimangano tuoi.",
+        "blueprintLabel": "Blueprint di Sistema",
+        "blueprintTitle": "Il Blueprint per il tuo Prossimo Prodotto",
+        "blueprintBody": "Sonae è il punto di partenza per il tuo prossimo grande prodotto. È il nostro starter framework personalizzato, progettato per offrire alla tua nuova applicazione una base bellissima e ad alte prestazioni fin dal primo giorno. Ti trovi attualmente all'interno del canvas principale in cui assembliamo layout, stili e strutture prima di personalizzarli specificamente per la missione unica del tuo prodotto.",
+        "exploreButton": "Esplora Workspace",
         "intelLayer": "{sonae} fornisce un sofisticato livello di orchestrazione agentica per il tuo protocollo.",
         "securityProtocol": "Protocollo di Sicurezza",
         "securityProtocolDesc": "Verifica la tua identità utilizzando l'autenticazione a più fattori per le operazioni sensibili."
@@ -145,7 +134,9 @@
         "agenticTesting": "Test Agentico",
         "properties": "Proprietà",
         "propertiesSearch": "Ricerca",
-        "propertiesScrapedData": "Dati Estratti"
+        "propertiesScrapedData": "Dati Estratti",
+        "impersonatingLabel": "Workspace in Impersonificazione",
+        "exitWorkspace": "Esci da Workspace"
     },
     "properties": {
         "search": {
@@ -1055,17 +1046,17 @@
             },
             "security": {
                 "title": "Sicurezza dei Dati",
-                "redaction": "Privacy e Mascheramento",
-                "redactionSub": "Mascheramento automatico dei dati per la privacy e la conformità.",
+                "redaction": "Mascheramento prompt in entrata",
+                "redactionSub": "Schermatura automatica dei dati personali per i prompt in entrata prima che raggiungano il modello.",
                 "mfaPolicy": "Criteri MFA di Sistema",
                 "mfaSub": "Forza l'autenticazione a più fattori per tutti gli utenti.",
                 "masterToggle": "Abilita Mascheramento Dati",
-                "masterToggleSub": "Attiva il mascheramento per i campi sensibili.",
+                "masterToggleSub": "Attiva il mascheramento per i campi sensibili nelle query degli utenti in entrata.",
                 "maskEmails": "Maschera Indirizzi Email",
                 "maskCreditCards": "Maschera Numeri di Carta di Credito",
                 "maskNi": "Maschera Numeri di Identità Nazionale",
                 "maskPhones": "Maschera Numeri di Telefono",
-                "maskPhonesSub": "Nascondi i numeri di telefono fisso e mobile ovunque appaiano.",
+                "maskPhonesSub": "Nascondi i numeri di telefono fisso e mobile nei prompt in entrata.",
                 "purgeEngine": "Conservazione Automatica dei Dati",
                 "purgeSub": "Elimina automaticamente i vecchi record in base alla programmazione.",
                 "purgeToggle": "Abilita Criteri di Conservazione",
@@ -1374,6 +1365,28 @@
                 "transcribing": "Trascrizione pensiero...",
                 "inputPlaceholder": "Inserisci un prompt per {platformName}",
                 "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
+            },
+            "loadingStages": {
+                "stage1": {
+                    "0": "Attivazione assistente...",
+                    "1": "Lettura del prompt...",
+                    "2": "Analisi dei requisiti..."
+                },
+                "stage2": {
+                    "0": "Raccolta del contesto...",
+                    "1": "Consultazione regole Sonae...",
+                    "2": "Revisione dati di riferimento..."
+                },
+                "stage3": {
+                    "0": "Strutturazione risposta...",
+                    "1": "Sintetizzazione conoscenza...",
+                    "2": "Verifica dei fatti..."
+                },
+                "stage4": {
+                    "0": "Rifinitura spiegazione...",
+                    "1": "Applicazione dettagli finali...",
+                    "2": "Consegna della risposta..."
+                }
             },
             "controls": {
                 "tools": "Strumenti",

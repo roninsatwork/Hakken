@@ -29,6 +29,7 @@ import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 import { useTranslations } from "next-intl";
+import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
 
 const THINKING_LEVELS = [
   { id: "NONE" },
@@ -49,6 +50,18 @@ export default function AssistantWelcomePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  
+  const progressiveText = useProgressiveLoading(isSubmitting);
+
+  // Sync progressive text to uploadStatus when submitting (and not actively uploading files)
+  useEffect(() => {
+    if (isSubmitting) {
+      const isUploading = uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
+      if (!isUploading && progressiveText) {
+        setUploadStatus(progressiveText);
+      }
+    }
+  }, [progressiveText, isSubmitting, uploadStatus]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -208,8 +221,9 @@ export default function AssistantWelcomePage() {
            uploadedFileIds.push(storageId);
         }
         setUploadStatus("Parsing Intelligence Data...");
-      } else {
-        setUploadStatus("Connecting to Agent...");
+        
+        // Clear file upload status to allow progressive loading hook to take over
+        setUploadStatus(null);
       }
 
       await sendMessage({
