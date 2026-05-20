@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import CompanyUsersPage from "./page";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import * as nextNavigation from "next/navigation";
+import { getFunctionName } from "convex/server";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -12,6 +13,25 @@ vi.mock("next/navigation", () => ({
   useParams: vi.fn(() => ({
     id: "company123",
   })),
+}));
+
+// Mock next-intl
+vi.mock("next-intl", () => ({
+  useTranslations: vi.fn(() => (key: string) => {
+    const translations: Record<string, string> = {
+      addSystemAdmin: "Add System Admin",
+      assignSystemAdmin: "Assign System Admin",
+      attachExistingAdmin: "Attach an existing platform-level System Admin to this tenant workspace.",
+      selectAdministrator: "Select Administrator",
+      chooseAdmin: "Choose an admin...",
+      assignToWorkspace: "Assign to Workspace",
+      detachSystemAdmin: "Detach System Admin",
+      detachConfirm: "Are you sure you want to detach...",
+      detach: "Detach",
+      detaching: "Detaching...",
+    };
+    return translations[key] || key;
+  }),
 }));
 
 // Mock framer-motion to bypass animations in JSDOM
@@ -54,13 +74,20 @@ describe("CompanyUsersPage", () => {
     currentMockInvites = mockPendingInvites;
     useQueryCallCount = 0;
     
-    // Mock the global convex hooks
     (useQuery as any).mockImplementation((queryFn: any) => {
-      useQueryCallCount++;
-      const mod = useQueryCallCount % 3;
-      if (mod === 1) return currentMockUser;
-      if (mod === 2) return currentMockCompanies;
-      if (mod === 0) return currentMockInvites;
+      let path = "";
+      try {
+        path = getFunctionName(queryFn);
+      } catch (e) {
+        path = queryFn?._path || queryFn?.name || "";
+      }
+      if (typeof path === "string") {
+        if (path.includes("getMe")) return currentMockUser;
+        if (path.includes("getCompanies")) return currentMockCompanies;
+        if (path.includes("getInvitesByCompany")) return currentMockInvites;
+        if (path.includes("getUnassignedSuperAdmins")) return [];
+      }
+      return [];
     });
 
     (usePaginatedQuery as any).mockImplementation(() => ({

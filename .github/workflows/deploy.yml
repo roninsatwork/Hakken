@@ -32,6 +32,9 @@ jobs:
       - name: Workaround NPM Optional Dependency Bug
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
+      - name: Audit Dependencies for Known Vulnerabilities
+        run: npm audit --audit-level=high
+
       - name: Execute Automated Test Matrix
         run: npx vitest run
 
