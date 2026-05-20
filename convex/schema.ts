@@ -572,4 +572,10 @@ export default defineSchema({
     poseData: v.string(),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"]),
+
+  mockStorageMetadata: defineTable({
+    storageId: v.string(),
+    size: v.number(),
+    contentType: v.optional(v.string()),
+  }).index("by_storageId", ["storageId"]),
 });

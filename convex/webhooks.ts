@@ -1,6 +1,7 @@
 import { httpAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { timingSafeEqual } from "node:crypto";
 
 export const processApifyWebhook = httpAction(async (ctx, request) => {
   // Validate dynamic shared webhook secret to prevent spoofing
@@ -9,7 +10,19 @@ export const processApifyWebhook = httpAction(async (ctx, request) => {
   const secretHeader = request.headers.get("X-Apify-Secret") || request.headers.get("x-apify-secret");
   const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
 
-  const isSecretValid = webhookSecret && (secretParam === webhookSecret || secretHeader === webhookSecret);
+  let isSecretValid = false;
+  if (webhookSecret) {
+    const expected = Buffer.from(webhookSecret);
+    const expectedLen = expected.length;
+
+    const checkSecret = (providedStr: string | null) => {
+      if (!providedStr) return false;
+      const provided = Buffer.from(providedStr);
+      return provided.length === expectedLen && timingSafeEqual(provided, expected);
+    };
+
+    isSecretValid = checkSecret(secretHeader) || checkSecret(secretParam);
+  }
 
   if (!isSecretValid) {
     return new Response("Unauthorized request origin", { status: 401 });

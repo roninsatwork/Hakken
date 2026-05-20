@@ -301,20 +301,21 @@ export const executeDatabaseOperation = internalMutation({
     const table = args.tableName as any;
 
     if (!user || user.role !== "SUPER_ADMIN") {
-      // 🛡️ BOLA Enforcer: Restrict non-SUPER_ADMIN workflows from accessing system tables
-      const systemTables = [
-        "systemSettings",
-        "plans",
-        "users",
-        "auditLogs",
-        "aiModels",
-        "companies",
-        "workflows",
-        "workflowExecutions",
-        "workflowExecutionSteps",
-        "schedules"
+      // 🛡️ BOLA Enforcer: Restrict non-SUPER_ADMIN workflows strictly to allowlisted tables
+      const allowedTables = [
+        "properties",
+        "threads",
+        "messages",
+        "widgets",
+        "knowledgeDocuments",
+        "knowledgeChunks",
+        "aiRules",
+        "agentLogs",
+        "agentTransactions",
+        "arcadeScores",
+        "salesReports"
       ];
-      if (systemTables.includes(args.tableName)) {
+      if (!allowedTables.includes(args.tableName)) {
         throw new ConvexError(`Unauthorized: Access to system table '${args.tableName}' is strictly restricted.`);
       }
 

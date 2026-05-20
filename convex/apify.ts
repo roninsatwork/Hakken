@@ -30,7 +30,7 @@ export const startRightmoveScrape = action({
     if (!webhookSecret) throw new Error("APIFY_WEBHOOK_SECRET environment variable is missing.");
 
     const client = new ApifyClient({ token: apifyToken });
-    const webhookUrl = `${siteUrl}/apify-webhook?secret=${webhookSecret}`;
+    const webhookUrl = `${siteUrl}/apify-webhook`;
 
     const input = {
         "listUrls": args.listUrls.map(url => ({ url })),
@@ -55,8 +55,11 @@ export const startRightmoveScrape = action({
             {
                 eventTypes: ["ACTOR.RUN.SUCCEEDED", "ACTOR.RUN.FAILED", "ACTOR.RUN.ABORTED"],
                 requestUrl: webhookUrl,
+                headersTemplate: JSON.stringify({
+                    "X-Apify-Secret": webhookSecret
+                }),
                 payloadTemplate: `{"runId": "{{resource.id}}", "status": "{{resource.status}}", "actorId": "{{resource.actId}}", "datasetId": "{{resource.defaultDatasetId}}"}`,
-            }
+            } as any
         ]
     });
 

@@ -3,6 +3,7 @@ import { mutation, query, internalQuery, action, httpAction } from "./_generated
 import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
+import { timingSafeEqual } from "node:crypto";
 
 export const list = query({
   args: {},
@@ -270,9 +271,15 @@ export const handleWebhook = httpAction(async (ctx, request) => {
     // 🛡️ SECURITY: Webhook secret verification (prevent trigger spoofing)
     const secretParam = url.searchParams.get("secret");
     const secretHeader = request.headers.get("x-sonae-secret");
-    const providedSecret = secretParam || secretHeader;
+    const providedSecret = secretParam || secretHeader || "";
 
-    if (!workflow.webhookSecret || providedSecret !== workflow.webhookSecret) {
+    const expectedSecret = workflow.webhookSecret || "";
+    const provided = Buffer.from(providedSecret);
+    const expected = Buffer.from(expectedSecret);
+
+    const isSecretValid = expectedSecret !== "" && provided.length === expected.length && timingSafeEqual(provided, expected);
+
+    if (!isSecretValid) {
        return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing webhook secret" }), { status: 401 });
     }
 
