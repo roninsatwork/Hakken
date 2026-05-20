@@ -12,6 +12,8 @@ export default function ProfileTabs() {
   const tPrefs = useTranslations('user.preferences');
   const tCommon = useTranslations('common');
   const { theme, setTheme } = useTheme();
+  const user = useQuery(api.users.getMe);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("preferences");
   const [locale, setLocale] = useState("en");
@@ -90,15 +92,17 @@ export default function ProfileTabs() {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
           )}
         </button>
-        <button
-          onClick={() => setActiveTab("logins")}
-          className={`pb-3 text-[13px] font-medium transition-all relative ${activeTab === "logins" ? "text-foreground" : "text-secondary hover:text-foreground"}`}
-        >
-          {t('tabs.security')}
-          {activeTab === "logins" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10_px_rgba(var(--brand),0.5)]" />
-          )}
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => setActiveTab("logins")}
+            className={`pb-3 text-[13px] font-medium transition-all relative ${activeTab === "logins" ? "text-foreground" : "text-secondary hover:text-foreground"}`}
+          >
+            {t('tabs.security')}
+            {activeTab === "logins" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Tab Content: Preferences */}
@@ -280,7 +284,7 @@ export default function ProfileTabs() {
       )}
 
       {/* Tab Content: Logins */}
-      {activeTab === "logins" && (
+      {activeTab === "logins" && isSuperAdmin && (
         <div className="flex flex-col gap-4">
 
           {/* Header & Search */}

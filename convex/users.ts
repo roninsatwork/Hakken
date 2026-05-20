@@ -391,6 +391,15 @@ export const getLogins = query({
       throw new Error("Unauthenticated request");
     }
     
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return {
+        page: [],
+        isDone: true,
+        continueCursor: "",
+      };
+    }
+    
     // If tracking terminal inputs
     if (args.searchTerm && args.searchTerm.trim() !== "") {
        return await ctx.db
@@ -454,6 +463,9 @@ export const getMyLoginsCount = query({
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) return 0;
+    
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "SUPER_ADMIN") return 0;
     
     if (args.searchTerm && args.searchTerm.trim() !== "") {
        const logins = await ctx.db
