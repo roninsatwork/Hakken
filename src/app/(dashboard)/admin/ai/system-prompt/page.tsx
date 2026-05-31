@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -13,9 +14,6 @@ import {
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function SystemPromptPage() {
   const t = useTranslations("ai.systemPrompt");

@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -34,9 +35,6 @@ const frequencyOptions: { id: Frequency; labelKey: string }[] = [
   { id: "monthly", labelKey: "fields.interval.monthly" },
 ];
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
 
 export default function NewSchedulePage() {
   const router = useRouter();

@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDate } from "@/src/lib/dates";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 
@@ -197,7 +198,7 @@ export default function ManageUsersPage() {
                           </td>
                         )}
                         <td className="px-4 py-3 text-[12px] text-secondary">
-                          {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : t('table.na')}
+                          {formatDate(inv.invitedAt, { fallback: t('table.na') })}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -250,7 +251,7 @@ export default function ManageUsersPage() {
                           </td>
                         )}
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : t('table.na')}
+                          {formatDate(user.createdAt, { fallback: t('table.na') })}
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

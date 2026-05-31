@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { getErrorMessage } from "@/src/lib/errors";
 
 export default function AnalyticsPage() {
   const currentId = useQuery(api.system.getAnalyticsId);
@@ -44,7 +45,7 @@ export default function AnalyticsPage() {
     } catch (error: unknown) {
       console.error("Failed to save analytics configuration:", error);
       setSaveStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to transmit changes to the persistent Edge store.");
+      setErrorMessage(getErrorMessage(error, "Failed to transmit changes to the persistent Edge store."));
     } finally {
       setIsSaving(false);
     }

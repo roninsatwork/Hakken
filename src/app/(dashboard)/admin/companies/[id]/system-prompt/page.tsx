@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -14,9 +15,6 @@ import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function CompanySystemPromptPage() {
   const params = useParams();

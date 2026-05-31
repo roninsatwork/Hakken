@@ -6,6 +6,7 @@ import { Activity, Loader2, CheckCircle2, XCircle, RefreshCcw } from "lucide-rea
 import Header from "@/src/ui/components/layout/Header";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
+import { formatDateTime, formatTime } from "@/src/lib/dates";
 
 export default function PropertiesLogsPage() {
   const latestRunsQuery = useQuery(api.properties.getLatestRuns) as Doc<"apifyRuns">[] | undefined;
@@ -87,7 +88,7 @@ export default function PropertiesLogsPage() {
                       {run.status === "FAILED" && <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[11px] font-bold uppercase tracking-widest border border-red-500/20"><XCircle className="w-3.5 h-3.5" /> Failed</span>}
                     </div>
                     <span className="text-[13px] text-secondary font-medium">
-                      Dispatched: {new Date(run.startedAt).toLocaleString()}
+                      Dispatched: {formatDateTime(run.startedAt)}
                     </span>
                   </div>
                   <div className="flex flex-col sm:items-end gap-2">
@@ -100,7 +101,7 @@ export default function PropertiesLogsPage() {
                     </span>
                     {run.completedAt && (
                       <span className="text-[12px] text-muted">
-                        Finished: {new Date(run.completedAt).toLocaleTimeString()}
+                        Finished: {formatTime(run.completedAt)}
                       </span>
                     )}
                   </div>

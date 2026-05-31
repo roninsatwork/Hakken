@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useRef } from "react";
@@ -10,10 +11,8 @@ import { Library, CheckCircle, Upload, AlertTriangle, UploadCloud, Loader2, Tras
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+import { formatDate } from "@/src/lib/dates";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function AgentKnowledgePage() {
   const t = useTranslations("admin.agents.details.knowledge");
@@ -143,7 +142,7 @@ export default function AgentKnowledgePage() {
                   <div className="flex flex-col flex-1 gap-1">
                     <span className="text-[14px] font-semibold text-foreground tracking-tight">{doc.title}</span>
                     <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-secondary">
-                      <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                      <span>{formatDate(doc.createdAt)}</span>
                       <span className="opacity-40">•</span>
                       <span className="font-mono uppercase tracking-widest text-[10px]">{doc.format}</span>
                     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -28,9 +29,6 @@ type ScheduleRow = Doc<"schedules"> & {
   targetName?: string;
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
 
 export default function SchedulesPage() {
   const router = useRouter();

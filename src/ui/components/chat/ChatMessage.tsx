@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SonaeMarkdown } from "./SonaeMarkdown";
 import Image from "next/image";
+import { formatTime } from "@/src/lib/dates";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -44,7 +45,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         
         {/* Ambient Subtle Timestamp Data */}
         <div className={`text-[10px] font-mono mt-3 uppercase tracking-widest ${isAssistant ? "text-left opacity-40" : "text-right opacity-50 dark:opacity-40"}`}>
-          {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {formatTime(message.createdAt, { locale: [], options: { hour: '2-digit', minute: '2-digit' } })}
         </div>
       </div>
       

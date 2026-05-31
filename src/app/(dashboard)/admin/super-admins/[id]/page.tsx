@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDate, formatDateTime } from "@/src/lib/dates";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -236,8 +237,8 @@ export default function UserProfilePage() {
                       </td>
                       <td className="px-5 py-4 text-right">
                         <span className="text-[12px] text-secondary tracking-wide">
-                          {new Date(login.timestamp).toLocaleString(undefined, { 
-                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                          {formatDateTime(login.timestamp, {
+                            options: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
                           })}
                         </span>
                       </td>
@@ -357,7 +358,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-[13px] text-secondary">
-                        {new Date(thread.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {formatDate(thread.createdAt, { options: { month: 'short', day: 'numeric', year: 'numeric' } })}
                       </span>
                     </td>
                     <td className="px-5 py-4">

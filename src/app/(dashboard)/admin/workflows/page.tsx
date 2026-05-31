@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -58,8 +59,6 @@ export default function WorkflowsPage() {
     setIsAddModalOpen(true);
   };
 
-  const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error ? error.message : fallback;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

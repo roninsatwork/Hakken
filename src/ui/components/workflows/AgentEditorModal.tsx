@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/src/lib/errors";
 import { useEffect, useMemo, useState } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -39,9 +40,6 @@ type AgentEditorModalProps = {
   onUpdateNode: WorkflowNodeUpdateHandler;
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onUpdateNode }: AgentEditorModalProps) {
   const t = useTranslations('admin.workflows.designer.editor');

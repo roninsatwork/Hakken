@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { getErrorMessage } from "@/src/lib/errors";
 
 export default function PropertiesSearchPage() {
   const t = useTranslations();
@@ -44,7 +45,7 @@ export default function PropertiesSearchPage() {
       setMessage(t('properties.search.searchSuccess'));
       setBaseRightmoveUrl("");
     } catch (err: unknown) {
-      setMessage(`Error: ${err instanceof Error ? err.message : t('properties.search.urlError')}`);
+      setMessage(`Error: ${getErrorMessage(err, t('properties.search.urlError'))}`);
     } finally {
       setIsSubmitting(false);
     }

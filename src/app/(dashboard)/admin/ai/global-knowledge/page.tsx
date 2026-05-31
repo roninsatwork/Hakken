@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, KeyboardEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -8,10 +9,8 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { FileText, Upload, Loader2, Trash2, CheckCircle2, AlertTriangle, UploadCloud, Globe, AlignLeft, ChevronDown, ChevronUp, Search, RefreshCw, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { formatDate } from "@/src/lib/dates";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function GlobalKnowledgeBasePage() {
   const t = useTranslations("ai.knowledge");
@@ -447,7 +446,7 @@ export default function GlobalKnowledgeBasePage() {
                           <div className="flex flex-col gap-1">
                              <h4 className="text-[14px] font-bold text-foreground">{doc.title}</h4>
                              <div className="flex items-center gap-2 text-[12px] text-muted font-mono tracking-wide">
-                                <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                                <span>{formatDate(doc.createdAt)}</span>
                                 <span>•</span>
                                 <span className="uppercase">{doc.format?.split('/').pop()?.replace('vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx')}</span>
                              </div>

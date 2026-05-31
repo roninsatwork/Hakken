@@ -19,6 +19,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDate } from "@/src/lib/dates";
 
 type CompanyRow = Doc<"companies"> & { userCount: number };
 type CompanyFormData = { name: string; systemPrompt: string; planId: string };
@@ -184,7 +185,7 @@ export default function CompaniesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
-                          {company.createdAt ? new Date(company.createdAt).toLocaleDateString() : 'N/A'}
+                          {formatDate(company.createdAt)}
                         </td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">

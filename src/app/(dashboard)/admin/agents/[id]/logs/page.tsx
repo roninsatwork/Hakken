@@ -20,6 +20,7 @@ import {
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { formatDate, formatTime } from "@/src/lib/dates";
 
 export default function AgentLogsDashboard() {
   const t = useTranslations("admin.agents.details.logs");
@@ -138,10 +139,10 @@ export default function AgentLogsDashboard() {
                       <td className="px-5 py-4 align-middle">
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[13px] font-bold text-foreground tracking-wide">
-                            {new Date(log.createdAt).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDate(log.createdAt, { locale: "en-GB", options: { day: 'numeric', month: 'short', year: 'numeric' } })}
                           </span>
                           <span className="text-[11px] font-mono tracking-widest text-muted">
-                            {new Date(log.createdAt).toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            {formatTime(log.createdAt, { locale: "en-GB", options: { hour: '2-digit', minute: '2-digit', second: '2-digit' } })}
                           </span>
                         </div>
                       </td>

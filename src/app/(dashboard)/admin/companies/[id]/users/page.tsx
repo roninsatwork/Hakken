@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDate } from "@/src/lib/dates";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
@@ -35,9 +37,6 @@ type UserFormData = {
   companyId: string;
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
 
 export default function CompanyUsersPage() {
   const t = useTranslations('companyUsers');
@@ -273,7 +272,7 @@ export default function CompanyUsersPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-[12px] text-secondary">
-                            {inv.invitedAt ? new Date(inv.invitedAt).toLocaleDateString() : 'N/A'}
+                            {formatDate(inv.invitedAt)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -322,7 +321,7 @@ export default function CompanyUsersPage() {
                             </div>
                           </td>
                           <td className="px-4 py-2.5 text-[12px] text-secondary">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                            {formatDate(item.createdAt)}
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

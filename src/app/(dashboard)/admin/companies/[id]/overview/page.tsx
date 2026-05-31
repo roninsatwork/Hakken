@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -7,9 +8,6 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Save, Loader2, PoundSterling } from "lucide-react";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function CompanyOverviewPage() {
   const params = useParams();

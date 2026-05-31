@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,9 +10,6 @@ import { SquareTerminal, RefreshCcw, Save, CheckCircle2, AlertCircle } from "luc
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function AgentSystemPromptPage() {
   const t = useTranslations("admin.agents.details.systemPrompt");

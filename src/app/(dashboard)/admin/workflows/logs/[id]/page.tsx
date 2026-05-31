@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { getErrorMessage } from "@/src/lib/errors";
+import { formatDateTime } from "@/src/lib/dates";
 
 type WorkflowExecutionDetail = Doc<"workflowExecutions"> & {
   workflowName: string;
@@ -50,7 +52,7 @@ export default function WorkflowExecutionLogPage() {
     } catch (error: unknown) {
       setResumeMessage({
         type: "error",
-        text: error instanceof Error ? error.message : t('feedback.resumeFailed'),
+        text: getErrorMessage(error, t('feedback.resumeFailed')),
       });
     } finally {
       setIsResuming(null);
@@ -131,7 +133,7 @@ export default function WorkflowExecutionLogPage() {
         </div>
         <div className="flex flex-col gap-2 p-5 rounded-[16px] bg-sidebar/30 border border-border-dim/50">
           <span className="text-[10px] text-muted uppercase font-mono tracking-widest">{t('meta.startedAt')}</span>
-          <span className="text-[14px] text-foreground/80">{new Date(exec.startedAt).toLocaleString()}</span>
+          <span className="text-[14px] text-foreground/80">{formatDateTime(exec.startedAt)}</span>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
@@ -46,9 +47,6 @@ const emptyFormData: AgentSettingsFormData = {
 
 const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");

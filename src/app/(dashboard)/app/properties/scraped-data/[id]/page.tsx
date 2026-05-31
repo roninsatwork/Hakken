@@ -11,6 +11,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Header from "@/src/ui/components/layout/Header";
 import PropertyDescription from "./PropertyDescription";
 import Image from "next/image";
+import { formatDate } from "@/src/lib/dates";
 
 export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -123,7 +124,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       <div>
                         <span className="block text-[11px] uppercase tracking-wider text-secondary">Listed On</span>
                         <span className="block text-[14px] text-foreground font-medium mt-1">
-                          {new Date(property.firstVisibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {formatDate(property.firstVisibleDate, { locale: "en-GB", options: { day: 'numeric', month: 'short', year: 'numeric' } })}
                         </span>
                       </div>
                     </div>

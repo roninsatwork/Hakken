@@ -16,6 +16,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { getErrorMessage } from "@/src/lib/errors";
 
 type ModelStatusFilter = "active" | "inactive";
 
@@ -58,7 +59,7 @@ export default function AIModelsPage() {
       await syncVertexModels();
     } catch (err) {
       console.error(err);
-      setSyncError("Failed to sync models: " + (err instanceof Error ? err.message : String(err)));
+      setSyncError(`Failed to sync models: ${getErrorMessage(err, String(err))}`);
     } finally {
       setIsSyncing(false);
     }

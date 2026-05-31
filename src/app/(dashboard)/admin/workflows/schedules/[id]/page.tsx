@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -44,9 +45,6 @@ type EditableSchedule = {
   isActive?: boolean;
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
 
 const DEFAULT_SCHEDULE_DRAFT: ScheduleDraft = {
   payloadType: "agent",

@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDateTime } from "@/src/lib/dates";
 
 type WorkflowExecutionRow = Doc<"workflowExecutions"> & {
   workflowName: string;
@@ -129,7 +130,7 @@ export default function WorkflowLogsPage() {
 
                         <td className="px-4 py-3">
                           <span className="text-[12px] text-muted">
-                            {new Date(exec.startedAt).toLocaleString()}
+                            {formatDateTime(exec.startedAt)}
                           </span>
                         </td>
 

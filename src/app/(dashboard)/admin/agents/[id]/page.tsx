@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDate, formatTime } from "@/src/lib/dates";
 
 export default function AgentDashboard() {
   const t = useTranslations("admin.agents.details.dashboard");
@@ -137,10 +138,10 @@ export default function AgentDashboard() {
                   <td className="px-5 py-4">
                     <div className="flex flex-col">
                       <span className="text-[13px] font-medium text-foreground tracking-wide">
-                        {new Date(tx.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {formatDate(tx.createdAt, { options: { month: 'short', day: 'numeric' } })}
                       </span>
                       <span className="text-[11px] font-mono text-muted">
-                        {new Date(tx.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        {formatTime(tx.createdAt, { options: { hour: '2-digit', minute: '2-digit', second: '2-digit' } })}
                       </span>
                     </div>
                   </td>
