@@ -22,6 +22,7 @@ import { useParams } from "next/navigation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
+import { buildChatTranscript } from "@/src/lib/chatTranscript";
 
 export default function CompanyChatLogsDashboard() {
   const params = useParams();
@@ -56,65 +57,13 @@ export default function CompanyChatLogsDashboard() {
   const handleCopyChat = async () => {
     if (!messages || messages.length === 0) return;
     const activeThread = results.find((t) => t._id === selectedThreadId);
-
-    let htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.5; color: #333;">`;
-    let textContent = "";
+    const { htmlContent, textContent } = buildChatTranscript({
+      thread: activeThread,
+      messages,
+      userLabel: "Visitor",
+    });
     
     try {
-      htmlContent += `<h2 style="margin-bottom: 4px;">Chat Log: ${activeThread?.title || "Unknown"}</h2>`;
-      const dateStr = activeThread
-        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" }).format(new Date(activeThread.createdAt))
-        : new Date().toLocaleString();
-      htmlContent += `<p style="color: #666; font-size: 13px; margin-top: 0;">${dateStr}</p>`;
-      
-      if (activeThread?.sourceUrl) {
-          htmlContent += `<p style="color: #666; font-size: 13px; margin-top: 0;">Source: ${activeThread.sourceUrl}</p>`;
-      }
-
-      htmlContent += `<hr style="border: none; border-bottom: 1px solid #eaeaea; margin: 20px 0;" />`;
-
-      textContent += `Chat Log: ${activeThread?.title || "Unknown"}\n`;
-      textContent += `Date: ${dateStr}\n`;
-      if (activeThread?.sourceUrl) textContent += `Source: ${activeThread.sourceUrl}\n`;
-      textContent += `-------------------------------------------------\n\n`;
-
-      let msgHtml = "";
-
-      messages.forEach((msg) => {
-        const isUser = msg.role === "user";
-        const senderName = isUser ? activeThread?.user?.name || "Visitor" : "Sonae";
-        const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(msg._creationTime));
-
-        // Format basic Markdown to HTML
-        let formattedHtml = msg.content
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\*(.*?)\*/g, "<em>$1</em>")
-          .replace(/`{3}([\s\S]*?)`{3}/g, '<pre style="background: #f4f5f7; padding: 12px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 12px;">$1</pre>')
-          .replace(/`(.*?)`/g, '<code style="background: #f4f5f7; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px;">$1</code>')
-          .replace(/\n\n/g, "</p><p>")
-          .replace(/\n/g, "<br/>");
-
-        // Better Lists
-        formattedHtml = formattedHtml.replace(/(<br\/>)?- (.*)/g, "<li>$2</li>");
-        formattedHtml = formattedHtml.replace(/(<li>[\s\S]*<\/li>)/, '<ul style="margin-top: 4px; margin-bottom: 4px; padding-left: 20px;">$1</ul>');
-
-        msgHtml += `<div style="margin-bottom: 24px;">`;
-        msgHtml += `<div style="margin-bottom: 4px;">`;
-        msgHtml += `<strong style="color: ${isUser ? "#000" : "#4f46e5"}">${senderName}</strong> <span style="color: #999; font-size: 11px; margin-left: 8px;">${time}</span>`;
-        msgHtml += `</div>`;
-        msgHtml += `<div style="font-size: 14px; background: ${isUser ? "#f9f9f9" : "#fff"}; border: 1px solid ${isUser ? "#eee" : "#e0e7ff"}; padding: 12px; border-radius: 8px;">`;
-        msgHtml += `<p style="margin: 0;">${formattedHtml}</p>`;
-        msgHtml += `</div></div>`;
-
-        textContent += `[${time}] ${senderName}:\n${msg.content}\n\n`;
-      });
-
-      htmlContent += msgHtml;
-      htmlContent += `</div>`;
-
       // Use the Clipboard API with HTML
       const clipboardItem = new ClipboardItem({
         "text/html": new Blob([htmlContent], { type: "text/html" }),
