@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
+import { requireSuperAdmin } from "./authz";
 
 export const DEFAULT_SETTINGS = {
   platformName: "Sonae",
@@ -109,10 +109,7 @@ export const update = mutation({
     diagnosticRoutingEnabled: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
 
     const settings = await ctx.db.query("systemSettings").first();
     
@@ -132,7 +129,7 @@ export const update = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_SYSTEM_PREFERENCES",
-      actorId: admin._id,
+      actorId: userId,
       entityType: "systemSettings",
       entityId: settings?._id || "global_settings",
       timestamp: Date.now(),
@@ -145,10 +142,7 @@ export const update = mutation({
 
 export const generateUploadUrl = mutation({
   handler: async (ctx) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
 
     return await ctx.storage.generateUploadUrl();
   },

@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { requireAdmin, requireSuperAdmin } from "./authz";
+
+function canReadCompanyThreads(admin: Doc<"users">, companyId: Id<"companies">): boolean {
+  return admin.role === "SUPER_ADMIN" || (admin.role === "ADMIN" && admin.companyId === companyId);
+}
 
 // Secure API endpoint to fetch all threads across the platform with user data joined
 export const getOffsetPaginatedThreads = query({
@@ -10,11 +15,7 @@ export const getOffsetPaginatedThreads = query({
     pageSize: v.number()
   },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized: Top level clearance required.");
+    await requireSuperAdmin(ctx, "Unauthorized: Top level clearance required.", "Unauthenticated Admin Request");
 
     // Fetch the raw threads
     const allThreads = await ctx.db
@@ -84,14 +85,9 @@ export const getOffsetPaginatedCompanyThreads = query({
     pageSize: v.number()
   },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") {
-        if (admin?.role !== "ADMIN" || !admin.companyId || admin.companyId !== args.companyId) {
-            throw new Error("Unauthorized");
-        }
+    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated Request");
+    if (!canReadCompanyThreads(admin, args.companyId)) {
+      throw new Error("Unauthorized");
     }
 
     const allThreads = await ctx.db
@@ -158,16 +154,11 @@ export const getOffsetPaginatedCompanyThreads = query({
 export const getAdminThreadMessages = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
+    const { user: admin } = await requireAdmin(ctx, "Unauthorized: Cross-boundary access denied.", "Unauthenticated Admin Request");
     const thread = await ctx.db.get(args.threadId);
     
-    if (admin?.role !== "SUPER_ADMIN") {
-        if (admin?.role !== "ADMIN" || !admin.companyId || !thread || thread.companyId !== admin.companyId) {
-            throw new Error("Unauthorized: Cross-boundary access denied.");
-        }
+    if (admin.role !== "SUPER_ADMIN" && (!thread?.companyId || !canReadCompanyThreads(admin, thread.companyId))) {
+      throw new Error("Unauthorized: Cross-boundary access denied.");
     }
 
     return await ctx.db
