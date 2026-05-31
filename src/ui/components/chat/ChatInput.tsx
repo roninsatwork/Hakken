@@ -6,7 +6,6 @@ import { api } from "@/convex/_generated/api";
 import { 
   ShieldCheck, 
   Plus, 
-  Settings2, 
   ChevronDown, 
   Check, 
   Square,
@@ -15,12 +14,10 @@ import {
   Mic,
   MicOff,
   AlertTriangle,
-  Target,
-  Paperclip,
   FileText,
   X
 } from "lucide-react";
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
@@ -39,7 +36,9 @@ const THINKING_LEVELS = [
   { id: "LOW", name: "Low Focus", description: "Quick verification thoughts" },
   { id: "MEDIUM", name: "Deep Focus", description: "Standard problem solving" },
   { id: "HIGH", name: "Max Focus", description: "Complex autonomous reasoning" },
-];
+] as const;
+
+type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
 export default function ChatInput({ threadId, onUploadStateChange, onOptimisticMessage }: ChatInputProps) {
   const settings = useSystemSettings();
@@ -72,16 +71,16 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
      onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
   });
 
-  const allModels = useQuery(api.aiModels.getModels) || [];
-  const activeModels = allModels.filter((m: any) => m.isEnabled);
+  const allModels = useQuery(api.aiModels.getModels) as Doc<"aiModels">[] | undefined;
+  const activeModels = (allModels ?? []).filter((model) => model.isEnabled);
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
 
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
-  const [selectedThinking, setSelectedThinking] = useState(THINKING_LEVELS[0]); 
+  const [selectedThinking, setSelectedThinking] = useState<ThinkingLevel>(THINKING_LEVELS[0]);
   
-  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
+  const [isAutonomousMode] = useState(false);
 
   const sendMessage = useMutation(api.chat.sendMessage);
   const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
@@ -94,7 +93,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   // Set default model automatically
   useEffect(() => {
     if (!selectedModelId && activeModels.length > 0) {
-       const defModel = activeModels.find((m: any) => m.isDefault) || activeModels[0];
+       const defModel = activeModels.find((model) => model.isDefault) || activeModels[0];
        setSelectedModelId(defModel.modelId);
     }
   }, [activeModels, selectedModelId]);
@@ -240,7 +239,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     }
   };
 
-  const selectedModelData = activeModels.find((m: any) => m.modelId === selectedModelId);
+  const selectedModelData = activeModels.find((model) => model.modelId === selectedModelId);
 
   return (
     <>
@@ -395,7 +394,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                         <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1 sticky top-0 bg-card z-10">
                           <span className="text-[12px] font-medium text-muted tracking-widest uppercase">Verified Grid Engines</span>
                         </div>
-                        {activeModels.map((model: any) => (
+                        {activeModels.map((model) => (
                           <button
                             key={model.modelId}
                             type="button"
@@ -519,7 +518,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
             </p>
           </div>
           <div className="bg-foreground/[0.03] border border-border-dim rounded-[12px] p-4 text-[13px] text-muted font-mono tracking-wide mt-2">
-            Click the `microphone` icon located in your browser's top URL search bar and select "Allow".
+            Click the `microphone` icon located in your browser&apos;s top URL search bar and select &quot;Allow&quot;.
           </div>
           <div className="w-full flex justify-end mt-2">
             <button 

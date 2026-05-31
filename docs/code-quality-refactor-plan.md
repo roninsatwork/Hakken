@@ -128,7 +128,8 @@ Status:
 - Gemini rule drift has been corrected for touched admin surfaces: no native alert usage, admin list pagination now uses 15 rows, and new feedback text has English/Italian locale parity.
 - App settings, properties, shared chat/layout components, and the progressive loading hook now remove broad local `any` usage, raw touched avatar/property images, dead imports, and render-time random/time purity warnings.
 - Small E2E, login, sandbox, and widget warnings now avoid unused variables and unescaped text where touched.
-- Current warning backlog after this slice: `npm run lint:all` reports 184 warnings and 0 errors.
+- Chat input now uses typed AI model rows, typed modal test mocks, and escaped modal copy without local `any` warnings.
+- Current warning backlog after this slice: `npm run lint:all` reports 169 warnings and 0 errors.
 
 ## Phase 5: UI Code Cleanup
 

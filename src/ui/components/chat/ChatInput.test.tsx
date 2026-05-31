@@ -1,12 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { PropsWithChildren } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Id } from '@/convex/_generated/dataModel'
 import ChatInput from './ChatInput'
 
 // --- Mocking Dependencies ---
 
 // 1. Mock Convex
 const mockSendMessage = vi.fn().mockResolvedValue(true)
-vi.mock('convex/react', async (importOriginal) => {
+vi.mock('convex/react', () => {
   return {
     useMutation: vi.fn(() => mockSendMessage),
     useQuery: vi.fn(() => [{ modelId: 'fast', displayName: 'Fast', isEnabled: true, isDefault: true }]),
@@ -50,7 +52,9 @@ vi.mock('next-intl', () => ({
 
 // 4. Mock complex nested components if necessary (like Modals)
 vi.mock('../feedback/SonaeModal', () => ({
-  default: ({ isOpen, children }: any) => (isOpen ? <div data-testid="mock-modal">{children}</div> : null),
+  default: ({ isOpen, children }: PropsWithChildren<{ isOpen: boolean }>) => (
+    isOpen ? <div data-testid="mock-modal">{children}</div> : null
+  ),
 }))
 
 // 5. jsdom matchMedia mock (needed for some framed-motion or layout components)
@@ -67,12 +71,14 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 describe('ChatInput Component', () => {
+  const threadId = 'mock_thread_123' as Id<"threads">
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('renders the core elements with correct platform name', () => {
-    render(<ChatInput threadId={"mock_thread_123" as any} />)
+    render(<ChatInput threadId={threadId} />)
     
     // Check placeholder uses system settings
     expect(screen.getByPlaceholderText('Enter a prompt for Sonae')).toBeInTheDocument()
@@ -85,7 +91,7 @@ describe('ChatInput Component', () => {
   })
 
   it('handles typing and calling sendMessage on submit', async () => {
-    render(<ChatInput threadId={"mock_thread_123" as any} />)
+    render(<ChatInput threadId={threadId} />)
     
     const textarea = screen.getByPlaceholderText('Enter a prompt for Sonae')
     const submitButton = screen.getByRole('button', { name: '' }) // Button with ArrowUp icon
