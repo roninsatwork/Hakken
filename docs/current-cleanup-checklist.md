@@ -219,7 +219,7 @@ Completed commit:
 
 ## Phase 6: Final Hardening Before Push
 
-Status: Pending.
+Status: Complete.
 
 Only run when the cleanup is complete and the user is ready for final review.
 
@@ -240,11 +240,19 @@ npm run convex:dev
 
 Then:
 
-- [ ] Review full diff.
-- [ ] Agree commit grouping.
-- [ ] Wait for explicit `commit` approval.
-- [ ] Wait for explicit `push` approval to `dev`.
+- [x] Review full diff.
+- [x] Agree commit grouping.
+- [x] Wait for explicit `commit` approval.
+- [x] Wait for explicit `push` approval to `dev`.
 - [ ] Only merge/push `main` when the user explicitly approves live deploy.
+
+Phase 6 verification completed:
+
+- `npm run check`
+- `npm run build`
+- `npm audit --audit-level=high`
+- Local app smoke on `localhost:3000/login`
+- Convex dev readiness smoke
 
 ## Recommended Execution Order
 
