@@ -8,6 +8,12 @@ import { validateSafeUrl } from "./utils/security";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
+import {
+  evaluateLogicBranch,
+  getWorkflowSystemCommands,
+  sanitizeForConvexValue,
+  type LogicConfig,
+} from "./workflowRuntimeService";
 
 type HeaderConfig = {
   key?: string;
@@ -19,16 +25,6 @@ type ActionConfig = {
   url?: string;
   headers?: HeaderConfig[];
   body?: unknown;
-};
-
-type LogicConfig = {
-  fallbackBranch?: string;
-  rules?: Array<{
-    variable: string;
-    value?: string;
-    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IS_EMPTY" | "NOT_EMPTY";
-    branch: string;
-  }>;
 };
 
 type DatabaseConfig = {
@@ -197,27 +193,7 @@ export const executeNode = internalAction({
       else if (node.type === "logicNode") {
         try {
           const config = (node.data?._logicConfig || { rules: [], fallbackBranch: "default" }) as LogicConfig;
-          let evaluatedBranch = config.fallbackBranch;
-          
-          for (const rule of config.rules ?? []) {
-             const resolvedVar = resolveTemplate(rule.variable, globalStatePayload);
-             const resolvedVal = rule.value ? resolveTemplate(rule.value, globalStatePayload) : rule.value;
-             
-             let match = false;
-             switch(rule.operator) {
-                case "EQUALS": match = String(resolvedVar) === String(resolvedVal); break;
-                case "NOT_EQUALS": match = String(resolvedVar) !== String(resolvedVal); break;
-                case "CONTAINS": match = String(resolvedVar).includes(String(resolvedVal)); break;
-                case "GREATER_THAN": match = parseFloat(String(resolvedVar)) > parseFloat(String(resolvedVal ?? "")); break;
-                case "LESS_THAN": match = parseFloat(String(resolvedVar)) < parseFloat(String(resolvedVal ?? "")); break;
-                case "IS_EMPTY": match = !resolvedVar || String(resolvedVar).trim() === ''; break;
-                case "NOT_EMPTY": match = !!resolvedVar && String(resolvedVar).trim() !== ''; break;
-             }
-             if (match) {
-                 evaluatedBranch = rule.branch;
-                 break;
-             }
-          }
+          const evaluatedBranch = evaluateLogicBranch(config, globalStatePayload);
           outputPayload = JSON.stringify({ evaluated: evaluatedBranch });
         } catch(error: unknown) {
           throw new Error('Logic routing failed: ' + getErrorMessage(error));
@@ -239,20 +215,7 @@ export const executeNode = internalAction({
              try { resolvedData = JSON.parse(resolveTemplate(node.data._inputTemplate, globalStatePayload)); } catch {}
           }
 
-          const sanitizeForConvex = (obj: unknown): unknown => {
-             if (Array.isArray(obj)) return obj.map(sanitizeForConvex);
-             if (obj !== null && typeof obj === 'object') {
-                 const clean: Record<string, unknown> = {};
-                 for (const key in obj as Record<string, unknown>) {
-                     const safeKey = key.startsWith('$') ? key.substring(1) : key;
-                     clean[safeKey] = sanitizeForConvex((obj as Record<string, unknown>)[key]);
-                 }
-                 return clean;
-             }
-             return obj;
-          };
-
-          resolvedData = sanitizeForConvex(resolvedData);
+          resolvedData = sanitizeForConvexValue(resolvedData);
 
           const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
             tableName,
@@ -398,13 +361,7 @@ export const executeNode = internalAction({
       });
 
       // Extract System commands
-      let delayMs = 0;
-      let halt = false;
-      try {
-         const outObj = JSON.parse(outputPayload);
-         if (outObj._system?.delayMs) delayMs = outObj._system.delayMs;
-         if (outObj._system?.halt) halt = true;
-      } catch {}
+      const { delayMs, halt } = getWorkflowSystemCommands(outputPayload);
 
       if (halt) return; // Do not schedule next steps, workflow suspended.
 

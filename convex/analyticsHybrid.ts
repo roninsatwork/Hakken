@@ -8,6 +8,13 @@ import {
   requireAnalyticsCompanyAccess,
   requireAnalyticsSuperAdmin,
 } from "./analytics";
+import {
+  createTimelineMap,
+  formatAnalyticsDateGroup,
+  getAggregationType,
+  resolveDateRange,
+  resolveTimestampRange,
+} from "./analyticsService";
 import type { Id } from "./_generated/dataModel";
 
 type SystemAgentId = "system_assistant";
@@ -42,17 +49,7 @@ export const getGlobalAICosts = query({
     await requireAnalyticsSuperAdmin(ctx, "Unauthorized AI Logistics query");
 
     // 1. Establish Temporal Boundaries
-    const now = Date.now();
-    let startDate = 0;
-    
-    if (args.timeframe === "today") startDate = new Date().setHours(0,0,0,0);
-    else if (args.timeframe === "7d") startDate = now - (7 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "30d") startDate = now - (30 * 24 * 60 * 60 * 1000);
-    else if (args.timeframe === "ytd") startDate = new Date(new Date().getFullYear(), 0, 1).getTime();
-    else if (args.timeframe === "custom" && args.customStart) startDate = args.customStart;
-
-    let endDate = now;
-    if (args.timeframe === "custom" && args.customEnd) endDate = args.customEnd;
+    const { start: startDate, end: endDate } = resolveTimestampRange(args);
 
     // Filter target threads natively against timeframe parameters
     const messages = await ctx.db
@@ -74,8 +71,7 @@ export const getGlobalAICosts = query({
     const periodUniqueUsers = new Set<string>();
     
     // Aggregation Logic (Daily vs Weekly vs Monthly)
-    const durationDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-    const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
+    const aggregationType = getAggregationType(startDate, endDate);
     const timelineMap: Record<string, { costGBP: number }> = {};
 
     messages.forEach(msg => {
@@ -96,24 +92,7 @@ export const getGlobalAICosts = query({
        if (userId) periodUniqueUsers.add(userId);
 
        // Time-Based Timeline Grouping
-       const msgDate = new Date(msg.createdAt);
-       let dateString = "";
-
-       if (aggregationType === "month") {
-           dateString = msgDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-       } else if (aggregationType === "week") {
-           // Basic Week approximating
-           const target = new Date(msgDate.valueOf());
-           const dayNr = (msgDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateString = `Wk ${weekNum}, ${msgDate.getFullYear()}`;
-       } else {
-           dateString = msgDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-       }
+       const dateString = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType, { includeWeekYear: true });
 
        if (!timelineMap[dateString]) timelineMap[dateString] = { costGBP: 0 };
        timelineMap[dateString].costGBP += (msgCost * 0.78);
@@ -324,29 +303,20 @@ export const getCompanyMetrics = query({
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     await requireAnalyticsCompanyAccess(ctx, args.companyId);
 
-    const now = new Date();
-    let startDate = new Date();
-    let endDate = new Date();
-    
-    if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
-    else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
-    else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
-    else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
-    else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
-    else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
-    else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
-
-    if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
-
-    const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-    const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
+    const { now, start: startDate, end: endDate } = resolveDateRange(args);
+    const aggregationType = getAggregationType(startDate.getTime(), endDate.getTime());
 
     let totalMessages = 0;
     let totalTokens = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
-    const timelineMap: Record<string, { cost: number; messages: number; internalMessages: number; externalMessages: number; inputTokens: number; outputTokens: number }> = {};
+    const timelineMap = createTimelineMap(
+      startDate,
+      endDate,
+      aggregationType,
+      () => ({ cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 })
+    );
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
 
     const companyObj = await ctx.db.get(args.companyId);
@@ -392,22 +362,7 @@ export const getCompanyMetrics = query({
         totalOutputTokens += s.metrics.totalOutputTokens;
         totalCostGBP += s.metrics.costGBP;
         
-        let dateGroup = s.date;
-        const metricDate = new Date(s.date);
-        if (aggregationType === "month") {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        } else if (aggregationType === "week") {
-           const target = new Date(metricDate.valueOf());
-           const dayNr = (metricDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-        } else {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        }
+        const dateGroup = formatAnalyticsDateGroup(new Date(s.date), aggregationType);
 
         if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
         timelineMap[dateGroup].cost += s.metrics.costGBP;
@@ -514,22 +469,7 @@ export const getCompanyMetrics = query({
        totalOutputTokens += outputs;
        totalCostGBP += gbpCost;
 
-       const metricDate = new Date(msg.createdAt);
-       let dateGroup = "";
-       if (aggregationType === "month") {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-       } else if (aggregationType === "week") {
-           const target = new Date(metricDate.valueOf());
-           const dayNr = (metricDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-       } else {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-       }
+       const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
        timelineMap[dateGroup].cost += gbpCost;
@@ -653,22 +593,8 @@ export const getGlobalAnalytics = query({
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     await requireAnalyticsSuperAdmin(ctx);
 
-    const now = new Date();
-    let startDate = new Date();
-    let endDate = new Date();
-    
-    if (args.timeframe === "today") { startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999); }
-    else if (args.timeframe === "yesterday") { startDate.setDate(now.getDate() - 1); startDate.setHours(0,0,0,0); endDate.setDate(now.getDate() - 1); endDate.setHours(23,59,59,999); }
-    else if (args.timeframe === "7d") startDate.setDate(now.getDate() - 7);
-    else if (args.timeframe === "30d") startDate.setDate(now.getDate() - 30);
-    else if (args.timeframe === "90d") startDate.setDate(now.getDate() - 90);
-    else if (args.timeframe === "ytd") startDate = new Date(now.getFullYear(), 0, 1);
-    else if (args.timeframe === "custom" && args.customStart) startDate = new Date(args.customStart);
-
-    if (args.timeframe === "custom" && args.customEnd) endDate = new Date(args.customEnd);
-
-    const durationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-    const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
+    const { now, start: startDate, end: endDate } = resolveDateRange(args);
+    const aggregationType = getAggregationType(startDate.getTime(), endDate.getTime());
 
     const users = await ctx.db.query("users").take(10000);
     const companies = await ctx.db.query("companies").take(10000);
@@ -682,7 +608,12 @@ export const getGlobalAnalytics = query({
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCostGBP = 0;
-    const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
+    const timelineMap = createTimelineMap(
+      startDate,
+      endDate,
+      aggregationType,
+      () => ({ cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 })
+    );
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
     for (const c of companies) {
@@ -792,22 +723,7 @@ export const getGlobalAnalytics = query({
        totalOutputTokens += outputs;
        totalCostGBP += gbpCost;
 
-       const metricDate = new Date(msg.createdAt);
-       let dateGroup = "";
-       if (aggregationType === "month") {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-       } else if (aggregationType === "week") {
-           const target = new Date(metricDate.valueOf());
-           const dayNr = (metricDate.getDay() + 6) % 7;
-           target.setDate(target.getDate() - dayNr + 3);
-           const firstThursday = target.valueOf();
-           target.setMonth(0, 1);
-           if (target.getDay() !== 4) target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-           const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-           dateGroup = `Wk ${weekNum}`;
-       } else {
-           dateGroup = metricDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-       }
+       const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
        timelineMap[dateGroup].cost += gbpCost;

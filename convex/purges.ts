@@ -3,11 +3,12 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireSuperAdmin } from "./authz";
+import { calculateNextPurgeRun, type PurgeScheduleInterval } from "./purgeScheduleService";
 
 interface PipelineConfig {
   enabled: boolean;
   retentionDays: number;
-  interval: "Hourly" | "Daily" | "Weekly" | "Monthly";
+  interval: PurgeScheduleInterval;
   hourUtc: number; // 0 to 23
   dayOfWeek?: number; // 0 (Sunday) to 6 (Saturday) - for Weekly
   dayOfMonth?: number; // 1 to 28 - for Monthly
@@ -64,56 +65,6 @@ const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
   },
 };
 
-function calculateNextRun(
-  interval: "Hourly" | "Daily" | "Weekly" | "Monthly",
-  hourUtc: number,
-  dayOfWeek?: number,
-  dayOfMonth?: number
-): number {
-  const now = new Date();
-  // Clear milliseconds/seconds/minutes to make clean hour marks
-  const next = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      now.getUTCHours(),
-      0,
-      0,
-      0
-    )
-  );
-
-  if (interval === "Hourly") {
-    next.setUTCHours(next.getUTCHours() + 1);
-  } else if (interval === "Daily") {
-    next.setUTCHours(hourUtc);
-    if (next.getTime() <= now.getTime()) {
-      next.setUTCDate(next.getUTCDate() + 1);
-    }
-  } else if (interval === "Weekly") {
-    next.setUTCHours(hourUtc);
-    const targetDay = dayOfWeek !== undefined ? dayOfWeek : 0; // 0 = Sunday
-    const currentDay = next.getUTCDay();
-    let daysToAdd = targetDay - currentDay;
-    if (daysToAdd < 0) {
-      daysToAdd += 7;
-    } else if (daysToAdd === 0 && next.getTime() <= now.getTime()) {
-      daysToAdd = 7;
-    }
-    next.setUTCDate(next.getUTCDate() + daysToAdd);
-  } else if (interval === "Monthly") {
-    next.setUTCHours(hourUtc);
-    const targetDate = dayOfMonth !== undefined ? dayOfMonth : 1;
-    next.setUTCDate(targetDate);
-    if (next.getTime() <= now.getTime()) {
-      next.setUTCMonth(next.getUTCMonth() + 1);
-      next.setUTCDate(targetDate);
-    }
-  }
-  return next.getTime();
-}
-
 export const getPipelineConfig = query({
   args: {},
   handler: async (ctx) => {
@@ -162,7 +113,7 @@ export const updatePipelineConfig = mutation({
         }
         // If enabled and nextRunTimestamp is missing/zero or interval/hour changed, recalculate
         if (conf.enabled) {
-          conf.nextRunTimestamp = calculateNextRun(conf.interval, conf.hourUtc, conf.dayOfWeek, conf.dayOfMonth);
+          conf.nextRunTimestamp = calculateNextPurgeRun(conf.interval, conf.hourUtc, conf.dayOfWeek, conf.dayOfMonth);
         } else {
           conf.nextRunTimestamp = 0;
         }
@@ -544,7 +495,7 @@ export const dispatcher = internalMutation({
 
       // If nextRunTimestamp is not set, initialize it
       if (!config.nextRunTimestamp || config.nextRunTimestamp === 0) {
-        config.nextRunTimestamp = calculateNextRun(
+        config.nextRunTimestamp = calculateNextPurgeRun(
           config.interval,
           config.hourUtc,
           config.dayOfWeek,
@@ -579,7 +530,7 @@ export const dispatcher = internalMutation({
         });
 
         // Calculate next execution run
-        config.nextRunTimestamp = calculateNextRun(
+        config.nextRunTimestamp = calculateNextPurgeRun(
           config.interval,
           config.hourUtc,
           config.dayOfWeek,

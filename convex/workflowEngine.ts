@@ -9,6 +9,7 @@ import {
   parseWorkflowState,
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
+import { shouldRunWorkflowSchedule } from "./workflowScheduleService";
 
 const allowedWorkflowTables = [
   "properties",
@@ -26,15 +27,6 @@ const allowedWorkflowTables = [
 
 type WorkflowDbTable = (typeof allowedWorkflowTables)[number];
 type TenantScopedRecord = { companyId?: Id<"companies"> };
-type ScheduleConfig = {
-  mode?: "interval" | "daily" | "weekly" | "monthly";
-  intervalUnit?: string;
-  intervalVal?: number;
-  time?: string;
-  dayOfWeek?: number;
-  dayOfMonth?: number;
-};
-
 export const initExecution = internalMutation({
   args: {
     workflowId: v.id("workflows"),
@@ -423,67 +415,11 @@ export const scheduleDispatcher = internalMutation({
     for (const schedule of activeWorkflowSchedules) {
         if (!schedule.workflowId) continue;
         
-        let config: ScheduleConfig | null = null;
-        try { config = JSON.parse(schedule.intervalStr) as ScheduleConfig; } catch {}
-        
-        let shouldRun = false;
-        const lastRunTs = schedule.lastRunTs || 0;
-        
-        if (config?.mode) {
-             if (config.mode === 'interval') {
-                  let ms = 0;
-                  const unit = config.intervalUnit || 'minutes';
-                  const val = config.intervalVal || 15;
-                  if (unit.startsWith("minute")) ms = val * 60 * 1000;
-                  if (unit.startsWith("hour")) ms = val * 60 * 60 * 1000;
-                  if (unit.startsWith("day")) ms = val * 24 * 60 * 60 * 1000;
-                  
-                  if (now - lastRunTs >= ms) {
-                      shouldRun = true;
-                  }
-             } else {
-                  const [targetH, targetM] = (config.time || "00:00").split(":").map(Number);
-                  
-                  const targetToday = new Date(nowObj);
-                  targetToday.setUTCHours(targetH, targetM, 0, 0);
-                  const targetMs = targetToday.getTime();
-                  
-                  if (now >= targetMs && lastRunTs < targetMs) {
-                      if (config.mode === 'daily') {
-                          shouldRun = true;
-                      } else if (config.mode === 'weekly') {
-                          if (nowObj.getUTCDay() === (config.dayOfWeek || 0)) {
-                              shouldRun = true;
-                          }
-                      } else if (config.mode === 'monthly') {
-                          if (nowObj.getUTCDate() === (config.dayOfMonth || 1)) {
-                              shouldRun = true;
-                          }
-                      }
-                  }
-             }
-        } else {
-            // Legacy strings "15 minutes" or "daily" fallback
-            let ms = 0;
-            const parts = schedule.intervalStr.split(" ");
-            if (parts.length === 2) {
-                const val = parseInt(parts[0]);
-                const unit = parts[1].toLowerCase();
-                if (unit.startsWith("minute")) ms = val * 60 * 1000;
-                else if (unit.startsWith("hour")) ms = val * 60 * 60 * 1000;
-                else if (unit.startsWith("day")) ms = val * 24 * 60 * 60 * 1000;
-            } else if (schedule.intervalStr === "daily") {
-                ms = 24 * 60 * 60 * 1000;
-            } else if (schedule.intervalStr === "hourly") {
-                ms = 60 * 60 * 1000;
-            } else if (schedule.intervalStr === "weekly") {
-                ms = 7 * 24 * 60 * 60 * 1000;
-            }
-            
-            if (ms > 0 && now - lastRunTs >= ms) {
-                 shouldRun = true;
-            }
-        }
+        const shouldRun = shouldRunWorkflowSchedule({
+            intervalStr: schedule.intervalStr,
+            lastRunTs: schedule.lastRunTs,
+            now: nowObj,
+        });
         
         if (shouldRun) {
              const workflow = await ctx.db.get(schedule.workflowId);

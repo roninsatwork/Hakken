@@ -21,6 +21,7 @@ import type * as aiTools from "../aiTools.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsCron from "../analyticsCron.js";
 import type * as analyticsHybrid from "../analyticsHybrid.js";
+import type * as analyticsService from "../analyticsService.js";
 import type * as apify from "../apify.js";
 import type * as arcade from "../arcade.js";
 import type * as auditLogs from "../auditLogs.js";
@@ -41,6 +42,7 @@ import type * as movements from "../movements.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as plans from "../plans.js";
 import type * as properties from "../properties.js";
+import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
 import type * as salesReportActions from "../salesReportActions.js";
 import type * as salesReports from "../salesReports.js";
@@ -65,6 +67,8 @@ import type * as widgets from "../widgets.js";
 import type * as workflowEngine from "../workflowEngine.js";
 import type * as workflowExecutions from "../workflowExecutions.js";
 import type * as workflowRuntime from "../workflowRuntime.js";
+import type * as workflowRuntimeService from "../workflowRuntimeService.js";
+import type * as workflowScheduleService from "../workflowScheduleService.js";
 import type * as workflows from "../workflows.js";
 
 import type {
@@ -87,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   analyticsCron: typeof analyticsCron;
   analyticsHybrid: typeof analyticsHybrid;
+  analyticsService: typeof analyticsService;
   apify: typeof apify;
   arcade: typeof arcade;
   auditLogs: typeof auditLogs;
@@ -107,6 +112,7 @@ declare const fullApi: ApiFromModules<{
   orchestrator: typeof orchestrator;
   plans: typeof plans;
   properties: typeof properties;
+  purgeScheduleService: typeof purgeScheduleService;
   purges: typeof purges;
   salesReportActions: typeof salesReportActions;
   salesReports: typeof salesReports;
@@ -131,6 +137,8 @@ declare const fullApi: ApiFromModules<{
   workflowEngine: typeof workflowEngine;
   workflowExecutions: typeof workflowExecutions;
   workflowRuntime: typeof workflowRuntime;
+  workflowRuntimeService: typeof workflowRuntimeService;
+  workflowScheduleService: typeof workflowScheduleService;
   workflows: typeof workflows;
 }>;
 
