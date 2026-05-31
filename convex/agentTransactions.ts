@@ -1,7 +1,7 @@
-import { auth } from "./auth";
 import { v } from "convex/values";
 import { query, internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { requireAdmin } from "./authz";
 
 export const getForAgent = query({
   args: {
@@ -9,10 +9,7 @@ export const getForAgent = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const baseQuery = ctx.db
       .query("agentTransactions")
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
@@ -32,10 +29,7 @@ export const getForAgent = query({
 export const getStatsForAgent = query({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const baseQuery = ctx.db
       .query("agentTransactions")
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
@@ -76,11 +70,7 @@ export const getStatsForAgent = query({
 export const seedForAgent = internalMutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx);
 
     // Generate 15 dummy transactions
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
