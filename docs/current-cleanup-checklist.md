@@ -183,7 +183,7 @@ Completed commit:
 
 ## Phase 5: Test & Drift Guardrails
 
-Status: Pending.
+Status: Complete.
 
 Scope:
 
@@ -201,17 +201,21 @@ Goal:
 
 Checklist:
 
-- [ ] Add or strengthen BOLA/security tests around high-risk backend paths.
-- [ ] Add admin page tests for shared table/search/pagination patterns.
-- [ ] Add shared component tests where repeated primitives carry behavior.
-- [ ] Add quality drift tests for rules we want future agents to respect.
-- [ ] Confirm promoted lint rules remain hard errors and clean.
-- [ ] Confirm no movement demo files changed.
-- [ ] Run `npm run check`.
-- [ ] Run `npm run build`.
-- [ ] Provide diff summary for user review.
-- [ ] Wait for explicit `commit` approval.
-- [ ] Push to `dev` after explicit phase-end push approval.
+- [x] Add or strengthen BOLA/security tests around high-risk backend paths.
+- [x] Add admin page tests for shared table/search/pagination patterns.
+- [x] Add shared component tests where repeated primitives carry behavior.
+- [x] Add quality drift tests for rules we want future agents to respect.
+- [x] Confirm promoted lint rules remain hard errors and clean.
+- [x] Confirm no movement demo files changed.
+- [x] Run `npm run check`.
+- [x] Run `npm run build`.
+- [x] Provide diff summary for user review.
+- [x] Wait for explicit `commit` approval.
+- [x] Push to `dev` after explicit phase-end push approval.
+
+Completed commit:
+
+- Phase 5 test and drift guardrails.
 
 ## Phase 6: Final Hardening Before Push
 

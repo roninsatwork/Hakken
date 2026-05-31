@@ -22,6 +22,7 @@ const walkFiles = (dir: string, extensions: ReadonlySet<string>): string[] => {
 };
 
 const relativePath = (filePath: string) => path.relative(repoRoot, filePath);
+const readRepoFile = (relativeFilePath: string) => fs.readFileSync(path.join(repoRoot, relativeFilePath), 'utf8');
 
 describe('Quality Drift Guardrails', () => {
   test('admin pagination standard stays at 15 rows', () => {
@@ -71,5 +72,69 @@ describe('Quality Drift Guardrails', () => {
     });
 
     expect(offenders, `Non-standard admin pagination found:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('admin list pages keep using shared table primitives after cleanup', () => {
+    const pages = [
+      'src/app/(dashboard)/admin/agents/page.tsx',
+      'src/app/(dashboard)/admin/companies/page.tsx',
+      'src/app/(dashboard)/admin/settings/plans/page.tsx',
+    ];
+
+    const offenders = pages.filter((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return !contents.includes('AdminSearchBar') ||
+        !contents.includes('AdminTableShell') ||
+        !contents.includes('AdminPaginationFooter') ||
+        contents.includes('ChevronLeft') ||
+        contents.includes('ChevronRight');
+    });
+
+    expect(offenders, `Admin pages drifted away from shared table primitives:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('admin rules list pages keep using the shared rules table', () => {
+    const pages = [
+      'src/app/(dashboard)/admin/ai/rules/page.tsx',
+      'src/app/(dashboard)/admin/agents/[id]/rules/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/rules/page.tsx',
+    ];
+
+    const offenders = pages.filter((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return !contents.includes('AdminRulesTable') || /getPriorityColor|deleteRuleMutation\(\{\s*id:\s*rule\._id/.test(contents);
+    });
+
+    expect(offenders, `Rules pages drifted away from shared table/delete-confirmation patterns:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('knowledge document deletes remain confirmation-gated', () => {
+    const pages = [
+      'src/app/(dashboard)/admin/ai/global-knowledge/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx',
+    ];
+
+    const offenders = pages.filter((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return /onClick=\{\(\) => deleteDocument/.test(contents) || !contents.includes('documentToDelete');
+    });
+
+    expect(offenders, `Knowledge pages allow direct document deletion:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('cleanup checklist keeps movement demo files out of scope', () => {
+    const checklist = readRepoFile('docs/current-cleanup-checklist.md');
+    const requiredNoTouchPaths = [
+      'src/app/(dashboard)/demos/movements/**',
+      'src/app/(dashboard)/demos/movement-capture/page.tsx',
+      'convex/movements.ts',
+    ];
+
+    const missingPaths = requiredNoTouchPaths.filter((demoPath) => !checklist.includes(demoPath));
+
+    expect(missingPaths, `Movement demo no-touch paths missing from cleanup checklist:\n${missingPaths.join('\n')}`).toEqual([]);
   });
 });
