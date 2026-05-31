@@ -15,6 +15,7 @@ import type * as agentRuntime from "../agentRuntime.js";
 import type * as agentTransactions from "../agentTransactions.js";
 import type * as agents from "../agents.js";
 import type * as ai from "../ai.js";
+import type * as aiModelService from "../aiModelService.js";
 import type * as aiModels from "../aiModels.js";
 import type * as aiModelsActions from "../aiModelsActions.js";
 import type * as aiRules from "../aiRules.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   agentTransactions: typeof agentTransactions;
   agents: typeof agents;
   ai: typeof ai;
+  aiModelService: typeof aiModelService;
   aiModels: typeof aiModels;
   aiModelsActions: typeof aiModelsActions;
   aiRules: typeof aiRules;

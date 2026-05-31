@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { requireCurrentUser, requireSuperAdmin } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { getDefaultModelId } from "./aiModelService";
 
 export const getModels = query({
   args: {},
@@ -56,8 +57,6 @@ export const getOffsetPaginatedModels = query({
 export const resolveModelForExecution = internalQuery({
   args: { requestedModelId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const FAILSAFE_MODEL = "gemini-2.5-flash"; // Hardcoded network backup
-
     // Try finding the exact model requested
     if (args.requestedModelId) {
        const model = await ctx.db
@@ -70,18 +69,13 @@ export const resolveModelForExecution = internalQuery({
        }
     }
 
-    // It doesn't exist or is disabled, fallback to Default
-    const defaultModel = await ctx.db
+    // It doesn't exist or is disabled, fallback to active default, then system failsafe.
+    const defaultModels = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
-      .first();
+      .take(10000);
 
-    if (defaultModel && defaultModel.isEnabled) {
-       return defaultModel.modelId;
-    }
-
-    // System failsafe if no active default is configured
-    return FAILSAFE_MODEL;
+    return getDefaultModelId(defaultModels);
   },
 });
 

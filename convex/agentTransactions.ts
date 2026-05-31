@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { requireAdmin } from "./authz";
+import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
 
 export const getForAgent = query({
   args: {
@@ -76,14 +77,12 @@ export const seedForAgent = internalMutation({
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
     const activeModels = await ctx.db.query("aiModels").take(10000);
     const modelMap = new Map(activeModels.map(m => [m.modelId, m]));
-    const defaultModelObj = activeModels.find((m) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
-    const models = activeModels.length > 0 ? activeModels.map(m => m.modelId) : [defaultModelId];
+    const models = getExecutionModelPool(activeModels);
     
     for (let i = 0; i < 15; i++) {
         const inputTokens = Math.floor(Math.random() * 8000) + 200;
         const outputTokens = Math.floor(Math.random() * 1500) + 50;
-        const model = models[Math.floor(Math.random() * models.length)];
+        const model = models[Math.floor(Math.random() * models.length)] ?? getDefaultModelId(activeModels);
         
         const config = modelMap.get(model);
         const inRate = config ? (inputTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;

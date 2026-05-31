@@ -315,7 +315,7 @@ export default function CompanyChatLogsDashboard() {
                           £{messages.reduce((acc, msg) => {
                             const i = msg.inputTokens || 0;
                             const o = msg.outputTokens || 0;
-                            const m = msg.modelUsed || "gemini-1.5-flash";
+                            const m = msg.modelUsed ?? "";
                             let usd = 0;
                             if (m.includes("pro")) usd = (i / 1e6) * 3.50 + (o / 1e6) * 10.50;
                             else usd = (i / 1e6) * 0.075 + (o / 1e6) * 0.30;

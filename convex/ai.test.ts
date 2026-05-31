@@ -2,6 +2,7 @@ import { expect, test, describe } from "vitest";
 import { convexTest } from "convex-test";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 
 describe("OWASP for LLMs: Denial of Wallet & Resource Exhaustion (LLM04)", () => {
     test("Core AI generator rejects excessive payload lengths before invoking Vertex AI", async () => {
@@ -64,5 +65,25 @@ describe("OWASP for LLMs: Denial of Wallet & Resource Exhaustion (LLM04)", () =>
         // Should fall back to safemodel because expensive is disabled
         expect(resolved).not.toBe("expensive-model-2.0");
         expect(resolved).toBe("safemodel-1.5");
+    });
+
+    test("Model resolver uses platform failsafe when no active default exists", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+        await t.run(async (ctx) => {
+            await ctx.db.insert("aiModels", {
+                 modelId: "disabled-default",
+                 displayName: "Disabled Default",
+                 isEnabled: false,
+                 isDefault: true,
+                 lastSyncedAt: Date.now()
+            });
+        });
+
+        const resolved = await t.run(async (ctx) => {
+            return await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+        });
+
+        expect(resolved).toBe(SYSTEM_FAILSAFE_MODEL_ID);
     });
 });

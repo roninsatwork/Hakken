@@ -10,6 +10,7 @@ import {
     resolveDateRange,
     resolveTimestampRange,
 } from "./analyticsService";
+import { getDefaultModelId } from "./aiModelService";
 
 type AiModelDoc = Doc<"aiModels">;
 type ModelCostMap = Map<string, AiModelDoc>;
@@ -64,8 +65,7 @@ export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id
 
 export function buildModelCostContext(aiModelsFetch: AiModelDoc[]) {
     const modelMap: ModelCostMap = new Map(aiModelsFetch.map((m) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const defaultModelId = getDefaultModelId(aiModelsFetch);
     return { modelMap, defaultModelId };
 }
 

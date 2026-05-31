@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
+import { getDefaultModelId } from "./aiModelService";
 
 export const list = query({
   args: {},
@@ -45,12 +46,12 @@ export const createAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModel = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).first();
+    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
 
     const newAgentId = await ctx.db.insert("agents", {
       name: args.name,
       description: args.description,
-      modelId: defaultModel?.modelId || "gemini-2.5-flash", // securely extract default or fallback
+      modelId: getDefaultModelId(defaultModels),
       thinkingMode: false,
       isActive: true, // defaults to true
       temperature: 1.0, // Default deterministic score
@@ -190,12 +191,12 @@ export const createInlineAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModel = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).first();
+    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
 
     const newAgentId = await ctx.db.insert("agents", {
       name: "Sandbox Agent",
       description: "Inline agent logic",
-      modelId: defaultModel?.modelId || "gemini-2.5-flash", // securely extract default or fallback
+      modelId: getDefaultModelId(defaultModels),
       thinkingMode: false,
       isActive: true, // defaults to true
       temperature: 1.0,
