@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
+import { Doc } from "./_generated/dataModel";
 import schema from "./schema";
 
 describe("OWASP: BOLA / Data Isolation Shield", () => {
@@ -75,8 +76,8 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
     });
     
     expect(transactions.page.length).toBe(5);
-    transactions.page.forEach((t: any) => {
-      expect(t.companyId).toBe(companyAId);
+    transactions.page.forEach((transaction: Doc<"agentTransactions">) => {
+      expect(transaction.companyId).toBe(companyAId);
     });
   });
 
@@ -160,6 +161,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
 
     // Should only see Company A's property
     expect(res.page.length).toBe(1);
+    expect(res.page[0]._id).toBe(propAId);
     expect(res.page[0].address).toBe("123 safe street");
 
     // Admin A tries to get Company B's property directly (BOLA)

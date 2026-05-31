@@ -1,19 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+
+type PoseLandmark = {
+  x: number;
+  y: number;
+  visibility: number;
+};
+
+type PoseFrame = PoseLandmark[];
 
 interface PreviewModalProps {
-  movement: any;
+  movement: Doc<"movements"> | null;
   onClose: () => void;
 }
 
 export default function PreviewModal({ movement, onClose }: PreviewModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [frames, setFrames] = useState<any[]>([]);
+  const [frames, setFrames] = useState<PoseFrame[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,12 +38,12 @@ export default function PreviewModal({ movement, onClose }: PreviewModalProps) {
       try {
         if (!isStorageId) {
           // Legacy direct JSON
-          setFrames(JSON.parse(movement.poseData));
+          setFrames(JSON.parse(movement.poseData) as PoseFrame[]);
           setIsLoading(false);
         } else if (fileUrl) {
           // Fetch from Blob storage
           const res = await fetch(fileUrl);
-          const data = await res.json();
+          const data = await res.json() as PoseFrame[];
           setFrames(data);
           setIsLoading(false);
         }
@@ -48,7 +56,7 @@ export default function PreviewModal({ movement, onClose }: PreviewModalProps) {
   }, [movement, isStorageId, fileUrl]);
 
   // Drawing logic matches movement-capture perfectly
-  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: any[], width: number, height: number) => {
+  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: PoseFrame, width: number, height: number) => {
     ctx.clearRect(0, 0, width, height);
     
     ctx.strokeStyle = "#0ff"; // Cyan neon

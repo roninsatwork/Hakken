@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import Header from "@/src/ui/components/layout/Header";
 import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker } from "@mediapipe/tasks-vision";
+import type { Landmark, NormalizedLandmark, Classifications } from "@mediapipe/tasks-vision";
 import Typography from "@/src/ui/atoms/typography";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
@@ -12,6 +13,21 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+
+type HandSide = "left" | "right";
+
+type HandCapture = {
+  landmarks: NormalizedLandmark[];
+  worldLandmarks: Landmark[] | null;
+};
+
+type MovementCaptureFrame = {
+  timestamp: number;
+  landmarks: NormalizedLandmark[];
+  worldLandmarks: Landmark[] | null;
+  blendshapes?: Classifications["categories"];
+  hands?: Record<HandSide, HandCapture | null>;
+};
 
 export default function MovementCapturePage() {
   const webcamRef = useRef<Webcam>(null);
@@ -22,7 +38,7 @@ export default function MovementCapturePage() {
   const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
   const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const recordedFramesRef = useRef<any[]>([]);
+  const recordedFramesRef = useRef<MovementCaptureFrame[]>([]);
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
   
@@ -55,6 +71,10 @@ export default function MovementCapturePage() {
   // Initialize MediaPipe Triad
   useEffect(() => {
     let active = true;
+    let createdPose: PoseLandmarker | null = null;
+    let createdFace: FaceLandmarker | null = null;
+    let createdHands: HandLandmarker | null = null;
+
     const initModel = async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks(
@@ -85,6 +105,9 @@ export default function MovementCapturePage() {
               minTrackingConfidence: 0.6,
             })
         ]);
+        createdPose = pose;
+        createdFace = face;
+        createdHands = hands;
         if (active) {
           setPoseLandmarker(pose);
           setFaceLandmarker(face);
@@ -97,9 +120,9 @@ export default function MovementCapturePage() {
     initModel();
     return () => {
       active = false;
-      if (poseLandmarker) poseLandmarker.close();
-      if (faceLandmarker) faceLandmarker.close();
-      if (handLandmarker) handLandmarker.close();
+      createdPose?.close();
+      createdFace?.close();
+      createdHands?.close();
     };
   }, []);
 
@@ -149,7 +172,7 @@ export default function MovementCapturePage() {
 
             if (avgCoreVis >= 0.6) {
                 // Construct unified payload
-                const currentData: any = {
+                const currentData: MovementCaptureFrame = {
                     timestamp: startTimeMs,
                     landmarks: smoothedLandmarks,
                     worldLandmarks: smoothedWorld
@@ -160,14 +183,15 @@ export default function MovementCapturePage() {
                 }
 
                 if (handResults.landmarks && handResults.landmarks.length > 0) {
-                    currentData.hands = { left: null, right: null };
+                    const handsPayload: Record<HandSide, HandCapture | null> = { left: null, right: null };
+                    currentData.hands = handsPayload;
                     
                     const leftWristPose = smoothedLandmarks[15];
                     const rightWristPose = smoothedLandmarks[16];
                     
-                    handResults.landmarks.forEach((handLms: any[], index: number) => {
+                    handResults.landmarks.forEach((handLms, index) => {
                         const handWrist = handLms[0];
-                        let side = "right"; 
+                        let side: HandSide = "right";
                         
                         // Spatial Distance Matching: Stop relying on buggy categoryName, measure physical distance to wrists
                         if (leftWristPose && rightWristPose) {
@@ -189,7 +213,7 @@ export default function MovementCapturePage() {
                             smoothedHandWorld = worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs);
                         }
 
-                        currentData.hands[side] = {
+                        handsPayload[side] = {
                             landmarks: smoothedHandLms,
                             worldLandmarks: smoothedHandWorld
                         };
@@ -223,7 +247,7 @@ export default function MovementCapturePage() {
     };
   }, [poseLandmarker, faceLandmarker, handLandmarker, isRecording]);
 
-  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: any[], width: number, height: number) => {
+  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: NormalizedLandmark[], width: number, height: number) => {
     ctx.strokeStyle = "#0ff"; // Cyan neon
     ctx.lineWidth = 4;
     ctx.shadowColor = "#0ff";

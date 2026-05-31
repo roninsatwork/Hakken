@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -33,7 +33,9 @@ const THINKING_LEVELS = [
   { id: "LOW" },
   { id: "MEDIUM" },
   { id: "HIGH" },
-];
+] as const;
+
+type ThinkingLevelId = (typeof THINKING_LEVELS)[number]["id"];
 
 function getGreetingKey() {
   const hour = new Date().getHours();
@@ -66,18 +68,18 @@ export default function AssistantWelcomePage() {
     onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
   });
 
-  const allModels = useQuery(api.aiModels.getModels) || [];
-  const activeModels = allModels.filter((m: any) => m.isEnabled);
+  const allModels = useQuery(api.aiModels.getModels) as Doc<"aiModels">[] | undefined;
+  const activeModels = (allModels ?? []).filter((model) => model.isEnabled);
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const defaultModel = activeModels.find((m: any) => m.isDefault) || activeModels[0];
+  const defaultModel = activeModels.find((model) => model.isDefault) || activeModels[0];
   const effectiveSelectedModelId = selectedModelId || defaultModel?.modelId || null;
 
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
-  const [selectedThinkingId, setSelectedThinkingId] = useState(THINKING_LEVELS[0].id);
+  const [selectedThinkingId, setSelectedThinkingId] = useState<ThinkingLevelId>(THINKING_LEVELS[0].id);
 
-  const [isAutonomousMode, setIsAutonomousMode] = useState(false);
+  const [isAutonomousMode] = useState(false);
 
   const modelRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
@@ -218,7 +220,7 @@ export default function AssistantWelcomePage() {
   };
 
   const firstName = user?.name ? user.name.split(" ")[0] : "";
-  const selectedModelData = activeModels.find((m: any) => m.modelId === effectiveSelectedModelId);
+  const selectedModelData = activeModels.find((model) => model.modelId === effectiveSelectedModelId);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-transparent w-full min-h-0">
@@ -386,7 +388,7 @@ export default function AssistantWelcomePage() {
                           <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1 sticky top-0 bg-card z-10">
                             <span className="text-[12px] font-medium text-muted tracking-widest uppercase">{t('controls.engine.title')}</span>
                           </div>
-                          {activeModels.map((model: any) => (
+                          {activeModels.map((model) => (
                             <button
                               key={model.modelId}
                               type="button"

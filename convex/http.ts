@@ -2,8 +2,6 @@ import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { handleWebhook } from "./workflows";
 import { processApifyWebhook } from "./webhooks";
-import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
 
 const http = httpRouter();
 

@@ -4,7 +4,7 @@ import { SonaeMarkdown } from './SonaeMarkdown';
 
 describe("OWASP: Cross Site Scripting (XSS) Prevention", () => {
   test("Markdown renderer escapes malicious <script> tags", () => {
-    const maliciousPayload = "This is a response and <script>alert('hacked')</script>";
+    const maliciousPayload = "This is a response and <script>console.log('hacked')</script>";
     const { container } = render(<SonaeMarkdown content={maliciousPayload} />);
     
     // The rendered HTML should literally display the script tag as text, 
@@ -17,7 +17,7 @@ describe("OWASP: Cross Site Scripting (XSS) Prevention", () => {
   });
 
   test("Markdown renderer escapes iframe injections", () => {
-    const maliciousIframe = "Checkout this cool site: <iframe src='javascript:alert(1)'></iframe>";
+    const maliciousIframe = "Checkout this cool site: <iframe src='javascript:void(1)'></iframe>";
     const { container } = render(<SonaeMarkdown content={maliciousIframe} />);
     
     const iframeTag = container.querySelector('iframe');

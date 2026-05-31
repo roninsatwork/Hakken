@@ -1,4 +1,4 @@
-import { internalQuery, mutation, query, internalMutation } from "./_generated/server";
+import { internalQuery, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -18,9 +18,10 @@ export const getLatestReport = query({
 
       let reports;
       if (user.role !== "SUPER_ADMIN") {
-          if (!user.companyId) throw new Error("Unauthorized: Orphaned administrator account.");
+          const companyId = user.companyId;
+          if (!companyId) throw new Error("Unauthorized: Orphaned administrator account.");
           reports = await ctx.db.query("salesReports")
-            .withIndex("by_company", q => q.eq("companyId", user.companyId as any))
+            .withIndex("by_company", q => q.eq("companyId", companyId))
             .order("desc")
             .take(1);
       } else {

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { Activity, Plus, Search, Trash2, Play, ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
@@ -15,15 +16,15 @@ export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [movementToDelete, setMovementToDelete] = useState<any>(null);
+  const [movementToDelete, setMovementToDelete] = useState<Doc<"movements"> | null>(null);
   const router = useRouter();
   const itemsPerPage = 15;
   
-  const movements = useQuery(api.movements.list) || [];
+  const movements = useQuery(api.movements.list) as Doc<"movements">[] | undefined;
 
   const removeMovement = useMutation(api.movements.remove);
 
-  const filteredMovements = movements.filter(m => m.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredMovements = (movements ?? []).filter(m => m.title.toLowerCase().includes(searchTerm.toLowerCase()));
   const totalItems = filteredMovements.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -33,7 +34,7 @@ export default function MovementsLibraryPage() {
     setCurrentPage(1);
   };
 
-  const confirmDelete = (m: any) => {
+  const confirmDelete = (m: Doc<"movements">) => {
     setMovementToDelete(m);
     setDeleteModalOpen(true);
   };
@@ -99,7 +100,7 @@ export default function MovementsLibraryPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {movements.length === 0 ? (
+                {(movements ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-0 border-none">
                       <SonaeEmptyState 
@@ -110,7 +111,7 @@ export default function MovementsLibraryPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedMovements.map((m: any) => (
+                    {paginatedMovements.map((m) => (
                       <motion.tr
                         key={m._id}
                         initial={{ opacity: 0, y: 10 }}

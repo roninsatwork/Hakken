@@ -8,6 +8,7 @@ import { Bot, Send, Loader2, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 
 export default function WidgetIframePage() {
   const params = useParams();
@@ -257,7 +258,14 @@ export default function WidgetIframePage() {
            <div className="flex items-center gap-3">
                <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-white/20 shadow-sm" style={{ backgroundColor: primaryColor }}>
                    {widget.themeLogoUrl ? (
-                       <img src={widget.themeLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+                       <Image
+                         src={widget.themeLogoUrl}
+                         alt="Logo"
+                         width={32}
+                         height={32}
+                         unoptimized
+                         className="w-full h-full object-cover"
+                       />
                    ) : (
                        <Bot className="w-4 h-4 text-white" />
                    )}

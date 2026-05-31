@@ -1,4 +1,4 @@
-import { query, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 
 export const getPlans = internalQuery({
   args: {},

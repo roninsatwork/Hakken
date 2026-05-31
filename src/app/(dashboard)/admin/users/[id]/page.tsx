@@ -277,7 +277,7 @@ export default function UserProfilePage() {
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
   const t = useTranslations('admin.users.profilePage.costs');
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });

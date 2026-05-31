@@ -25,6 +25,7 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError("");
     try {
       await updateAgent({
         id: agentId,
@@ -46,7 +48,7 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch {
-      alert(t("errors.saveFailed"));
+      setSaveError(t("errors.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -80,9 +82,14 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
               {isSaving ? t("savingButton") : t("saveButton")}
             </button>
           </div>
-        </div>
+	        </div>
+          {saveError && (
+            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+              {saveError}
+            </div>
+          )}
 
-        {/* Input Context Schema */}
+	        {/* Input Context Schema */}
         <div className="flex flex-col gap-4">
           <JsonSchemaBuilder
             title={t("input.title")}

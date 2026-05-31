@@ -43,6 +43,7 @@ type FlowCanvasWithProviderProps = {
   workflow: WorkflowDoc;
   isSaving: boolean;
   isRunning: boolean;
+  feedbackMessage: string;
   handleSave: (nodes: WorkflowCanvasNode[], edges: WorkflowCanvasEdge[]) => Promise<void>;
   handleManualRun: () => Promise<void>;
 };
@@ -89,7 +90,7 @@ const nodeTypes: NodeTypes = {
   emailNode: GenericWorkflowNode,
 };
 
-function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, handleManualRun }: FlowCanvasWithProviderProps) {
+function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage, handleSave, handleManualRun }: FlowCanvasWithProviderProps) {
   const t = useTranslations('admin.workflows.designer');
   const deleteAgent = useMutation(api.agents.deleteAgent);
 
@@ -197,8 +198,13 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
         </div>
       </div>
 
-      <div className="flex w-full flex-1 relative">
-        <div className="flex-1 h-full w-full custom-react-flow react-flow-wrapper" onDragOver={onDragOver} onDrop={onDrop}>
+	      <div className="flex w-full flex-1 relative">
+          {feedbackMessage && (
+            <div className="absolute top-4 left-1/2 z-20 w-[min(560px,calc(100%-2rem))] -translate-x-1/2 rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400 backdrop-blur-xl">
+              {feedbackMessage}
+            </div>
+          )}
+	        <div className="flex-1 h-full w-full custom-react-flow react-flow-wrapper" onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -288,10 +294,12 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
 
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const handleSave = async (nodes: WorkflowCanvasNode[], edges: WorkflowCanvasEdge[]) => {
-    if (!workflow) return;
-    setIsSaving(true);
+	    if (!workflow) return;
+	    setIsSaving(true);
+    setFeedbackMessage("");
     
     // Phase 5: Graph Validation (DFS Cycle Detection)
     const hasCycle = () => {
@@ -326,10 +334,10 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
       return false;
     };
 
-    if (hasCycle()) {
-      alert("Cycle Detected: Infinite Loops are not supported.\n\nPlease use the Iterator (Loop) node for iteration instead of routing edges backwards.");
-      setIsSaving(false);
-      return;
+	    if (hasCycle()) {
+	      setFeedbackMessage("Cycle Detected: Infinite loops are not supported. Please use the Iterator (Loop) node for iteration instead of routing edges backwards.");
+	      setIsSaving(false);
+	      return;
     }
 
     try {
@@ -342,24 +350,25 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
         nodes: JSON.stringify(nodes),
         edges: JSON.stringify(edges)
       });
-    } catch (e) {
-      console.error(e);
-      alert(t('alerts.saveFailed'));
+	    } catch (e) {
+	      console.error(e);
+	      setFeedbackMessage(t('alerts.saveFailed'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleManualRun = async () => {
-    if (!workflow) return;
-    setIsRunning(true);
+	    if (!workflow) return;
+	    setIsRunning(true);
+    setFeedbackMessage("");
     try {
       await runWorkflow({ id: workflow._id });
       setIsRunning(false);
-    } catch (e) {
-      console.error(e);
-      alert(t('alerts.dispatchFailed'));
-      setIsRunning(false);
+	    } catch (e) {
+	      console.error(e);
+	      setFeedbackMessage(t('alerts.dispatchFailed'));
+	      setIsRunning(false);
     }
   };
 
@@ -369,9 +378,10 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
     <ReactFlowProvider>
        <FlowCanvasWithProvider 
           workflow={workflow} 
-          isSaving={isSaving} 
-          isRunning={isRunning} 
-          handleSave={handleSave} 
+	          isSaving={isSaving}
+	          isRunning={isRunning}
+            feedbackMessage={feedbackMessage}
+	          handleSave={handleSave}
           handleManualRun={handleManualRun} 
        />
     </ReactFlowProvider>

@@ -72,6 +72,8 @@ export default function AgentOverviewPage() {
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [uploadError, setUploadError] = useState("");
 
   // Avatar Upload State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -103,6 +105,7 @@ export default function AgentOverviewPage() {
       e.preventDefault();
     }
     setIsSaving(true);
+    setSaveError("");
     try {
       await updateAgent({
         id: agentId,
@@ -120,7 +123,7 @@ export default function AgentOverviewPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err: unknown) {
-      alert(getErrorMessage(err, t("errors.saveFailed")));
+      setSaveError(getErrorMessage(err, t("errors.saveFailed")));
     } finally {
       setIsSaving(false);
     }
@@ -128,6 +131,7 @@ export default function AgentOverviewPage() {
 
   const processUpload = async (file: File) => {
     setIsUploading(true);
+    setUploadError("");
     try {
       const postUrl = await generateUploadUrl();
       const result = await fetch(postUrl, {
@@ -146,7 +150,7 @@ export default function AgentOverviewPage() {
       setIsAvatarModalOpen(false);
     } catch (error) {
       console.error("Upload failed", error);
-      alert(t("errors.uploadFailed"));
+      setUploadError(t("errors.uploadFailed"));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -178,8 +182,8 @@ export default function AgentOverviewPage() {
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300 antialiased">
       <form onSubmit={handleSave} className="flex flex-col gap-12 w-full">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim/50 pb-4">
+	        <div className="flex flex-col gap-6">
+	          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim/50 pb-4">
             <h2 className="text-[14px] font-semibold text-foreground tracking-wide flex items-center gap-2">
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand/20 text-brand text-[11px] font-mono">1</span>
               {t("sections.identity.title")}
@@ -196,9 +200,14 @@ export default function AgentOverviewPage() {
                 {isSaving ? t("sections.identity.saving") : t("sections.identity.saveButton")}
               </button>
             </div>
-          </div>
+	          </div>
+            {saveError && (
+              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+                {saveError}
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+	          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="flex flex-col sm:flex-row gap-8 md:col-span-2 w-full">
               <div className="flex flex-col gap-2 shrink-0">
                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.identity.avatar.label")}</label>
@@ -351,12 +360,17 @@ export default function AgentOverviewPage() {
         onClose={() => !isUploading && setIsAvatarModalOpen(false)}
         title={t("uploadModal.title")}
       >
-        <div className="flex flex-col gap-6 mt-2 relative">
-          <p className="text-[13px] text-secondary">
-            {t("uploadModal.subtitle")}
-          </p>
+	        <div className="flex flex-col gap-6 mt-2 relative">
+	          <p className="text-[13px] text-secondary">
+	            {t("uploadModal.subtitle")}
+	          </p>
+            {uploadError && (
+              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+                {uploadError}
+              </div>
+            )}
 
-          <div
+	          <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}

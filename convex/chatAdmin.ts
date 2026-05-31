@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { paginationOptsValidator } from "convex/server";
 
 // Secure API endpoint to fetch all threads across the platform with user data joined
 export const getOffsetPaginatedThreads = query({

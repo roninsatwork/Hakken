@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 describe("Strict Message Upload Gating (Option B)", () => {
@@ -145,7 +146,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
     const authedClient = t.withIdentity({ subject: userId });
 
     // Generate a valid-looking fake ID or pass a mocked storage ID format
-    const fakeStorageId = "123" as any; 
+    const fakeStorageId = "123" as Id<"_storage">;
 
     await expect(
       authedClient.mutation(api.chat.sendMessage, {

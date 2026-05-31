@@ -17,6 +17,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const updatePricing = useMutation(api.aiModels.updatePricingConfig);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   
   // Form State
   const [friendlyName, setFriendlyName] = useState("");
@@ -42,6 +43,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError("");
     try {
       await updatePricing({
         modelId,
@@ -56,7 +58,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
       router.back();
     } catch (e) {
       console.error(e);
-      alert("Failed to save pricing configuration.");
+      setSaveError("Failed to save pricing configuration.");
     } finally {
       setIsSaving(false);
     }
@@ -104,9 +106,14 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           SAVE PRICING CONFIGURATION
         </button>
-      </div>
+	      </div>
+      {saveError && (
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+          {saveError}
+        </div>
+      )}
 
-      <div className="flex flex-col gap-6">
+	      <div className="flex flex-col gap-6">
         
         {/* General Information */}
         <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">

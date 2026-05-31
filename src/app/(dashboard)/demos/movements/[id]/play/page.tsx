@@ -17,32 +17,109 @@ import AvatarSelectorLobby from "./_components/AvatarSelectorLobby";
 import { AVATAR_ROSTER } from "@/src/lib/constants/avatars";
 
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, useGLTF, Environment, useAnimations, Html, Grid } from "@react-three/drei";
+import { OrbitControls, Environment, Html, Grid } from "@react-three/drei";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, VRM } from "@pixiv/three-vrm";
 import * as Kalidokit from "kalidokit";
 import { FilesetResolver, PoseLandmarker, FaceLandmarker, HandLandmarker } from "@mediapipe/tasks-vision";
+import type { Classifications, Landmark, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import Webcam from "react-webcam";
 
-// MediaPipe Skeleton Connections
-const POSE_CONNECTIONS = [
-  // Torso
-  [11, 12], [11, 23], [12, 24], [23, 24],
-  // Right Arm
-  [12, 14], [14, 16], [16, 18], [16, 20], [16, 22],
-  // Left Arm
-  [11, 13], [13, 15], [15, 17], [15, 19], [15, 21],
-  // Right Leg
-  [24, 26], [26, 28], [28, 30], [28, 32], [32, 30],
-  // Left Leg
-  [23, 25], [25, 27], [27, 29], [27, 31], [31, 29]
-];
+type LoaderPlugin = ReturnType<Parameters<InstanceType<typeof GLTFLoader>["register"]>[0]>;
+type VrmBoneName = Parameters<VRM["humanoid"]["getNormalizedBoneNode"]>[0];
+type HandSide = "left" | "right";
+type BlendshapeCategory = Classifications["categories"][number];
+type LandmarkTuple = [number, number, number?];
+type PoseLandmark = (NormalizedLandmark | Landmark) & {
+  visibility?: number;
+  isSnapped?: boolean;
+};
+type LandmarkInput = PoseLandmark | LandmarkTuple;
+type SolverLandmark = {
+  x: number;
+  y: number;
+  z: number;
+  visibility: number;
+  isSnapped?: boolean;
+};
+type HandCapture = {
+  landmarks: PoseLandmark[];
+  worldLandmarks?: PoseLandmark[] | null;
+};
+type HandsPayload = Partial<Record<HandSide, HandCapture | null>>;
+type MotionPayload = {
+  pose?: PoseLandmark[];
+  landmarks?: PoseLandmark[];
+  worldLandmarks?: PoseLandmark[] | null;
+  blendshapes?: BlendshapeCategory[];
+  hands?: HandsPayload;
+};
+type MotionFrame = MotionPayload | PoseLandmark[];
+type MotionRef = MotionFrame | null;
+type RigRotation = {
+  x: number;
+  y: number;
+  z: number;
+  rotationOrder?: THREE.EulerOrder;
+};
+type RiggedPose = {
+  Neck?: RigRotation;
+  Head?: RigRotation;
+  RightHand?: RigRotation;
+  LeftHand?: RigRotation;
+  Hips?: {
+    position?: unknown;
+  };
+};
+type HandRig = Record<string, RigRotation | undefined>;
+
+const getMotionLandmarks = (value: MotionRef): PoseLandmark[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return value.pose ?? value.landmarks ?? [];
+};
+
+const normalizeLandmark = (landmark: LandmarkInput): SolverLandmark => {
+  if (Array.isArray(landmark)) {
+    return {
+      x: landmark[0],
+      y: landmark[1],
+      z: landmark[2] ?? 0,
+      visibility: 0.8,
+    };
+  }
+
+  return {
+    x: landmark.x,
+    y: landmark.y,
+    z: landmark.z,
+    visibility: landmark.visibility ?? 0.8,
+    isSnapped: landmark.isSnapped,
+  };
+};
+
+const mirrorLandmarkArray = (arr: SolverLandmark[], invertX: (x: number) => number) => {
+  const swapPairs = [
+    [1, 4], [2, 5], [3, 6], [7, 8], [9, 10], // Face
+    [11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22], // Arms
+    [23, 24], [25, 26], [27, 28], [29, 30], [31, 32] // Legs
+  ];
+
+  arr.forEach(lm => { lm.x = invertX(lm.x); });
+  swapPairs.forEach(([l, r]) => {
+    if (arr[l] && arr[r]) {
+      const temp = { ...arr[l] };
+      arr[l] = { ...arr[r] };
+      arr[r] = temp;
+    }
+  });
+};
 
 // High-performance Stardust/Sparkle particles for high-score feedback
 const Sparkles = ({ landmarksRef, jointIndices, syncRef }: { 
-  landmarksRef: React.MutableRefObject<any>, 
+  landmarksRef: React.MutableRefObject<MotionRef>,
   jointIndices: number[],
   syncRef: React.MutableRefObject<number>
 }) => {
@@ -57,8 +134,7 @@ const Sparkles = ({ landmarksRef, jointIndices, syncRef }: {
     }
     pointsRef.current.visible = true;
     
-    const rawRef = landmarksRef.current;
-    const lms = Array.isArray(rawRef) ? rawRef : rawRef?.landmarks || [];
+    const lms = getMotionLandmarks(landmarksRef.current);
     if (!lms || lms.length < 33) return;
 
     const time = state.clock.getElapsedTime();
@@ -113,37 +189,35 @@ const VRMAvatar = ({
   positionOffset,
   isPlayer = false,
   isPlaying = true,
-  syncRef,
   vrmUrl,
   name,
 }: { 
-  landmarksRef: React.MutableRefObject<any>, 
+  landmarksRef: React.MutableRefObject<MotionRef>,
   positionOffset: [number, number, number],
   isPlayer?: boolean,
   isPlaying?: boolean,
-  syncRef?: React.MutableRefObject<number>,
   vrmUrl: string,
   name: string,
 }) => {
   const group = useRef<THREE.Group>(null);
   const vrmRef = useRef<VRM | null>(null);
   const lastGoodQuatRef = useRef<Record<string, THREE.Quaternion>>({});
-  const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
 
   // useLoader cache keys are just the URL, so to load two separate instances:
   const urlToLoad = isPlayer ? `${vrmUrl}?player` : vrmUrl;
   
   const gltf = useLoader(GLTFLoader, urlToLoad, (loader) => {
-    loader.register((parser) => new VRMLoaderPlugin(parser as any) as any);
+    loader.register((parser) => new VRMLoaderPlugin(parser as never) as unknown as LoaderPlugin);
   });
+  const loadedVrm = gltf.userData.vrm as VRM | undefined;
+  const avatarScene = loadedVrm?.scene ?? gltf.scene;
 
   useEffect(() => {
-    if (gltf && gltf.userData.vrm) {
-      const vrm = gltf.userData.vrm;
+    if (loadedVrm) {
       VRMUtils.removeUnnecessaryJoints(gltf.scene);
-      vrmRef.current = vrm;
+      vrmRef.current = loadedVrm;
     }
-  }, [gltf]);
+  }, [gltf.scene, loadedVrm]);
 
   useFrame((state, delta) => {
     if (!vrmRef.current || !group.current) return;
@@ -151,37 +225,40 @@ const VRMAvatar = ({
     
     // 1. Resolve Landmarks Array
     const lms = landmarksRef.current;
-    if (!lms) return;
-    const raw = Array.isArray(lms) ? lms : (lms?.pose || lms?.landmarks || []);
+    const payload = lms && !Array.isArray(lms) ? lms : null;
+    const raw = getMotionLandmarks(lms);
     if (!raw || raw.length < 33) return;
+    let rigHands = payload?.hands;
+    let rigBlendshapes = payload?.blendshapes;
 
     // Standby Override: If the match hasn't started, force the instructor into a relaxed standing pose
     // to match the live player's default occlusion state.
     const forceStandby = !isPlayer && !isPlaying;
 
     // Standard Decoder
-    const format = (lm: any) => ({
-      x: typeof lm.x === "number" ? lm.x : (Array.isArray(lm) ? lm[0] : 0.5),
-      y: typeof lm.y === "number" ? lm.y : (Array.isArray(lm) ? lm[1] : 0.5),
-      z: typeof lm.z === "number" ? lm.z : (Array.isArray(lm) ? lm[2] : 0),
-      visibility: forceStandby ? 0 : (lm.visibility || 0.8)
-    });
+    const format = (lm: LandmarkInput): SolverLandmark => {
+      const normalized = normalizeLandmark(lm);
+      return {
+        ...normalized,
+        visibility: forceStandby ? 0 : normalized.visibility,
+      };
+    };
 
-    let imageLms = raw.map(format);
-    let solverLms;
+    const imageLms = raw.map(format);
+    let solverLms: SolverLandmark[];
     
     // Pass raw, perfectly unmirrored data directly into Kalidokit.
     // This allows Kalidokit's heuristics to natively detect 'Facing Camera',
     // which unlocks the spine solver and inherently prevents leg-crossing.
     
-    if ((lms as any).worldLandmarks) {
-       solverLms = (lms as any).worldLandmarks.map(format);
+    if (payload?.worldLandmarks) {
+       solverLms = payload.worldLandmarks.map(format);
     } else {
        // Fallback: 2D Projection (Centered & Scaled)
        // This natively mimics the unmirrored physical coordinate space of true 3D data.
        const hipX = (imageLms[23].x + imageLms[24].x) / 2;
        const hipY = (imageLms[23].y + imageLms[24].y) / 2;
-       solverLms = imageLms.map((lm: any) => ({
+       solverLms = imageLms.map((lm) => ({
          x: (lm.x - hipX) * 3.0, 
          y: (lm.y - hipY) * 3.0,  
          z: lm.z * 3.0,           
@@ -189,53 +266,34 @@ const VRMAvatar = ({
        }));
     }
     
-    let kdSolverLms = solverLms.map((lm: any) => ({...lm}));
+    const kdSolverLms = solverLms.map((lm) => ({...lm}));
 
     if (!isPlayer) {
-      // Mirror the raw data computationally so Kalidokit naturally generates a mirrored pose
-      // This allows us to avoid negative group scaling which breaks 3D bone physics.
-      const swapPairs = [
-        [1, 4], [2, 5], [3, 6], [7, 8], [9, 10], // Face
-        [11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22], // Arms
-        [23, 24], [25, 26], [27, 28], [29, 30], [31, 32] // Legs
-      ];
-
-      const mirrorArray = (arr: any[], invertX: (x: number) => number) => {
-        arr.forEach(lm => { if (lm) lm.x = invertX(lm.x); });
-        swapPairs.forEach(([l, r]) => {
-          if (arr[l] && arr[r]) {
-            const temp = { ...arr[l] };
-            arr[l] = { ...arr[r] };
-            arr[r] = temp;
-          }
-        });
-      };
-
-      mirrorArray(imageLms, (x) => 1 - x);
-      mirrorArray(solverLms, (x) => -x); // World/fallback coordinates are zero-centered at hips
-      mirrorArray(kdSolverLms, (x) => -x);
+      mirrorLandmarkArray(imageLms, (x) => 1 - x);
+      mirrorLandmarkArray(solverLms, (x) => -x); // World/fallback coordinates are zero-centered at hips
+      mirrorLandmarkArray(kdSolverLms, (x) => -x);
       
       // Mirror Hands & Blendshapes
-      if ((lms as any).hands) {
-          const rawHands = (lms as any).hands;
-          const mirroredHands: any = {};
+      if (payload?.hands) {
+          const rawHands = payload.hands;
+          const mirroredHands: HandsPayload = {};
           if (rawHands.left) {
               mirroredHands.right = { ...rawHands.left };
               if (mirroredHands.right.worldLandmarks) {
-                  mirroredHands.right.worldLandmarks = mirroredHands.right.worldLandmarks.map((lm: any) => ({ ...lm, x: -lm.x }));
+                  mirroredHands.right.worldLandmarks = mirroredHands.right.worldLandmarks.map((lm) => ({ ...lm, x: -lm.x }));
               }
           }
           if (rawHands.right) {
               mirroredHands.left = { ...rawHands.right };
               if (mirroredHands.left.worldLandmarks) {
-                  mirroredHands.left.worldLandmarks = mirroredHands.left.worldLandmarks.map((lm: any) => ({ ...lm, x: -lm.x }));
+                  mirroredHands.left.worldLandmarks = mirroredHands.left.worldLandmarks.map((lm) => ({ ...lm, x: -lm.x }));
               }
           }
-          (lms as any).hands = mirroredHands;
+          rigHands = mirroredHands;
       }
       
-      if ((lms as any).blendshapes) {
-          (lms as any).blendshapes = (lms as any).blendshapes.map((b: any) => {
+      if (payload?.blendshapes) {
+          rigBlendshapes = payload.blendshapes.map((b) => {
               let name = b.categoryName;
               if (name.includes("Left")) name = name.replace("Left", "Right");
               else if (name.includes("Right")) name = name.replace("Right", "Left");
@@ -245,24 +303,24 @@ const VRMAvatar = ({
     }
 
     // Solve IK for core body
-    let riggedPose;
+    let riggedPose: RiggedPose | null;
     try {
       riggedPose = Kalidokit.Pose.solve(kdSolverLms, imageLms, {
         runtime: "mediapipe",
         video: null,
         imageSize: { width: 640, height: 480 },
-      });
-    } catch (e) { return; }
+      }) as RiggedPose | null;
+    } catch { return; }
 
     if (riggedPose && vrmRef.current.humanoid) {
       // Dynamic Interpolation: Ghost smoothed to 0.5 to absorb 1-frame AI glitches (preventing jerky snapping), Instructor at 0.3
       const slerpFactor = isPlayer ? 0.5 : 0.3;
 
-      const applyRot = (boneName: string, euler: any, overrideFactor?: number) => {
+      const applyRot = (boneName: VrmBoneName, euler?: RigRotation, overrideFactor?: number) => {
         if (!euler) return;
-        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
+        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName);
         if (bone) {
-          let targetEuler = new THREE.Euler(euler.x, euler.y, euler.z, euler.rotationOrder || "XYZ");
+          const targetEuler = new THREE.Euler(euler.x, euler.y, euler.z, euler.rotationOrder || "XYZ");
           // Unlocked Hips: allow full 6DOF pelvic tilt for Pilates floor work
           bone.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetEuler), overrideFactor ?? slerpFactor);
         }
@@ -271,14 +329,14 @@ const VRMAvatar = ({
       const rp = riggedPose;
 
       // 1. Kalidokit Purge: We only keep Kalidokit for Head, Neck, and Hands
-      applyRot("neck", (rp as any).Neck);
-      applyRot("head", (rp as any).Head);
+      applyRot("neck", rp.Neck);
+      applyRot("head", rp.Head);
       applyRot("rightHand", rp.RightHand);
       applyRot("leftHand", rp.LeftHand);
       
       // Removed Kalidokit leg physics to prevent the 'leg grouping/locking' heuristic bug
       const hipsNode = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
-      if (hipsNode && rp.Hips.position) {
+      if (hipsNode && rp.Hips?.position) {
          // All Kalidokit root translation (X, Y, Z) is explicitly ignored.
          // Y is handled by the Dynamic Floor Anchor for perfect squats.
          // X and Z are ignored because 2D bounding box depth estimation turns desk-users into giants.
@@ -289,11 +347,13 @@ const VRMAvatar = ({
       }
 
       // 2. Pure Forward Kinematics (FK)
-      const aimVector = (boneName: string, targetName: string, vStart: any, vEnd: any, ignoreVisibility = false) => {
-        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName as any);
+      const aimVector = (boneName: VrmBoneName, targetName: VrmBoneName, vStart?: SolverLandmark | null, vEnd?: SolverLandmark | null, ignoreVisibility = false) => {
+        const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(boneName);
         if (!bone) return;
         
-        if (!ignoreVisibility && (!vStart || !vEnd || vStart.visibility < 0.2 || vEnd.visibility < 0.2)) {
+        if (!vStart || !vEnd) return;
+
+        if (!ignoreVisibility && (vStart.visibility < 0.2 || vEnd.visibility < 0.2)) {
             if (lastGoodQuatRef.current[boneName]) {
                 // Aggressive Freeze: Lock rotation instantly
                 bone.quaternion.copy(lastGoodQuatRef.current[boneName]);
@@ -309,7 +369,7 @@ const VRMAvatar = ({
         const boneW = new THREE.Vector3();
         bone.getWorldPosition(boneW);
 
-        const childNode = vrmRef.current?.humanoid?.getNormalizedBoneNode(targetName as any);
+        const childNode = vrmRef.current?.humanoid?.getNormalizedBoneNode(targetName);
         if (!childNode) return;
         const childW = new THREE.Vector3();
         childNode.getWorldPosition(childW);
@@ -317,7 +377,7 @@ const VRMAvatar = ({
         const currentDir = childW.clone().sub(boneW).normalize();
         
         let dz = vEnd.z - vStart.z;
-        if (!((lms as any).worldLandmarks)) {
+        if (!payload?.worldLandmarks) {
            dz *= 0.1;
         }
 
@@ -386,9 +446,6 @@ const VRMAvatar = ({
              }
              return;
          }
-         
-         const leftHip = new THREE.Vector3(p23.x, -p23.y, -p23.z);
-         const rightHip = new THREE.Vector3(p24.x, -p24.y, -p24.z);
          
          // 1. Force a perfectly upright foundation to prevent 'Matrix Dodge' back-bending
          // MediaPipe Z-depth for desk users is highly corrupted, causing the hips to think they are lying flat.
@@ -537,11 +594,11 @@ const VRMAvatar = ({
       }
 
       // Facial Expressions (Blendshapes)
-      const blendshapes = (lms as any).blendshapes;
+      const blendshapes = rigBlendshapes;
       const expressionManager = vrmRef.current?.expressionManager;
       if (blendshapes && expressionManager && !forceStandby) {
           let smileScore = 0;
-          blendshapes.forEach((b: any) => {
+          blendshapes.forEach((b) => {
               if (b.categoryName === "eyeBlinkLeft") expressionManager.setValue("blinkLeft", b.score);
               if (b.categoryName === "eyeBlinkRight") expressionManager.setValue("blinkRight", b.score);
               if (b.categoryName === "jawOpen") expressionManager.setValue("aa", Math.min(1.0, b.score * 1.5));
@@ -551,7 +608,7 @@ const VRMAvatar = ({
       }
 
       // Hand & Finger FK
-      const hands = (lms as any).hands;
+      const hands = rigHands;
       if (hands && !forceStandby) {
           const mapFingers = (side: "left" | "right") => {
               const handData = hands[side];
@@ -563,14 +620,14 @@ const VRMAvatar = ({
               // CRITICAL: MediaPipe reads the raw unmirrored webcam, meaning the X-axis is physically backwards.
               // Kalidokit's complex 2D algorithm will violently mangle the rotations if it receives unmirrored coordinates.
               // We MUST deeply clone and mirror the X-axis (1 - x) to restore the true physical shape of the hand.
-              const mirroredLandmarks = handData.landmarks.map((lm: any) => ({ ...lm, x: 1 - lm.x }));
+              const mirroredLandmarks = handData.landmarks.map((lm) => ({ ...lm, x: 1 - lm.x }));
               
-              const rig = Kalidokit.Hand.solve(mirroredLandmarks, handednessStr);
+              const rig = Kalidokit.Hand.solve(mirroredLandmarks, handednessStr) as HandRig | null;
               if (!rig) return;
 
-              const applyHandRot = (vrmName: any, rigKey: string) => {
+              const applyHandRot = (vrmName: VrmBoneName, rigKey: string) => {
                   const bone = vrmRef.current?.humanoid?.getNormalizedBoneNode(vrmName);
-                  const rot = (rig as any)[rigKey];
+                  const rot = rig[rigKey];
                   if (bone && rot) {
                       // Smooth the high-frequency finger jitter using slerp instead of hard set
                       const targetQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(rot.x, rot.y, rot.z));
@@ -587,7 +644,7 @@ const VRMAvatar = ({
               
               FINGERS.forEach(finger => {
                   JOINTS.forEach(joint => {
-                      const vrmName = `${side}${finger}${joint}`;
+                      const vrmName = `${side}${finger}${joint}` as VrmBoneName;
                       const rigKey = `${handednessStr}${finger}${joint}`;
                       applyHandRot(vrmName, rigKey);
                   });
@@ -607,7 +664,7 @@ const VRMAvatar = ({
       rotation={[0, Math.PI, 0]}
       scale={5.25}
     >
-      <primitive object={vrmRef.current ? vrmRef.current.scene : gltf.scene} />
+      <primitive object={avatarScene} />
       
       {/* Dynamic Nameplate */}
       <Html position={[0, -0.45, 0]} center zIndexRange={[100, 0]}>
@@ -617,196 +674,6 @@ const VRMAvatar = ({
           </span>
         </div>
       </Html>
-    </group>
-  );
-};
-
-// 3D Cartoon Avatar (Rayman / VR Style using authentic Robot meshes)
-// 100% Reliable Procedural Cyberpunk Avatar (Glassmorphism & Neon)
-const CartoonAvatar = ({ 
-  landmarksRef, 
-  positionOffset, 
-  isPlayer = false,
-  syncRef
-}: { 
-  landmarksRef: React.MutableRefObject<any>, 
-  positionOffset: [number, number, number],
-  isPlayer?: boolean,
-  baseOpacity?: number,
-  syncRef?: React.MutableRefObject<number>
-}) => {
-  const headRef = useRef<THREE.Group>(null);
-  const torsoRef = useRef<THREE.Group>(null);
-  const limbRefs = useRef<THREE.Group[]>([]);
-
-  // Aesthetic Tokens
-  const neonColor = isPlayer ? "#00f2ff" : "#ff0080";
-  const glassColor = "#1a1a2e";
-
-  // CLONE MATERIAL for player to enable unique "Power Glow" without breaking instructor
-  const limbMaterial = useMemo(() => new THREE.MeshStandardMaterial({
-    color: neonColor,
-    emissive: neonColor,
-    emissiveIntensity: isPlayer ? 3 : 8,
-    transparent: true,
-    opacity: isPlayer ? 0.25 : 0.8,
-    depthWrite: !isPlayer,
-    blending: isPlayer ? THREE.AdditiveBlending : THREE.NormalBlending
-  }), [isPlayer, neonColor]);
-
-  useFrame(() => {
-    const currentRef = landmarksRef.current;
-    const lms = Array.isArray(currentRef) ? currentRef : (currentRef?.landmarks || []);
-    
-    if (lms && lms.length >= 33) {
-      const mirrorX = 1;
-      const anchorX = 0.5;
-      const anchorY = 0.5;
-      const scaleMult = 15;
-
-      const getVec = (idx: number) => {
-        const lm = lms[idx];
-        if (!lm || (typeof lm.visibility !== 'undefined' && lm.visibility < 0.05)) return null;
-        return new THREE.Vector3(
-          (lm.x - anchorX) * -scaleMult * mirrorX,
-          (anchorY - lm.y) * scaleMult,
-          (lm.z || 0) * -scaleMult * 0.5
-        );
-      };
-
-      // 1. Position Head (Nose)
-      const hPos = getVec(0);
-      if (headRef.current) {
-        if (hPos) {
-          // Offset head slightly up from the nose landmark for better appearance
-          headRef.current.position.set(hPos.x, hPos.y + 0.3, hPos.z);
-          headRef.current.visible = true;
-        } else {
-          headRef.current.visible = false;
-        }
-      }
-
-      // 2. Position Torso (Shoulder-Hip midpoint)
-      const sL = getVec(11), sR = getVec(12), hL = getVec(23), hR = getVec(24);
-      if (torsoRef.current) {
-        if (sL && sR && hL && hR) {
-          const center = new THREE.Vector3().addVectors(sL, sR).add(hL).add(hR).multiplyScalar(0.25);
-          torsoRef.current.position.copy(center);
-          torsoRef.current.visible = true;
-          
-          // Face forward
-          const spine = new THREE.Vector3().subVectors(new THREE.Vector3().addVectors(sL, sR).multiplyScalar(0.5), center).normalize();
-          const shoulderVec = new THREE.Vector3().subVectors(sR, sL).normalize();
-          const forward = new THREE.Vector3().crossVectors(shoulderVec, spine).normalize();
-          torsoRef.current.lookAt(new THREE.Vector3().addVectors(center, forward));
-        } else {
-          torsoRef.current.visible = false;
-        }
-      }
-
-      // 3. Position Limbs (Segments)
-      const segments = [
-        [11, 13], [13, 15], // Arm L
-        [12, 14], [14, 16], // Arm R
-        [23, 25], [25, 27], // Leg L
-        [24, 26], [26, 28], // Leg R
-        [11, 12], [23, 24]  // Shoulders/Hips
-      ];
-
-      segments.forEach((seg, i) => {
-        const start = getVec(seg[0]);
-        const end = getVec(seg[1]);
-        const ref = limbRefs.current[i];
-        if (ref && start && end) {
-          const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-          const dist = start.distanceTo(end);
-          ref.position.copy(mid);
-          ref.lookAt(end);
-          ref.scale.set(1, 1, dist);
-          ref.visible = true;
-
-          // Power Glow logic for Player
-          if (isPlayer && syncRef) {
-            const syncValue = syncRef.current / 100;
-            const isJointSnapped = lms[seg[1]]?.isSnapped;
-            const baseCol = new THREE.Color("#00f2ff");
-            const peakCol = new THREE.Color(isJointSnapped ? "#ffffff" : "#ffb800"); // White pulse for snap
-            limbMaterial.emissive.lerpColors(baseCol, peakCol, isJointSnapped ? 1 : Math.max(0, (syncValue - 0.4) * 1.6));
-            limbMaterial.emissiveIntensity = isJointSnapped ? 30 : (3 + (syncValue * 20));
-            limbMaterial.opacity = isJointSnapped ? 0.9 : (0.2 + (syncValue * 0.6));
-          }
-        } else if (ref) {
-          ref.visible = false;
-        }
-      });
-    }
-  });
-
-  return (
-    <group position={positionOffset}>
-      {/* Head: Cybernetic Helmet with Visor */}
-      <group ref={headRef}>
-        <mesh>
-          <boxGeometry args={[0.7, 0.7, 0.7]} />
-          <meshPhysicalMaterial 
-            color="#2a2a40" 
-            transmission={0.8} 
-            thickness={2} 
-            roughness={0.1} 
-            metalness={0.9}
-            transparent={isPlayer}
-            opacity={isPlayer ? 0.3 : 1}
-            depthWrite={!isPlayer}
-          />
-        </mesh>
-        {/* Digital Visor */}
-        <mesh position={[0, 0.05, 0.36]}>
-          <boxGeometry args={[0.55, 0.15, 0.05]} />
-          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={isPlayer ? 2 : 5} transparent={isPlayer} opacity={isPlayer ? 0.5 : 1} depthWrite={!isPlayer} />
-        </mesh>
-        {/* Glowing Head Detail */}
-        <mesh position={[0, 0.36, 0]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.1]} />
-          <meshBasicMaterial color={neonColor} />
-        </mesh>
-      </group>
-
-      {/* Torso: Heavy Mech-Plate with Core */}
-      <group ref={torsoRef}>
-        <mesh>
-          <boxGeometry args={[1.3, 1.8, 0.7]} />
-          <meshPhysicalMaterial 
-            color="#1a1a2e" 
-            transmission={0.7} 
-            thickness={3} 
-            roughness={0.2}
-            metalness={0.9}
-            transparent={isPlayer}
-            opacity={isPlayer ? 0.3 : 1}
-            depthWrite={!isPlayer}
-          />
-        </mesh>
-        {/* Power Core */}
-        <mesh position={[0, 0.2, 0.36]}>
-          <sphereGeometry args={[0.2, 16, 16]} />
-          <meshStandardMaterial color={neonColor} emissive={neonColor} emissiveIntensity={isPlayer ? 4 : 10} transparent={isPlayer} opacity={isPlayer ? 0.6 : 1} depthWrite={!isPlayer} />
-        </mesh>
-        <pointLight color={neonColor} intensity={10} distance={3} />
-      </group>
-
-      {/* Limbs: Armored Struts */}
-      {[...Array(10)].map((_, i) => (
-        <group key={i} ref={(el) => { if (el) limbRefs.current[i] = el; }}>
-          <mesh rotation={[Math.PI / 2, 0, 0]} material={limbMaterial}>
-            <cylinderGeometry args={[0.12, 0.12, 1, 8]} />
-          </mesh>
-          {/* Hydraulic Joints */}
-          <mesh position={[0, 0, 0.5]}>
-            <sphereGeometry args={[0.16, 16, 16]} />
-            <meshStandardMaterial color="#ffffff" metalness={1} roughness={0} />
-          </mesh>
-        </group>
-      ))}
     </group>
   );
 };
@@ -828,8 +695,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [score, setScore] = useState(0);
-  const [syncRate, setSyncRate] = useState(100);
+  const [finalScore, setFinalScore] = useState(0);
   const [feedbackMsg, setFeedbackMsg] = useState<{text: string, id: number} | null>(null);
   const [isComplete, setIsComplete] = useState(false);
 
@@ -852,10 +718,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     }
   }, [feedbackMsg]);
 
-  const instructorFramesRef = useRef<any>([]);
-  const instructorCurrentLmRef = useRef<any>([]);
-  const playerLiveLmRef = useRef<any>([]);
-  const snappedPlayerLmRef = useRef<any>([]);
+  const instructorFramesRef = useRef<MotionFrame[]>([]);
+  const instructorCurrentLmRef = useRef<MotionRef>([]);
+  const playerLiveLmRef = useRef<MotionRef>([]);
+  const snappedPlayerLmRef = useRef<PoseLandmark[]>([]);
   const frameIndexRef = useRef(0);
   const scoreRef = useRef(0);
   const comboRef = useRef(0); // Add Combo Counter
@@ -883,19 +749,19 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     const loadData = async () => {
       if (!movement) return;
       
-      let loadedFrames: any[] = [];
+      let loadedFrames: MotionFrame[] = [];
       if (isStorageId && fileUrl) {
         try {
           const res = await fetch(fileUrl);
           const data = await res.json();
-          loadedFrames = Array.isArray(data) ? data : (data.frames || []);
+          loadedFrames = (Array.isArray(data) ? data : (data.frames || [])) as MotionFrame[];
         } catch (e) {
           console.error("Failed to load pose data from URL", e);
         }
       } else if (!isStorageId && typeof movement.poseData === "string") {
         try {
           const parsed = JSON.parse(movement.poseData);
-          loadedFrames = Array.isArray(parsed) ? parsed : (parsed.frames || []);
+          loadedFrames = (Array.isArray(parsed) ? parsed : (parsed.frames || [])) as MotionFrame[];
         } catch (e) {
           console.error("Failed to parse pose data", e);
         }
@@ -904,7 +770,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       if (loadedFrames && loadedFrames.length > 0) {
         instructorFramesRef.current = loadedFrames;
         const firstFrame = loadedFrames[0];
-        instructorCurrentLmRef.current = firstFrame.pose ? firstFrame.pose : Array.isArray(firstFrame) ? firstFrame : (firstFrame?.landmarks || []);
+        instructorCurrentLmRef.current = Array.isArray(firstFrame) ? firstFrame : firstFrame;
       }
       setIsLoading(false);
     };
@@ -914,6 +780,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   // 2. Init MediaPipe Triad
   useEffect(() => {
     let active = true;
+    let createdPose: PoseLandmarker | null = null;
+    let createdFace: FaceLandmarker | null = null;
+    let createdHands: HandLandmarker | null = null;
+
     const init = async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
@@ -943,6 +813,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               minTrackingConfidence: 0.6,
             })
         ]);
+        createdPose = pose;
+        createdFace = face;
+        createdHands = hands;
 
         if (active) {
             setPoseLandmarker(pose);
@@ -956,9 +829,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     init();
     return () => { 
         active = false; 
-        if (poseLandmarker) poseLandmarker.close(); 
-        if (faceLandmarker) faceLandmarker.close();
-        if (handLandmarker) handLandmarker.close();
+        createdPose?.close();
+        createdFace?.close();
+        createdHands?.close();
     };
   }, []);
 
@@ -978,7 +851,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
         const handResults = handLandmarker.detectForVideo(video, startTimeMs);
         
-        const currentData: any = {};
+        const currentData: MotionPayload = {};
 
         if (poseResults && poseResults.landmarks && poseResults.landmarks.length > 0) {
           const raw = poseResults.landmarks[0];
@@ -999,14 +872,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         }
 
         if (handResults && handResults.landmarks && handResults.landmarks.length > 0) {
-            currentData.hands = { left: null, right: null };
+            const handsPayload: HandsPayload = { left: null, right: null };
             
             const leftWristPose = currentData.landmarks ? currentData.landmarks[15] : null;
             const rightWristPose = currentData.landmarks ? currentData.landmarks[16] : null;
             
-            handResults.landmarks.forEach((handLms: any[], index: number) => {
+            handResults.landmarks.forEach((handLms, index) => {
                 const handWrist = handLms[0];
-                let side = "right"; 
+                let side: HandSide = "right";
                 
                 // Spatial Distance Matching: Stop relying on buggy categoryName, measure physical distance to wrists
                 if (leftWristPose && rightWristPose) {
@@ -1023,16 +896,17 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                 
                 const smoothedHandLms = filterRef.filter(handLms, startTimeMs);
                 
-                let smoothedHandWorld = null;
+                let smoothedHandWorld: PoseLandmark[] | null = null;
                 if (handResults.worldLandmarks && handResults.worldLandmarks[index]) {
                     smoothedHandWorld = worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs);
                 }
 
-                currentData.hands[side] = {
+                handsPayload[side] = {
                     landmarks: smoothedHandLms,
                     worldLandmarks: smoothedHandWorld
                 };
             });
+            currentData.hands = handsPayload;
         }
         
         // Store unified payload
@@ -1054,7 +928,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   useEffect(() => {
     let active = true;
     let animationFrameId: number;
-    const gameLoop = (time: number) => {
+    const gameLoop = () => {
       if (!active) return;
       animationFrameId = requestAnimationFrame(gameLoop);
       
@@ -1066,6 +940,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       if (totalFrames > 0) {
         if (frameIndexRef.current + 1 >= totalFrames) {
           if (isPlaying) {
+            setFinalScore(scoreRef.current);
             setIsPlaying(false);
             setIsComplete(true);
           }
@@ -1074,17 +949,18 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         
         frameIndexRef.current += 1;
         const frameData = frames[frameIndexRef.current];
+        const framePayload = !Array.isArray(frameData) ? frameData : null;
           // Smooth the instructor's core body to absorb frame-skips from the lag compensator
           const now = performance.now();
-          let filteredIL = frameData?.landmarks || [];
+          let filteredIL = getMotionLandmarks(frameData);
           filteredIL = instructorFilterRef.current.filter(filteredIL, now);
           
-          let filteredIWorld = frameData?.worldLandmarks || [];
+          let filteredIWorld = framePayload?.worldLandmarks || [];
           if (filteredIWorld.length > 0) {
               filteredIWorld = instructorWorldFilterRef.current.filter(filteredIWorld, now);
           }
           
-          let filteredIHands = frameData?.hands;
+          let filteredIHands = framePayload?.hands;
           if (filteredIHands) {
               // Deep-clone the hands so we don't accidentally mutate the cached JSON array in memory
               filteredIHands = { 
@@ -1099,30 +975,31 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               }
           }
 
-          instructorCurrentLmRef.current = {
-             ...frameData,
-             landmarks: filteredIL,
-             worldLandmarks: filteredIWorld.length > 0 ? filteredIWorld : frameData.worldLandmarks,
-             hands: filteredIHands
-          };
+	          instructorCurrentLmRef.current = {
+	             ...frameData,
+	             landmarks: filteredIL,
+	             worldLandmarks: filteredIWorld.length > 0 ? filteredIWorld : framePayload?.worldLandmarks,
+	             hands: filteredIHands
+	          };
         }
 
         // Calculate Score (3D Angle-Based Engine / Law of Cosines)
-        const pData = playerLiveLmRef.current as any;
+        const pData = playerLiveLmRef.current && !Array.isArray(playerLiveLmRef.current) ? playerLiveLmRef.current : null;
         const lagCompIndex = Math.max(0, frameIndexRef.current - 6);
         const iData = frames[lagCompIndex] || {};
+        const iPayload = !Array.isArray(iData) ? iData : null;
 
         let currentPL = pData?.landmarks || [];
-        let iL = iData?.landmarks || [];
+        let iL = getMotionLandmarks(iData);
         
         // Upgrade to True 3D depth angles if both feeds have high-fidelity worldLandmarks
-        if (pData?.worldLandmarks?.length === 33 && iData?.worldLandmarks?.length === 33) {
+        if (pData?.worldLandmarks?.length === 33 && iPayload?.worldLandmarks?.length === 33) {
             currentPL = pData.worldLandmarks;
-            iL = iData.worldLandmarks;
+            iL = iPayload.worldLandmarks;
         }
         
         if (currentPL && currentPL.length >= 33 && iL && iL.length >= 33) {
-            const getAngle = (a: any, b: any, c: any) => {
+            const getAngle = (a?: PoseLandmark, b?: PoseLandmark, c?: PoseLandmark) => {
               if (!a || !b || !c || a.visibility < 0.2 || b.visibility < 0.2 || c.visibility < 0.2) return null;
               const ba = new THREE.Vector3(a.x - b.x, a.y - b.y, a.z - b.z).normalize();
               const bc = new THREE.Vector3(c.x - b.x, c.y - b.y, c.z - b.z).normalize();
@@ -1182,7 +1059,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             
             // --- 1. Hand Posture Matching (Aperture) ---
             // Highly efficient alternative to measuring 42 finger angles. Measures the spread/curl of the hand.
-            const calculateAperture = (handLms: any) => {
+            const calculateAperture = (handLms?: PoseLandmark[] | null) => {
                 if (!handLms || handLms.length < 21) return null;
                 const p0 = handLms[0];
                 const tips = [handLms[8], handLms[12], handLms[16], handLms[20]];
@@ -1196,9 +1073,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
             // Mirror Play mapping: Player Left vs Instructor Right
             const pLeftHand = pData?.hands?.left?.worldLandmarks || pData?.hands?.left?.landmarks;
-            const iRightHand = iData?.hands?.right?.worldLandmarks || iData?.hands?.right?.landmarks;
+            const iRightHand = iPayload?.hands?.right?.worldLandmarks || iPayload?.hands?.right?.landmarks;
             const pRightHand = pData?.hands?.right?.worldLandmarks || pData?.hands?.right?.landmarks;
-            const iLeftHand = iData?.hands?.left?.worldLandmarks || iData?.hands?.left?.landmarks;
+            const iLeftHand = iPayload?.hands?.left?.worldLandmarks || iPayload?.hands?.left?.landmarks;
 
             const pLAperture = calculateAperture(pLeftHand);
             const iRAperture = calculateAperture(iRightHand);
@@ -1215,8 +1092,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             // --- 2. Facial Expression Bonus (Zen Multiplier) ---
             let isZenActive = false;
             if (pData?.blendshapes) {
-                const smileLeft = pData.blendshapes.find((b: any) => b.categoryName === "mouthSmileLeft")?.score || 0;
-                const smileRight = pData.blendshapes.find((b: any) => b.categoryName === "mouthSmileRight")?.score || 0;
+                const smileLeft = pData.blendshapes.find((b) => b.categoryName === "mouthSmileLeft")?.score || 0;
+                const smileRight = pData.blendshapes.find((b) => b.categoryName === "mouthSmileRight")?.score || 0;
                 // If the player holds a genuine smile during the movement
                 if ((smileLeft + smileRight) / 2 > 0.4) {
                     isZenActive = true;
@@ -1346,15 +1223,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             />
             
             {/* The Player (Live) - Reacts directly to raw webcam feed */}
-            <VRMAvatar 
-              landmarksRef={playerLiveLmRef} 
-              positionOffset={[5, 0, 0]} 
-              isPlayer={true}
-              isPlaying={isPlaying}
-              syncRef={syncRef}
-              vrmUrl={playerAvatarUrl}
-              name={getAvatarName(playerAvatarUrl)}
-            />
+              <VRMAvatar
+                landmarksRef={playerLiveLmRef}
+                positionOffset={[5, 0, 0]}
+                isPlayer={true}
+                isPlaying={isPlaying}
+                vrmUrl={playerAvatarUrl}
+                name={getAvatarName(playerAvatarUrl)}
+              />
 
             {/* Magic Sparkles on high performance */}
             {/* Magic Sparkles on high performance - Use live feed */}
@@ -1399,7 +1275,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               <div className="flex flex-col items-center justify-center w-full bg-black/40 rounded-3xl p-8 mb-10 border border-white/5">
                 <Typography className="text-white/60 font-bold tracking-[0.2em] uppercase text-xs mb-2">Final Score</Typography>
                 <Typography className="text-[#FF3300] font-black text-7xl drop-shadow-[0_0_20px_rgba(255,51,0,0.6)]">
-                  {scoreRef.current}
+                  {finalScore}
                 </Typography>
               </div>
 
@@ -1410,6 +1286,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                 <button 
                   onClick={() => {
                     scoreRef.current = 0;
+                    setFinalScore(0);
                     frameIndexRef.current = 0;
                     comboRef.current = 0;
                     const scoreElem = document.getElementById("score-display");
@@ -1530,7 +1407,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
               <div className="bg-[#0B0C10] border border-white/5 rounded-[24px] p-10 w-full flex flex-col items-center mb-10 relative z-10 shadow-inner">
                 <span className="text-gray-400 font-semibold tracking-[0.2em] text-xs uppercase mb-4">FINAL SCORE</span>
-                <span className="text-5xl font-black text-[#FF3300] tracking-tight">{scoreRef.current}</span>
+                <span className="text-5xl font-black text-[#FF3300] tracking-tight">{finalScore}</span>
               </div>
 
               <div className="flex w-full gap-4 relative z-10">
@@ -1540,6 +1417,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                     setIsLobby(true);
                     frameIndexRef.current = 0;
                     scoreRef.current = 0;
+                    setFinalScore(0);
                     comboRef.current = 0;
                     syncRef.current = 100;
                   }}
@@ -1552,6 +1430,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
                     setIsComplete(false);
                     frameIndexRef.current = 0;
                     scoreRef.current = 0;
+                    setFinalScore(0);
                     comboRef.current = 0;
                     syncRef.current = 100;
                     setIsPlaying(true);

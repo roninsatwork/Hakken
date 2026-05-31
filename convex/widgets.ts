@@ -336,7 +336,7 @@ export const createWidgetThread = mutation({
                 throw new Error("URL contains credentials");
             }
             parsedOrigin = urlObj.hostname.toLowerCase();
-        } catch (e) {
+        } catch {
             await ctx.db.insert("auditLogs", {
               actorId: widget.createdBy,
               actionType: "BLOCKED_WIDGET_ACCESS",

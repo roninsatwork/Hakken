@@ -1,8 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import ChatHistoryList from "./ChatHistoryList";
 import { useQuery, useMutation } from "convex/react";
 import * as nextNavigation from "next/navigation";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -13,25 +14,30 @@ vi.mock("next/navigation", () => ({
   })),
 }));
 
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(),
+  useMutation: vi.fn(),
+}));
+
 describe("ChatHistoryList", () => {
   const mockThreads = [
-    { _id: "thread1", title: "First Conversation" },
-    { _id: "thread2", title: "Project Alpha" },
-    { _id: "thread3", title: "General Inquiry" },
+    { _id: "thread1" as Id<"threads">, title: "First Conversation" },
+    { _id: "thread2" as Id<"threads">, title: "Project Alpha" },
+    { _id: "thread3" as Id<"threads">, title: "General Inquiry" },
   ];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (nextNavigation.usePathname as any).mockReturnValue("/app/assistant");
+    vi.mocked(nextNavigation.usePathname).mockReturnValue("/app/assistant");
     
     // Mock convex useQuery to return our mock threads
-    (useQuery as any).mockImplementation((queryFn: any) => {
+    vi.mocked(useQuery).mockImplementation(() => {
       // Return threads array for the default case
       return mockThreads;
     });
     
     // Mock useMutation to return an empty async function
-    (useMutation as any).mockReturnValue(vi.fn().mockResolvedValue({}));
+    vi.mocked(useMutation).mockReturnValue(vi.fn().mockResolvedValue({}) as unknown as ReturnType<typeof useMutation>);
   });
 
   it("renders the history header and new conversation button", () => {
@@ -64,7 +70,7 @@ describe("ChatHistoryList", () => {
   });
 
   it("displays a loading state when threads are undefined", () => {
-    (useQuery as any).mockReturnValue(undefined);
+    vi.mocked(useQuery).mockReturnValue(undefined);
     const { container } = render(<ChatHistoryList />);
     
     // Check for loader by class name or tag since it's an SVG
@@ -72,7 +78,7 @@ describe("ChatHistoryList", () => {
   });
 
   it("displays an empty state when threads array is empty", () => {
-    (useQuery as any).mockReturnValue([]);
+    vi.mocked(useQuery).mockReturnValue([]);
     render(<ChatHistoryList />);
     
     expect(screen.getByText("No previous conversations. Start exploring Sonae.")).toBeInTheDocument();

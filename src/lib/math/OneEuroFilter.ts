@@ -70,11 +70,11 @@ export class PoseFilterWrapper {
     }
   }
 
-  filter(landmarks: any[], timestampMs: number) {
+  filter<T extends { x: number; y: number; z: number }>(landmarks: T[], timestampMs: number) {
     if (!landmarks || landmarks.length === 0) return landmarks;
     
     const t = timestampMs / 1000; // Convert to seconds
-    const smoothedLandmarks = [];
+    const smoothedLandmarks: T[] = [];
 
     for (let i = 0; i < landmarks.length; i++) {
       const lm = landmarks[i];

@@ -8,12 +8,14 @@ import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { Loader2 } from "lucide-react";
 import * as THREE from "three";
 
+type LoaderPlugin = ReturnType<Parameters<InstanceType<typeof GLTFLoader>["register"]>[0]>;
+
 function Model() {
   const group = useRef<THREE.Group>(null);
   
   // Load the Moon Girl VRM
   const gltf = useLoader(GLTFLoader, "/models/MoonGirl.vrm", (loader) => {
-    loader.register((parser) => new VRMLoaderPlugin(parser as any) as any);
+    loader.register((parser) => new VRMLoaderPlugin(parser as never) as unknown as LoaderPlugin);
   });
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";

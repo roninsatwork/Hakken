@@ -20,6 +20,7 @@ export default function AIModelsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [syncError, setSyncError] = useState("");
   const pageSize = 15;
 
   useEffect(() => {
@@ -43,11 +44,12 @@ export default function AIModelsPage() {
 
   const fetchModels = async () => {
     setIsSyncing(true);
+    setSyncError("");
     try {
       await syncVertexModels();
     } catch (err) {
       console.error(err);
-      alert("Failed to sync models: " + err);
+      setSyncError("Failed to sync models: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsSyncing(false);
     }
@@ -86,6 +88,11 @@ export default function AIModelsPage() {
           {isSyncing ? t("syncButton.syncing") : t("syncButton.idle")}
         </button>
       </div>
+      {syncError && (
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+          {syncError}
+        </div>
+      )}
 
       {/* Control Bar */}
       <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">

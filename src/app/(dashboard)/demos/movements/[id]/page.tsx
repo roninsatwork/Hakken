@@ -11,6 +11,16 @@ import { ArrowLeft, Play, Pause, Trash2, Activity, Database, Clock } from "lucid
 import Typography from "@/src/ui/atoms/typography";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
+type PoseLandmark = {
+  x: number;
+  y: number;
+  visibility: number;
+};
+
+type PoseFrame = PoseLandmark[] | { landmarks: PoseLandmark[] };
+
+const getFrameLandmarks = (frame: PoseFrame | undefined) => Array.isArray(frame) ? frame : frame?.landmarks;
+
 export default function MovementDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const router = useRouter();
@@ -21,7 +31,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameIndexRef = useRef(0);
-  const [frames, setFrames] = useState<any[]>([]);
+  const [frames, setFrames] = useState<PoseFrame[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -36,11 +46,11 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
       
       try {
         if (!isStorageId) {
-          setFrames(JSON.parse(movement.poseData));
+          setFrames(JSON.parse(movement.poseData) as PoseFrame[]);
           setIsLoading(false);
         } else if (fileUrl) {
           const res = await fetch(fileUrl);
-          const data = await res.json();
+          const data = await res.json() as PoseFrame[];
           setFrames(data);
           setIsLoading(false);
         }
@@ -52,7 +62,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
     loadData();
   }, [movement, isStorageId, fileUrl]);
 
-  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: any[] | null | undefined, width: number, height: number) => {
+  const drawCyberZenSkeleton = (ctx: CanvasRenderingContext2D, landmarks: PoseFrame | null | undefined, width: number, height: number) => {
     ctx.clearRect(0, 0, width, height);
     
     if (!landmarks || !Array.isArray(landmarks)) return;
@@ -112,7 +122,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
           const ctx = canvas.getContext("2d");
           if (ctx) {
             const frameData = frames[frameIndexRef.current];
-            const landmarks = frameData?.landmarks || frameData;
+            const landmarks = getFrameLandmarks(frameData);
             drawCyberZenSkeleton(ctx, landmarks, canvas.width, canvas.height);
           }
         }
@@ -137,7 +147,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
     if (frames && frames.length > 0 && !isPlaying && canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       const frameData = frames[frameIndexRef.current];
-      const landmarks = frameData?.landmarks || frameData;
+      const landmarks = getFrameLandmarks(frameData);
       if (ctx && frameData) {
         drawCyberZenSkeleton(ctx, landmarks, canvasRef.current.width, canvasRef.current.height);
       }
@@ -254,7 +264,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                       const ctx = canvas.getContext("2d");
                       if (ctx) {
                         const frameData = frames[frameIndexRef.current];
-                        drawCyberZenSkeleton(ctx, frameData?.landmarks || frameData, canvas.width, canvas.height);
+                        drawCyberZenSkeleton(ctx, getFrameLandmarks(frameData), canvas.width, canvas.height);
                       }
                     }
                   }}

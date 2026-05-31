@@ -30,10 +30,12 @@ export default function AgentIntegrationsPage({ params }: { params: Promise<{ id
 
   const toggleToolMutation = useMutation(api.aiTools.toggleAgentTool);
   const [processingId, setProcessingId] = useState<Id<"aiTools"> | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const handleToggleTool = async (toolId: Id<"aiTools">, isBound: boolean) => {
     if (processingId) return;
     setProcessingId(toolId);
+    setFeedbackMessage("");
     try {
       await toggleToolMutation({
         agentId,
@@ -41,7 +43,7 @@ export default function AgentIntegrationsPage({ params }: { params: Promise<{ id
         action: isBound ? "UNBIND" : "BIND"
       });
     } catch {
-      alert(t("errors.assignFailed"));
+      setFeedbackMessage(t("errors.assignFailed"));
     } finally {
       setProcessingId(null);
     }
@@ -66,9 +68,14 @@ export default function AgentIntegrationsPage({ params }: { params: Promise<{ id
               {t("subtitle")}
             </p>
           </div>
-        </div>
+	        </div>
+          {feedbackMessage && (
+            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+              {feedbackMessage}
+            </div>
+          )}
 
-        <div className="flex flex-col gap-4">
+	        <div className="flex flex-col gap-4">
           <h3 className="text-[14px] font-semibold text-foreground">{t("sectionTitle")}</h3>
 
           {globalTools.length === 0 ? (

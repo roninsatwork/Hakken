@@ -28,6 +28,7 @@ export default function CompanyWidgetPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hostOrigin, setHostOrigin] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   useEffect(() => {
     setHostOrigin(window.location.origin);
@@ -72,11 +73,12 @@ export default function CompanyWidgetPage() {
       if (!file) return;
 
       if (file.size > 2 * 1024 * 1024) {
-          alert("Logo file must be under 2MB");
+          setFeedbackMessage("Logo file must be under 2MB");
           return;
       }
 
       setIsUploadingLogo(true);
+      setFeedbackMessage("");
       try {
           const objectUrl = URL.createObjectURL(file);
           setThemeLogoUrl(objectUrl);
@@ -92,11 +94,11 @@ export default function CompanyWidgetPage() {
           const { storageId } = await result.json();
 
           setThemeLogoUrl(storageId);
-      } catch (err) {
-          console.error(err);
-          setThemeLogoUrl("");
-          alert("Failed to upload logo.");
-      } finally {
+	      } catch (err) {
+	          console.error(err);
+	          setThemeLogoUrl("");
+	          setFeedbackMessage("Failed to upload logo.");
+	      } finally {
           setIsUploadingLogo(false);
       }
   };
@@ -114,9 +116,10 @@ export default function CompanyWidgetPage() {
     setConversationStarters(newStarters);
   };
 
-  const handleCreateOrUpdate = async () => {
-    setIsSaving(true);
-    try {
+	  const handleCreateOrUpdate = async () => {
+	    setIsSaving(true);
+      setFeedbackMessage("");
+	    try {
       const domains = allowedDomains.split(",").map(d => d.trim()).filter(Boolean);
       await saveWidget({
         widgetId: widget?._id,
@@ -136,10 +139,10 @@ export default function CompanyWidgetPage() {
         enableGreeting,
         conversationStarters
       });
-    } catch (error) {
-      console.error(error);
-      alert("Failed to save widget settings.");
-    } finally {
+	    } catch (error) {
+	      console.error(error);
+	      setFeedbackMessage("Failed to save widget settings.");
+	    } finally {
       setIsSaving(false);
     }
   };
@@ -180,9 +183,14 @@ export default function CompanyWidgetPage() {
                   <span>Publish Configuration</span>
               </button>
           )}
-        </header>
+	        </header>
+          {feedbackMessage && (
+            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+              {feedbackMessage}
+            </div>
+          )}
 
-        {widgets === undefined ? (
+	        {widgets === undefined ? (
           <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>
         ) : !widget ? (
           <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">

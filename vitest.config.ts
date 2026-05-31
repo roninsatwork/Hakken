@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import type { UserConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -6,8 +7,12 @@ const rootAlias = {
   '@': path.resolve(__dirname, './'),
 }
 
+type VitestPlugin = NonNullable<UserConfig['plugins']>[number]
+
+const reactPlugin = react() as unknown as VitestPlugin
+
 export default defineConfig({
-  plugins: [react() as any],
+  plugins: [reactPlugin],
   resolve: {
     alias: rootAlias,
   },
@@ -15,7 +20,7 @@ export default defineConfig({
     globals: true,
     projects: [
       {
-        plugins: [react() as any],
+        plugins: [reactPlugin],
         resolve: {
           alias: rootAlias,
         },

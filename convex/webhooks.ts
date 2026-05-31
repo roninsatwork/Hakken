@@ -11,6 +11,15 @@ function constantTimeEqual(a: string, b: string) {
   return result === 0;
 }
 
+const getUrlValue = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "url" in value) {
+    const url = (value as { url?: unknown }).url;
+    return typeof url === "string" ? url : "";
+  }
+  return "";
+};
+
 export const processApifyWebhook = httpAction(async (ctx, request) => {
   // Validate dynamic shared webhook secret to prevent spoofing
   // 🛡️ SECURITY: Enforce webhook secret strictly via headers to prevent credential leak in proxy/server logs.
@@ -35,11 +44,11 @@ export const processApifyWebhook = httpAction(async (ctx, request) => {
   let payload;
   try {
     payload = JSON.parse(payloadStr);
-  } catch (err) {
+  } catch {
     return new Response("Invalid JSON payload", { status: 400 });
   }
 
-  const { runId, status, actorId, datasetId } = payload;
+  const { runId, status, datasetId } = payload;
   if (!runId || !status) {
     return new Response("Missing runId or status", { status: 400 });
   }
@@ -146,11 +155,11 @@ export const storeRightmoveData = internalMutation({
         bathrooms: item.bathrooms || 0,
         propertyType: item.propertyType || "Unknown",
         url: item.url || "",
-        imageUrl: (Array.isArray(item.images) && item.images.length > 0) ? (item.images[0].url || item.images[0]) : (item.mainImage || ""),
-        images: Array.isArray(item.images) ? item.images.map((img: any) => img.url || img).filter(Boolean) : [],
+        imageUrl: (Array.isArray(item.images) && item.images.length > 0) ? (getUrlValue(item.images[0]) || item.mainImage || "") : (item.mainImage || ""),
+        images: Array.isArray(item.images) ? item.images.map(getUrlValue).filter(Boolean) : [],
         description: item.description || item.summary || "",
         features: Array.isArray(item.features) ? item.features : [],
-        floorplans: Array.isArray(item.floorplans) ? item.floorplans.map((fp: any) => fp.url || fp).filter(Boolean) : [],
+        floorplans: Array.isArray(item.floorplans) ? item.floorplans.map(getUrlValue).filter(Boolean) : [],
         epcRating: item.epcRating || item.epc?.rating || "",
         latitude: item.coordinates?.latitude || item.location?.latitude || undefined,
         longitude: item.coordinates?.longitude || item.location?.longitude || undefined,

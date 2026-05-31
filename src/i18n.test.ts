@@ -6,13 +6,14 @@ import path from 'path';
  * Utility function to flatten a nested JSON object into an array of dot-notation keys
  * example: { a: { b: "hello" } } -> ["a.b"]
  */
-const flattenKeys = (obj: any, prefix = ''): string[] => {
+const flattenKeys = (obj: unknown, prefix = ''): string[] => {
   if (typeof obj !== 'object' || obj === null) return [];
   
   return Object.keys(obj).reduce((acc: string[], key: string) => {
     const pre = prefix.length ? prefix + '.' : '';
-    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-      acc.push(...flattenKeys(obj[key], pre + key));
+    const value = (obj as Record<string, unknown>)[key];
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      acc.push(...flattenKeys(value, pre + key));
     } else {
       acc.push(pre + key);
     }
@@ -45,7 +46,7 @@ describe("UX Layer: Internationalization (i18n) Parity", () => {
     try {
         expect(missingInItalian.length).toBe(0);
         expect(missingInEnglish.length).toBe(0);
-    } catch (e: any) {
+    } catch {
         // Provide hyper-specific debugging text if it fails
         throw new Error(
             `Localization Parity Failure!\n` +

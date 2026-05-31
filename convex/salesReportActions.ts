@@ -1,9 +1,12 @@
 "use node";
 
-import { internalAction, query } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Doc } from "./_generated/dataModel";
+
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error during AI Generation";
 
 export const generateReport = internalAction({
   args: {
@@ -247,8 +250,8 @@ Total length: 600-900 words. Never pad.
         const inTokens = modelResponse.usageMetadata?.promptTokenCount || 0;
         const outTokens = modelResponse.usageMetadata?.candidatesTokenCount || 0;
         
-        const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
-        const modelMap = new Map((allModelsRaw as any[]).map(m => [m.modelId, m]));
+        const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {}) as Doc<"aiModels">[];
+        const modelMap = new Map(allModelsRaw.map((model) => [model.modelId, model]));
         const config = modelMap.get(agent.modelId);
         
         const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
@@ -282,16 +285,16 @@ Total length: 600-900 words. Never pad.
            patterns: reportData.patterns,
            priorities: reportData.priorities,
         });
-    } catch (e: any) {
+    } catch (error) {
         // Log the exact error
         await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
             agentId: args.agentId,
             interactionType: "ERROR",
             promptContent: "N/A [Execution Failure]",
-            responseContent: e.message || "Unknown error during AI Generation",
+            responseContent: getErrorMessage(error),
             companyId: args.companyId
         });
-        throw e;
+        throw error;
     }
   }
 });

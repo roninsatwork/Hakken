@@ -1,5 +1,9 @@
 // Audio Engine using raw Web Audio API for Zero-Latency Sound Synthesis 
 
+type WindowWithWebkitAudioContext = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
@@ -15,8 +19,10 @@ export class AudioEngine {
 
   constructor() {
     try {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    } catch (e) {
+      const AudioContextConstructor = window.AudioContext || (window as WindowWithWebkitAudioContext).webkitAudioContext;
+      if (!AudioContextConstructor) return;
+      this.ctx = new AudioContextConstructor();
+    } catch {
       console.warn("AudioContext not supported");
     }
   }
@@ -250,7 +256,7 @@ export class AudioEngine {
       this.ambientGain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 1);
       setTimeout(() => {
         this.ambientOsc.forEach(osc => {
-           try { osc.stop(); osc.disconnect(); } catch(e) {}
+           try { osc.stop(); osc.disconnect(); } catch {}
         });
         this.ambientOsc = [];
         this.ambientGain?.disconnect();

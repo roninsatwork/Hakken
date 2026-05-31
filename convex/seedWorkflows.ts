@@ -1,5 +1,4 @@
-import { internalMutation, mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { internalMutation } from "./_generated/server";
 
 export const seedAcmeWorkflow = internalMutation({
   args: {},
@@ -21,7 +20,10 @@ export const seedAcmeWorkflow = internalMutation({
       acme = (await ctx.db.get(id))!;
     }
 
-    const companyId = acme._id;
+    const seedUser = await ctx.db.query("users").first();
+    if (!seedUser) {
+      throw new Error("Cannot seed workflow without at least one user.");
+    }
 
     // 2. Create the Workflow
     const workflowId = await ctx.db.insert("workflows", {
@@ -31,7 +33,7 @@ export const seedAcmeWorkflow = internalMutation({
       triggerType: "MANUAL",
       createdAt: now,
       updatedAt: now,
-      createdBy: (await ctx.db.query("users").first())?._id as any, // fallback to any first user
+      createdBy: seedUser._id,
     });
 
     // 3. Create Inline Agents
@@ -183,7 +185,7 @@ export const seedAcmeWorkflow = internalMutation({
     // 6. Log in Audit
     await ctx.db.insert("auditLogs", {
       actionType: "SEED_WORKFLOW",
-      actorId: (await ctx.db.query("users").first())?._id as any,
+      actorId: seedUser._id,
       entityType: "workflows",
       entityId: workflowId,
       timestamp: now,

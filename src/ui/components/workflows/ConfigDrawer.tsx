@@ -117,6 +117,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const generateConfig = useAction(api.ai.generateNodeConfig);
 
   useEffect(() => {
@@ -172,9 +173,10 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
 
   if (!node) return null;
 
-  const handleAutoConfigure = async () => {
-    if (!aiPrompt.trim() || isGenerating) return;
-    setIsGenerating(true);
+	  const handleAutoConfigure = async () => {
+	    if (!aiPrompt.trim() || isGenerating) return;
+	    setIsGenerating(true);
+    setFeedbackMessage("");
     try {
       const result = await generateConfig({
         prompt: aiPrompt,
@@ -194,7 +196,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
       setAiPrompt("");
       setIsDeveloperMode(true);
     } catch {
-      alert("AI Configuration failed. Please try again or construct the payload manually.");
+      setFeedbackMessage("AI Configuration failed. Please try again or construct the payload manually.");
     } finally {
       setIsGenerating(false);
     }
@@ -266,8 +268,13 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
           </div>
         )}
 
-        <form id="configForm" onSubmit={handleSave} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
+	        <form id="configForm" onSubmit={handleSave} className="flex flex-col gap-6">
+            {feedbackMessage && (
+              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+                {feedbackMessage}
+              </div>
+            )}
+	          <div className="flex flex-col gap-2">
             <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Node Label</label>
             <input
               type="text"

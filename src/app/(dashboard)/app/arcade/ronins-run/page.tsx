@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
@@ -9,6 +8,7 @@ import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
 import RoninCanvas from "./RoninCanvas";
 import { AudioEngine } from "./engine/AudioEngine";
+import Image from "next/image";
 
 const pressStart = Press_Start_2P({ weight: '400', subsets: ['latin'] });
 
@@ -332,7 +332,7 @@ export default function RoninArcadePage() {
           ) : (
             <>
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10 pt-16 pb-24">
-                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>RONIN'S RUN</h2>
+                 <h2 className={`text-4xl lg:text-5xl font-bold tracking-widest mb-6 text-[#D2B48C] drop-shadow-[0_0_15px_rgba(139,90,43,0.8)] ${pressStart.className}`}>RONIN&apos;S RUN</h2>
                  <p className={`text-white/80 max-w-lg mx-auto mb-10 text-[10px] leading-loose ${pressStart.className}`}>
                    INSERT A VIRTUAL TOKEN TO START THE EMULATION MATRIX... HIGH SCORES WILL BE RECORDED ON THE LEDGER.
                  </p>
@@ -438,7 +438,14 @@ export default function RoninArcadePage() {
                        <td className="px-6 py-4">
                          <div className="flex items-center gap-3">
                            {entry.userAvatar ? (
-                             <img src={entry.userAvatar} className="w-8 h-8 rounded-full object-cover shadow-sm bg-background border border-border-dim" />
+                             <Image
+                               src={entry.userAvatar}
+                               alt={entry.userName || "Player avatar"}
+                               width={32}
+                               height={32}
+                               unoptimized
+                               className="w-8 h-8 rounded-full object-cover shadow-sm bg-background border border-border-dim"
+                             />
                            ) : (
                              <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-bold text-[12px]">
                                {entry.userName?.charAt(0).toUpperCase() || "?"}

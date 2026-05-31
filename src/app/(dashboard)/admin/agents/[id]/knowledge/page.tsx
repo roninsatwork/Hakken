@@ -17,6 +17,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function AgentKnowledgePage() {
   const t = useTranslations("admin.agents.details.knowledge");
+  const tCommon = useTranslations("common.actions");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -30,8 +31,10 @@ export default function AgentKnowledgePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [errorDetails, setErrorDetails] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [activeDeletion, setActiveDeletion] = useState<Id<"knowledgeDocuments"> | null>(null);
+  const [documentPendingDelete, setDocumentPendingDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File) => {
@@ -155,21 +158,12 @@ export default function AgentKnowledgePage() {
                       {doc.status === 'ready' ? t("table.statusReady") : doc.status}
                     </span>
 
-                    <button
-                      onClick={async () => {
-                        if (confirm(t("table.deleteConfirm"))) {
-                          setActiveDeletion(doc._id);
-                          try {
-                            await deleteDocument({ documentId: doc._id });
-                          } catch (err: unknown) {
-                            console.error(err);
-                            alert(t("errors.deleteFailed"));
-                          } finally {
-                            setActiveDeletion(null);
-                          }
-                        }
-                      }}
-                      disabled={activeDeletion === doc._id}
+	                    <button
+	                      onClick={() => {
+                          setDeleteError("");
+                          setDocumentPendingDelete(doc);
+                        }}
+	                      disabled={activeDeletion === doc._id}
                       className="p-1.5 rounded-md hover:bg-red-500/10 text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
                     >
                       {activeDeletion === doc._id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
@@ -233,7 +227,57 @@ export default function AgentKnowledgePage() {
             )}
           </div>
         </div>
-      </SonaeModal>
-    </>
+	      </SonaeModal>
+        <SonaeModal
+          isOpen={!!documentPendingDelete}
+          onClose={() => !activeDeletion && setDocumentPendingDelete(null)}
+          title={tCommon("delete")}
+          size="sm"
+        >
+          <div className="flex flex-col gap-6">
+            <p className="text-[14px] text-secondary leading-relaxed">
+              {t("table.deleteConfirm")}
+            </p>
+            {deleteError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">{deleteError}</span>
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDocumentPendingDelete(null)}
+                disabled={!!activeDeletion}
+                className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all disabled:opacity-50"
+              >
+                {tCommon("cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={!!activeDeletion}
+                onClick={async () => {
+                  if (!documentPendingDelete) return;
+                  setActiveDeletion(documentPendingDelete._id);
+                  setDeleteError("");
+                  try {
+                    await deleteDocument({ documentId: documentPendingDelete._id });
+                    setDocumentPendingDelete(null);
+                  } catch (err: unknown) {
+                    console.error(err);
+                    setDeleteError(t("errors.deleteFailed"));
+                  } finally {
+                    setActiveDeletion(null);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-[10px] bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[13px] font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {activeDeletion ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {tCommon("delete")}
+              </button>
+            </div>
+          </div>
+        </SonaeModal>
+	    </>
   );
 }

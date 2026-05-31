@@ -99,6 +99,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
 
   const generateConfig = useAction(api.ai.generateNodeConfig);
 
@@ -139,9 +141,10 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   };
 
   const handleAutoConfigure = async () => {
-    if (!node) return;
-    if (!aiPrompt.trim() || isGenerating) return;
-    setIsGenerating(true);
+	    if (!node) return;
+	    if (!aiPrompt.trim() || isGenerating) return;
+	    setIsGenerating(true);
+    setFeedbackMessage("");
     try {
       const result = await generateConfig({
         prompt: aiPrompt,
@@ -166,16 +169,17 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
       setAiPrompt("");
       setIsDeveloperMode(true);
     } catch {
-      alert("AI Configuration failed. Please try again or construct the payload manually.");
+      setFeedbackMessage("AI Configuration failed. Please try again or construct the payload manually.");
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!node) return;
-    setIsSaving(true);
+	    e.preventDefault();
+	    if (!node) return;
+	    setIsSaving(true);
+    setFeedbackMessage("");
     let targetAgentId = agentId;
 
     try {
@@ -219,34 +223,40 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
       onClose();
     } catch (err: unknown) {
-      alert(getErrorMessage(err, tAlerts('saveAgentFailed')));
+      setFeedbackMessage(getErrorMessage(err, tAlerts('saveAgentFailed')));
     } finally {
       setIsSaving(false);
     }
-  };
+	  };
 
-  const handlePromote = async () => {
-    if (!agent || !confirm(t('promoteConfirm'))) return;
-    try {
-      await promoteToGlobal({ id: agent._id });
-      alert(t('promoteSuccess'));
-      onClose();
-    } catch (err: unknown) {
-      alert(getErrorMessage(err, tAlerts('promoteFailed')));
-    }
-  };
+	  const handlePromote = async () => {
+	    if (!agent) return;
+	    try {
+	      await promoteToGlobal({ id: agent._id });
+	      onClose();
+	    } catch (err: unknown) {
+        setIsPromoteModalOpen(false);
+	      setFeedbackMessage(getErrorMessage(err, tAlerts('promoteFailed')));
+	    }
+	  };
 
   if (!node) return null;
   const isLoading = agentId && agent === undefined;
 
-  return (
-    <SonaeModal size="xl" isOpen={!!node} onClose={onClose} title={formData.name || t('configureAgent')}>
-      {isLoading ? (
-        <div className="py-8 text-center text-muted text-sm border border-border-dim rounded-[12px]">{t('loading')}</div>
-      ) : (
-        <form onSubmit={handleSave} className="flex flex-col gap-6">
+	  return (
+      <>
+	    <SonaeModal size="xl" isOpen={!!node} onClose={onClose} title={formData.name || t('configureAgent')}>
+	      {isLoading ? (
+	        <div className="py-8 text-center text-muted text-sm border border-border-dim rounded-[12px]">{t('loading')}</div>
+	      ) : (
+	        <form onSubmit={handleSave} className="flex flex-col gap-6">
+            {feedbackMessage && (
+              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
+                {feedbackMessage}
+              </div>
+            )}
 
-          {/* Tabs */}
+	          {/* Tabs */}
           <div className="flex border-b border-border-dim mb-2 w-full max-w-[400px]">
              <button
                 type="button"
@@ -485,10 +495,10 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 pt-6 border-t border-border-dim gap-4">
             <div>
               {agent?.isGlobal === false && (
-                <button
-                  type="button"
-                  onClick={handlePromote}
-                  className="px-4 py-2 rounded-[10px] text-brand hover:text-brand-foreground hover:bg-brand transition-all text-[12px] font-medium border border-brand/20 shadow-sm shadow-brand/10 w-full sm:w-auto"
+	                <button
+	                  type="button"
+	                  onClick={() => setIsPromoteModalOpen(true)}
+	                  className="px-4 py-2 rounded-[10px] text-brand hover:text-brand-foreground hover:bg-brand transition-all text-[12px] font-medium border border-brand/20 shadow-sm shadow-brand/10 w-full sm:w-auto"
                 >
                   {t('promote')}
                 </button>
@@ -512,8 +522,35 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
               </button>
             </div>
           </div>
-        </form>
-      )}
-    </SonaeModal>
-  );
+	        </form>
+	      )}
+	    </SonaeModal>
+      <SonaeModal
+        isOpen={isPromoteModalOpen}
+        onClose={() => setIsPromoteModalOpen(false)}
+        title={t('promote')}
+        size="sm"
+      >
+        <div className="flex flex-col gap-6">
+          <p className="text-[14px] text-secondary leading-relaxed">{t('promoteConfirm')}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPromoteModalOpen(false)}
+              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all"
+            >
+              {tCommon('cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handlePromote}
+              className="px-5 py-2.5 rounded-[10px] bg-brand text-brand-foreground text-[13px] font-bold hover:bg-brand/90 transition-all"
+            >
+              {t('promote')}
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+      </>
+	  );
 }

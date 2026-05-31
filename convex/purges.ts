@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
-import { Id } from "./_generated/dataModel";
 
 interface PipelineConfig {
   enabled: boolean;
@@ -520,11 +519,11 @@ export const executePurgeRecursive = internalMutation({
           completedAt: Date.now(),
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error in executePurgeRecursive for ${pipelineKey}:`, err);
       await ctx.db.patch(historyId, {
         status: "FAILED",
-        error: err.message || String(err),
+        error: err instanceof Error ? err.message : String(err),
         completedAt: Date.now(),
       });
     }

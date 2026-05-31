@@ -1,5 +1,4 @@
-import { mutation, internalMutation } from "./_generated/server";
-import { auth } from "./auth";
+import { internalMutation } from "./_generated/server";
 
 /**
  * runSaaSMigration
