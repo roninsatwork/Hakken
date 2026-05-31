@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 
 export default function CompanyChatLogsDashboard() {
   const params = useParams();
@@ -305,22 +306,14 @@ export default function CompanyChatLogsDashboard() {
                       <div className="flex flex-col items-end">
                           <span className="text-[9px] uppercase font-mono tracking-widest text-muted mb-0.5">Total Tokens</span>
                           <span className="text-[14px] font-bold text-foreground">
-                          {messages.reduce((acc, msg) => acc + ((msg.inputTokens || 0) + (msg.outputTokens || 0)), 0).toLocaleString()}
+                          {getChatTokenTotal(messages).toLocaleString()}
                         </span>
                       </div>
                       <div className="w-px h-6 bg-border-dim" />
                       <div className="flex flex-col items-start">
                         <span className="text-[9px] uppercase font-mono tracking-widest text-muted mb-0.5">Est. Cost</span>
                         <span className="text-[14px] font-bold text-brand tracking-wider">
-                          £{messages.reduce((acc, msg) => {
-                            const i = msg.inputTokens || 0;
-                            const o = msg.outputTokens || 0;
-                            const m = msg.modelUsed ?? "";
-                            let usd = 0;
-                            if (m.includes("pro")) usd = (i / 1e6) * 3.50 + (o / 1e6) * 10.50;
-                            else usd = (i / 1e6) * 0.075 + (o / 1e6) * 0.30;
-                            return acc + (usd * 0.78);
-                          }, 0).toFixed(5)}
+                          £{formatEstimatedChatCostGbp(messages)}
                         </span>
                       </div>
                     </div>
