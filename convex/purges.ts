@@ -1,8 +1,8 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
+import { getCurrentUser, requireSuperAdmin } from "./authz";
 
 interface PipelineConfig {
   enabled: boolean;
@@ -13,6 +13,8 @@ interface PipelineConfig {
   dayOfMonth?: number; // 1 to 28 - for Monthly
   nextRunTimestamp: number;
 }
+
+const superAdminPurgeMessage = "Unauthorized: Super Administrator privileges required.";
 
 const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
   agentLogs: {
@@ -115,12 +117,7 @@ function calculateNextRun(
 export const getPipelineConfig = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Super Administrator privileges required.");
-    }
+    await requireSuperAdmin(ctx, superAdminPurgeMessage);
 
     const config = await ctx.db
       .query("systemConfig")
@@ -145,12 +142,7 @@ export const updatePipelineConfig = mutation({
     configStr: v.string(), // JSON string representing the config
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Super Administrator privileges required.");
-    }
+    const { userId, user } = await requireSuperAdmin(ctx, superAdminPurgeMessage);
 
     // Validate configStr to ensure it is valid JSON
     let parsed: Record<string, PipelineConfig>;
@@ -217,12 +209,7 @@ export const getPurgeHistoryPaginated = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Super Administrator privileges required.");
-    }
+    await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
 
     return await ctx.db
       .query("purgeHistory")
@@ -235,10 +222,8 @@ export const getPurgeHistoryPaginated = query({
 export const getRecentPurges = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") return [];
+    const current = await getCurrentUser(ctx);
+    if (current?.user.role !== "SUPER_ADMIN") return [];
 
     const logs = await ctx.db
       .query("purgeHistory")
@@ -273,12 +258,7 @@ export const runManualPurge = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Super Administrator privileges required.");
-    }
+    const { userId, user } = await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
 
     const configDoc = await ctx.db
       .query("systemConfig")
@@ -623,12 +603,7 @@ export const cancelPurge = mutation({
     historyId: v.id("purgeHistory"),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Super Administrator privileges required.");
-    }
+    const { user } = await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
 
     const history = await ctx.db.get(args.historyId);
     if (!history) {

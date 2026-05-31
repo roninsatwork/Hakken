@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
 import { internal } from "./_generated/api";
+import { getCurrentUser, requireSuperAdmin } from "./authz";
 
 // 1. Log an action
 export const logAction = internalMutation({
@@ -24,10 +24,8 @@ export const logAction = internalMutation({
 // 2. Fetch Config for UI
 export const getConfig = query({
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") return null;
+    const current = await getCurrentUser(ctx);
+    if (current?.user.role !== "SUPER_ADMIN") return null;
 
     const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
     if (!configRow) {
@@ -53,10 +51,7 @@ export const updateConfig = mutation({
     nextRunTimestamp: v.optional(v.number()), // Let the UI blindly pass the existing payload
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId, user } = await requireSuperAdmin(ctx);
 
     // Calculate next run timestamp securely handling UTC bounds
     const now = new Date();
@@ -146,11 +141,8 @@ export const executePurge = internalMutation({
 // 6. View Recent Logs (UI Feed)
 export const getRecentLogs = query({
   handler: async (ctx) => {
-    const adminId = await auth.getUserId(ctx);
-    if (!adminId) return [];
-    
-    const user = await ctx.db.get(adminId);
-    if (!user || user.role !== "SUPER_ADMIN") return [];
+    const current = await getCurrentUser(ctx);
+    if (current?.user.role !== "SUPER_ADMIN") return [];
 
     const logs = await ctx.db.query("auditLogs")
       .withIndex("by_timestamp")
