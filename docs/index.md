@@ -18,10 +18,12 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Known trade-offs and future implementation highlights.
 7.  **[Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)**
     Handoff rules and code-quality cleanup priorities for future agents.
-8.  **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
+8.  **[Platform Grade Refactor And Test Upgrade Plan](./code-quality-95-plan.md)**
+    Deeper refactor roadmap for turning Sonae into a reusable product core with stronger contracts, naming, tests, and extension points.
+9.  **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
     Completed 6-phase refactor checklist and verification record.
-9.  **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
-    Active low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
+10. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
+    Completed low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
 
 ---
 
