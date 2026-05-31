@@ -7,13 +7,12 @@ import html2canvas from "html2canvas";
 import { useRef } from "react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from "recharts";
+import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import Header from "@/src/ui/components/layout/Header";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
-
-const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE'];
 
 const formatCurrency = (val: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', notation: 'compact', maximumFractionDigits: 2 }).format(val);
 
@@ -68,7 +67,7 @@ export default function ReportsPage() {
   }
 
   // Graceful handling for legacy schemas or fresh schema mapping
-  const { headline, executiveSummary, markdownReport, kpis, closingWindows, topDeals, chartData, pipelineHealth, riskRadar, teamSpotlight, patterns, priorities } = report;
+  const { headline, executiveSummary, markdownReport, kpis, closingWindows, topDeals, pipelineHealth, riskRadar, teamSpotlight, patterns, priorities } = report;
 
   // Fallback if legacy markdown report exists without structured sections
   const isLegacy = !closingWindows || !riskRadar || !teamSpotlight;
@@ -170,7 +169,7 @@ export default function ReportsPage() {
                             contentStyle={{ backgroundColor: 'rgba(15,15,15,0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}
                             itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}
                             labelStyle={{ color: 'var(--color-brand)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                            formatter={(value: any, name: any) => [formatCurrency(Number(value) || 0), name]}
+                            formatter={(value: ValueType | undefined, name: NameType | undefined) => [formatCurrency(Number(value) || 0), name]}
                           />
                           <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#888', paddingTop: '0px', paddingBottom: '15px' }} />
                           <Area type="monotone" dataKey="totalValue" name="Total Pipeline" fill="url(#totalArea)" stroke="var(--color-brand)" strokeOpacity={0.3} strokeWidth={2} />
@@ -186,7 +185,7 @@ export default function ReportsPage() {
                         <Zap className="w-4 h-4 text-brand" /> Top Deals to Watch
                       </h3>
                       <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
-                        {(topDeals || []).map((deal: any, i: number) => (
+                        {(topDeals || []).map((deal, i) => (
                            <div key={i} className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.03] hover:bg-white/[0.04] hover:border-brand/30 hover:shadow-[0_0_30px_rgba(var(--color-brand-rgb),0.1)] transition-all duration-500 group relative overflow-hidden">
                               <div className="absolute inset-0 bg-gradient-to-r from-brand/0 via-brand/[0.03] to-brand/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
                               <div className="flex justify-between items-start mb-3">
@@ -215,7 +214,7 @@ export default function ReportsPage() {
                        4a. Pipeline by Stage <span className="opacity-50 tracking-normal capitalize ml-1">(Value)</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
-                       {(pipelineHealth?.byStage || []).map((ph: any, i: number) => (
+                       {(pipelineHealth?.byStage || []).map((ph, i) => (
                          <div key={i} className="flex flex-col group">
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[12px] uppercase tracking-[0.1em] text-muted font-medium truncate">{ph.stage}</span>
@@ -236,7 +235,7 @@ export default function ReportsPage() {
                        4b. Pipeline by Rep <span className="opacity-50 tracking-normal capitalize ml-1">(Weighted Value)</span>
                     </h3>
                     <div className="space-y-7 relative z-10">
-                       {(pipelineHealth?.byRep || []).map((ph: any, i: number) => (
+                       {(pipelineHealth?.byRep || []).map((ph, i) => (
                          <div key={i} className="flex flex-col group">
                             <div className="flex items-center gap-4 mb-2">
                                <span className="w-28 text-[14px] font-medium text-foreground truncate">{ph.rep}</span>
@@ -271,7 +270,7 @@ export default function ReportsPage() {
                               Critical — Needs Intervention This Week
                            </h4>
                            <div className="space-y-4">
-                             {riskRadar.critical.map((d: any, i: number) => (
+                             {riskRadar.critical.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-red-500/20">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">Recommendation:</strong> {d.recommendation}
                                 </p>
@@ -288,7 +287,7 @@ export default function ReportsPage() {
                               At Risk — Deteriorating
                            </h4>
                            <div className="space-y-4">
-                             {riskRadar.atRisk.map((d: any, i: number) => (
+                             {riskRadar.atRisk.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-yellow-400/20">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">Recommendation:</strong> {d.recommendation}
                                 </p>
@@ -305,7 +304,7 @@ export default function ReportsPage() {
                               Quiet — Worth a Nudge
                            </h4>
                            <div className="space-y-4">
-                             {riskRadar.quiet.map((d: any, i: number) => (
+                             {riskRadar.quiet.map((d, i) => (
                                 <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-green-500/20">
                                   <strong className="text-foreground font-semibold tracking-tight">{d.dealName}</strong> <span className="opacity-60 text-[13px]">({d.rep}, {formatCurrency(d.value)})</span> — {d.reason} <strong className="text-foreground ml-1 font-medium">Recommendation:</strong> {d.recommendation}
                                 </p>
@@ -352,7 +351,7 @@ export default function ReportsPage() {
                              <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#00C49F]/30">{teamSpotlight.momentum}</p>
                            ) : (
                              <div className="space-y-4">
-                               {(teamSpotlight?.momentum || []).map((item: any, i: number) => (
+                               {(teamSpotlight?.momentum || []).map((item, i) => (
                                  <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#00C49F]/30">
                                    <strong className="text-foreground font-semibold">{item.rep}</strong> — {item.summary}
                                  </p>
@@ -370,7 +369,7 @@ export default function ReportsPage() {
                              <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#FF8042]/30">{teamSpotlight.supportNeeded}</p>
                            ) : (
                              <div className="space-y-4">
-                               {(teamSpotlight?.supportNeeded || []).map((item: any, i: number) => (
+                               {(teamSpotlight?.supportNeeded || []).map((item, i) => (
                                  <p key={i} className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-[#FF8042]/30">
                                    <strong className="text-foreground font-semibold">{item.rep}</strong> — {item.summary}
                                  </p>
@@ -388,7 +387,7 @@ export default function ReportsPage() {
                        <LineChart className="w-4 h-4 text-brand" /> Patterns & Signals
                     </h3>
                     <div className="space-y-6 relative z-10">
-                        {(patterns || []).map((p: any, i: number) => (
+                        {(patterns || []).map((p, i) => (
                            <div key={i} className="relative">
                               <Zap className="absolute -left-1.5 top-0.5 w-[14px] h-[14px] text-brand/80 bg-background rounded-full drop-shadow-[0_0_8px_rgba(var(--color-brand-rgb),0.5)] z-10" />
                               <p className="text-[14px] text-secondary/90 leading-relaxed pl-5 border-l-[3px] border-brand/30">
@@ -404,7 +403,7 @@ export default function ReportsPage() {
                 <div className="bg-card/40 backdrop-blur-3xl border border-border-dim rounded-3xl p-8 relative overflow-hidden shadow-xl mt-4">
                    <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 blur-[100px] rounded-full -mt-20 -mr-20 pointer-events-none" />
                    <h3 className="text-[14px] uppercase tracking-[0.2em] font-medium text-foreground mb-8 flex items-center gap-2 relative z-10">
-                       <CheckCircle2 className="w-4 h-4 text-brand" /> This Week's Priorities
+                       <CheckCircle2 className="w-4 h-4 text-brand" /> This Week&apos;s Priorities
                    </h3>
                    <div className="space-y-5 relative z-10">
                       {(priorities || []).map((task: string, i: number) => (
