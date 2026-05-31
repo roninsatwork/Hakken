@@ -1,27 +1,15 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
-import type { MutationCtx } from "./_generated/server";
+import { canAccessCompany, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
-// Only super admins can manage plans
-async function requireSuperAdmin(ctx: MutationCtx) {
-  const userId = await auth.getUserId(ctx);
-  if (!userId) throw new Error("Unauthenticated request");
-
-  const user = await ctx.db.get(userId);
-  if (!user || user.role !== "SUPER_ADMIN") {
-    throw new Error("Unauthorized access. Super Admin role required.");
-  }
-  return { userId, user };
-}
+const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
 
 export const getMyCompanyPlanStatus = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-    const user = await ctx.db.get(userId);
-    if (!user) return null;
+    const current = await getCurrentUser(ctx);
+    if (!current) return null;
+    const { user } = current;
 
     let planName = "System Default";
     let messageLimit = -1;
@@ -62,15 +50,12 @@ export const getMyCompanyPlanStatus = query({
 export const getCompanyPlanStatus = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const adminId = await auth.getUserId(ctx);
-    if (!adminId) return null;
-    const admin = await ctx.db.get(adminId);
-    if (!admin) return null;
+    const current = await getCurrentUser(ctx);
+    if (!current) return null;
+    const { user: admin } = current;
 
-    if (admin.role !== "SUPER_ADMIN") {
-       if (admin.role !== "ADMIN" || admin.companyId !== args.companyId) {
-          return null; // Unauthorized
-       }
+    if (!canAccessCompany(admin, args.companyId)) {
+      return null; // Unauthorized
     }
 
     let planName = "System Default";
@@ -101,8 +86,7 @@ export const getPlans = query({
   args: {},
   handler: async (ctx) => {
     // Anyone authenticated can read available plans
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
 
     return await ctx.db.query("plans").order("asc").take(10000);
   },
@@ -111,8 +95,7 @@ export const getPlans = query({
 export const getActivePlans = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
 
     return await ctx.db
       .query("plans")
@@ -131,7 +114,7 @@ export const createPlan = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
+    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
 
     const planId = await ctx.db.insert("plans", {
       name: args.name,
@@ -156,7 +139,7 @@ export const updatePlan = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
+    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
 
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
@@ -166,7 +149,7 @@ export const updatePlan = mutation({
 export const deletePlan = mutation({
   args: { id: v.id("plans") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
+    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
 
     // Ensure we don't delete plans strictly assigned to companies
     const companiesAssigned = await ctx.db
