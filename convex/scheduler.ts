@@ -1,15 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireSuperAdmin } from "./authz";
 
 export const getSchedules = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     
     // We fetch all schedules. Assume admin access or scoped later.
     const schedules = await ctx.db.query("schedules").order("desc").take(10000);
@@ -50,10 +47,7 @@ export const createSchedule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
@@ -74,10 +68,7 @@ export const createSchedule = mutation({
 export const getSchedule = query({
   args: { scheduleId: v.id("schedules") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     return await ctx.db.get(args.scheduleId);
   },
 });
@@ -92,10 +83,7 @@ export const updateSchedule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
@@ -118,10 +106,7 @@ export const toggleSchedule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
     await ctx.db.patch(args.scheduleId, {
       isActive: args.isActive
@@ -135,10 +120,7 @@ export const deleteSchedule = mutation({
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
     await ctx.db.delete(args.scheduleId);
     return true;
@@ -151,10 +133,7 @@ export const manualRunSchedule = mutation({
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Cannot run: no target specified.");
@@ -210,10 +189,7 @@ export const completeSimulation = internalMutation({
 export const getWorkflowExecutions = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
     const execs = await ctx.db.query("workflowExecutions").order("desc").take(50);
     
@@ -235,10 +211,7 @@ export const getWorkflowExecutions = query({
 export const getWorkflowExecution = query({
   args: { executionId: v.id("workflowExecutions") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized System Access");
+    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
     const exec = await ctx.db.get(args.executionId);
     if (!exec) return null;

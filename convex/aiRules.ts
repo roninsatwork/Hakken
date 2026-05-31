@@ -1,6 +1,11 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
+import {
+  assertAdminCanAccessCompany,
+  canAccessCompany,
+  getCurrentUser,
+  requireCurrentUser,
+} from "./authz";
 
 // Fetch rules based on company context. If companyId is absent, fetches global rules.
 export const getRules = query({
@@ -9,14 +14,12 @@ export const getRules = query({
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return []; 
-
-    const user = await ctx.db.get(userId);
-    if (!user) return [];
+    const current = await getCurrentUser(ctx);
+    if (!current) return [];
+    const { user } = current;
 
     if (user.role !== "SUPER_ADMIN") {
-        if (args.companyId && args.companyId !== user.companyId) {
+        if (args.companyId && !canAccessCompany(user, args.companyId)) {
             return []; // Unauthorized to view another company's rules
         }
     }
@@ -63,14 +66,12 @@ export const getOffsetPaginatedRules = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return { data: [], totalCount: 0, totalPages: 1 };
-
-    const user = await ctx.db.get(userId);
-    if (!user) return { data: [], totalCount: 0, totalPages: 1 };
+    const current = await getCurrentUser(ctx);
+    if (!current) return { data: [], totalCount: 0, totalPages: 1 };
+    const { user } = current;
 
     if (user.role !== "SUPER_ADMIN") {
-        if (args.companyId && args.companyId !== user.companyId) {
+        if (args.companyId && !canAccessCompany(user, args.companyId)) {
             return { data: [], totalCount: 0, totalPages: 1 };
         }
     }
@@ -171,16 +172,13 @@ export const seedPricingRule = internalMutation({
 export const getRuleById = query({
   args: { id: v.id("aiRules") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
+    const { user } = await requireCurrentUser(ctx, "Unauthenticated");
     const rule = await ctx.db.get(args.id);
     
-    if (!user || !rule) return null;
+    if (!rule) return null;
 
     if (user.role !== "SUPER_ADMIN") {
-        if (rule.companyId && rule.companyId !== user.companyId) {
+        if (rule.companyId && !canAccessCompany(user, rule.companyId)) {
             throw new Error("Unauthorized");
         }
         // If it's a global rule (no companyId), only SUPER_ADMIN can view it in the admin panel
@@ -212,21 +210,13 @@ export const createRule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-
-    if (user.role !== "SUPER_ADMIN") {
-        if (!args.companyId || user.companyId !== args.companyId || user.role !== "ADMIN") {
-            throw new Error("Unauthorized: System Protocol creation requires valid permissions.");
-        }
-        if (args.agentId) {
-             // Agents are global in Sonae. If an ADMIN creates a rule for an agent, 
-             // it must still be strictly scoped by their companyId (which we verified above).
-        }
+    if (user.role !== "SUPER_ADMIN" && args.agentId) {
+       // Agents are global in Sonae. If an ADMIN creates a rule for an agent,
+       // it must still be strictly scoped by their companyId.
     }
+    assertAdminCanAccessCompany(user, args.companyId, "Unauthorized: System Protocol creation requires valid permissions.");
 
     const newRuleId = await ctx.db.insert("aiRules", {
       name: args.name,
@@ -263,19 +253,11 @@ export const updateRule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
     const existingRule = await ctx.db.get(args.id);
     
-    if (!user || !existingRule) throw new Error("Entities not found");
-
-    if (user.role !== "SUPER_ADMIN") {
-        if (existingRule.companyId !== user.companyId || user.role !== "ADMIN") {
-            throw new Error("Unauthorized: System Protocol modification requires valid permissions.");
-        }
-    }
+    if (!existingRule) throw new Error("Entities not found");
+    assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: System Protocol modification requires valid permissions.");
 
     await ctx.db.patch(args.id, {
       name: args.name,
@@ -304,18 +286,10 @@ export const toggleRuleActive = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
     const existingRule = await ctx.db.get(args.id);
-    if (!user || !existingRule) throw new Error("Entities not found");
-
-    if (user.role !== "SUPER_ADMIN") {
-       if (existingRule.companyId !== user.companyId || user.role !== "ADMIN") {
-           throw new Error("Unauthorized");
-       }
-    }
+    if (!existingRule) throw new Error("Entities not found");
+    assertAdminCanAccessCompany(user, existingRule.companyId);
 
     await ctx.db.patch(args.id, { isActive: args.isActive });
 
@@ -335,18 +309,10 @@ export const toggleRuleActive = mutation({
 export const deleteRule = mutation({
   args: { id: v.id("aiRules") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
     const existingRule = await ctx.db.get(args.id);
-    if (!user || !existingRule) throw new Error("Entities not found");
-
-    if (user.role !== "SUPER_ADMIN") {
-        if (existingRule.companyId !== user.companyId || user.role !== "ADMIN") {
-            throw new Error("Unauthorized: Sonae architectural deletion prevented.");
-        }
-    }
+    if (!existingRule) throw new Error("Entities not found");
+    assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: Sonae architectural deletion prevented.");
 
     await ctx.db.delete(args.id);
 

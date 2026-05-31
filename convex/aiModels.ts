@@ -1,12 +1,11 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
-import { auth } from "./auth";
+import { requireCurrentUser, requireSuperAdmin } from "./authz";
 
 export const getModels = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
     return await ctx.db.query("aiModels").order("asc").take(10000);
   },
 });
@@ -14,14 +13,12 @@ export const getModels = query({
 export const getOffsetPaginatedModels = query({
   args: {
     searchTerm: v.optional(v.string()),
+    statusFilter: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
     page: v.number(),
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     let models = await ctx.db.query("aiModels").order("asc").take(10000);
 
     if (args.searchTerm) {
@@ -30,6 +27,10 @@ export const getOffsetPaginatedModels = query({
         (m.displayName || "").toLowerCase().includes(term) ||
         (m.modelId || "").toLowerCase().includes(term)
       );
+    }
+
+    if (args.statusFilter) {
+      models = models.filter((m) => m.isEnabled === (args.statusFilter === "active"));
     }
 
     models.sort((a, b) => {
@@ -89,11 +90,7 @@ export const resolveModelForExecution = internalQuery({
 export const toggleModelEnforcement = mutation({
   args: { modelId: v.id("aiModels"), isEnabled: v.boolean() },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
 
     if (!args.isEnabled) {
       const model = await ctx.db.get(args.modelId);
@@ -118,11 +115,7 @@ export const toggleModelEnforcement = mutation({
 export const setDefaultModel = mutation({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
 
     const currentDefaults = await ctx.db
       .query("aiModels")
@@ -191,8 +184,7 @@ export const internalBatchUpsert = internalMutation({
 export const getModel = query({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
     return await ctx.db.get(args.modelId);
   },
 });
@@ -209,11 +201,7 @@ export const updatePricingConfig = mutation({
     outputReasoningCost: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
 
     const { modelId, ...fields } = args;
     await ctx.db.patch(modelId, fields);

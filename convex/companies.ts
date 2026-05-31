@@ -1,18 +1,16 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import { requireSuperAdmin } from "./authz";
 
 export const getCompanies = query({
   args: {},
   handler: async (ctx) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
 
     const companies = await ctx.db.query("companies").order("desc").take(10000);
     
@@ -38,13 +36,7 @@ export const getCompanies = query({
 export const getCompanyById = query({
   args: { id: v.id("companies") },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     return await ctx.db.get(args.id);
   },
@@ -60,13 +52,7 @@ export const getCompanyByIdInternal = internalQuery({
 export const createCompany = mutation({
   args: { name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId: adminId } = await requireSuperAdmin(ctx);
 
     const newCompanyId = await ctx.db.insert("companies", {
       name: args.name,
@@ -90,13 +76,7 @@ export const createCompany = mutation({
 export const updateCompany = mutation({
   args: { id: v.id("companies"), name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId: adminId } = await requireSuperAdmin(ctx);
 
     const previous = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { name: args.name, systemPrompt: args.systemPrompt });
@@ -117,13 +97,7 @@ export const updateCompany = mutation({
 export const deleteCompany = mutation({
   args: { id: v.id("companies") },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId: adminId } = await requireSuperAdmin(ctx);
 
     await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
 
@@ -147,13 +121,11 @@ export const deleteCompany = mutation({
 export const updateCompanyPrompt = mutation({
   args: { id: v.id("companies"), systemPrompt: v.string() },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
 
     await ctx.db.patch(args.id, { systemPrompt: args.systemPrompt });
     return args.id;
@@ -163,13 +135,11 @@ export const updateCompanyPrompt = mutation({
 export const updateCompanyDescription = mutation({
   args: { id: v.id("companies"), description: v.string() },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
 
     await ctx.db.patch(args.id, { description: args.description });
     return args.id;
@@ -184,13 +154,11 @@ export const updateCompanyProfile = mutation({
     overview: v.optional(v.string()) 
   },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    const { userId: adminId } = await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
 
     const previous = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { 
@@ -215,13 +183,11 @@ export const updateCompanyProfile = mutation({
 export const assignPlanToCompany = mutation({
   args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
   handler: async (ctx, args) => {
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthenticated Admin Request");
-
-    const admin = await ctx.db.get(adminId);
-    if (!admin || admin.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
 
     await ctx.db.patch(args.id, { planId: args.planId });
     return args.id;

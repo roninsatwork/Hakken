@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type Agent = Doc<"agents">;
 
@@ -44,7 +45,7 @@ export default function AgentsPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredAgents = agents.filter((a) =>
     (a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||

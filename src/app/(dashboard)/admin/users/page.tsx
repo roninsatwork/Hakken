@@ -21,6 +21,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 
@@ -48,7 +49,7 @@ export default function ManageUsersPage() {
   const { results: filteredUsers, status, loadMore } = usePaginatedQuery(
     api.users.getPaginatedUsers,
     { searchTerm },
-    { initialNumItems: 15 }
+    { initialNumItems: ADMIN_PAGE_SIZE }
   );
 
   const deleteUser = useMutation(api.users.deleteUser);
@@ -276,7 +277,7 @@ export default function ManageUsersPage() {
         {status === "CanLoadMore" && (
           <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
             <button
-              onClick={() => loadMore(15)}
+              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
               className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
             >
               Load More Identities

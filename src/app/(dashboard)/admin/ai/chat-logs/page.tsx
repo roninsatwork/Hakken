@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function ChatLogsDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,7 +29,7 @@ export default function ChatLogsDashboard() {
   const t = useTranslations("ai.chatLogs");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   // Pagination bounds
   const paginatedData = useQuery(api.chatAdmin.getOffsetPaginatedThreads, {

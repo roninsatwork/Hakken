@@ -2,18 +2,18 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
+import {
+  assertAdminCanAccessCompany,
+  canAccessCompany,
+  requireAdmin,
+  requireSuperAdmin,
+} from "./authz";
 
 export const getWidgetsByCompany = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    
-    // Verify user belongs to this company
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN" && user?.companyId !== args.companyId) {
-      throw new Error("Unauthorized Access");
-    }
+    const { user } = await requireAdmin(ctx, "Unauthorized Access", "Unauthorized");
+    assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
 
     return await ctx.db
       .query("widgets")
@@ -25,13 +25,7 @@ export const getWidgetsByCompany = query({
 export const getGlobalWidgets = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized Access");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized Access", "Unauthorized");
 
     return await ctx.db
       .query("widgets")
@@ -96,18 +90,13 @@ export const saveWidget = mutation({
     isGlobal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
+    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
 
-    const user = await ctx.db.get(userId);
-    
-    if (user?.role !== "SUPER_ADMIN") {
+    if (user.role !== "SUPER_ADMIN") {
       if (args.isGlobal || !args.companyId) {
         throw new Error("Unauthorized: Only Super Admins can manage global widgets.");
       }
-      if (user?.companyId !== args.companyId) {
-        throw new Error("Unauthorized");
-      }
+      assertAdminCanAccessCompany(user, args.companyId);
     }
 
     const now = Date.now();
@@ -124,7 +113,9 @@ export const saveWidget = mutation({
       // Update
       const existing = await ctx.db.get(args.widgetId);
       if (!existing) throw new Error("Widget not found");
-      if (user?.role !== "SUPER_ADMIN" && existing.companyId !== args.companyId) throw new Error("Widget not found");
+      if (user.role !== "SUPER_ADMIN" && (!existing.companyId || !canAccessCompany(user, existing.companyId))) {
+        throw new Error("Widget not found");
+      }
       
       await ctx.db.patch(args.widgetId, {
         name: args.name,
@@ -199,16 +190,14 @@ export const deleteWidget = mutation({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
+    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
 
-    const user = await ctx.db.get(userId);
     const widget = await ctx.db.get(args.widgetId);
     
     if (!widget) throw new Error("Widget not found");
 
-    if (user?.role !== "SUPER_ADMIN") {
-      if (widget.isGlobal || widget.companyId !== user?.companyId || args.companyId !== user?.companyId) {
+    if (user.role !== "SUPER_ADMIN") {
+      if (widget.isGlobal || widget.companyId !== user.companyId || args.companyId !== user.companyId) {
         throw new Error("Unauthorized");
       }
     }

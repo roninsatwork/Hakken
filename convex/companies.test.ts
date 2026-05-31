@@ -4,6 +4,27 @@ import { api } from "./_generated/api";
 import schema from "./schema";
 
 describe("OWASP: Broken Access Control - Companies", () => {
+  test("SUPER_ADMIN can create companies", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        name: "Super Admin",
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now()
+      });
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const companyId = await superAdminClient.mutation(api.companies.createCompany, {
+      name: "Created Corp",
+      systemPrompt: "Use helpful language."
+    });
+
+    const company = await t.run(async (ctx) => await ctx.db.get(companyId));
+    expect(company?.name).toBe("Created Corp");
+  });
 
   test("Unauthenticated requests are completely rejected", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));

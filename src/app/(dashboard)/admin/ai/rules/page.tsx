@@ -1,46 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   BrainCircuit,
   Plus,
-  Search,
   Power,
   Edit2,
   Trash2,
   AlertOctagon,
   RefreshCcw,
-  ChevronLeft,
-  ChevronRight,
-  Loader2
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import {
+  AdminPaginationFooter,
+  AdminSearchBar,
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import useDebounce from "@/src/hooks/useDebounce";
 
 export default function RulesDashboard() {
+  const router = useRouter();
   const t = useTranslations("ai.rules");
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [page, setPage] = useState(1);
-  const pageSize = 15;
+  const pageSize = ADMIN_PAGE_SIZE;
 
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to page 1 on new searches
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
 
   const rulesData = useQuery(api.aiRules.getOffsetPaginatedRules, {
     searchTerm: debouncedSearch,
@@ -96,24 +100,21 @@ export default function RulesDashboard() {
         </Link>
       </header>
 
-      {/* Control Bar */}
-      <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">
-        <div className="flex items-center gap-2 px-3 flex-1">
-          <Search className="w-4 h-4 text-muted" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"
-          />
-        </div>
-      </div>
+      <AdminSearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
 
       {/* Listing Area */}
-      <div className="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+      <AdminTableShell
+        footer={
+          <AdminPaginationFooter
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            isLoading={isLoading}
+            onPageChange={setPage}
+          />
+        }
+      >
             <thead>
               <tr className="border-b border-border-dim/50 bg-sidebar/40">
                 <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[120px]">Priority</th>
@@ -124,25 +125,18 @@ export default function RulesDashboard() {
             </thead>
             <tbody className="divide-y divide-white/5">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-16 text-center text-secondary">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-brand opacity-80" />
-                    </td>
-                  </tr>
+                  <AdminTableLoadingRow colSpan={4} />
                 ) : filteredRules.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-16 text-center">
-                       <div className="flex flex-col items-center justify-center gap-4 w-full">
-                         <BrainCircuit className="w-8 h-8 text-muted/30" />
-                         <span className="text-muted text-[13px] font-medium tracking-widest uppercase">{t("status.noRules")}</span>
-                       </div>
-                    </td>
-                  </tr>
+                  <AdminTableEmptyRow
+                    colSpan={4}
+                    icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
+                    label={t("status.noRules")}
+                  />
                 ) : (
                   filteredRules.map((rule) => (
                     <tr 
                       key={rule._id} 
-                      onClick={() => { window.location.href = `/admin/ai/rules/${rule._id}`; }}
+                      onClick={() => router.push(`/admin/ai/rules/${rule._id}`)}
                       className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
                     >
                       <td className="px-5 py-4 align-middle">
@@ -187,44 +181,7 @@ export default function RulesDashboard() {
                   ))
                 )}
             </tbody>
-          </table>
-        </div>
-
-        {/* Numbered Pagination Footer */}
-        <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
-          <div className="text-[12px] font-medium text-secondary">
-            {totalCount > 0 ? (
-              <span>Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalCount)} of {totalCount}</span>
-            ) : (
-              <span>No entries found</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-
-            <div className="flex items-center justify-center min-w-[100px] text-[12px] font-medium tracking-wide">
-              Page {page} of {totalPages}
-            </div>
-
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+      </AdminTableShell>
 
       {/* Restricted Deletion Sonae Modal */}
       <SonaeModal

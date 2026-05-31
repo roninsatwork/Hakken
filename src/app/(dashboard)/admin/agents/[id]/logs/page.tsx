@@ -3,7 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   FileText,
@@ -18,6 +18,8 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import useDebounce from "@/src/hooks/useDebounce";
 
 export default function AgentLogsDashboard() {
   const t = useTranslations("admin.agents.details.logs");
@@ -26,17 +28,14 @@ export default function AgentLogsDashboard() {
   const agentId = params.id as Id<"agents">;
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = ADMIN_PAGE_SIZE;
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to page 1 on new searches
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
 
   const queryParams = {
     agentId,
@@ -81,8 +80,8 @@ export default function AgentLogsDashboard() {
           <Search className="w-4 h-4 text-muted absolute left-4" />
           <input
             type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t("searchPlaceholder")}
             className="w-full bg-sidebar/50 border border-border-dim rounded-full py-2.5 pl-11 pr-4 text-[13px] text-foreground placeholder:text-muted outline-none transition-all focus:border-indigo-500/50 focus:bg-sidebar shadow-sm"
           />

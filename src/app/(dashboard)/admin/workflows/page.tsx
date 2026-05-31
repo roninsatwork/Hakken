@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function WorkflowsPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredWorkflows = workflows.filter((w) =>
     (w.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||

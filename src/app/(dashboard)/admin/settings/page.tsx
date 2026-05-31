@@ -32,6 +32,7 @@ import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type SettingBlockProps = {
   title: string;
@@ -904,7 +905,9 @@ export default function SystemSettingsPage() {
                           <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">{t('purges.history.table.empty')}</td>
                         </tr>
                       ) : (
-                        (recentPurges as PurgeHistoryRow[]).slice((purgesCurrentPage - 1) * 15, purgesCurrentPage * 15).map((log) => (
+                        (recentPurges as PurgeHistoryRow[])
+                          .slice((purgesCurrentPage - 1) * ADMIN_PAGE_SIZE, purgesCurrentPage * ADMIN_PAGE_SIZE)
+                          .map((log) => (
                           <tr key={log._id} className="group hover:bg-foreground/[0.03] transition-colors">
                             <td className="px-5 py-4">
                               <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${log.pipelineKey}.title`)}</span>
@@ -936,10 +939,10 @@ export default function SystemSettingsPage() {
                     </tbody>
                   </table>
                 </div>
-                {recentPurges && recentPurges.length > 15 && (
+                {recentPurges && recentPurges.length > ADMIN_PAGE_SIZE && (
                   <div className="flex items-center justify-between px-5 py-3 border-t border-border-dim/50 bg-background/50">
                     <span className="text-[12px] text-secondary">
-                      Showing {(purgesCurrentPage - 1) * 15 + 1} to {Math.min(purgesCurrentPage * 15, recentPurges.length)} of {recentPurges.length} entries
+                      Showing {(purgesCurrentPage - 1) * ADMIN_PAGE_SIZE + 1} to {Math.min(purgesCurrentPage * ADMIN_PAGE_SIZE, recentPurges.length)} of {recentPurges.length} entries
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -950,8 +953,8 @@ export default function SystemSettingsPage() {
                         Previous
                       </button>
                       <button
-                        onClick={() => setPurgesCurrentPage(Math.min(Math.ceil(recentPurges.length / 15), purgesCurrentPage + 1))}
-                        disabled={purgesCurrentPage === Math.ceil(recentPurges.length / 15)}
+                        onClick={() => setPurgesCurrentPage(Math.min(Math.ceil(recentPurges.length / ADMIN_PAGE_SIZE), purgesCurrentPage + 1))}
+                        disabled={purgesCurrentPage === Math.ceil(recentPurges.length / ADMIN_PAGE_SIZE)}
                         className="px-2.5 py-1 text-[12px] text-foreground bg-foreground/5 hover:bg-foreground/10 rounded-[6px] transition-colors disabled:opacity-30"
                       >
                         Next
@@ -1244,7 +1247,7 @@ function AuditLogsTable({ logs }: { logs: AuditLogRow[] | undefined }) {
   const common = useTranslations('common');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   if (logs === undefined) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-brand" /></div>;

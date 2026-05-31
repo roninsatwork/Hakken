@@ -1,17 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireSuperAdmin } from "./authz";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated Admin Request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
 
     const allAgents = await ctx.db.query("agents").order("desc").take(10000);
     return allAgents.filter(a => a.isGlobal !== false);
@@ -21,13 +15,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated Admin Request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const agent = await ctx.db.get(args.id);
     if (!agent) throw new Error("Agent not found");
@@ -55,13 +43,7 @@ export const createAgent = mutation({
     description: v.optional(v.string()) 
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const defaultModel = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).first();
 
@@ -112,13 +94,7 @@ export const updateAgent = mutation({
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const { id, storageId, ...updates } = args;
     
@@ -149,13 +125,7 @@ export const updateAgent = mutation({
 export const deleteAgent = mutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const agent = await ctx.db.get(args.id);
 
@@ -218,13 +188,7 @@ export const createInlineAgent = mutation({
     workflowId: v.id("workflows"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const defaultModel = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).first();
 
@@ -258,13 +222,7 @@ export const createInlineAgent = mutation({
 export const promoteToGlobal = mutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     await ctx.db.patch(args.id, {
       isGlobal: true,

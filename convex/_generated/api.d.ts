@@ -24,6 +24,7 @@ import type * as apify from "../apify.js";
 import type * as arcade from "../arcade.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
+import type * as authz from "../authz.js";
 import type * as chat from "../chat.js";
 import type * as chatAdmin from "../chatAdmin.js";
 import type * as companies from "../companies.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   arcade: typeof arcade;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
+  authz: typeof authz;
   chat: typeof chat;
   chatAdmin: typeof chatAdmin;
   companies: typeof companies;

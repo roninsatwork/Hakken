@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type Plan = Doc<"plans">;
 
@@ -48,7 +49,7 @@ export default function SubscriptionPlansPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredPlans = plans.filter((p) =>
     (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())

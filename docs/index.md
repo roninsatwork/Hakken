@@ -16,6 +16,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     CI/CD pipeline with GitHub Actions, Google Cloud Run, and branching protocols.
 6.  **[Roadmap & Technical Debt](./roadmap-and-debt.md)**  
     Known trade-offs and future implementation highlights.
+7.  **[Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)**
+    Handoff rules and code-quality cleanup priorities for future agents.
 
 ---
 

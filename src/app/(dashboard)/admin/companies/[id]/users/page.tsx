@@ -21,6 +21,7 @@ import Link from "next/link";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
@@ -50,7 +51,7 @@ export default function CompanyUsersPage() {
   const { results: paginatedUsers, status, loadMore } = usePaginatedQuery(
     api.users.getUsersByCompany,
     { companyId },
-    { initialNumItems: 15 }
+    { initialNumItems: ADMIN_PAGE_SIZE }
   );
 
   const pendingInvites = useQuery(api.invites.getInvitesByCompany, { companyId }) || [];
@@ -363,7 +364,7 @@ export default function CompanyUsersPage() {
         {status === "CanLoadMore" && (
           <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
             <button
-              onClick={() => loadMore(15)}
+              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
               className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
             >
               Load More Users

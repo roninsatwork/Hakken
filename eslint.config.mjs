@@ -7,15 +7,15 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      // Existing debt: keep visible in lint output without blocking deploys.
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/ban-ts-comment": "warn",
-      "prefer-const": "warn",
-      "react/no-unescaped-entities": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/static-components": "warn",
+      // Keep previously cleaned warning categories as hard failures.
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/ban-ts-comment": "error",
+      "prefer-const": "error",
+      "react/no-unescaped-entities": "error",
+      "react-hooks/purity": "error",
+      "react-hooks/refs": "error",
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/static-components": "error",
     },
   },
   // Override default ignores of eslint-config-next.

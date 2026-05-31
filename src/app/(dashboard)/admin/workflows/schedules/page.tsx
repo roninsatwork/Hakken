@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type ScheduleRow = Doc<"schedules"> & {
   workflowName?: string;
@@ -48,7 +49,7 @@ export default function SchedulesPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredSchedules = schedules.filter((s) =>
     (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||

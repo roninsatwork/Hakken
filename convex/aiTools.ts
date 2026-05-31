@@ -1,13 +1,13 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
+import { getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
 // Fetch all registered AI system tools
 export const getTools = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
+    const current = await getCurrentUser(ctx);
+    if (!current) return [];
     
     // Tools are strictly globally configured by admins
     return await ctx.db.query("aiTools").order("desc").take(10000);
@@ -17,8 +17,7 @@ export const getTools = query({
 export const getToolById = query({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
 
     return await ctx.db.get(args.id);
   },
@@ -32,13 +31,11 @@ export const createTool = mutation({
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized: Only Super Admins can register system execution hooks.");
-    }
+    const { userId } = await requireSuperAdmin(
+      ctx,
+      "Unauthorized: Only Super Admins can register system execution hooks.",
+      "Unauthenticated request"
+    );
 
     return await ctx.db.insert("aiTools", {
       name: args.name,
@@ -60,13 +57,11 @@ export const updateTool = mutation({
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized: System modification requires supreme permissions.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System modification requires supreme permissions.",
+      "Unauthenticated request"
+    );
 
     await ctx.db.patch(args.id, {
       name: args.name,
@@ -82,13 +77,11 @@ export const updateTool = mutation({
 export const deleteTool = mutation({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized: Sonae architectural deletion prevented.");
-    }
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: Sonae architectural deletion prevented.",
+      "Unauthenticated request"
+    );
 
     // Must also cleanse all bindings to this tool in the junction table
     const bindings = await ctx.db
@@ -109,8 +102,8 @@ export const deleteTool = mutation({
 export const getAgentTools = query({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
+    const current = await getCurrentUser(ctx);
+    if (!current) return [];
 
     const bindings = await ctx.db
        .query("agentTools")
@@ -137,13 +130,7 @@ export const toggleAgentTool = mutation({
     action: v.union(v.literal("BIND"), v.literal("UNBIND"))
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
 
     const existingBinding = await ctx.db
        .query("agentTools")

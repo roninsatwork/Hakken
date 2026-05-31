@@ -3,14 +3,13 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
+import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
 export const getMe = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-    
-    return await ctx.db.get(userId);
+    const current = await getCurrentUser(ctx);
+    return current?.user ?? null;
   },
 });
 
@@ -35,13 +34,10 @@ export const getPaginatedUsers = query({
     searchTerm: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    
-    const caller = await ctx.db.get(callerId);
+    const { user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     if (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId)) {
       if (!activeCompanyId) throw new Error("Unauthorized");
@@ -81,13 +77,10 @@ export const getPaginatedUsers = query({
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    
-    const caller = await ctx.db.get(callerId);
+    const { user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     if (caller.role === "SUPER_ADMIN" && !caller.impersonatingCompanyId) {
       return await ctx.db.query("users").order("desc").take(1000);
@@ -110,13 +103,10 @@ export const getUsersByCompany = query({
     paginationOpts: paginationOptsValidator
   },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    
-    const caller = await ctx.db.get(callerId);
+    const { user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     if (caller.role === "SUPER_ADMIN" || (caller.role === "ADMIN" && activeCompanyId === args.companyId)) {
        return await ctx.db
@@ -133,11 +123,7 @@ export const getUsersByCompany = query({
 export const getSuperAdmins = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    
-    const caller = await ctx.db.get(callerId);
-    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
 
     return await ctx.db
       .query("users")
@@ -150,12 +136,9 @@ export const getSuperAdmins = query({
 export const getUserById = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
-    if (!caller) throw new Error("Unauthorized");
+    const { user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
     
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) return null;

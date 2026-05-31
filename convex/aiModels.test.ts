@@ -114,5 +114,26 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     expect(page.data[0].modelId).toBe("gemini-2.0-pro"); // Default MUST be 0th
     expect(page.data[1].modelId).toBe("gemini-1.5-pro"); // Enabled must be 1st
     expect(page.data[2].modelId).toBe("gemini-1.0-pro"); // Disabled must be 2nd
+
+    const activePage = await client.query(api.aiModels.getOffsetPaginatedModels, {
+      searchTerm: "",
+      statusFilter: "active",
+      page: 1,
+      pageSize: 15
+    });
+
+    expect(activePage.data.map((model) => model.modelId)).toEqual([
+      "gemini-2.0-pro",
+      "gemini-1.5-pro",
+    ]);
+
+    const inactivePage = await client.query(api.aiModels.getOffsetPaginatedModels, {
+      searchTerm: "",
+      statusFilter: "inactive",
+      page: 1,
+      pageSize: 15
+    });
+
+    expect(inactivePage.data.map((model) => model.modelId)).toEqual(["gemini-1.0-pro"]);
   });
 });

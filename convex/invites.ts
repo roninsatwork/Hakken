@@ -2,6 +2,12 @@ import { mutation, query, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
+import {
+  canAccessCompany,
+  getCurrentUser,
+  requireAdmin,
+  requireSuperAdmin,
+} from "./authz";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -10,8 +16,8 @@ const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "htt
 // Get active email template for invites
 export const getActiveTemplate = query({
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
+    const current = await getCurrentUser(ctx);
+    if (!current) return null;
 
     const template = await ctx.db
       .query("emailTemplates")
@@ -40,11 +46,7 @@ export const saveTemplate = mutation({
     ctaText: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx);
 
     const template = await ctx.db
       .query("emailTemplates")
@@ -80,13 +82,7 @@ export const saveTemplate = mutation({
 // Fetch all active/pending invites for the Admin Dashboard Left-Column
 export const getPendingInvites = query({
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || !user.role || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
-       throw new Error("Unauthorized");
-    }
+    const { user } = await requireAdmin(ctx);
 
     if (user.role === "SUPER_ADMIN") {
       return await ctx.db
@@ -107,23 +103,17 @@ export const getPendingInvites = query({
 export const getInvitesByCompany = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
+    const { user } = await requireAdmin(ctx);
 
-    const user = await ctx.db.get(userId);
-    if (!user || (!["ADMIN", "SUPER_ADMIN"].includes(user.role ?? ""))) {
-       throw new Error("Unauthorized");
+    if (!canAccessCompany(user, args.companyId)) {
+      throw new Error("Unauthorized");
     }
 
-    if (user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && user.companyId === args.companyId)) {
-        return await ctx.db
-          .query("invitations")
-          .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
-          .order("desc")
-          .take(10000);
-    }
-
-    throw new Error("Unauthorized");
+    return await ctx.db
+      .query("invitations")
+      .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
+      .order("desc")
+      .take(10000);
   },
 });
 
@@ -131,19 +121,13 @@ export const getInvitesByCompany = query({
 export const revokeInvite = mutation({
   args: { id: v.id("invitations") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || !user.role) throw new Error("Unauthorized");
+    const { userId, user } = await requireAdmin(ctx);
 
     const invite = await ctx.db.get(args.id);
     if (!invite) throw new Error("Invite not found");
 
-    if (user.role !== "SUPER_ADMIN") {
-      if (user.role !== "ADMIN" || invite.companyId !== user.companyId) {
-        throw new Error("Unauthorized");
-      }
+    if (user.role !== "SUPER_ADMIN" && invite.companyId !== user.companyId) {
+      throw new Error("Unauthorized");
     }
 
     await ctx.db.delete(args.id);

@@ -8,6 +8,7 @@ import { ArrowLeft, User, ShieldCheck, ShieldAlert, Search, Loader2, MonitorSmar
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -19,7 +20,7 @@ export default function UserProfilePage() {
   const { results: logins, status, loadMore } = usePaginatedQuery(
     api.users.getUserLogins,
     { userId, searchTerm },
-    { initialNumItems: 10 }
+    { initialNumItems: ADMIN_PAGE_SIZE }
   );
 
   const parseUserAgent = (ua: string) => {
@@ -249,7 +250,7 @@ export default function UserProfilePage() {
             {status === "CanLoadMore" && (
               <div className="w-full p-3 border-t border-border-dim/50 flex justify-center bg-sidebar/10">
                 <button 
-                  onClick={() => loadMore(10)}
+                  onClick={() => loadMore(ADMIN_PAGE_SIZE)}
                   className="px-4 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all"
                 >
                   Load More History
@@ -272,7 +273,7 @@ export default function UserProfilePage() {
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });
 

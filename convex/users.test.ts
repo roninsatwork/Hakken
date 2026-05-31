@@ -35,6 +35,74 @@ describe("OWASP: Broken Access Control - Users", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  test("ADMIN read queries are scoped to their company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminCompanyId = await t.run(async (ctx) => {
+      return await ctx.db.insert("companies", { name: "Admin Corp", createdAt: Date.now() });
+    });
+    const foreignCompanyId = await t.run(async (ctx) => {
+      return await ctx.db.insert("companies", { name: "Foreign Corp", createdAt: Date.now() });
+    });
+    const [adminId, ownUserId, foreignUserId] = await t.run(async (ctx) => {
+      const admin = await ctx.db.insert("users", {
+        email: "admin@corp.com",
+        role: "ADMIN",
+        companyId: adminCompanyId,
+      });
+      const ownUser = await ctx.db.insert("users", {
+        email: "own@corp.com",
+        role: "USER",
+        companyId: adminCompanyId,
+      });
+      const foreignUser = await ctx.db.insert("users", {
+        email: "foreign@corp.com",
+        role: "USER",
+        companyId: foreignCompanyId,
+      });
+
+      return [admin, ownUser, foreignUser];
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const users = await adminClient.query(api.users.getAllUsers);
+    const userIds = users.map((user) => user._id);
+
+    expect(userIds).toContain(adminId);
+    expect(userIds).toContain(ownUserId);
+    expect(userIds).not.toContain(foreignUserId);
+
+    await expect(
+      adminClient.query(api.users.getUserById, { id: foreignUserId })
+    ).rejects.toThrow("Unauthorized");
+  });
+
+  test("SUPER_ADMIN read queries can access users across companies", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const companyId = await t.run(async (ctx) => {
+      return await ctx.db.insert("companies", { name: "Tenant Corp", createdAt: Date.now() });
+    });
+    const [superAdminId, tenantUserId] = await t.run(async (ctx) => {
+      const superAdmin = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const tenantUser = await ctx.db.insert("users", {
+        email: "tenant@corp.com",
+        role: "USER",
+        companyId,
+      });
+
+      return [superAdmin, tenantUser];
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const tenantUser = await superAdminClient.query(api.users.getUserById, { id: tenantUserId });
+
+    expect(tenantUser?._id).toBe(tenantUserId);
+  });
+
   test("Standard USER cannot create a new user", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     

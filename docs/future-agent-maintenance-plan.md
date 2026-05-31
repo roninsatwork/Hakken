@@ -1,0 +1,158 @@
+# Future Agent Maintenance Plan
+
+This plan is for future agents taking over Sonae development without relying on Gemini-specific instructions. The goal is to keep improving code quality outside the temporary movement demo.
+
+## Operating Position
+
+- Use `dev` for all normal development.
+- Keep `main` production-only. Push or merge to `main` only when the user explicitly asks.
+- Batch cleanup work and push at the end of a verified slice.
+- Keep the app runnable locally on port 3000 with Convex running alongside it when the user is testing.
+- Do not touch the movement demo unless the user asks or it breaks a required gate.
+
+## Frozen Demo Scope
+
+The movement demo is temporary client-facing work. Do not spend refactor budget here:
+
+- `src/app/(dashboard)/demos/movements/**`
+- `src/app/(dashboard)/demos/movement-capture/page.tsx`
+
+Allowed exceptions:
+
+- Fix a build, typecheck, lint, or test failure.
+- Fix a security issue that can affect the rest of the app.
+- Make a minimal change explicitly requested by the user.
+
+## Phase 1: Make Drift Checks First-Class
+
+Add lightweight checks so project rules stay enforced automatically.
+
+Targets:
+
+- No native browser dialogs in `src/app` or shared UI.
+- English and Italian message key parity.
+- Admin tables use 15 rows per page.
+- No accidental movement-demo edits in broad cleanup branches unless explicitly allowed.
+
+Acceptance:
+
+- Checks run through `npm run check` or a clearly named companion script.
+- Failures print actionable file paths.
+- Existing tests still pass.
+
+Status:
+
+- English and Italian message parity is covered by `src/i18n.test.ts`.
+- Native browser dialog usage and admin 15-row pagination are covered by `src/quality-drift.test.ts`.
+
+## Phase 2: Tighten Lint Baselines
+
+`npm run lint:all` is currently clean, so the next useful step is to make clean categories hard errors.
+
+Targets:
+
+- Remove warning-only status for rules that now have a clean baseline.
+- Prefer category-by-category changes over one large eslint rewrite.
+- Avoid broad disable comments unless there is a documented framework limitation.
+
+Acceptance:
+
+- `npm run lint:all` stays at 0 warnings and 0 errors.
+- `npm run lint` remains a hard-error gate.
+- Rule changes are documented in the PR or commit message.
+
+Status:
+
+- The cleaned lint categories have been promoted back to hard errors in `eslint.config.mjs`.
+
+## Phase 3: Shared Admin Surface Cleanup
+
+Several admin pages repeat the same table, filter, pagination, empty-state, and error-state patterns.
+
+Targets:
+
+- Create shared helpers/components for admin table shells outside movement demo code.
+- Standardize loading, empty, error, and success feedback.
+- Keep row count, search behavior, and permissions predictable.
+- Preserve existing visual direction unless a bug requires a visible change.
+
+Acceptance:
+
+- At least two duplicated admin surfaces move to shared primitives.
+- User-visible behavior is covered by focused tests or smoke coverage.
+- Locale strings remain in parity.
+
+Status:
+
+- Rule-list pages now share `AdminSearchBar`, `AdminTableShell`, loading/empty rows, and `AdminPaginationFooter`.
+- First adopters: global AI rules, company AI rules, and agent AI rules.
+
+## Phase 4: Convex Auth And Tenant Helpers
+
+Authorization checks are critical enough to deserve small, boring helpers.
+
+Targets:
+
+- Add common `requireUser`, `requireAdmin`, and `requireSuperAdmin` helpers if the existing patterns support it.
+- Add helper coverage for company scoping.
+- Use generated Convex types such as `Doc<"users">` and `Id<"...">`.
+- Keep privilege escalation checks explicit in user-management mutations.
+
+Acceptance:
+
+- Tests cover admin versus super-admin access.
+- Non-super-admin queries cannot cross company boundaries.
+- Error paths are consistent and easy to reason about.
+
+Status:
+
+- Added shared Convex auth helpers in `convex/authz.ts`.
+- Migrated `convex/aiRules.ts` to the shared helper pattern.
+- Added AI rule permission tests for own-company, foreign-company, and global-rule admin boundaries.
+- Migrated `convex/companies.ts` super-admin gates to the shared helper pattern.
+- Added positive company creation coverage for super-admins.
+- Migrated read-only user queries in `convex/users.ts` to shared current-user/company-scope helpers.
+- Added user read-boundary coverage for admin tenant scoping and super-admin cross-company access.
+
+## Phase 5: Workflow And AI Contract Hardening
+
+The workflow and AI surfaces are high-value maintainability areas, separate from the movement demo.
+
+Targets:
+
+- Continue moving workflow node, edge, schedule, and execution payload shapes into shared typed helpers.
+- Replace dynamic casts with narrow parser or guard functions.
+- Keep model selection configuration-driven.
+- Normalize upload/file policy usage across frontend and Convex paths.
+
+Acceptance:
+
+- Workflow tests remain green.
+- Invalid payloads fail clearly.
+- Frontend/backend file policy drift is covered by tests.
+
+## Phase 6: Release Readiness Checklist
+
+Before any push intended for `main`, run:
+
+```bash
+npm audit --audit-level=high
+npm run lint:all
+npm run check
+npm run build
+git diff --check
+```
+
+If the app server was stopped for the build, restart:
+
+```bash
+npm run dev
+npm run convex:dev
+```
+
+Then confirm:
+
+- Working tree only contains intended changes.
+- No movement-demo files changed unless explicitly allowed.
+- `dev` has the finished work.
+- `main` is only updated when the user asks for deployment.

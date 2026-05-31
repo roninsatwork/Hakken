@@ -1,6 +1,6 @@
-import { auth } from "./auth";
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
+import { requireAdmin } from "./authz";
 
 export const getOffsetPaginated = query({
   args: {
@@ -10,10 +10,7 @@ export const getOffsetPaginated = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
 
     if (user.role === "ADMIN" && !user.companyId) {
        throw new Error("Unauthorized");
@@ -125,10 +122,7 @@ export const insertAgentLogInternal = internalMutation({
 export const getLogById = query({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const log = await ctx.db.get(args.id);
     if (!log) return null;
     
@@ -144,10 +138,7 @@ export const getLogById = query({
 export const deleteLog = mutation({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const log = await ctx.db.get(args.id);
     if (!log) throw new Error("Log not found");
     

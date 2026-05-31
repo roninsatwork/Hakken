@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function CompanyChatLogsDashboard() {
   const params = useParams();
@@ -30,7 +31,7 @@ export default function CompanyChatLogsDashboard() {
   const [isCopied, setIsCopied] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   // Pagination bounds scoped to company
   const paginatedData = useQuery(api.chatAdmin.getOffsetPaginatedCompanyThreads, {

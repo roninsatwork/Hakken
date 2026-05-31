@@ -18,6 +18,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type CompanyRow = Doc<"companies"> & { userCount: number };
 type CompanyFormData = { name: string; systemPrompt: string; planId: string };
@@ -43,7 +44,7 @@ export default function CompaniesPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredCompanies = companies.filter((c) =>
     (c.name || "").toLowerCase().includes(searchTerm.toLowerCase())

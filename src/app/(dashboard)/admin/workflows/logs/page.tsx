@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type WorkflowExecutionRow = Doc<"workflowExecutions"> & {
   workflowName: string;
@@ -31,7 +32,7 @@ export default function WorkflowLogsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const filteredLogs = executions.filter((exec) =>
     (exec.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||

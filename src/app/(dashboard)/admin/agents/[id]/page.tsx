@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function AgentDashboard() {
   const t = useTranslations("admin.agents.details.dashboard");
@@ -28,7 +29,7 @@ export default function AgentDashboard() {
   const { results, status, loadMore } = usePaginatedQuery(
     api.agentTransactions.getForAgent,
     { agentId },
-    { initialNumItems: 20 }
+    { initialNumItems: ADMIN_PAGE_SIZE }
   );
 
 
@@ -187,7 +188,7 @@ export default function AgentDashboard() {
         {status === "CanLoadMore" && (
           <div className="w-full p-4 border-t border-border-dim/50 flex justify-center bg-sidebar/20">
             <button
-              onClick={() => loadMore(20)}
+              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
               className="px-5 py-2 text-[12px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all border border-transparent hover:border-border-dim"
             >
               {t("table.loadMore")}
