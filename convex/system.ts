@@ -1,13 +1,13 @@
 import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
+import { getCurrentUser, requireAdmin, requireSuperAdmin } from "./authz";
 
 // Public authenticated query for the Admin UI editor
 export const getSystemPrompt = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
+    const current = await getCurrentUser(ctx);
+    if (!current) return null;
 
     const config = await ctx.db
       .query("systemConfig")
@@ -36,16 +36,11 @@ export const updateSystemPrompt = mutation({
     prompt: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) {
-      throw new Error("Target identity unauthenticated or session expired");
-    }
-
-    // Role verification: Ensure only ADMIN can edit core system protocols
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized: System Protocol modifications require Super Administrator clearance.");
-    }
+    const { userId } = await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System Protocol modifications require Super Administrator clearance.",
+      "Target identity unauthenticated or session expired"
+    );
 
     const existingConfig = await ctx.db
       .query("systemConfig")
@@ -61,7 +56,7 @@ export const updateSystemPrompt = mutation({
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_SYSTEM_PROMPT",
-        actorId: user._id,
+        actorId: userId,
         entityType: "systemConfig",
         entityId: "SYSTEM_PROMPT",
         timestamp: Date.now(),
@@ -79,7 +74,7 @@ export const updateSystemPrompt = mutation({
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_SYSTEM_PROMPT",
-        actorId: user._id,
+        actorId: userId,
         entityType: "systemConfig",
         entityId: "SYSTEM_PROMPT",
         timestamp: Date.now(),
@@ -109,15 +104,11 @@ export const updateAnalyticsId = mutation({
     trackingId: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) {
-      throw new Error("Target identity unauthenticated or session expired");
-    }
-
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized: System Protocol modifications require Super Administrator clearance.");
-    }
+    const { userId } = await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System Protocol modifications require Super Administrator clearance.",
+      "Target identity unauthenticated or session expired"
+    );
 
     const existingConfig = await ctx.db
       .query("systemConfig")
@@ -133,7 +124,7 @@ export const updateAnalyticsId = mutation({
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_ANALYTICS_ID",
-        actorId: user._id,
+        actorId: userId,
         entityType: "systemConfig",
         entityId: "GOOGLE_ANALYTICS_ID",
         timestamp: Date.now(),
@@ -151,7 +142,7 @@ export const updateAnalyticsId = mutation({
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_ANALYTICS_ID",
-        actorId: user._id,
+        actorId: userId,
         entityType: "systemConfig",
         entityId: "GOOGLE_ANALYTICS_ID",
         timestamp: Date.now(),
@@ -166,10 +157,7 @@ export const updateAnalyticsId = mutation({
 export const getPiiConfig = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN" && user?.role !== "ADMIN") throw new Error("Unauthorized");
+    await requireAdmin(ctx, "Unauthorized", "Unauthorized");
 
     const config = await ctx.db
       .query("systemConfig")
@@ -196,10 +184,7 @@ export const updatePiiConfig = mutation({
     configStr: v.string(), // JSON string
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
 
     const existingConfig = await ctx.db
       .query("systemConfig")
@@ -223,7 +208,7 @@ export const updatePiiConfig = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_PII_FIREWALL",
-      actorId: user._id,
+      actorId: userId,
       entityType: "systemConfig",
       entityId: "PII_REDACTION_CONFIG",
       timestamp: Date.now(),
