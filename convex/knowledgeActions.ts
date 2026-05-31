@@ -3,7 +3,6 @@
 import { internalAction, action } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { auth } from "./auth";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { GoogleGenAI } from "@google/genai";
@@ -11,6 +10,7 @@ import { GoogleGenAI } from "@google/genai";
 import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
+import { requireActionAdmin } from "./actionAuth";
 
 function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
   const chunks: string[] = [];
@@ -82,13 +82,7 @@ export const ingestDocument = internalAction({
 export const mapWebsite = action({
   args: { url: v.string() },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
-        throw new Error("Unauthorized: Only administrators can map new external sites.");
-    }
+    await requireActionAdmin(ctx, "Unauthorized: Only administrators can map new external sites.");
 
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
     if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY environment variable not set");

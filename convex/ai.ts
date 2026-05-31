@@ -4,8 +4,8 @@ import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import type { GenerateContentConfig, Part } from "@google/genai";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
+import { requireActionAdmin, requireActionUser } from "./actionAuth";
 
 function parseThinkingLevel(value: string): ThinkingLevel | undefined {
   switch (value) {
@@ -266,8 +266,7 @@ export const transcribeAudio = action({
     mimeType: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireActionUser(ctx, "Unauthenticated request");
 
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = "us-central1"; // Enforce central routing for stable multimodal models
@@ -360,13 +359,7 @@ export const generateNodeConfig = action({
     }))
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
-        throw new Error("Unauthorized: Only administrators can configure workflow nodes.");
-    }
+    await requireActionAdmin(ctx, "Unauthorized: Only administrators can configure workflow nodes.");
 
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";

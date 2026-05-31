@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
+  getCurrentUser,
   requireAdmin,
   requireSuperAdmin,
 } from "./authz";
@@ -293,7 +293,7 @@ export const createWidgetThread = mutation({
   },
   handler: async (ctx, args) => {
     // For anonymous widget interactions, the user might not be authenticated.
-    const userId = await getAuthUserId(ctx) || undefined;
+    const userId = (await getCurrentUser(ctx))?.userId;
     
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");

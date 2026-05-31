@@ -1,21 +1,34 @@
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { auth } from "./auth";
 import { validateSafeUrl } from "./utils/security";
 import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
+import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
+import type { Doc, Id } from "./_generated/dataModel";
+
+function assertCanAccessKnowledgeScope(
+  user: Doc<"users">,
+  companyId: Id<"companies"> | undefined,
+  globalMessage = "Unauthorized access to global knowledge base",
+  companyMessage = "Unauthorized"
+) {
+  if (!companyId) {
+    if (user.role !== "SUPER_ADMIN") {
+      throw new Error(globalMessage);
+    }
+    return;
+  }
+
+  const activeCompanyId = getActiveCompanyId(user);
+  if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || activeCompanyId !== companyId)) {
+    throw new Error(companyMessage);
+  }
+}
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    // Secure Gate: Check if user is an admin or super admin
-    const user = await ctx.db.get(userId);
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
-      throw new Error("Unauthorized to upload knowledge base documents.");
-    }
+    await requireAdmin(ctx, "Unauthorized to upload knowledge base documents.", "Unauthenticated request");
 
     return await ctx.storage.generateUploadUrl();
   },
@@ -27,13 +40,14 @@ export const getDocuments = query({
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
+    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
     
     // Agent-isolated Knowledge Scope (Highest Priority)
     if (args.agentId) {
+      if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized");
+      }
+
       let results = await ctx.db
         .query("knowledgeDocuments")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
@@ -41,7 +55,7 @@ export const getDocuments = query({
         .take(10000);
         
       if (user?.role === "ADMIN") {
-          results = results.filter(r => r.companyId === user.companyId);
+          results = results.filter(r => r.companyId === getActiveCompanyId(user));
       }
       return results;
     }
@@ -62,7 +76,7 @@ export const getDocuments = query({
         .take(10000);
     }
 
-    if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
+    if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
         throw new Error("Unauthorized access to company knowledge base");
     }
 
@@ -81,19 +95,18 @@ export const getDocuments = query({
 export const getThreadDocuments = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return []; 
+    const current = await getCurrentUser(ctx);
+    if (!current) return [];
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return [];
 
-    if (thread.userId !== userId) {
-         const user = await ctx.db.get(userId);
-         if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+    if (thread.userId !== current.userId) {
+         if (current.user.role !== "SUPER_ADMIN" && current.user.role !== "ADMIN") {
            return [];
          }
          // BOLA Protection: Ensure standard ADMIN cannot view cross-tenant thread documents
-         if (user.role === "ADMIN" && thread.companyId !== user.companyId) {
+         if (current.user.role === "ADMIN" && thread.companyId !== getActiveCompanyId(current.user)) {
            return [];
          }
     }
@@ -115,20 +128,8 @@ export const saveDocument = mutation({
     format: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    
-    if (!args.companyId) {
-      if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
-      }
-    } else {
-      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
-          throw new Error("Unauthorized");
-      }
-    }
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    assertCanAccessKnowledgeScope(user, args.companyId);
 
     const metadata = await ctx.storage.getMetadata(args.storageId);
     if (!metadata) {
@@ -174,8 +175,7 @@ export const saveChatDocument = mutation({
     format: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    const { userId } = await requireCurrentUser(ctx, "Unauthenticated request");
 
     // Secure Gate: Prevent malicious injection by verifying thread ownership
     const thread = await ctx.db.get(args.threadId);
@@ -212,13 +212,10 @@ export const saveChatDocument = mutation({
 export const deleteDocument = mutation({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
     const doc = await ctx.db.get(args.documentId);
     if (!doc) throw new Error("Document not found");
-
-    const user = await ctx.db.get(userId);
     
     // Allow users to delete their own thread-scoped documents
     if (doc.threadId) {
@@ -227,11 +224,11 @@ export const deleteDocument = mutation({
             throw new Error("Unauthorized to delete this document");
         }
     } else if (!doc.companyId) {
-       if (!user || user.role !== "SUPER_ADMIN") {
+       if (user.role !== "SUPER_ADMIN") {
          throw new Error("Unauthorized to delete global documents");
        }
     } else {
-       if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== doc.companyId)) {
+       if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== doc.companyId)) {
          throw new Error("Unauthorized");
        }
     }
@@ -324,20 +321,8 @@ export const saveManualText = mutation({
     textContent: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    
-    if (!args.companyId) {
-      if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
-      }
-    } else {
-      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
-          throw new Error("Unauthorized");
-      }
-    }
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    assertCanAccessKnowledgeScope(user, args.companyId);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
@@ -375,20 +360,8 @@ export const queueWebsiteUrls = mutation({
     forceRefresh: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    
-    if (!args.companyId) {
-      if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
-      }
-    } else {
-      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) {
-          throw new Error("Unauthorized");
-      }
-    }
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    assertCanAccessKnowledgeScope(user, args.companyId);
 
     const docIds = [];
     for (const url of args.urls) {
@@ -438,16 +411,8 @@ export const deleteWebsiteBulk = mutation({
     rootDomain: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
-
-    const user = await ctx.db.get(userId);
-    
-    if (!args.companyId) {
-      if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
-    } else {
-      if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== args.companyId)) throw new Error("Unauthorized");
-    }
+    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    assertCanAccessKnowledgeScope(user, args.companyId, "Unauthorized");
 
     // Query documents scoped to company or agent safely satisfying TypeScript's QueryInitializer
     const docs = args.companyId 

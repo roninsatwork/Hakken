@@ -1,8 +1,8 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 
 import { paginationOptsValidator } from "convex/server";
+import { getActiveCompanyId, requireCurrentUser } from "./authz";
 
 export const getPaginatedLeaderboard = query({
   args: { 
@@ -10,8 +10,7 @@ export const getPaginatedLeaderboard = query({
     paginationOpts: paginationOptsValidator
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
 
     // Fetch paginated scores for the given game
     const scoresPage = await ctx.db
@@ -39,8 +38,7 @@ export const getPaginatedLeaderboard = query({
 export const getScoresCount = query({
   args: { game: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated request");
+    await requireCurrentUser(ctx, "Unauthenticated request");
 
     const scores = await ctx.db
       .query("arcadeScores")
@@ -53,15 +51,12 @@ export const getScoresCount = query({
 export const submitScore = mutation({
   args: { game: v.string(), score: v.number() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
-    const user = await ctx.db.get(userId);
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthorized");
 
     // Insert the score
     await ctx.db.insert("arcadeScores", {
       userId,
-      companyId: user?.companyId,
+      companyId: getActiveCompanyId(user),
       game: args.game,
       score: args.score,
       playedAt: Date.now(),

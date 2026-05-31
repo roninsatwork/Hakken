@@ -1,17 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { redactPII, type PiiConfig } from "./utils/pii";
 import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
+import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 
 export const getThreads = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
+    const { userId } = await requireCurrentUser(ctx, "Unauthorized");
 
     return await ctx.db
       .query("threads")
@@ -24,7 +21,7 @@ export const getThreads = query({
 export const getMessages = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return null;
 
@@ -35,7 +32,7 @@ export const getMessages = query({
       if (!widget || !widget.isActive) return null;
     } else {
       // Standard strict authentication for internal threads
-      if (!userId || thread.userId !== userId) {
+      if (!current || thread.userId !== current.userId) {
         return null;
       }
     }
@@ -70,10 +67,7 @@ export const getThreadInternal = internalQuery({
 export const generateChatUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
+    await requireCurrentUser(ctx, "Unauthorized");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -83,15 +77,10 @@ export const createThread = mutation({
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
-    
-    const user = await ctx.db.get(userId);
+    const { userId, user } = await requireCurrentUser(ctx, "Unauthorized");
 
     const now = Date.now();
-    const activeCompanyId = user?.impersonatingCompanyId || user?.companyId;
+    const activeCompanyId = getActiveCompanyId(user);
     
     const threadId = await ctx.db.insert("threads", {
       userId,
@@ -121,7 +110,7 @@ export const sendMessage = mutation({
     }
 
     // 🛡️ SECURITY: Run Auth and Thread verification BEFORE heavy file metadata lookups
-    const userId = await getAuthUserId(ctx);
+    const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
     if (!thread) {
       throw new Error("Thread not found");
@@ -134,7 +123,7 @@ export const sendMessage = mutation({
       if (!widget || !widget.isActive) throw new Error("Unauthorized: Widget is inactive");
     } else {
       // Standard strict authentication for internal threads
-      if (!userId || thread.userId !== userId) {
+      if (!current || thread.userId !== current.userId) {
         throw new Error("Unauthorized");
       }
     }
@@ -201,16 +190,12 @@ export const sendMessage = mutation({
       throw new Error("429 Too Many Requests: Please wait a moment before sending more messages.");
     }
 
-    let user = null;
-    if (userId) {
-       user = await ctx.db.get(userId);
-       if (!user && !thread.widgetId) throw new Error("Unauthorized");
-    }
+    const user = current?.user ?? null;
 
     let messagesUsed = 0;
     let messageLimit = -1; // -1 represents unlimited
     let isUserOverride = false;
-    const resolvingCompanyId = user?.impersonatingCompanyId || user?.companyId || thread.companyId;
+    const resolvingCompanyId = user ? getActiveCompanyId(user) : thread.companyId;
     
     // 1. Check User Override
     if (user?.planOverrideId) {
@@ -255,8 +240,8 @@ export const sendMessage = mutation({
     }
 
     // 4. Increment appropriate tracker since limit passed
-    if (isUserOverride && userId) {
-        await ctx.db.patch(userId, { messagesUsedThisPeriod: messagesUsed + 1 });
+    if (isUserOverride && current) {
+        await ctx.db.patch(current.userId, { messagesUsedThisPeriod: messagesUsed + 1 });
     } else if (resolvingCompanyId) {
         await ctx.db.patch(resolvingCompanyId, { messagesUsedThisPeriod: messagesUsed + 1 });
     }
@@ -357,8 +342,7 @@ export const deleteThread = mutation({
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized Sonae Deletion");
+    const { userId } = await requireCurrentUser(ctx, "Unauthorized Sonae Deletion");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
@@ -388,8 +372,7 @@ export const renameThread = mutation({
     title: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
+    const { userId } = await requireCurrentUser(ctx, "Unauthorized");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {

@@ -1,24 +1,19 @@
 import { internalQuery, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveCompanyId, requireAdmin } from "./authz";
 
 export const getLatestReport = query({
   args: {},
   handler: async (ctx) => {
-      const userId = await getAuthUserId(ctx);
-      if (!userId) throw new Error("Unauthenticated request");
-
-      const user = await ctx.db.get(userId);
-      if (!user) throw new Error("User not found");
-
-      if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
-          throw new Error("Unauthorized: Insufficient privileges to view executive reports.");
-      }
+      const { user } = await requireAdmin(
+        ctx,
+        "Unauthorized: Insufficient privileges to view executive reports.",
+        "Unauthenticated request"
+      );
 
       let reports;
       if (user.role !== "SUPER_ADMIN") {
-          const companyId = user.companyId;
+          const companyId = getActiveCompanyId(user);
           if (!companyId) throw new Error("Unauthorized: Orphaned administrator account.");
           reports = await ctx.db.query("salesReports")
             .withIndex("by_company", q => q.eq("companyId", companyId))

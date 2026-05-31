@@ -1,13 +1,13 @@
 "use node";
 
 import { internalAction, action } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { resolveTemplate } from "./utils/templateParser";
 import { validateSafeUrl } from "./utils/security";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
+import { requireActionUser } from "./actionAuth";
 
 type HeaderConfig = {
   key?: string;
@@ -439,8 +439,7 @@ export const resumeApprovalStep = action({
     action: v.union(v.literal("APPROVED"), v.literal("REJECTED"))
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
+    await requireActionUser(ctx, "Unauthorized");
 
     if (args.action === "REJECTED") {
         await ctx.runMutation(internal.workflowEngine.failNodeStep, {

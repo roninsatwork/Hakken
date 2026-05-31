@@ -4,8 +4,8 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { internal } from "./_generated/api";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "./_generated/dataModel";
+import { requireActionUser } from "./actionAuth";
 
 export const routeAgentIntent = action({
   args: {
@@ -13,11 +13,7 @@ export const routeAgentIntent = action({
   },
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthorized");
-
-    const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
-    if (!user) throw new Error("User not found in system");
+    const { user } = await requireActionUser(ctx, "Unauthorized", "User not found in system");
 
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";

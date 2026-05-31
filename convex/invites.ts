@@ -1,13 +1,14 @@
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import {
   canAccessCompany,
+  getActiveCompanyId,
   getCurrentUser,
   requireAdmin,
   requireSuperAdmin,
 } from "./authz";
+import { requireActionUser } from "./actionAuth";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -211,17 +212,15 @@ export const dispatchInviteEmail = action({
     }),
   },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated request");
-
-    const caller = await ctx.runQuery(internal.users.getUserInternal, { userId: callerId });
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    const { userId: callerId, user: caller } = await requireActionUser(ctx);
+    if (!caller.role) throw new Error("Unauthorized");
 
     if (caller.role !== "SUPER_ADMIN") {
-      if (caller.role !== "ADMIN" || caller.companyId !== args.companyId) {
+      const activeCompanyId = getActiveCompanyId(caller);
+      if (caller.role !== "ADMIN" || activeCompanyId !== args.companyId) {
         throw new Error("Unauthorized: Insufficient privileges to dispatch invites");
       }
-      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== caller.companyId)) {
+      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== activeCompanyId)) {
         throw new Error("Unauthorized: Cannot invite external or elevated roles");
       }
     }

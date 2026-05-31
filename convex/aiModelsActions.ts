@@ -1,29 +1,16 @@
 "use node";
 import { action } from "./_generated/server";
-import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-
-import { getAuthUserId } from "@convex-dev/auth/server";
-import type { Id } from "./_generated/dataModel";
+import { requireActionSuperAdmin } from "./actionAuth";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
-async function requireSuperAdminAction(ctx: ActionCtx): Promise<Id<"users">> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) throw new Error("Unauthenticated request");
-
-  const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
-  if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
-
-  return userId;
-}
-
 export const syncVertexModels = action({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdminAction(ctx);
+    await requireActionSuperAdmin(ctx);
 
     try {
       // In @google/genai with Vertex, we fetch available models using the standard method

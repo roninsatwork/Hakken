@@ -17,6 +17,17 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
 
     const standardClient = t.withIdentity({ subject: standardId });
 
+    const agentId = await t.run(async (ctx) => {
+      return await ctx.db.insert("agents", {
+        name: "Knowledge Agent",
+        modelId: "gemini-2.5-flash",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+
     // Attempt to generate upload URL
     await expect(
       standardClient.mutation(api.knowledge.generateUploadUrl, {})
@@ -28,6 +39,10 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
         title: "Malicious Injection",
         textContent: "I am injecting knowledge.",
       })
+    ).rejects.toThrow("Unauthorized");
+
+    await expect(
+      standardClient.query(api.knowledge.getDocuments, { agentId })
     ).rejects.toThrow("Unauthorized");
   });
 
@@ -117,4 +132,3 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     expect(result.length).toBeGreaterThan(0);
   });
 });
-

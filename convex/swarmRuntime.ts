@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getCurrentUser } from "./authz";
 
 export const getSwarmLogs = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const current = await getCurrentUser(ctx);
     
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return [];
@@ -13,7 +13,7 @@ export const getSwarmLogs = query({
     if (thread.widgetId && !thread.userId) {
        // Allow access
     } else {
-       if (!userId || thread.userId !== userId) {
+       if (!current || thread.userId !== current.userId) {
          return [];
        }
     }
@@ -97,5 +97,4 @@ export const getCompanyContextForThread = internalQuery({
     };
   }
 });
-
 

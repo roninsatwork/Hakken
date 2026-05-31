@@ -1,7 +1,6 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
@@ -21,8 +20,7 @@ export const getUserInternal = internalQuery({
 });
 
 export const generateUploadUrl = mutation(async (ctx) => {
-  const userId = await auth.getUserId(ctx);
-  if (!userId) throw new Error("Unauthenticated request");
+  await requireCurrentUser(ctx, "Unauthenticated request");
   return await ctx.storage.generateUploadUrl();
 });
 
@@ -164,12 +162,10 @@ export const addUser = mutation({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
+    const { userId: callerId, user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
       if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== args.companyId) {
@@ -215,12 +211,10 @@ export const updateUser = mutation({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
+    const { userId: callerId, user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) throw new Error("User not found");
@@ -292,12 +286,10 @@ export const purgeUserEntitiesInternal = internalMutation({
 export const deleteUser = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
+    const { userId: callerId, user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
-    const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+    const activeCompanyId = getActiveCompanyId(caller);
 
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) return false;
@@ -335,11 +327,7 @@ export const updateMyProfile = mutation({
     storageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    
-    if (!userId) {
-      throw new Error("Target identity unauthenticated or session expired");
-    }
+    const { userId } = await requireCurrentUser(ctx, "Target identity unauthenticated or session expired");
 
     let resolvedImageUrl = args.image;
     if (args.storageId) {
@@ -365,13 +353,12 @@ export const getLogins = query({
     searchTerm: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) {
+    const current = await getCurrentUser(ctx);
+    if (!current) {
       throw new Error("Unauthenticated request");
     }
-    
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
+
+    if (current.user.role !== "SUPER_ADMIN") {
       return {
         page: [],
         isDone: true,
@@ -384,14 +371,14 @@ export const getLogins = query({
        return await ctx.db
         .query("logins")
         .withSearchIndex("search_device", (q) => 
-           q.search("device", args.searchTerm!).eq("userId", userId)
+           q.search("device", args.searchTerm!).eq("userId", current.userId)
         )
         .paginate(args.paginationOpts);
     }
     
     return await ctx.db
       .query("logins")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", current.userId))
       .order("desc")
       .paginate(args.paginationOpts);
   }
@@ -405,14 +392,12 @@ export const getUserLogins = query({
   },
   handler: async (ctx, args) => {
     // Basic verification
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
+    const { userId: callerId, user: caller } = await requireCurrentUser(ctx, "Unauthenticated");
 
     if (callerId !== args.userId) {
-      const caller = await ctx.db.get(callerId);
       if (!caller || !caller.role) throw new Error("Unauthorized");
       
-      const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
+      const activeCompanyId = getActiveCompanyId(caller);
       
       const targetUser = await ctx.db.get(args.userId);
       if (!targetUser || (caller.role !== "SUPER_ADMIN" && activeCompanyId !== targetUser.companyId)) {
@@ -440,17 +425,14 @@ export const getUserLogins = query({
 export const getMyLoginsCount = query({
   args: { searchTerm: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return 0;
-    
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") return 0;
+    const current = await getCurrentUser(ctx);
+    if (!current || current.user.role !== "SUPER_ADMIN") return 0;
     
     if (args.searchTerm && args.searchTerm.trim() !== "") {
        const logins = await ctx.db
         .query("logins")
         .withSearchIndex("search_device", (q) => 
-           q.search("device", args.searchTerm!).eq("userId", userId)
+           q.search("device", args.searchTerm!).eq("userId", current.userId)
         )
         .take(10000);
        return logins.length;
@@ -458,7 +440,7 @@ export const getMyLoginsCount = query({
     
     const logins = await ctx.db
       .query("logins")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", current.userId))
       .take(10000);
     return logins.length;
   }
@@ -471,16 +453,13 @@ export const recordLogin = mutation({
     location: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-    
-    const user = await ctx.db.get(userId);
-    if (!user) return null;
+    const current = await getCurrentUser(ctx);
+    if (!current) return null;
 
     // Prevent duplicated spam tracks logically
     const lastLogin = await ctx.db
       .query("logins")
-      .withIndex("by_user", q => q.eq("userId", userId))
+      .withIndex("by_user", q => q.eq("userId", current.userId))
       .order("desc")
       .first();
       
@@ -490,7 +469,7 @@ export const recordLogin = mutation({
     }
 
     const loginId = await ctx.db.insert("logins", {
-      userId,
+      userId: current.userId,
       device: args.device,
       ip: args.ip,
       location: args.location,
@@ -498,10 +477,10 @@ export const recordLogin = mutation({
       timestamp: Date.now(),
     });
 
-    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+    if (current.user.role === "SUPER_ADMIN" || current.user.role === "ADMIN") {
        await ctx.db.insert("auditLogs", {
           actionType: "SYSTEM_AUTHENTICATION",
-          actorId: userId,
+          actorId: current.userId,
           entityType: "users",
           entityId: "USER_SESSION",
           timestamp: Date.now(),
@@ -516,16 +495,13 @@ export const recordLogin = mutation({
 export const recordLogout = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return;
+    const current = await getCurrentUser(ctx);
+    if (!current) return;
 
-    const user = await ctx.db.get(userId);
-    if (!user) return;
-
-    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+    if (current.user.role === "SUPER_ADMIN" || current.user.role === "ADMIN") {
       await ctx.db.insert("auditLogs", {
         actionType: "SYSTEM_DISCONNECTION",
-        actorId: userId,
+        actorId: current.userId,
         entityType: "users",
         entityId: "USER_SESSION",
         timestamp: Date.now(),
@@ -538,13 +514,7 @@ export const recordLogout = mutation({
 export const impersonateCompany = mutation({
   args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-    
-    const caller = await ctx.db.get(userId);
-    if (!caller || caller.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized: Only super admins can impersonate tenants");
-    }
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized: Only super admins can impersonate tenants", "Unauthenticated");
 
     await ctx.db.patch(userId, { impersonatingCompanyId: args.companyId === undefined ? undefined : args.companyId });
 
@@ -564,10 +534,7 @@ export const impersonateCompany = mutation({
 export const getUnassignedSuperAdmins = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
-    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
 
     const superAdmins = await ctx.db
       .query("users")
@@ -582,10 +549,7 @@ export const getUnassignedSuperAdmins = query({
 export const assignSuperAdminToCompany = mutation({
   args: { userId: v.id("users"), companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
-    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId: callerId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser || targetUser.role !== "SUPER_ADMIN") {
@@ -610,10 +574,7 @@ export const assignSuperAdminToCompany = mutation({
 export const detachSuperAdminFromCompany = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const callerId = await auth.getUserId(ctx);
-    if (!callerId) throw new Error("Unauthenticated");
-    const caller = await ctx.db.get(callerId);
-    if (!caller || caller.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    const { userId: callerId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser || targetUser.role !== "SUPER_ADMIN") {

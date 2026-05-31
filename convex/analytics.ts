@@ -1,7 +1,8 @@
 import { query, internalQuery } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { requireAdmin, requireSuperAdmin } from "./authz";
 
 type AiModelDoc = Doc<"aiModels">;
 type ModelCostMap = Map<string, AiModelDoc>;
@@ -18,6 +19,41 @@ type AnalyticsInteraction = {
 };
 type CompanyLeaderboardEntry = { id: string; name: string; logo: string; cost: number; messages: number };
 const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
+
+export async function requireAnalyticsSuperAdmin(ctx: QueryCtx, unauthenticatedMessage = "Unauthorized") {
+    return await requireSuperAdmin(ctx, "Unauthorized", unauthenticatedMessage);
+}
+
+export async function requireAnalyticsAdmin(ctx: QueryCtx) {
+    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
+    return admin;
+}
+
+export function assertAnalyticsUserAccess(admin: Doc<"users">, targetUser: Doc<"users">) {
+    if (admin.role !== "SUPER_ADMIN") {
+       if (admin.role !== "ADMIN" || admin.companyId !== targetUser.companyId || !admin.companyId) {
+          throw new Error("Unauthorized: Company Admin clearance required.");
+       }
+    }
+}
+
+export async function requireAnalyticsUserAccess(ctx: QueryCtx, targetUser: Doc<"users">) {
+    const admin = await requireAnalyticsAdmin(ctx);
+    assertAnalyticsUserAccess(admin, targetUser);
+    return admin;
+}
+
+export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id<"companies">) {
+    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
+
+    if (admin.role !== "SUPER_ADMIN") {
+       if (admin.role !== "ADMIN" || admin.companyId !== companyId) {
+          throw new Error("Unauthorized");
+       }
+    }
+
+    return admin;
+}
 
 export function buildModelCostContext(aiModelsFetch: AiModelDoc[]) {
     const modelMap: ModelCostMap = new Map(aiModelsFetch.map((m) => [m.modelId, m]));
@@ -42,10 +78,7 @@ export const getGlobalAICosts = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized AI Logistics query");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireAnalyticsSuperAdmin(ctx, "Unauthorized AI Logistics query");
 
     // 1. Establish Temporal Boundaries
     const now = Date.now();
@@ -183,10 +216,7 @@ export const getPlatformOverview = query({
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Core Authorization Check
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireAnalyticsSuperAdmin(ctx);
 
     // 2. Base Structural Telemetry
     const users = await ctx.db.query("users").take(10000);
@@ -274,19 +304,10 @@ export const getUserCostOverview = query({
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Authorization Check
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (!admin) throw new Error("Unauthorized");
-
+    const admin = await requireAnalyticsAdmin(ctx);
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("User not found");
-
-    if (admin.role !== "SUPER_ADMIN") {
-       if (admin.role !== "ADMIN" || admin.companyId !== targetUser.companyId || !admin.companyId) {
-          throw new Error("Unauthorized: Company Admin clearance required.");
-       }
-    }
+    assertAnalyticsUserAccess(admin, targetUser);
 
     // 2. Fetch User Threads
     
@@ -368,16 +389,7 @@ export const getCompanyMetrics = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (!admin) throw new Error("Unauthorized");
-    
-    if (admin.role !== "SUPER_ADMIN") {
-       if (admin.role !== "ADMIN" || admin.companyId !== args.companyId) {
-          throw new Error("Unauthorized");
-       }
-    }
+    await requireAnalyticsCompanyAccess(ctx, args.companyId);
 
     const now = new Date();
     let startDate = new Date();
@@ -740,10 +752,7 @@ export const getGlobalAnalytics = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    const adminId = await getAuthUserId(ctx);
-    if (!adminId) throw new Error("Unauthorized");
-    const admin = await ctx.db.get(adminId);
-    if (admin?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    await requireAnalyticsSuperAdmin(ctx);
 
     const now = new Date();
     let startDate = new Date();

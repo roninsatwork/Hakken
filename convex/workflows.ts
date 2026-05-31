@@ -1,9 +1,10 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery, action, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 import { parseWorkflowNodes } from "./utils/workflowTypes";
+import { requireSuperAdmin } from "./authz";
+import { requireActionSuperAdmin } from "./actionAuth";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -21,13 +22,7 @@ function constantTimeEqual(a: string, b: string) {
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated Admin Request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized: System level clearance required.");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
 
     return await ctx.db.query("workflows").order("desc").take(10000);
   },
@@ -36,13 +31,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated Admin Request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw new Error("Workflow not found");
@@ -66,13 +55,7 @@ export const createWorkflow = mutation({
     description: v.optional(v.string()) 
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const newWorkflowId = await ctx.db.insert("workflows", {
       name: args.name,
@@ -110,13 +93,7 @@ export const updateWorkflow = mutation({
     edges: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const { id, ...updates } = args;
 
@@ -181,13 +158,7 @@ export const updateWorkflow = mutation({
 export const deleteWorkflow = mutation({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     const workflow = await ctx.db.get(args.id);
 
@@ -212,13 +183,7 @@ export const triggerManualRun = mutation({
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"workflowExecutions">> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    const { userId } = await requireSuperAdmin(ctx);
 
     // 1. Create Execution Record
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
@@ -244,13 +209,7 @@ export const runManualSync = action({
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<unknown> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated");
-
-    const user = await ctx.runQuery(api.users.getUserById, { id: userId });
-    if (!user || user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized");
-    }
+    await requireActionSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
 
     // 1. Create execution record
     const executionId = await ctx.runMutation(api.workflows.triggerManualRun, {
@@ -324,13 +283,7 @@ export const handleWebhook = httpAction(async (ctx, request) => {
 export const getWebhookSecret = query({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Unauthenticated Admin Request");
-
-    const user = await ctx.db.get(userId);
-    if (!user || user.role !== "SUPER_ADMIN") {
-       throw new Error("Unauthorized");
-    }
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw new Error("Workflow not found");
