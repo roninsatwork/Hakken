@@ -244,7 +244,7 @@ Then:
 - [x] Agree commit grouping.
 - [x] Wait for explicit `commit` approval.
 - [x] Wait for explicit `push` approval to `dev`.
-- [ ] Only merge/push `main` when the user explicitly approves live deploy.
+- [x] Only merge/push `main` when the user explicitly approves live deploy.
 
 Phase 6 verification completed:
 
@@ -253,6 +253,7 @@ Phase 6 verification completed:
 - `npm audit --audit-level=high`
 - Local app smoke on `localhost:3000/login`
 - Convex dev readiness smoke
+- `main` push completed after explicit user approval for deploy testing.
 
 ## Recommended Execution Order
 

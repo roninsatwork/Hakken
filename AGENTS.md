@@ -46,6 +46,7 @@ Frozen areas:
 
 - `src/app/(dashboard)/demos/movements/**`
 - `src/app/(dashboard)/demos/movement-capture/page.tsx`
+- `convex/movements.ts`
 
 The user considers this demo temporary and expects to delete it after the client has seen it. Focus maintainability work elsewhere.
 

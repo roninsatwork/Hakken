@@ -31,10 +31,6 @@ const eslintConfig = defineConfig([
     "tsconfig.tsbuildinfo",
     "convex/_generated/**",
     "adk-python/**",
-    "test*.js",
-    "parse-glb*.js",
-    "patch*.js",
-    "check*.mjs",
   ]),
 ]);
 

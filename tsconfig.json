@@ -35,10 +35,6 @@
     "node_modules",
     "adk-python",
     "playwright-report",
-    "convex/_generated",
-    "test*.js",
-    "parse-glb*.js",
-    "patch*.js",
-    "check*.mjs"
+    "convex/_generated"
   ]
 }

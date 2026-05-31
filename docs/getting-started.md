@@ -38,7 +38,7 @@ Follow these steps to set up the Sonae development environment on your local mac
       ```
     - **Terminal 2 (Backend)**:
       ```bash
-      npx convex dev
+      npm run convex:dev
       ```
 
 ## 🧪 Running Tests
@@ -47,13 +47,20 @@ Sonae uses a dual-environment testing strategy (Vitest).
 
 - **UI Tests**:
   ```bash
-  npm test
+  npm run test:run
   ```
-- **Backend Tests**:
-  These are automatically run by the Convex engine or via the `npx convex test` command if configured.
+- **Full Local Check**:
+  ```bash
+  npm run check
+  ```
+- **Build Check**:
+  ```bash
+  npm run build
+  ```
 
 ## 💡 Quick Tips
 
 - Use the `dev` branch for all active coding.
+- Push to `main` only when you intend to trigger the production deploy workflow.
 - Never use `window.alert` or `confirm`. Use the **Sonae Modal** component found in `src/ui/components/feedback`.
 - Layouts are fluid by default; avoid fixed widths in your CSS/Tailwind classes.
