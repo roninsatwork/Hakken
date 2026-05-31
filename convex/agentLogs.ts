@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { requireAdmin } from "./authz";
+import { normalizeSearchTerm, paginateItems } from "./adminQueryService";
 
 export const getOffsetPaginated = query({
   args: {
@@ -16,20 +17,20 @@ export const getOffsetPaginated = query({
        throw new Error("Unauthorized");
     }
 
-    const isSearching = args.searchTerm && args.searchTerm.trim() !== "";
-    const rawResults = isSearching
+    const searchTerm = normalizeSearchTerm(args.searchTerm);
+    const rawResults = searchTerm
       ? user.role === "ADMIN"
         ? await ctx.db
             .query("agentLogs")
             .withSearchIndex("search_content", (searchQ) =>
-              searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
+              searchQ.search("promptContent", searchTerm).eq("agentId", args.agentId)
             )
             .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
             .take(1000)
         : await ctx.db
             .query("agentLogs")
             .withSearchIndex("search_content", (searchQ) =>
-              searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
+              searchQ.search("promptContent", searchTerm).eq("agentId", args.agentId)
             )
             .take(1000)
       : user.role === "ADMIN"
@@ -43,14 +44,12 @@ export const getOffsetPaginated = query({
             .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
             .take(1000);
 
-    const totalCount = rawResults.length;
-    const offset = (args.page - 1) * args.pageSize;
-    const pageData = rawResults.slice(offset, offset + args.pageSize);
+    const page = paginateItems(rawResults, args.page, args.pageSize, { minTotalPages: 0 });
 
     return {
-      data: pageData,
-      totalCount,
-      totalPages: Math.ceil(totalCount / args.pageSize),
+      data: page.data,
+      totalCount: page.totalCount,
+      totalPages: page.totalPages,
     };
   },
 });

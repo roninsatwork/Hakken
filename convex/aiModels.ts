@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { requireCurrentUser, requireSuperAdmin } from "./authz";
+import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 
 export const getModels = query({
   args: {},
@@ -21,11 +22,11 @@ export const getOffsetPaginatedModels = query({
     await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     let models = await ctx.db.query("aiModels").order("asc").take(10000);
 
-    if (args.searchTerm) {
-      const term = args.searchTerm.toLowerCase();
+    const term = normalizeSearchTerm(args.searchTerm);
+    if (term) {
       models = models.filter((m) =>
-        (m.displayName || "").toLowerCase().includes(term) ||
-        (m.modelId || "").toLowerCase().includes(term)
+        includesSearchTerm(m.displayName, term) ||
+        includesSearchTerm(m.modelId, term)
       );
     }
 
@@ -41,15 +42,12 @@ export const getOffsetPaginatedModels = query({
       return 0;
     });
 
-    const totalCount = models.length;
-    const totalPages = Math.ceil(totalCount / args.pageSize) || 1;
-    const startIndex = (args.page - 1) * args.pageSize;
-    const endIndex = startIndex + args.pageSize;
+    const page = paginateItems(models, args.page, args.pageSize);
 
     return {
-      data: models.slice(startIndex, endIndex),
-      totalCount,
-      totalPages,
+      data: page.data,
+      totalCount: page.totalCount,
+      totalPages: page.totalPages,
       page: args.page,
     };
   },

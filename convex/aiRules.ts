@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   requireCurrentUser,
 } from "./authz";
+import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 
 // Fetch rules based on company context. If companyId is absent, fetches global rules.
 export const getRules = query({
@@ -106,23 +107,21 @@ export const getOffsetPaginatedRules = query({
          .take(1000);
     }
 
-    if (args.searchTerm && args.searchTerm.trim() !== "") {
-       const term = args.searchTerm.toLowerCase();
+    const term = normalizeSearchTerm(args.searchTerm);
+    if (term) {
        rawResults = rawResults.filter(r => 
-           (r.name || "").toLowerCase().includes(term) ||
-           r.trigger.toLowerCase().includes(term) ||
-           r.instruction.toLowerCase().includes(term)
+           includesSearchTerm(r.name, term) ||
+           includesSearchTerm(r.trigger, term) ||
+           includesSearchTerm(r.instruction, term)
        );
     }
 
-    const totalCount = rawResults.length;
-    const offset = (args.page - 1) * args.pageSize;
-    const pageData = rawResults.slice(offset, offset + args.pageSize);
+    const page = paginateItems(rawResults, args.page, args.pageSize);
 
     return {
-      data: pageData,
-      totalCount,
-      totalPages: Math.max(1, Math.ceil(totalCount / args.pageSize)),
+      data: page.data,
+      totalCount: page.totalCount,
+      totalPages: page.totalPages,
     };
   },
 });

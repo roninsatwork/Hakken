@@ -18,6 +18,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Known trade-offs and future implementation highlights.
 7.  **[Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)**
     Handoff rules and code-quality cleanup priorities for future agents.
+8.  **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
+    Active phase checklist and completion gates for the current cleanup work.
 
 ---
 

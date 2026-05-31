@@ -9,6 +9,7 @@
  */
 
 import type * as actionAuth from "../actionAuth.js";
+import type * as adminQueryService from "../adminQueryService.js";
 import type * as agentLogs from "../agentLogs.js";
 import type * as agentRuntime from "../agentRuntime.js";
 import type * as agentTransactions from "../agentTransactions.js";
@@ -29,6 +30,8 @@ import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
 import type * as chat from "../chat.js";
 import type * as chatAdmin from "../chatAdmin.js";
+import type * as chatAdminService from "../chatAdminService.js";
+import type * as chatService from "../chatService.js";
 import type * as companies from "../companies.js";
 import type * as crons from "../crons.js";
 import type * as debug from "../debug.js";
@@ -37,6 +40,7 @@ import type * as http from "../http.js";
 import type * as invites from "../invites.js";
 import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
+import type * as knowledgeService from "../knowledgeService.js";
 import type * as migrations from "../migrations.js";
 import type * as movements from "../movements.js";
 import type * as orchestrator from "../orchestrator.js";
@@ -79,6 +83,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   actionAuth: typeof actionAuth;
+  adminQueryService: typeof adminQueryService;
   agentLogs: typeof agentLogs;
   agentRuntime: typeof agentRuntime;
   agentTransactions: typeof agentTransactions;
@@ -99,6 +104,8 @@ declare const fullApi: ApiFromModules<{
   authz: typeof authz;
   chat: typeof chat;
   chatAdmin: typeof chatAdmin;
+  chatAdminService: typeof chatAdminService;
+  chatService: typeof chatService;
   companies: typeof companies;
   crons: typeof crons;
   debug: typeof debug;
@@ -107,6 +114,7 @@ declare const fullApi: ApiFromModules<{
   invites: typeof invites;
   knowledge: typeof knowledge;
   knowledgeActions: typeof knowledgeActions;
+  knowledgeService: typeof knowledgeService;
   migrations: typeof migrations;
   movements: typeof movements;
   orchestrator: typeof orchestrator;

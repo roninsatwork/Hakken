@@ -4,26 +4,13 @@ import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
 import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
-import type { Doc, Id } from "./_generated/dataModel";
-
-function assertCanAccessKnowledgeScope(
-  user: Doc<"users">,
-  companyId: Id<"companies"> | undefined,
-  globalMessage = "Unauthorized access to global knowledge base",
-  companyMessage = "Unauthorized"
-) {
-  if (!companyId) {
-    if (user.role !== "SUPER_ADMIN") {
-      throw new Error(globalMessage);
-    }
-    return;
-  }
-
-  const activeCompanyId = getActiveCompanyId(user);
-  if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || activeCompanyId !== companyId)) {
-    throw new Error(companyMessage);
-  }
-}
+import {
+  assertCanAccessKnowledgeScope,
+  canReadThreadKnowledgeDocuments,
+  getKnowledgeAuditScope,
+  getKnowledgeScopeFields,
+  isExpiredThreadKnowledgeDocument,
+} from "./knowledgeService";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -101,15 +88,7 @@ export const getThreadDocuments = query({
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return [];
 
-    if (thread.userId !== current.userId) {
-         if (current.user.role !== "SUPER_ADMIN" && current.user.role !== "ADMIN") {
-           return [];
-         }
-         // BOLA Protection: Ensure standard ADMIN cannot view cross-tenant thread documents
-         if (current.user.role === "ADMIN" && thread.companyId !== getActiveCompanyId(current.user)) {
-           return [];
-         }
-    }
+    if (!canReadThreadKnowledgeDocuments(thread, current)) return [];
 
     return await ctx.db
       .query("knowledgeDocuments")
@@ -140,8 +119,7 @@ export const saveDocument = mutation({
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
       fileId: args.storageId,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      ...(args.agentId ? { agentId: args.agentId } : {}),
+      ...getKnowledgeScopeFields(args),
       status: "processing",
       format: args.format,
       createdBy: userId,
@@ -160,7 +138,7 @@ export const saveDocument = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ title: args.title, format: args.format, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+      metadata: JSON.stringify({ title: args.title, format: args.format, scope: getKnowledgeAuditScope(args) })
     });
 
     return documentId;
@@ -291,7 +269,7 @@ export const garbageCollectThreadVectors = internalMutation({
       .take(10000);
 
     let purgeCount = 0;
-    for (const doc of expiredDocs) {
+    for (const doc of expiredDocs.filter((doc) => isExpiredThreadKnowledgeDocument(doc, expirationThreshold))) {
         if (doc.fileId) {
             await ctx.storage.delete(doc.fileId).catch(() => {});
         }
@@ -327,8 +305,7 @@ export const saveManualText = mutation({
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
       textContent: args.textContent,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      ...(args.agentId ? { agentId: args.agentId } : {}),
+      ...getKnowledgeScopeFields(args),
       status: "processing",
       format: "text/plain",
       createdBy: userId,
@@ -345,7 +322,7 @@ export const saveManualText = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ title: args.title, format: "text/plain", scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+      metadata: JSON.stringify({ title: args.title, format: "text/plain", scope: getKnowledgeAuditScope(args) })
     });
 
     return documentId;
@@ -386,8 +363,7 @@ export const queueWebsiteUrls = mutation({
         const documentId = await ctx.db.insert("knowledgeDocuments", {
           title: url,
           sourceUrl: url,
-          ...(args.companyId ? { companyId: args.companyId } : {}),
-          ...(args.agentId ? { agentId: args.agentId } : {}),
+          ...getKnowledgeScopeFields(args),
           status: "pending",
           format: "url",
           createdBy: userId,

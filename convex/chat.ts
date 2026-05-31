@@ -1,9 +1,19 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { redactPII, type PiiConfig } from "./utils/pii";
-import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
+import { redactPII } from "./utils/pii";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
+import {
+  assertCanAccessThread,
+  assertWithinMessageRateLimit,
+  canAccessThread,
+  incrementChatQuota,
+  isChatQuotaExceeded,
+  loadPiiConfig,
+  resolveChatQuota,
+  resolveTargetAgentId,
+  validateChatAttachments,
+} from "./chatService";
 
 export const getThreads = query({
   args: {},
@@ -25,17 +35,7 @@ export const getMessages = query({
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return null;
 
-    // Zero-Trust Enforcer: Allow anonymous capability-based access ONLY if it's a widget thread with no owner.
-    if (thread.widgetId && !thread.userId) {
-      // Access granted via unguessable ID, but must verify widget is active
-      const widget = await ctx.db.get(thread.widgetId);
-      if (!widget || !widget.isActive) return null;
-    } else {
-      // Standard strict authentication for internal threads
-      if (!current || thread.userId !== current.userId) {
-        return null;
-      }
-    }
+    if (!(await canAccessThread(ctx, thread, current))) return null;
 
     return await ctx.db
       .query("messages")
@@ -116,112 +116,30 @@ export const sendMessage = mutation({
       throw new Error("Thread not found");
     }
 
-    // Zero-Trust Enforcer: Allow anonymous capability-based write ONLY if it's a widget thread with no owner.
-    if (thread.widgetId && !thread.userId) {
-      // Access granted via unguessable ID, but must verify widget is active
-      const widget = await ctx.db.get(thread.widgetId);
-      if (!widget || !widget.isActive) throw new Error("Unauthorized: Widget is inactive");
-    } else {
-      // Standard strict authentication for internal threads
-      if (!current || thread.userId !== current.userId) {
-        throw new Error("Unauthorized");
-      }
-    }
+    await assertCanAccessThread(ctx, thread, current);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
-    if (args.fileIds && args.fileIds.length > 0) {
-      for (const storageId of args.fileIds) {
-        let metadata: { size: number; contentType?: string | null } | null = null;
-        try {
-          metadata = await ctx.storage.getMetadata(storageId);
-        } catch {
-          // Fall back to mock table if getMetadata throws or is unsupported in tests
-        }
-
-        if (!metadata && (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test")) {
-          const mock = await ctx.db
-            .query("mockStorageMetadata")
-            .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-            .first();
-          metadata = mock ? { size: mock.size, contentType: mock.contentType } : null;
-        }
-
-        if (!metadata) {
-          throw new Error("Attached file not found in storage");
-        }
-
-        try {
-          validateChatAttachmentMetadata(metadata);
-        } catch (error) {
-          try {
-            await ctx.storage.delete(storageId);
-          } catch {
-            // Handle test environment lacking storage delete syscall
-          }
-          if (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
-            const mock = await ctx.db
-              .query("mockStorageMetadata")
-              .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-              .first();
-            if (mock) {
-              await ctx.db.delete(mock._id);
-            }
-          }
-          if (error instanceof Error) {
-            throw error;
-          }
-          throw new Error("Invalid attachment");
-        }
-      }
-    }
+    await validateChatAttachments(ctx, args.fileIds);
 
     // 🛡️ SECURITY: Rate Limiting (Prevent Denial of Wallet / Spam)
     // Max 10 user messages per minute per thread
-    const oneMinuteAgo = Date.now() - 60000;
+    const rateLimitNow = Date.now();
     const recentMessages = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("desc")
       .take(15); // Only need to look at the last 15 to find 10 user messages
 
-    const recentUserMessages = recentMessages.filter(m => m.role === "user" && m.createdAt >= oneMinuteAgo);
-    
-    if (recentUserMessages.length >= 10) {
-      throw new Error("429 Too Many Requests: Please wait a moment before sending more messages.");
-    }
+    assertWithinMessageRateLimit(recentMessages, rateLimitNow);
 
     const user = current?.user ?? null;
 
-    let messagesUsed = 0;
-    let messageLimit = -1; // -1 represents unlimited
-    let isUserOverride = false;
-    const resolvingCompanyId = user ? getActiveCompanyId(user) : thread.companyId;
-    
-    // 1. Check User Override
-    if (user?.planOverrideId) {
-       const userPlan = await ctx.db.get(user.planOverrideId);
-       if (userPlan) {
-           messageLimit = userPlan.messageLimit;
-           messagesUsed = user.messagesUsedThisPeriod || 0;
-           isUserOverride = true;
-       }
-    }
-    // 2. Check Company Pool
-    else if (resolvingCompanyId) {
-       const company = await ctx.db.get(resolvingCompanyId);
-       if (company && company.planId) {
-           const companyPlan = await ctx.db.get(company.planId);
-           if (companyPlan) {
-               messageLimit = companyPlan.messageLimit;
-               messagesUsed = company.messagesUsedThisPeriod || 0;
-           }
-       }
-    }
+    const quota = await resolveChatQuota(ctx, user, thread);
 
     const now = Date.now();
 
     // 3. Evaluate Limit
-    if (messageLimit !== -1 && messagesUsed >= messageLimit) {
+    if (isChatQuotaExceeded(quota)) {
        // Sonae Rejection Soft Block
        await ctx.db.insert("messages", {
           threadId: args.threadId,
@@ -240,22 +158,10 @@ export const sendMessage = mutation({
     }
 
     // 4. Increment appropriate tracker since limit passed
-    if (isUserOverride && current) {
-        await ctx.db.patch(current.userId, { messagesUsedThisPeriod: messagesUsed + 1 });
-    } else if (resolvingCompanyId) {
-        await ctx.db.patch(resolvingCompanyId, { messagesUsedThisPeriod: messagesUsed + 1 });
-    }
+    await incrementChatQuota(ctx, quota);
 
     // -- PII FIREWALL EXTRACTION --
-    const piiConfigEntry = await ctx.db
-      .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
-      .first();
-      
-    let piiConfig: PiiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
-    if (piiConfigEntry && piiConfigEntry.value) {
-        piiConfig = { ...piiConfig, ...(JSON.parse(piiConfigEntry.value) as Partial<PiiConfig>) };
-    }
+    const piiConfig = await loadPiiConfig(ctx);
     
     // Execute Auto-redaction logic masking sensitive data synchronously
     const safeContent = redactPII(args.content, piiConfig);
@@ -273,12 +179,9 @@ export const sendMessage = mutation({
     await ctx.db.patch(args.threadId, { updatedAt: now });
 
     // Determine if we need to hot-swap the agent mid-conversation
-    let targetAgentId = thread.agentId;
-    if (args.dynamicAgentId !== undefined) {
-        targetAgentId = args.dynamicAgentId === null ? undefined : args.dynamicAgentId;
-        if (targetAgentId !== thread.agentId) {
-             await ctx.db.patch(args.threadId, { agentId: targetAgentId });
-        }
+    const targetAgentId = resolveTargetAgentId(thread.agentId, args.dynamicAgentId);
+    if (args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
+        await ctx.db.patch(args.threadId, { agentId: targetAgentId });
     }
 
     // 3. Trigger the asynchronous Vertex AI Orchestrator Action to respond to this message
