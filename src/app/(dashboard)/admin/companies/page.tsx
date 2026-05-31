@@ -7,18 +7,26 @@ import type { FormEvent } from "react";
 import {
   Building2,
   Plus,
-  Search,
   Trash2,
   Edit2,
-  ChevronLeft,
-  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import {
+  AdminPaginationFooter,
+  AdminSearchBar,
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import {
+  ADMIN_PAGE_SIZE,
+  matchesAdminSearchTerm,
+  paginateAdminItems,
+} from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 
 type CompanyRow = Doc<"companies"> & { userCount: number };
@@ -28,7 +36,8 @@ export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
   const tCommon = useTranslations('common');
-  const companies = (useQuery(api.companies.getCompanies) || []) as CompanyRow[];
+  const companiesData = useQuery(api.companies.getCompanies) as CompanyRow[] | undefined;
+  const companies = companiesData || [];
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
@@ -46,14 +55,17 @@ export default function CompaniesPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
+  const isLoading = companiesData === undefined;
 
   const filteredCompanies = companies.filter((c) =>
-    (c.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    matchesAdminSearchTerm(searchTerm, [c.name])
   );
 
-  const totalItems = filteredCompanies.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedCompanies = filteredCompanies.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const {
+    items: paginatedCompanies,
+    totalItems,
+    totalPages,
+  } = paginateAdminItems(filteredCompanies, currentPage, itemsPerPage);
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -129,24 +141,26 @@ export default function CompaniesPage() {
         </button>
       </div>
 
-      {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
-      </div>
+      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
+      <AdminTableShell
+        footer={
+          <AdminPaginationFooter
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalItems}
+            pageSize={itemsPerPage}
+            isLoading={isLoading}
+            onPageChange={setCurrentPage}
+            labels={{
+              empty: t('emptyState'),
+              showing: (start, end, total) => `${t('showing')} ${start} ${t('to')} ${end} ${t('of')} ${total} ${t('companies')}`,
+            }}
+          />
+        }
+        minWidthClassName="min-w-[800px]"
+      >
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-4 py-3 font-medium">{t('tenantName')}</th>
@@ -157,12 +171,14 @@ export default function CompaniesPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {paginatedCompanies.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      {t('emptyState')}
-                    </td>
-                  </tr>
+                {isLoading ? (
+                  <AdminTableLoadingRow colSpan={4} />
+                ) : paginatedCompanies.length === 0 ? (
+                  <AdminTableEmptyRow
+                    colSpan={4}
+                    icon={<Building2 className="w-8 h-8 text-muted/30" />}
+                    label={t('emptyState')}
+                  />
                 ) : (
                   <>
                     {paginatedCompanies.map((company) => (
@@ -210,40 +226,7 @@ export default function CompaniesPage() {
                 )}
               </AnimatePresence>
             </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-            <div className="flex items-center gap-2 text-[12px] text-muted">
-              <span>{t('showing')}</span>
-              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-              <span>{t('to')}</span>
-              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-              <span>{t('of')}</span>
-              <span className="font-medium text-foreground">{totalItems}</span>
-              <span>{t('companies')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      </AdminTableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal

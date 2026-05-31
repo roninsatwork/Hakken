@@ -47,7 +47,7 @@ Completed commits:
 
 ## Phase 2: Backend Service Boundaries
 
-Status: Verification complete; awaiting explicit commit and phase-end push approval before returning to frontend Phase 3.
+Status: Complete.
 
 Scope:
 
@@ -89,14 +89,16 @@ Remaining checklist:
 - [x] Run `npm run check`.
 - [x] Run `npm run build` if the sweep touches generated API/type boundaries or broad app code.
 - [x] Provide diff summary for user review.
-- [ ] Wait for explicit `commit` approval.
-- [ ] Push to `dev` after explicit phase-end push approval.
+- [x] Wait for explicit `commit` approval.
+- [x] Push to `dev` after explicit phase-end push approval.
 
-Phase 2 is implementation- and verification-complete. It is not committed or pushed until the user explicitly approves both steps.
+Completed commits:
+
+- `04f3790 Complete backend service boundary cleanup`
 
 ## Phase 3: Frontend Admin Maintainability
 
-Status: Incomplete. Do not continue this until Phase 2 is genuinely complete.
+Status: Complete.
 
 Scope:
 
@@ -124,22 +126,24 @@ Partial commit:
 
 Remaining checklist:
 
-- [ ] Identify admin pages still duplicating table shell markup.
-- [ ] Move at least two more admin pages onto existing `AdminTable` primitives.
-- [ ] Consolidate repeated search/filter/page reset patterns.
-- [ ] Consolidate repeated loading rows, empty rows, and error states.
-- [ ] Consolidate repeated mutation feedback flows where safe.
-- [ ] Keep visual layout and current UI direction intact.
-- [ ] Add or update focused UI tests for touched shared patterns.
-- [ ] Confirm no movement demo files changed.
-- [ ] Run focused UI tests.
-- [ ] Run `npm run check`.
-- [ ] Run `npm run build`.
-- [ ] Provide diff summary for user review.
-- [ ] Wait for explicit `commit` approval.
-- [ ] Push to `dev` after explicit phase-end push approval.
+- [x] Identify admin pages still duplicating table shell markup.
+- [x] Move at least two more admin pages onto existing `AdminTable` primitives.
+- [x] Consolidate repeated search/filter/page reset patterns.
+- [x] Consolidate repeated loading rows, empty rows, and error states.
+- [x] Consolidate repeated mutation feedback flows where safe.
+- [x] Keep visual layout and current UI direction intact.
+- [x] Add or update focused UI tests for touched shared patterns.
+- [x] Confirm no movement demo files changed.
+- [x] Run focused UI tests.
+- [x] Run `npm run check`.
+- [x] Run `npm run build`.
+- [x] Provide diff summary for user review.
+- [x] Wait for explicit `commit` approval.
+- [x] Push to `dev` after explicit phase-end push approval.
 
-Phase 3 is complete only when every remaining checklist item above is done.
+Completed commit:
+
+- Phase 3 frontend admin maintainability sweep.
 
 ## Phase 4: App UX Reliability Sweep
 

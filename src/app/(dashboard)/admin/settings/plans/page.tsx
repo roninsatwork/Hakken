@@ -6,11 +6,8 @@ import { useState } from "react";
 import {
   CreditCard,
   Plus,
-  Search,
   Trash2,
   Edit2,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   XCircle,
   Info
@@ -19,7 +16,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import {
+  AdminPaginationFooter,
+  AdminSearchBar,
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import {
+  ADMIN_PAGE_SIZE,
+  matchesAdminSearchTerm,
+  paginateAdminItems,
+} from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type Plan = Doc<"plans">;
 
@@ -27,7 +35,8 @@ export default function SubscriptionPlansPage() {
   const t = useTranslations('admin.plans');
   const tCommon = useTranslations('common');
   
-  const plans = (useQuery(api.plans.getPlans) || []) as Plan[];
+  const plansData = useQuery(api.plans.getPlans) as Plan[] | undefined;
+  const plans = plansData || [];
   const createPlan = useMutation(api.plans.createPlan);
   const updatePlan = useMutation(api.plans.updatePlan);
   const deletePlan = useMutation(api.plans.deletePlan);
@@ -50,14 +59,17 @@ export default function SubscriptionPlansPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
+  const isLoading = plansData === undefined;
 
   const filteredPlans = plans.filter((p) =>
-    (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    matchesAdminSearchTerm(searchTerm, [p.name, p.description])
   );
 
-  const totalItems = filteredPlans.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedPlans = filteredPlans.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const {
+    items: paginatedPlans,
+    totalItems,
+    totalPages,
+  } = paginateAdminItems(filteredPlans, currentPage, itemsPerPage);
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -160,24 +172,26 @@ export default function SubscriptionPlansPage() {
          </div>
       </div>
 
-      {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
-      </div>
+      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
+      <AdminTableShell
+        footer={
+          <AdminPaginationFooter
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalItems}
+            pageSize={itemsPerPage}
+            isLoading={isLoading}
+            onPageChange={setCurrentPage}
+            labels={{
+              empty: t('emptyState'),
+              showing: (start, end, total) => `${tCommon('pagination.showing')} ${start} ${tCommon('pagination.to')} ${end} ${tCommon('pagination.of')} ${total} ${tCommon('pagination.entries')}`,
+            }}
+          />
+        }
+        minWidthClassName="min-w-[900px]"
+      >
             <thead>
               <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-4 py-3 font-medium">{t('table.name')}</th>
@@ -189,12 +203,14 @@ export default function SubscriptionPlansPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {paginatedPlans.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-secondary">
-                      {t('emptyState')}
-                    </td>
-                  </tr>
+                {isLoading ? (
+                  <AdminTableLoadingRow colSpan={5} />
+                ) : paginatedPlans.length === 0 ? (
+                  <AdminTableEmptyRow
+                    colSpan={5}
+                    icon={<CreditCard className="w-8 h-8 text-muted/30" />}
+                    label={t('emptyState')}
+                  />
                 ) : (
                   <>
                     {paginatedPlans.map((plan) => (
@@ -252,40 +268,7 @@ export default function SubscriptionPlansPage() {
                 )}
               </AnimatePresence>
             </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-            <div className="flex items-center gap-2 text-[12px] text-muted">
-              <span>{tCommon('pagination.showing')}</span>
-              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-              <span>{tCommon('pagination.to')}</span>
-              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-              <span>{tCommon('pagination.of')}</span>
-              <span className="font-medium text-foreground">{totalItems}</span>
-              <span>{tCommon('pagination.entries')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      </AdminTableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal

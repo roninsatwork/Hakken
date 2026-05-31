@@ -1,0 +1,164 @@
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Edit2, Power, Trash2 } from "lucide-react";
+import type { Id } from "@/convex/_generated/dataModel";
+import {
+  AdminPaginationFooter,
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+
+export type AdminRuleTableRow = {
+  _id: Id<"aiRules">;
+  priority: string;
+  name?: string;
+  trigger?: string;
+  isActive: boolean;
+};
+
+type AdminRulesTableProps = {
+  rules: AdminRuleTableRow[];
+  isLoading: boolean;
+  emptyIcon: ReactNode;
+  emptyLabel: ReactNode;
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  getRowHref: (rule: AdminRuleTableRow) => string;
+  getEditHref: (rule: AdminRuleTableRow) => string;
+  onToggleActive: (rule: AdminRuleTableRow) => void;
+  onDelete: (rule: AdminRuleTableRow) => void;
+  labels: {
+    priority: string;
+    rule: string;
+    status: string;
+    activate: string;
+    deactivate: string;
+    edit: string;
+    delete: string;
+  };
+};
+
+function getPriorityColor(priority: string) {
+  if (priority === "CRITICAL") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+  if (priority === "HIGH") return "text-orange-500 bg-orange-500/10 border-orange-500/20";
+  if (priority === "NORMAL") return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+  return "text-secondary bg-foreground/5 border-border-dim";
+}
+
+export function AdminRulesTable({
+  rules,
+  isLoading,
+  emptyIcon,
+  emptyLabel,
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  onPageChange,
+  getRowHref,
+  getEditHref,
+  onToggleActive,
+  onDelete,
+  labels,
+}: AdminRulesTableProps) {
+  const router = useRouter();
+
+  return (
+    <AdminTableShell
+      footer={
+        <AdminPaginationFooter
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={onPageChange}
+        />
+      }
+    >
+      <thead>
+        <tr className="border-b border-border-dim/50 bg-sidebar/40">
+          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[120px]">
+            {labels.priority}
+          </th>
+          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[250px]">
+            {labels.rule}
+          </th>
+          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[100px] text-right">
+            {labels.status}
+          </th>
+          <th className="w-[100px] px-5 py-3.5"></th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-white/5">
+        {isLoading ? (
+          <AdminTableLoadingRow colSpan={4} />
+        ) : rules.length === 0 ? (
+          <AdminTableEmptyRow colSpan={4} icon={emptyIcon} label={emptyLabel} />
+        ) : (
+          rules.map((rule) => (
+            <tr
+              key={rule._id}
+              onClick={() => router.push(getRowHref(rule))}
+              className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
+            >
+              <td className="px-5 py-4 align-middle">
+                <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
+                  {rule.priority}
+                </div>
+              </td>
+              <td className="px-5 py-4 align-middle">
+                <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
+                  {rule.name || `"${rule.trigger}"`}
+                </h3>
+              </td>
+              <td className="px-5 py-4 align-middle text-right border-r border-white/5">
+                <button
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onToggleActive(rule);
+                  }}
+                  className="hover:text-foreground transition-colors p-1 flex justify-end w-full"
+                  title={rule.isActive ? labels.deactivate : labels.activate}
+                >
+                  <Power className={`w-4 h-4 ${rule.isActive ? "text-orange-500" : "opacity-40"}`} />
+                </button>
+              </td>
+              <td className="px-5 py-4 align-middle text-right">
+                <div className="flex items-center justify-end gap-3 text-secondary">
+                  <Link
+                    href={getEditHref(rule)}
+                    onClick={(event) => event.stopPropagation()}
+                    className="hover:text-foreground transition-colors p-1"
+                    title={labels.edit}
+                  >
+                    <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
+                  </Link>
+                  <button
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onDelete(rule);
+                    }}
+                    className="transition-colors group/trash p-1"
+                    title={labels.delete}
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </AdminTableShell>
+  );
+}
