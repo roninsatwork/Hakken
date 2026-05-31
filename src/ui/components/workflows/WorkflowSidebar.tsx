@@ -1,11 +1,8 @@
 import React from 'react';
 import { Bot, Webhook, Zap, ArrowRightLeft, X, Code2, Clock, Database, UserCheck, RefreshCcw, GitMerge, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 
 export const WorkflowSidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-  const t = useTranslations('admin.workflows.designer');
-
   const onDragStart = (event: React.DragEvent, nodeType: string, label: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.setData('application/reactflow-label', label);

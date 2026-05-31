@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -12,29 +12,29 @@ export default function WidgetSandboxPage() {
   const widgetId = params.widgetId as Id<"widgets">;
   
   const widget = useQuery(api.widgets.getWidgetById, { widgetId });
-  const [scriptMounted, setScriptMounted] = useState(false);
+  const scriptMountedRef = useRef(false);
 
   useEffect(() => {
     // We strictly wait for the widget data to resolve before injecting
-    if (widget && !scriptMounted) {
+    if (widget && !scriptMountedRef.current) {
+      scriptMountedRef.current = true;
       const script = document.createElement("script");
       script.src = `/embed.js?t=${new Date().getTime()}`;
       // To mimic a client environment, we pass the data attribute
       script.setAttribute("data-widget-id", widgetId);
       script.async = true;
       document.body.appendChild(script);
-      setScriptMounted(true);
 
       return () => {
+        scriptMountedRef.current = false;
         // Clean up the script and widget DOM elements if navigating away
         if (script.parentNode) script.parentNode.removeChild(script);
         const widgetContainer = document.getElementById("sonae-widget-container");
         if (widgetContainer) widgetContainer.remove();
-        // @ts-ignore
-        window.SonaeWidgetInitialized = false;
+        (window as typeof window & { SonaeWidgetInitialized?: boolean }).SonaeWidgetInitialized = false;
       };
     }
-  }, [widget, widgetId, scriptMounted]);
+  }, [widget, widgetId]);
 
   if (widget === undefined) {
     return (
@@ -98,7 +98,7 @@ export default function WidgetSandboxPage() {
                    The ultimate layer for <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-blue-500">enterprise orchestration.</span>
                </h1>
                <p className="text-lg text-[#666] dark:text-[#888] leading-relaxed mt-4">
-                   This is a simulated Sandbox Environment hosted safely inside Sonae. The external widget loader script has been automatically injected into this page's DOM. 
+                   This is a simulated Sandbox Environment hosted safely inside Sonae. The external widget loader script has been automatically injected into this page&apos;s DOM.
                </p>
                
                <div className="flex items-center gap-4 mt-8">
@@ -131,7 +131,7 @@ export default function WidgetSandboxPage() {
                    <Cpu className="w-6 h-6 text-brand" />
                    <h3 className="font-bold text-lg">Agnostic Integration</h3>
                    <p className="text-[14px] text-[#666] dark:text-[#999] leading-relaxed">
-                       Test your agent's capability to understand varying user intent while inheriting the specific UI bindings.
+                       Test your agent&apos;s capability to understand varying user intent while inheriting the specific UI bindings.
                    </p>
                </div>
            </div>

@@ -6,7 +6,8 @@ Command: npx gltfjsx@6.5.3 public/robot.glb -o src/ui/components/Robot.tsx
 import * as THREE from 'three'
 import React from 'react'
 import { useGraph } from '@react-three/fiber'
-import { useGLTF, useAnimations } from '@react-three/drei'
+import type { ThreeElements } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
 import { GLTF, SkeletonUtils } from 'three-stdlib'
 
 type ActionName = 'Dance' | 'Death' | 'Idle' | 'Jump' | 'No' | 'Punch' | 'Running' | 'Sitting' | 'Standing' | 'ThumbsUp' | 'Walking' | 'WalkJump' | 'Wave' | 'Yes'
@@ -46,12 +47,11 @@ type GLTFResult = GLTF & {
   animations: GLTFAction[]
 }
 
-export function Model(props: any) {
+export function Model(props: ThreeElements['group']) {
   const group = React.useRef<THREE.Group>(null)
-  const { scene, animations } = useGLTF('/robot.glb')
+  const { scene } = useGLTF('/robot.glb')
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene])
   const { nodes, materials } = useGraph(clone) as unknown as GLTFResult
-  const { actions } = useAnimations(animations, group)
   return (
     <group ref={group} {...props} dispose={null}>
       <group name="Root_Scene">

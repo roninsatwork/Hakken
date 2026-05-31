@@ -1,6 +1,6 @@
-# Next.js + Convex Template
+# Sonae
 
-A high-performance Next.js starter template integrated with Convex for a real-time, type-safe backend.
+A Next.js and Convex application for real-time AI orchestration, administration, chat, workflows, and tenant-scoped knowledge.
 
 ## 📚 Internal Documentation
 

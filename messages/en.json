@@ -474,6 +474,10 @@
                     "output": {
                         "title": "Output Logs",
                         "noOutput": "No output data recorded"
+                    },
+                    "feedback": {
+                        "resumeSuccess": "Workflow resumed. Processing will continue shortly.",
+                        "resumeFailed": "Resume failed. The workflow could not be unblocked."
                     }
                 }
             },

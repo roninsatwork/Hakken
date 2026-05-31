@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -12,12 +14,12 @@ import {
   Bot,
   Users,
   MessageSquare,
-  Calendar,
   Building2,
   PieChart as PieChartIcon,
-  BarChart3
+  BarChart3,
+  type LucideIcon
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import {
@@ -28,28 +30,50 @@ import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
-export default function AICostsDashboard() {
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
-  const [customStart, setCustomStart] = useState<string>("");
-  const [customEnd, setCustomEnd] = useState<string>("");
+type MetricBlockProps = {
+  title: string;
+  value: ReactNode;
+  sub: ReactNode;
+  icon: LucideIcon;
+  delay?: number;
+  className?: string;
+  largeText?: boolean;
+};
 
-  const t = useTranslations("ai.costs");
-  const adminOverview = useTranslations("admin.overview");
+type ModelDistributionRow = {
+  name: string;
+  cost: number;
+  calls: number;
+};
 
-  const data = useQuery(api.analytics.getGlobalAnalytics, {
-    timeframe,
-    customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
-    customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined // end of day 
-  });
+type CompanyLeaderboardRow = {
+  id: string;
+  name: string;
+  logo: string;
+  cost: number;
+  messages: number;
+};
 
-  const getAggregationLabel = (agg: string) => {
-    if (agg === "month") return adminOverview("charts.monthly") || t("aggregation.month");
-    if (agg === "week") return adminOverview("charts.weekly") || t("aggregation.week");
-    return adminOverview("charts.daily") || t("aggregation.day");
-  };
+type UserLeaderboardRow = {
+  id: string;
+  name: string;
+  image: string;
+  companyName: string;
+  cost: number;
+  messages: number;
+};
 
-  // Reusable Animated Component mapping standard integers
-  const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: any) => (
+type AgentLeaderboardRow = {
+  id: string;
+  name: string;
+  avatar: string;
+  cost: number;
+  interactions?: number;
+  messages?: number;
+};
+
+function MetricBlock({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: MetricBlockProps) {
+  return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -67,6 +91,27 @@ export default function AICostsDashboard() {
       </div>
     </motion.div>
   );
+}
+
+export default function AICostsDashboard() {
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
+  const [customStart, setCustomStart] = useState<string>("");
+  const [customEnd, setCustomEnd] = useState<string>("");
+
+  const t = useTranslations("ai.costs");
+  const adminOverview = useTranslations("admin.overview");
+
+  const data = useQuery(api.analytics.getGlobalAnalytics, {
+    timeframe,
+    customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
+    customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined // end of day
+  });
+
+  const getAggregationLabel = (agg: string) => {
+    if (agg === "month") return adminOverview("charts.monthly") || t("aggregation.month");
+    if (agg === "week") return adminOverview("charts.weekly") || t("aggregation.week");
+    return adminOverview("charts.daily") || t("aggregation.day");
+  };
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
@@ -151,7 +196,7 @@ export default function AICostsDashboard() {
                         contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
-                        formatter={(value: any) => [`£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`, t("chart.tooltipLabel") || "COST"]}
+                        formatter={(value: unknown) => [`£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`, t("chart.tooltipLabel") || "COST"]}
                       />
                       <Area
                         type="monotone"
@@ -245,14 +290,14 @@ export default function AICostsDashboard() {
                           dataKey="calls"
                           stroke="none"
                         >
-                          {data.modelDistribution.map((entry: any, index: number) => (
+                          {(data.modelDistribution as ModelDistributionRow[]).map((_, index) => (
                             <Cell key={`cell-${index}`} fill={['#8b5cf6', '#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#14b8a6'][index % 6]} />
                           ))}
                         </Pie>
                         <Tooltip
                           contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                           itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
-                          formatter={(value: any) => `${Number(value).toLocaleString()} Calls`}
+                          formatter={(value: unknown) => `${Number(value).toLocaleString()} Calls`}
                         />
                         <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888' }} />
                       </PieChart>
@@ -319,12 +364,19 @@ export default function AICostsDashboard() {
                   {(!data.topCompanies || data.topCompanies.length === 0) ? (
                     <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
                   ) : (
-                    data.topCompanies.map((c: any, i: number) => (
+                    (data.topCompanies as CompanyLeaderboardRow[]).map((c, i) => (
                       <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                         <div className="flex items-center gap-4">
                           <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{i + 1}</span>
                           {c.logo ? (
-                            <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]" />
+                            <Image
+                              src={c.logo}
+                              alt={c.name}
+                              width={32}
+                              height={32}
+                              unoptimized
+                              className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]"
+                            />
                           ) : (
                             <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] flex items-center justify-center text-[10px] text-foreground font-bold">
                               {c.name.substring(0, 2).toUpperCase()}
@@ -363,11 +415,18 @@ export default function AICostsDashboard() {
                   {(!data.topUsers || data.topUsers.length === 0) ? (
                     <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
                   ) : (
-                    data.topUsers.map((u: any, i: number) => (
+                    (data.topUsers as UserLeaderboardRow[]).map((u, i) => (
                       <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                         <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                           <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                          <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
+                          <Image
+                            src={u.image}
+                            alt={u.name}
+                            width={32}
+                            height={32}
+                            unoptimized
+                            className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
+                          />
                           <div className="flex flex-col min-w-0">
                             <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
                             <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.companyName}</span>
@@ -405,11 +464,18 @@ export default function AICostsDashboard() {
                 {(!data.topAgents || data.topAgents.length === 0) ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{adminOverview('leaderboards.empty')}</div>
                 ) : (
-                  data.topAgents.map((a: any, i: number) => (
+                  (data.topAgents as AgentLeaderboardRow[]).map((a, i) => (
                     <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
+                        <Image
+                          src={a.avatar}
+                          alt={a.name}
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>

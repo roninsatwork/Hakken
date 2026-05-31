@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { SquareTerminal, RefreshCcw, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function AgentSystemPromptPage() {
   const t = useTranslations("admin.agents.details.systemPrompt");
@@ -21,16 +25,17 @@ export default function AgentSystemPromptPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
 
   const currentPrompt = agent?.systemPrompt ?? "";
   const isLoaded = agent !== undefined;
 
-  // Sync state once data loads
   useEffect(() => {
-    if (isLoaded) {
-      setPromptValue(currentPrompt);
-    }
-  }, [isLoaded, currentPrompt]);
+    if (!agent || initializedAgentIdRef.current === agent._id) return;
+
+    initializedAgentIdRef.current = agent._id;
+    setPromptValue(agent.systemPrompt ?? "");
+  }, [agent]);
 
   const hasUnsavedChanges = isLoaded && promptValue !== currentPrompt;
 
@@ -44,10 +49,10 @@ export default function AgentSystemPromptPage() {
       await updateAgent({ id: agentId, systemPrompt: promptValue });
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to commit System Prompt protocol:", error);
       setSaveStatus("error");
-      setErrorMessage(error.message || t("errors.saveFailed"));
+      setErrorMessage(getErrorMessage(error, t("errors.saveFailed")));
     } finally {
       setIsSaving(false);
     }

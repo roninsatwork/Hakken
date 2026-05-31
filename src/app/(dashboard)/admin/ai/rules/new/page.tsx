@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function NewRulePage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function NewRulePage() {
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "CRITICAL">("NORMAL");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting) return;
 

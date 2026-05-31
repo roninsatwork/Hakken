@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import type { Doc, Id } from "./_generated/dataModel";
 
 describe("OWASP: Broken Access Control - Workflows", () => {
   test("Standard USER cannot execute any Workflow CRUD operations", async () => {
@@ -71,8 +72,12 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     const updatedWorkflow = await t.run(async (ctx) => {
       return await ctx.db.get(workflowId);
     });
-    expect(typeof updatedWorkflow?.webhookSecret).toBe("string");
-    expect(updatedWorkflow?.webhookSecret.length).toBeGreaterThan(10);
+    const webhookSecret = updatedWorkflow?.webhookSecret;
+    expect(typeof webhookSecret).toBe("string");
+    if (typeof webhookSecret !== "string") {
+      throw new Error("Expected webhook secret to be generated");
+    }
+    expect(webhookSecret.length).toBeGreaterThan(10);
 
     // 3. Test access controls on getWebhookSecret query
     // Super Admin should be allowed
@@ -214,7 +219,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       workflowId: adminAWorkflowId,
       tableName: "properties",
       operation: "SELECT"
-    });
+    }) as Doc<"properties">[];
     expect(filteredProps.length).toBe(1);
     expect(filteredProps[0]._id).toBe(propertyAId);
 
@@ -248,11 +253,11 @@ describe("OWASP: Broken Access Control - Workflows", () => {
         url: "https://example.com/new",
         scrapedAt: Date.now()
       }
-    });
+    }) as { id: Id<"properties"> };
 
     const insertedProp = await t.run(async (ctx) => {
       return await ctx.db.get(insertedRes.id);
-    });
+    }) as Doc<"properties"> | null;
     expect(insertedProp?.companyId).toBe(companyAId); // Automatically scoped to creator's company
 
     // 🔓 SCENARIO 5: SUPER_ADMIN workflow has unrestricted access
@@ -261,7 +266,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       workflowId: superAdminWorkflowId,
       tableName: "users",
       operation: "SELECT"
-    });
+    }) as Doc<"users">[];
     expect(allUsers.length).toBeGreaterThan(0);
 
     // Can SELECT foreign tenant documents
@@ -270,8 +275,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       tableName: "properties",
       operation: "SELECT",
       docId: propertyBId
-    });
+    }) as Doc<"properties">;
     expect(foreignDoc._id).toBe(propertyBId);
   });
 });
-

@@ -17,22 +17,24 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
+
+type Plan = Doc<"plans">;
 
 export default function SubscriptionPlansPage() {
   const t = useTranslations('admin.plans');
   const tCommon = useTranslations('common');
   
-  const plans = useQuery(api.plans.getPlans) || [];
+  const plans = (useQuery(api.plans.getPlans) || []) as Plan[];
   const createPlan = useMutation(api.plans.createPlan);
   const updatePlan = useMutation(api.plans.updatePlan);
   const deletePlan = useMutation(api.plans.deletePlan);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<any | null>(null);
-  const [deletingPlan, setDeletingPlan] = useState<any | null>(null);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null);
 
   const [formData, setFormData] = useState({ 
     name: "", 
@@ -48,7 +50,7 @@ export default function SubscriptionPlansPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  const filteredPlans = plans.filter((p: any) =>
+  const filteredPlans = plans.filter((p) =>
     (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -68,7 +70,7 @@ export default function SubscriptionPlansPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (plan: any) => {
+  const handleOpenEdit = (plan: Plan) => {
     setFormData({ 
         name: plan.name, 
         description: plan.description || "", 
@@ -104,7 +106,7 @@ export default function SubscriptionPlansPage() {
         });
       }
       setIsAddModalOpen(false);
-    } catch (err: any) {
+    } catch {
       setSubmitError(t("errors.saveFailed"));
     } finally {
       setIsSubmitting(false);
@@ -117,7 +119,7 @@ export default function SubscriptionPlansPage() {
       try {
         await deletePlan({ id: deletingPlan._id });
         setDeletingPlan(null);
-      } catch (err: any) {
+      } catch {
         setSubmitError(t("errors.deleteFailed"));
       } finally {
         setIsSubmitting(false);
@@ -383,7 +385,7 @@ export default function SubscriptionPlansPage() {
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            {t.rich('deleteConfirm', { name: (chunks) => <strong className="text-foreground font-semibold">{deletingPlan?.name}</strong> })}
+            {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingPlan?.name}</strong> })}
           </p>
           <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-4 text-red-500/90 text-[13px]">
             {t('deleteWarning')}

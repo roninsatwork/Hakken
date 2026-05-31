@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import Image from "next/image";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   Search,
   Loader2,
@@ -13,7 +14,6 @@ import {
   User as UserIcon,
   ChevronLeft,
   ChevronRight,
-  Database,
   Copy,
   Check
 } from "lucide-react";
@@ -220,10 +220,13 @@ export default function CompanyChatLogsDashboard() {
                           <Bot className="w-4 h-4" />
                       </div>
                   ) : (
-                      <img
+                      <Image
                         src={thread.user?.image || "https://api.dicebear.com/7.x/notionists/svg"}
-                        className="w-8 h-8 rounded-full border border-border-dim object-cover shrink-0 relative z-10"
                         alt="User"
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="w-8 h-8 rounded-full border border-border-dim object-cover shrink-0 relative z-10"
                       />
                   )}
 
@@ -354,10 +357,13 @@ export default function CompanyChatLogsDashboard() {
                                    <UserIcon className="w-3 h-3 text-secondary" />
                                 </div>
                              ) : (
-                                <img
+                                <Image
                                   src={activeThread?.user?.image || "https://api.dicebear.com/7.x/notionists/svg"}
-                                  className="w-6 h-6 rounded-full border border-border-dim object-cover shrink-0"
                                   alt="User"
+                                  width={24}
+                                  height={24}
+                                  unoptimized
+                                  className="w-6 h-6 rounded-full border border-border-dim object-cover shrink-0"
                                 />
                              )
                           ) : (

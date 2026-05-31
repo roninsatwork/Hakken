@@ -29,7 +29,6 @@ test.describe('End-User Profile & Settings Journey', () => {
     await expect(emailInput).toBeDisabled();
 
     // 4. Simulate modifying a user preference (e.g., phone number)
-    const originalPhone = await phoneInput.inputValue();
     const testPhone = `+1555${Math.floor(100000 + Math.random() * 900000)}`;
     await phoneInput.fill(testPhone);
 

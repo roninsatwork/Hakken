@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -15,11 +16,11 @@ import {
   Loader2,
   PoundSterling,
   Building2,
-  Calendar,
   CreditCard,
   Target
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
 import { useTranslations } from "next-intl";
@@ -27,8 +28,17 @@ import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
-// Reusable Animated Component mapping standard integers
-const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: any) => (
+type MetricBlockProps = {
+  title: string;
+  value: string;
+  sub: string;
+  icon: LucideIcon;
+  delay?: number;
+  className?: string;
+  largeText?: boolean;
+};
+
+const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: MetricBlockProps) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
@@ -49,7 +59,6 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
 
 export default function AdminDashboard() {
   const t = useTranslations('admin.overview');
-  const tCommon = useTranslations('common');
   const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
@@ -164,7 +173,7 @@ export default function AdminDashboard() {
                         contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
-                        formatter={(value: any, name: any) => [
+                        formatter={(value, name) => [
                           name === 'cost' ? `£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}` : value,
                           name === 'cost' ? t('charts.estimatedCost') : t('charts.globalMessages')
                         ]}
@@ -297,14 +306,14 @@ export default function AdminDashboard() {
                         dataKey="calls"
                         stroke="none"
                       >
-                        {data.modelDistribution.map((entry: any, index: number) => (
+                        {data.modelDistribution.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={['#8b5cf6', '#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#14b8a6'][index % 6]} />
                         ))}
                       </Pie>
                       <Tooltip
                         contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
-                        formatter={(value: any) => `${Number(value).toLocaleString()} Calls`}
+                        formatter={(value) => `${Number(value).toLocaleString()} Calls`}
                       />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888' }} />
                     </PieChart>
@@ -371,12 +380,19 @@ export default function AdminDashboard() {
                 {data.topCompanies.length === 0 ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
-                  data.topCompanies.map((c: any, i: number) => (
+                  data.topCompanies.map((c, i) => (
                     <div key={c.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{i + 1}</span>
                         {c.logo ? (
-                          <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]" />
+                          <Image
+                            src={c.logo}
+                            alt={c.name}
+                            width={32}
+                            height={32}
+                            unoptimized
+                            className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]"
+                          />
                         ) : (
                           <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] flex items-center justify-center text-[10px] text-foreground font-bold">
                             {c.name.substring(0, 2).toUpperCase()}
@@ -415,11 +431,18 @@ export default function AdminDashboard() {
                 {data.topUsers.length === 0 ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
-                  data.topUsers.map((u: any, i: number) => (
+                  data.topUsers.map((u, i) => (
                     <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
+                        <Image
+                          src={u.image}
+                          alt={u.name}
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.companyName}</span>
@@ -467,7 +490,7 @@ export default function AdminDashboard() {
                       <Tooltip
                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                         contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
-                        formatter={(value: any) => `£${Number(value).toLocaleString('en-GB')}`}
+                        formatter={(value) => `£${Number(value).toLocaleString('en-GB')}`}
                       />
                       <Bar dataKey="mrr" name="MRR" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={40} />
                     </BarChart>
@@ -492,11 +515,18 @@ export default function AdminDashboard() {
                 {(!data.topAgents || data.topAgents.length === 0) ? (
                   <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">{t('leaderboards.empty')}</div>
                 ) : (
-                  data.topAgents.map((a: any, i: number) => (
+                  data.topAgents.map((a, i) => (
                     <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-[#0000000d] dark:border-[#ffffff0d] last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0" />
+                        <Image
+                          src={a.avatar}
+                          alt={a.name}
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Process</span>
@@ -505,7 +535,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-6 shrink-0 pr-2">
                         <div className="flex flex-col items-end w-[65px]">
                           <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Messages</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">{(a.interactions || a.messages || 0).toLocaleString()}</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">{(a.interactions || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex flex-col items-end w-[65px]">
                           <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>

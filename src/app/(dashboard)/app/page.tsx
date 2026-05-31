@@ -18,7 +18,13 @@ export default function Home() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = useQuery(api.users.getMe);
-  const [greeting, setGreeting] = useState("welcome");
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "goodMorning";
+    if (hour < 17) return "goodAfternoon";
+    if (hour < 21) return "goodEvening";
+    return "goodNight";
+  })();
 
   useEffect(() => {
     if (user && user.role === "SUPER_ADMIN") {
@@ -29,14 +35,6 @@ export default function Home() {
       }
     }
   }, [user, router]);
-
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("goodMorning");
-    else if (hour < 17) setGreeting("goodAfternoon");
-    else if (hour < 21) setGreeting("goodEvening");
-    else setGreeting("goodNight");
-  }, []);
 
   const firstName = user?.name ? user.name.split(" ")[0] : "";
 
@@ -117,7 +115,7 @@ export default function Home() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-secondary text-[14px] leading-relaxed">
-            {t.rich('intelLayer', { sonae: (chunks) => <span className="text-foreground font-medium">Sonae Intelligence</span> })}
+            {t.rich('intelLayer', { sonae: () => <span className="text-foreground font-medium">Sonae Intelligence</span> })}
           </p>
           <div className="p-4 rounded-xl bg-foreground/[0.03] border border-border-dim/50 flex flex-col gap-2">
             <span className="text-[11px] font-mono tracking-widest text-brand uppercase">{t('securityProtocol')}</span>
@@ -136,4 +134,3 @@ export default function Home() {
     </div>
   );
 }
-

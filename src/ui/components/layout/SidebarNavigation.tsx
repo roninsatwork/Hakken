@@ -1,29 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
   LayoutDashboard,
-  FolderKanban,
   Building2,
-  Users2,
-  Briefcase,
   LineChart,
   ChevronDown,
-  Search,
   Sidebar,
-  Apple,
   Globe,
-  PenTool,
   Bot,
   ShieldCheck,
   Settings,
   Workflow,
-  Network,
   Home
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUI } from "@/src/context/UIContext";
@@ -152,9 +146,64 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
   );
 }
 
+function getActiveItemFromPathname(pathname: string) {
+  if (pathname === '/admin') return 'Admin Dashboard';
+  if (pathname.startsWith('/admin/companies')) return 'Companies';
+  if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
+  if (pathname === '/admin/users/invite') return 'Invitations';
+  if (pathname.startsWith('/admin/users')) return 'Manage Users';
+  if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
+  if (pathname.startsWith('/admin/ai/global-knowledge')) return 'Global Knowledge';
+  if (pathname.startsWith('/admin/ai/widget')) return 'Widget';
+  if (pathname.startsWith('/admin/ai/models')) return 'Models';
+  if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
+  if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
+  if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
+  if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
+  if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
+  if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
+  if (pathname === '/admin/workflows') return 'Manage Workflows';
+  if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
+  if (pathname === '/admin/settings/analytics') return 'Analytics';
+  if (pathname.startsWith('/admin/settings')) return 'System Settings';
+  if (pathname === '/app') return 'Dashboard';
+  if (pathname.startsWith('/app/assistant')) return 'Assistant';
+  if (pathname.startsWith('/app/properties')) return 'Properties';
+  if (pathname.startsWith('/app/reports')) return 'Reports';
+  if (pathname.startsWith('/app/profile')) return 'Profile';
+  if (pathname === '/app/settings') return 'Organization Dashboard';
+  if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
+  if (pathname.startsWith('/app/agents')) return 'Agents';
+  if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
+  if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
+  if (pathname.startsWith('/demos')) return 'Demos';
+  return pathname.startsWith('/admin') ? 'Admin Dashboard' : '';
+}
+
+function getDefaultOpenSections(pathname: string): Record<string, boolean> {
+  const isAgentsActive = pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
+
+  return {
+    workspace: true,
+    businessHub: false,
+    clients: false,
+    companies: pathname.startsWith('/admin/companies'),
+    superAdmins: pathname.startsWith('/admin/super-admins'),
+    ai: true,
+    agents: isAgentsActive,
+    workflows: false,
+    users: false,
+    settings: pathname.startsWith('/admin/settings'),
+    reports: false,
+    organization: false,
+    arcade: false,
+    properties: false,
+    demos: false,
+  };
+}
+
 export default function SidebarNavigation() {
   const t = useTranslations('sidebar');
-  const tc = useTranslations('common');
   const pathname = usePathname();
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const settings = useSystemSettings();
@@ -181,111 +230,16 @@ export default function SidebarNavigation() {
     router.push("/admin/companies");
   };
 
-  const [activeItem, setActiveItem] = useState(() => {
-    if (pathname === '/admin') return 'Admin Dashboard';
-    if (pathname.startsWith('/admin/companies')) return 'Companies';
-    if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
-    if (pathname === '/admin/users/invite') return 'Invitations';
-    if (pathname.startsWith('/admin/users')) return 'Manage Users';
-    if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
-    if (pathname.startsWith('/admin/ai/global-knowledge')) return 'Global Knowledge';
-    if (pathname.startsWith('/admin/ai/widget')) return 'Widget';
-    if (pathname.startsWith('/admin/ai/models')) return 'Models';
-    if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
-    if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
-    if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
-    if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
-    if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
-    if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
-    if (pathname === '/admin/workflows') return 'Manage Workflows';
-    if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
-    if (pathname === '/admin/settings/analytics') return 'Analytics';
-    if (pathname.startsWith('/admin/settings')) return 'System Settings';
-    if (pathname === '/app') return 'Dashboard';
-    if (pathname.startsWith('/app/assistant')) return 'Assistant';
-    if (pathname.startsWith('/app/properties')) return 'Properties';
-    if (pathname.startsWith('/app/reports')) return 'Reports';
-    if (pathname.startsWith('/app/profile')) return 'Profile';
-    if (pathname === '/app/settings') return 'Organization Dashboard';
-    if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
-    if (pathname.startsWith('/app/agents')) return 'Agents';
-    if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
-    if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
-    if (pathname.startsWith('/demos')) return 'Demos';
-    return isAdmin ? 'Admin Dashboard' : '';
-  });
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const isAgentsActive = pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
-    return {
-      workspace: true,
-      businessHub: false,
-      clients: false,
-      companies: pathname.startsWith('/admin/companies'),
-      superAdmins: pathname.startsWith('/admin/super-admins'),
-      ai: true,
-      agents: isAgentsActive,
-      workflows: false,
-      users: false,
-      settings: pathname.startsWith('/admin/settings'),
-      reports: false,
-      organization: false,
-      arcade: false,
-      properties: false,
-      demos: false
-    };
-  });
+  const pathnameActiveItem = getActiveItemFromPathname(pathname);
+  const [manualActiveItem, setActiveItem] = useState(pathnameActiveItem);
+  const activeItem = pathnameActiveItem || manualActiveItem;
+  const defaultOpenSections = getDefaultOpenSections(pathname);
+  const [sectionOverrides, setSectionOverrides] = useState<Record<string, boolean>>({});
+  const openSections = { ...defaultOpenSections, ...sectionOverrides };
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setSectionOverrides(prev => ({ ...prev, [section]: !openSections[section] }));
   };
-
-  useEffect(() => {
-    if (pathname === '/admin') setActiveItem('Admin Dashboard');
-    else if (pathname.startsWith('/admin/companies')) setActiveItem('Companies');
-    else if (pathname.startsWith('/admin/super-admins')) setActiveItem('System Admins');
-    else if (pathname === '/admin/users/invite') setActiveItem('Invitations');
-    else if (pathname.startsWith('/admin/users')) setActiveItem('Manage Users');
-    else if (pathname.startsWith('/admin/ai/system-prompt')) setActiveItem('System Prompt');
-    else if (pathname.startsWith('/admin/ai/global-knowledge')) setActiveItem('Global Knowledge');
-    else if (pathname.startsWith('/admin/ai/widget')) setActiveItem('Widget');
-    else if (pathname.startsWith('/admin/ai/models')) setActiveItem('Models');
-    else if (pathname.startsWith('/admin/ai/chat-logs')) setActiveItem('Chat Logs');
-    else if (pathname.startsWith('/admin/ai/tools')) setActiveItem('Connectors');
-    else if (pathname.startsWith('/admin/ai/rules')) setActiveItem('Rules');
-    else if (pathname.startsWith('/admin/agents')) setActiveItem('Manage Agents');
-    else if (pathname.startsWith('/admin/workflows/schedules')) setActiveItem('Schedules');
-    else if (pathname.startsWith('/admin/workflows/logs')) setActiveItem('Workflow Logs');
-    else if (pathname === '/admin/workflows') setActiveItem('Manage Workflows');
-    else if (pathname.startsWith('/admin/ai/costs')) setActiveItem('Running Costs');
-    else if (pathname === '/admin/settings/analytics') setActiveItem('Analytics');
-    else if (pathname.startsWith('/admin/settings')) setActiveItem('System Settings');
-    else if (pathname.startsWith('/app/reports')) setActiveItem('Reports');
-    else if (pathname === '/app/settings') setActiveItem('Organization Dashboard');
-    else if (pathname.startsWith('/app/settings/team')) setActiveItem('Organization Team');
-    else if (pathname.startsWith('/app/agents')) setActiveItem('Agents');
-    else if (pathname.startsWith('/app/arcade/ronins-run')) setActiveItem('RoninsRun');
-    else if (pathname.startsWith('/app/ai/rules')) setActiveItem('AIRules');
-    else if (pathname.startsWith('/demos')) setActiveItem('Demos');
-    else if (pathname === '/app') setActiveItem('Dashboard');
-    else if (pathname.startsWith('/app/assistant')) setActiveItem('Assistant');
-    else if (pathname.startsWith('/app/properties')) setActiveItem('Properties');
-    else if (pathname.startsWith('/app/profile')) setActiveItem('Profile');
-
-    // Auto-expand sidebar sections based on active pathname
-    const isAgentsActive = pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
-    if (isAgentsActive) {
-      setOpenSections(prev => ({ ...prev, agents: true }));
-    }
-    if (pathname.startsWith('/admin/companies')) {
-      setOpenSections(prev => ({ ...prev, companies: true }));
-    }
-    if (pathname.startsWith('/admin/super-admins')) {
-      setOpenSections(prev => ({ ...prev, superAdmins: true }));
-    }
-    if (pathname.startsWith('/admin/settings')) {
-      setOpenSections(prev => ({ ...prev, settings: true }));
-    }
-  }, [pathname]);
 
   return (
     <AnimatePresence mode="wait">
@@ -302,7 +256,7 @@ export default function SidebarNavigation() {
           <div className="flex items-center justify-between px-5 pt-8 pb-5">
             <Link href="/" className="flex items-center gap-3 group">
               {activeLogo ? (
-                <img src={activeLogo} alt={settings.platformName} className="h-8 object-contain" />
+                <Image src={activeLogo} alt={settings.platformName} width={128} height={32} unoptimized className="h-8 w-auto object-contain" />
               ) : (
                 <div className="w-[30px] h-[30px] rounded-[8px] bg-card border border-border-dim flex items-center justify-center relative shadow-sm">
                   <div className="w-[18px] h-[18px] text-brand flex items-center justify-center">
@@ -514,7 +468,7 @@ export default function SidebarNavigation() {
                       </NavItem>
                     )}
 
-                    {(settings as any).diagnosticRoutingEnabled && (
+                    {settings.diagnosticRoutingEnabled && (
                       <NavItem
                         icon={Gamepad2}
                         label="Arcade"

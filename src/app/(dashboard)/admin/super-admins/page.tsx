@@ -3,11 +3,12 @@
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import Image from "next/image";
+import type { FormEvent } from "react";
 import { 
   Users, 
   Plus, 
   Search, 
-  MoreVertical,
   ShieldCheck,
   User,
   Trash2,
@@ -17,8 +18,19 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
+
+type SuperAdminFormData = {
+  name: string;
+  email: string;
+  role: "SUPER_ADMIN";
+  image: string;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function ManageSuperAdminsPage() {
   const router = useRouter();
@@ -34,25 +46,24 @@ export default function ManageSuperAdminsPage() {
   const pendingInvites = useQuery(api.invites.getPendingInvites, isSuperAdmin ? {} : "skip") || [];
   const deleteUser = useMutation(api.users.deleteUser);
   const revokeInvite = useMutation(api.invites.revokeInvite);
-  const addUser = useMutation(api.users.addUser);
   const updateUser = useMutation(api.users.updateUser);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
+  const [formData, setFormData] = useState<SuperAdminFormData>({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const filteredUsers = paginatedUsers.filter((u: any) => 
-    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = paginatedUsers.filter((u) =>
+    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredInvites = pendingInvites.filter((inv: any) => 
+  const filteredInvites = pendingInvites.filter((inv) =>
     inv.role === "SUPER_ADMIN" &&
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -73,32 +84,22 @@ export default function ManageSuperAdminsPage() {
     return <div className="p-8 text-secondary">Unauthorized area.</div>;
   }
 
-  const handleOpenAdd = () => {
-    setFormData({ name: "", email: "", role: "SUPER_ADMIN", image: "" });
-    setEditingUser(null);
-    setSubmitError("");
-    setIsAddModalOpen(true);
-  };
-
-  const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, role: "SUPER_ADMIN", image: user.image || "" });
+  const handleOpenEdit = (user: Doc<"users">) => {
+    setFormData({ name: user.name ?? "", email: user.email ?? "", role: "SUPER_ADMIN", image: user.image || "" });
     setEditingUser(user);
     setSubmitError("");
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!editingUser) return;
     setIsSubmitting(true);
     try {
-      if (editingUser) {
-        await updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined });
-      } else {
-        await addUser({ ...formData, role: "SUPER_ADMIN", companyId: undefined });
-      }
+      await updateUser({ id: editingUser._id, ...formData, role: "SUPER_ADMIN", companyId: undefined });
       setIsAddModalOpen(false);
-    } catch (err: any) {
-      setSubmitError(err.message || "Operation failed.");
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err, "Operation failed."));
     } finally {
       setIsSubmitting(false);
     }
@@ -110,8 +111,8 @@ export default function ManageSuperAdminsPage() {
       try {
         await deleteUser({ id: deletingUser._id });
         setDeletingUser(null);
-      } catch (err: any) {
-        setSubmitError(err.message || "Failed to delete user.");
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, "Failed to delete user."));
       } finally {
         setIsSubmitting(false);
       }
@@ -124,8 +125,8 @@ export default function ManageSuperAdminsPage() {
       try {
         await revokeInvite({ id: deletingInvite._id });
         setDeletingInvite(null);
-      } catch (err: any) {
-        setSubmitError(err.message || "Failed to revoke invite.");
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, "Failed to revoke invite."));
       } finally {
         setIsSubmitting(false);
       }
@@ -188,7 +189,7 @@ export default function ManageSuperAdminsPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredInvites.map((inv: any) => (
+                    {filteredInvites.map((inv) => (
                         <motion.tr 
                           key={`inv-${inv._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -227,7 +228,7 @@ export default function ManageSuperAdminsPage() {
                         </motion.tr>
                     ))}
                     
-                    {filteredUsers.map((item: any) => (
+                    {filteredUsers.map((item) => (
                         <motion.tr 
                           key={`user-${item._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -238,9 +239,12 @@ export default function ManageSuperAdminsPage() {
                         >
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-3">
-                              <img 
-                                src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name}`} 
-                                alt={item.name} 
+                              <Image
+                                src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name ?? item.email ?? item._id}`}
+                                alt={item.name ?? item.email ?? "Super admin"}
+                                width={32}
+                                height={32}
+                                unoptimized
                                 className="w-8 h-8 rounded-full bg-card border border-border-dim"
                               />
                               <div>

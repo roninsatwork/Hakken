@@ -1,7 +1,35 @@
-import { internalMutation, internalAction, mutation, action } from "./_generated/server";
+import { internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { computeCostFromMap } from "./analytics";
+import { buildModelCostContext, computeCostFromMap } from "./analytics";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+
+type SystemAgentId = "system_assistant";
+type SnapshotInteraction = {
+  userId?: Id<"users">;
+  widgetId?: Id<"widgets">;
+  companyId?: Id<"companies">;
+  agentId?: Id<"agents"> | SystemAgentId;
+  inputTokens: number;
+  outputTokens: number;
+  modelUsed: string;
+};
+type AgentLeader = { id: string; name: string; avatar: string; cost: number; interactions: number };
+type UserLeader = { id: string; name: string; image: string; email: string; companyName: string; cost: number; messages: number };
+type ModelMetric = { model: string; cost: number; calls: number };
+type CompanyAggregate = {
+  messages: number;
+  inTokens: number;
+  outTokens: number;
+  costGBP: number;
+  activeUsers: Set<string>;
+  topAgents: Map<string, AgentLeader>;
+  topUsers: Map<string, UserLeader>;
+  modelMetrics: Map<string, ModelMetric>;
+};
+type UserAggregate = { messages: number; inTokens: number; outTokens: number; costGBP: number };
+
+const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
 
 export const generateDailySnapshots = internalMutation({
   args: { 
@@ -41,9 +69,7 @@ export const generateDailySnapshots = internalMutation({
     }
 
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
 
     // Fetch all interaction data for the 24h window
     const rawMessages = await ctx.db.query("messages")
@@ -82,12 +108,12 @@ export const generateDailySnapshots = internalMutation({
     const agents = await ctx.db.query("agents").take(10000);
     const agentMap = new Map(agents.map(a => [a._id, a]));
 
-    const unifiedInteractions = [
+    const unifiedInteractions: SnapshotInteraction[] = [
        ...rawMessages.map(m => ({
           userId: threadUserMap.get(m.threadId),
           widgetId: threadWidgetMap.get(m.threadId),
           companyId: undefined, // Resolved below
-          agentId: threadAgentMap.get(m.threadId) || "system_assistant",
+          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
@@ -109,11 +135,11 @@ export const generateDailySnapshots = internalMutation({
     const globalTopUsers = new Map<string, { id: string, name: string, image: string, email: string, companyName: string, cost: number, messages: number }>();
     const globalModelMetrics = new Map<string, { model: string, cost: number, calls: number }>();
 
-    const companyAggregates = new Map<string, any>(); // companyId -> metrics
-    const userAggregates = new Map<string, any>(); // userId -> metrics
+    const companyAggregates = new Map<Id<"companies">, CompanyAggregate>(); // companyId -> metrics
+    const userAggregates = new Map<Id<"users">, UserAggregate>(); // userId -> metrics
 
     // Build the "Widget User" fallback leader profile
-    const widgetUserLeader = {
+    const widgetUserLeader: UserLeader = {
         id: "WIDGET_USER_GROUP",
         name: "Widget User",
         image: "https://api.dicebear.com/7.x/shapes/svg?seed=WidgetUser",
@@ -149,7 +175,7 @@ export const generateDailySnapshots = internalMutation({
            if (!ga) {
                ga = msg.agentId === "system_assistant" 
                   ? { id: "system_assistant", name: "Platform Assistant", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 }
-                   : { id: msg.agentId as string, name: agentMap.get(msg.agentId as any)?.name || "Unknown", avatar: agentMap.get(msg.agentId as any)?.avatar || "", cost: 0, interactions: 0 };
+                   : { id: msg.agentId, name: agentMap.get(msg.agentId)?.name || "Unknown", avatar: agentMap.get(msg.agentId)?.avatar || "", cost: 0, interactions: 0 };
                globalTopAgents.set(msg.agentId, ga);
            }
            ga.cost += costGBP;
@@ -186,7 +212,7 @@ export const generateDailySnapshots = internalMutation({
        if (activeCompanyId) {
            let cAgg = companyAggregates.get(activeCompanyId);
            if (!cAgg) {
-               cAgg = { messages: 0, inTokens: 0, outTokens: 0, costGBP: 0, activeUsers: new Set<string>(), topAgents: new Map(), topUsers: new Map(), modelMetrics: new Map<string, { model: string, cost: number, calls: number }>() };
+               cAgg = { messages: 0, inTokens: 0, outTokens: 0, costGBP: 0, activeUsers: new Set<string>(), topAgents: new Map(), topUsers: new Map(), modelMetrics: new Map<string, ModelMetric>() };
                companyAggregates.set(activeCompanyId, cAgg);
            }
            cAgg.messages++;
@@ -205,7 +231,7 @@ export const generateDailySnapshots = internalMutation({
                if (!ca) {
                   ca = msg.agentId === "system_assistant" 
                      ? { id: "system_assistant", name: "Platform Assistant", avatar: "", cost: 0, interactions: 0 }
-                     : { id: msg.agentId as string, name: agentMap.get(msg.agentId as any)?.name || "Unknown", avatar: "", cost: 0, interactions: 0 };
+                     : { id: msg.agentId, name: agentMap.get(msg.agentId)?.name || "Unknown", avatar: "", cost: 0, interactions: 0 };
                   cAgg.topAgents.set(msg.agentId, ca);
                }
                ca.cost += costGBP;
@@ -271,7 +297,7 @@ export const generateDailySnapshots = internalMutation({
         await ctx.db.insert("analyticsDailySnapshots", {
             date: dateString,
             type: "company",
-            companyId: compId as any,
+            companyId: compId,
             metrics: {
                 totalMessages: cAgg.messages,
                 totalInputTokens: cAgg.inTokens,
@@ -282,8 +308,8 @@ export const generateDailySnapshots = internalMutation({
             uniqueUserIds: Array.from(cAgg.activeUsers),
             modelMetrics: Array.from(cAgg.modelMetrics.values()),
             leaderboards: {
-                topAgents: Array.from(cAgg.topAgents.values() as Iterable<any>).sort((a,b) => b.interactions - a.interactions).slice(0,10),
-                topUsers: Array.from(cAgg.topUsers.values() as Iterable<any>).sort((a,b) => b.cost - a.cost).slice(0,10)
+                topAgents: Array.from(cAgg.topAgents.values()).sort((a,b) => b.interactions - a.interactions).slice(0,10),
+                topUsers: Array.from(cAgg.topUsers.values()).sort((a,b) => b.cost - a.cost).slice(0,10)
             }
         });
     }
@@ -293,7 +319,7 @@ export const generateDailySnapshots = internalMutation({
         await ctx.db.insert("analyticsDailySnapshots", {
             date: dateString,
             type: "user",
-            userId: uId as any,
+            userId: uId,
             metrics: {
                 totalMessages: uAgg.messages,
                 totalInputTokens: uAgg.inTokens,

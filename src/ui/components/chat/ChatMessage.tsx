@@ -2,10 +2,11 @@
 
 import { motion } from "framer-motion";
 import { Sparkles, User } from "lucide-react";
-import { Doc } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SonaeMarkdown } from "./SonaeMarkdown";
+import Image from "next/image";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -51,7 +52,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       {!isAssistant && (
         <div className="w-8 h-8 rounded-[10px] bg-foreground/10 border border-foreground/30 flex-shrink-0 flex items-center justify-center backdrop-blur-md mt-1 shadow-sm overflow-hidden">
           {user?.image ? (
-            <img src={user.image} alt={user.name || "User"} className="w-full h-full object-cover" />
+            <Image src={user.image} alt={user.name || "User"} width={32} height={32} unoptimized className="w-full h-full object-cover" />
           ) : (
             <User className="w-4 h-4 text-foreground/80" />
           )}

@@ -2,11 +2,11 @@
 
 import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, User, Mail, ShieldCheck, Clock, ShieldAlert, LineChart, Search, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
+import Image from "next/image";
+import type { Id } from "@/convex/_generated/dataModel";
+import { ArrowLeft, User, ShieldCheck, ShieldAlert, Search, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { motion } from "framer-motion";
 import { useState } from "react";
 
 export default function UserProfilePage() {
@@ -110,7 +110,14 @@ export default function UserProfilePage() {
             <label className="text-[11px] font-medium text-secondary uppercase tracking-widest">Profile Photo</label>
             <div className="flex items-center gap-4 w-full h-full">
               {user.image ? (
-                <img src={user.image} alt={user.name} className="w-11 h-11 rounded-full object-cover border border-border-dim shrink-0 shadow-sm" />
+                <Image
+                  src={user.image}
+                  alt={user.name ?? user.email ?? "User avatar"}
+                  width={44}
+                  height={44}
+                  unoptimized
+                  className="w-11 h-11 rounded-full object-cover border border-border-dim shrink-0 shadow-sm"
+                />
               ) : (
                 <div className="w-11 h-11 rounded-full border border-dashed border-border-dim flex items-center justify-center bg-foreground/5 shrink-0">
                   <User className="w-5 h-5 text-muted" />
@@ -196,7 +203,7 @@ export default function UserProfilePage() {
                     </tr>
                   )}
 
-                  {logins.map((login, idx) => (
+                  {logins.map((login) => (
                     <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -277,7 +284,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
     );
   }
 
-  const filteredThreads = costs.threads.filter((t: any) => 
+  const filteredThreads = costs.threads.filter((t) =>
     t.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -342,7 +349,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                   </td>
                 </tr>
               ) : (
-                paginatedThreads.map((thread: any) => (
+                paginatedThreads.map((thread) => (
                   <tr key={thread.threadId} className="group hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-4">
                       <span className="text-[13px] font-medium text-foreground">{thread.title}</span>

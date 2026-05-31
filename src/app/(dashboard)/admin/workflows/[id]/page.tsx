@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, use } from "react";
+import { useCallback, useState, use } from "react";
+import type { DragEvent } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -14,52 +16,98 @@ import {
   addEdge,
   Connection,
   Edge,
+  NodeProps,
   NodeTypes
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AgentNode } from "@/src/ui/components/workflows/AgentNode";
+import { AgentNode, type AgentNodeType } from "@/src/ui/components/workflows/AgentNode";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AgentEditorModal } from "@/src/ui/components/workflows/AgentEditorModal";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { ArrowLeft, Bot, Play, Save, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Play, Save, Loader2, Plus } from "lucide-react";
 import { GenericNode } from "@/src/ui/components/workflows/GenericNode";
 import { WorkflowSidebar } from "@/src/ui/components/workflows/WorkflowSidebar";
 import { ConfigDrawer } from "@/src/ui/components/workflows/ConfigDrawer";
+import type {
+  UpdatableWorkflowNodeData,
+  WorkflowCanvasEdge,
+  WorkflowCanvasNode,
+  WorkflowNodeType,
+  WorkflowTriggerType,
+} from "@/src/ui/components/workflows/types";
 
-const nodeTypes: NodeTypes = {
-  agentNode: AgentNode as any,
-  triggerNode: GenericNode as any,
-  actionNode: GenericNode as any,
-  logicNode: GenericNode as any,
-  codeNode: GenericNode as any,
-  databaseNode: GenericNode as any,
-  waitNode: GenericNode as any,
-  approvalNode: GenericNode as any,
-  iteratorNode: GenericNode as any,
-  mergeNode: GenericNode as any,
-  emailNode: GenericNode as any,
+type WorkflowDoc = Doc<"workflows">;
+
+type FlowCanvasWithProviderProps = {
+  workflow: WorkflowDoc;
+  isSaving: boolean;
+  isRunning: boolean;
+  handleSave: (nodes: WorkflowCanvasNode[], edges: WorkflowCanvasEdge[]) => Promise<void>;
+  handleManualRun: () => Promise<void>;
 };
 
-function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, handleManualRun }: any) {
+function parseWorkflowNodesJson(serialized?: string): WorkflowCanvasNode[] {
+  if (!serialized || serialized === "[]") return [];
+  try {
+    const parsed: unknown = JSON.parse(serialized);
+    return Array.isArray(parsed) ? (parsed as WorkflowCanvasNode[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseWorkflowEdgesJson(serialized?: string): WorkflowCanvasEdge[] {
+  if (!serialized || serialized === "[]") return [];
+  try {
+    const parsed: unknown = JSON.parse(serialized);
+    return Array.isArray(parsed) ? (parsed as WorkflowCanvasEdge[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function GenericWorkflowNode({ data, type }: NodeProps<WorkflowCanvasNode>) {
+  return <GenericNode data={data} type={(type || "actionNode") as WorkflowNodeType} />;
+}
+
+function AgentWorkflowNode(props: NodeProps<WorkflowCanvasNode>) {
+  return <AgentNode {...(props as unknown as NodeProps<AgentNodeType>)} />;
+}
+
+const nodeTypes: NodeTypes = {
+  agentNode: AgentWorkflowNode,
+  triggerNode: GenericWorkflowNode,
+  actionNode: GenericWorkflowNode,
+  logicNode: GenericWorkflowNode,
+  codeNode: GenericWorkflowNode,
+  databaseNode: GenericWorkflowNode,
+  waitNode: GenericWorkflowNode,
+  approvalNode: GenericWorkflowNode,
+  iteratorNode: GenericWorkflowNode,
+  mergeNode: GenericWorkflowNode,
+  emailNode: GenericWorkflowNode,
+};
+
+function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, handleManualRun }: FlowCanvasWithProviderProps) {
   const t = useTranslations('admin.workflows.designer');
   const deleteAgent = useMutation(api.agents.deleteAgent);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<any>(workflow.nodes !== "[]" ? JSON.parse(workflow.nodes) : []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<any>(workflow.edges !== "[]" ? JSON.parse(workflow.edges) : []);
+  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowCanvasNode>(parseWorkflowNodesJson(workflow.nodes));
+  const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowCanvasEdge>(parseWorkflowEdgesJson(workflow.edges));
   const [isManualRunModalOpen, setIsManualRunModalOpen] = useState(false);
-  const [editingNode, setEditingNode] = useState<any>(null);
+  const [editingNode, setEditingNode] = useState<WorkflowCanvasNode | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const { screenToFlowPosition } = useReactFlow();
 
-  const onDragOver = useCallback((event: any) => {
+  const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
   const onDrop = useCallback(
-    (event: any) => {
+    (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
 
       const type = event.dataTransfer.getData('application/reactflow');
@@ -74,9 +122,9 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
         y: event.clientY,
       });
 
-      const newNode = {
+      const newNode: WorkflowCanvasNode = {
         id: `${type}-${Date.now()}`,
-        type,
+        type: type as WorkflowNodeType,
         position,
         data: { label },
       };
@@ -92,7 +140,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
   );
 
   const onNodesDelete = useCallback(
-    (deletedNodes: any[]) => {
+    (deletedNodes: WorkflowCanvasNode[]) => {
       deletedNodes.forEach((node) => {
         if (node.type === 'agentNode' && node.data?.isInline && node.data?._agentId) {
           deleteAgent({ id: node.data._agentId }).catch(console.error);
@@ -102,7 +150,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
     [deleteAgent]
   );
 
-  const handleUpdateNodeData = (nodeId: string, newData: any) => {
+  const handleUpdateNodeData = (nodeId: string, newData: UpdatableWorkflowNodeData) => {
     setNodes(nds => nds.map(n => {
       if (n.id === nodeId) {
         return { ...n, data: newData };
@@ -144,7 +192,7 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
               ) : (
                 <Play className="w-4 h-4 fill-current" />
               )}
-              <span>{isRunning ? t('header.dispatching' as any) : t('header.manualRun')}</span>
+              <span>{isRunning ? t('header.dispatching') : t('header.manualRun')}</span>
            </button>
         </div>
       </div>
@@ -231,29 +279,30 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, handleSave, han
 
 export default function WorkflowCanvas({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const workflowId = id as Id<"workflows">;
   const t = useTranslations('admin.workflows.designer');
 
-  const workflow = useQuery((api as any).workflows.get, { id });
-  const updateWorkflow = useMutation((api as any).workflows.updateWorkflow);
-  const runWorkflow = useMutation((api as any).workflows.triggerManualRun);
+  const workflow = useQuery(api.workflows.get, { id: workflowId });
+  const updateWorkflow = useMutation(api.workflows.updateWorkflow);
+  const runWorkflow = useMutation(api.workflows.triggerManualRun);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
-  const handleSave = async (nodes: any, edges: any) => {
+  const handleSave = async (nodes: WorkflowCanvasNode[], edges: WorkflowCanvasEdge[]) => {
     if (!workflow) return;
     setIsSaving(true);
     
     // Phase 5: Graph Validation (DFS Cycle Detection)
     const hasCycle = () => {
-      const graph = new Map();
-      nodes.forEach((n: any) => graph.set(n.id, []));
-      edges.forEach((e: any) => {
-        if (graph.has(e.source)) graph.get(e.source).push(e.target);
+      const graph = new Map<string, string[]>();
+      nodes.forEach((n) => graph.set(n.id, []));
+      edges.forEach((e) => {
+        graph.get(e.source)?.push(e.target);
       });
 
-      const visited = new Set();
-      const recStack = new Set();
+      const visited = new Set<string>();
+      const recStack = new Set<string>();
 
       const isCyclic = (nodeId: string) => {
         if (recStack.has(nodeId)) return true;
@@ -284,12 +333,12 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
     }
 
     try {
-      const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
-      const triggerType = triggerNode?.data?._triggerType || 'MANUAL';
+      const triggerNode = nodes.find((n) => n.type === 'triggerNode');
+      const triggerType: WorkflowTriggerType = triggerNode?.data?._triggerType || 'MANUAL';
 
       await updateWorkflow({
-        id: workflow._id as any,
-        triggerType: triggerType,
+        id: workflow._id,
+        triggerType,
         nodes: JSON.stringify(nodes),
         edges: JSON.stringify(edges)
       });
@@ -305,11 +354,11 @@ export default function WorkflowCanvas({ params }: { params: Promise<{ id: strin
     if (!workflow) return;
     setIsRunning(true);
     try {
-      await runWorkflow({ id: workflow._id as any });
+      await runWorkflow({ id: workflow._id });
       setIsRunning(false);
     } catch (e) {
       console.error(e);
-      alert(t('alerts.dispatchFailed' as any));
+      alert(t('alerts.dispatchFailed'));
       setIsRunning(false);
     }
   };

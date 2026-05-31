@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Search, Loader2, Link2, Settings2, Activity, CheckCircle2, XCircle } from "lucide-react";
+import { Search, Loader2, Link2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import type { FormEvent } from "react";
+import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function PropertiesSearchPage() {
@@ -20,7 +21,7 @@ export default function PropertiesSearchPage() {
     setBaseRightmoveUrl(val);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
     const trimmedUrl = baseRightmoveUrl.trim();
@@ -42,8 +43,8 @@ export default function PropertiesSearchPage() {
 
       setMessage(t('properties.search.searchSuccess'));
       setBaseRightmoveUrl("");
-    } catch (err: any) {
-      setMessage(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setMessage(`Error: ${err instanceof Error ? err.message : t('properties.search.urlError')}`);
     } finally {
       setIsSubmitting(false);
     }

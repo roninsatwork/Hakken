@@ -2,13 +2,18 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import type { ChangeEvent, DragEvent } from "react";
 import { useParams } from "next/navigation";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Library, CheckCircle, Upload, AlertTriangle, UploadCloud, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function AgentKnowledgePage() {
   const t = useTranslations("admin.agents.details.knowledge");
@@ -16,7 +21,7 @@ export default function AgentKnowledgePage() {
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
-  const availableKnowledge = useQuery(api.knowledge.getDocuments, { agentId }) || [];
+  const availableKnowledge = (useQuery(api.knowledge.getDocuments, { agentId }) || []) as Doc<"knowledgeDocuments">[];
 
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
@@ -26,7 +31,7 @@ export default function AgentKnowledgePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [errorDetails, setErrorDetails] = useState("");
   const [dragActive, setDragActive] = useState(false);
-  const [activeDeletion, setActiveDeletion] = useState<string | null>(null);
+  const [activeDeletion, setActiveDeletion] = useState<Id<"knowledgeDocuments"> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File) => {
@@ -45,7 +50,7 @@ export default function AgentKnowledgePage() {
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const { storageId } = await result.json();
+      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
 
       await saveDocument({
         storageId,
@@ -55,15 +60,15 @@ export default function AgentKnowledgePage() {
       });
 
       setIsModalOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorDetails(err.message || t("errors.uploadFailed"));
+      setErrorDetails(getErrorMessage(err, t("errors.uploadFailed")));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -73,7 +78,7 @@ export default function AgentKnowledgePage() {
     }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = async (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -82,7 +87,7 @@ export default function AgentKnowledgePage() {
     }
   };
 
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       await processFile(e.target.files[0]);
@@ -125,7 +130,7 @@ export default function AgentKnowledgePage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {availableKnowledge.map((doc: any) => {
+            {availableKnowledge.map((doc) => {
               return (
                 <div key={doc._id} className="flex items-center gap-4 px-5 py-4 border rounded-[12px] bg-black/20 border-border-dim w-full group">
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
@@ -156,7 +161,8 @@ export default function AgentKnowledgePage() {
                           setActiveDeletion(doc._id);
                           try {
                             await deleteDocument({ documentId: doc._id });
-                          } catch (err: any) {
+                          } catch (err: unknown) {
+                            console.error(err);
                             alert(t("errors.deleteFailed"));
                           } finally {
                             setActiveDeletion(null);

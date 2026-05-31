@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   Palette,
-  CreditCard,
-  Upload,
   Loader2,
   Settings as SettingsIcon,
   Save,
@@ -24,16 +25,85 @@ import {
   AlertTriangle,
   Play,
   Square,
-  Calendar,
   Settings2,
   Clock
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
-const SettingBlock = ({ title, sub, children }: any) => (
+type SettingBlockProps = {
+  title: string;
+  sub: string;
+  children: ReactNode;
+};
+
+type SettingsTab = "identity" | "appearance" | "security" | "audit" | "options" | "purges";
+
+type PiiConfig = {
+  enabled?: boolean;
+  maskEmails?: boolean;
+  maskCreditCards?: boolean;
+  maskPhones?: boolean;
+  maskNinos?: boolean;
+};
+
+type AuditConfig = {
+  enabled: boolean;
+  retentionDays: number;
+  dayOfMonth: number;
+  hourOfDay: number;
+  nextRunTimestamp?: number;
+};
+
+type SystemSettingsFormData = Partial<Doc<"systemSettings">> & {
+  [key: string]: string | number | boolean | undefined;
+};
+
+type PurgePipelineKey = "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs";
+
+type PurgePipelineConfig = {
+  enabled?: boolean;
+  retentionDays?: number;
+  interval?: "Hourly" | "Daily" | "Weekly" | "Monthly";
+  hourUtc?: number;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  nextRunTimestamp?: number;
+  isCustom?: boolean;
+};
+
+type PurgeConfigMap = Record<PurgePipelineKey, PurgePipelineConfig>;
+
+type PurgeHistoryRow = Doc<"purgeHistory"> & {
+  actorName?: string;
+};
+
+type AuditLogRow = {
+  _id: string | Id<"auditLogs">;
+  actionType: string;
+  actorName?: string;
+  entityId?: string;
+  entityType?: string;
+  actorId?: Id<"users">;
+  timestamp: number;
+  metadata?: string;
+};
+
+const purgePipelineKeys: PurgePipelineKey[] = ["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"];
+const mockAuditTimestampBase = 1735689600000;
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return value === "identity" ||
+    value === "appearance" ||
+    value === "security" ||
+    value === "audit" ||
+    value === "options" ||
+    value === "purges";
+}
+
+const SettingBlock = ({ title, sub, children }: SettingBlockProps) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
@@ -78,7 +148,6 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
 
 export default function SystemSettingsPage() {
   const t = useTranslations('admin.settings');
-  const tCommon = useTranslations('common');
   const locale = useLocale();
 
   const getOrdinalSuffix = (day: number) => {
@@ -105,9 +174,15 @@ export default function SystemSettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Local state form
-  const [formData, setFormData] = useState<any>({});
-  const [piiData, setPiiData] = useState<any>({});
-  const [auditData, setAuditData] = useState<any>({});
+  const [formData, setFormData] = useState<SystemSettingsFormData>({});
+  const [piiData, setPiiData] = useState<PiiConfig>({});
+  const [auditData, setAuditData] = useState<AuditConfig>({
+    enabled: false,
+    retentionDays: 30,
+    dayOfMonth: 1,
+    hourOfDay: 2,
+    nextRunTimestamp: 0,
+  });
 
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
@@ -119,24 +194,24 @@ export default function SystemSettingsPage() {
   const recentPurges = useQuery(api.purges.getRecentPurges);
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [configModalPipeline, setConfigModalPipeline] = useState<string | null>(null);
-  const [configModalData, setConfigModalData] = useState<any>({});
+  const [configModalPipeline, setConfigModalPipeline] = useState<PurgePipelineKey | null>(null);
+  const [configModalData, setConfigModalData] = useState<PurgePipelineConfig>({});
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmModalPipeline, setConfirmModalPipeline] = useState<string | null>(null);
+  const [confirmModalPipeline, setConfirmModalPipeline] = useState<PurgePipelineKey | null>(null);
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [cancelModalHistoryId, setCancelModalHistoryId] = useState<string | null>(null);
-  const [cancelModalPipeline, setCancelModalPipeline] = useState<string | null>(null);
+  const [cancelModalHistoryId, setCancelModalHistoryId] = useState<Id<"purgeHistory"> | null>(null);
+  const [cancelModalPipeline, setCancelModalPipeline] = useState<PurgePipelineKey | null>(null);
   const [isCancelRunning, setIsCancelRunning] = useState(false);
 
   const [purgesCurrentPage, setPurgesCurrentPage] = useState(1);
   const [isManualRunning, setIsManualRunning] = useState(false);
-  const [modalSuccessMsg, setModalSuccessMsg] = useState("");
 
   const searchParams = useSearchParams();
-  const initTab = (searchParams.get("tab") as any) || "identity";
-  const [activeTab, setActiveTab] = useState<"identity" | "appearance" | "security" | "audit" | "options" | "purges">(initTab);
+  const requestedTab = searchParams.get("tab");
+  const initTab: SettingsTab = isSettingsTab(requestedTab) ? requestedTab : "identity";
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initTab);
 
   const router = useRouter();
 
@@ -147,14 +222,14 @@ export default function SystemSettingsPage() {
   }, [currentPiiConfig]);
 
   useEffect(() => {
-    const freshTab = searchParams.get("tab") as any;
+    const freshTab = searchParams.get("tab");
     if (freshTab && freshTab !== activeTab) {
-      setActiveTab(freshTab);
+      setActiveTab(isSettingsTab(freshTab) ? freshTab : "identity");
     }
-  }, [searchParams]);
+  }, [activeTab, searchParams]);
 
   // Optionally, update the URL instantly when clicking tabs
-  const handleTabChange = (tab: any) => {
+  const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
     router.replace(`/admin/settings?tab=${tab}`, { scroll: false });
   };
@@ -209,7 +284,9 @@ export default function SystemSettingsPage() {
       } else if (activeTab === "audit") {
         // Read-only feed, no state to save
       } else {
-        const { _id, _creationTime, ...payload } = formData;
+        const payload = { ...formData };
+        delete payload._id;
+        delete payload._creationTime;
         await updateSettings(payload);
       }
       setSaveSuccess(true);
@@ -240,10 +317,10 @@ export default function SystemSettingsPage() {
       // Instantly save to DB
       if (mode === "light") {
         await updateSettings({ logoUrlLight: storageId });
-        setFormData((s: any) => ({ ...s, logoUrlLight: storageId }));
+        setFormData((s) => ({ ...s, logoUrlLight: storageId }));
       } else {
         await updateSettings({ logoUrlDark: storageId });
-        setFormData((s: any) => ({ ...s, logoUrlDark: storageId }));
+        setFormData((s) => ({ ...s, logoUrlDark: storageId }));
       }
     } catch (err) {
       console.error("Upload failed", err);
@@ -284,14 +361,14 @@ export default function SystemSettingsPage() {
       </header>
 
       <div className="flex items-center gap-1 border-b border-border-dim/50 overflow-x-auto custom-scrollbar pb-px -mt-4">
-        {[
+        {([
           { id: 'identity', label: t('tabs.identity'), icon: Building2 },
           { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
           { id: 'security', label: t('tabs.security'), icon: ShieldCheck },
           { id: 'audit', label: t('tabs.audit'), icon: History },
           { id: 'purges', label: t('tabs.purges'), icon: Database },
           { id: 'options', label: t('tabs.options'), icon: SettingsIcon }
-        ].map(tab => {
+        ] satisfies { id: SettingsTab; label: string; icon: typeof SettingsIcon }[]).map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
@@ -332,7 +409,14 @@ export default function SystemSettingsPage() {
               <SettingBlock title={t('identity.logoLight')} sub={t('identity.logoLightSub')}>
                 <div className="w-full h-[120px] rounded-[16px] border-2 border-dashed border-border-dim/50 flex items-center justify-center relative overflow-hidden bg-white hover:bg-white/90 transition-colors group">
                   {formData.logoUrlLight ? (
-                    <img src={formData.logoUrlLight} className="max-w-[80%] max-h-[80%] object-contain mix-blend-multiply" alt="Light mode" />
+                    <Image
+                      src={formData.logoUrlLight}
+                      width={180}
+                      height={80}
+                      unoptimized
+                      className="max-w-[80%] max-h-[80%] object-contain mix-blend-multiply"
+                      alt="Light mode"
+                    />
                   ) : (
                     <ImageIcon className="w-8 h-8 text-black/20" />
                   )}
@@ -344,7 +428,14 @@ export default function SystemSettingsPage() {
               <SettingBlock title={t('identity.logoDark')} sub={t('identity.logoDarkSub')}>
                 <div className="w-full h-[120px] rounded-[16px] border-2 border-dashed border-border-dim/50 flex items-center justify-center relative overflow-hidden bg-black hover:bg-black/90 transition-colors group">
                   {formData.logoUrlDark ? (
-                    <img src={formData.logoUrlDark} className="max-w-[80%] max-h-[80%] object-contain" alt="Dark mode" />
+                    <Image
+                      src={formData.logoUrlDark}
+                      width={180}
+                      height={80}
+                      unoptimized
+                      className="max-w-[80%] max-h-[80%] object-contain"
+                      alt="Dark mode"
+                    />
                   ) : (
                     <ImageIcon className="w-8 h-8 text-white/20" />
                   )}
@@ -695,11 +786,12 @@ export default function SystemSettingsPage() {
                         <td colSpan={6} className="px-5 py-8 text-center"><Loader2 className="w-5 h-5 animate-spin text-brand mx-auto" /></td>
                       </tr>
                     ) : (
-                      ["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"].map(key => {
-                        const conf = purgeConfigs[key] || {};
+                      purgePipelineKeys.map((key) => {
+                        const configs = (purgeConfigs || {}) as Partial<PurgeConfigMap>;
+                        const conf = configs[key] || {};
                         const isEnabled = conf.enabled;
                         const runningLog = recentPurges?.find(
-                          (log: any) => log.pipelineKey === key && log.status === "RUNNING"
+                          (log) => log.pipelineKey === key && log.status === "RUNNING"
                         );
 
                         return (
@@ -812,7 +904,7 @@ export default function SystemSettingsPage() {
                           <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">{t('purges.history.table.empty')}</td>
                         </tr>
                       ) : (
-                        recentPurges.slice((purgesCurrentPage - 1) * 15, purgesCurrentPage * 15).map((log: any) => (
+                        (recentPurges as PurgeHistoryRow[]).slice((purgesCurrentPage - 1) * 15, purgesCurrentPage * 15).map((log) => (
                           <tr key={log._id} className="group hover:bg-foreground/[0.03] transition-colors">
                             <td className="px-5 py-4">
                               <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${log.pipelineKey}.title`)}</span>
@@ -896,7 +988,7 @@ export default function SystemSettingsPage() {
             <div className="flex flex-col gap-2 relative">
               <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.retention')}</span>
               <select
-                value={[30, 60, 90, 180, 365].includes(configModalData.retentionDays) ? configModalData.retentionDays : "custom"}
+                value={[30, 60, 90, 180, 365].includes(configModalData.retentionDays ?? 90) ? (configModalData.retentionDays ?? 90) : "custom"}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val === "custom") {
@@ -914,7 +1006,7 @@ export default function SystemSettingsPage() {
               </select>
             </div>
 
-            {(configModalData.isCustom || (![30, 60, 90, 180, 365].includes(configModalData.retentionDays) && configModalData.retentionDays > 0)) && (
+            {(configModalData.isCustom || (![30, 60, 90, 180, 365].includes(configModalData.retentionDays ?? 90) && (configModalData.retentionDays ?? 0) > 0)) && (
               <div className="flex flex-col gap-2 relative">
                 <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.customLabel')}</span>
                 <input
@@ -926,7 +1018,7 @@ export default function SystemSettingsPage() {
                     setConfigModalData({ ...configModalData, retentionDays: isNaN(parsed) ? 30 : parsed });
                   }}
                   onBlur={() => {
-                    if (configModalData.retentionDays < 30) {
+                    if ((configModalData.retentionDays ?? 30) < 30) {
                       setConfigModalData({ ...configModalData, retentionDays: 30 });
                     }
                   }}
@@ -940,7 +1032,7 @@ export default function SystemSettingsPage() {
               <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.interval')}</span>
               <select
                 value={configModalData.interval || "Daily"}
-                onChange={(e) => setConfigModalData({ ...configModalData, interval: e.target.value })}
+                onChange={(e) => setConfigModalData({ ...configModalData, interval: e.target.value as PurgePipelineConfig["interval"] })}
                 className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors appearance-none cursor-pointer"
               >
                 {['Hourly', 'Daily', 'Weekly', 'Monthly'].map(int => (
@@ -1016,7 +1108,7 @@ export default function SystemSettingsPage() {
               onClick={async () => {
                 if (configModalPipeline) {
                   const retentionDays = Math.max(30, configModalData.retentionDays || 30);
-                  const updated = { ...purgeConfigs, [configModalPipeline]: {
+                  const updated = { ...((purgeConfigs || {}) as Partial<PurgeConfigMap>), [configModalPipeline]: {
                     enabled: configModalData.enabled,
                     retentionDays,
                     interval: configModalData.interval,
@@ -1049,8 +1141,8 @@ export default function SystemSettingsPage() {
               <p className="text-[14px] text-rose-500 font-medium">
                 {confirmModalPipeline ? t('purges.modals.confirm.body', {
                   category: t(`purges.categories.${confirmModalPipeline}.title`),
-                  cutoffDate: new Date(Date.now() - (purgeConfigs?.[confirmModalPipeline]?.retentionDays || 90) * 24 * 60 * 60 * 1000).toLocaleDateString(),
-                  days: purgeConfigs?.[confirmModalPipeline]?.retentionDays || 90
+                  cutoffDate: new Date(Date.now() - (((purgeConfigs || {}) as Partial<PurgeConfigMap>)[confirmModalPipeline]?.retentionDays || 90) * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                  days: ((purgeConfigs || {}) as Partial<PurgeConfigMap>)[confirmModalPipeline]?.retentionDays || 90
                 }) : ""}
               </p>
               <p className="text-[13px] text-rose-500/80">
@@ -1072,7 +1164,7 @@ export default function SystemSettingsPage() {
                   setIsManualRunning(true);
                   try {
                     await manualPurgeMutation({ 
-                      pipelineKey: confirmModalPipeline as "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs"
+                      pipelineKey: confirmModalPipeline
                     });
                     setIsConfirmModalOpen(false);
                   } finally {
@@ -1123,9 +1215,7 @@ export default function SystemSettingsPage() {
                 if (cancelModalHistoryId) {
                   setIsCancelRunning(true);
                   try {
-                    await cancelPurgeMutation({ 
-                      historyId: cancelModalHistoryId as any
-                    });
+                    await cancelPurgeMutation({ historyId: cancelModalHistoryId });
                     setIsCancelModalOpen(false);
                   } catch (err) {
                     console.error("Failed to cancel active purge execution:", err);
@@ -1148,7 +1238,7 @@ export default function SystemSettingsPage() {
   );
 }
 
-function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
+function AuditLogsTable({ logs }: { logs: AuditLogRow[] | undefined }) {
   const router = useRouter();
   const t = useTranslations('admin.auditLogs');
   const common = useTranslations('common');
@@ -1161,13 +1251,13 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
   }
 
   // Mock data fallback if DB is empty
-  const activeLogs = logs.length > 0 ? logs : [
+  const activeLogs: AuditLogRow[] = logs.length > 0 ? logs : [
     {
       _id: "mock-log-1a2b3c",
       actionType: "UPDATE_COMPANY",
       actorName: "Anthony (SuperAdmin)",
       entityId: "comp_291039",
-      timestamp: Date.now() - 1000 * 60 * 5, // 5 mins ago
+      timestamp: mockAuditTimestampBase - 1000 * 60 * 5,
       metadata: "{\"field\":\"security_policy\",\"status\":\"enforced\"}"
     },
     {
@@ -1175,7 +1265,7 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
       actionType: "TOGGLE_PII",
       actorName: "System Subroutine",
       entityId: "system_global",
-      timestamp: Date.now() - 1000 * 60 * 120, // 2 hours ago
+      timestamp: mockAuditTimestampBase - 1000 * 60 * 120,
       metadata: "{\"rule\":\"maskCreditCards\",\"newState\":true}"
     },
     {
@@ -1183,7 +1273,7 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
       actionType: "DELETE_USER",
       actorName: "Anthony (SuperAdmin)",
       entityId: "usr_malicious_99",
-      timestamp: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+      timestamp: mockAuditTimestampBase - 1000 * 60 * 60 * 24,
       metadata: "{\"reason\":\"TOS Violation\",\"email\":\"spam@fake.com\"}"
     },
     {
@@ -1191,12 +1281,12 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
       actionType: "CREATE_INVITE",
       actorName: "Regional Admin",
       entityId: "inv_91823",
-      timestamp: Date.now() - 1000 * 60 * 60 * 48, // 2 days ago
+      timestamp: mockAuditTimestampBase - 1000 * 60 * 60 * 48,
       metadata: "{\"role\":\"USER\",\"companyId\":\"comp_812\"}"
     }
   ];
 
-  const filteredLogs = activeLogs.filter((l: any) =>
+  const filteredLogs = activeLogs.filter((l) =>
     l.actionType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (l.actorName || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -1249,7 +1339,7 @@ function AuditLogsTable({ logs }: { logs: any[] | undefined }) {
                 </td>
               </tr>
             ) : (
-              paginatedLogs.map((log: any) => (
+              paginatedLogs.map((log) => (
                 <tr
                   key={log._id}
                   onClick={() => router.push(`/admin/audit-logs/${log._id}`)}

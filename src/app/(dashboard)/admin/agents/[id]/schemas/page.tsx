@@ -3,7 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, use } from "react";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   Save,
   CheckCircle2,
@@ -45,7 +45,7 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (err: any) {
+    } catch {
       alert(t("errors.saveFailed"));
     } finally {
       setIsSaving(false);

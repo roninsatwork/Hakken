@@ -39,6 +39,7 @@ type SettingsType = {
   darkSuccess?: string;
   darkDestructive?: string;
   darkRing?: string;
+  diagnosticRoutingEnabled?: boolean;
 };
 
 const SystemSettingsContext = createContext<SettingsType | undefined>(undefined);

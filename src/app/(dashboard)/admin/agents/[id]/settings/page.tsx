@@ -2,9 +2,11 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import { useState, useEffect, useMemo, useRef } from "react";
+import type { DragEvent, FormEvent } from "react";
 import { useParams } from "next/navigation";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   Save,
   CheckCircle2,
@@ -17,19 +19,57 @@ import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
 
+type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
+
+type AgentSettingsFormData = {
+  name: string;
+  description: string;
+  avatar: string;
+  modelId: string;
+  thinkingMode: boolean;
+  reasoningEffort: ReasoningEffort;
+  allowInternetAccess: boolean;
+  isActive: boolean;
+  storageId?: Id<"_storage">;
+};
+
+const emptyFormData: AgentSettingsFormData = {
+  name: "",
+  description: "",
+  avatar: "",
+  modelId: "",
+  thinkingMode: false,
+  reasoningEffort: "MEDIUM",
+  allowInternetAccess: false,
+  isActive: true,
+};
+
+const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
-  const allModels = useQuery(api.aiModels.getModels) || [];
-  const activeModels = allModels.filter((m) => m.isEnabled);
+  const allModels = useQuery(api.aiModels.getModels);
+  const activeModels = useMemo(
+    () => ((allModels ?? []) as Doc<"aiModels">[]).filter((model) => model.isEnabled),
+    [allModels],
+  );
+  const defaultModelId = useMemo(
+    () => activeModels.find((model) => model.isDefault)?.modelId ?? "",
+    [activeModels],
+  );
 
   const updateAgent = useMutation(api.agents.updateAgent);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -38,25 +78,30 @@ export default function AgentOverviewPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
 
   useEffect(() => {
-    if (agent && Object.keys(formData).length === 0) {
-      setFormData({
-        name: agent.name || "",
-        description: agent.description || "",
-        avatar: agent.avatar || "",
-        modelId: agent.modelId || activeModels.find((m: any) => m.isDefault)?.modelId || "",
-        thinkingMode: agent.thinkingMode || false,
-        reasoningEffort: agent.reasoningEffort || "MEDIUM",
-        allowInternetAccess: agent.allowInternetAccess || false,
-        isActive: agent.isActive ?? true,
-        storageId: undefined,
-      });
-    }
-  }, [agent]);
+    if (!agent || initializedAgentIdRef.current === agent._id) return;
+    if (!agent.modelId && allModels === undefined) return;
 
-  const handleSave = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    initializedAgentIdRef.current = agent._id;
+    setFormData({
+      name: agent.name || "",
+      description: agent.description || "",
+      avatar: agent.avatar || "",
+      modelId: agent.modelId || defaultModelId,
+      thinkingMode: agent.thinkingMode || false,
+      reasoningEffort: agent.reasoningEffort || "MEDIUM",
+      allowInternetAccess: agent.allowInternetAccess || false,
+      isActive: agent.isActive ?? true,
+      storageId: undefined,
+    });
+  }, [agent, allModels, defaultModelId]);
+
+  const handleSave = async (e?: FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     setIsSaving(true);
     try {
       await updateAgent({
@@ -71,11 +116,11 @@ export default function AgentOverviewPage() {
         isActive: formData.isActive,
         storageId: formData.storageId
       });
-      setFormData((prev: any) => ({ ...prev, storageId: undefined }));
+      setFormData((prev) => ({ ...prev, storageId: undefined }));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (err: any) {
-      alert(err.message || t("errors.saveFailed"));
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, t("errors.saveFailed")));
     } finally {
       setIsSaving(false);
     }
@@ -90,10 +135,10 @@ export default function AgentOverviewPage() {
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const { storageId } = await result.json();
+      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
       const localPreviewUrl = URL.createObjectURL(file);
 
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         storageId,
         avatar: localPreviewUrl
@@ -108,7 +153,7 @@ export default function AgentOverviewPage() {
     }
   };
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -118,7 +163,7 @@ export default function AgentOverviewPage() {
     }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = async (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -159,7 +204,14 @@ export default function AgentOverviewPage() {
                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.identity.avatar.label")}</label>
                 <div className="flex items-center gap-4 py-2 pr-6 border-r border-border-dim/30">
                   {formData.avatar ? (
-                    <img src={formData.avatar} alt="Agent Preview" className="w-16 h-16 rounded-full object-cover border border-white/10 shrink-0 bg-card shadow-sm" />
+                    <Image
+                      src={formData.avatar}
+                      alt="Agent Preview"
+                      width={64}
+                      height={64}
+                      unoptimized
+                      className="w-16 h-16 rounded-full object-cover border border-white/10 shrink-0 bg-card shadow-sm"
+                    />
                   ) : (
                     <div className="w-16 h-16 rounded-full border border-dashed border-white/20 flex items-center justify-center bg-white/5 shrink-0">
                       <Bot className="w-6 h-6 text-muted" />
@@ -235,14 +287,14 @@ export default function AgentOverviewPage() {
             <div className="flex flex-col gap-2">
               <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.reasoning.label")}</label>
               <div className="grid grid-cols-3 gap-2 h-[46px]">
-                {["LOW", "MEDIUM", "HIGH"].map((level) => (
+                {reasoningLevels.map((level) => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => setFormData({ ...formData, reasoningEffort: level })}
                     className={`flex items-center justify-center gap-2 rounded-[12px] text-[12px] font-medium border transition-all h-full ${formData.reasoningEffort === level ? "bg-brand/20 border-brand/30 text-brand" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
                   >
-                    {t(`sections.engine.reasoning.levels.${level}` as any)}
+                    {t(`sections.engine.reasoning.levels.${level}`)}
                   </button>
                 ))}
               </div>

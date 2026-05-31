@@ -1,11 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState } from 'react';
 
-interface ThinkingState {
-  isThinking: boolean;
-  currentQuestion: string;
-}
-
 interface UIContextType {
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;

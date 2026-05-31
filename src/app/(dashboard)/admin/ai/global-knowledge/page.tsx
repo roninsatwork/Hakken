@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import type { ChangeEvent, DragEvent, KeyboardEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { FileText, Upload, Loader2, Trash2, CheckCircle2, AlertTriangle, UploadCloud, Globe, AlignLeft, ChevronDown, ChevronUp, Search, RefreshCw, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function GlobalKnowledgeBasePage() {
   const t = useTranslations("ai.knowledge");
   
-  const documents = useQuery(api.knowledge.getDocuments, {});
+  const documents = useQuery(api.knowledge.getDocuments, {}) as Doc<"knowledgeDocuments">[] | undefined;
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
   const deleteDocument = useMutation(api.knowledge.deleteDocument);
@@ -63,7 +69,7 @@ export default function GlobalKnowledgeBasePage() {
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const { storageId } = await result.json();
+      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
 
       await saveDocument({
         storageId,
@@ -71,15 +77,15 @@ export default function GlobalKnowledgeBasePage() {
         format: file.type,
       });
       setIsModalOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setFileError(err.message || "Failed to upload file.");
+      setFileError(getErrorMessage(err, "Failed to upload file."));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -89,7 +95,7 @@ export default function GlobalKnowledgeBasePage() {
     }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = async (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -98,7 +104,7 @@ export default function GlobalKnowledgeBasePage() {
     }
   };
 
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       await processFile(e.target.files[0]);
@@ -120,7 +126,7 @@ export default function GlobalKnowledgeBasePage() {
       }
   };
 
-  const handleMapUrl = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleMapUrl = async (e: KeyboardEvent<HTMLInputElement>) => {
      if (e.key === "Enter" && websiteUrl.trim()) {
          e.preventDefault();
          setIsMapping(true);
@@ -131,9 +137,9 @@ export default function GlobalKnowledgeBasePage() {
              if (!cleanedUrl.startsWith("http")) cleanedUrl = "https://" + cleanedUrl;
              const links = await mapWebsite({ url: cleanedUrl });
              setMappedUrls(links);
-         } catch (err: any) {
+         } catch (err: unknown) {
              console.error("Map error", err);
-             setWebsiteError(err.message || "Failed to map website. Check API keys and network.");
+             setWebsiteError(getErrorMessage(err, "Failed to map website. Check API keys and network."));
          } finally {
              setIsMapping(false);
          }
@@ -148,7 +154,7 @@ export default function GlobalKnowledgeBasePage() {
           await queueWebsiteUrls({ urls: mappedUrls });
           setMappedUrls([]);
           setWebsiteUrl("");
-      } catch (err: any) {
+      } catch (err: unknown) {
           console.error(err);
           setWebsiteError("Failed to queue URLs.");
       } finally {
@@ -162,9 +168,9 @@ export default function GlobalKnowledgeBasePage() {
       try {
           const links = await mapWebsite({ url: root });
           await queueWebsiteUrls({ urls: links, forceRefresh: true });
-      } catch (err: any) {
+      } catch (err: unknown) {
           console.error("Refresh error", err);
-          setWebsiteError(`Failed to refresh ${root}: ` + err.message);
+          setWebsiteError(`Failed to refresh ${root}: ${getErrorMessage(err, "Unknown error")}`);
       } finally {
           setRefreshingRoots(prev => ({...prev, [root]: false}));
       }
@@ -176,7 +182,7 @@ export default function GlobalKnowledgeBasePage() {
       try {
           await deleteWebsiteBulk({ rootDomain: rootToDelete });
           setRootToDelete(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
           console.error(err);
           setWebsiteError("Failed to rigidly delete website root.");
       } finally {
@@ -186,7 +192,7 @@ export default function GlobalKnowledgeBasePage() {
 
   const websiteGroups = useMemo(() => {
      if (!documents) return {};
-     const groups: Record<string, typeof documents> = {};
+     const groups: Record<string, Doc<"knowledgeDocuments">[]> = {};
      documents.forEach(doc => {
          if (doc.format === "url" && doc.sourceUrl) {
             try {
@@ -543,11 +549,11 @@ export default function GlobalKnowledgeBasePage() {
     >
         <div className="flex flex-col gap-6 w-full pt-4">
             <p className="text-[14px] text-secondary">
-                Are you sure you want to completely remove <strong>{rootToDelete}</strong> and all of its trained sub-pages from Sonae's memory? 
+                Are you sure you want to completely remove <strong>{rootToDelete}</strong> and all of its trained sub-pages from Sonae&apos;s memory?
                 This will delete the vectors instantly.
             </p>
             <div className="flex justify-end gap-3">
-                <button 
+                <button
                    onClick={() => setRootToDelete(null)}
                    disabled={isDeletingBulk}
                    className="px-4 py-2 rounded-md hover:bg-white/5 transition-colors text-[13px] font-medium"

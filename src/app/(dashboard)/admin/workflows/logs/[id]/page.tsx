@@ -1,8 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Activity,
@@ -21,25 +22,36 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+type WorkflowExecutionDetail = Doc<"workflowExecutions"> & {
+  workflowName: string;
+  startedByName: string;
+  steps: Doc<"workflowExecutionSteps">[];
+};
+
 export default function WorkflowExecutionLogPage() {
   const params = useParams();
   const router = useRouter();
   const t = useTranslations('admin.workflows.logs.report');
   const tCommon = useTranslations('common');
-  const executionId = params.id as string;
+  const executionId = params.id as Id<"workflowExecutions">;
 
-  const exec = useQuery((api as any).scheduler.getWorkflowExecution, { executionId: executionId as any });
-  const resumeApprovalStep = useMutation((api as any).workflowRuntime.resumeApprovalStep);
+  const exec = useQuery(api.scheduler.getWorkflowExecution, { executionId }) as WorkflowExecutionDetail | null | undefined;
+  const resumeApprovalStep = useAction(api.workflowRuntime.resumeApprovalStep);
   const [copied, setCopied] = useState(false);
   const [isResuming, setIsResuming] = useState<string | null>(null);
+  const [resumeMessage, setResumeMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleApprove = async (nodeId: string, workflowId: string) => {
+  const handleApprove = async (nodeId: string, workflowId: Id<"workflows">) => {
     setIsResuming(nodeId);
+    setResumeMessage(null);
     try {
-      await resumeApprovalStep({ executionId: executionId as any, nodeId, workflowId: workflowId as any });
-      alert("Workflow Resumed! The sub-systems will now proceed.");
-    } catch {
-      alert("Resume Failed. An error occurred unblocking the flow.");
+      await resumeApprovalStep({ executionId, nodeId, workflowId, action: "APPROVED" });
+      setResumeMessage({ type: "success", text: t('feedback.resumeSuccess') });
+    } catch (error: unknown) {
+      setResumeMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : t('feedback.resumeFailed'),
+      });
     } finally {
       setIsResuming(null);
     }
@@ -55,7 +67,7 @@ export default function WorkflowExecutionLogPage() {
   const safeParseJSON = (str: string) => {
     try {
       return JSON.stringify(JSON.parse(str), null, 2);
-    } catch (e) {
+    } catch {
       return str; // If it's just raw text, return it as string
     }
   };
@@ -125,6 +137,17 @@ export default function WorkflowExecutionLogPage() {
 
       <div className="w-full h-[1px] bg-border-dim/50 my-2" />
 
+      {resumeMessage && (
+        <div className={`flex items-center gap-2 rounded-[12px] border px-4 py-3 text-[13px] ${
+          resumeMessage.type === "success"
+            ? "border-[#10b981]/20 bg-[#10b981]/10 text-[#10b981]"
+            : "border-red-500/20 bg-red-500/10 text-red-500"
+        }`}>
+          {resumeMessage.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+          <span>{resumeMessage.text}</span>
+        </div>
+      )}
+
       {/* Visual Execution Steps */}
       {exec.steps && exec.steps.length > 0 && (
         <div className="flex flex-col gap-4 mt-2">
@@ -134,7 +157,7 @@ export default function WorkflowExecutionLogPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {exec.steps.map((step: any, idx: number) => (
+            {exec.steps.map((step, idx) => (
               <div key={step._id} className="flex flex-col gap-3 p-5 rounded-[16px] bg-sidebar/30 border border-border-dim/50 transition-all hover:bg-sidebar/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -161,7 +184,7 @@ export default function WorkflowExecutionLogPage() {
                 {step.status === "PENDING_APPROVAL" && (
                   <div className="mt-2 flex">
                     <button
-                      onClick={() => handleApprove(step.nodeId, exec.workflowId)}
+                      onClick={() => exec.workflowId && handleApprove(step.nodeId, exec.workflowId)}
                       disabled={isResuming === step.nodeId}
                       className="flex items-center gap-2 px-5 py-2.5 bg-brand text-background rounded-full font-bold text-[13px] hover:bg-brand/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-brand/20"
                     >

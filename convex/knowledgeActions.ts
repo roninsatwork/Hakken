@@ -1,11 +1,13 @@
 "use node";
 
 import { internalAction, action } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { GoogleGenAI } from "@google/genai";
-// @ts-ignore
+// @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
 import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
@@ -158,7 +160,14 @@ export const processWebsiteQueue = internalAction({
   }
 });
 
-async function embedAndStoreDoc(ctx: any, documentId: string, companyId: any, agentId: any, threadId: any, rawText: string) {
+async function embedAndStoreDoc(
+  ctx: ActionCtx,
+  documentId: Id<"knowledgeDocuments">,
+  companyId: Id<"companies"> | undefined,
+  agentId: Id<"agents"> | undefined,
+  threadId: Id<"threads"> | undefined,
+  rawText: string
+) {
       const chunks = chunkText(rawText);
 
       const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";

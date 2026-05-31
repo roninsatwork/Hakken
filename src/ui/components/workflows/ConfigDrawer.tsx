@@ -1,20 +1,79 @@
 import { useState, useEffect } from "react";
 import { X, Save, Database, Code2, Wand2, Loader2, Zap, Clock, Webhook } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslations } from "next-intl";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type {
+  WorkflowActionConfig,
+  WorkflowApprovalConfig,
+  WorkflowCanvasEdge,
+  WorkflowCanvasNode,
+  WorkflowDatabaseConfig,
+  WorkflowEmailConfig,
+  WorkflowHeaderConfig,
+  WorkflowIteratorConfig,
+  WorkflowLogicConfig,
+  WorkflowLogicRule,
+  WorkflowMergeConfig,
+  WorkflowNodeUpdateHandler,
+  WorkflowTriggerType,
+  WorkflowWaitConfig,
+} from "./types";
 
-export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdateNode }: any) {
-  const tCommon = useTranslations('common');
+type ScheduleMode = "interval" | "daily" | "weekly" | "monthly";
+
+type ConfigDrawerFormData = {
+  label: string;
+  _inputMapping: string;
+  _inputTemplate: string;
+  _triggerType: WorkflowTriggerType;
+  _scheduleMode: ScheduleMode;
+  _scheduleIntervalValue: number;
+  _scheduleIntervalUnit: string;
+  _scheduleTime: string;
+  _scheduleDayOfWeek: number;
+  _scheduleDayOfMonth: number;
+  _webhookSecret: string;
+  _actionConfig: WorkflowActionConfig;
+  _dbConfig: WorkflowDatabaseConfig;
+  _logicConfig: WorkflowLogicConfig;
+  _iteratorConfig: WorkflowIteratorConfig;
+  _mergeConfig: WorkflowMergeConfig;
+  _waitConfig: WorkflowWaitConfig;
+  _approvalConfig: WorkflowApprovalConfig;
+  _emailConfig: WorkflowEmailConfig;
+};
+
+type ScheduleConfig = {
+  mode?: ScheduleMode;
+  intervalVal?: number;
+  intervalUnit?: string;
+  time?: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+};
+
+type ConfigDrawerProps = {
+  node: WorkflowCanvasNode | null;
+  allNodes?: WorkflowCanvasNode[];
+  edges?: WorkflowCanvasEdge[];
+  onClose: () => void;
+  onUpdateNode: WorkflowNodeUpdateHandler;
+};
+
+const defaultActionConfig: WorkflowActionConfig = { method: "GET", url: "", headers: [], body: "" };
+const defaultDbConfig: WorkflowDatabaseConfig = { operation: "INSERT", tableName: "", docId: "" };
+const defaultLogicConfig: WorkflowLogicConfig = { rules: [], fallbackBranch: "" };
+
+export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdateNode }: ConfigDrawerProps) {
   
-  const getUpstreamNodes = () => {
+  const getUpstreamNodes = (): WorkflowCanvasNode[] => {
     if (!node?.id) return [];
     const upstreamIds = new Set<string>();
     const queue = [node.id];
     while (queue.length > 0) {
       const current = queue.shift();
-      const incoming = edges.filter((e: any) => e.target === current).map((e: any) => e.source);
+      const incoming = edges.filter((e) => e.target === current).map((e) => e.source);
       for (const id of incoming) {
         if (!upstreamIds.has(id)) {
           upstreamIds.add(id);
@@ -22,18 +81,18 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
         }
       }
     }
-    return allNodes.filter((n: any) => upstreamIds.has(n.id));
+    return allNodes.filter((n) => upstreamIds.has(n.id));
   };
 
-  const getDownstreamNodes = () => {
+  const getDownstreamNodes = (): WorkflowCanvasNode[] => {
     if (!node?.id) return [];
-    const downstreamIds = edges.filter((e: any) => e.source === node.id).map((e: any) => e.target);
-    return allNodes.filter((n: any) => downstreamIds.includes(n.id));
+    const downstreamIds = edges.filter((e) => e.source === node.id).map((e) => e.target);
+    return allNodes.filter((n) => downstreamIds.includes(n.id));
   };
 
   const upstreamNodes = getUpstreamNodes();
   const downstreamNodes = getDownstreamNodes();
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<ConfigDrawerFormData>({
     label: "",
     _inputMapping: "",
     _inputTemplate: "",
@@ -45,9 +104,9 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
     _scheduleDayOfWeek: 1,
     _scheduleDayOfMonth: 1,
     _webhookSecret: "",
-    _actionConfig: { method: 'GET', url: '', headers: [], body: '' },
-    _dbConfig: { operation: 'INSERT', tableName: '', docId: '' },
-    _logicConfig: { rules: [], fallbackBranch: '' },
+    _actionConfig: defaultActionConfig,
+    _dbConfig: defaultDbConfig,
+    _logicConfig: defaultLogicConfig,
     _iteratorConfig: { listVariable: '' },
     _mergeConfig: { mode: 'WAIT_FOR_ALL' },
     _waitConfig: { delaySeconds: '5' },
@@ -63,17 +122,22 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
   useEffect(() => {
     if (node) {
         const existingSchedule = node.data?._scheduleInterval;
-        let pMode = "interval", pVal = 15, pUnit = "minutes", pTime = "09:00", pDow = 1, pDom = 1;
+        let pMode: ScheduleMode = "interval";
+        let pVal = 15;
+        let pUnit = "minutes";
+        let pTime = "09:00";
+        let pDow = 1;
+        let pDom = 1;
         if (existingSchedule) {
            try {
-              const parsed = JSON.parse(existingSchedule);
+              const parsed = JSON.parse(existingSchedule) as ScheduleConfig;
               if (parsed.mode) pMode = parsed.mode;
               if (parsed.intervalVal) pVal = parsed.intervalVal;
               if (parsed.intervalUnit) pUnit = parsed.intervalUnit;
               if (parsed.time) pTime = parsed.time;
               if (parsed.dayOfWeek) pDow = parsed.dayOfWeek;
               if (parsed.dayOfMonth) pDom = parsed.dayOfMonth;
-           } catch(e) {
+           } catch {
               const parts = existingSchedule.split(" ");
               if (parts.length === 2 && !isNaN(parseInt(parts[0]))) {
                  pVal = parseInt(parts[0]);
@@ -94,9 +158,9 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
           _scheduleDayOfWeek: pDow,
           _scheduleDayOfMonth: pDom,
         _webhookSecret: node.data?._webhookSecret || "",
-        _actionConfig: node.data?._actionConfig || { method: 'GET', url: '', headers: [], body: '' },
-        _dbConfig: node.data?._dbConfig || { operation: 'INSERT', tableName: '', docId: '' },
-        _logicConfig: node.data?._logicConfig || { rules: [], fallbackBranch: '' },
+        _actionConfig: node.data?._actionConfig || defaultActionConfig,
+        _dbConfig: node.data?._dbConfig || defaultDbConfig,
+        _logicConfig: node.data?._logicConfig || defaultLogicConfig,
         _iteratorConfig: node.data?._iteratorConfig || { listVariable: '' },
         _mergeConfig: node.data?._mergeConfig || { mode: 'WAIT_FOR_ALL' },
         _waitConfig: node.data?._waitConfig || { delaySeconds: '5' },
@@ -115,7 +179,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
       const result = await generateConfig({
         prompt: aiPrompt,
         nodeType: node.type,
-        availableNodes: upstreamNodes.map((n: any) => ({
+        availableNodes: upstreamNodes.map((n) => ({
           id: n.id,
           type: n.type,
           label: n.data?.label
@@ -129,7 +193,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
       });
       setAiPrompt("");
       setIsDeveloperMode(true);
-    } catch (e) {
+    } catch {
       alert("AI Configuration failed. Please try again or construct the payload manually.");
     } finally {
       setIsGenerating(false);
@@ -140,7 +204,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
     e.preventDefault();
     let parsedMapping = formData._inputMapping;
     if (parsedMapping) {
-      try { parsedMapping = JSON.parse(parsedMapping); } catch(e) {}
+      try { parsedMapping = JSON.parse(parsedMapping); } catch {}
     }
     
     onUpdateNode(node.id, {
@@ -264,7 +328,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                      <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Run Frequency</label>
                      <select 
                         value={formData._scheduleMode} 
-                        onChange={(e) => setFormData({ ...formData, _scheduleMode: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, _scheduleMode: e.target.value as ScheduleMode })}
                         className="w-full px-4 py-3 bg-background border border-border-dim rounded-[12px] text-sm outline-none focus:border-brand/50 text-foreground cursor-pointer"
                      >
                         <option value="interval">Custom Interval</option>
@@ -380,7 +444,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                     <button type="button" onClick={() => setFormData({ ...formData, _actionConfig: { ...formData._actionConfig, headers: [...(formData._actionConfig?.headers || []), {key: '', value: ''}] }})} className="text-brand hover:text-brand-foreground text-[10px] font-bold uppercase py-1 px-2 rounded bg-brand/10">+ Add Header</button>
                  </label>
                  
-                 {formData._actionConfig?.headers?.map((header: any, index: number) => (
+                 {formData._actionConfig?.headers?.map((header: WorkflowHeaderConfig, index: number) => (
                     <div key={index} className="flex gap-2 items-center">
                        <input 
                          type="text" placeholder="Key (e.g. Authorization)" value={header.key} 
@@ -401,7 +465,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                          className="flex-[2] px-3 py-2 bg-background border border-border-dim rounded-[8px] text-[12px] outline-none focus:border-brand/50"
                        />
                        <button type="button" onClick={() => {
-                          const newHeaders = formData._actionConfig.headers.filter((_:any, i:number) => i !== index);
+                          const newHeaders = formData._actionConfig.headers.filter((_, i) => i !== index);
                           setFormData({...formData, _actionConfig: {...formData._actionConfig, headers: newHeaders}});
                        }} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><X className="w-4 h-4"/></button>
                     </div>
@@ -425,7 +489,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                          }}
                       >
                          <option value="">+ Forward Data From...</option>
-                         {upstreamNodes.map((n: any) => (
+                         {upstreamNodes.map((n) => (
                             <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                          ))}
                       </select>
@@ -470,7 +534,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                  <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Database Operation</label>
                  <select 
                     value={formData._dbConfig?.operation || 'INSERT'}
-                    onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, operation: e.target.value } })}
+                    onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, operation: e.target.value as WorkflowDatabaseConfig["operation"] } })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                  >
                     {['INSERT', 'UPDATE', 'DELETE', 'SELECT'].map(m => <option key={m} value={m}>{m}</option>)}
@@ -515,9 +579,9 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                     <button type="button" onClick={() => setFormData({ ...formData, _logicConfig: { ...formData._logicConfig, rules: [...(formData._logicConfig?.rules || []), { variable: '', operator: 'EQUALS', value: '', branch: '' }] }})} className="text-brand hover:text-brand-foreground text-[10px] font-bold uppercase py-1 px-2 rounded bg-brand/10">+ Add Rule</button>
                  </label>
                  
-                 {formData._logicConfig?.rules?.map((rule: any, index: number) => (
+                 {formData._logicConfig?.rules?.map((rule: WorkflowLogicRule, index: number) => (
                     <div key={index} className="flex flex-col gap-3 p-4 bg-background border border-border-dim rounded-[12px] relative shadow-sm">
-                       <button type="button" onClick={() => { const r = formData._logicConfig.rules.filter((_:any, i:number) => i !== index); setFormData({...formData, _logicConfig: {...formData._logicConfig, rules: r}}) }} className="absolute top-2 right-2 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><X className="w-4 h-4"/></button>
+                       <button type="button" onClick={() => { const r = formData._logicConfig.rules.filter((_, i) => i !== index); setFormData({...formData, _logicConfig: {...formData._logicConfig, rules: r}}) }} className="absolute top-2 right-2 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><X className="w-4 h-4"/></button>
                        
                        <div className="flex flex-col gap-1.5 pr-8">
                            <label className="text-[10px] font-semibold text-secondary uppercase tracking-wider">Test Variable</label>
@@ -534,7 +598,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                                    }}
                                >
                                   <option value="">+ Inject Upstream Variable Reference...</option>
-                                  {upstreamNodes.map((n: any) => (
+                                  {upstreamNodes.map((n) => (
                                      <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                                   ))}
                                </select>
@@ -544,7 +608,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                        
                        <div className="flex flex-col gap-1.5">
                            <label className="text-[10px] font-semibold text-secondary uppercase tracking-wider">Condition</label>
-                           <select value={rule.operator} onChange={e => { const r = [...formData._logicConfig.rules]; r[index].operator = e.target.value; setFormData({...formData, _logicConfig: {...formData._logicConfig, rules: r}}) }} className="w-full px-3 py-2 bg-sidebar border border-border-dim rounded-[8px] text-[12px] outline-none cursor-pointer focus:border-brand/50">
+                           <select value={rule.operator} onChange={e => { const r = [...formData._logicConfig.rules]; r[index].operator = e.target.value as WorkflowLogicRule["operator"]; setFormData({...formData, _logicConfig: {...formData._logicConfig, rules: r}}) }} className="w-full px-3 py-2 bg-sidebar border border-border-dim rounded-[8px] text-[12px] outline-none cursor-pointer focus:border-brand/50">
                               <option value="EQUALS">Equals (==)</option>
                               <option value="NOT_EQUALS">Not Equals (!=)</option>
                               <option value="CONTAINS">Contains</option>
@@ -571,7 +635,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                                    onChange={e => { const r = [...formData._logicConfig.rules]; r[index].branch = e.target.value; setFormData({...formData, _logicConfig: {...formData._logicConfig, rules: r}}) }} 
                                    className="w-full px-3 py-2 bg-background border border-brand/20 rounded-[8px] text-[12px] text-foreground font-medium outline-none focus:border-brand/50 cursor-pointer"
                                >
-                                   {downstreamNodes.map((n: any) => (
+                                   {downstreamNodes.map((n) => (
                                       <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                                    ))}
                                </select>
@@ -592,7 +656,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                     onChange={(e) => setFormData({ ...formData, _logicConfig: { ...formData._logicConfig, fallbackBranch: e.target.value } })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50 cursor-pointer"
                  >
-                    {downstreamNodes.map((n: any) => (
+                    {downstreamNodes.map((n) => (
                        <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                     ))}
                  </select>
@@ -620,7 +684,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                          }}
                      >
                         <option value="">+ Inject Upstream Variable Reference...</option>
-                        {upstreamNodes.map((n: any) => (
+                        {upstreamNodes.map((n) => (
                            <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                         ))}
                      </select>
@@ -642,7 +706,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                  <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Merge Wait Behavior</label>
                  <select 
                     value={formData._mergeConfig?.mode || 'WAIT_FOR_ALL'}
-                    onChange={(e) => setFormData({ ...formData, _mergeConfig: { ...formData._mergeConfig, mode: e.target.value } })}
+                    onChange={(e) => setFormData({ ...formData, _mergeConfig: { ...formData._mergeConfig, mode: e.target.value as WorkflowMergeConfig["mode"] } })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50 cursor-pointer"
                  >
                     <option value="WAIT_FOR_ALL">Wait for ALL mapped upstream branches to finish</option>
@@ -706,7 +770,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                          }}
                      >
                         <option value="">+ Map Upstream Result for live Preview...</option>
-                        {upstreamNodes.map((n: any) => (
+                        {upstreamNodes.map((n) => (
                            <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                         ))}
                      </select>
@@ -779,7 +843,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                          }}
                      >
                         <option value="">+ Inject Upstream Content Variable...</option>
-                        {upstreamNodes.map((n: any) => (
+                        {upstreamNodes.map((n) => (
                            <option key={n.id} value={n.id}>{n.data?.label || n.type} ({n.id.split('-')[1] || n.id})</option>
                         ))}
                      </select>

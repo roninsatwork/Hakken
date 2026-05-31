@@ -7,6 +7,52 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+type AuditLogRow = {
+   _id: string;
+   actionType: string;
+   actorName: string;
+   entityId?: string;
+   timestamp: number;
+   metadata?: string;
+};
+
+const MOCK_LOG_BASE_TIMESTAMP = new Date("2026-01-01T12:00:00.000Z").getTime();
+
+const fallbackLogs: AuditLogRow[] = [
+   {
+      _id: "mock-log-1a2b3c",
+      actionType: "UPDATE_COMPANY",
+      actorName: "Anthony (SuperAdmin)",
+      entityId: "comp_291039",
+      timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 5,
+      metadata: "{\"field\":\"security_policy\",\"status\":\"enforced\"}"
+   },
+   {
+      _id: "mock-log-4d5e6f",
+      actionType: "TOGGLE_PII",
+      actorName: "System Subroutine",
+      entityId: "system_global",
+      timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 120,
+      metadata: "{\"rule\":\"maskCreditCards\",\"newState\":true}"
+   },
+   {
+      _id: "mock-log-7g8h9i",
+      actionType: "DELETE_USER",
+      actorName: "Anthony (SuperAdmin)",
+      entityId: "usr_malicious_99",
+      timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 60 * 24,
+      metadata: "{\"reason\":\"TOS Violation\",\"email\":\"spam@fake.com\"}"
+   },
+   {
+      _id: "mock-log-xjx9a1",
+      actionType: "CREATE_INVITE",
+      actorName: "Regional Admin",
+      entityId: "inv_91823",
+      timestamp: MOCK_LOG_BASE_TIMESTAMP - 1000 * 60 * 60 * 48,
+      metadata: "{\"role\":\"USER\",\"companyId\":\"comp_812\"}"
+   }
+];
+
 export default function AuditLogDetail() {
    const params = useParams();
    const id = params.id as string;
@@ -19,42 +65,9 @@ export default function AuditLogDetail() {
    }
 
    // Mock data fallback if DB is empty to match the feed
-   const activeLogs = logs.length > 0 ? logs : [
-      {
-         _id: "mock-log-1a2b3c",
-         actionType: "UPDATE_COMPANY",
-         actorName: "Anthony (SuperAdmin)",
-         entityId: "comp_291039",
-         timestamp: Date.now() - 1000 * 60 * 5,
-         metadata: "{\"field\":\"security_policy\",\"status\":\"enforced\"}"
-      },
-      {
-         _id: "mock-log-4d5e6f",
-         actionType: "TOGGLE_PII",
-         actorName: "System Subroutine",
-         entityId: "system_global",
-         timestamp: Date.now() - 1000 * 60 * 120,
-         metadata: "{\"rule\":\"maskCreditCards\",\"newState\":true}"
-      },
-      {
-         _id: "mock-log-7g8h9i",
-         actionType: "DELETE_USER",
-         actorName: "Anthony (SuperAdmin)",
-         entityId: "usr_malicious_99",
-         timestamp: Date.now() - 1000 * 60 * 60 * 24,
-         metadata: "{\"reason\":\"TOS Violation\",\"email\":\"spam@fake.com\"}"
-      },
-      {
-         _id: "mock-log-xjx9a1",
-         actionType: "CREATE_INVITE",
-         actorName: "Regional Admin",
-         entityId: "inv_91823",
-         timestamp: Date.now() - 1000 * 60 * 60 * 48,
-         metadata: "{\"role\":\"USER\",\"companyId\":\"comp_812\"}"
-      }
-   ];
+   const activeLogs: AuditLogRow[] = logs.length > 0 ? logs : fallbackLogs;
 
-   const log = activeLogs.find((l: any) => l._id === id);
+   const log = activeLogs.find((entry) => entry._id === id);
 
    return (
       <div className="flex flex-col gap-6 w-full antialiased pb-20">

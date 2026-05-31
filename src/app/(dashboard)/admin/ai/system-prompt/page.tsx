@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
-  Bot,
   TerminalSquare,
   Save,
   RefreshCcw,
@@ -13,6 +12,10 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function SystemPromptPage() {
   const t = useTranslations("ai.systemPrompt");
@@ -23,10 +26,11 @@ export default function SystemPromptPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const hasLoadedPromptRef = useRef(false);
 
-  // Sync state once data loads
   useEffect(() => {
-    if (currentPrompt !== undefined) {
+    if (currentPrompt !== undefined && !hasLoadedPromptRef.current) {
+      hasLoadedPromptRef.current = true;
       setPromptValue(currentPrompt || "");
     }
   }, [currentPrompt]);
@@ -44,10 +48,10 @@ export default function SystemPromptPage() {
       setSaveStatus("success");
       // Reset success status after exactly 3.5s for seamless fluid feedback
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to commit System Prompt protocol:", error);
       setSaveStatus("error");
-      setErrorMessage(error.message || t("error.defaultMsg"));
+      setErrorMessage(getErrorMessage(error, t("error.defaultMsg")));
     } finally {
       setIsSaving(false);
     }

@@ -10,16 +10,12 @@ import {
   Loader2,
   ShieldCheck,
   Plus,
-  Settings2,
   ChevronDown,
   Check,
-  Square,
   ArrowUp,
   Mic,
   MicOff,
   AlertTriangle,
-  Target,
-  Paperclip,
   FileText,
   X
 } from "lucide-react";
@@ -30,6 +26,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 import { useTranslations } from "next-intl";
 import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
+import { CHAT_DOCUMENT_MAX_BYTES, isSupportedChatDocument } from "@/src/lib/constants/uploads";
 
 const THINKING_LEVELS = [
   { id: "NONE" },
@@ -38,13 +35,21 @@ const THINKING_LEVELS = [
   { id: "HIGH" },
 ];
 
+function getGreetingKey() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  if (hour < 21) return "evening";
+  return "night";
+}
+
 export default function AssistantWelcomePage() {
   const t = useTranslations('ai.assistant');
   const tCommon = useTranslations('common');
   const settings = useSystemSettings();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [greetingKey, setGreetingKey] = useState("default");
+  const greetingKey = getGreetingKey();
   
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,16 +57,8 @@ export default function AssistantWelcomePage() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   
   const progressiveText = useProgressiveLoading(isSubmitting);
-
-  // Sync progressive text to uploadStatus when submitting (and not actively uploading files)
-  useEffect(() => {
-    if (isSubmitting) {
-      const isUploading = uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
-      if (!isUploading && progressiveText) {
-        setUploadStatus(progressiveText);
-      }
-    }
-  }, [progressiveText, isSubmitting, uploadStatus]);
+  const isUploadingFiles = uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
+  const displayedUploadStatus = isSubmitting && !isUploadingFiles && progressiveText ? progressiveText : uploadStatus;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +71,8 @@ export default function AssistantWelcomePage() {
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const defaultModel = activeModels.find((m: any) => m.isDefault) || activeModels[0];
+  const effectiveSelectedModelId = selectedModelId || defaultModel?.modelId || null;
 
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [selectedThinkingId, setSelectedThinkingId] = useState(THINKING_LEVELS[0].id);
@@ -90,13 +89,6 @@ export default function AssistantWelcomePage() {
   const saveChatDocument = useMutation(api.knowledge.saveChatDocument);
   const user = useQuery(api.users.getMe);
   const router = useRouter();
-
-  useEffect(() => {
-    if (!selectedModelId && activeModels.length > 0) {
-      const defModel = activeModels.find((m: any) => m.isDefault) || activeModels[0];
-      setSelectedModelId(defModel.modelId);
-    }
-  }, [activeModels, selectedModelId]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -118,33 +110,15 @@ export default function AssistantWelcomePage() {
     }
   }, [content]);
 
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreetingKey("morning");
-    else if (hour < 17) setGreetingKey("afternoon");
-    else if (hour < 21) setGreetingKey("evening");
-    else setGreetingKey("night");
-  }, []);
-
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    const allowedTypes = [
-      "application/pdf", 
-      "text/csv", 
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/plain"
-    ];
-    
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
-    const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
     Array.from(files).forEach(file => {
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size > CHAT_DOCUMENT_MAX_BYTES) {
          invalidFiles.push(`${file.name} (exceeds 50MB limit)`);
-      } else if (allowedTypes.includes(file.type) || file.name.endsWith(".csv") || file.name.endsWith(".txt") || file.name.endsWith(".docx")) {
+      } else if (isSupportedChatDocument(file)) {
         validFiles.push(file);
       } else {
         invalidFiles.push(file.name);
@@ -229,7 +203,7 @@ export default function AssistantWelcomePage() {
       await sendMessage({
         threadId,
         content: textSnapshot || "Analyzed attached documents.",
-        modelId: selectedModelId || undefined,
+        modelId: effectiveSelectedModelId || undefined,
         thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinkingId,
         fileIds: uploadedFileIds,
       });
@@ -244,7 +218,7 @@ export default function AssistantWelcomePage() {
   };
 
   const firstName = user?.name ? user.name.split(" ")[0] : "";
-  const selectedModelData = activeModels.find((m: any) => m.modelId === selectedModelId);
+  const selectedModelData = activeModels.find((m: any) => m.modelId === effectiveSelectedModelId);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-transparent w-full min-h-0">
@@ -271,7 +245,7 @@ export default function AssistantWelcomePage() {
           
           {/* Transcript-styled Upload Indicator (Moved out of input) */}
           <AnimatePresence>
-            {uploadStatus && (
+            {displayedUploadStatus && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -280,7 +254,7 @@ export default function AssistantWelcomePage() {
               >
                 <div className="px-4 py-2 rounded-full bg-brand/10 border border-brand/20 flex items-center gap-2 self-end shadow-sm">
                   <Loader2 className="w-3.5 h-3.5 text-brand animate-spin" />
-                  <span className="text-[12px] font-semibold tracking-wide text-brand uppercase">{uploadStatus}</span>
+                  <span className="text-[12px] font-semibold tracking-wide text-brand uppercase">{displayedUploadStatus}</span>
                 </div>
               </motion.div>
             )}
@@ -420,13 +394,13 @@ export default function AssistantWelcomePage() {
                                 setSelectedModelId(model.modelId);
                                 setModelDropdownOpen(false);
                               }}
-                              className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                              className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${effectiveSelectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                             >
                               <div className="flex flex-col gap-1 min-w-0 pr-4">
-                                <span className={`text-[15px] font-medium truncate ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
+                                <span className={`text-[15px] font-medium truncate ${effectiveSelectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
                                 <span className="text-[13px] text-muted font-light truncate">{model.description || t('controls.engine.defaultDesc')}</span>
                               </div>
-                              {selectedModelId === model.modelId && (
+                              {effectiveSelectedModelId === model.modelId && (
                                 <div className="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
                                   <Check className="w-3 h-3 text-brand" />
                                 </div>

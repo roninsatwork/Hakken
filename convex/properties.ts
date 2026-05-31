@@ -1,8 +1,10 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
+import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
-async function getCurrentUser(ctx: any) {
+async function getCurrentUser(ctx: QueryCtx | MutationCtx): Promise<Doc<"users"> | null> {
   const userId = await auth.getUserId(ctx);
   if (!userId) return null;
   return await ctx.db.get(userId);
@@ -167,5 +169,4 @@ export const getAllRunsAdmin = query(async (ctx) => {
   }
   return await ctx.db.query("apifyRuns").order("desc").take(5);
 });
-
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Timer,
@@ -12,97 +13,143 @@ import {
   ToggleRight,
   ToggleLeft
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+
+type PayloadType = "workflow" | "agent";
+type Frequency = "hourly" | "daily" | "weekly" | "monthly";
+type WorkflowRow = Doc<"workflows">;
+type AgentRow = Doc<"agents">;
+
+type ScheduleDraft = {
+  payloadType: PayloadType;
+  formData: {
+    name: string;
+    workflowId: Id<"workflows"> | "";
+    agentId: Id<"agents"> | "";
+  };
+  frequency: Frequency;
+  hourlyInterval: string;
+  timeOfDay: string;
+  dayOfWeek: string;
+  dayOfMonth: string;
+  isActive: boolean;
+};
+
+type EditableSchedule = {
+  name?: string;
+  workflowId?: Id<"workflows">;
+  agentId?: Id<"agents">;
+  intervalStr?: string;
+  isActive?: boolean;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+const DEFAULT_SCHEDULE_DRAFT: ScheduleDraft = {
+  payloadType: "agent",
+  formData: {
+    name: "",
+    workflowId: "",
+    agentId: "",
+  },
+  frequency: "hourly",
+  hourlyInterval: "1",
+  timeOfDay: "09:00",
+  dayOfWeek: "Monday",
+  dayOfMonth: "1",
+  isActive: true,
+};
+
+function createScheduleDraft(schedule: EditableSchedule): ScheduleDraft {
+  const draft: ScheduleDraft = {
+    ...DEFAULT_SCHEDULE_DRAFT,
+    payloadType: schedule.agentId ? "agent" : "workflow",
+    formData: {
+      name: schedule.name || "",
+      workflowId: schedule.agentId ? "" : schedule.workflowId || "",
+      agentId: schedule.agentId || "",
+    },
+    isActive: schedule.isActive ?? true,
+  };
+
+  const intervalStr = (schedule.intervalStr || "").toLowerCase();
+  if (intervalStr.startsWith("every") && intervalStr.includes("hours")) {
+    draft.frequency = "hourly";
+    const hoursMatch = intervalStr.match(/every (\d+) hours/i);
+    if (hoursMatch) draft.hourlyInterval = hoursMatch[1];
+  } else if (intervalStr === "hourly") {
+    draft.frequency = "hourly";
+    draft.hourlyInterval = "1";
+  } else if (intervalStr.startsWith("daily")) {
+    draft.frequency = "daily";
+    const timeParts = intervalStr.split(" at ");
+    if (timeParts.length === 2) draft.timeOfDay = timeParts[1];
+  } else if (intervalStr.startsWith("every") && intervalStr.includes("at")) {
+    draft.frequency = "weekly";
+    const dayMatch = intervalStr.match(/every ([a-z]+) at/i);
+    if (dayMatch && dayMatch[1]) draft.dayOfWeek = dayMatch[1].charAt(0).toUpperCase() + dayMatch[1].slice(1);
+    const timeParts = intervalStr.split(" at ");
+    if (timeParts.length === 2) draft.timeOfDay = timeParts[1];
+  } else if (intervalStr.startsWith("monthly") || intervalStr.startsWith("on day")) {
+    draft.frequency = "monthly";
+    const dayMatch = intervalStr.match(/day (\d+) of/i);
+    if (dayMatch && dayMatch[1]) draft.dayOfMonth = dayMatch[1];
+    const timeParts = intervalStr.split(" at ");
+    if (timeParts.length === 2) draft.timeOfDay = timeParts[1];
+  }
+
+  return draft;
+}
 
 export default function EditSchedulePage() {
   const router = useRouter();
   const params = useParams();
-  const scheduleId = params.id as string;
+  const scheduleId = params.id as Id<"schedules">;
   const t = useTranslations('admin.workflows.schedules.editor');
   const tCommon = useTranslations('common');
 
-  const schedule = useQuery((api as any).scheduler.getSchedule, { scheduleId: scheduleId as any });
-  const workflows = useQuery((api as any).workflows.list) || [];
-  const agents = useQuery((api as any).agents.list) || [];
-  const updateSchedule = useMutation((api as any).scheduler.updateSchedule);
+  const schedule = useQuery(api.scheduler.getSchedule, { scheduleId });
+  const workflows = (useQuery(api.workflows.list) || []) as WorkflowRow[];
+  const agents = (useQuery(api.agents.list) || []) as AgentRow[];
+  const updateSchedule = useMutation(api.scheduler.updateSchedule);
 
-  const [payloadType, setPayloadType] = useState<"workflow" | "agent">("agent");
-  const [formData, setFormData] = useState({
-    name: "",
-    workflowId: "",
-    agentId: "",
-  });
-
-  // Scheduling State
-  const [frequency, setFrequency] = useState("hourly"); // hourly, daily, weekly, monthly
-  const [hourlyInterval, setHourlyInterval] = useState("1"); // every X hours
-  const [timeOfDay, setTimeOfDay] = useState("09:00");
-  const [dayOfWeek, setDayOfWeek] = useState("Monday");
-  const [dayOfMonth, setDayOfMonth] = useState("1");
-
+  const [draft, setDraft] = useState<ScheduleDraft | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isActive, setIsActive] = useState(true);
   const [errorModal, setErrorModal] = useState("");
 
-  const filteredWorkflows = workflows.filter((w: any) =>
+  const form = draft ?? (schedule ? createScheduleDraft(schedule) : DEFAULT_SCHEDULE_DRAFT);
+
+  const updateDraft = (updates: Partial<ScheduleDraft>) => {
+    const current = draft ?? (schedule ? createScheduleDraft(schedule) : DEFAULT_SCHEDULE_DRAFT);
+    setDraft({ ...current, ...updates });
+  };
+
+  const updateFormData = (updates: Partial<ScheduleDraft["formData"]>) => {
+    const current = draft ?? (schedule ? createScheduleDraft(schedule) : DEFAULT_SCHEDULE_DRAFT);
+    setDraft({ ...current, formData: { ...current.formData, ...updates } });
+  };
+
+  const filteredWorkflows = workflows.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (w.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredAgents = agents.filter((a: any) =>
+  const filteredAgents = agents.filter((a) =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  useEffect(() => {
-    if (schedule) {
-      if (schedule.agentId) {
-        setPayloadType("agent");
-        setFormData({ name: schedule.name, workflowId: "", agentId: schedule.agentId });
-      } else {
-        setPayloadType("workflow");
-        setFormData({ name: schedule.name, workflowId: schedule.workflowId || "", agentId: "" });
-      }
-      setIsActive(schedule.isActive);
-
-      const str = schedule.intervalStr.toLowerCase();
-      if (str.startsWith("every") && str.includes("hours")) {
-        setFrequency("hourly");
-        const hoursMatch = str.match(/every (\d+) hours/i);
-        if (hoursMatch) setHourlyInterval(hoursMatch[1]);
-      } else if (str === "hourly") {
-        setFrequency("hourly");
-        setHourlyInterval("1");
-      } else if (str.startsWith("daily")) {
-        setFrequency("daily");
-        const timeParts = str.split(" at ");
-        if (timeParts.length === 2) setTimeOfDay(timeParts[1]);
-      } else if (str.startsWith("every") && str.includes("at")) {
-        setFrequency("weekly");
-        const dayMatch = str.match(/every ([a-z]+) at/i);
-        if (dayMatch && dayMatch[1]) setDayOfWeek(dayMatch[1].charAt(0).toUpperCase() + dayMatch[1].slice(1));
-        const timeParts = str.split(" at ");
-        if (timeParts.length === 2) setTimeOfDay(timeParts[1]);
-      } else if (str.startsWith("monthly") || str.startsWith("on day")) {
-        setFrequency("monthly");
-        const dayMatch = str.match(/day (\d+) of/i);
-        if (dayMatch && dayMatch[1]) setDayOfMonth(dayMatch[1]);
-        const timeParts = str.split(" at ");
-        if (timeParts.length === 2) setTimeOfDay(timeParts[1]);
-      }
-    }
-  }, [schedule]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (payloadType === "workflow" && !formData.workflowId) {
+    if (form.payloadType === "workflow" && !form.formData.workflowId) {
       setErrorModal(t('errors.noWorkflow'));
       return;
     }
-    if (payloadType === "agent" && !formData.agentId) {
+    if (form.payloadType === "agent" && !form.formData.agentId) {
       setErrorModal(t('errors.noWorkflow'));
       return;
     }
@@ -110,24 +157,24 @@ export default function EditSchedulePage() {
     setIsSubmitting(true);
 
     // Construct human-readable interval string
-    let constructedInterval = t('intervals.hourly', { hours: hourlyInterval });
-    if (frequency === "hourly" && hourlyInterval === "1") constructedInterval = t('intervals.hourlySingle');
-    if (frequency === "daily") constructedInterval = t('intervals.daily', { time: timeOfDay });
-    if (frequency === "weekly") constructedInterval = t('intervals.weekly', { day: t(`fields.interval.days.${dayOfWeek.toLowerCase()}`), time: timeOfDay });
-    if (frequency === "monthly") constructedInterval = t('intervals.monthly', { day: dayOfMonth, time: timeOfDay });
+    let constructedInterval = t('intervals.hourly', { hours: form.hourlyInterval });
+    if (form.frequency === "hourly" && form.hourlyInterval === "1") constructedInterval = t('intervals.hourlySingle');
+    if (form.frequency === "daily") constructedInterval = t('intervals.daily', { time: form.timeOfDay });
+    if (form.frequency === "weekly") constructedInterval = t('intervals.weekly', { day: t(`fields.interval.days.${form.dayOfWeek.toLowerCase()}`), time: form.timeOfDay });
+    if (form.frequency === "monthly") constructedInterval = t('intervals.monthly', { day: form.dayOfMonth, time: form.timeOfDay });
 
     try {
       await updateSchedule({
-        scheduleId: scheduleId as any,
-        name: formData.name,
-        workflowId: formData.workflowId ? (formData.workflowId as any) : undefined,
-        agentId: formData.agentId ? (formData.agentId as any) : undefined,
+        scheduleId,
+        name: form.formData.name,
+        workflowId: form.formData.workflowId || undefined,
+        agentId: form.formData.agentId || undefined,
         intervalStr: constructedInterval,
-        isActive
+        isActive: form.isActive
       });
       router.push("/admin/workflows/schedules");
-    } catch (err: any) {
-      setErrorModal(err.message || "Failed to edit schedule.");
+    } catch (err: unknown) {
+      setErrorModal(getErrorMessage(err, "Failed to edit schedule."));
       setIsSubmitting(false);
     }
   };
@@ -156,14 +203,14 @@ export default function EditSchedulePage() {
         {/* State Toggle in Header */}
         <button
           type="button"
-          onClick={() => setIsActive(!isActive)}
-          className={`flex items-center gap-3 group transition-colors ${isActive ? "text-[#10b981]" : "text-muted hover:text-foreground"}`}
+          onClick={() => updateDraft({ isActive: !form.isActive })}
+          className={`flex items-center gap-3 group transition-colors ${form.isActive ? "text-[#10b981]" : "text-muted hover:text-foreground"}`}
         >
           <div className="flex flex-col items-end gap-0.5 text-right">
-            <span className="text-[12px] font-bold tracking-widest uppercase">{isActive ? t('status.armed') : t('status.paused')}</span>
-            <span className="text-[10px] text-muted/70 font-medium tracking-wide">{isActive ? t('status.armedDesc') : t('status.pausedDesc')}</span>
+            <span className="text-[12px] font-bold tracking-widest uppercase">{form.isActive ? t('status.armed') : t('status.paused')}</span>
+            <span className="text-[10px] text-muted/70 font-medium tracking-wide">{form.isActive ? t('status.armedDesc') : t('status.pausedDesc')}</span>
           </div>
-          {isActive ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
+          {form.isActive ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
         </button>
       </div>
 
@@ -178,8 +225,8 @@ export default function EditSchedulePage() {
               type="text"
               required
               autoFocus
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              value={form.formData.name}
+              onChange={e => updateFormData({ name: e.target.value })}
               placeholder={t('fields.name.placeholder')}
               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
             />
@@ -199,16 +246,16 @@ export default function EditSchedulePage() {
               <div className="flex items-center p-1 bg-transparent border border-border-dim rounded-[12px] w-fit">
                 <button
                   type="button"
-                  onClick={() => { setPayloadType("workflow"); setFormData(p => ({ ...p, agentId: "" })); setSearchQuery(""); }}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-[8px] text-[13px] font-bold tracking-wide transition-all ${payloadType === "workflow" ? 'bg-foreground/10 text-foreground' : 'text-muted hover:text-foreground hover:bg-foreground/5'}`}
+                  onClick={() => { updateDraft({ payloadType: "workflow", formData: { ...form.formData, agentId: "" } }); setSearchQuery(""); }}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-[8px] text-[13px] font-bold tracking-wide transition-all ${form.payloadType === "workflow" ? 'bg-foreground/10 text-foreground' : 'text-muted hover:text-foreground hover:bg-foreground/5'}`}
                 >
                   <Timer className="w-4 h-4" />
                   {t('fields.payload.workflowGraph')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPayloadType("agent"); setFormData(p => ({ ...p, workflowId: "" })); setSearchQuery(""); }}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-[8px] text-[13px] font-bold tracking-wide transition-all ${payloadType === "agent" ? 'bg-foreground/10 text-foreground' : 'text-muted hover:text-foreground hover:bg-foreground/5'}`}
+                  onClick={() => { updateDraft({ payloadType: "agent", formData: { ...form.formData, workflowId: "" } }); setSearchQuery(""); }}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-[8px] text-[13px] font-bold tracking-wide transition-all ${form.payloadType === "agent" ? 'bg-foreground/10 text-foreground' : 'text-muted hover:text-foreground hover:bg-foreground/5'}`}
                 >
                   <span className="w-4 h-4 flex items-center justify-center font-bold text-[14px]">🤖</span>
                   {t('fields.payload.autonomousAgent')}
@@ -217,20 +264,20 @@ export default function EditSchedulePage() {
             </div>
 
             {/* Workflow Mode */}
-            {payloadType === "workflow" && (
-              formData.workflowId ? (
+            {form.payloadType === "workflow" && (
+              form.formData.workflowId ? (
                 // Selected State
                 <div className="flex items-center justify-between p-4 rounded-[12px] bg-brand/10 border border-brand/30 shadow-inner group transition-all">
                   <div className="flex flex-col gap-1">
                     <span className="text-[14px] font-bold text-brand flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
-                      {workflows.find((w: any) => w._id === formData.workflowId)?.name}
+                      {workflows.find((w) => w._id === form.formData.workflowId)?.name}
                     </span>
                     <span className="text-[12px] text-brand/70 font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, workflowId: "" })}
+                    onClick={() => updateFormData({ workflowId: "" })}
                     className="px-4 py-2 rounded-[8px] bg-brand/20 text-brand text-[11px] font-bold tracking-widest uppercase hover:bg-brand hover:text-white transition-all"
                   >
                     {t('fields.workflow.change')}
@@ -251,10 +298,10 @@ export default function EditSchedulePage() {
                   </div>
 
                   <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar p-1 border border-border-dim/30 rounded-[12px] bg-sidebar/10">
-                    {filteredWorkflows.map((w: any) => (
+                    {filteredWorkflows.map((w) => (
                       <div
                         key={w._id}
-                        onClick={() => { setFormData({ ...formData, workflowId: w._id }); setSearchQuery(""); }}
+                        onClick={() => { updateFormData({ workflowId: w._id }); setSearchQuery(""); }}
                         className="px-4 py-2 bg-transparent hover:bg-foreground/5 cursor-pointer rounded-[8px] flex flex-col gap-0.5 transition-colors border border-transparent hover:border-border-dim/50"
                       >
                         <span className="text-[14px] font-semibold text-foreground">{w.name}</span>
@@ -272,20 +319,20 @@ export default function EditSchedulePage() {
             )}
 
             {/* Agent Mode */}
-            {payloadType === "agent" && (
-              formData.agentId ? (
+            {form.payloadType === "agent" && (
+              form.formData.agentId ? (
                 // Selected Agent State (matching screenshot style)
                 <div className="flex items-center justify-between p-4 rounded-[12px] bg-[#d97736]/10 border border-[#d97736]/30 shadow-inner group transition-all">
                   <div className="flex flex-col gap-1">
                     <span className="text-[14px] font-bold text-[#d97736] flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
-                      {agents.find((a: any) => a._id === formData.agentId)?.name}
+                      {agents.find((a) => a._id === form.formData.agentId)?.name}
                     </span>
                     <span className="text-[12px] text-[#d97736]/70 font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, agentId: "" })}
+                    onClick={() => updateFormData({ agentId: "" })}
                     className="px-4 py-2 rounded-[8px] bg-[#d97736]/20 text-[#d97736] text-[11px] font-bold tracking-widest uppercase hover:bg-[#d97736] hover:text-white transition-all"
                   >
                     {t('fields.agent.change')}
@@ -306,10 +353,10 @@ export default function EditSchedulePage() {
                   </div>
 
                   <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar p-1 border border-border-dim/30 rounded-[12px] bg-sidebar/10">
-                    {filteredAgents.map((a: any) => (
+                    {filteredAgents.map((a) => (
                       <div
                         key={a._id}
-                        onClick={() => { setFormData({ ...formData, agentId: a._id }); setSearchQuery(""); }}
+                        onClick={() => { updateFormData({ agentId: a._id }); setSearchQuery(""); }}
                         className="px-4 py-2 bg-transparent hover:bg-foreground/5 cursor-pointer rounded-[8px] flex flex-col gap-0.5 transition-colors border border-transparent hover:border-border-dim/50"
                       >
                         <span className="text-[14px] font-semibold text-foreground">{a.name}</span>
@@ -350,8 +397,8 @@ export default function EditSchedulePage() {
                     <button
                       key={f.id}
                       type="button"
-                      onClick={() => setFrequency(f.id)}
-                      className={`px-6 py-2 rounded-[8px] text-[12px] font-bold tracking-wide transition-all ${frequency === f.id ? 'bg-foreground/10 text-foreground' : 'text-muted hover:bg-foreground/5'}`}
+                      onClick={() => updateDraft({ frequency: f.id as Frequency })}
+                      className={`px-6 py-2 rounded-[8px] text-[12px] font-bold tracking-wide transition-all ${form.frequency === f.id ? 'bg-foreground/10 text-foreground' : 'text-muted hover:bg-foreground/5'}`}
                     >
                       {f.label}
                     </button>
@@ -359,13 +406,13 @@ export default function EditSchedulePage() {
                 </div>
               </div>
 
-              {frequency === "hourly" && (
+              {form.frequency === "hourly" && (
                 <div className="flex flex-col gap-2 w-[200px]">
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase flex items-center justify-between">
                     {t('fields.interval.everyXHours')}
                   </label>
                   <select
-                    value={hourlyInterval} onChange={e => setHourlyInterval(e.target.value)}
+                    value={form.hourlyInterval} onChange={e => updateDraft({ hourlyInterval: e.target.value })}
                     className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono appearance-none"
                     style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
@@ -376,11 +423,11 @@ export default function EditSchedulePage() {
                 </div>
               )}
 
-              {frequency === "weekly" && (
+              {form.frequency === "weekly" && (
                 <div className="flex flex-col gap-2 w-[200px]">
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfWeek')}</label>
                   <select
-                    value={dayOfWeek} onChange={e => setDayOfWeek(e.target.value)}
+                    value={form.dayOfWeek} onChange={e => updateDraft({ dayOfWeek: e.target.value })}
                     className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 appearance-none"
                     style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
@@ -391,11 +438,11 @@ export default function EditSchedulePage() {
                 </div>
               )}
 
-              {frequency === "monthly" && (
+              {form.frequency === "monthly" && (
                 <div className="flex flex-col gap-2 w-[200px]">
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfMonth')}</label>
                   <select
-                    value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)}
+                    value={form.dayOfMonth} onChange={e => updateDraft({ dayOfMonth: e.target.value })}
                     className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 flex-shrink-0 appearance-none"
                     style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                   >
@@ -406,12 +453,12 @@ export default function EditSchedulePage() {
                 </div>
               )}
 
-              {frequency !== "hourly" && (
+              {form.frequency !== "hourly" && (
                 <div className="flex flex-col gap-2 w-[200px]">
                   <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.timeLabel')}</label>
                   <input
                     type="time"
-                    value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)}
+                    value={form.timeOfDay} onChange={e => updateDraft({ timeOfDay: e.target.value })}
                     className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono"
                   />
                 </div>
@@ -434,7 +481,7 @@ export default function EditSchedulePage() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || (payloadType === "workflow" ? !formData.workflowId : !formData.agentId) || !formData.name}
+              disabled={isSubmitting || (form.payloadType === "workflow" ? !form.formData.workflowId : !form.formData.agentId) || !form.formData.name}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
             >
               {isSubmitting ? t('actions.saving') : t('actions.save')}

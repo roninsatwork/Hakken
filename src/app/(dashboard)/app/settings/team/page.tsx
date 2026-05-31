@@ -3,11 +3,12 @@
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import type { FormEvent } from "react";
+import Image from "next/image";
 import {
   Users,
   Plus,
   Search,
-  MoreVertical,
   ShieldCheck,
   User,
   Trash2,
@@ -16,8 +17,18 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import type { Doc } from "@/convex/_generated/dataModel";
+
+type TeamUserRole = "USER" | "ADMIN";
+
+type TeamUserFormData = {
+  name: string;
+  email: string;
+  role: TeamUserRole;
+  image: string;
+  companyId: string;
+};
 
 export default function CompanyTeamPage() {
   const currentUser = useQuery(api.users.getMe);
@@ -42,13 +53,13 @@ export default function CompanyTeamPage() {
   const updateUser = useMutation(api.users.updateUser);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [formData, setFormData] = useState<TeamUserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
 
-  const filteredInvites = pendingInvites.filter((inv: any) =>
+  const filteredInvites = pendingInvites.filter((inv) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase()) && inv.companyId === currentUser?.companyId
   );
 
@@ -58,17 +69,22 @@ export default function CompanyTeamPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, role: user.role || "USER", image: user.image || "", companyId: user.companyId || currentUser?.companyId || "" });
+  const handleOpenEdit = (user: Doc<"users">) => {
+    setFormData({
+      name: user.name ?? "",
+      email: user.email ?? "",
+      role: user.role === "ADMIN" ? "ADMIN" : "USER",
+      image: user.image || "",
+      companyId: user.companyId || currentUser?.companyId || "",
+    });
     setEditingUser(user);
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const payload = {
       ...formData,
-      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       companyId: currentUser?.companyId
     };
     if (editingUser) {
@@ -205,9 +221,12 @@ export default function CompanyTeamPage() {
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user._id}`}
-                              alt={user.name}
+                            <Image
+                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name ?? user.email ?? user._id}`}
+                              alt={user.name ?? user.email ?? tCommon('table.user')}
+                              width={32}
+                              height={32}
+                              unoptimized
                               className="w-8 h-8 rounded-full bg-card border border-border-dim"
                             />
                             <div>
@@ -300,7 +319,7 @@ export default function CompanyTeamPage() {
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.role')}</label>
             <select
               value={formData.role}
-              onChange={e => setFormData({ ...formData, role: e.target.value })}
+              onChange={e => setFormData({ ...formData, role: e.target.value as TeamUserRole })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
               <option value="USER">{t('roles.user')}</option>
@@ -345,7 +364,7 @@ export default function CompanyTeamPage() {
         title={t('modal.deleteTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.deleteConfirm', { name: deletingUser?.name })}
+          {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button
@@ -372,7 +391,7 @@ export default function CompanyTeamPage() {
         title={t('modal.revokeTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.revokeConfirm', { email: deletingInvite?.email })}
+          {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button

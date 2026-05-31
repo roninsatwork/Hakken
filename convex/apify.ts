@@ -59,7 +59,7 @@ export const startRightmoveScrape = action({
                     "X-Apify-Secret": webhookSecret
                 }),
                 payloadTemplate: `{"runId": "{{resource.id}}", "status": "{{resource.status}}", "actorId": "{{resource.actId}}", "datasetId": "{{resource.defaultDatasetId}}"}`,
-            } as any
+            }
         ]
     });
 
@@ -152,7 +152,7 @@ export const syncRunStatus = action({
     await ctx.runMutation(internal.webhooks.storeRightmoveData, {
       runId: args.runId,
       status: "SUCCEEDED",
-      items: dataset.items.map((item: any) => JSON.stringify(item)),
+      items: dataset.items.map((item) => JSON.stringify(item)),
     });
     
     return "SUCCEEDED";

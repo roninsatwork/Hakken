@@ -3,25 +3,40 @@
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import Image from "next/image";
 import { 
   Users, 
   Plus, 
   Search, 
-  MoreVertical,
   ShieldCheck,
   User,
   Trash2,
   Edit2,
-  Loader2,
   ChevronDown,
   RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+
+type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+type CompanyUser = Doc<"users">;
+type PendingInvite = Doc<"invitations">;
+
+type UserFormData = {
+  name: string;
+  email: string;
+  role: UserRole;
+  image: string;
+  companyId: string;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 export default function CompanyUsersPage() {
   const t = useTranslations('companyUsers');
@@ -31,9 +46,6 @@ export default function CompanyUsersPage() {
 
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
-
-  const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || "System Level";
 
   const { results: paginatedUsers, status, loadMore } = usePaginatedQuery(
     api.users.getUsersByCompany,
@@ -55,12 +67,12 @@ export default function CompanyUsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedAdminId, setSelectedAdminId] = useState("");
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
-  const [detachingAdmin, setDetachingAdmin] = useState<any | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<CompanyUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<CompanyUser | null>(null);
+  const [detachingAdmin, setDetachingAdmin] = useState<CompanyUser | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<PendingInvite | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -72,8 +84,8 @@ export default function CompanyUsersPage() {
       await assignSuperAdmin({ userId: selectedAdminId as Id<"users">, companyId });
       setIsAssignModalOpen(false);
       setSelectedAdminId("");
-    } catch (err: any) {
-      setSubmitError(err.message || "Failed to assign system admin.");
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err, "Failed to assign system admin."));
     } finally {
       setIsSubmitting(false);
     }
@@ -85,20 +97,20 @@ export default function CompanyUsersPage() {
       try {
         await detachSuperAdmin({ userId: detachingAdmin._id });
         setDetachingAdmin(null);
-      } catch (err: any) {
-        setSubmitError(err.message || "Failed to detach system admin.");
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, "Failed to detach system admin."));
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  const filteredUsers = paginatedUsers.filter((u: any) => 
-    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = paginatedUsers.filter((u) =>
+    (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredInvites = pendingInvites.filter((inv: any) => 
+  const filteredInvites = pendingInvites.filter((inv) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -106,15 +118,8 @@ export default function CompanyUsersPage() {
     setSearchTerm(v);
   };
 
-  const handleOpenAdd = () => {
-    setFormData({ name: "", email: "", role: "USER", image: "", companyId: "" });
-    setEditingUser(null);
-    setSubmitError("");
-    setIsAddModalOpen(true);
-  };
-
-  const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
+  const handleOpenEdit = (user: CompanyUser) => {
+    setFormData({ name: user.name || "", email: user.email || "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
     setEditingUser(user);
     setSubmitError("");
     setIsAddModalOpen(true);
@@ -125,7 +130,7 @@ export default function CompanyUsersPage() {
     setIsSubmitting(true);
     const payload = {
       ...formData,
-      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
+      role: formData.role,
       companyId
     };
     try {
@@ -135,8 +140,8 @@ export default function CompanyUsersPage() {
         await addUser(payload);
       }
       setIsAddModalOpen(false);
-    } catch (err: any) {
-      setSubmitError(err.message || "Operation failed.");
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err, "Operation failed."));
     } finally {
       setIsSubmitting(false);
     }
@@ -148,8 +153,8 @@ export default function CompanyUsersPage() {
       try {
         await deleteUser({ id: deletingUser._id });
         setDeletingUser(null);
-      } catch (err: any) {
-        setSubmitError(err.message || "Failed to delete user.");
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, "Failed to delete user."));
       } finally {
         setIsSubmitting(false);
       }
@@ -162,8 +167,8 @@ export default function CompanyUsersPage() {
       try {
         await revokeInvite({ id: deletingInvite._id });
         setDeletingInvite(null);
-      } catch (err: any) {
-        setSubmitError(err.message || "Failed to revoke invite.");
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, "Failed to revoke invite."));
       } finally {
         setIsSubmitting(false);
       }
@@ -238,7 +243,7 @@ export default function CompanyUsersPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredInvites.map((inv: any) => (
+                    {filteredInvites.map((inv) => (
                         <motion.tr 
                           key={`inv-${inv._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -280,7 +285,7 @@ export default function CompanyUsersPage() {
                         </motion.tr>
                     ))}
 
-                    {filteredUsers.map((item: any) => (
+                    {filteredUsers.map((item) => (
                         <motion.tr 
                           key={`user-${item._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -291,9 +296,12 @@ export default function CompanyUsersPage() {
                         >
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-3">
-                              <img 
+                              <Image
                                 src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name}`} 
-                                alt={item.name} 
+                                alt={item.name || "User avatar"}
+                                width={32}
+                                height={32}
+                                unoptimized
                                 className="w-8 h-8 rounded-full bg-card border border-border-dim"
                               />
                               <div>
@@ -415,7 +423,7 @@ export default function CompanyUsersPage() {
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
             <select 
               value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
+              onChange={e => setFormData({...formData, role: e.target.value as UserRole})}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
               <option value="USER">User (Read-only)</option>
@@ -542,7 +550,7 @@ export default function CompanyUsersPage() {
                 className="w-full px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none pr-10"
               >
                 <option value="">{t("chooseAdmin")}</option>
-                {unassignedSuperAdmins.map((admin: any) => (
+                {unassignedSuperAdmins.map((admin) => (
                   <option key={admin._id} value={admin._id}>
                     {admin.name} ({admin.email})
                   </option>

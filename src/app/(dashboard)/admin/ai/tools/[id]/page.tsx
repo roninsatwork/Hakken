@@ -1,12 +1,30 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+
+type ToolRole = "ADMIN" | "SUPER_ADMIN";
+
+type ToolDraft = {
+  name: string;
+  description: string;
+  handlerMapping: string;
+  requiredRole: ToolRole;
+};
+
+function createToolDraft(tool: Doc<"aiTools">): ToolDraft {
+  return {
+    name: tool.name,
+    description: tool.description,
+    handlerMapping: tool.handlerMapping,
+    requiredRole: tool.requiredRole,
+  };
+}
 
 export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiTools"> }> }) {
   const router = useRouter();
@@ -16,34 +34,28 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
   const tool = useQuery(api.aiTools.getToolById, { id: toolId });
   const updateTool = useMutation(api.aiTools.updateTool);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [handlerMapping, setHandlerMapping] = useState("");
-  const [requiredRole, setRequiredRole] = useState<"ADMIN" | "SUPER_ADMIN">("ADMIN");
+  const [draft, setDraft] = useState<ToolDraft | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync DB record to local UI state once it lands
-  useEffect(() => {
-    if (tool) {
-      setName(tool.name);
-      setDescription(tool.description);
-      setHandlerMapping(tool.handlerMapping);
-      setRequiredRole(tool.requiredRole);
-    }
-  }, [tool]);
+  const updateDraft = (updates: Partial<ToolDraft>) => {
+    if (!tool) return;
+    setDraft((current) => ({ ...(current ?? createToolDraft(tool)), ...updates }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !description.trim() || !handlerMapping.trim() || isSubmitting) return;
+    if (!tool) return;
+    const form = draft ?? createToolDraft(tool);
+    if (!form.name.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       await updateTool({
         id: toolId,
-        name: name.trim(),
-        description: description.trim(),
-        handlerMapping: handlerMapping.trim(),
-        requiredRole,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        handlerMapping: form.handlerMapping.trim(),
+        requiredRole: form.requiredRole,
       });
       router.push(`/admin/ai/tools`);
     } catch (err) {
@@ -67,8 +79,14 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <div className="flex-1 w-full h-full flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-muted" />
         </div>
-     );
+	     );
   }
+
+  if (!tool) {
+    return null;
+  }
+
+  const form = draft ?? createToolDraft(tool);
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
@@ -110,8 +128,8 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
            <div className="flex flex-col gap-2 relative group ml-1">
              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Global Tool Name</label>
              <input
-               value={name}
-               onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+	               value={form.name}
+	               onChange={(e) => updateDraft({ name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
                placeholder="e.g. check_inventory_status"
                className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
              />
@@ -127,8 +145,8 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
            <div className="flex flex-col gap-2 relative group ml-1 h-[150px]">
              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Semantic Description</label>
              <textarea
-               value={description}
-               onChange={(e) => setDescription(e.target.value)}
+	               value={form.description}
+	               onChange={(e) => updateDraft({ description: e.target.value })}
                placeholder="Tell the LLM exactly what this tool does and when to use it..."
                className="w-full h-full resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-amber-500/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
                spellCheck={false}
@@ -145,8 +163,8 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
            <div className="flex flex-col gap-2 relative group ml-1">
              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Internal Convex Mutation/Action</label>
              <input
-               value={handlerMapping}
-               onChange={(e) => setHandlerMapping(e.target.value)}
+	               value={form.handlerMapping}
+	               onChange={(e) => updateDraft({ handlerMapping: e.target.value })}
                placeholder="e.g. api.integrations.stripe.createCharge"
                className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide"
              />
@@ -164,8 +182,8 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
                 <button
                   key={p}
                   type="button"
-                  onClick={() => setRequiredRole(p)}
-                  className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
+	                  onClick={() => updateDraft({ requiredRole: p })}
+	                  className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === form.requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
                 >
                   <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{p}</span>
                 </button>
@@ -177,7 +195,7 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
           <button
             type="submit"
-            disabled={!name.trim() || !description.trim() || !handlerMapping.trim() || isSubmitting}
+	            disabled={!form.name.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

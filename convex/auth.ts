@@ -1,8 +1,27 @@
 import { convexAuth } from "@convex-dev/auth/server";
-import authConfig from "./auth.config";
+import type { MutationCtx } from "./_generated/server";
 
 import Google from "@auth/core/providers/google";
 import Resend from "@auth/core/providers/resend";
+
+type AuthProfile = {
+  email?: string;
+  name?: string;
+  image?: string;
+  picture?: string;
+};
+
+type AuthUser = {
+  email?: string;
+  name?: string;
+  image?: string;
+};
+
+type CreateOrUpdateUserArgs = {
+  profile?: AuthProfile;
+  email?: string;
+  user?: AuthUser;
+};
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -17,7 +36,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   ],
 
   callbacks: {
-    async createOrUpdateUser(ctx: any, args: any) {
+    async createOrUpdateUser(ctx: Pick<MutationCtx, "db">, args: CreateOrUpdateUserArgs) {
       const rawEmail = args.profile?.email || args.email || args.user?.email || "";
       const email = rawEmail.toLowerCase();
       const name = args.profile?.name || args.user?.name || email.split("@")[0] || "User";
@@ -30,7 +49,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       // Find if user already exists
       const existingUser = await ctx.db
         .query("users")
-        .withIndex("email", (q: any) => q.eq("email", email))
+        .withIndex("email", (q) => q.eq("email", email))
         .first();
 
       const isInitialSuperAdmin = !!process.env.INITIAL_SUPER_ADMIN_EMAIL && email === process.env.INITIAL_SUPER_ADMIN_EMAIL.toLowerCase();
@@ -40,8 +59,8 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         if (!isInitialSuperAdmin) {
           const pendingInvite = await ctx.db
             .query("invitations")
-            .withIndex("by_email", (q: any) => q.eq("email", email))
-            .filter((q: any) => q.eq(q.field("status"), "PENDING"))
+            .withIndex("by_email", (q) => q.eq("email", email))
+            .filter((q) => q.eq(q.field("status"), "PENDING"))
             .first();
 
           if (!pendingInvite) {

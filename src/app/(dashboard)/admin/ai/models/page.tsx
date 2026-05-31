@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Bot, RefreshCw, Loader2, Star, ShieldCheck, Power, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, RefreshCw, Loader2, Star, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export default function AIModelsPage() {
   const router = useRouter();

@@ -3,6 +3,11 @@ import { mutation, query, internalQuery, action, httpAction } from "./_generated
 import { internal, api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
+import { parseWorkflowNodes } from "./utils/workflowTypes";
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
 
 function constantTimeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -83,7 +88,7 @@ export const createWorkflow = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_WORKFLOW",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "workflows",
       entityId: newWorkflowId,
       timestamp: Date.now(),
@@ -131,8 +136,8 @@ export const updateWorkflow = mutation({
     
     // Sync Scheduling Table
     if (args.nodes) {
-      const parsedNodes = JSON.parse(args.nodes);
-      const triggerNode = parsedNodes.find((n: any) => n.type === 'triggerNode');
+      const parsedNodes = parseWorkflowNodes(args.nodes);
+      const triggerNode = parsedNodes.find((node) => node.type === 'triggerNode');
       const triggerType = triggerNode?.data?._triggerType || 'MANUAL';
       
       const existingSchedule = await ctx.db.query("schedules")
@@ -162,7 +167,7 @@ export const updateWorkflow = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_WORKFLOW",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "workflows",
       entityId: id,
       timestamp: Date.now(),
@@ -190,7 +195,7 @@ export const deleteWorkflow = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_WORKFLOW",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "workflows",
       entityId: args.id,
       timestamp: Date.now(),
@@ -238,11 +243,11 @@ export const runManualSync = action({
     workflowId: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<unknown> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
 
-    const user = await ctx.runQuery(api.users.getUserById, { id: userId as any });
+    const user = await ctx.runQuery(api.users.getUserById, { id: userId });
     if (!user || user.role !== "SUPER_ADMIN") {
       throw new Error("Unauthorized");
     }
@@ -310,9 +315,9 @@ export const handleWebhook = httpAction(async (ctx, request) => {
        status: 200,
        headers: { "Content-Type": "application/json" }
      });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Webhook error:", error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: getErrorMessage(error) }), { status: 500 });
   }
 });
 

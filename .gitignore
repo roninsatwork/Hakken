@@ -30,6 +30,10 @@ Thumbs.db
 
 # Testing
 /coverage
+/playwright-report/
+
+# TypeScript incremental cache
+tsconfig.tsbuildinfo
 
 # Convex database exports and dumps
 dev-export/

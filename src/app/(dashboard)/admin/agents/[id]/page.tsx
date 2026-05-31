@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import {
   Activity,
@@ -11,11 +11,9 @@ import {
   Database,
   TerminalSquare,
   Zap,
-  RefreshCcw,
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 export default function AgentDashboard() {
@@ -23,8 +21,7 @@ export default function AgentDashboard() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
-
-  const activeModels = useQuery(api.aiModels.getModels) || [];
+  const activeModels = (useQuery(api.aiModels.getModels) || []) as Doc<"aiModels">[];
 
   const stats = useQuery(api.agentTransactions.getStatsForAgent, { agentId });
 
@@ -131,7 +128,10 @@ export default function AgentDashboard() {
                 </tr>
               )}
 
-              {results.map((tx, idx) => (
+              {results.map((tx) => {
+                const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
+
+                return (
                 <tr key={tx._id} className="group hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex flex-col">
@@ -150,7 +150,7 @@ export default function AgentDashboard() {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
-                      {activeModels.find((m: any) => m.modelId === tx.modelUsed)?.friendlyName || activeModels.find((m: any) => m.modelId === tx.modelUsed)?.displayName || tx.modelUsed}
+                      {model?.friendlyName || model?.displayName || tx.modelUsed}
                     </div>
                   </td>
                   <td className="px-5 py-4 text-right">
@@ -177,7 +177,8 @@ export default function AgentDashboard() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -3,6 +3,8 @@
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import Image from "next/image";
+import type { FormEvent } from "react";
 import {
   Users,
   Plus,
@@ -18,7 +20,17 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+
+type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+
+type UserFormData = {
+  name: string;
+  email: string;
+  role: UserRole;
+  image: string;
+  companyId: string;
+};
 
 export default function ManageUsersPage() {
   const currentUser = useQuery(api.users.getMe);
@@ -27,7 +39,7 @@ export default function ManageUsersPage() {
   const t = useTranslations('admin.users');
   const tCommon = useTranslations('common');
 
-  const getCompanyName = (id: string) => companies.find((c: any) => c._id === id)?.name || t('table.systemLevel');
+  const getCompanyName = (id: string) => companies.find((c) => c._id === id)?.name || t('table.systemLevel');
 
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -45,33 +57,26 @@ export default function ManageUsersPage() {
   const updateUser = useMutation(api.users.updateUser);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
-  const [deletingInvite, setDeletingInvite] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
 
-  const filteredInvites = pendingInvites.filter((inv: any) =>
+  const filteredInvites = pendingInvites.filter((inv) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenAdd = () => {
-    setFormData({ name: "", email: "", role: "USER", image: "", companyId: "" });
-    setEditingUser(null);
-    setIsAddModalOpen(true);
-  };
-
-  const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
+  const handleOpenEdit = (user: Doc<"users">) => {
+    setFormData({ name: user.name ?? "", email: user.email ?? "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
     setEditingUser(user);
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const payload = {
       ...formData,
-      role: formData.role as "USER" | "ADMIN" | "SUPER_ADMIN",
       companyId: isSuperAdmin && formData.companyId ? (formData.companyId as Id<"companies">) : undefined
     };
     if (editingUser) {
@@ -213,10 +218,13 @@ export default function ManageUsersPage() {
                         className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
                       >
                         <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`}
-                              alt={user.name}
+                            <div className="flex items-center gap-3">
+                            <Image
+                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name ?? user.email ?? user._id}`}
+                              alt={user.name ?? user.email ?? tCommon('table.user')}
+                              width={32}
+                              height={32}
+                              unoptimized
                               className="w-8 h-8 rounded-full bg-card border border-border-dim"
                             />
                             <div>
@@ -313,7 +321,7 @@ export default function ManageUsersPage() {
             <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.role')}</label>
             <select
               value={formData.role}
-              onChange={e => setFormData({ ...formData, role: e.target.value })}
+              onChange={e => setFormData({ ...formData, role: e.target.value as UserRole })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
               <option value="USER">{t('roles.user')}</option>
@@ -331,7 +339,7 @@ export default function ManageUsersPage() {
                 className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
               >
                 <option value="">{t('table.systemLevel')}</option>
-                {companies.map((c: any) => (
+                {companies.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
@@ -375,7 +383,7 @@ export default function ManageUsersPage() {
         title={t('modal.deleteTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.deleteConfirm', { name: deletingUser?.name })}
+          {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button
@@ -402,7 +410,7 @@ export default function ManageUsersPage() {
         title={t('modal.revokeTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
-          {t('modal.revokeConfirm', { email: deletingInvite?.email })}
+          {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
         </p>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button

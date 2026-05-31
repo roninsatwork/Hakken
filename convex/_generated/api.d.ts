@@ -56,6 +56,8 @@ import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
+import type * as utils_uploadPolicy from "../utils/uploadPolicy.js";
+import type * as utils_workflowTypes from "../utils/workflowTypes.js";
 import type * as webhooks from "../webhooks.js";
 import type * as widgets from "../widgets.js";
 import type * as workflowEngine from "../workflowEngine.js";
@@ -118,6 +120,8 @@ declare const fullApi: ApiFromModules<{
   "utils/pii": typeof utils_pii;
   "utils/security": typeof utils_security;
   "utils/templateParser": typeof utils_templateParser;
+  "utils/uploadPolicy": typeof utils_uploadPolicy;
+  "utils/workflowTypes": typeof utils_workflowTypes;
   webhooks: typeof webhooks;
   widgets: typeof widgets;
   workflowEngine: typeof workflowEngine;

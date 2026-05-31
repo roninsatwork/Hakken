@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -22,6 +22,14 @@ const sizeClasses = {
   xl: 'max-w-5xl',
 };
 
+function useMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export default function SonaeModal({ 
   isOpen, 
   onClose, 
@@ -30,11 +38,7 @@ export default function SonaeModal({
   className,
   size = 'md'
 }: SonaeModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const modalContent = (
     <AnimatePresence>

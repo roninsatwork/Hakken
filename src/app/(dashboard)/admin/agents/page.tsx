@@ -3,6 +3,9 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import type { FormEvent } from "react";
+import Image from "next/image";
+import type { Doc } from "@/convex/_generated/dataModel";
 import {
   Bot,
   Workflow,
@@ -18,10 +21,15 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+type Agent = Doc<"agents">;
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export default function AgentsPage() {
   const router = useRouter();
   const t = useTranslations('admin.agents');
-  const tCommon = useTranslations('common');
   const agents = useQuery(api.agents.list) || [];
   const activeModels = useQuery(api.aiModels.getModels) || [];
   const createAgent = useMutation(api.agents.createAgent);
@@ -29,15 +37,16 @@ export default function AgentsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deletingAgent, setDeletingAgent] = useState<any | null>(null);
+  const [deletingAgent, setDeletingAgent] = useState<Agent | null>(null);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
 
-  const filteredAgents = agents.filter((a: any) =>
+  const filteredAgents = agents.filter((a) =>
     (a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -53,12 +62,14 @@ export default function AgentsPage() {
 
   const handleOpenAdd = () => {
     setFormData({ name: "", description: "" });
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError("");
     try {
       const newAgentId = await createAgent({
         name: formData.name,
@@ -67,8 +78,8 @@ export default function AgentsPage() {
       setIsAddModalOpen(false);
       // Navigate straight to the new agent's config page
       router.push(`/admin/agents/${newAgentId}`);
-    } catch (err: any) {
-      alert(err.message || t('errors.create'));
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err, t('errors.create')));
     } finally {
       setIsSubmitting(false);
     }
@@ -80,9 +91,8 @@ export default function AgentsPage() {
       try {
         await deleteAgent({ id: deletingAgent._id });
         setDeletingAgent(null);
-      } catch (err: any) {
-        alert(err.message || t('errors.delete'));
-        setDeletingAgent(null);
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, t('errors.delete')));
       } finally {
         setIsSubmitting(false);
       }
@@ -146,7 +156,7 @@ export default function AgentsPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedAgents.map((agent: any) => (
+                    {paginatedAgents.map((agent) => (
                       <motion.tr
                         key={agent._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -158,7 +168,14 @@ export default function AgentsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {agent.avatar ? (
-                              <img src={agent.avatar} alt={agent.name} className="w-8 h-8 rounded-full border border-border-dim object-cover" />
+                              <Image
+                                src={agent.avatar}
+                                alt={agent.name}
+                                width={32}
+                                height={32}
+                                unoptimized
+                                className="w-8 h-8 rounded-full border border-border-dim object-cover"
+                              />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground">
                                 <Bot className="w-4 h-4 text-brand" />
@@ -179,7 +196,7 @@ export default function AgentsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
-                              {activeModels.find((m: any) => m.modelId === agent.modelId)?.friendlyName || activeModels.find((m: any) => m.modelId === agent.modelId)?.displayName || agent.modelId}
+                              {activeModels.find((m) => m.modelId === agent.modelId)?.friendlyName || activeModels.find((m) => m.modelId === agent.modelId)?.displayName || agent.modelId}
                             </span>
                           </div>
                         </td>
@@ -247,6 +264,7 @@ export default function AgentsPage() {
         title={t('modal.initTitle')}
       >
         <p className="text-secondary mb-6 text-[15px]">{t('modal.initDesc')}</p>
+        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.name')}</label>
@@ -299,9 +317,10 @@ export default function AgentsPage() {
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            {t('modal.deleteConfirm', { name: deletingAgent?.name })}
+            {t('modal.deleteConfirm', { name: deletingAgent?.name ?? "" })}
           </p>
           <p className="text-[13px] text-muted">{t('modal.undone')}</p>
+          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button

@@ -2,8 +2,32 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import CompanyUsersPage from "./page";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
-import * as nextNavigation from "next/navigation";
 import { getFunctionName } from "convex/server";
+import type { ReactNode, HTMLAttributes } from "react";
+
+type MockQueryFunction = {
+  _path?: string;
+  name?: string;
+};
+
+type HookMock = {
+  mockImplementation: (implementation: (...args: unknown[]) => unknown) => void;
+  mockReturnValue: (value: unknown) => void;
+};
+
+type MockUser = {
+  _id: string;
+  name?: string;
+  email?: string;
+  role?: "USER" | "ADMIN" | "SUPER_ADMIN";
+  companyId?: string;
+};
+
+type MockInvite = {
+  _id: string;
+  email: string;
+  role: "USER" | "ADMIN" | "SUPER_ADMIN";
+};
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -36,35 +60,34 @@ vi.mock("next-intl", () => ({
 
 // Mock framer-motion to bypass animations in JSDOM
 vi.mock("framer-motion", async () => {
-  const actual = await vi.importActual<any>("framer-motion");
+  const actual = await vi.importActual<typeof import("framer-motion")>("framer-motion");
   return {
     ...actual,
-    AnimatePresence: ({ children }: any) => <>{children}</>,
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
     motion: {
       ...actual.motion,
-      div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-      tr: ({ children, ...props }: any) => <tr {...props}>{children}</tr>,
+      div: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+      tr: ({ children, ...props }: HTMLAttributes<HTMLTableRowElement>) => <tr {...props}>{children}</tr>,
     },
   };
 });
 
 describe("CompanyUsersPage", () => {
-  const mockCurrentUser = { _id: "admin1", role: "SUPER_ADMIN", name: "System Admin" };
+  const mockCurrentUser: MockUser = { _id: "admin1", role: "SUPER_ADMIN", name: "System Admin" };
   const mockCompanies = [
     { _id: "company123", name: "Acme Corp" }
   ];
-  const mockPaginatedUsers = [
+  const mockPaginatedUsers: MockUser[] = [
     { _id: "user1", name: "Acme Employee", email: "employee@acme.com", role: "USER", companyId: "company123" },
   ];
-  const mockPendingInvites = [
+  const mockPendingInvites: MockInvite[] = [
     { _id: "inv1", email: "pending@acme.com", role: "USER" },
   ];
 
-  let currentMockUser: any;
-  let currentMockCompanies: any;
-  let currentMockInvites: any;
-  let mockLoadMore: any;
-  let useQueryCallCount = 0;
+  let currentMockUser: MockUser;
+  let currentMockCompanies: { _id: string; name: string }[];
+  let currentMockInvites: MockInvite[];
+  let mockLoadMore: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -72,14 +95,14 @@ describe("CompanyUsersPage", () => {
     currentMockUser = mockCurrentUser;
     currentMockCompanies = mockCompanies;
     currentMockInvites = mockPendingInvites;
-    useQueryCallCount = 0;
     
-    (useQuery as any).mockImplementation((queryFn: any) => {
+    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       let path = "";
       try {
-        path = getFunctionName(queryFn);
-      } catch (e) {
-        path = queryFn?._path || queryFn?.name || "";
+        path = getFunctionName(queryFn as never);
+      } catch {
+        const maybeQuery = queryFn as MockQueryFunction;
+        path = maybeQuery?._path || maybeQuery?.name || "";
       }
       if (typeof path === "string") {
         if (path.includes("getMe")) return currentMockUser;
@@ -90,13 +113,13 @@ describe("CompanyUsersPage", () => {
       return [];
     });
 
-    (usePaginatedQuery as any).mockImplementation(() => ({
+    (usePaginatedQuery as unknown as HookMock).mockImplementation(() => ({
       results: mockPaginatedUsers,
       status: "CanLoadMore",
       loadMore: mockLoadMore,
     }));
 
-    (useMutation as any).mockReturnValue(vi.fn().mockResolvedValue({}));
+    (useMutation as unknown as HookMock).mockReturnValue(vi.fn().mockResolvedValue({}));
   });
 
   it("renders the table with users and pending invites for the specific company", () => {
@@ -139,7 +162,7 @@ describe("CompanyUsersPage", () => {
   });
 
   it("hides 'Load More' button when status is Exhausted", () => {
-    (usePaginatedQuery as any).mockImplementation(() => ({
+    (usePaginatedQuery as unknown as HookMock).mockImplementation(() => ({
       results: mockPaginatedUsers,
       status: "Exhausted",
       loadMore: mockLoadMore,

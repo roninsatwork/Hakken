@@ -1,8 +1,32 @@
-import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
+import { query, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
 
-export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: Map<string, any>) {
+type AiModelDoc = Doc<"aiModels">;
+type ModelCostMap = Map<string, AiModelDoc>;
+type SystemAgentId = "system_assistant";
+type AnalyticsInteraction = {
+    userId?: Id<"users">;
+    widgetId?: Id<"widgets">;
+    companyId?: Id<"companies">;
+    agentId?: Id<"agents"> | SystemAgentId;
+    inputTokens: number;
+    outputTokens: number;
+    modelUsed: string;
+    createdAt: number;
+};
+type CompanyLeaderboardEntry = { id: string; name: string; logo: string; cost: number; messages: number };
+const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
+
+export function buildModelCostContext(aiModelsFetch: AiModelDoc[]) {
+    const modelMap: ModelCostMap = new Map(aiModelsFetch.map((m) => [m.modelId, m]));
+    const defaultModelObj = aiModelsFetch.find((m) => m.isDefault);
+    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    return { modelMap, defaultModelId };
+}
+
+export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: ModelCostMap) {
     const config = modelMap.get(model);
     const inRate = config ? (inputs > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
     const outRate = config ? (config.outputResponseCost || 0) : 0;
@@ -17,9 +41,7 @@ export const getGlobalAICosts = query({
   },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized AI Logistics query");
     const admin = await ctx.db.get(adminId);
@@ -68,7 +90,7 @@ export const getGlobalAICosts = query({
     const aggregationType = durationDays > 180 ? "month" : durationDays > 60 ? "week" : "day";
     const timelineMap: Record<string, { costGBP: number }> = {};
 
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     while (currentDate.getTime() <= endDate) {
         let dateGroup = "";
         if (aggregationType === "month") {
@@ -159,9 +181,7 @@ export const getPlatformOverview = query({
   args: {},
   handler: async (ctx) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Core Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -252,9 +272,7 @@ export const getUserCostOverview = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Authorization Check
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
@@ -349,9 +367,7 @@ export const getCompanyMetrics = query({
   },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -391,7 +407,7 @@ export const getCompanyMetrics = query({
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number; internalMessages: number; externalMessages: number; inputTokens: number; outputTokens: number }> = {};
 
-    let currentDate = new Date(startDate.getTime());
+    const currentDate = new Date(startDate.getTime());
     while (currentDate.getTime() <= endDate.getTime()) {
         let dateGroup = "";
         if (aggregationType === "month") {
@@ -422,7 +438,7 @@ export const getCompanyMetrics = query({
     }
 
     const agents = await ctx.db.query("agents").take(10000);
-    const agentMap = new Map(agents.map((a: any) => [a._id, a]));
+    const agentMap = new Map(agents.map((a) => [a._id, a]));
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
     for (const a of agents) {
        agentLeaderboard[a._id] = { id: a._id, name: a.name, avatar: a.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${a._id}`, cost: 0, interactions: 0 };
@@ -431,11 +447,10 @@ export const getCompanyMetrics = query({
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
     const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
-    const companyUserIds = new Set(companyUsers.map((u: any) => u._id));
     
     // Natively fetch only threads related to this tenant
     const companyThreads = await ctx.db.query("threads").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
-    const companyThreadIds = new Set(companyThreads.map((t: any) => t._id));
+    const companyThreadIds = new Set(companyThreads.map((t) => t._id));
 
     const startTimeStamp = startDate.getTime();
     const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
@@ -448,7 +463,7 @@ export const getCompanyMetrics = query({
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
       .take(10000);
       
-    const periodRawMessages = rawMessages.filter((m: any) => companyThreadIds.has(m.threadId));
+    const periodRawMessages = rawMessages.filter((m) => companyThreadIds.has(m.threadId));
 
     const periodAgentTxs = await ctx.db.query("agentTransactions")
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
@@ -457,9 +472,9 @@ export const getCompanyMetrics = query({
        
     const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(10000);
 
-    const threadUserMap = new Map(companyThreads.map((t: any) => [t._id, t.userId]));
-    const threadAgentMap = new Map(companyThreads.map((t: any) => [t._id, t.agentId]));
-    const threadWidgetMap = new Map(companyThreads.map((t: any) => [t._id, t.widgetId]));
+    const threadUserMap = new Map(companyThreads.map((t) => [t._id, t.userId]));
+    const threadAgentMap = new Map(companyThreads.map((t) => [t._id, t.agentId]));
+    const threadWidgetMap = new Map(companyThreads.map((t) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
     for (const u of companyUsers) {
        userLeaderboard[u._id] = {
@@ -482,17 +497,17 @@ export const getCompanyMetrics = query({
         messages: 0
     };
     
-    const unifiedInteractions = [
-       ...periodRawMessages.map((m: any) => ({
+    const unifiedInteractions: AnalyticsInteraction[] = [
+       ...periodRawMessages.map((m) => ({
           userId: threadUserMap.get(m.threadId),
           widgetId: threadWidgetMap.get(m.threadId),
-          agentId: threadAgentMap.get(m.threadId) || "system_assistant",
+          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
        })),
-       ...periodAgentTxs.map((t: any) => ({
+       ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined, // Txs don't have thread visibility easily, but they follow raw messages
           agentId: t.agentId,
@@ -554,7 +569,7 @@ export const getCompanyMetrics = query({
             });
         }
         if (s.leaderboards?.topUsers) {
-            s.leaderboards.topUsers.forEach((u: any) => {
+            s.leaderboards.topUsers.forEach((u) => {
                 if (userLeaderboard[u.id]) {
                     userLeaderboard[u.id].cost += u.cost;
                     userLeaderboard[u.id].messages += u.messages;
@@ -562,10 +577,10 @@ export const getCompanyMetrics = query({
             });
         }
         if (s.modelMetrics) {
-            s.modelMetrics.forEach((m: any) => {
+            s.modelMetrics.forEach((m) => {
                 if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model) || {};
-                    modelDistribution[m.model] = { name: modelObj.friendlyName || modelObj.name || m.model, cost: 0, calls: 0 };
+                    const modelObj = modelMap.get(m.model);
+                    modelDistribution[m.model] = { name: modelObj?.friendlyName || modelObj?.displayName || m.model, cost: 0, calls: 0 };
                 }
                 modelDistribution[m.model].cost += m.cost;
                 modelDistribution[m.model].calls += m.calls;
@@ -628,11 +643,11 @@ export const getCompanyMetrics = query({
           activePeriodUsers.add(msg.userId);
           
           const isWidgetThread = !!msg.widgetId;
-          const isRegistered = companyUsers.some((u: any) => u._id === msg.userId);
+          const isRegistered = companyUsers.some((u) => u._id === msg.userId);
           const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
           
           if (!userLeaderboard[targetLeaderId]) {
-             const userObj = companyUsers.find((u: any) => u._id === targetLeaderId);
+             const userObj = companyUsers.find((u) => u._id === targetLeaderId);
              userLeaderboard[targetLeaderId] = {
                 id: targetLeaderId,
                 name: userObj?.name || "Unknown",
@@ -711,7 +726,7 @@ export const getCompanyMetrics = query({
        },
        topUsers,
        topAgents,
-       topCompanies: [] as any[]
+       topCompanies: [] as CompanyLeaderboardEntry[]
     };
   }
 });
@@ -724,9 +739,7 @@ export const getGlobalAnalytics = query({
   },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
-    const modelMap = new Map<string, any>(aiModelsFetch.map((m: any) => [m.modelId, m]));
-    const defaultModelObj = aiModelsFetch.find((m: any) => m.isDefault);
-    const defaultModelId = defaultModelObj ? defaultModelObj.modelId : "gemini-2.5-flash";
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthorized");
     const admin = await ctx.db.get(adminId);
@@ -755,10 +768,10 @@ export const getGlobalAnalytics = query({
 
     const users = await ctx.db.query("users").take(10000);
     const companies = await ctx.db.query("companies").take(10000);
-    const companyMap = new Map(companies.map((c: any) => [c._id, c]));
+    const companyMap = new Map(companies.map((c) => [c._id, c]));
 
     const agents = await ctx.db.query("agents").take(10000);
-    const agentMap = new Map(agents.map((a: any) => [a._id, a]));
+    const agentMap = new Map(agents.map((a) => [a._id, a]));
 
     let totalMessages = 0;
     let totalTokens = 0;
@@ -767,7 +780,7 @@ export const getGlobalAnalytics = query({
     let totalCostGBP = 0;
     const timelineMap: Record<string, { cost: number; messages: number; inputTokens: number; outputTokens: number }> = {};
 
-    let currentDate = new Date(startDate.getTime());
+    const currentDate = new Date(startDate.getTime());
     while (currentDate.getTime() <= endDate.getTime()) {
         let dateGroup = "";
         if (aggregationType === "month") {
@@ -814,30 +827,30 @@ export const getGlobalAnalytics = query({
       .take(10000);
       
     const periodAgentTxs = await ctx.db.query("agentTransactions")
-      .filter((q: any) => q.gte(q.field("createdAt"), realStartTimeStamp))
-      .filter((q: any) => q.lte(q.field("createdAt"), endTimeStamp))
+      .filter((q) => q.gte(q.field("createdAt"), realStartTimeStamp))
+      .filter((q) => q.lte(q.field("createdAt"), endTimeStamp))
       .take(10000);
       
     const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
     const thirtyDayMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
       .take(10000);
-    const threadUserMapAll = new Map(threads.map((t: any) => [t._id, t.userId]));
+    const threadUserMapAll = new Map(threads.map((t) => [t._id, t.userId]));
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
        const uId = threadUserMapAll.get(msg.threadId);
        if (uId) mauSet.add(uId);
     }
     const thirtyDayTxs = await ctx.db.query("agentTransactions")
-       .filter((q: any) => q.gte(q.field("createdAt"), thirtyDaysAgo))
+       .filter((q) => q.gte(q.field("createdAt"), thirtyDaysAgo))
        .take(10000);
     for (const tx of thirtyDayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
 
-    const threadUserMap = new Map(threads.map((t: any) => [t._id, t.userId]));
-    const threadAgentMap = new Map(threads.map((t: any) => [t._id, t.agentId]));
-    const threadWidgetMap = new Map(threads.map((t: any) => [t._id, t.widgetId]));
+    const threadUserMap = new Map(threads.map((t) => [t._id, t.userId]));
+    const threadAgentMap = new Map(threads.map((t) => [t._id, t.agentId]));
+    const threadWidgetMap = new Map(threads.map((t) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
     for (const u of users) {
        const compObj = u.companyId ? companyMap.get(u.companyId) : null;
@@ -863,18 +876,18 @@ export const getGlobalAnalytics = query({
         messages: 0
     };
     
-    const unifiedInteractions = [
-       ...periodRawMessages.map((m: any) => ({
+    const unifiedInteractions: AnalyticsInteraction[] = [
+       ...periodRawMessages.map((m) => ({
           userId: threadUserMap.get(m.threadId),
           widgetId: threadWidgetMap.get(m.threadId),
           companyId: undefined, // Resolved in loop
-          agentId: threadAgentMap.get(m.threadId) || "system_assistant",
+          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
        })),
-       ...periodAgentTxs.map((t: any) => ({
+       ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined,
           companyId: t.companyId,
@@ -936,7 +949,7 @@ export const getGlobalAnalytics = query({
             });
         }
         if (s.leaderboards?.topUsers) {
-            s.leaderboards.topUsers.forEach((u: any) => {
+            s.leaderboards.topUsers.forEach((u) => {
                 if (userLeaderboard[u.id]) {
                     userLeaderboard[u.id].cost += u.cost;
                     userLeaderboard[u.id].messages += u.messages;
@@ -944,10 +957,10 @@ export const getGlobalAnalytics = query({
             });
         }
         if (s.modelMetrics) {
-            s.modelMetrics.forEach((m: any) => {
+            s.modelMetrics.forEach((m) => {
                 if (!modelDistribution[m.model]) {
-                    const modelObj = modelMap.get(m.model) || {};
-                    modelDistribution[m.model] = { name: modelObj.friendlyName || modelObj.name || m.model, cost: 0, calls: 0 };
+                    const modelObj = modelMap.get(m.model);
+                    modelDistribution[m.model] = { name: modelObj?.friendlyName || modelObj?.displayName || m.model, cost: 0, calls: 0 };
                 }
                 modelDistribution[m.model].cost += m.cost;
                 modelDistribution[m.model].calls += m.calls;
@@ -1009,7 +1022,7 @@ export const getGlobalAnalytics = query({
        const modelObj = modelMap.get(model);
        if (modelObj) {
            if (!modelDistribution[model]) {
-              modelDistribution[model] = { name: modelObj.friendlyName || modelObj.name || model, cost: 0, calls: 0 };
+              modelDistribution[model] = { name: modelObj.friendlyName || modelObj.displayName || model, cost: 0, calls: 0 };
            }
            modelDistribution[model].cost += gbpCost;
            modelDistribution[model].calls += 1;
@@ -1019,12 +1032,13 @@ export const getGlobalAnalytics = query({
           activePeriodUsers.add(msg.userId);
           
           const isWidgetThread = !!msg.widgetId;
-          const isRegistered = users.some((u: any) => u._id === msg.userId);
+          const isRegistered = users.some((u) => u._id === msg.userId);
           const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
           
           if (!userLeaderboard[targetLeaderId]) {
-             const userObj = users.find((u: any) => u._id === targetLeaderId);
-             const compObj = (msg.companyId || (userObj && userObj.companyId)) ? companyMap.get(msg.companyId || userObj?.companyId) : null;
+             const userObj = users.find((u) => u._id === targetLeaderId);
+             const companyId = msg.companyId ?? userObj?.companyId;
+             const compObj = companyId ? companyMap.get(companyId) : null;
              userLeaderboard[targetLeaderId] = {
                 id: targetLeaderId,
                 name: userObj?.name || "Unknown",
@@ -1039,7 +1053,7 @@ export const getGlobalAnalytics = query({
           userLeaderboard[targetLeaderId].messages += 1;
        }
 
-       const activeCompanyId = msg.companyId || (msg.userId ? users.find((u: any) => u._id === msg.userId)?.companyId : undefined);
+       const activeCompanyId = msg.companyId || (msg.userId ? users.find((u) => u._id === msg.userId)?.companyId : undefined);
        if (activeCompanyId) {
           if (!companyLeaderboard[activeCompanyId]) {
              const compObj = companyMap.get(activeCompanyId);

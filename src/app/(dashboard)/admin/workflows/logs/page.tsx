@@ -16,18 +16,24 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import type { Doc } from "@/convex/_generated/dataModel";
+
+type WorkflowExecutionRow = Doc<"workflowExecutions"> & {
+  workflowName: string;
+  startedByName: string;
+};
 
 export default function WorkflowLogsPage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows.logs');
   const tCommon = useTranslations('common');
-  const executions = useQuery((api as any).scheduler.getWorkflowExecutions) || [];
+  const executions = (useQuery(api.scheduler.getWorkflowExecutions) || []) as WorkflowExecutionRow[];
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
 
-  const filteredLogs = executions.filter((exec: any) =>
+  const filteredLogs = executions.filter((exec) =>
     (exec.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (exec.status || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (exec.triggerType || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -88,7 +94,7 @@ export default function WorkflowLogsPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedLogs.map((exec: any) => (
+                    {paginatedLogs.map((exec) => (
                       <motion.tr
                         key={exec._id}
                         initial={{ opacity: 0, y: 10 }}

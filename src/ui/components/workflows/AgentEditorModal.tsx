@@ -1,23 +1,60 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Bot, BrainCircuit, Globe, Key, Settings2, Database, Code2, Wand2, Loader2, Workflow } from "lucide-react";
+import { Bot, BrainCircuit, Globe, Key, Settings2, Database, Code2, Wand2, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { WorkflowCanvasEdge, WorkflowCanvasNode, WorkflowNodeUpdateHandler } from "./types";
 
-export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onUpdateNode }: any) {
+type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
+
+type AgentEditorFormData = {
+  name: string;
+  systemPrompt: string;
+  inputSchema: string;
+  outputSchema: string;
+  modelId: string;
+  thinkingMode: boolean;
+  reasoningEffort: ReasoningEffort;
+  allowInternetAccess: boolean;
+  humanApprovalRequired: boolean;
+  temperature: number | string;
+  _inputMapping: string;
+  _inputTemplate: string;
+  _inputFields: string;
+  _outputFields: string;
+};
+
+type JsonSchemaObject = {
+  properties?: Record<string, unknown>;
+};
+
+type AgentEditorModalProps = {
+  node: WorkflowCanvasNode | null;
+  allNodes?: WorkflowCanvasNode[];
+  edges?: WorkflowCanvasEdge[];
+  onClose: () => void;
+  onUpdateNode: WorkflowNodeUpdateHandler;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onUpdateNode }: AgentEditorModalProps) {
   const t = useTranslations('admin.workflows.designer.editor');
   const tAlerts = useTranslations('admin.workflows.designer.alerts');
   const tCommon = useTranslations('common');
 
-  const getUpstreamNodes = () => {
+  const getUpstreamNodes = (): WorkflowCanvasNode[] => {
     if (!node?.id) return [];
     const upstreamIds = new Set<string>();
     const queue = [node.id];
     while (queue.length > 0) {
       const current = queue.shift();
-      const incoming = edges.filter((e: any) => e.target === current).map((e: any) => e.source);
+      const incoming = edges.filter((e) => e.target === current).map((e) => e.source);
       for (const id of incoming) {
         if (!upstreamIds.has(id)) {
           upstreamIds.add(id);
@@ -25,27 +62,28 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         }
       }
     }
-    return allNodes.filter((n: any) => upstreamIds.has(n.id));
+    return allNodes.filter((n) => upstreamIds.has(n.id));
   };
 
   const upstreamNodes = getUpstreamNodes();
 
   const agentId = node?.data?._agentId;
   const agent = useQuery(api.agents.get, agentId ? { id: agentId } : "skip");
-  const allModels = useQuery(api.aiModels.getModels) || [];
-  const activeModels = allModels.filter((m) => m.isEnabled);
+  const allModels = useQuery(api.aiModels.getModels);
+  const activeModels = useMemo(() => (allModels ?? []).filter((m) => m.isEnabled), [allModels]);
+  const defaultModelId = useMemo(() => activeModels.find((m) => m.isDefault)?.modelId || "", [activeModels]);
   const params = useParams();
 
   const updateAgent = useMutation(api.agents.updateAgent);
   const createInlineAgent = useMutation(api.agents.createInlineAgent);
-  const promoteToGlobal = useMutation((api as any).agents.promoteToGlobal);
+  const promoteToGlobal = useMutation(api.agents.promoteToGlobal);
 
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<AgentEditorFormData>({
     name: "",
     systemPrompt: "",
     inputSchema: "",
     outputSchema: "",
-    modelId: activeModels.find((m: any) => m.isDefault)?.modelId || "",
+    modelId: defaultModelId,
     thinkingMode: false,
     reasoningEffort: "MEDIUM",
     allowInternetAccess: false,
@@ -53,6 +91,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     temperature: 1.0,
     _inputMapping: "",
     _inputTemplate: "",
+    _inputFields: "",
+    _outputFields: "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'IDENTITY' | 'MAPPING'>('MAPPING');
@@ -63,13 +103,13 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const generateConfig = useAction(api.ai.generateNodeConfig);
 
   useEffect(() => {
-    if (agent) {
+    if (agent && node) {
       setFormData({
         name: agent.name || "",
         systemPrompt: agent.systemPrompt || "",
         inputSchema: agent.inputSchema || "",
         outputSchema: agent.outputSchema || "",
-        modelId: agent.modelId || activeModels.find((m: any) => m.isDefault)?.modelId || "",
+        modelId: agent.modelId || defaultModelId,
         thinkingMode: agent.thinkingMode || false,
         reasoningEffort: agent.reasoningEffort || "MEDIUM",
         allowInternetAccess: agent.allowInternetAccess || false,
@@ -81,11 +121,11 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         _outputFields: agent.outputSchema ? deriveCSVFromSchema(agent.outputSchema) : "",
       });
     }
-  }, [agent, node]);
+  }, [agent, defaultModelId, node]);
 
   const deriveCSVFromSchema = (schemaStr: string) => {
     try {
-      const parsed = JSON.parse(schemaStr);
+      const parsed = JSON.parse(schemaStr) as JsonSchemaObject;
       return Object.keys(parsed.properties || {}).join(", ");
     } catch { return ""; }
   };
@@ -93,19 +133,20 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const createSchemaFromCSV = (csv: string) => {
     const fields = csv.split(',').map(f => f.trim()).filter(Boolean);
     if (fields.length === 0) return "";
-    const properties: any = {};
+    const properties: Record<string, { type: "string" }> = {};
     fields.forEach(f => properties[f] = { type: "string" });
     return JSON.stringify({ type: "object", properties }, null, 2);
   };
 
   const handleAutoConfigure = async () => {
+    if (!node) return;
     if (!aiPrompt.trim() || isGenerating) return;
     setIsGenerating(true);
     try {
       const result = await generateConfig({
         prompt: aiPrompt,
         nodeType: node.type,
-        availableNodes: upstreamNodes.map((n: any) => ({
+        availableNodes: upstreamNodes.map((n) => ({
           id: n.id,
           type: n.type,
           label: n.data?.label
@@ -124,7 +165,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
       });
       setAiPrompt("");
       setIsDeveloperMode(true);
-    } catch (e) {
+    } catch {
       alert("AI Configuration failed. Please try again or construct the payload manually.");
     } finally {
       setIsGenerating(false);
@@ -133,12 +174,13 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!node) return;
     setIsSaving(true);
     let targetAgentId = agentId;
 
     try {
       if (!targetAgentId) {
-         targetAgentId = await createInlineAgent({ workflowId: params.id as any });
+         targetAgentId = await createInlineAgent({ workflowId: params.id as Id<"workflows"> });
       }
 
       const generatedInputSchema = formData._inputFields ? createSchemaFromCSV(formData._inputFields) : formData.inputSchema;
@@ -155,12 +197,12 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         reasoningEffort: formData.reasoningEffort,
         allowInternetAccess: formData.allowInternetAccess,
         humanApprovalRequired: formData.humanApprovalRequired,
-        temperature: parseFloat(formData.temperature),
+        temperature: parseFloat(String(formData.temperature)),
       });
 
       let parsedMapping = formData._inputMapping;
       if (parsedMapping) {
-        try { parsedMapping = JSON.parse(parsedMapping); } catch(e) {}
+        try { parsedMapping = JSON.parse(parsedMapping); } catch {}
       }
 
       // Update the visual node on the canvas too
@@ -176,8 +218,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
       });
 
       onClose();
-    } catch (err: any) {
-      alert(err.message || tAlerts('saveAgentFailed'));
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, tAlerts('saveAgentFailed')));
     } finally {
       setIsSaving(false);
     }
@@ -189,8 +231,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
       await promoteToGlobal({ id: agent._id });
       alert(t('promoteSuccess'));
       onClose();
-    } catch (err: any) {
-      alert(err.message || tAlerts('promoteFailed'));
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, tAlerts('promoteFailed')));
     }
   };
 
@@ -323,7 +365,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                     <div className="pl-7 pt-2 border-t border-border-dim/50 mt-1 flex flex-col gap-2">
                       <span className="text-[10px] uppercase tracking-widest text-muted">{t('thinking.effort')}</span>
                       <div className="flex gap-2">
-                        {["LOW", "MEDIUM", "HIGH"].map(level => (
+                        {(["LOW", "MEDIUM", "HIGH"] as const).map(level => (
                           <button
                             key={level}
                             type="button"

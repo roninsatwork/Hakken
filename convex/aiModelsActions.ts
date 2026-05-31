@@ -1,9 +1,12 @@
 "use node";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { GoogleGenAI } from "@google/genai";
 
 import { getAuthUserId } from "@convex-dev/auth/server";
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
 
 export const syncVertexModels = action({
   args: {},
@@ -13,21 +16,6 @@ export const syncVertexModels = action({
     
     const user = await ctx.runQuery(internal.users.getUserInternal, { userId });
     if (!user || user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
-
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
-
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
 
     try {
       // In @google/genai with Vertex, we fetch available models using the standard method
@@ -44,7 +32,7 @@ export const syncVertexModels = action({
         { name: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro", description: "Complex instructions" }
       ];
 
-      const formattedModels = hardcodedVertexModels.map((m: any) => ({
+      const formattedModels = hardcodedVertexModels.map((m) => ({
         modelId: m.name,
         displayName: m.displayName,
         description: m.description,
@@ -55,8 +43,8 @@ export const syncVertexModels = action({
       });
 
       return formattedModels;
-    } catch (e: any) {
-      throw new Error(`Failed to sync Vertex Models: ${e.message}`);
+    } catch (e: unknown) {
+      throw new Error(`Failed to sync Vertex Models: ${getErrorMessage(e)}`);
     }
   },
 });

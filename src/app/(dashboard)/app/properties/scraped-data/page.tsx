@@ -2,20 +2,22 @@
 
 import { useTranslations } from "next-intl";
 
-import { Database, ExternalLink, X, MapPin, Bed, Bath, Home, User, Phone, Search, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Database, Search, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { useRouter } from "next/navigation";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import Image from "next/image";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 export default function ScrapedDataPage() {
   const t = useTranslations('sidebar');
   const router = useRouter();
-  const [deletingProperty, setDeletingProperty] = useState<any>(null);
+  const [deletingProperty, setDeletingProperty] = useState<Doc<"properties"> | null>(null);
   const deleteProperty = useMutation(api.properties.deleteProperty);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,10 +51,6 @@ export default function ScrapedDataPage() {
     }
   };
 
-  useEffect(() => {
-     setCurrentPage(1);
-  }, [searchTerm]);
-
   const confirmDelete = async () => {
     if (deletingProperty) {
       await deleteProperty({ id: deletingProperty._id });
@@ -83,7 +81,10 @@ export default function ScrapedDataPage() {
               type="text"
               placeholder="Search properties by address..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
             />
           </div>
@@ -113,7 +114,7 @@ export default function ScrapedDataPage() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedItems.map((property: any) => (
+                    paginatedItems.map((property) => (
                       <motion.tr 
                         key={property._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -123,7 +124,7 @@ export default function ScrapedDataPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
                             {property.imageUrl ? (
-                              <img src={property.imageUrl} alt="Property" className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
+                              <Image src={property.imageUrl} alt="Property" width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
                             ) : (
                               <div className="w-12 h-12 rounded-[8px] bg-background border border-border-dim flex items-center justify-center">
                                 <span className="text-[9px] font-mono text-muted uppercase">No Img</span>

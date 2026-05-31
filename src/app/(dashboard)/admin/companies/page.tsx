@@ -3,6 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import type { FormEvent } from "react";
 import {
   Building2,
   Plus,
@@ -14,34 +15,37 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+
+type CompanyRow = Doc<"companies"> & { userCount: number };
+type CompanyFormData = { name: string; systemPrompt: string; planId: string };
 
 export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
   const tCommon = useTranslations('common');
-  const companies = useQuery(api.companies.getCompanies) || [];
+  const companies = (useQuery(api.companies.getCompanies) || []) as CompanyRow[];
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
   const assignPlanToCompany = useMutation(api.companies.assignPlanToCompany);
-  const activePlans = useQuery(api.plans.getActivePlans) || [];
+  const activePlans = (useQuery(api.plans.getActivePlans) || []) as Doc<"plans">[];
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<any | null>(null);
-  const [deletingCompany, setDeletingCompany] = useState<any | null>(null);
+  const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
+  const [deletingCompany, setDeletingCompany] = useState<CompanyRow | null>(null);
 
-  const [formData, setFormData] = useState({ name: "", systemPrompt: "", planId: "" });
+  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
 
-  const filteredCompanies = companies.filter((c: any) =>
+  const filteredCompanies = companies.filter((c) =>
     (c.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -61,14 +65,14 @@ export default function CompaniesPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (company: any) => {
+  const handleOpenEdit = (company: CompanyRow) => {
     setFormData({ name: company.name, systemPrompt: company.systemPrompt || "", planId: company.planId || "" });
     setEditingCompany(company);
     setSubmitError("");
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
@@ -81,7 +85,7 @@ export default function CompaniesPage() {
         if (formData.planId) await assignPlanToCompany({ id: newCompanyId, planId: formData.planId as Id<"plans"> });
       }
       setIsAddModalOpen(false);
-    } catch (err: any) {
+    } catch {
       setSubmitError(t("errors.saveFailed"));
     } finally {
       setIsSubmitting(false);
@@ -94,7 +98,7 @@ export default function CompaniesPage() {
       try {
         await deleteCompany({ id: deletingCompany._id });
         setDeletingCompany(null);
-      } catch (err: any) {
+      } catch {
         setSubmitError(t("errors.deleteFailed"));
       } finally {
         setIsSubmitting(false);
@@ -321,7 +325,7 @@ export default function CompaniesPage() {
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            {t.rich('deleteConfirm', { name: (chunks) => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
+            {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
           </p>
           <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-4 text-red-500/90 text-[13px]">
             <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">{t('warningCascade')}</strong>

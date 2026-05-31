@@ -2,10 +2,14 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Save, Loader2, Info, PoundSterling } from "lucide-react";
+import { Save, Loader2, PoundSterling } from "lucide-react";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function CompanyOverviewPage() {
   const params = useParams();
@@ -19,7 +23,7 @@ export default function CompanyOverviewPage() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const activePlans = useQuery(api.plans.getActivePlans) || [];
+  const activePlans = (useQuery(api.plans.getActivePlans) || []) as Doc<"plans">[];
 
   const [nameVal, setNameVal] = useState("");
   const [descVal, setDescVal] = useState("");
@@ -55,8 +59,8 @@ export default function CompanyOverviewPage() {
       }
       setSaveMessage({ text: "Profile successfully updated.", type: "success" });
       setTimeout(() => setSaveMessage({ text: "", type: "" }), 3000);
-    } catch (e: any) {
-      setSaveMessage({ text: e.message || "Failed to save profile", type: "error" });
+    } catch (e: unknown) {
+      setSaveMessage({ text: getErrorMessage(e, "Failed to save profile"), type: "error" });
     } finally {
       setIsSaving(false);
     }
@@ -129,7 +133,7 @@ export default function CompanyOverviewPage() {
                    className="w-full py-2.5 px-4 bg-background/50 border border-border-dim rounded-[10px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all appearance-none cursor-pointer"
                 >
                     <option value="">No Plan (Unlimited / System Default)</option>
-                    {activePlans.map((plan: any) => (
+                    {activePlans.map((plan) => (
                        <option key={plan._id} value={plan._id}>
                            {plan.name} {plan.messageLimit === -1 ? '(Unlimited)' : `(${plan.messageLimit} msgs)`} - £{plan.priceGBP}/mo
                        </option>
@@ -165,7 +169,7 @@ export default function CompanyOverviewPage() {
             <PoundSterling className="w-5 h-5 text-brand opacity-80" />
             <h2 className="text-[15px] font-bold text-foreground tracking-wide">Subscription & Billing</h2>
           </div>
-          <p className="text-[13px] text-secondary">Manage your organization's subscription tier and monitor structural capacity limits.</p>
+          <p className="text-[13px] text-secondary">Manage your organization&apos;s subscription tier and monitor structural capacity limits.</p>
         </div>
         <div className="p-6 flex flex-col lg:flex-row gap-6">
           <div className="flex-1 bg-background/50 rounded-[16px] border border-border-dim p-6 relative overflow-hidden group">
@@ -182,7 +186,7 @@ export default function CompanyOverviewPage() {
           <div className="flex-[2] flex flex-col justify-center gap-4">
             <h3 className="text-[11px] font-semibold text-muted uppercase tracking-widest">Available Tier Upgrades</h3>
             <div className="flex flex-wrap gap-4">
-              {activePlans?.map((p: any) => (
+              {activePlans?.map((p) => (
                 <div key={p._id} className={`flex flex-col gap-1 p-4 rounded-[16px] border ${p.name === planStatus?.planName ? 'border-brand/40 bg-brand/5' : 'border-border-dim bg-background/30'} min-w-[160px] cursor-default transition-all hover:border-brand/20`}>
                   <span className="text-[14px] font-bold tracking-wide text-foreground">{p.name} {p.name === planStatus?.planName && <span className="text-[10px] ml-2 text-brand uppercase tracking-widest rounded-full bg-brand/10 px-2 py-0.5">Active</span>}</span>
                   <span className="text-[13px] font-medium text-secondary">£{p.priceGBP}/mo</span>

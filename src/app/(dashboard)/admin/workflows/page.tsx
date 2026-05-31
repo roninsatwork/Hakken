@@ -3,6 +3,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import type { FormEvent } from "react";
+import type { Doc } from "@/convex/_generated/dataModel";
 import {
   Network,
   Plus,
@@ -20,24 +22,22 @@ import { useTranslations } from "next-intl";
 export default function WorkflowsPage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows');
-  const tCommon = useTranslations('common');
-  // Using the new workflows API
-  const workflows = useQuery((api as any).workflows.list) || [];
-  const createWorkflow = useMutation((api as any).workflows.createWorkflow);
-  const deleteWorkflow = useMutation((api as any).workflows.deleteWorkflow);
+  const workflows = (useQuery(api.workflows.list) || []) as Doc<"workflows">[];
+  const createWorkflow = useMutation(api.workflows.createWorkflow);
+  const deleteWorkflow = useMutation(api.workflows.deleteWorkflow);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deletingWorkflow, setDeletingWorkflow] = useState<any | null>(null);
+  const [deletingWorkflow, setDeletingWorkflow] = useState<Doc<"workflows"> | null>(null);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
 
-  const filteredWorkflows = workflows.filter((w: any) =>
+  const filteredWorkflows = workflows.filter((w) =>
     (w.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (w.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -57,7 +57,10 @@ export default function WorkflowsPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error ? error.message : fallback;
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
@@ -67,8 +70,8 @@ export default function WorkflowsPage() {
       });
       setIsAddModalOpen(false);
       router.push(`/admin/workflows/${newWorkflowId}`);
-    } catch (err: any) {
-      setSubmitError(err.message || t('errors.create'));
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err, t('errors.create')));
     } finally {
       setIsSubmitting(false);
     }
@@ -80,8 +83,8 @@ export default function WorkflowsPage() {
       try {
         await deleteWorkflow({ id: deletingWorkflow._id });
         setDeletingWorkflow(null);
-      } catch (err: any) {
-        setSubmitError(err.message || t('errors.delete'));
+      } catch (err: unknown) {
+        setSubmitError(getErrorMessage(err, t('errors.delete')));
       } finally {
         setIsSubmitting(false);
       }
@@ -141,7 +144,7 @@ export default function WorkflowsPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedWorkflows.map((workflow: any) => (
+                    {paginatedWorkflows.map((workflow) => (
                       <motion.tr
                         key={workflow._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -291,7 +294,7 @@ export default function WorkflowsPage() {
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            {t('modal.deleteConfirm', { name: deletingWorkflow?.name })}
+            {t('modal.deleteConfirm', { name: deletingWorkflow?.name ?? "" })}
           </p>
           <p className="text-[13px] text-muted">{t('modal.undone')}</p>
           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}

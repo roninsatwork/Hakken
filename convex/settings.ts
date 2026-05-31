@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Id } from "./_generated/dataModel";
 
 export const DEFAULT_SETTINGS = {
   platformName: "Sonae",
@@ -50,12 +51,12 @@ export const get = query({
     // Auto-resolve storage URLs if IDs are stored
     let fullLogoLight = settings.logoUrlLight;
     if (fullLogoLight && !fullLogoLight.startsWith('http')) {
-       fullLogoLight = await ctx.storage.getUrl(fullLogoLight as any) || fullLogoLight;
+       fullLogoLight = await ctx.storage.getUrl(fullLogoLight as Id<"_storage">) || fullLogoLight;
     }
     
     let fullLogoDark = settings.logoUrlDark;
     if (fullLogoDark && !fullLogoDark.startsWith('http')) {
-       fullLogoDark = await ctx.storage.getUrl(fullLogoDark as any) || fullLogoDark;
+       fullLogoDark = await ctx.storage.getUrl(fullLogoDark as Id<"_storage">) || fullLogoDark;
     }
     
     return {
@@ -116,10 +117,9 @@ export const update = mutation({
     const settings = await ctx.db.query("systemSettings").first();
     
     // Clean undefined args
-    const patchObj: any = {};
-    for (const [k, v] of Object.entries(args)) {
-      if (v !== undefined) patchObj[k] = v;
-    }
+    const patchObj = Object.fromEntries(
+      Object.entries(args).filter(([, value]) => value !== undefined),
+    ) as Partial<typeof args>;
 
     if (settings) {
       await ctx.db.patch(settings._id, patchObj);

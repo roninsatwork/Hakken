@@ -1,16 +1,18 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
-import { Bot, Network } from 'lucide-react';
+import Image from 'next/image';
+import { Bot } from 'lucide-react';
 import { cn } from '@/src/ui/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 export type AgentNodeData = {
   label: string;
   avatar?: string;
   modelId?: string;
-  _agentId?: string;
+  _agentId?: Id<"agents">;
   inputSchema?: string;
   outputSchema?: string;
 };
@@ -26,11 +28,11 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
     return id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   };
 
-  const agent = useQuery(api.agents.get, data._agentId ? { id: data._agentId as any } : "skip");
+  const agent = useQuery(api.agents.get, data._agentId ? { id: data._agentId } : "skip");
   
   // Use live agent config if available, otherwise trust the local canvas snapshot
   const liveModelId = agent ? agent.modelId : data.modelId;
-  const modelConfig = (allModels as any[]).find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
+  const modelConfig = (allModels as Doc<"aiModels">[]).find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
   const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || liveModelId) : formatFallback(liveModelId);
 
   // Parse schemas to show properties visually if available
@@ -71,7 +73,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
         {/* Header */}
         <div className="flex items-center gap-3 p-3 border-b border-border-dim/30">
           {data.avatar ? (
-            <img src={data.avatar} alt="Avatar" className="w-8 h-8 rounded-full border border-border-dim object-cover" />
+            <Image src={data.avatar} alt="Avatar" width={32} height={32} unoptimized className="w-8 h-8 rounded-full border border-border-dim object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground">
               <Bot className="w-4 h-4 text-brand" />

@@ -75,7 +75,7 @@ export const createCompany = mutation({
     });
 
     await ctx.db.insert("auditLogs", {
-      actorId: adminId as any,
+      actorId: adminId,
       actionType: "CREATE_COMPANY",
       entityId: newCompanyId,
       entityType: "companies",
@@ -102,7 +102,7 @@ export const updateCompany = mutation({
     await ctx.db.patch(args.id, { name: args.name, systemPrompt: args.systemPrompt });
 
     await ctx.db.insert("auditLogs", {
-      actorId: adminId as any,
+      actorId: adminId,
       actionType: "UPDATE_COMPANY",
       entityId: args.id,
       entityType: "companies",
@@ -132,7 +132,7 @@ export const deleteCompany = mutation({
     await ctx.db.delete(args.id);
 
     await ctx.db.insert("auditLogs", {
-      actorId: adminId as any,
+      actorId: adminId,
       actionType: "DELETE_COMPANY",
       entityId: args.id,
       entityType: "companies",
@@ -200,7 +200,7 @@ export const updateCompanyProfile = mutation({
     });
 
     await ctx.db.insert("auditLogs", {
-      actorId: adminId as any,
+      actorId: adminId,
       actionType: "UPDATE_COMPANY_PROFILE",
       entityId: args.id,
       entityType: "companies",

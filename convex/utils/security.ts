@@ -59,8 +59,8 @@ export function validateSafeUrl(url: string, context: string = "URL"): void {
         }
     }
 
-  } catch (e: any) {
-    if (e.message && e.message.startsWith("SSRF Prevention")) throw e;
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.startsWith("SSRF Prevention")) throw e;
     throw new Error(`SSRF Prevention: Malformed URL provided for ${context}.`);
   }
 }

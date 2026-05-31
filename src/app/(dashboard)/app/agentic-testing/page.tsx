@@ -53,17 +53,6 @@ export default function AgenticTestingSandbox() {
   }, [agents, selectedAgentId]);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // Disabled for testing event bubbling bug
-        // setAgentDropdownOpen(false);
-      }
-    }
-    // document.addEventListener("mousedown", handleClickOutside);
-    // return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSubmitting) {
       setLoadingPhase(0);

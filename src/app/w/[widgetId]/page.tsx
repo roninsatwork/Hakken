@@ -80,8 +80,8 @@ export default function WidgetIframePage() {
                        targetOrigin = "*";
                    }
                }
-           } catch (e) {
-               console.error("Failed to parse referrer origin for postMessage", e);
+           } catch (error) {
+               console.error("Failed to parse referrer origin for postMessage", error);
            }
 
            if (targetOrigin) {
@@ -130,7 +130,7 @@ export default function WidgetIframePage() {
                    const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
                    return normalizedDomain === "*" || referrerHost === normalizedDomain || referrerHost.endsWith("." + normalizedDomain);
                });
-           } catch (e) {
+           } catch {
                isAllowed = false;
            }
        } else {
@@ -144,7 +144,7 @@ export default function WidgetIframePage() {
            if (referrerHost === platformHost.toLowerCase() || referrerHost.endsWith("." + platformHost.toLowerCase())) {
                isAllowed = true;
            }
-       } catch (e) {
+       } catch {
            if (referrer.includes(platformHost)) {
                isAllowed = true;
            }

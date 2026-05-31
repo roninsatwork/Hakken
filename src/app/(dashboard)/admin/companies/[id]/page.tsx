@@ -1,33 +1,38 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   Building2,
   Users,
   Activity,
-  MessageSquare,
   TrendingUp,
   Loader2,
-  PoundSterling,
-  CalendarDays,
   BrainCircuit,
-  Calendar,
   Layers
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
+import type { LucideIcon } from "lucide-react";
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
-// Reusable Animated Component mapping standard integers
-const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: any) => (
+type MetricBlockProps = {
+  title: string;
+  value: string;
+  sub: string;
+  icon: LucideIcon;
+  delay?: number;
+};
+
+const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: MetricBlockProps) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
@@ -50,7 +55,6 @@ export default function CompanyOverviewPage() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const t = useTranslations('admin.companyDetails');
-  const tCommon = useTranslations('common');
 
   const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
   const [customStart, setCustomStart] = useState<string>("");
@@ -190,7 +194,7 @@ export default function CompanyOverviewPage() {
                         contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
-                        formatter={(value: any, name: any) => [
+                        formatter={(value, name) => [
                           value,
                           name === "internalMessages" ? "Internal Executions" : "External Widget Traffic"
                         ]}
@@ -247,7 +251,14 @@ export default function CompanyOverviewPage() {
                     <div key={u.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <Image
+                          src={u.image}
+                          alt={u.name}
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{u.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">{u.email}</span>
@@ -283,7 +294,14 @@ export default function CompanyOverviewPage() {
                     <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <img src={a.avatar} alt={a.name} className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0" />
+                        <Image
+                          src={a.avatar}
+                          alt={a.name}
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Workflow Agent</span>

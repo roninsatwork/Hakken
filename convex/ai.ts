@@ -2,9 +2,25 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
+import type { GenerateContentConfig, Part } from "@google/genai";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
+
+function parseThinkingLevel(value: string): ThinkingLevel | undefined {
+  switch (value) {
+    case "MINIMAL":
+      return ThinkingLevel.MINIMAL;
+    case "LOW":
+      return ThinkingLevel.LOW;
+    case "MEDIUM":
+      return ThinkingLevel.MEDIUM;
+    case "HIGH":
+      return ThinkingLevel.HIGH;
+    default:
+      return undefined;
+  }
+}
 
 export const generateSonaeResponse = internalAction({
   args: {
@@ -39,9 +55,12 @@ export const generateSonaeResponse = internalAction({
     // Direct mapping configuration
     let actualModelStr = args.modelId;
     
-    const generationConfig: any = {};
+    const generationConfig: GenerateContentConfig = {};
     if (args.thinkingLevel && args.thinkingLevel !== "NONE") {
-        generationConfig.thinkingConfig = { thinkingLevel: args.thinkingLevel };
+        const thinkingLevel = parseThinkingLevel(args.thinkingLevel);
+        if (thinkingLevel) {
+            generationConfig.thinkingConfig = { thinkingLevel };
+        }
     }
 
     actualModelStr = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {
@@ -56,7 +75,7 @@ export const generateSonaeResponse = internalAction({
         
         while (!docsReady && loopCount < 30) { // Max wait 60 seconds (30 * 2000ms)
             const threadDocs = await ctx.runQuery(internal.knowledge.getThreadDocumentsInternal, { threadId: args.threadId });
-            const pendingDocs = threadDocs.filter((d: any) => d.status === "processing" || d.status === "pending");
+            const pendingDocs = threadDocs.filter((d) => d.status === "processing" || d.status === "pending");
             
             if (pendingDocs.length === 0) {
                docsReady = true;
@@ -74,7 +93,7 @@ export const generateSonaeResponse = internalAction({
         
         // Reconstruct conversation history (simplified for text-only currently)
         let memoryString = "Previous Conversation History:\n";
-        messages.slice(-20).forEach((msg: any) => { // Grab last 20 messages for deep contextual memory
+        messages.slice(-20).forEach((msg) => { // Grab last 20 messages for deep contextual memory
             memoryString += `\n[${msg.role.toUpperCase()}]: ${msg.content}`;
         });
 
@@ -97,7 +116,7 @@ export const generateSonaeResponse = internalAction({
 
         // Compile explicit logic branches if any are flagged active in the DB
         if (customRules && customRules.length > 0) {
-            const compiledRules = customRules.map((r: any) => `[PRIORITY: ${r.priority}]\nIF USER ASKS OR MENTIONS: ${r.trigger}\nTHEN YOU MUST: ${r.instruction}`).join("\n\n---\n\n");
+            const compiledRules = customRules.map((r) => `[PRIORITY: ${r.priority}]\nIF USER ASKS OR MENTIONS: ${r.trigger}\nTHEN YOU MUST: ${r.instruction}`).join("\n\n---\n\n");
             activeSystemInstruction += `\n\n====================\nCRITICAL BEHAVIORAL OVERRIDES (STRICTLY OBEY THE FOLLOWING RULES WHEN REGIONALLY APPLICABLE):\n\n${compiledRules}`;
         }
 
@@ -169,7 +188,7 @@ User Prompt: ${args.content}`;
         }
 
         // --- Ad-hoc File Parsing for Chat Uploads ---
-        const payloadContents: any[] = [];
+        const payloadContents: Part[] = [];
         
         if (args.fileIds && args.fileIds.length > 0) {
             for (const fileId of args.fileIds) {
@@ -207,7 +226,7 @@ User Prompt: ${args.content}`;
         }
         
         // Push the main textual context
-        payloadContents.push(combinedPrompt);
+        payloadContents.push({ text: combinedPrompt });
 
         // Dynamically inject rules into generation architecture
         generationConfig.systemInstruction = activeSystemInstruction;

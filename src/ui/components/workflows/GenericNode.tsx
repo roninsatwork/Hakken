@@ -1,8 +1,9 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Zap, Webhook, ArrowRightLeft, Settings2, Mail, Database } from 'lucide-react';
+import type { WorkflowCanvasNodeData, WorkflowNodeType } from './types';
 
-export function GenericNode({ data, type }: { data: any; type: string }) {
+export function GenericNode({ data, type }: { data: WorkflowCanvasNodeData; type: WorkflowNodeType }) {
   let Icon = Settings2;
   let color = 'text-foreground';
   let border = 'border-border-dim';

@@ -2,14 +2,15 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, Bed, Bath, Home, User, Phone, ExternalLink, Loader2, Zap, LayoutTemplate, CheckCircle2, Map, Clock, TrendingDown, Tag, Maximize2 } from "lucide-react";
+import { ChevronLeft, Bed, Bath, Home, User, Phone, ExternalLink, Loader2, Zap, LayoutTemplate, CheckCircle2, Map, Clock, TrendingDown, Tag, Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { use } from "react";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Header from "@/src/ui/components/layout/Header";
 import PropertyDescription from "./PropertyDescription";
+import Image from "next/image";
 
 export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -56,7 +57,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           {/* Top Image Section */}
           <div className="relative h-[360px] sm:h-[480px] w-full bg-background flex-shrink-0">
             {property.imageUrl ? (
-              <img src={property.imageUrl} alt="Property" className="w-full h-full object-cover opacity-90" />
+              <Image src={property.imageUrl} alt="Property" fill sizes="100vw" unoptimized className="object-cover opacity-90" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-background/50">
                 <span className="text-secondary font-mono tracking-widest text-sm uppercase">No Image Available</span>
@@ -247,7 +248,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                       {property.floorplans.map((fp: string, idx: number) => (
                         <a key={idx} href={fp} target="_blank" rel="noopener noreferrer" className="block relative group rounded-[16px] overflow-hidden border border-border-dim hover:border-brand/50 transition-colors bg-background/50 p-2">
                           <div className="w-full sm:w-48 aspect-[4/3] flex items-center justify-center bg-white rounded-[10px] overflow-hidden">
-                             <img src={fp} alt="Floorplan" className="w-full h-full object-contain" />
+                             <Image src={fp} alt="Floorplan" width={192} height={144} unoptimized className="w-full h-full object-contain" />
                           </div>
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-[16px]">
                             <LayoutTemplate className="w-8 h-8 text-white" />
@@ -266,7 +267,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {property.images.slice(1).map((img: string, idx: number) => (
                         <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block relative group rounded-[16px] overflow-hidden border border-border-dim aspect-[4/3]">
-                          <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <Image src={img} alt={`Gallery ${idx + 1}`} fill sizes="(min-width: 640px) 33vw, 50vw" unoptimized className="object-cover transition-transform duration-500 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
                       ))}

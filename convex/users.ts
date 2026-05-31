@@ -1,5 +1,4 @@
-import { mutation, query, internalQuery, internalMutation, MutationCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { auth } from "./auth";
@@ -43,9 +42,6 @@ export const getPaginatedUsers = query({
     if (!caller || !caller.role) throw new Error("Unauthorized");
     
     const activeCompanyId = caller.impersonatingCompanyId || caller.companyId;
-
-    // Dynamic Database Query Object
-    const userQuery = ctx.db.query("users");
 
     if (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId)) {
       if (!activeCompanyId) throw new Error("Unauthorized");
@@ -215,7 +211,7 @@ export const addUser = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_USER",
-      actorId: callerId as any,
+      actorId: callerId,
       entityType: "users",
       entityId: newUserId,
       timestamp: Date.now(),
@@ -267,7 +263,7 @@ export const updateUser = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_USER",
-      actorId: callerId as any,
+      actorId: callerId,
       entityType: "users",
       entityId: id,
       timestamp: Date.now(),
@@ -337,7 +333,7 @@ export const deleteUser = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_USER",
-      actorId: callerId as any,
+      actorId: callerId,
       entityType: "users",
       entityId: args.id,
       timestamp: Date.now(),
@@ -571,7 +567,7 @@ export const impersonateCompany = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "IMPERSONATE_COMPANY",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "users",
       entityId: userId,
       timestamp: Date.now(),
@@ -617,7 +613,7 @@ export const assignSuperAdminToCompany = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "ASSIGN_SUPER_ADMIN",
-      actorId: callerId as any,
+      actorId: callerId,
       entityType: "users",
       entityId: args.userId,
       timestamp: Date.now(),
@@ -645,7 +641,7 @@ export const detachSuperAdminFromCompany = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "DETACH_SUPER_ADMIN",
-      actorId: callerId as any,
+      actorId: callerId,
       entityType: "users",
       entityId: args.userId,
       timestamp: Date.now(),

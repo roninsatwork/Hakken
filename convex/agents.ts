@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
@@ -33,20 +33,18 @@ export const get = query({
     if (!agent) throw new Error("Agent not found");
 
     // We can also fetch populated rules and knowledge documents here if needed
-    let populatedRules: any[] = [];
-    if (agent.ruleIds && agent.ruleIds.length > 0) {
-      populatedRules = await Promise.all(agent.ruleIds.map(id => ctx.db.get(id)));
-    }
+    const populatedRules = agent.ruleIds && agent.ruleIds.length > 0
+      ? (await Promise.all(agent.ruleIds.map(id => ctx.db.get(id)))).filter((rule) => rule !== null)
+      : [];
 
-    let populatedKnowledge: any[] = [];
-    if (agent.knowledgeDocumentIds && agent.knowledgeDocumentIds.length > 0) {
-      populatedKnowledge = await Promise.all(agent.knowledgeDocumentIds.map(id => ctx.db.get(id)));
-    }
+    const populatedKnowledge = agent.knowledgeDocumentIds && agent.knowledgeDocumentIds.length > 0
+      ? (await Promise.all(agent.knowledgeDocumentIds.map(id => ctx.db.get(id)))).filter((document) => document !== null)
+      : [];
 
     return {
       ...agent,
-      populatedRules: populatedRules.filter(Boolean),
-      populatedKnowledge: populatedKnowledge.filter(Boolean),
+      populatedRules,
+      populatedKnowledge,
     };
   },
 });
@@ -81,7 +79,7 @@ export const createAgent = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "agents",
       entityId: newAgentId,
       timestamp: Date.now(),
@@ -137,7 +135,7 @@ export const updateAgent = mutation({
     
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_AGENT",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "agents",
       entityId: id,
       timestamp: Date.now(),
@@ -175,7 +173,7 @@ export const deleteAgent = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_AGENT",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "agents",
       entityId: args.id,
       timestamp: Date.now(),
@@ -206,6 +204,7 @@ export const getAgentToolsInternal = internalQuery({
 export const getForCompanyInternal = internalQuery({
   args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args) => {
+    void args.companyId;
     // Return all agents (for now agents are global, but filtered by isActive)
     return await ctx.db
       .query("agents")
@@ -245,7 +244,7 @@ export const createInlineAgent = mutation({
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "agents",
       entityId: newAgentId,
       timestamp: Date.now(),
@@ -275,7 +274,7 @@ export const promoteToGlobal = mutation({
     
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_AGENT",
-      actorId: userId as any,
+      actorId: userId,
       entityType: "agents",
       entityId: args.id,
       timestamp: Date.now(),

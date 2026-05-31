@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Timer,
@@ -12,29 +13,50 @@ import {
   ToggleRight,
   ToggleLeft
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+
+type PayloadType = "workflow" | "agent";
+type Frequency = "hourly" | "daily" | "weekly" | "monthly";
+type WorkflowRow = Doc<"workflows">;
+type AgentRow = Doc<"agents">;
+
+type ScheduleFormData = {
+  name: string;
+  workflowId: Id<"workflows"> | "";
+  agentId: Id<"agents"> | "";
+};
+
+const frequencyOptions: { id: Frequency; labelKey: string }[] = [
+  { id: "hourly", labelKey: "fields.interval.hourly" },
+  { id: "daily", labelKey: "fields.interval.daily" },
+  { id: "weekly", labelKey: "fields.interval.weekly" },
+  { id: "monthly", labelKey: "fields.interval.monthly" },
+];
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 export default function NewSchedulePage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows.schedules.editor');
   const tCommon = useTranslations('common');
 
-  const workflows = useQuery((api as any).workflows.list) || [];
-  const agents = useQuery((api as any).agents.list) || [];
-  const createSchedule = useMutation((api as any).scheduler.createSchedule);
+  const workflows = (useQuery(api.workflows.list) || []) as WorkflowRow[];
+  const agents = (useQuery(api.agents.list) || []) as AgentRow[];
+  const createSchedule = useMutation(api.scheduler.createSchedule);
 
-  const [payloadType, setPayloadType] = useState<"workflow" | "agent">("agent"); // matched screenshot
+  const [payloadType, setPayloadType] = useState<PayloadType>("agent"); // matched screenshot
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ScheduleFormData>({
     name: "",
     workflowId: "",
     agentId: "",
   });
 
   // Scheduling State
-  const [frequency, setFrequency] = useState("hourly"); // hourly, daily, weekly, monthly
+  const [frequency, setFrequency] = useState<Frequency>("hourly"); // hourly, daily, weekly, monthly
   const [hourlyInterval, setHourlyInterval] = useState("1"); // every X hours
   const [timeOfDay, setTimeOfDay] = useState("09:00");
   const [dayOfWeek, setDayOfWeek] = useState("Monday");
@@ -45,12 +67,12 @@ export default function NewSchedulePage() {
   const [isActive, setIsActive] = useState(true);
   const [errorModal, setErrorModal] = useState("");
 
-  const filteredWorkflows = workflows.filter((w: any) =>
+  const filteredWorkflows = workflows.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (w.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredAgents = agents.filter((a: any) =>
+  const filteredAgents = agents.filter((a) =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -78,14 +100,14 @@ export default function NewSchedulePage() {
     try {
       await createSchedule({
         name: formData.name,
-        workflowId: formData.workflowId ? (formData.workflowId as any) : undefined,
-        agentId: formData.agentId ? (formData.agentId as any) : undefined,
+        workflowId: formData.workflowId || undefined,
+        agentId: formData.agentId || undefined,
         intervalStr: constructedInterval,
         isActive
       });
       router.push("/admin/workflows/schedules");
-    } catch (err: any) {
-      setErrorModal(err.message || "Failed to create schedule.");
+    } catch (err: unknown) {
+      setErrorModal(getErrorMessage(err, "Failed to create schedule."));
       setIsSubmitting(false);
     }
   };
@@ -182,7 +204,7 @@ export default function NewSchedulePage() {
                   <div className="flex flex-col gap-1">
                     <span className="text-[14px] font-bold text-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
-                      {workflows.find((w: any) => w._id === formData.workflowId)?.name}
+                      {workflows.find((w) => w._id === formData.workflowId)?.name}
                     </span>
                     <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
                   </div>
@@ -209,7 +231,7 @@ export default function NewSchedulePage() {
                   </div>
 
                   <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar p-1 border border-border-dim/30 rounded-[12px] bg-sidebar/10">
-                    {filteredWorkflows.map((w: any) => (
+                    {filteredWorkflows.map((w) => (
                       <div
                         key={w._id}
                         onClick={() => { setFormData({ ...formData, workflowId: w._id }); setSearchQuery(""); }}
@@ -237,7 +259,7 @@ export default function NewSchedulePage() {
                   <div className="flex flex-col gap-1">
                     <span className="text-[14px] font-bold text-foreground flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
-                      {agents.find((a: any) => a._id === formData.agentId)?.name}
+                      {agents.find((a) => a._id === formData.agentId)?.name}
                     </span>
                     <span className="text-[12px] text-muted font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
                   </div>
@@ -264,7 +286,7 @@ export default function NewSchedulePage() {
                   </div>
 
                   <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto custom-scrollbar p-1 border border-border-dim/30 rounded-[12px] bg-sidebar/10">
-                    {filteredAgents.map((a: any) => (
+                    {filteredAgents.map((a) => (
                       <div
                         key={a._id}
                         onClick={() => { setFormData({ ...formData, agentId: a._id }); setSearchQuery(""); }}
@@ -299,19 +321,14 @@ export default function NewSchedulePage() {
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.label')}</label>
                 <div className="flex bg-transparent rounded-[12px] p-1 border border-border-dim w-fit">
-                  {[
-                    { id: "hourly", label: t('fields.interval.hourly') },
-                    { id: "daily", label: t('fields.interval.daily') },
-                    { id: "weekly", label: t('fields.interval.weekly') },
-                    { id: "monthly", label: t('fields.interval.monthly') },
-                  ].map(f => (
+                  {frequencyOptions.map(f => (
                     <button
                       key={f.id}
                       type="button"
                       onClick={() => setFrequency(f.id)}
                       className={`px-6 py-2 rounded-[8px] text-[12px] font-bold tracking-wide transition-all ${frequency === f.id ? 'bg-foreground/10 text-foreground' : 'text-muted hover:bg-foreground/5'}`}
                     >
-                      {f.label}
+                      {t(f.labelKey)}
                     </button>
                   ))}
                 </div>

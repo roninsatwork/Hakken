@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import ThemeToggle from './ThemeToggle'
 import { ThemeProvider } from 'next-themes'
 
@@ -28,9 +28,7 @@ describe('ThemeToggle Component', () => {
     
     // Initially, it might render the skeleton because mounted=false, then updates
     // The skeleton is just a div without the button. Wait for button to be in document.
-    const container = screen.getByRole('button', { name: /toggle theme/i, hidden: true }) 
-       // Note: "Toggle Theme" text is in the tooltip, we can query by text
-       ?? screen.getByText('Toggle Theme')
+    expect(screen.getByRole('button', { name: /toggle theme/i, hidden: true })).toBeInTheDocument()
        
     expect(screen.getByText('Toggle Theme')).toBeInTheDocument()
   })

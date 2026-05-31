@@ -1,7 +1,39 @@
 import { v, ConvexError } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import {
+  parseWorkflowEdges,
+  parseWorkflowNodes,
+  parseWorkflowOutput,
+  parseWorkflowState,
+  type WorkflowStatePayload,
+} from "./utils/workflowTypes";
+
+const allowedWorkflowTables = [
+  "properties",
+  "threads",
+  "messages",
+  "widgets",
+  "knowledgeDocuments",
+  "knowledgeChunks",
+  "aiRules",
+  "agentLogs",
+  "agentTransactions",
+  "arcadeScores",
+  "salesReports",
+] as const;
+
+type WorkflowDbTable = (typeof allowedWorkflowTables)[number];
+type TenantScopedRecord = { companyId?: Id<"companies"> };
+type ScheduleConfig = {
+  mode?: "interval" | "daily" | "weekly" | "monthly";
+  intervalUnit?: string;
+  intervalVal?: number;
+  time?: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+};
 
 export const initExecution = internalMutation({
   args: {
@@ -13,8 +45,8 @@ export const initExecution = internalMutation({
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
 
-    const nodes = JSON.parse(workflow.nodes || "[]");
-    const edges = JSON.parse(workflow.edges || "[]");
+    const nodes = parseWorkflowNodes(workflow.nodes);
+    const edges = parseWorkflowEdges(workflow.edges);
 
     if (nodes.length === 0) {
       await ctx.db.patch(args.executionId, {
@@ -35,8 +67,8 @@ export const initExecution = internalMutation({
     });
 
     // Find starting nodes (nodes with no incoming edges)
-    const targetNodes = new Set(edges.map((e: any) => e.target));
-    const startingNodes = nodes.filter((n: any) => !targetNodes.has(n.id));
+    const targetNodes = new Set(edges.map((edge) => edge.target));
+    const startingNodes = nodes.filter((node) => !targetNodes.has(node.id));
 
     // For each starting node, create a PENDING step
     for (const node of startingNodes) {
@@ -50,50 +82,48 @@ export const initExecution = internalMutation({
       });
     }
 
-    return startingNodes.map((n: any) => n.id);
+    return startingNodes.map((node) => node.id);
   },
 });
 
 // Core logic extracted so multiple mutations can call it without nesting ctx.runMutation which is forbidden
-async function processNodeFinalization(ctx: any, args: { executionId: Id<"workflowExecutions">, nodeId: string, stepId?: Id<"workflowExecutionSteps">, outputData: string }) {
+async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id<"workflowExecutions">, nodeId: string, stepId?: Id<"workflowExecutionSteps">, outputData: string }) {
     const execution = await ctx.db.get(args.executionId);
     if (!execution || execution.status !== "RUNNING") return [];
 
     const workflow = await ctx.db.get(execution.workflowId!);
     if (!workflow) return [];
 
-    const nodes = JSON.parse(workflow.nodes || "[]");
-    const edges = JSON.parse(workflow.edges || "[]");
+    const nodes = parseWorkflowNodes(workflow.nodes);
+    const edges = parseWorkflowEdges(workflow.edges);
 
-    let step: any = null;
+    let step: Doc<"workflowExecutionSteps"> | null | undefined = null;
     if (args.stepId) {
         step = await ctx.db.get(args.stepId);
     } else {
         const stepQuery = await ctx.db
           .query("workflowExecutionSteps")
-          .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
+          .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
           .collect();
-        step = stepQuery.sort((a: any, b: any) => b.startedAt - a.startedAt)[0];
+        step = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
     }
 
-    let nextStatus: any = "SUCCESS";
+    let nextStatus: Doc<"workflowExecutionSteps">["status"] = "SUCCESS";
     let halt = false;
     let evaluatedBranch: string | null = null;
     
-    try {
-       const parsedOut = JSON.parse(args.outputData || "{}");
-       if (parsedOut._system?.halt) {
-         nextStatus = "PENDING_APPROVAL";
-         halt = true;
-       }
-       if (parsedOut.evaluated !== undefined) {
-         evaluatedBranch = parsedOut.evaluated.toString();
-       }
-    } catch(e) {}
+    const parsedOut = parseWorkflowOutput(args.outputData);
+    if (parsedOut._system?.halt) {
+      nextStatus = "PENDING_APPROVAL";
+      halt = true;
+    }
+    if (parsedOut.evaluated !== undefined && parsedOut.evaluated !== null) {
+      evaluatedBranch = parsedOut.evaluated.toString();
+    }
 
     if (step) {
       await ctx.db.patch(step._id, {
-        status: nextStatus as any,
+        status: nextStatus,
         output: args.outputData,
         completedAt: nextStatus === "SUCCESS" ? Date.now() : undefined,
       });
@@ -101,8 +131,8 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
 
     if (halt) return []; 
 
-    const currentPayload = JSON.parse(execution.state || "{}");
-    const nodeDataObj = JSON.parse(args.outputData || "{}");
+    const currentPayload = parseWorkflowState(execution.state);
+    const nodeDataObj = parsedOut;
     if (!currentPayload.nodes) currentPayload.nodes = {};
     currentPayload.nodes[args.nodeId] = { output: nodeDataObj };
 
@@ -110,29 +140,29 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
         state: JSON.stringify(currentPayload)
     });
 
-    let outgoingEdges = edges.filter((e: any) => e.source === args.nodeId);
+    let outgoingEdges = edges.filter((edge) => edge.source === args.nodeId);
     
     // Logic Router specifically pushes to explicit node IDs instead of unreliable edge string labels
     if (evaluatedBranch !== null) {
-       outgoingEdges = outgoingEdges.filter((e: any) => e.target === evaluatedBranch);
+       outgoingEdges = outgoingEdges.filter((edge) => edge.target === evaluatedBranch);
     }
-    const downstreamNodeIds = outgoingEdges.map((e: any) => e.target);
+    const downstreamNodeIds = outgoingEdges.map((edge) => edge.target);
 
-    const readyToSchedule = [];
+    const readyToSchedule: string[] = [];
     
     for (const dId of downstreamNodeIds) {
-      const incomingEdges = edges.filter((e: any) => e.target === dId);
+      const incomingEdges = edges.filter((edge) => edge.target === dId);
       let allDependenciesSatisfied = true;
-      const nextNodeDef = nodes.find((n: any) => n.id === dId);
+      const nextNodeDef = nodes.find((node) => node.id === dId);
 
       if (nextNodeDef?.type === 'mergeNode' && nextNodeDef.data?._mergeConfig?.mode === 'WAIT_FOR_ANY') {
          allDependenciesSatisfied = false;
          for (const edge of incomingEdges) {
             const depSteps = await ctx.db
               .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
+              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
               .collect();
-            const depStep = depSteps.sort((a: any, b: any) => b.startedAt - a.startedAt)[0];
+            const depStep = depSteps.sort((a, b) => b.startedAt - a.startedAt)[0];
               
             if (depStep && depStep.status === "SUCCESS") {
                allDependenciesSatisfied = true;
@@ -144,7 +174,7 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
          if (allDependenciesSatisfied) {
             const existingMergeAttempts = await ctx.db
               .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId).eq("nodeId", dId))
+              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", dId))
               .collect();
             if (existingMergeAttempts.length > 0) {
                allDependenciesSatisfied = false; 
@@ -154,9 +184,9 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
          for (const edge of incomingEdges) {
             const depSteps = await ctx.db
               .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
+              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
               .collect();
-            const depStep = depSteps.sort((a: any, b: any) => b.startedAt - a.startedAt)[0];
+            const depStep = depSteps.sort((a, b) => b.startedAt - a.startedAt)[0];
               
             if (!depStep || depStep.status !== "SUCCESS") {
               allDependenciesSatisfied = false;
@@ -166,13 +196,13 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
       }
 
       if (allDependenciesSatisfied) {
-        const nextNodeDef = nodes.find((n: any) => n.id === dId);
+        const nextNodeDef = nodes.find((node) => node.id === dId);
         
-        let targetPayloads = [currentPayload];
+        let targetPayloads: WorkflowStatePayload[] = [currentPayload];
         
         // Native Fan-Out for Iterator Nodes
         if (nodeDataObj._system?.isIterator && Array.isArray(nodeDataObj.items)) {
-           targetPayloads = nodeDataObj.items.map((item: any, i: number) => ({
+           targetPayloads = nodeDataObj.items.map((item, i) => ({
                ...currentPayload,
                nodes: {
                   ...currentPayload.nodes,
@@ -199,10 +229,10 @@ async function processNodeFinalization(ctx: any, args: { executionId: Id<"workfl
     if (readyToSchedule.length === 0) {
       const allSteps = await ctx.db
         .query("workflowExecutionSteps")
-        .withIndex("by_execution", (q: any) => q.eq("executionId", args.executionId))
+        .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
         .take(10000);
       
-      const incompleteSteps = allSteps.filter((s: any) => s.status === "PENDING" || s.status === "RUNNING");
+      const incompleteSteps = allSteps.filter((step) => step.status === "PENDING" || step.status === "RUNNING");
       if (incompleteSteps.length === 0) {
         await ctx.db.patch(args.executionId, {
             status: "SUCCESS",
@@ -238,7 +268,7 @@ export const resumeNodeStep = internalMutation({
       .query("workflowExecutionSteps")
       .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
       .collect();
-    const step = stepQuery.sort((a: any, b: any) => b.startedAt - a.startedAt)[0];
+    const step = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
 
     if (!step || step.status !== "PENDING_APPROVAL") throw new Error("Step is not pending approval");
 
@@ -259,7 +289,7 @@ export const failNodeStep = internalMutation({
     error: v.string(),
   },
   handler: async (ctx, args) => {
-    let targetStep: any = null;
+    let targetStep: Doc<"workflowExecutionSteps"> | null | undefined = null;
     if (args.stepId) {
         targetStep = await ctx.db.get(args.stepId);
     } else {
@@ -267,7 +297,7 @@ export const failNodeStep = internalMutation({
           .query("workflowExecutionSteps")
           .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
           .collect();
-        targetStep = stepQuery.sort((a: any, b: any) => b.startedAt - a.startedAt)[0];
+        targetStep = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
     }
 
     if (targetStep) {
@@ -298,24 +328,11 @@ export const executeDatabaseOperation = internalMutation({
     if (!workflow) throw new ConvexError("Workflow not found.");
 
     const user = await ctx.db.get(workflow.createdBy);
-    const table = args.tableName as any;
+    const table = args.tableName as WorkflowDbTable;
 
     if (!user || user.role !== "SUPER_ADMIN") {
       // 🛡️ BOLA Enforcer: Restrict non-SUPER_ADMIN workflows strictly to allowlisted tables
-      const allowedTables = [
-        "properties",
-        "threads",
-        "messages",
-        "widgets",
-        "knowledgeDocuments",
-        "knowledgeChunks",
-        "aiRules",
-        "agentLogs",
-        "agentTransactions",
-        "arcadeScores",
-        "salesReports"
-      ];
-      if (!allowedTables.includes(args.tableName)) {
+      if (!allowedWorkflowTables.includes(table)) {
         throw new ConvexError(`Unauthorized: Access to system table '${args.tableName}' is strictly restricted.`);
       }
 
@@ -327,7 +344,7 @@ export const executeDatabaseOperation = internalMutation({
       // Enforce tenant boundary on operations
       if (args.operation === "SELECT") {
         if (args.docId) {
-          const doc = (await ctx.db.get(args.docId as any)) as any;
+          const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
           if (!doc) return { error: "Document not found" };
           if (doc.companyId !== companyId) {
             throw new ConvexError("Unauthorized: Access denied to foreign company document.");
@@ -335,7 +352,7 @@ export const executeDatabaseOperation = internalMutation({
           return doc;
         } else {
           const docs = await ctx.db.query(table).collect();
-          return docs.filter((d: any) => d.companyId === companyId);
+          return docs.filter((doc) => "companyId" in doc && doc.companyId === companyId);
         }
       } else if (args.operation === "INSERT") {
         const insertData = args.data || {};
@@ -347,7 +364,7 @@ export const executeDatabaseOperation = internalMutation({
         return { id };
       } else if (args.operation === "UPDATE") {
         if (!args.docId) throw new ConvexError("Document ID required for UPDATE");
-        const doc = (await ctx.db.get(args.docId as any)) as any;
+        const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
         if (!doc) throw new ConvexError("Document not found");
         if (doc.companyId !== companyId) {
           throw new ConvexError("Unauthorized: Cannot update a foreign company document.");
@@ -357,23 +374,23 @@ export const executeDatabaseOperation = internalMutation({
           throw new ConvexError("Unauthorized: Cannot modify company association.");
         }
         updateData.companyId = companyId; // Safeguard company Id mapping
-        await ctx.db.patch(args.docId as any, updateData);
+        await ctx.db.patch(args.docId as Id<WorkflowDbTable>, updateData);
         return { id: args.docId };
       } else if (args.operation === "DELETE") {
         if (!args.docId) throw new ConvexError("Document ID required for DELETE");
-        const doc = (await ctx.db.get(args.docId as any)) as any;
+        const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>) as TenantScopedRecord | null;
         if (!doc) throw new ConvexError("Document not found");
         if (doc.companyId !== companyId) {
           throw new ConvexError("Unauthorized: Cannot delete a foreign company document.");
         }
-        await ctx.db.delete(args.docId as any);
+        await ctx.db.delete(args.docId as Id<WorkflowDbTable>);
         return { deletedId: args.docId };
       }
     } else {
       // SUPER_ADMIN has unrestricted database access
       if (args.operation === "SELECT") {
          if (args.docId) {
-            const doc = await ctx.db.get(args.docId as any);
+            const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>);
             return doc || { error: "Document not found" };
          } else {
             return await ctx.db.query(table).order("desc").collect();
@@ -383,11 +400,11 @@ export const executeDatabaseOperation = internalMutation({
         return { id };
       } else if (args.operation === "UPDATE") {
          if (!args.docId) throw new Error("Document ID required for UPDATE");
-         await ctx.db.patch(args.docId as any, args.data || {});
+         await ctx.db.patch(args.docId as Id<WorkflowDbTable>, args.data || {});
          return { id: args.docId };
       } else if (args.operation === "DELETE") {
          if (!args.docId) throw new Error("Document ID required for DELETE");
-         await ctx.db.delete(args.docId as any);
+         await ctx.db.delete(args.docId as Id<WorkflowDbTable>);
          return { deletedId: args.docId };
       }
     }
@@ -406,8 +423,8 @@ export const scheduleDispatcher = internalMutation({
     for (const schedule of activeWorkflowSchedules) {
         if (!schedule.workflowId) continue;
         
-        let config: any = null;
-        try { config = JSON.parse(schedule.intervalStr); } catch(e) {}
+        let config: ScheduleConfig | null = null;
+        try { config = JSON.parse(schedule.intervalStr) as ScheduleConfig; } catch {}
         
         let shouldRun = false;
         const lastRunTs = schedule.lastRunTs || 0;

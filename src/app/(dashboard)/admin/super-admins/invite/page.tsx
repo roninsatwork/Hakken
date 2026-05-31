@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, Eye, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
-import { Id } from "@/convex/_generated/dataModel";
+import { ShieldCheck, Loader2, Save, Send, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function InviteUsersPage() {
   const user = useQuery(api.users.getMe);
@@ -52,7 +52,7 @@ export default function InviteUsersPage() {
     }
   };
 
-  const handleSendInvite = async (e: React.FormEvent) => {
+  const handleSendInvite = async (e: FormEvent) => {
     e.preventDefault();
     if (!inviteEmail) return;
     setIsSending(true);
@@ -69,7 +69,7 @@ export default function InviteUsersPage() {
       setSendSuccess(true);
       setInviteEmail("");
       setTimeout(() => setSendSuccess(false), 3000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       setSendError("Email delivery rejected by Resend API. Check your domain limits.");
       setTimeout(() => setSendError(null), 5000);

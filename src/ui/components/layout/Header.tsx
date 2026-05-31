@@ -7,31 +7,30 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown,
   Sidebar,
   ShieldCheck,
   ChevronsUpDown
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useUI } from "@/src/context/UIContext";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 
 interface HeaderProps {
   onOpenModal?: () => void;
 }
 
 export default function Header({ onOpenModal }: HeaderProps) {
+  void onOpenModal;
   const t = useTranslations('header');
   const tc = useTranslations('common');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(true);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
-  const router = useRouter();
   const { signOut } = useAuthActions();
   const isAdmin = pathname.startsWith('/admin');
 
@@ -128,9 +127,12 @@ export default function Header({ onOpenModal }: HeaderProps) {
             className="flex items-center gap-4 p-1 rounded-full hover:bg-foreground/5 transition-colors group"
           >
             <div className="relative">
-              <img
+              <Image
                 src={user?.image || "https://api.dicebear.com/7.x/notionists/svg?seed=Aman"}
                 alt={user?.name || "Aman"}
+                width={40}
+                height={40}
+                unoptimized
                 className="w-10 h-10 rounded-full bg-sidebar border border-border-dim group-hover:border-foreground/20 transition-all object-cover"
               />
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#10b981] border-2 border-[#161616] rounded-full" />

@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import Image from "next/image";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { ReactNode } from "react";
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2 } from "lucide-react";
@@ -10,7 +12,11 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
-export default function AgentDashboardLayout({ children }: { children: React.ReactNode }) {
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
   const t = useTranslations("admin.agents.details");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
@@ -29,10 +35,10 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
         title: "Execution Launched",
         message: "Agent execution initiated! You can monitor live telemetry inside the Logs tab."
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       setModalState({
         title: "Execution Blocked",
-        message: e.message || "An unknown error prevented execution."
+        message: getErrorMessage(e, "An unknown error prevented execution.")
       });
     } finally {
       setIsManualRunning(false);
@@ -64,7 +70,14 @@ export default function AgentDashboardLayout({ children }: { children: React.Rea
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {agent.avatar ? (
-              <img src={agent.avatar} alt="Avatar" className="w-10 h-10 rounded-full border border-border-dim object-cover shadow-sm bg-card" />
+              <Image
+                src={agent.avatar}
+                alt="Avatar"
+                width={40}
+                height={40}
+                unoptimized
+                className="w-10 h-10 rounded-full border border-border-dim object-cover shadow-sm bg-card"
+              />
             ) : (
               <div className="w-10 h-10 rounded-[10px] bg-card border border-border-dim flex items-center justify-center text-brand shadow-sm">
                 <Bot className="w-5 h-5" />

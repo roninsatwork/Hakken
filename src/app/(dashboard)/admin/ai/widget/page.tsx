@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
+import type { ChangeEvent } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AppWindow, Plus, Loader2, Save, Terminal, Copy, CheckCircle2, MessageSquare, Volume2, User, Zap, X, Bell, Bot, UploadCloud } from "lucide-react";
+import { AppWindow, Plus, Loader2, Save, MessageSquare, Volume2, X, Bell, Bot, UploadCloud } from "lucide-react";
 
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
@@ -58,7 +60,7 @@ export default function GlobalWidgetPage() {
     }
   }, [widget]);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -143,6 +145,7 @@ export default function GlobalWidgetPage() {
   };
 
   const activeColor = themePrimaryColor || "#4f46e5";
+  const logoPreviewUrl = themeLogoUrl.startsWith('blob:') || themeLogoUrl.startsWith('http') ? themeLogoUrl : null;
 
   const tabs: Tab[] = ['Appearance', 'Welcome Screen', 'Conversation Starters', 'Greeting', 'Integration'];
 
@@ -238,7 +241,18 @@ export default function GlobalWidgetPage() {
                             {themeLogoUrl ? (
                                 <div className="flex items-center gap-4 bg-background border border-border-dim rounded-[10px] p-3">
                                     <div className="w-12 h-12 rounded-full overflow-hidden border border-border-dim/50 flex-shrink-0 bg-sidebar/50">
-                                        <img src={themeLogoUrl.startsWith('blob:') || themeLogoUrl.startsWith('http') ? themeLogoUrl : ''} alt="Widget Logo" className="w-full h-full object-cover" />
+                                        {logoPreviewUrl ? (
+                                            <Image
+                                                src={logoPreviewUrl}
+                                                alt="Widget Logo"
+                                                width={48}
+                                                height={48}
+                                                unoptimized
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <Bot className="w-full h-full p-3 text-secondary" />
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                                         <span className="text-[13px] text-foreground font-medium truncate">
@@ -459,7 +473,18 @@ export default function GlobalWidgetPage() {
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0 border border-white/30 backdrop-blur-md">
                                             {themeLogoUrl ? (
-                                                <img src={themeLogoUrl.startsWith('blob:') || themeLogoUrl.startsWith('http') ? themeLogoUrl : ''} alt="logo" className="w-full h-full object-cover" />
+                                                logoPreviewUrl ? (
+                                                    <Image
+                                                        src={logoPreviewUrl}
+                                                        alt="logo"
+                                                        width={32}
+                                                        height={32}
+                                                        unoptimized
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <Bot className="w-5 h-5 text-white" />
+                                                )
                                             ) : (
                                                 <Bot className="w-5 h-5 text-white" />
                                             )}
@@ -487,8 +512,15 @@ export default function GlobalWidgetPage() {
                                             {enableGreeting && themeGreeting && (
                                                 <div className="flex items-end gap-2 max-w-[85%] self-start">
                                                     <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-1" style={{ backgroundColor: activeColor }}>
-                                                        {themeLogoUrl ? (
-                                                            <img src={themeLogoUrl} alt="logo" className="w-full h-full object-cover rounded-full" />
+                                                        {logoPreviewUrl ? (
+                                                            <Image
+                                                                src={logoPreviewUrl}
+                                                                alt="logo"
+                                                                width={24}
+                                                                height={24}
+                                                                unoptimized
+                                                                className="w-full h-full object-cover rounded-full"
+                                                            />
                                                         ) : (
                                                             <Bot className="w-3.5 h-3.5 text-white" />
                                                         )}

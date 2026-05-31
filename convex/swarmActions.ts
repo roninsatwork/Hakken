@@ -3,6 +3,7 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI } from "@google/genai";
+import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
 
 export const executeSwarmObjective = internalAction({
@@ -79,7 +80,7 @@ export const executeSwarmObjective = internalAction({
           order: ++order,
        });
 
-       const config: any = {
+       const config: GenerateContentConfig = {
            systemInstruction: agent.systemPrompt,
            temperature: 0.1
        };
@@ -96,15 +97,16 @@ export const executeSwarmObjective = internalAction({
                });
                
                if (embeddings && embeddings.length > 0) {
-                 const filterArgs: any = {};
-                 if (tenantContext.companyId) {
-                     filterArgs.filter = (q: any) => q.eq("companyId", tenantContext.companyId);
-                 }
-                 const results = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                   vector: embeddings[0].values as number[],
-                   limit: 50,
-                   ...filterArgs
-                 });
+                 const results = tenantContext.companyId
+                   ? await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                       vector: embeddings[0].values as number[],
+                       limit: 50,
+                       filter: (q) => q.eq("companyId", tenantContext.companyId),
+                     })
+                   : await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                       vector: embeddings[0].values as number[],
+                       limit: 50,
+                     });
                  let ragContext = "";
                  for (const res of results) {
                    const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });

@@ -1,14 +1,18 @@
 {
-  "name": "nextjs-template",
+  "name": "sonae",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --quiet",
+    "lint:all": "eslint",
     "convex:dev": "convex dev",
     "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run test:run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -67,5 +71,8 @@
     "tailwindcss": "^4.3.0",
     "typescript": "6.0.3",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "tmp": "^0.2.6"
   }
 }

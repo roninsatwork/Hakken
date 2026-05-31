@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   BrainCircuit,
   Plus,
@@ -18,13 +18,11 @@ import {
   Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 export default function RulesDashboard() {
   const t = useTranslations("ai.rules");
-  const common = useTranslations("common");
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
   const deleteRuleMutation = useMutation(api.aiRules.deleteRule);
 

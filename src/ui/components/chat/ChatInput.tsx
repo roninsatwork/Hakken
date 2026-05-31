@@ -26,6 +26,7 @@ import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
+import { CHAT_DOCUMENT_MAX_BYTES, isSupportedChatDocument } from "@/src/lib/constants/uploads";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -122,23 +123,13 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    const allowedTypes = [
-      "application/pdf", 
-      "text/csv", 
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/plain"
-    ];
-    
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
-    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB lock
 
     Array.from(files).forEach(file => {
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size > CHAT_DOCUMENT_MAX_BYTES) {
          invalidFiles.push(`${file.name} (exceeds 50MB limit)`);
-      } else if (allowedTypes.includes(file.type) || file.name.endsWith(".csv") || file.name.endsWith(".txt") || file.name.endsWith(".docx")) {
+      } else if (isSupportedChatDocument(file)) {
         validFiles.push(file);
       } else {
         invalidFiles.push(file.name);

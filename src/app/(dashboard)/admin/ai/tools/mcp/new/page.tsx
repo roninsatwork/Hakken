@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -21,7 +22,7 @@ export default function AddMcpServerPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !mcpUrl.trim() || isSubmitting) return;
 
@@ -56,7 +57,7 @@ export default function AddMcpServerPage() {
           Add custom connector (MCP)
         </h1>
         <p className="text-[13px] text-secondary tracking-wide max-w-2xl mt-1">
-          Connect Sonae to your data and tools using the open Model Context Protocol. Once connected, all tools exposed by the remote server will automatically import into Sonae's library.
+          Connect Sonae to your data and tools using the open Model Context Protocol. Once connected, all tools exposed by the remote server will automatically import into Sonae&apos;s library.
         </p>
       </header>
 
@@ -148,7 +149,7 @@ export default function AddMcpServerPage() {
         {/* Action Bar */}
         <div className="flex flex-col gap-4 pt-6 mt-4 border-t border-border-dim">
            <p className="text-[12px] text-secondary leading-relaxed bg-amber-500/5 p-4 rounded-[12px] border border-amber-500/10">
-              <strong className="text-amber-500">Security Notice:</strong> Only use connectors from developers you trust. Sonae does not control which tools developers make available via the MCP URL and cannot verify that they will work as intended or that they won't automatically mutate backend data.
+              <strong className="text-amber-500">Security Notice:</strong> Only use connectors from developers you trust. Sonae does not control which tools developers make available via the MCP URL and cannot verify that they will work as intended or that they will not automatically mutate backend data.
            </p>
 
            <div className="flex justify-end pt-2">

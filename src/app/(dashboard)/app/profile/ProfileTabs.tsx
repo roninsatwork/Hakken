@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Search, Loader2, MonitorSmartphone, Shield, MapPin, Activity, ChevronLeft, ChevronRight, Palette, Check, Globe, ChevronDown } from "lucide-react";
+import { Search, Loader2, MonitorSmartphone, MapPin, ChevronLeft, ChevronRight, Palette, Check, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
   const tPrefs = useTranslations('user.preferences');
-  const tCommon = useTranslations('common');
   const { theme, setTheme } = useTheme();
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -337,7 +336,7 @@ export default function ProfileTabs() {
                     </tr>
                   )}
 
-                  {paginatedItems.map((login, idx) => (
+                  {paginatedItems.map((login) => (
                     <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">

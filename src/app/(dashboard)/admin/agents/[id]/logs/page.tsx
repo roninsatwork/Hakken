@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -12,13 +12,11 @@ import {
   ChevronRight,
   DatabaseZap,
   Loader2,
-  Workflow,
   Trash2,
   CheckCircle2,
   XCircle,
   ArrowRight
 } from "lucide-react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export default function AgentLogsDashboard() {
@@ -61,7 +59,7 @@ export default function AgentLogsDashboard() {
 
 
   const isLoading = logData === undefined;
-  const logs = logData?.data || [];
+  const logs = (logData?.data || []) as Doc<"agentLogs">[];
   const totalCount = logData?.totalCount || 0;
   const totalPages = logData?.totalPages || 1;
 
@@ -130,7 +128,7 @@ export default function AgentLogsDashboard() {
                   </td>
                 </tr>
               ) : (
-                logs.map((log: any) => {
+                logs.map((log) => {
                   const isFailed = log.interactionType.toUpperCase().includes("ERROR") || log.interactionType.toUpperCase().includes("FAIL");
                   return (
                     <tr 

@@ -80,6 +80,49 @@ describe("Strict Message Upload Gating (Option B)", () => {
     expect(messages?.[0].attachments).toEqual([storageId]);
   });
 
+  test("Message with valid document attachment succeeds", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const userId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "visitor@sonae.com",
+        role: "USER"
+      });
+    });
+
+    const threadId = await t.run(async (ctx) => {
+      return await ctx.db.insert("threads", {
+        userId,
+        title: "Test Thread",
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    const storageId = await t.run(async (ctx) => {
+      const id = await ctx.storage.store(new Blob(["hello,world"], { type: "text/csv" }));
+      await ctx.db.insert("mockStorageMetadata", {
+        storageId: id,
+        size: 11,
+        contentType: "text/csv",
+      });
+      return id;
+    });
+
+    const authedClient = t.withIdentity({ subject: userId });
+
+    const success = await authedClient.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "Analyze this CSV",
+      fileIds: [storageId]
+    });
+    expect(success).toBe(true);
+
+    const messages = await authedClient.query(api.chat.getMessages, { threadId });
+    expect(messages?.length).toBe(1);
+    expect(messages?.[0].attachments).toEqual([storageId]);
+  });
+
   test("Message with non-existent storage ID is strictly rejected", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -113,7 +156,7 @@ describe("Strict Message Upload Gating (Option B)", () => {
     ).rejects.toThrow();
   });
 
-  test("Message with invalid file type (non-image) is rejected and deleted", async () => {
+  test("Message with invalid file type is rejected and deleted", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const userId = await t.run(async (ctx) => {
@@ -132,13 +175,13 @@ describe("Strict Message Upload Gating (Option B)", () => {
       });
     });
 
-    // Store a plain text blob instead of an image
+    // Store an executable script blob instead of an allowed image/document
     const storageId = await t.run(async (ctx) => {
-      const id = await ctx.storage.store(new Blob(["import os; os.system('malicious')"], { type: "text/plain" }));
+      const id = await ctx.storage.store(new Blob(["import os; os.system('malicious')"], { type: "application/javascript" }));
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
         size: 50,
-        contentType: "text/plain",
+        contentType: "application/javascript",
       });
       return id;
     });
@@ -148,14 +191,14 @@ describe("Strict Message Upload Gating (Option B)", () => {
     await expect(
       authedClient.mutation(api.chat.sendMessage, {
         threadId,
-        content: "Sending malicious text file!",
+        content: "Sending malicious script file!",
         fileIds: [storageId]
       })
-    ).rejects.toThrow("Invalid file type: strictly images only are allowed");
+    ).rejects.toThrow("Invalid file type");
 
   });
 
-  test("Message with file exceeding 1MB limit is rejected and deleted", async () => {
+  test("Message with image exceeding 5MB limit is rejected and deleted", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const userId = await t.run(async (ctx) => {
@@ -174,13 +217,13 @@ describe("Strict Message Upload Gating (Option B)", () => {
       });
     });
 
-    // Create an oversized blob (larger than 1MB)
-    const largeBlobContent = "x".repeat(1024 * 1024 + 10);
+    // Create an oversized image blob (larger than 5MB)
+    const largeBlobContent = "x".repeat(5 * 1024 * 1024 + 10);
     const storageId = await t.run(async (ctx) => {
       const id = await ctx.storage.store(new Blob([largeBlobContent], { type: "image/jpeg" }));
       await ctx.db.insert("mockStorageMetadata", {
         storageId: id,
-        size: 1024 * 1024 + 10,
+        size: 5 * 1024 * 1024 + 10,
         contentType: "image/jpeg",
       });
       return id;
@@ -194,7 +237,48 @@ describe("Strict Message Upload Gating (Option B)", () => {
         content: "Sending massive image!",
         fileIds: [storageId]
       })
-    ).rejects.toThrow("File exceeds the maximum size limit of 1MB");
+    ).rejects.toThrow("File exceeds the maximum size limit of 5MB for images");
+
+  });
+
+  test("Message with document exceeding 50MB limit is rejected and deleted", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const userId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "visitor@sonae.com",
+        role: "USER"
+      });
+    });
+
+    const threadId = await t.run(async (ctx) => {
+      return await ctx.db.insert("threads", {
+        userId,
+        title: "Test Thread",
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    const storageId = await t.run(async (ctx) => {
+      const id = await ctx.storage.store(new Blob(["mock-pdf"], { type: "application/pdf" }));
+      await ctx.db.insert("mockStorageMetadata", {
+        storageId: id,
+        size: 50 * 1024 * 1024 + 1,
+        contentType: "application/pdf",
+      });
+      return id;
+    });
+
+    const authedClient = t.withIdentity({ subject: userId });
+
+    await expect(
+      authedClient.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "Sending massive document!",
+        fileIds: [storageId]
+      })
+    ).rejects.toThrow("File exceeds the maximum size limit of 50MB for documents");
 
   });
 });

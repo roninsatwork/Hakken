@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LineChart, 
-  TerminalSquare, 
   Save, 
   RefreshCcw,
   CheckCircle2,
@@ -42,10 +41,10 @@ export default function AnalyticsPage() {
       setSaveStatus("success");
       // Reset success status after exactly 3.5s for seamless fluid feedback
       setTimeout(() => setSaveStatus("idle"), 3500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save analytics configuration:", error);
       setSaveStatus("error");
-      setErrorMessage(error.message || "Failed to transmit changes to the persistent Edge store.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to transmit changes to the persistent Edge store.");
     } finally {
       setIsSaving(false);
     }

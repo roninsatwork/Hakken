@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
 
 export type SchemaType = "STRING" | "NUMBER" | "BOOLEAN";
@@ -13,6 +13,17 @@ export interface SchemaProperty {
   isRequired: boolean;
 }
 
+type JsonSchemaProperty = {
+  type?: SchemaType;
+  description?: string;
+};
+
+type JsonSchemaObject = {
+  type?: string;
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: string[];
+};
+
 interface JsonSchemaBuilderProps {
   initialSchemaJson?: string;
   onChange: (jsonString: string) => void;
@@ -20,38 +31,37 @@ interface JsonSchemaBuilderProps {
   subtitle: string;
 }
 
+function createPropertyId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function parseInitialProperties(initialSchemaJson?: string): SchemaProperty[] {
+  if (!initialSchemaJson) return [];
+
+  try {
+    const parsed = JSON.parse(initialSchemaJson) as JsonSchemaObject;
+    if (parsed.type !== "OBJECT" || !parsed.properties) return [];
+
+    const requiredArr = parsed.required || [];
+    return Object.entries(parsed.properties).map(([key, value]) => ({
+      id: createPropertyId(),
+      keyName: key,
+      type: value.type || "STRING",
+      description: value.description || "",
+      isRequired: requiredArr.includes(key),
+    }));
+  } catch (e) {
+    console.error("Failed to parse initial schema", e);
+    return [];
+  }
+}
+
 export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, subtitle }: JsonSchemaBuilderProps) {
-  const [properties, setProperties] = useState<SchemaProperty[]>([]);
-
-  // Parse initial stringified schema
-  useEffect(() => {
-    if (initialSchemaJson) {
-      try {
-        const parsed = JSON.parse(initialSchemaJson);
-        if (parsed.type === "OBJECT" && parsed.properties) {
-          const loadedProps: SchemaProperty[] = [];
-          const requiredArr = parsed.required || [];
-
-          for (const key in parsed.properties) {
-            loadedProps.push({
-              id: Math.random().toString(36).substr(2, 9),
-              keyName: key,
-              type: parsed.properties[key].type as SchemaType,
-              description: parsed.properties[key].description || "",
-              isRequired: requiredArr.includes(key),
-            });
-          }
-          setProperties(loadedProps);
-        }
-      } catch (e) {
-        console.error("Failed to parse initial schema", e);
-      }
-    }
-  }, []);
+  const [properties, setProperties] = useState<SchemaProperty[]>(() => parseInitialProperties(initialSchemaJson));
 
   // Compile back to JSON whenever properties change
   const compileSchema = (props: SchemaProperty[]) => {
-    const propertiesObj: Record<string, any> = {};
+    const propertiesObj: Record<string, JsonSchemaProperty> = {};
     const requiredKeys: string[] = [];
 
     props.forEach(p => {
@@ -85,7 +95,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
   const handleAddProperty = () => {
     const newProps: SchemaProperty[] = [
       ...properties, 
-      { id: Math.random().toString(36).substr(2, 9), keyName: "", type: "STRING", description: "", isRequired: true }
+      { id: createPropertyId(), keyName: "", type: "STRING", description: "", isRequired: true }
     ];
     setProperties(newProps);
     compileSchema(newProps);

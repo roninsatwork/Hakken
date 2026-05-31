@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, Eye, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export default function InviteUsersPage() {
   const activeTemplate = useQuery(api.invites.getActiveTemplate);
@@ -56,7 +57,7 @@ export default function InviteUsersPage() {
     }
   };
 
-  const handleSendInvite = async (e: React.FormEvent) => {
+  const handleSendInvite = async (e: FormEvent) => {
     e.preventDefault();
     if (!inviteEmail) return;
     setIsSending(true);
@@ -73,7 +74,7 @@ export default function InviteUsersPage() {
       setSendSuccess(true);
       setInviteEmail("");
       setTimeout(() => setSendSuccess(false), 3000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       setSendError(t('messages.sendError'));
       setTimeout(() => setSendError(null), 5000);
@@ -163,7 +164,7 @@ export default function InviteUsersPage() {
                 className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all appearance-none"
               >
                 <option value="">{t('fields.company.noCompany')}</option>
-                {companies.map((c: any) => (
+                {companies.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>

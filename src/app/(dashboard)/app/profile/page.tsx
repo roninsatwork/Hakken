@@ -7,10 +7,19 @@ import { api } from "@/convex/_generated/api";
 import { UserCircle, Save, CheckCircle, Activity } from "lucide-react";
 import ProfileTabs from "./ProfileTabs";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
+import type { Id } from "@/convex/_generated/dataModel";
+
+type ProfileFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  image: string;
+  storageId: Id<"_storage"> | "";
+};
 
 export default function MyProfilePage() {
   const t = useTranslations('user.profile');
-  const tCommon = useTranslations('common');
 
   const user = useQuery(api.users.getMe);
   const updateProfile = useMutation(api.users.updateMyProfile);
@@ -19,12 +28,12 @@ export default function MyProfilePage() {
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProfileFormData>({
     name: "",
     email: "",
     phone: "",
     image: "",
-    storageId: "" as any,
+    storageId: "",
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +68,7 @@ export default function MyProfilePage() {
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const { storageId } = await result.json();
+      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
 
       // 3. Save the storage ID to form state and generate a local preview URL
       const localPreviewUrl = URL.createObjectURL(file);
@@ -176,7 +185,14 @@ export default function MyProfilePage() {
                 <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">{t('fields.photo.label')}</label>
                 <div className="flex items-center gap-4 w-full h-full pb-1">
                   {formData.image ? (
-                    <img src={formData.image} alt="Avatar Preview" className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0" />
+                    <Image
+                      src={formData.image}
+                      alt="Avatar Preview"
+                      width={44}
+                      height={44}
+                      unoptimized
+                      className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+                    />
                   ) : (
                     <div className="w-11 h-11 rounded-full border border-dashed border-white/20 flex items-center justify-center bg-white/5 shrink-0">
                       <UserCircle className="w-5 h-5 text-muted" />

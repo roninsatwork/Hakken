@@ -26,7 +26,7 @@ export default function LoginPage() {
     setIsSubmittingEmail(true);
     try {
       await signIn("resend", { email });
-    } catch (e) {
+    } catch {
       // Fail silently to thwart user enumeration attacks
       console.debug("Auth action processed.");
     } finally {
@@ -136,7 +136,7 @@ export default function LoginPage() {
                 </div>
                 <h3 className="text-xl font-medium text-foreground mb-2">{t('thankYou')}</h3>
                 <p className="text-[15px] text-secondary leading-relaxed max-w-[280px]">
-                  {t.rich('magicLinkSent', { email: (chunks) => <strong className="text-foreground">{email}</strong> })}
+                  {t.rich('magicLinkSent', { email: () => <strong className="text-foreground">{email}</strong> })}
                 </p>
                 <button
                   type="button"

@@ -1,9 +1,10 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
+import type { MutationCtx } from "./_generated/server";
 
 // Only super admins can manage plans
-async function requireSuperAdmin(ctx: any) {
+async function requireSuperAdmin(ctx: MutationCtx) {
   const userId = await auth.getUserId(ctx);
   if (!userId) throw new Error("Unauthenticated request");
 

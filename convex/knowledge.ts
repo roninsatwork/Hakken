@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
 import { validateSafeUrl } from "./utils/security";
+import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -129,6 +130,12 @@ export const saveDocument = mutation({
       }
     }
 
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error("Attached file not found in storage");
+    }
+    validateChatAttachmentMetadata(metadata, { allowDocuments: true });
+
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
       fileId: args.storageId,
@@ -175,6 +182,12 @@ export const saveChatDocument = mutation({
     if (!thread || thread.userId !== userId) {
       throw new Error("Unauthorized access to thread");
     }
+
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error("Attached file not found in storage");
+    }
+    validateChatAttachmentMetadata(metadata, { allowDocuments: true });
 
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       title: args.title,
@@ -380,11 +393,7 @@ export const queueWebsiteUrls = mutation({
     const docIds = [];
     for (const url of args.urls) {
         // 🛡️ SECURITY: Central SSRF Prevention Shield
-        try {
-           validateSafeUrl(url, "Knowledge Base Import");
-        } catch (e: any) {
-           throw e;
-        }
+        validateSafeUrl(url, "Knowledge Base Import");
 
         // Simple duplicates check
         const existing = await ctx.db.query("knowledgeDocuments")

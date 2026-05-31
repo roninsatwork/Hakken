@@ -1,4 +1,4 @@
-import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
@@ -314,9 +314,10 @@ export const dispatchInviteEmail = action({
       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
 
       return { success: true, id: data?.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      throw new Error(`System exception during dispatch: ${e.message}`);
+      const message = e instanceof Error ? e.message : "Unknown error";
+      throw new Error(`System exception during dispatch: ${message}`);
     }
   }
 });

@@ -35,8 +35,17 @@ jobs:
       - name: Audit Dependencies for Known Vulnerabilities
         run: npm audit --audit-level=high
 
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
       - name: Execute Automated Test Matrix
-        run: npx vitest run
+        run: npm run test:run
+
+      - name: Verify production build
+        run: npm run build
 
   deploy:
     runs-on: ubuntu-latest

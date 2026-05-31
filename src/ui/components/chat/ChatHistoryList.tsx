@@ -98,7 +98,7 @@ export default function ChatHistoryList() {
           </span>
         ) : filteredThreads?.length === 0 ? (
           <span className="text-[13px] text-muted font-light mt-4 block text-center leading-relaxed">
-            No chats matched "{searchQuery}"
+            No chats matched &quot;{searchQuery}&quot;
           </span>
         ) : (
           <AnimatePresence>

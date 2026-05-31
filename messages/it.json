@@ -493,6 +493,10 @@
                     "output": {
                         "title": "Log di Output",
                         "noOutput": "Nessun dato di output registrato"
+                    },
+                    "feedback": {
+                        "resumeSuccess": "Workflow ripreso. L'elaborazione continuerà a breve.",
+                        "resumeFailed": "Ripresa fallita. Non è stato possibile sbloccare il workflow."
                     }
                 }
             },

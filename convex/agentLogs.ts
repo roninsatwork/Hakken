@@ -14,24 +14,37 @@ export const getOffsetPaginated = query({
     if (!userId) throw new Error("Unauthenticated request");
     const user = await ctx.db.get(userId);
     if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) throw new Error("Unauthorized");
-    let rawResults = [];
 
-    let q: any = ctx.db.query("agentLogs");
-    
-    if (args.searchTerm && args.searchTerm.trim() !== "") {
-       q = ctx.db.query("agentLogs").withSearchIndex("search_content", (searchQ) =>
-          searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
-       );
-    } else {
-       q = ctx.db.query("agentLogs").withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
+    if (user.role === "ADMIN" && !user.companyId) {
+       throw new Error("Unauthorized");
     }
 
-    if (user.role === "ADMIN") {
-       if (!user.companyId) throw new Error("Unauthorized");
-       q = q.filter((filterQ: any) => filterQ.eq(filterQ.field("companyId"), user.companyId));
-    }
-
-    rawResults = await q.take(1000);
+    const isSearching = args.searchTerm && args.searchTerm.trim() !== "";
+    const rawResults = isSearching
+      ? user.role === "ADMIN"
+        ? await ctx.db
+            .query("agentLogs")
+            .withSearchIndex("search_content", (searchQ) =>
+              searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
+            )
+            .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
+            .take(1000)
+        : await ctx.db
+            .query("agentLogs")
+            .withSearchIndex("search_content", (searchQ) =>
+              searchQ.search("promptContent", args.searchTerm!).eq("agentId", args.agentId)
+            )
+            .take(1000)
+      : user.role === "ADMIN"
+        ? await ctx.db
+            .query("agentLogs")
+            .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
+            .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
+            .take(1000)
+        : await ctx.db
+            .query("agentLogs")
+            .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
+            .take(1000);
 
     const totalCount = rawResults.length;
     const offset = (args.page - 1) * args.pageSize;

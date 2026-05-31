@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useState, use } from "react";
 import {
   Cpu,
@@ -14,19 +14,22 @@ import {
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
+type AgentTool = Doc<"aiTools"> & { bindingId: Id<"agentTools"> };
+type ToolRole = Doc<"aiTools">["requiredRole"];
+
 export default function AgentIntegrationsPage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.integrations");
   const unwrappedParams = use(params);
   const agentId = unwrappedParams.id;
 
   // Retrieve global available integrations/tools
-  const globalTools = useQuery(api.aiTools.getTools) || [];
+  const globalTools = (useQuery(api.aiTools.getTools) || []) as Doc<"aiTools">[];
 
   // Retrieve bindings for this specific agent
-  const agentTools = useQuery(api.aiTools.getAgentTools, { agentId }) || [];
+  const agentTools = (useQuery(api.aiTools.getAgentTools, { agentId }) || []) as AgentTool[];
 
   const toggleToolMutation = useMutation(api.aiTools.toggleAgentTool);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<Id<"aiTools"> | null>(null);
 
   const handleToggleTool = async (toolId: Id<"aiTools">, isBound: boolean) => {
     if (processingId) return;
@@ -37,14 +40,14 @@ export default function AgentIntegrationsPage({ params }: { params: Promise<{ id
         toolId,
         action: isBound ? "UNBIND" : "BIND"
       });
-    } catch (err: any) {
+    } catch {
       alert(t("errors.assignFailed"));
     } finally {
       setProcessingId(null);
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: ToolRole) => {
     if (role === "SUPER_ADMIN") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
     if (role === "ADMIN") return "text-orange-500 bg-orange-500/10 border-orange-500/20";
     return "text-secondary bg-foreground/5 border-border-dim";

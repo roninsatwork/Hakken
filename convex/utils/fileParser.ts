@@ -1,13 +1,13 @@
 "use node";
 
 import { GenericActionCtx } from "convex/server";
-import { Id } from "../_generated/dataModel";
-// @ts-ignore
+import type { DataModel, Id } from "../_generated/dataModel";
+// @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
 import pdfExtraction from "pdf-extraction";
 import * as ExcelJS from "exceljs";
 import mammoth from "mammoth";
 
-export async function parseDocuments(ctx: GenericActionCtx<any>, fileIds: Id<"_storage">[]): Promise<string> {
+export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: Id<"_storage">[]): Promise<string> {
   if (!fileIds || fileIds.length === 0) return "";
 
   let compiledTexts = "";
@@ -20,7 +20,7 @@ export async function parseDocuments(ctx: GenericActionCtx<any>, fileIds: Id<"_s
 
       const mimeType = blob.type;
       const arrayBuffer = await blob.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(arrayBuffer) as Buffer;
 
       let extractedText = "";
 
@@ -38,12 +38,12 @@ export async function parseDocuments(ctx: GenericActionCtx<any>, fileIds: Id<"_s
       ) {
          try {
            const workbook = new ExcelJS.Workbook();
-           await workbook.xlsx.load(buffer as any);
+           await workbook.xlsx.load(arrayBuffer);
            // Extract text from the first sheet
            if (workbook.worksheets.length > 0) {
               const worksheet = workbook.worksheets[0];
               const rows: string[] = [];
-              worksheet.eachRow((row, rowNumber) => {
+              worksheet.eachRow((row) => {
                  rows.push(row.values.toString());
               });
               extractedText = rows.join('\n');

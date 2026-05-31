@@ -4,14 +4,16 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Activity, Loader2, CheckCircle2, XCircle, RefreshCcw } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import { useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 export default function PropertiesLogsPage() {
-  const latestRuns = useQuery(api.properties.getLatestRuns) || [];
+  const latestRunsQuery = useQuery(api.properties.getLatestRuns) as Doc<"apifyRuns">[] | undefined;
+  const latestRuns = useMemo(() => latestRunsQuery ?? [], [latestRunsQuery]);
   const syncRun = useAction(api.apify.syncRunStatus);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
-  const handleSync = async (runId: string) => {
+  const handleSync = useCallback(async (runId: string) => {
     setSyncingId(runId);
     try {
       await syncRun({ runId });
@@ -20,12 +22,12 @@ export default function PropertiesLogsPage() {
     } finally {
       setSyncingId(null);
     }
-  };
+  }, [syncRun]);
 
   // Auto-sync PENDING runs every 30 seconds
   useEffect(() => {
     const syncPending = () => {
-      latestRuns.forEach((run: any) => {
+      latestRuns.forEach((run) => {
         if (run.status === "PENDING") {
           handleSync(run.runId);
         }
@@ -38,7 +40,7 @@ export default function PropertiesLogsPage() {
     // Set up interval
     const interval = setInterval(syncPending, 30000);
     return () => clearInterval(interval);
-  }, [latestRuns]);
+  }, [handleSync, latestRuns]);
 
   return (
     <>
@@ -63,7 +65,7 @@ export default function PropertiesLogsPage() {
                 <span className="text-[14px] text-muted font-medium">No extraction jobs have been dispatched yet.</span>
               </div>
             ) : (
-              latestRuns.map((run: any) => (
+              latestRuns.map((run) => (
                 <div key={run._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-[24px] border border-border-dim bg-background/50 hover:bg-background/80 transition-colors gap-6 shadow-sm">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-4">

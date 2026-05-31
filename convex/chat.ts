@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
-import { redactPII } from "./utils/pii";
+import { redactPII, type PiiConfig } from "./utils/pii";
+import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
 
 export const getThreads = query({
   args: {},
@@ -138,14 +139,13 @@ export const sendMessage = mutation({
       }
     }
 
-    // 🛡️ SECURITY: Strict real-time widget visitor upload validation (Option B)
+    // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
     if (args.fileIds && args.fileIds.length > 0) {
-      const maxBytes = 1024 * 1024; // 1MB
       for (const storageId of args.fileIds) {
-        let metadata = null;
+        let metadata: { size: number; contentType?: string | null } | null = null;
         try {
           metadata = await ctx.storage.getMetadata(storageId);
-        } catch (e: any) {
+        } catch {
           // Fall back to mock table if getMetadata throws or is unsupported in tests
         }
 
@@ -161,11 +161,12 @@ export const sendMessage = mutation({
           throw new Error("Attached file not found in storage");
         }
 
-        // Validate size (< 1MB)
-        if (metadata.size > maxBytes) {
+        try {
+          validateChatAttachmentMetadata(metadata);
+        } catch (error) {
           try {
             await ctx.storage.delete(storageId);
-          } catch (e: any) {
+          } catch {
             // Handle test environment lacking storage delete syscall
           }
           if (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
@@ -177,26 +178,10 @@ export const sendMessage = mutation({
               await ctx.db.delete(mock._id);
             }
           }
-          throw new Error("File exceeds the maximum size limit of 1MB");
-        }
-
-        // Validate MIME type (must be image)
-        if (!metadata.contentType || !metadata.contentType.startsWith("image/")) {
-          try {
-            await ctx.storage.delete(storageId);
-          } catch (e: any) {
-            // Handle test environment lacking storage delete syscall
+          if (error instanceof Error) {
+            throw error;
           }
-          if (process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
-            const mock = await ctx.db
-              .query("mockStorageMetadata")
-              .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-              .first();
-            if (mock) {
-              await ctx.db.delete(mock._id);
-            }
-          }
-          throw new Error("Invalid file type: strictly images only are allowed");
+          throw new Error("Invalid attachment");
         }
       }
     }
@@ -282,13 +267,13 @@ export const sendMessage = mutation({
       .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
       .first();
       
-    let piiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
+    let piiConfig: PiiConfig = { enabled: false, maskEmails: true, maskCreditCards: true, maskPhones: false, maskNinos: true };
     if (piiConfigEntry && piiConfigEntry.value) {
-        piiConfig = JSON.parse(piiConfigEntry.value);
+        piiConfig = { ...piiConfig, ...(JSON.parse(piiConfigEntry.value) as Partial<PiiConfig>) };
     }
     
     // Execute Auto-redaction logic masking sensitive data synchronously
-    const safeContent = redactPII(args.content, piiConfig as any);
+    const safeContent = redactPII(args.content, piiConfig);
 
     // 1. Insert User Message
     await ctx.db.insert("messages", {

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('End-User Chat Journey', () => {
   test('User can type a message, submit, and transition to a thread', async ({ page }) => {
     // Navigate to the primary Assistant interaction interface
-    const response = await page.goto('/app/assistant');
+    await page.goto('/app/assistant');
     
     // Check if the application enforced authentication and redirected to login
     // If we are unauthenticated during a local smoke test, gracefully bypass the DOM assertions

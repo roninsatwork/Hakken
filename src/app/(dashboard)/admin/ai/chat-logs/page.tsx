@@ -1,20 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import Image from "next/image";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   Search,
   Loader2,
   MessageSquareText,
   ShieldAlert,
   Bot,
-  User as UserIcon,
   ChevronLeft,
   ChevronRight,
   Database,
-  CalendarDays,
   Copy,
   Check
 } from "lucide-react";
@@ -207,10 +206,13 @@ export default function ChatLogsDashboard() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 blur-[40px] rounded-full pointer-events-none -translate-y-16 translate-x-12" />
                   )}
 
-                  <img
+                  <Image
                     src={thread.user?.image || "https://api.dicebear.com/7.x/notionists/svg"}
-                    className="w-8 h-8 rounded-full border border-border-dim object-cover shrink-0 relative z-10"
                     alt="User"
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="w-8 h-8 rounded-full border border-border-dim object-cover shrink-0 relative z-10"
                   />
 
                   <div className="flex flex-col w-full min-w-0 relative z-10">
@@ -334,10 +336,13 @@ export default function ChatLogsDashboard() {
                         {/* Log Signature */}
                         <div className={`flex items-center gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                           {isUser ? (
-                            <img
+                            <Image
                               src={activeThread?.user?.image || "https://api.dicebear.com/7.x/notionists/svg"}
-                              className="w-6 h-6 rounded-full border border-border-dim object-cover shrink-0"
                               alt="User"
+                              width={24}
+                              height={24}
+                              unoptimized
+                              className="w-6 h-6 rounded-full border border-border-dim object-cover shrink-0"
                             />
                           ) : (
                             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand/10 border border-brand/20 text-[10px]">

@@ -3,13 +3,13 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import type { MouseEvent } from "react";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   Timer,
   Plus,
   Search,
   Trash2,
-  CheckCircle2,
-  XCircle,
   ToggleLeft,
   ToggleRight,
   ChevronLeft,
@@ -21,28 +21,36 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+type ScheduleRow = Doc<"schedules"> & {
+  workflowName?: string;
+  agentName?: string;
+  targetName?: string;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export default function SchedulesPage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows.schedules');
   const tCommon = useTranslations('common');
 
-  const schedules = useQuery((api as any).scheduler.getSchedules) || [];
-  const workflows = useQuery((api as any).workflows.list) || [];
+  const schedules = (useQuery(api.scheduler.getSchedules) || []) as ScheduleRow[];
 
-  const createSchedule = useMutation((api as any).scheduler.createSchedule);
-  const deleteSchedule = useMutation((api as any).scheduler.deleteSchedule);
-  const toggleSchedule = useMutation((api as any).scheduler.toggleSchedule);
-  const manualRunWorkflow = useMutation((api as any).scheduler.manualRunWorkflow);
+  const deleteSchedule = useMutation(api.scheduler.deleteSchedule);
+  const toggleSchedule = useMutation(api.scheduler.toggleSchedule);
+  const manualRunSchedule = useMutation(api.scheduler.manualRunSchedule);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [deletingSchedule, setDeletingSchedule] = useState<any | null>(null);
+  const [deletingSchedule, setDeletingSchedule] = useState<ScheduleRow | null>(null);
   const [messageModal, setMessageModal] = useState<{ title: string; body: string } | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
 
-  const filteredSchedules = schedules.filter((s: any) =>
+  const filteredSchedules = schedules.filter((s) =>
     (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -66,30 +74,33 @@ export default function SchedulesPage() {
       try {
         await deleteSchedule({ scheduleId: deletingSchedule._id });
         setDeletingSchedule(null);
-      } catch (err: any) {
-        setMessageModal({ title: t('modals.error.deleteFailed'), body: err.message || tCommon('errors.default') });
+      } catch (err: unknown) {
+        setMessageModal({ title: t('modals.error.deleteFailed'), body: getErrorMessage(err, tCommon('errors.default')) });
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  const handleManualRun = async (workflowId: string, e: any) => {
+  const handleManualRun = async (
+    target: { workflowId?: Id<"workflows">; agentId?: Id<"agents"> },
+    e: MouseEvent<HTMLButtonElement>
+  ) => {
     e.stopPropagation();
     try {
-      await manualRunWorkflow({ workflowId: workflowId as any });
+      await manualRunSchedule(target);
       setMessageModal({ title: t('modals.execution.title'), body: t('modals.execution.body') });
-    } catch (e: any) {
-      setMessageModal({ title: t('modals.error.executionFailed'), body: e.message || tCommon('errors.default') });
+    } catch (e: unknown) {
+      setMessageModal({ title: t('modals.error.executionFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
     }
   };
 
-  const handleToggle = async (scheduleId: string, current: boolean, e: any) => {
+  const handleToggle = async (scheduleId: Id<"schedules">, current: boolean, e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     try {
-      await toggleSchedule({ scheduleId: scheduleId as any, isActive: !current });
-    } catch (e: any) {
-      setMessageModal({ title: t('modals.error.statusFailed'), body: e.message || tCommon('errors.default') });
+      await toggleSchedule({ scheduleId, isActive: !current });
+    } catch (e: unknown) {
+      setMessageModal({ title: t('modals.error.statusFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
     }
   };
 
@@ -147,7 +158,7 @@ export default function SchedulesPage() {
                   </tr>
                 ) : (
                   <>
-                    {paginatedSchedules.map((schedule: any) => (
+                    {paginatedSchedules.map((schedule) => (
                       <motion.tr
                         key={schedule._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -197,7 +208,11 @@ export default function SchedulesPage() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
 
-                            <button onClick={(e) => handleManualRun(schedule.workflowId, e)} className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors" title={t('actions.forceRun')}>
+                            <button
+                              onClick={(e) => handleManualRun({ workflowId: schedule.workflowId, agentId: schedule.agentId }, e)}
+                              className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors"
+                              title={t('actions.forceRun')}
+                            >
                               <Play className="w-4 h-4 fill-current" />
                             </button>
 
@@ -256,7 +271,7 @@ export default function SchedulesPage() {
       >
         <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
           <p>
-            {t('modals.delete.confirm', { name: deletingSchedule?.name })}
+            {t('modals.delete.confirm', { name: deletingSchedule?.name ?? "" })}
           </p>
         </div>
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">

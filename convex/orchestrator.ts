@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Doc } from "./_generated/dataModel";
 
 export const routeAgentIntent = action({
   args: {
@@ -45,7 +46,7 @@ export const routeAgentIntent = action({
 
         // Build the routing context
         let contextBlock = "Available Sonae Agents:\n\n";
-        agents.forEach((agent: any) => {
+        agents.forEach((agent: Doc<"agents">) => {
             contextBlock += `[ID: ${agent._id}]\nName: ${agent.name}\nDescription: ${agent.description || 'No description provided'}\nSystem Rules: ${agent.systemPrompt || 'None'}\n\n`;
         });
 

@@ -3,9 +3,15 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { GoogleGenAI } from "@google/genai";
+import type { Content, FunctionDeclaration, GenerateContentConfig, Tool } from "@google/genai";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { parseDocuments } from "./utils/fileParser";
 import { redactPII, DEFAULT_PII_CONFIG } from "./utils/pii";
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown Engine Exception";
+}
 
 export const generateAgentResponse = internalAction({
   args: {
@@ -53,7 +59,7 @@ export const generateAgentResponse = internalAction({
         });
 
         // Map Sonae generic messages into expected Vertex AI Content arrays
-        const conversationHistory: any[] = messages.slice(-20).map((msg: any) => {
+        const conversationHistory: Content[] = messages.slice(-20).map((msg) => {
             return {
                 role: msg.role === "user" ? "user" : "model",
                 parts: [{ text: msg.content }]
@@ -83,11 +89,13 @@ export const generateAgentResponse = internalAction({
         const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
         
         // Build the Tools Declaration block for @google/genai
-        const dynamicTools: any[] = [];
+        const dynamicTools: FunctionDeclaration[] = [];
         
         for (const junction of agentTools) {
              const toolDef = await ctx.runQuery(internal.aiTools.getToolInternal, { id: junction.toolId });
-             const schemaStr = (toolDef as any)?.inputSchema;
+             const schemaStr = toolDef && "inputSchema" in toolDef && typeof toolDef.inputSchema === "string"
+                 ? toolDef.inputSchema
+                 : undefined;
              if (toolDef && schemaStr) {
                  try {
                      const parsedSchema = JSON.parse(schemaStr);
@@ -95,9 +103,9 @@ export const generateAgentResponse = internalAction({
                      dynamicTools.push({
                          name: toolDef.handlerMapping.replace(/[^a-zA-Z0-9_]/g, "_"), // sanitize name
                          description: toolDef.description,
-                         parameters: parsedSchema
+                         parametersJsonSchema: parsedSchema
                      });
-                 } catch(e) {
+                 } catch {
                      console.error("Failed to parse tool schema for:", toolDef.name);
                  }
              }
@@ -146,10 +154,14 @@ export const generateAgentResponse = internalAction({
         const finalSystemInstruction = systemInstruction;
         if (ragContext) {
              // Append to the final user message to prioritize context grounding over system instruction fading
-             conversationHistory[conversationHistory.length - 1].parts[0].text += ragContext;
+             const finalMessage = conversationHistory[conversationHistory.length - 1];
+             const finalTextPart = finalMessage?.parts?.[0];
+             if (finalTextPart?.text) {
+                 finalTextPart.text += ragContext;
+             }
         }
 
-        const genConfig: any = {
+        const genConfig: GenerateContentConfig = {
             systemInstruction: finalSystemInstruction,
             temperature: 0.1, // Deterministic logic routing
         };
@@ -232,7 +244,7 @@ export const generateAgentResponse = internalAction({
         
         // Calculate dynamic cost based on the exact model utilized
         const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
-        const modelMap = new Map((allModelsRaw as any[]).map(m => [m.modelId, m]));
+        const modelMap = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]));
         const config = modelMap.get(targetModel);
         
         const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
@@ -276,8 +288,9 @@ export const generateAgentResponse = internalAction({
             }
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Agent Engine Error:", error);
+        const errorMessage = getErrorMessage(error);
         
         if (args.agentId) {
              await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
@@ -285,7 +298,7 @@ export const generateAgentResponse = internalAction({
                  threadId: args.threadId,
                  interactionType: "ERROR",
                  promptContent: args.content,
-                 responseContent: error.message || "Unknown Engine Exception"
+                 responseContent: errorMessage
              });
         }
 
@@ -328,12 +341,12 @@ export const executeAgentNode = internalAction({
     const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
     
     // Check if tools or internet access are enabled
-    const tools: any[] = [];
+    const tools: Tool[] = [];
     if (agent.allowInternetAccess) {
         tools.push({ googleSearch: {} });
     }
     
-    const config: any = {
+    const config: GenerateContentConfig = {
         systemInstruction: systemInstruction,
         temperature: agent.temperature !== undefined ? agent.temperature : 0.1,
     };
@@ -345,7 +358,7 @@ export const executeAgentNode = internalAction({
     if (agent.outputSchema) {
         try {
             config.responseMimeType = "application/json";
-            config.responseSchema = JSON.parse(agent.outputSchema);
+            config.responseJsonSchema = JSON.parse(agent.outputSchema);
         } catch (e) {
             console.error("Failed to parse output schema", e);
         }
