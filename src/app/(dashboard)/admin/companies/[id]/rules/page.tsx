@@ -4,22 +4,17 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { BrainCircuit, Plus, Power, Trash2, Edit2 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { AlertOctagon, BrainCircuit, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 
 export default function CompanyAiRulesPage() {
   const params = useParams();
-  const router = useRouter();
   const companyId = params.id as Id<"companies">;
   
   const toggleActive = useMutation(api.aiRules.toggleRuleActive);
@@ -28,6 +23,8 @@ export default function CompanyAiRulesPage() {
   const debouncedSearch = useDebounce(searchTerm, 400);
   const [page, setPage] = useState(1);
   const pageSize = ADMIN_PAGE_SIZE;
+  const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -46,11 +43,17 @@ export default function CompanyAiRulesPage() {
   const totalCount = rulesData?.totalCount || 0;
   const totalPages = rulesData?.totalPages || 1;
 
-  const getPriorityColor = (p: string) => {
-    if (p === "CRITICAL") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
-    if (p === "HIGH") return "text-orange-500 bg-orange-500/10 border-orange-500/20";
-    if (p === "NORMAL") return "text-blue-500 bg-blue-500/10 border-blue-500/20";
-    return "text-secondary bg-foreground/5 border-border-dim";
+  const handleDeleteRule = async () => {
+    if (!deleteId || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteRuleMutation({ id: deleteId });
+      setDeleteId(null);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -78,83 +81,67 @@ export default function CompanyAiRulesPage() {
       
       <AdminSearchBar value={searchTerm} onChange={handleSearchChange} placeholder="Search triggers or instructions..." />
       
-      {/* Listing Area */}
-      <AdminTableShell
-        footer={
-          <AdminPaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={pageSize}
-            isLoading={isLoading}
-            onPageChange={setPage}
-          />
-        }
+      <AdminRulesTable
+        rules={filteredRules}
+        isLoading={isLoading}
+        emptyIcon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
+        emptyLabel="No Rules Yet"
+        page={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        getRowHref={(rule) => `/admin/companies/${companyId}/rules/${rule._id}`}
+        getEditHref={(rule) => `/admin/companies/${companyId}/rules/${rule._id}`}
+        onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
+        onDelete={(rule) => setDeleteId(rule._id)}
+        labels={{
+          priority: "Priority",
+          rule: "Rule Name / Trigger",
+          status: "Status",
+          activate: "Activate",
+          deactivate: "Deactivate",
+          edit: "Edit",
+          delete: "Delete",
+        }}
+      />
+
+      <SonaeModal
+        isOpen={deleteId !== null}
+        onClose={() => !isDeleting && setDeleteId(null)}
+        title="Delete Rule"
+        size="sm"
       >
-            <thead>
-              <tr className="border-b border-border-dim/50 bg-sidebar/40">
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[120px]">Priority</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[250px]">Rule Name / Trigger</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[100px] text-right">Status</th>
-                <th className="w-[100px] px-5 py-3.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-                {isLoading ? (
-                  <AdminTableLoadingRow colSpan={4} />
-                ) : filteredRules.length === 0 ? (
-                  <AdminTableEmptyRow
-                    colSpan={4}
-                    icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
-                    label="No Rules Yet"
-                  />
-                ) : (
-                  filteredRules.map((rule) => (
-                    <tr 
-                      key={rule._id} 
-                      onClick={() => router.push(`/admin/companies/${companyId}/rules/${rule._id}`)}
-                      className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
-                    >
-                      <td className="px-5 py-4 align-middle">
-                        <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
-                          {rule.priority}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 align-middle">
-                        <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
-                          {rule.name || `"${rule.trigger}"`}
-                        </h3>
-                      </td>
-                      <td className="px-5 py-4 align-middle text-right border-r border-white/5">
-                         <button
-                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleActive({ id: rule._id, isActive: !rule.isActive }); }}
-                           className="hover:text-foreground transition-colors p-1 flex justify-end w-full"
-                         >
-                           <Power className={`w-4 h-4 ${rule.isActive ? 'text-orange-500' : 'opacity-40'}`} />
-                         </button>
-                      </td>
-                      <td className="px-5 py-4 align-middle text-right">
-                        <div className="flex items-center justify-end gap-3 text-secondary">
-                          <Link
-                            href={`/admin/companies/${companyId}/rules/${rule._id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="hover:text-foreground transition-colors p-1"
-                          >
-                            <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
-                          </Link>
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteRuleMutation({ id: rule._id }); }}
-                            className="transition-colors group/trash p-1"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-            </tbody>
-      </AdminTableShell>
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-2">
+            <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
+            <p className="text-[14px] text-secondary leading-relaxed">
+              This rule will be removed from the workspace rule set.
+            </p>
+            <p className="text-[13px] font-bold text-foreground mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
+            <button
+              onClick={() => setDeleteId(null)}
+              disabled={isDeleting}
+              className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteRule}
+              disabled={isDeleting}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
+            >
+              {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              <span>Delete Rule</span>
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
     </div>
   );
 }

@@ -147,7 +147,7 @@ Completed commit:
 
 ## Phase 4: App UX Reliability Sweep
 
-Status: Pending.
+Status: Complete.
 
 Scope:
 
@@ -165,17 +165,21 @@ Goal:
 
 Checklist:
 
-- [ ] Audit stale search/query behavior across admin and app pages.
-- [ ] Audit destructive actions for consistent confirmation and disabled states.
-- [ ] Audit loading/empty/error states for user-facing dead ends.
-- [ ] Fix grouped reliability issues without redesigning the app.
-- [ ] Add or update tests for important changed flows.
-- [ ] Confirm no movement demo files changed.
-- [ ] Run `npm run check`.
-- [ ] Run `npm run build`.
-- [ ] Provide diff summary for user review.
-- [ ] Wait for explicit `commit` approval.
-- [ ] Push to `dev` after explicit phase-end push approval.
+- [x] Audit stale search/query behavior across admin and app pages.
+- [x] Audit destructive actions for consistent confirmation and disabled states.
+- [x] Audit loading/empty/error states for user-facing dead ends.
+- [x] Fix grouped reliability issues without redesigning the app.
+- [x] Add or update tests for important changed flows.
+- [x] Confirm no movement demo files changed.
+- [x] Run `npm run check`.
+- [x] Run `npm run build`.
+- [x] Provide diff summary for user review.
+- [x] Wait for explicit `commit` approval.
+- [x] Push to `dev` after explicit phase-end push approval.
+
+Completed commit:
+
+- Phase 4 app UX reliability sweep.
 
 ## Phase 5: Test & Drift Guardrails
 

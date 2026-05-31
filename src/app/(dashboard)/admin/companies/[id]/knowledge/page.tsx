@@ -52,6 +52,9 @@ export default function CompanyKnowledgeBasePage() {
   const [rootToDelete, setRootToDelete] = useState<string | null>(null);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [websiteError, setWebsiteError] = useState("");
+  const [documentToDelete, setDocumentToDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
+  const [isDeletingDocument, setIsDeletingDocument] = useState(false);
+  const [documentDeleteError, setDocumentDeleteError] = useState("");
 
   const processFile = async (file: File) => {
     if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/csv"].includes(file.type)) {
@@ -188,6 +191,21 @@ export default function CompanyKnowledgeBasePage() {
           setWebsiteError("Failed to rigidly delete website root.");
       } finally {
           setIsDeletingBulk(false);
+      }
+  };
+
+  const handleConfirmDocumentDelete = async () => {
+      if (!documentToDelete || isDeletingDocument) return;
+      setIsDeletingDocument(true);
+      setDocumentDeleteError("");
+      try {
+          await deleteDocument({ documentId: documentToDelete._id });
+          setDocumentToDelete(null);
+      } catch (err: unknown) {
+          console.error(err);
+          setDocumentDeleteError(getErrorMessage(err, "Failed to delete document."));
+      } finally {
+          setIsDeletingDocument(false);
       }
   };
 
@@ -393,8 +411,9 @@ export default function CompanyKnowledgeBasePage() {
                                          {doc.status === "processing" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Processing</span>}
                                          {doc.status === "failed" && <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> Failed</span>}
                                          <button 
-                                            onClick={() => deleteDocument({ documentId: doc._id })}
+                                            onClick={() => setDocumentToDelete(doc)}
                                             className="text-secondary hover:text-red-500 transition-colors opacity-50 group-hover:opacity-100"
+                                            title="Delete Document"
                                          >
                                             <Trash2 className="w-4 h-4" />
                                          </button>
@@ -414,7 +433,7 @@ export default function CompanyKnowledgeBasePage() {
       {activeTab === "File" && (
           <div className="flex flex-col gap-4">
               <div className="flex justify-end">
-                <button 
+                <button
                    onClick={() => setIsModalOpen(true)}
                    className="h-9 px-4 rounded-[10px] bg-foreground text-background font-medium text-[13px] flex items-center gap-2 hover:opacity-90 transition-all"
                 >
@@ -469,7 +488,7 @@ export default function CompanyKnowledgeBasePage() {
                           )}
 
                           <button
-                            onClick={() => deleteDocument({ documentId: doc._id })}
+                            onClick={() => setDocumentToDelete(doc)}
                             className="p-2 rounded-lg border border-transparent text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
                             title="Delete Document"
                           >
@@ -535,6 +554,48 @@ export default function CompanyKnowledgeBasePage() {
             )}
         </div>
       </div>
+    </SonaeModal>
+
+    {/* Document Delete Confirm Modal */}
+    <SonaeModal
+      isOpen={!!documentToDelete}
+      onClose={() => {
+        if (!isDeletingDocument) {
+          setDocumentToDelete(null);
+          setDocumentDeleteError("");
+        }
+      }}
+      title="Delete Document"
+      size="sm"
+    >
+        <div className="flex flex-col gap-6 w-full pt-4">
+            <p className="text-[14px] text-secondary">
+                Are you sure you want to remove <strong>{documentToDelete?.title}</strong> from this workspace&apos;s memory?
+            </p>
+            {documentDeleteError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">{documentDeleteError}</span>
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+                <button
+                   onClick={() => setDocumentToDelete(null)}
+                   disabled={isDeletingDocument}
+                   className="px-4 py-2 rounded-md hover:bg-white/5 transition-colors text-[13px] font-medium disabled:opacity-50"
+                >
+                   Cancel
+                </button>
+                <button
+                   onClick={handleConfirmDocumentDelete}
+                   disabled={isDeletingDocument}
+                   className="px-4 py-2 rounded-md bg-red-500 text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-red-600 disabled:opacity-50"
+                >
+                   {isDeletingDocument && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                   Delete Document
+                </button>
+            </div>
+        </div>
     </SonaeModal>
 
     {/* Bulk Delete Confirm Modal */}

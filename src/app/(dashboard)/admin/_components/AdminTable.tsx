@@ -105,8 +105,9 @@ export function AdminPaginationFooter({
   labels,
 }: AdminPaginationFooterProps) {
   const safeTotalPages = Math.max(totalPages, 1);
-  const start = (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, totalCount);
+  const safePage = Math.min(Math.max(page, 1), safeTotalPages);
+  const start = (safePage - 1) * pageSize + 1;
+  const end = Math.min(safePage * pageSize, totalCount);
 
   return (
     <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
@@ -120,8 +121,8 @@ export function AdminPaginationFooter({
 
       <div className="flex items-center gap-3">
         <button
-          onClick={() => onPageChange(Math.max(1, page - 1))}
-          disabled={page === 1 || isLoading}
+          onClick={() => onPageChange(Math.max(1, safePage - 1))}
+          disabled={safePage === 1 || isLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -129,12 +130,12 @@ export function AdminPaginationFooter({
         </button>
 
         <div className="flex items-center justify-center min-w-[100px] text-[12px] font-medium tracking-wide">
-          {labels?.page?.(page, safeTotalPages) ?? `Page ${page} of ${safeTotalPages}`}
+          {labels?.page?.(safePage, safeTotalPages) ?? `Page ${safePage} of ${safeTotalPages}`}
         </div>
 
         <button
-          onClick={() => onPageChange(Math.min(safeTotalPages, page + 1))}
-          disabled={page >= safeTotalPages || isLoading}
+          onClick={() => onPageChange(Math.min(safeTotalPages, safePage + 1))}
+          disabled={safePage >= safeTotalPages || isLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
         >
           {labels?.next ?? "Next"}

@@ -1,5 +1,6 @@
 "use client";
 
+import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -64,6 +65,8 @@ export default function ManageUsersPage() {
   const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
 
   const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const filteredInvites = pendingInvites.filter((inv) =>
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -72,34 +75,60 @@ export default function ManageUsersPage() {
   const handleOpenEdit = (user: Doc<"users">) => {
     setFormData({ name: user.name ?? "", email: user.email ?? "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
     setEditingUser(user);
+    setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError("");
     const payload = {
       ...formData,
       companyId: isSuperAdmin && formData.companyId ? (formData.companyId as Id<"companies">) : undefined
     };
-    if (editingUser) {
-      await updateUser({ id: editingUser._id, ...payload });
-    } else {
-      await addUser(payload);
+    try {
+      if (editingUser) {
+        await updateUser({ id: editingUser._id, ...payload });
+      } else {
+        await addUser(payload);
+      }
+      setIsAddModalOpen(false);
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, "Failed to save user."));
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsAddModalOpen(false);
   };
 
   const confirmDelete = async () => {
-    if (deletingUser) {
+    if (deletingUser && !isSubmitting) {
+      setIsSubmitting(true);
+      setSubmitError("");
+      try {
       await deleteUser({ id: deletingUser._id });
       setDeletingUser(null);
+      } catch (error) {
+        setSubmitError(getErrorMessage(error, "Failed to delete user."));
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   const confirmRevoke = async () => {
-    if (deletingInvite) {
+    if (deletingInvite && !isSubmitting) {
+      setIsSubmitting(true);
+      setSubmitError("");
+      try {
       await revokeInvite({ id: deletingInvite._id });
       setDeletingInvite(null);
+      } catch (error) {
+        setSubmitError(getErrorMessage(error, "Failed to revoke invitation."));
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -290,10 +319,11 @@ export default function ManageUsersPage() {
       {/* Add/Edit Modal */}
       <SonaeModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => !isSubmitting && setIsAddModalOpen(false)}
         title={editingUser ? t('modal.editTitle') : t('modal.inviteTitle')}
       >
         <p className="text-secondary mb-6 text-[15px]">{editingUser ? t('modal.editDesc') : t('modal.inviteDesc')}</p>
+        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.fullName')}</label>
@@ -364,15 +394,17 @@ export default function ManageUsersPage() {
             <button
               type="button"
               onClick={() => setIsAddModalOpen(false)}
+              disabled={isSubmitting}
               className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
             >
               {t('buttons.cancel')}
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
-              {editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
+              {isSubmitting ? tCommon('saving') : editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
             </button>
           </div>
         </form>
@@ -381,26 +413,29 @@ export default function ManageUsersPage() {
       {/* Delete Confirmation Modal */}
       <SonaeModal
         isOpen={!!deletingUser}
-        onClose={() => setDeletingUser(null)}
+        onClose={() => { if (!isSubmitting) { setDeletingUser(null); setSubmitError(""); } }}
         title={t('modal.deleteTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
           {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
         </p>
+        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button
             type="button"
             onClick={() => setDeletingUser(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium disabled:opacity-50"
           >
             {t('buttons.cancel')}
           </button>
           <button
             type="button"
             onClick={confirmDelete}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {t('buttons.delete')}
+            {isSubmitting ? tCommon('deleting') : t('buttons.delete')}
           </button>
         </div>
       </SonaeModal>
@@ -408,26 +443,29 @@ export default function ManageUsersPage() {
       {/* Revoke Invitation Modal */}
       <SonaeModal
         isOpen={!!deletingInvite}
-        onClose={() => setDeletingInvite(null)}
+        onClose={() => { if (!isSubmitting) { setDeletingInvite(null); setSubmitError(""); } }}
         title={t('modal.revokeTitle')}
       >
         <p className="text-secondary mb-6 text-[15px] leading-relaxed">
           {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
         </p>
+        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
           <button
             type="button"
             onClick={() => setDeletingInvite(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium disabled:opacity-50"
           >
             {t('buttons.cancel')}
           </button>
           <button
             type="button"
             onClick={confirmRevoke}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
           >
-            {t('buttons.revoke')}
+            {isSubmitting ? tCommon('deleting') : t('buttons.revoke')}
           </button>
         </div>
       </SonaeModal>
