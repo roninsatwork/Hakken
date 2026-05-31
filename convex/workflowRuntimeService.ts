@@ -1,4 +1,5 @@
 import { resolveTemplate } from "./utils/templateParser";
+import { parseWorkflowOutput } from "./utils/workflowTypes";
 
 export type LogicConfig = {
   fallbackBranch?: string;
@@ -70,12 +71,12 @@ export function getWorkflowSystemCommands(outputPayload: string) {
   let delayMs = 0;
   let halt = false;
 
-  try {
-    const outObj = JSON.parse(outputPayload);
-    if (outObj._system?.delayMs) delayMs = outObj._system.delayMs;
-    if (outObj._system?.halt) halt = true;
-  } catch {
-    // Non-JSON outputs do not carry structural workflow commands.
+  const output = parseWorkflowOutput(outputPayload);
+  if (output._system && typeof output._system === "object") {
+    if (typeof output._system.delayMs === "number" && Number.isFinite(output._system.delayMs)) {
+      delayMs = output._system.delayMs;
+    }
+    if (output._system.halt === true) halt = true;
   }
 
   return { delayMs, halt };

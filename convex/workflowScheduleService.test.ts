@@ -1,11 +1,17 @@
 import { describe, expect, test } from "vitest";
-import { getLegacyScheduleIntervalMs, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import { getLegacyScheduleIntervalMs, parseScheduleConfig, shouldRunWorkflowSchedule } from "./workflowScheduleService";
 
 describe("workflow schedule service", () => {
   test("supports legacy interval strings", () => {
     expect(getLegacyScheduleIntervalMs("15 minutes")).toBe(15 * 60 * 1000);
     expect(getLegacyScheduleIntervalMs("hourly")).toBe(60 * 60 * 1000);
     expect(getLegacyScheduleIntervalMs("weekly")).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  test("rejects malformed JSON schedule configs", () => {
+    expect(parseScheduleConfig(JSON.stringify({ mode: "fortnightly" }))).toBeNull();
+    expect(parseScheduleConfig(JSON.stringify({ mode: "interval", intervalVal: "15" }))).toBeNull();
+    expect(parseScheduleConfig(JSON.stringify(["interval"]))).toBeNull();
   });
 
   test("runs interval schedules after the configured delay", () => {

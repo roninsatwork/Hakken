@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery, action, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
-import { parseWorkflowNodes } from "./utils/workflowTypes";
+import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
 import { requireSuperAdmin } from "./authz";
 import { requireActionSuperAdmin } from "./actionAuth";
 
@@ -105,6 +105,9 @@ export const updateWorkflow = mutation({
        webhookSecret = crypto.randomUUID();
     }
     
+    const parsedNodes = args.nodes ? validateWorkflowNodesJson(args.nodes) : undefined;
+    if (args.edges) validateWorkflowEdgesJson(args.edges);
+
     await ctx.db.patch(id, { 
       ...updates,
       ...(webhookSecret && { webhookSecret }),
@@ -112,8 +115,7 @@ export const updateWorkflow = mutation({
     });
     
     // Sync Scheduling Table
-    if (args.nodes) {
-      const parsedNodes = parseWorkflowNodes(args.nodes);
+    if (parsedNodes) {
       const triggerNode = parsedNodes.find((node) => node.type === 'triggerNode');
       const triggerType = triggerNode?.data?._triggerType || 'MANUAL';
       

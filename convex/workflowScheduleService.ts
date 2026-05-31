@@ -1,11 +1,32 @@
+type ScheduleMode = "interval" | "daily" | "weekly" | "monthly";
+
 type ScheduleConfig = {
-  mode?: "interval" | "daily" | "weekly" | "monthly";
+  mode?: ScheduleMode;
   intervalUnit?: string;
   intervalVal?: number;
   time?: string;
   dayOfWeek?: number;
   dayOfMonth?: number;
 };
+
+const SCHEDULE_MODES = new Set<ScheduleMode>(["interval", "daily", "weekly", "monthly"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isScheduleConfig(value: unknown): value is ScheduleConfig {
+  if (!isRecord(value)) return false;
+  if (typeof value.mode !== "undefined" && (typeof value.mode !== "string" || !SCHEDULE_MODES.has(value.mode as ScheduleMode))) {
+    return false;
+  }
+  if (typeof value.intervalUnit !== "undefined" && typeof value.intervalUnit !== "string") return false;
+  if (typeof value.intervalVal !== "undefined" && typeof value.intervalVal !== "number") return false;
+  if (typeof value.time !== "undefined" && typeof value.time !== "string") return false;
+  if (typeof value.dayOfWeek !== "undefined" && typeof value.dayOfWeek !== "number") return false;
+  if (typeof value.dayOfMonth !== "undefined" && typeof value.dayOfMonth !== "number") return false;
+  return true;
+}
 
 function intervalToMs(unit: string, value: number) {
   if (unit.startsWith("minute")) return value * 60 * 1000;
@@ -16,7 +37,8 @@ function intervalToMs(unit: string, value: number) {
 
 export function parseScheduleConfig(intervalStr: string): ScheduleConfig | null {
   try {
-    return JSON.parse(intervalStr) as ScheduleConfig;
+    const parsed = JSON.parse(intervalStr) as unknown;
+    return isScheduleConfig(parsed) ? parsed : null;
   } catch {
     return null;
   }

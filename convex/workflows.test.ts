@@ -90,6 +90,36 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  test("Workflow graph updates reject malformed node and edge contracts", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN"
+      });
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const workflowId = await superAdminClient.mutation(api.workflows.createWorkflow, {
+      name: "Contract Test Workflow",
+    });
+
+    await expect(
+      superAdminClient.mutation(api.workflows.updateWorkflow, {
+        id: workflowId,
+        nodes: JSON.stringify([{ type: "agentNode" }]),
+      })
+    ).rejects.toThrow("Workflow node at index 0 must include a string id");
+
+    await expect(
+      superAdminClient.mutation(api.workflows.updateWorkflow, {
+        id: workflowId,
+        edges: JSON.stringify([{ source: "trigger-1" }]),
+      })
+    ).rejects.toThrow("Workflow edge at index 0 must include string source and target node ids.");
+  });
+
   test("BOLA and Sandboxing inside Workflow Database Operations", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
