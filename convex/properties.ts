@@ -1,13 +1,14 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { auth } from "./auth";
 import type { Doc } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
-async function getCurrentUser(ctx: QueryCtx | MutationCtx): Promise<Doc<"users"> | null> {
-  const userId = await auth.getUserId(ctx);
-  if (!userId) return null;
-  return await ctx.db.get(userId);
+function getPropertyScope(user: Doc<"users">) {
+  const activeCompanyId = getActiveCompanyId(user);
+  return {
+    activeCompanyId,
+    canReadAllCompanies: user.role === "SUPER_ADMIN" && !activeCompanyId,
+  };
 }
 
 export const listProperties = query({
@@ -16,103 +17,99 @@ export const listProperties = query({
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
-
-    const activeCompanyId = user.impersonatingCompanyId || user.companyId;
+    const { user } = await requireCurrentUser(ctx);
+    const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
-      if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
-        if (!activeCompanyId) throw new Error("Unauthorized");
+      if (canReadAllCompanies) {
         return await ctx.db
           .query("properties")
-          .withSearchIndex("search_address", (q) => 
-            q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
-          )
-          .paginate(args.paginationOpts);
-      } else {
-        return await ctx.db
-          .query("properties")
-          .withSearchIndex("search_address", (q) => 
+          .withSearchIndex("search_address", (q) =>
             q.search("address", args.searchTerm!)
           )
           .paginate(args.paginationOpts);
       }
-    }
 
-    if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
       if (!activeCompanyId) throw new Error("Unauthorized");
       return await ctx.db
         .query("properties")
-        .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
-        .order("desc")
+        .withSearchIndex("search_address", (q) =>
+          q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
+        )
         .paginate(args.paginationOpts);
-    } else {
+    }
+
+    if (canReadAllCompanies) {
       return await ctx.db
         .query("properties")
         .order("desc")
         .paginate(args.paginationOpts);
     }
+
+    if (!activeCompanyId) throw new Error("Unauthorized");
+    return await ctx.db
+      .query("properties")
+      .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 
 export const getPropertiesCount = query({
   args: { searchTerm: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) return 0;
+    const current = await getCurrentUser(ctx);
+    if (!current) return 0;
 
-    const activeCompanyId = user.impersonatingCompanyId || user.companyId;
-    
+    const { activeCompanyId, canReadAllCompanies } = getPropertyScope(current.user);
+
     if (args.searchTerm && args.searchTerm.trim() !== "") {
-      if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
-        if (!activeCompanyId) return 0;
+      if (canReadAllCompanies) {
         const properties = await ctx.db
           .query("properties")
-          .withSearchIndex("search_address", (q) => 
-            q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
-          )
-          .take(10000);
-        return properties.length;
-      } else {
-        const properties = await ctx.db
-          .query("properties")
-          .withSearchIndex("search_address", (q) => 
+          .withSearchIndex("search_address", (q) =>
             q.search("address", args.searchTerm!)
           )
           .take(10000);
         return properties.length;
       }
-    }
-    
-    if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
+
       if (!activeCompanyId) return 0;
       const properties = await ctx.db
         .query("properties")
-        .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+        .withSearchIndex("search_address", (q) =>
+          q.search("address", args.searchTerm!).eq("companyId", activeCompanyId)
+        )
         .take(10000);
       return properties.length;
-    } else {
+    }
+
+    if (canReadAllCompanies) {
       const properties = await ctx.db
         .query("properties")
         .take(10000);
       return properties.length;
     }
+
+    if (!activeCompanyId) return 0;
+    const properties = await ctx.db
+      .query("properties")
+      .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+      .take(10000);
+    return properties.length;
   }
 });
 
 export const getProperty = query({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
+    const { user } = await requireCurrentUser(ctx);
 
     const property = await ctx.db.get(args.id);
     if (!property) return null;
 
-    const activeCompanyId = user.impersonatingCompanyId || user.companyId;
-
-    if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
+    const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
+    if (!canReadAllCompanies) {
       if (property.companyId !== activeCompanyId) {
         throw new Error("Unauthorized");
       }
@@ -125,15 +122,13 @@ export const getProperty = query({
 export const deleteProperty = mutation({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Unauthenticated");
+    const { user } = await requireCurrentUser(ctx);
 
     const property = await ctx.db.get(args.id);
     if (!property) throw new Error("Property not found");
 
-    const activeCompanyId = user.impersonatingCompanyId || user.companyId;
-
-    if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
+    const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
+    if (!canReadAllCompanies) {
       if (property.companyId !== activeCompanyId) {
         throw new Error("Unauthorized");
       }
@@ -144,29 +139,25 @@ export const deleteProperty = mutation({
 });
 
 export const getLatestRuns = query(async (ctx) => {
-  const user = await getCurrentUser(ctx);
-  if (!user) return [];
+  const current = await getCurrentUser(ctx);
+  if (!current) return [];
 
-  const activeCompanyId = user.impersonatingCompanyId || user.companyId;
+  const { activeCompanyId, canReadAllCompanies } = getPropertyScope(current.user);
 
-  if (user.role !== "SUPER_ADMIN" || activeCompanyId) {
-    if (!activeCompanyId) return [];
-    return await ctx.db.query("apifyRuns")
-      .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
-      .order("desc")
-      .take(5);
-  } else {
+  if (canReadAllCompanies) {
     return await ctx.db.query("apifyRuns")
       .order("desc")
       .take(5);
   }
+
+  if (!activeCompanyId) return [];
+  return await ctx.db.query("apifyRuns")
+    .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
+    .order("desc")
+    .take(5);
 });
 
 export const getAllRunsAdmin = query(async (ctx) => {
-  const user = await getCurrentUser(ctx);
-  if (!user || user.role !== "SUPER_ADMIN") {
-    throw new Error("Unauthorized");
-  }
+  await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
   return await ctx.db.query("apifyRuns").order("desc").take(5);
 });
-
