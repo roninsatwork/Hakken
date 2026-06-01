@@ -18,7 +18,7 @@ The suite uses Playwright projects instead of ad hoc login steps:
 
 - `setup` creates storage states in `e2e/.auth/`.
 - `unauthenticated` verifies protected route redirects and public login access.
-- `super-admin` verifies authenticated admin routes, tables, role behavior, and exports.
+- `super-admin` verifies authenticated admin routes, tables, AI controls, user management, widget/workflow journeys, role behavior, and exports.
 - `user` verifies authenticated assistant and profile journeys.
 
 The generated `e2e/.auth/*.json` files are ignored by git.
@@ -43,6 +43,13 @@ Authenticated coverage:
 - Admin table pagination and search behavior.
 - Workflow designer and schedule route rendering.
 - AI models and tools route rendering.
+- AI model All, Active, and Inactive filter behavior.
+- Connector listing with deterministic tool metadata.
+- User management search and edit dialog controls.
+- Company widget edit, publish, and integration snippet copy behavior.
+- Workflow create/detail, schedule manual dispatch, and workflow log visibility.
 - Role-based admin access behavior.
 - Dashboard export flow.
 - End-user assistant and profile flows.
+
+The Phase 6 suite currently runs 40 browser tests with no expected skips.

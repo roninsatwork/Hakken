@@ -32,6 +32,10 @@ const models = Array.from({ length: 18 }, (_, index) => ({
   outputTokenCostGBP: 0.000003,
 }));
 
+const workflowId = "workflow_e2e";
+const createdWorkflowId = "workflow_e2e_created";
+const widgetId = "widget_e2e";
+
 const rules = [
   {
     _id: "rule_e2e_global",
@@ -69,6 +73,29 @@ const analytics = {
   topCompanies: [{ id: companyId, name: "E2E Company", cost: 8.1, messages: 24 }],
   topUsers: [{ id: userId, name: "E2E User", email: "user.e2e@example.com", cost: 2.1, messages: 6 }],
 };
+
+function workflowFixture(id = workflowId, name = "E2E Workflow") {
+  return {
+    _id: id,
+    _creationTime: now,
+    companyId,
+    name,
+    description: "Route smoke workflow",
+    triggerType: "MANUAL",
+    isActive: true,
+    nodes: JSON.stringify([
+      {
+        id: "trigger-node",
+        type: "triggerNode",
+        position: { x: 120, y: 120 },
+        data: { label: "Manual Trigger", _triggerType: "MANUAL" },
+      },
+    ]),
+    edges: "[]",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 function getCookie(name: string) {
   if (typeof document === "undefined") return "";
@@ -216,6 +243,31 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "companies:getCompanies") {
     return [{ _id: companyId, _creationTime: now, name: "E2E Company", createdAt: now, userCount: 2 }];
   }
+  if (path === "widgets:getWidgetsByCompany") {
+    return [
+      {
+        _id: widgetId,
+        _creationTime: now,
+        companyId,
+        name: "E2E Website Bot",
+        isActive: true,
+        isGlobal: false,
+        allowedDomains: ["example.com"],
+        themeGreeting: "Welcome to the E2E widget.",
+        themePrimaryColor: "#2563eb",
+        themeLogoUrl: "",
+        themePlaceholder: "Ask the E2E assistant...",
+        enableSounds: false,
+        showPopupPreview: false,
+        requireName: false,
+        requireEmail: true,
+        enableGreeting: true,
+        conversationStarters: ["What can you help with?"],
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+  }
   if (path === "plans:getActivePlans" || path === "plans:getPlans") {
     return [{ _id: "plan_e2e", _creationTime: now, name: "Pro", description: "E2E plan", priceGBP: 99, messageLimit: 1000, isActive: true, createdAt: now }];
   }
@@ -223,10 +275,46 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     return { planName: "Pro", messagesUsed: 42, messageLimit: 1000, isUnlimited: false };
   }
   if (path === "workflows:list") {
-    return [{ _id: "workflow_e2e", _creationTime: now, name: "E2E Workflow", description: "Route smoke workflow", isActive: true, createdAt: now }];
+    return [workflowFixture()];
+  }
+  if (path === "workflows:get") {
+    const id = String(queryArgs.id || workflowId);
+    return workflowFixture(id, id === createdWorkflowId ? "Phase 6 Workflow" : "E2E Workflow");
   }
   if (path === "scheduler:getSchedules") {
-    return [{ _id: "schedule_e2e", _creationTime: now, workflowName: "E2E Workflow", cronExpression: "0 9 * * *", isEnabled: true, createdAt: now }];
+    return [
+      {
+        _id: "schedule_e2e",
+        _creationTime: now,
+        companyId,
+        name: "E2E Morning Schedule",
+        workflowId,
+        workflowName: "E2E Workflow",
+        targetName: "E2E Workflow",
+        intervalStr: "Every day at 09:00",
+        cronExpression: "0 9 * * *",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+  }
+  if (path === "scheduler:getWorkflowExecutions") {
+    return [
+      {
+        _id: "execution_e2e",
+        _creationTime: now,
+        workflowId,
+        workflowName: "E2E Workflow",
+        startedByName: "E2E Super Admin",
+        triggerType: "MANUAL",
+        status: "SUCCESS",
+        state: "Completed deterministic browser journey",
+        startedAt: now,
+        completedAt: now + 1000,
+        createdAt: now,
+      },
+    ];
   }
   if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics") return analytics;
   if (path === "chat:getThreads") {
@@ -249,6 +337,7 @@ export function useMutation(functionReference: FunctionReference) {
       }
       return threadId;
     }
+    if (path === "workflows:createWorkflow") return createdWorkflowId;
     if (path === "chat:sendMessage") {
       writeThreadMessages(String(args?.threadId || "thread_e2e_seed"), String(args?.content || ""));
       return true;
@@ -269,6 +358,7 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   if (path === "users:getPaginatedUsers") {
     return {
       results: [
+        { _id: superAdminId, _creationTime: now, name: "E2E Super Admin", email: "super.e2e@example.com", role: "SUPER_ADMIN", createdAt: now },
         { _id: userId, _creationTime: now, name: "E2E User", email: "user.e2e@example.com", role: "USER", companyId, createdAt: now },
       ],
       status: "Exhausted",

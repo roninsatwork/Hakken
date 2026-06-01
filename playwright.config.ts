@@ -26,6 +26,7 @@ export default defineConfig({
       name: 'unauthenticated',
       use: { ...devices['Desktop Chrome'] },
       testMatch: [
+        /auth-journey\.spec\.ts/,
         /admin-smoke\.spec\.ts/,
         /security\.spec\.ts/,
       ],
@@ -38,6 +39,8 @@ export default defineConfig({
         storageState: 'e2e/.auth/super-admin.json',
       },
       testMatch: [
+        /admin\/journeys\.spec\.ts/,
+        /admin\/workflow-widget-journeys\.spec\.ts/,
         /admin\/routes\.spec\.ts/,
         /admin\/tables\.spec\.ts/,
         /admin-roles\.spec\.ts/,

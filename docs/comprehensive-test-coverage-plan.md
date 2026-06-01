@@ -408,6 +408,27 @@ Acceptance:
 
 Goal: protect the most important real user journeys across routing, browser UI, Convex, and client state.
 
+Progress:
+
+- Phase 6 completed on June 1, 2026.
+- Current measured coverage after Phase 6:
+  - `npm run typecheck`: passing.
+  - `npm run lint`: passing.
+  - `npm run test:run`: 121 test files, 474 tests, all passing.
+  - `npm run test:e2e`: 40 browser tests passing, 0 skipped.
+  - `npm run test:coverage`: 121 test files, 474 tests, all passing.
+  - all files: 40.23 percent line coverage, 73.09 percent branch coverage, 74.26 percent function coverage.
+  - `convex`: 80.03 percent line coverage, 73.16 percent branch coverage, 89.01 percent function coverage.
+- Added deterministic browser journeys for:
+  - login redirect behavior for authenticated users and protected route denial after clearing session cookies.
+  - AI model All, Active, and Inactive filter behavior using visible result counts and status labels.
+  - AI connector rendering with deterministic connector metadata.
+  - admin user search and edit dialog controls.
+  - company widget configuration editing, publish state, and integration snippet copy action.
+  - workflow creation, workflow detail rendering, schedules, manual schedule dispatch, and workflow logs.
+- Expanded the e2e Convex React mock so authenticated browser journeys can exercise widget, workflow, schedule, execution-log, AI model, AI tool, and user-management data without live Convex/Auth dependencies.
+- Existing route-stability e2e specs collect page errors for high-value routes. Broader global console-error enforcement remains a Phase 7 hardening item because the current app still emits known hydration, chart-dimension, and clipboard warnings during otherwise passing browser journeys.
+
 Required e2e journeys:
 
 - Login and logout.
