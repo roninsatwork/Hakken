@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { requireCurrentUser, requireSuperAdmin } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
-import { getDefaultModelId } from "./aiModelService";
+import { resolveExecutionModel } from "./aiModelService";
 
 export const getModels = query({
   args: {},
@@ -57,25 +57,24 @@ export const getOffsetPaginatedModels = query({
 export const resolveModelForExecution = internalQuery({
   args: { requestedModelId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    // Try finding the exact model requested
+    let requestedModel = null;
     if (args.requestedModelId) {
-       const model = await ctx.db
+       requestedModel = await ctx.db
          .query("aiModels")
          .withIndex("by_model_id", (q) => q.eq("modelId", args.requestedModelId as string))
          .first();
-
-       if (model && model.isEnabled) {
-           return model.modelId;
-       }
     }
 
-    // It doesn't exist or is disabled, fallback to active default, then system failsafe.
     const defaultModels = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
       .take(10000);
 
-    return getDefaultModelId(defaultModels);
+    return resolveExecutionModel({
+      requestedModelId: args.requestedModelId,
+      requestedModel,
+      defaultModels,
+    }).modelId;
   },
 });
 

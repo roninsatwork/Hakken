@@ -2,12 +2,21 @@
 
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI } from "@google/genai";
 import type { Content, FunctionDeclaration, GenerateContentConfig, Tool } from "@google/genai";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { parseDocuments } from "./utils/fileParser";
 import { redactPII, DEFAULT_PII_CONFIG } from "./utils/pii";
+import {
+  buildProviderToolDeclaration,
+  buildToolFailureResult,
+  buildToolResultPayload,
+  canExecuteTool,
+  normalizeAiRuntimeError,
+  parseToolCallPayload,
+  type ToolAccessRole,
+} from "./aiToolExecutionService";
+import { createVertexGenAIClient } from "./vertexProviderService";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown Engine Exception";
@@ -21,21 +30,7 @@ export const generateAgentResponse = internalAction({
     fileIds: v.optional(v.array(v.id("_storage"))),
   },
   handler: async (ctx, args) => {
-    // Escaping Edge runtime limits. Using implicit Node env parsing.
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
 
     try {
         // 1. Fetch Agent Identity & System Prompt
@@ -90,6 +85,7 @@ export const generateAgentResponse = internalAction({
         
         // Build the Tools Declaration block for @google/genai
         const dynamicTools: FunctionDeclaration[] = [];
+        const toolAccessByName = new Map<string, ToolAccessRole>();
         
         for (const junction of agentTools) {
              const toolDef = await ctx.runQuery(internal.aiTools.getToolInternal, { id: junction.toolId });
@@ -98,15 +94,17 @@ export const generateAgentResponse = internalAction({
                  : undefined;
              if (toolDef && schemaStr) {
                  try {
-                     const parsedSchema = JSON.parse(schemaStr);
-                     // Map JSON Schema to GenAI FunctionDeclaration
-                     dynamicTools.push({
-                         name: toolDef.handlerMapping.replace(/[^a-zA-Z0-9_]/g, "_"), // sanitize name
+                     const declaration = buildProviderToolDeclaration({
+                         name: toolDef.name,
                          description: toolDef.description,
-                         parametersJsonSchema: parsedSchema
+                         handlerMapping: toolDef.handlerMapping,
+                         requiredRole: toolDef.requiredRole,
+                         inputSchema: schemaStr,
                      });
-                 } catch {
-                     console.error("Failed to parse tool schema for:", toolDef.name);
+                     dynamicTools.push(declaration as FunctionDeclaration);
+                     toolAccessByName.set(declaration.name, toolDef.requiredRole);
+                 } catch (error) {
+                     console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error));
                  }
              }
         }
@@ -184,18 +182,19 @@ export const generateAgentResponse = internalAction({
         // Did the model request a tool?
         if (response.functionCalls && response.functionCalls.length > 0) {
             const funcCall = response.functionCalls[0];
-            const rawArgsString = JSON.stringify(funcCall.args);
+            const toolCall = parseToolCallPayload({ name: funcCall.name, callArgs: funcCall.args });
+            const rawArgsString = JSON.stringify(toolCall.args);
             const redactedArgsString = redactPII(rawArgsString, DEFAULT_PII_CONFIG);
-            console.log("Agent requested function call:", funcCall.name, redactedArgsString);
+            console.log("Agent requested function call:", toolCall.name, redactedArgsString);
             
             // Log Telemetry: Tool Dispatch
             if (args.agentId) {
                await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
                    agentId: args.agentId,
                    threadId: args.threadId,
-                   interactionType: `TOOL DISPATCH: ${funcCall.name}`,
+                   interactionType: `TOOL DISPATCH: ${toolCall.name}`,
                    promptContent: args.content,
-                   responseContent: `{"functionCall": {"name": "${funcCall.name}", "args": ${redactedArgsString}}}`,
+                   responseContent: `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
                    companyId: thread.companyId
                });
             }
@@ -205,15 +204,30 @@ export const generateAgentResponse = internalAction({
             // you MUST retrieve the caller's session using getAuthUserId(ctx) and verify that
             // they have sufficient permissions (roles/company mapping) to execute the target tool.
             // DO NOT blindly trust the agent's intent, as it could be prompt-injected.
-            const mockToolResponse = { status: "success", data: "Mocked backend response payload from Sonae Integrations Hub" };
+            const currentUser = thread.userId
+                ? await ctx.runQuery(internal.users.getUserInternal, { userId: thread.userId })
+                : null;
+            const requiredRole = toolAccessByName.get(toolCall.name) ?? "SUPER_ADMIN";
+            const accessDecision = canExecuteTool({
+                requiredRole,
+                userRole: currentUser?.role,
+                userCompanyId: currentUser?.companyId,
+                targetCompanyId: thread.companyId,
+            });
+            const mockToolResponse = accessDecision.allowed
+                ? buildToolResultPayload({
+                    status: "success",
+                    data: "Mocked backend response payload from Sonae Integrations Hub",
+                })
+                : buildToolFailureResult(new Error(accessDecision.reason));
 
             // Inject the Function Call and Function Response into the conversation history
             conversationHistory.push({
                 role: "model",
                 parts: [{
                     functionCall: {
-                        name: funcCall.name,
-                        args: funcCall.args
+                        name: toolCall.name,
+                        args: toolCall.args
                     }
                 }]
             });
@@ -222,8 +236,8 @@ export const generateAgentResponse = internalAction({
                 role: "function",
                 parts: [{
                     functionResponse: {
-                        name: funcCall.name,
-                        response: { name: funcCall.name, content: mockToolResponse }
+                        name: toolCall.name,
+                        response: { name: toolCall.name, content: mockToolResponse }
                     }
                 }]
             });
@@ -290,7 +304,7 @@ export const generateAgentResponse = internalAction({
 
     } catch (error: unknown) {
         console.error("Agent Engine Error:", error);
-        const errorMessage = getErrorMessage(error);
+        const errorMessage = normalizeAiRuntimeError(error, "Agent execution failed.").error;
         
         if (args.agentId) {
              await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
@@ -316,20 +330,7 @@ export const executeAgentNode = internalAction({
     input: v.string(),
   },
   handler: async (ctx, args) => {
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
 
     const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
     if (!agent) throw new Error("Agent not found.");

@@ -100,7 +100,7 @@ Phase tracking checklist:
 - [x] Phase 0: Baseline, Inventory, And Safety Rails
 - [x] Phase 1: Provider Neutrality And Naming Cleanup
 - [x] Phase 2: Workflow Runtime Architecture Refactor
-- [ ] Phase 3: AI And Tool Execution Platform Layer
+- [x] Phase 3: AI And Tool Execution Platform Layer
 - [ ] Phase 4: Backend Service Boundary Refactor
 - [ ] Phase 5: Frontend Platform Primitives
 - [ ] Phase 6: Data, Upload, And Knowledge Policy Layer
@@ -255,7 +255,7 @@ Acceptance:
 
 ## Phase 3: AI And Tool Execution Platform Layer
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -278,21 +278,21 @@ Scope:
 
 Checklist:
 
-- [ ] Map current AI execution flows from user request to model call to tool execution.
-- [ ] Define provider-neutral types for model requests, model responses, tool calls, and tool results.
-- [ ] Keep provider adapters isolated behind provider-specific modules.
-- [ ] Confirm Vertex usage remains intentional and clearly named.
-- [ ] Extract model fallback selection into a stable service boundary.
-- [ ] Add typed guards for tool input and output payloads.
-- [ ] Add tests for:
-  - model fallback selection
-  - disabled model behavior
-  - missing credential behavior
-  - invalid tool payload behavior
-  - failed external tool call behavior
-  - tenant/role enforcement around tool execution
-- [ ] Normalize error shapes returned to the UI.
-- [ ] Document how to add a new provider or tool safely.
+- [x] Map current AI execution flows from user request to model call to tool execution.
+- [x] Define provider-neutral types for model requests, model responses, tool calls, and tool results.
+- [x] Keep provider adapters isolated behind provider-specific modules.
+- [x] Confirm Vertex usage remains intentional and clearly named.
+- [x] Extract model fallback selection into a stable service boundary.
+- [x] Add typed guards for tool input and output payloads.
+- [x] Add tests for:
+  - [x] model fallback selection
+  - [x] disabled model behavior
+  - [x] missing credential behavior
+  - [x] invalid tool payload behavior
+  - [x] failed external tool call behavior
+  - [x] tenant/role enforcement around tool execution
+- [x] Normalize error shapes returned to the UI.
+- [x] Document how to add a new provider or tool safely.
 
 Acceptance:
 

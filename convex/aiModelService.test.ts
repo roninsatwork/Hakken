@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   getDefaultModelId,
   getExecutionModelPool,
+  resolveExecutionModel,
   SYSTEM_FAILSAFE_MODEL_ID,
 } from "./aiModelService";
 
@@ -39,5 +40,44 @@ describe("aiModelService", () => {
       model("disabled-a", false),
       model("disabled-b", false),
     ])).toEqual([SYSTEM_FAILSAFE_MODEL_ID]);
+  });
+
+  test("resolves requested execution model when enabled", () => {
+    expect(
+      resolveExecutionModel({
+        requestedModelId: "requested",
+        requestedModel: model("requested", true),
+        defaultModels: [model("default", true, true)],
+      })
+    ).toEqual({
+      modelId: "requested",
+      source: "requested",
+    });
+  });
+
+  test("falls back to active default when requested execution model is disabled", () => {
+    expect(
+      resolveExecutionModel({
+        requestedModelId: "requested",
+        requestedModel: model("requested", false),
+        defaultModels: [model("default", true, true)],
+      })
+    ).toEqual({
+      modelId: "default",
+      source: "default",
+    });
+  });
+
+  test("falls back to platform failsafe when requested and default models are unavailable", () => {
+    expect(
+      resolveExecutionModel({
+        requestedModelId: "missing",
+        requestedModel: null,
+        defaultModels: [model("disabled-default", false, true)],
+      })
+    ).toEqual({
+      modelId: SYSTEM_FAILSAFE_MODEL_ID,
+      source: "failsafe",
+    });
   });
 });

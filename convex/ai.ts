@@ -2,10 +2,12 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
+import { ThinkingLevel, Type } from "@google/genai";
 import type { GenerateContentConfig, Part } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
+import { createVertexGenAIClient } from "./vertexProviderService";
+import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 
 function parseThinkingLevel(value: string): ThinkingLevel | undefined {
   switch (value) {
@@ -36,21 +38,7 @@ export const generateSonaeResponse = internalAction({
        throw new Error("Payload Too Large: Input exceeds maximum system context window.");
     }
 
-    // Escaping Edge runtime limits. Using implicit Node env parsing.
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
     
     // Direct mapping configuration
     let actualModelStr = args.modelId;
@@ -250,7 +238,7 @@ User Prompt: ${args.content}`;
         });
 
     } catch (error) {
-        console.error("Vertex AI Orchestrator Error:", error);
+        console.error("Vertex AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
         
         await ctx.runMutation(internal.chat.saveAssistantMessage, {
             threadId: args.threadId,
@@ -268,20 +256,7 @@ export const transcribeAudio = action({
   handler: async (ctx, args) => {
     await requireActionUser(ctx, "Unauthenticated request");
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = "us-central1"; // Enforce central routing for stable multimodal models
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient({ location: "us-central1" }); // Enforce central routing for stable multimodal models
 
     try {
         const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
@@ -296,7 +271,7 @@ export const transcribeAudio = action({
 
         return response.text ? response.text.trim() : "";
     } catch (error) {
-        console.error("Vertex AI Transcription Error:", error);
+        console.error("Vertex AI Transcription Error:", normalizeAiRuntimeError(error, "Audio transcription failed."));
         throw new Error("Failed to transcribe audio stream properly.");
     }
   }
@@ -308,20 +283,7 @@ export const generateThreadTitle = internalAction({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
 
     try {
       const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
@@ -343,7 +305,7 @@ export const generateThreadTitle = internalAction({
         });
       }
     } catch (error) {
-      console.error("Failed to generate thread title:", error);
+      console.error("Failed to generate thread title:", normalizeAiRuntimeError(error, "Thread title generation failed."));
     }
   }
 });
@@ -361,20 +323,7 @@ export const generateNodeConfig = action({
   handler: async (ctx, args) => {
     await requireActionAdmin(ctx, "Unauthorized: Only administrators can configure workflow nodes.");
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
 
     try {
       const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
@@ -428,7 +377,7 @@ Your job is to translate the user's plain-English intent into exact system paylo
       return parsed as { mapping: string, template: string, agentName?: string, agentSystemPrompt?: string, agentInputFields?: string, agentOutputFields?: string, agentAllowInternet?: boolean };
       
     } catch (error) {
-      console.error("Failed to generate node configuration via Vertex AI:", error);
+      console.error("Failed to generate node configuration via Vertex AI:", normalizeAiRuntimeError(error, "Node configuration generation failed."));
       throw new Error("Generative Payload creation failed.");
     }
   }
