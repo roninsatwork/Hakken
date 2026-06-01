@@ -338,6 +338,7 @@ Completed service-boundary slices:
 - Moved user-management create/update/delete role and tenant policy into `userManagementService`.
 - Moved purge pipeline defaults, schedule config parsing, retention-floor validation, next-run normalization, and cutoff timestamp calculation into `purgeScheduleService`.
 - Moved knowledge document/chunk record shaping, audit metadata formatting, thread-vector expiry threshold calculation, and website bulk-delete matching into `knowledgeService`.
+- Moved audit purge config defaults, monthly schedule calculation, cutoff math, config serialization, and recent-log actor-name decoration into `auditLogService`.
 
 Checklist:
 

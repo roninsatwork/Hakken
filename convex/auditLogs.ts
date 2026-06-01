@@ -2,6 +2,14 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { getCurrentUser, requireSuperAdmin } from "./authz";
+import {
+  buildAuditPurgeConfigPayload,
+  calculateAuditPurgeCutoff,
+  calculateFollowingMonthlyAuditPurgeRun,
+  parseAuditPurgeConfig,
+  serializeAuditPurgeConfig,
+  withAuditLogActorName,
+} from "./auditLogService";
 
 // 1. Log an action
 export const logAction = internalMutation({
@@ -28,16 +36,7 @@ export const getConfig = query({
     if (current?.user.role !== "SUPER_ADMIN") return null;
 
     const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
-    if (!configRow) {
-      return {
-        enabled: false,
-        retentionDays: 30,
-        dayOfMonth: 1,
-        hourOfDay: 2,
-        nextRunTimestamp: 0,
-      };
-    }
-    return JSON.parse(configRow.value);
+    return parseAuditPurgeConfig(configRow?.value);
   }
 });
 
@@ -53,28 +52,18 @@ export const updateConfig = mutation({
   handler: async (ctx, args) => {
     const { userId, user } = await requireSuperAdmin(ctx);
 
-    // Calculate next run timestamp securely handling UTC bounds
-    const now = new Date();
-    const nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), args.dayOfMonth, args.hourOfDay, 0, 0, 0));
-    
-    // If the planned time has already passed this month, bump to next month
-    if (nextRun.getTime() <= now.getTime()) {
-      nextRun.setUTCMonth(nextRun.getUTCMonth() + 1);
-    }
-
-    const payload = {
-      ...args,
-      nextRunTimestamp: nextRun.getTime()
-    };
+    const now = Date.now();
+    const payload = buildAuditPurgeConfigPayload(args);
+    const serializedPayload = serializeAuditPurgeConfig(payload);
 
     const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
     if (configRow) {
-      await ctx.db.patch(configRow._id, { value: JSON.stringify(payload), updatedAt: Date.now(), updatedBy: userId });
+      await ctx.db.patch(configRow._id, { value: serializedPayload, updatedAt: now, updatedBy: userId });
     } else {
       await ctx.db.insert("systemConfig", {
         key: "AUDIT_PURGE_CONFIG",
-        value: JSON.stringify(payload),
-        updatedAt: Date.now(),
+        value: serializedPayload,
+        updatedAt: now,
         updatedBy: userId
       });
     }
@@ -84,8 +73,8 @@ export const updateConfig = mutation({
       actorId: user._id,
       entityType: "systemConfig",
       entityId: "AUDIT_PURGE_CONFIG",
-      timestamp: Date.now(),
-      metadata: JSON.stringify(payload)
+      timestamp: now,
+      metadata: serializedPayload
     });
   }
 });
@@ -96,21 +85,19 @@ export const dispatcher = internalMutation({
   handler: async (ctx) => {
     const configRow = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", "AUDIT_PURGE_CONFIG")).first();
     if (!configRow) return;
-    const config = JSON.parse(configRow.value);
+    const config = parseAuditPurgeConfig(configRow.value);
 
     // Stop if globally disabled
     if (!config.enabled) return;
 
-    if (Date.now() >= config.nextRunTimestamp) {
+    const now = Date.now();
+    if (now >= config.nextRunTimestamp) {
         // Schedule execution independently
         await ctx.scheduler.runAfter(0, internal.auditLogs.executePurge, { retentionDays: config.retentionDays });
         
         // Advance schedule clock to next month exactly maintaining execution parameters
-        const now = new Date();
-        const nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, config.dayOfMonth, config.hourOfDay, 0, 0, 0));
-        
-        config.nextRunTimestamp = nextRun.getTime();
-        await ctx.db.patch(configRow._id, { value: JSON.stringify(config) });
+        config.nextRunTimestamp = calculateFollowingMonthlyAuditPurgeRun(config.dayOfMonth, config.hourOfDay, new Date(now));
+        await ctx.db.patch(configRow._id, { value: serializeAuditPurgeConfig(config) });
     }
   }
 });
@@ -119,7 +106,7 @@ export const dispatcher = internalMutation({
 export const executePurge = internalMutation({
   args: { retentionDays: v.number() },
   handler: async (ctx, args) => {
-    const cutoff = Date.now() - (args.retentionDays * 24 * 60 * 60 * 1000);
+    const cutoff = calculateAuditPurgeCutoff(args.retentionDays);
     
     // Max 500 rows per transaction constraint natively respected
     const oldLogs = await ctx.db
@@ -151,10 +138,7 @@ export const getRecentLogs = query({
       
     return await Promise.all(logs.map(async (log) => {
       const actor = await ctx.db.get(log.actorId);
-      return {
-        ...log,
-        actorName: actor?.name || actor?.email || "Unknown Admin",
-      }
+      return withAuditLogActorName(log, actor);
     }));
   }
 });

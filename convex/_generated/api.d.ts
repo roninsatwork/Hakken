@@ -27,6 +27,7 @@ import type * as analyticsHybrid from "../analyticsHybrid.js";
 import type * as analyticsService from "../analyticsService.js";
 import type * as apify from "../apify.js";
 import type * as arcade from "../arcade.js";
+import type * as auditLogService from "../auditLogService.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
@@ -105,6 +106,7 @@ declare const fullApi: ApiFromModules<{
   analyticsService: typeof analyticsService;
   apify: typeof apify;
   arcade: typeof arcade;
+  auditLogService: typeof auditLogService;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   authz: typeof authz;

@@ -50,6 +50,9 @@ describe("Audit log access controls", () => {
     });
 
     const config = await superAdminClient.query(api.auditLogs.getConfig);
+    if (!config) {
+      throw new Error("Expected audit purge config for super admin");
+    }
     expect(config.enabled).toBe(true);
     expect(config.retentionDays).toBe(45);
     expect(config.dayOfMonth).toBe(10);
