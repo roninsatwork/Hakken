@@ -392,7 +392,8 @@ Checklist:
 - [x] Extract repeated admin page header/action primitives.
 - [ ] Create or improve shared detail-page primitives where pages repeat header/action/sidebar structures.
 - [x] Create shared form field patterns only where they remove real duplication.
-- [ ] Standardize destructive action confirmation and disabled states.
+- [x] Extract repeated agents/companies destructive confirmation primitives.
+- [ ] Standardize destructive action confirmation and disabled states across remaining admin flows.
 - [ ] Standardize mutation toast/modal/error flows.
 - [x] Add tests for shared UI primitives.
 - [ ] Keep the current UI direction unless the user explicitly chooses a redesign.
@@ -402,6 +403,7 @@ Completed frontend primitive slices:
 - Added shared admin table header row/cell primitives plus row action/icon-button primitives, then adopted them in the agents and companies tables.
 - Added a shared admin page header and primary action primitive, then adopted it in the agents and companies pages.
 - Added shared admin modal form field, error, and footer action primitives, then adopted them in the agents and companies create/edit dialogs.
+- Added a shared admin destructive confirmation modal, then adopted it in the agents and companies delete flows.
 
 Acceptance:
 

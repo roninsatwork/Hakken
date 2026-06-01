@@ -15,6 +15,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import {
   AdminPageHeader,
   AdminPagePrimaryAction,
@@ -290,41 +291,24 @@ export default function CompaniesPage() {
         </form>
       </SonaeModal>
 
-      {/* Delete Confirmation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingCompany}
         onClose={() => { setDeletingCompany(null); setSubmitError(""); }}
         title={t('deleteTitle')}
+        cancelLabel={tCommon('cancel')}
+        confirmLabel={isSubmitting ? tCommon('deleting') : t('deleteTenant')}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        error={submitError}
+        warning={{
+          title: t('warningCascade'),
+          description: t('warningDesc'),
+        }}
       >
-        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
-          <p>
-            {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
-          </p>
-          <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-4 text-red-500/90 text-[13px]">
-            <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">{t('warningCascade')}</strong>
-            {t('warningDesc')}
-          </div>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingCompany(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-            disabled={isSubmitting}
-          >
-            {tCommon('cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? tCommon('deleting') : t('deleteTenant')}
-          </button>
-        </div>
-      </SonaeModal>
+        <p>
+          {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
+        </p>
+      </AdminConfirmationModal>
     </div>
   );
 }
