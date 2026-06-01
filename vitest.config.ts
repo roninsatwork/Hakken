@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config'
-import type { UserConfig } from 'vitest/config'
+import type { PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
@@ -8,9 +8,7 @@ const rootAlias = {
   '@': path.resolve(__dirname, './'),
 }
 
-type VitestPlugin = NonNullable<UserConfig['plugins']>[number]
-
-const reactPlugin = react() as unknown as VitestPlugin
+const reactPlugin = react() as PluginOption
 const coverageThresholds = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
 ).current
@@ -26,7 +24,6 @@ export default defineConfig({
       provider: 'v8',
       reportsDirectory: './coverage',
       reporter: ['text', 'html', 'json-summary'],
-      all: true,
       include: ['src/**/*.{ts,tsx}', 'convex/**/*.ts'],
       exclude: [
         'adk-python/**',

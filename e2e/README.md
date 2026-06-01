@@ -43,7 +43,7 @@ Authenticated coverage:
 - Admin table pagination and search behavior.
 - Workflow designer and schedule route rendering.
 - AI models and tools route rendering.
-- AI model All, Active, and Inactive filter behavior.
+- AI model Active and Inactive filter behavior.
 - Connector listing with deterministic tool metadata.
 - User management search and edit dialog controls.
 - Company widget edit, publish, and integration snippet copy behavior.

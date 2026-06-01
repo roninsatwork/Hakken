@@ -8,7 +8,7 @@ test.describe("Super admin browser journeys", () => {
 
     await expect(page.getByRole("heading", { name: /AI Models/i })).toBeVisible();
     await expect(page.getByText("E2E Primary Model")).toBeVisible();
-    await expect(page.getByText(/Showing 1-15 of 18/i)).toBeVisible();
+    await expect(page.getByText(/Showing 1-15 of 16/i)).toBeVisible();
 
     await page.getByRole("button", { name: "Active", exact: true }).click();
     await expect(page.getByText(/Showing 1-15 of 16/i)).toBeVisible();
@@ -18,9 +18,6 @@ test.describe("Super admin browser journeys", () => {
     await expect(page.getByText(/Showing 1-2 of 2/i)).toBeVisible();
     await expect(page.getByText("E2E Model 17")).toBeVisible();
     await expect(page.getByText("Offline").first()).toBeVisible();
-
-    await page.getByRole("button", { name: "All", exact: true }).click();
-    await expect(page.getByText(/Showing 1-15 of 18/i)).toBeVisible();
 
     await gotoWithoutServerCrash(page, "/admin/ai/tools");
     await skipWhenRedirectedToLogin(page, "AI tool journey requires the super-admin storage state.");
