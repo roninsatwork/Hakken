@@ -205,33 +205,38 @@ Already completed:
 - [x] Add typed workflow graph node/edge validation for workflow updates.
 - [x] Add tolerant runtime parsers for old saved graph data.
 - [x] Add focused tests for malformed node/edge/schedule payloads.
+- [x] Create a typed workflow runtime context helper for execution state, node data, parsed input, and global payload.
+- [x] Extract pure runtime handlers for logic, iterator, merge, wait, approval, and bypass/default nodes.
+- [x] Add config readers/parsers for logic, iterator, wait, and approval nodes.
+- [x] Normalize JSON parsing for trigger input, execution state, step input, and pure runtime node outputs.
+- [x] Add focused tests for malformed trigger input, malformed step input, malformed upstream output, invalid pure node config, and pure node output commands.
 
 Checklist:
 
-- [ ] Create a typed workflow runtime context object for execution state, node data, parsed input, and global payload.
+- [x] Create a typed workflow runtime context object for execution state, node data, parsed input, and global payload.
 - [ ] Extract node-specific handlers:
   - action/API node
   - agent node
   - database node
-  - logic node
-  - iterator node
-  - merge node
-  - wait node
-  - approval node
+  - [x] logic node
+  - [x] iterator node
+  - [x] merge node
+  - [x] wait node
+  - [x] approval node
   - email node
-  - bypass/default node
+  - [x] bypass/default node
 - [ ] Add config readers/parsers for each node type.
 - [ ] Replace local casts such as `as ActionConfig`, `as DatabaseConfig`, and `as LogicConfig`.
 - [ ] Normalize JSON parsing for:
-  - execution state
-  - step input
+  - [x] execution state
+  - [x] step input
   - step output
   - node config
   - system commands
 - [ ] Move scheduling decisions into a small tested helper.
 - [ ] Move failure message formatting into a small helper.
 - [ ] Add tests for invalid config per node type.
-- [ ] Add tests for malformed execution state and malformed upstream output.
+- [x] Add tests for malformed execution state and malformed upstream output.
 - [ ] Add tests for iterator fan-out and merge fan-in behavior.
 - [ ] Add tests for approval halt/resume behavior.
 

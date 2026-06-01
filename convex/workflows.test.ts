@@ -120,6 +120,56 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     ).rejects.toThrow("Workflow edge at index 0 must include string source and target node ids.");
   });
 
+  test("Workflow execution initialization tolerates malformed trigger input", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { executionId, workflowId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Malformed Trigger Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([{ id: "start", type: "triggerNode" }]),
+        edges: JSON.stringify([]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        startedAt: Date.now(),
+        startedBy: superAdminId,
+      });
+
+      return { executionId, workflowId };
+    });
+
+    await t.mutation(internal.workflowEngine.initExecution, {
+      workflowId,
+      executionId,
+      initialInput: "not json",
+    });
+
+    const { execution, steps } = await t.run(async (ctx) => {
+      const execution = await ctx.db.get(executionId);
+      const steps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId))
+        .collect();
+
+      return { execution, steps };
+    });
+
+    expect(execution?.state).toBe(JSON.stringify({ trigger: {} }));
+    expect(steps).toHaveLength(1);
+    expect(steps[0].input).toBe(JSON.stringify({ trigger: {} }));
+  });
+
   test("BOLA and Sandboxing inside Workflow Database Operations", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

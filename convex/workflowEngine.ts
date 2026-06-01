@@ -51,7 +51,7 @@ export const initExecution = internalMutation({
 
     // Initialize global payload with a trigger block
     const initialPayload = {
-      trigger: args.initialInput ? JSON.parse(args.initialInput) : {}
+      trigger: parseWorkflowState(args.initialInput)
     };
 
     await ctx.db.patch(args.executionId, {

@@ -9,10 +9,16 @@ import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
 import {
-  evaluateLogicBranch,
+  buildMergeNodeOutput,
+  createWorkflowRuntimeContext,
+  executeApprovalNode,
+  executeBypassNode,
+  executeIteratorNode,
+  executeLogicNode,
+  executeWaitNode,
   getWorkflowSystemCommands,
+  parseRuntimeJson,
   sanitizeForConvexValue,
-  type LogicConfig,
 } from "./workflowRuntimeService";
 
 type HeaderConfig = {
@@ -31,19 +37,6 @@ type DatabaseConfig = {
   tableName?: string;
   operation: "INSERT" | "UPDATE" | "DELETE" | "SELECT";
   docId?: string;
-};
-
-type WaitConfig = {
-  delaySeconds?: number | string;
-};
-
-type ApprovalConfig = {
-  message?: string;
-  previewTarget?: string;
-};
-
-type IteratorConfig = {
-  listVariable?: string;
 };
 
 type EmailConfig = {
@@ -118,19 +111,12 @@ export const executeNode = internalAction({
       const stepInput = claimedStep.input || execution.state || "{}";
       lockedStepId = claimedStep.stepId;
 
-      // Execute based on Node Type (In Phase 1 we only have Agent nodes natively supported)
       let outputPayload = "{}";
-
-      const globalStatePayload = JSON.parse(stepInput);
-      let resolvedInput = stepInput; // Default to raw state dump
-
-      if (node.data?._inputMapping) {
-        resolvedInput = JSON.stringify(resolveTemplate(node.data._inputMapping, globalStatePayload));
-      } else if (typeof node.data?._inputTemplate === "string") {
-        resolvedInput = resolveTemplate(node.data._inputTemplate, globalStatePayload);
-      }
-
-      const currentNodeData = node.data || {};
+      const { currentNodeData, globalStatePayload, resolvedInput } = createWorkflowRuntimeContext({
+        nodeData: node.data,
+        stepInput,
+        executionState: execution.state,
+      });
 
       if (node.type === "agentNode" && currentNodeData._agentId) {
         const result = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
@@ -173,14 +159,12 @@ export const executeNode = internalAction({
       }
       else if (node.type === "codeNode") {
         try {
-          // 🛡️ SECURITY: Replaced dangerous RCE (new Function) with safe templating logic
-          let parseCtx = resolvedInput;
-          try { parseCtx = JSON.parse(resolvedInput); } catch {}
+          const parseCtx = parseRuntimeJson(resolvedInput);
           
           // Fallback to safe templating resolution using the execution context
           let templatePayload = parseCtx;
           if (currentNodeData._inputTemplate && typeof currentNodeData._inputTemplate === "string") {
-              const safeGlobalPayload = { input: parseCtx, execution: execution.state ? JSON.parse(execution.state) : {} };
+              const safeGlobalPayload = { input: parseCtx, execution: parseRuntimeJson(execution.state || "{}", {}) };
               templatePayload = resolveTemplate(currentNodeData._inputTemplate, safeGlobalPayload);
           }
           
@@ -192,9 +176,7 @@ export const executeNode = internalAction({
 
       else if (node.type === "logicNode") {
         try {
-          const config = (node.data?._logicConfig || { rules: [], fallbackBranch: "default" }) as LogicConfig;
-          const evaluatedBranch = evaluateLogicBranch(config, globalStatePayload);
-          outputPayload = JSON.stringify({ evaluated: evaluatedBranch });
+          outputPayload = executeLogicNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
           throw new Error('Logic routing failed: ' + getErrorMessage(error));
         }
@@ -232,44 +214,21 @@ export const executeNode = internalAction({
       }
       else if (node.type === "waitNode") {
         try {
-          const config = (node.data?._waitConfig || { delaySeconds: 5 }) as WaitConfig;
-          const resolvedDelay = resolveTemplate(String(config.delaySeconds), globalStatePayload);
-          let delayMs = parseInt(resolvedDelay) * 1000;
-          if (isNaN(delayMs) || delayMs < 0) delayMs = 0;
-          
-          outputPayload = JSON.stringify({ 
-             _system: { delayMs: delayMs, structurallyHandled: true }, 
-             waitedSeconds: delayMs / 1000 
-          });
+          outputPayload = executeWaitNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
           throw new Error('Wait config failed: ' + getErrorMessage(error));
         }
       }
       else if (node.type === "approvalNode") {
         try {
-          const config = (node.data?._approvalConfig || { message: 'Action requires manual sign-off' }) as ApprovalConfig;
-          const previewValue = config.previewTarget ? resolveTemplate(config.previewTarget, globalStatePayload) : null;
-          
-          outputPayload = JSON.stringify({ 
-             _system: { halt: true, structurallyHandled: true }, 
-             message: config.message,
-             previewData: previewValue
-          });
+          outputPayload = executeApprovalNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
           throw new Error('Approval execution failed: ' + getErrorMessage(error));
         }
       }
       else if (node.type === "iteratorNode") {
         try {
-          const config = (node.data?._iteratorConfig || {}) as IteratorConfig;
-          const resolvedArray = resolveTemplate(config.listVariable || "", globalStatePayload);
-          let parsedArray = typeof resolvedArray === 'string' ? JSON.parse(resolvedArray) : resolvedArray;
-          if (!Array.isArray(parsedArray)) parsedArray = [parsedArray];
-          
-          outputPayload = JSON.stringify({ 
-             _system: { isIterator: true }, 
-             items: parsedArray 
-          });
+          outputPayload = executeIteratorNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
           throw new Error('Iterator logic failed: ' + getErrorMessage(error));
         }
@@ -278,26 +237,7 @@ export const executeNode = internalAction({
         try {
           const executionSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, { executionId: args.executionId });
           const edges = parseWorkflowEdges(workflow?.edges);
-          const incomingEdges = edges.filter((edge) => edge.target === args.nodeId);
-          
-          const mergedPayload: Record<string, unknown> = {};
-          
-          for (const edge of incomingEdges) {
-             const upstreamSteps = executionSteps.filter((step) => step.nodeId === edge.source && step.status === 'SUCCESS');
-             
-             if (upstreamSteps.length > 1) {
-                 // Array aggregation from Fan-out Iterator upstream
-                 mergedPayload[edge.source] = upstreamSteps.map((step) => JSON.parse(step.output || "{}"));
-             } else if (upstreamSteps.length === 1) {
-                 // Standard singular upstream
-                 mergedPayload[edge.source] = JSON.parse(upstreamSteps[0].output || "{}");
-             }
-          }
-
-          outputPayload = JSON.stringify({ 
-             _system: { isMerge: true, structurallyHandled: true }, 
-             mergedContexts: mergedPayload
-          });
+          outputPayload = buildMergeNodeOutput({ nodeId: args.nodeId, executionSteps, edges });
         } catch(error: unknown) {
           throw new Error('Merge / Sync processing failed: ' + getErrorMessage(error));
         }
@@ -348,8 +288,7 @@ export const executeNode = internalAction({
         }
       }
       else {
-        // Dummy/Bypass execution for unsupported node types
-        outputPayload = JSON.stringify({ bypassed: true, nodeType: node.type, received: resolvedInput });
+        outputPayload = executeBypassNode({ nodeType: node.type, resolvedInput });
       }
 
       // Finalize the step, append to State memory, and find downstream tasks
