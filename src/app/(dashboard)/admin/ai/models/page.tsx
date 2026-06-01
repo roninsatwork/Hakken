@@ -41,9 +41,10 @@ export default function AIModelsPage() {
     setPage(1);
   };
 
+  const statusFilterArg = statusFilter === "all" ? undefined : statusFilter;
   const modelsData = useQuery(api.aiModels.getOffsetPaginatedModels, {
     searchTerm: debouncedSearch,
-    statusFilter,
+    ...(statusFilterArg ? { statusFilter: statusFilterArg } : {}),
     page,
     pageSize
   });
