@@ -14,6 +14,7 @@ import {
   buildUpdateAgentAuditMetadata,
   isGlobalAgent,
 } from "./agentService";
+import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const list = query({
   args: {},
@@ -108,6 +109,7 @@ export const updateAgent = mutation({
     
     let resolvedAvatarUrl = updates.avatar;
     if (storageId) {
+      await validateStoredUpload(ctx, storageId, validateAdminImageMetadata);
       resolvedAvatarUrl = (await ctx.storage.getUrl(storageId)) ?? updates.avatar;
     }
 

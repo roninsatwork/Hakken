@@ -1,7 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
-import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
+import { validateChatAttachmentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import type { PiiConfig } from "./utils/pii";
 
 type DbCtx = Pick<QueryCtx, "db">;
@@ -14,10 +14,6 @@ const defaultPiiConfig: PiiConfig = {
   maskPhones: false,
   maskNinos: true,
 };
-
-function isTestEnvironment() {
-  return process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test";
-}
 
 function isAnonymousWidgetThread(thread: Doc<"threads">) {
   return Boolean(thread.widgetId && !thread.userId);
@@ -53,59 +49,11 @@ export async function assertCanAccessThread(
   }
 }
 
-async function getAttachmentMetadata(ctx: StorageCtx, storageId: Id<"_storage">) {
-  let metadata: { size: number; contentType?: string | null } | null = null;
-  try {
-    metadata = await ctx.storage.getMetadata(storageId);
-  } catch {
-    // Some test storage shims do not implement getMetadata.
-  }
-
-  if (!metadata && isTestEnvironment()) {
-    const mock = await ctx.db
-      .query("mockStorageMetadata")
-      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-      .first();
-    metadata = mock ? { size: mock.size, contentType: mock.contentType } : null;
-  }
-
-  return metadata;
-}
-
-async function deleteRejectedAttachment(ctx: StorageCtx, storageId: Id<"_storage">) {
-  try {
-    await ctx.storage.delete(storageId);
-  } catch {
-    // Handle test environments lacking storage delete syscall.
-  }
-
-  if (!isTestEnvironment()) return;
-
-  const mock = await ctx.db
-    .query("mockStorageMetadata")
-    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-    .first();
-  if (mock) {
-    await ctx.db.delete(mock._id);
-  }
-}
-
 export async function validateChatAttachments(ctx: StorageCtx, storageIds?: Id<"_storage">[]) {
   if (!storageIds?.length) return;
 
   for (const storageId of storageIds) {
-    const metadata = await getAttachmentMetadata(ctx, storageId);
-    if (!metadata) {
-      throw new Error("Attached file not found in storage");
-    }
-
-    try {
-      validateChatAttachmentMetadata(metadata);
-    } catch (error) {
-      await deleteRejectedAttachment(ctx, storageId);
-      if (error instanceof Error) throw error;
-      throw new Error("Invalid attachment");
-    }
+    await validateStoredUpload(ctx, storageId, validateChatAttachmentMetadata);
   }
 }
 

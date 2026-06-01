@@ -33,6 +33,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 type SettingBlockProps = {
   title: string;
@@ -302,6 +303,8 @@ export default function SystemSettingsPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, mode: "light" | "dark") => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validation = validateUploadFile(file, "adminImage");
+    if (!validation.allowed) return;
 
     if (mode === "light") setUploadingLight(true);
     if (mode === "dark") setUploadingDark(true);

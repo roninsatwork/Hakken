@@ -23,7 +23,7 @@ import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
-import { CHAT_DOCUMENT_MAX_BYTES, isSupportedChatDocument } from "@/src/lib/constants/uploads";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -126,17 +126,16 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     const invalidFiles: string[] = [];
 
     Array.from(files).forEach(file => {
-      if (file.size > CHAT_DOCUMENT_MAX_BYTES) {
-         invalidFiles.push(`${file.name} (exceeds 50MB limit)`);
-      } else if (isSupportedChatDocument(file)) {
+      const validation = validateUploadFile(file, "chatDocument");
+      if (validation.allowed) {
         validFiles.push(file);
       } else {
-        invalidFiles.push(file.name);
+        invalidFiles.push(`${file.name} (${validation.reason})`);
       }
     });
 
     if (invalidFiles.length > 0) {
-      setUploadError(`Unsupported file(s): ${invalidFiles.join(", ")}. Please upload PDF, CSV, Excel, Word, or Text files under 50MB.`);
+      setUploadError(`Unsupported file(s): ${invalidFiles.join(", ")}`);
     }
 
     if (validFiles.length > 0) {

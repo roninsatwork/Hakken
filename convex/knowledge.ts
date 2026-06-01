@@ -2,7 +2,7 @@ import { mutation, query, internalMutation, internalQuery } from "./_generated/s
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
-import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
+import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
 import {
   assertCanAccessKnowledgeScope,
@@ -113,11 +113,7 @@ export const saveDocument = mutation({
     const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
     assertCanAccessKnowledgeScope(user, args.companyId);
 
-    const metadata = await ctx.storage.getMetadata(args.storageId);
-    if (!metadata) {
-      throw new Error("Attached file not found in storage");
-    }
-    validateChatAttachmentMetadata(metadata, { allowDocuments: true });
+    await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
@@ -165,11 +161,7 @@ export const saveChatDocument = mutation({
       throw new Error("Unauthorized access to thread");
     }
 
-    const metadata = await ctx.storage.getMetadata(args.storageId);
-    if (!metadata) {
-      throw new Error("Attached file not found in storage");
-    }
-    validateChatAttachmentMetadata(metadata, { allowDocuments: true });
+    await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,

@@ -10,6 +10,7 @@ import {
   isStorageLogoReference,
   mergeSettingsWithDefaults,
 } from "./settingsService";
+import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const get = query({
   args: {},
@@ -83,6 +84,13 @@ export const update = mutation({
 
     const settings = await ctx.db.query("systemSettings").first();
     const patchObj = buildSettingsPatch(args);
+
+    if (patchObj.logoUrlLight && isStorageLogoReference(patchObj.logoUrlLight)) {
+      await validateStoredUpload(ctx, patchObj.logoUrlLight as Id<"_storage">, validateAdminImageMetadata);
+    }
+    if (patchObj.logoUrlDark && isStorageLogoReference(patchObj.logoUrlDark)) {
+      await validateStoredUpload(ctx, patchObj.logoUrlDark as Id<"_storage">, validateAdminImageMetadata);
+    }
 
     if (settings) {
       await ctx.db.patch(settings._id, patchObj);

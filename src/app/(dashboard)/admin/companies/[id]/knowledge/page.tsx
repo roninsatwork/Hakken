@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { FileText, Upload, Loader2, Trash2, CheckCircle2, AlertTriangle, UploadCloud, Globe, AlignLeft, ChevronDown, ChevronUp, Search, RefreshCw, AlertCircle } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { formatDate } from "@/src/lib/dates";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 
 export default function CompanyKnowledgeBasePage() {
@@ -57,8 +58,9 @@ export default function CompanyKnowledgeBasePage() {
   const [documentDeleteError, setDocumentDeleteError] = useState("");
 
   const processFile = async (file: File) => {
-    if (!["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/csv"].includes(file.type)) {
-       setFileError("Unsupported file type. Please upload a PDF, DOCX, TXT, or CSV file.");
+    const validation = validateUploadFile(file, "knowledgeDocument");
+    if (!validation.allowed) {
+       setFileError(validation.reason || "Unsupported file type. Please upload a PDF, DOCX, TXT, or CSV file.");
        return;
     }
 
@@ -528,7 +530,7 @@ export default function CompanyKnowledgeBasePage() {
             <input 
                ref={inputRef}
                type="file"
-               accept=".pdf,.docx,.txt,.csv"
+               accept=".pdf,.docx,.txt,.csv,.xls,.xlsx"
                onChange={handleChange}
                className="hidden"
             />

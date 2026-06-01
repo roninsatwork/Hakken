@@ -22,6 +22,7 @@ import {
   AdminSaveAction,
   AdminSaveError,
 } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 
@@ -131,6 +132,12 @@ export default function AgentOverviewPage() {
   };
 
   const processUpload = async (file: File) => {
+    const validation = validateUploadFile(file, "adminImage");
+    if (!validation.allowed) {
+      setUploadError(validation.reason);
+      return;
+    }
+
     setIsUploading(true);
     setUploadError("");
     try {

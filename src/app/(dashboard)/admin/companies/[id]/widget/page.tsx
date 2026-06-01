@@ -10,6 +10,7 @@ import { AppWindow, Plus, Loader2, Save, MessageSquare, Volume2, X, Bell, Upload
 import { useParams } from "next/navigation";
 import { useQuery as useConvexQuery, useMutation as useConvexMutation } from "convex/react";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
@@ -73,8 +74,9 @@ export default function CompanyWidgetPage() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (file.size > 2 * 1024 * 1024) {
-          setFeedbackMessage("Logo file must be under 2MB");
+      const validation = validateUploadFile(file, "adminImage");
+      if (!validation.allowed) {
+          setFeedbackMessage(validation.reason);
           return;
       }
 

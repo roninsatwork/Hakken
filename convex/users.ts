@@ -8,6 +8,7 @@ import {
   assertCanDeleteManagedUser,
   assertCanUpdateManagedUser,
 } from "./userManagementService";
+import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const getMe = query({
   args: {},
@@ -327,6 +328,7 @@ export const updateMyProfile = mutation({
 
     let resolvedImageUrl = args.image;
     if (args.storageId) {
+      await validateStoredUpload(ctx, args.storageId, validateAdminImageMetadata);
       resolvedImageUrl = (await ctx.storage.getUrl(args.storageId)) ?? args.image;
     }
 

@@ -1,5 +1,10 @@
+import type { Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
+
 export const CHAT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const CHAT_DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
+export const ADMIN_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+export const WIDGET_ATTACHMENT_IMAGE_MAX_BYTES = 1024 * 1024;
 
 export const CHAT_DOCUMENT_CONTENT_TYPES = [
   "application/pdf",
@@ -20,8 +25,57 @@ type AttachmentPolicy = {
   allowImages?: boolean;
 };
 
+type UploadPolicy = AttachmentPolicy & {
+  documentMaxBytes?: number;
+  imageMaxBytes?: number;
+  invalidTypeMessage?: string;
+};
+
+type StorageValidationCtx = Pick<MutationCtx, "db" | "storage">;
+
 function normalizeContentType(contentType?: string | null) {
   return contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+function isTestEnvironment() {
+  return process.env.IS_TEST === "true" || process.env.VITEST === "true" || process.env.NODE_ENV === "test";
+}
+
+async function getStoredUploadMetadata(ctx: StorageValidationCtx, storageId: Id<"_storage">) {
+  let metadata: StorageMetadata | null = null;
+  try {
+    metadata = await ctx.storage.getMetadata(storageId);
+  } catch {
+    // Some test storage shims do not implement getMetadata.
+  }
+
+  if (!metadata && isTestEnvironment()) {
+    const mock = await ctx.db
+      .query("mockStorageMetadata")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .first();
+    metadata = mock ? { size: mock.size, contentType: mock.contentType } : null;
+  }
+
+  return metadata;
+}
+
+async function deleteRejectedUpload(ctx: StorageValidationCtx, storageId: Id<"_storage">) {
+  try {
+    await ctx.storage.delete(storageId);
+  } catch {
+    // Test environments may not implement storage deletion.
+  }
+
+  if (!isTestEnvironment()) return;
+
+  const mock = await ctx.db
+    .query("mockStorageMetadata")
+    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+    .first();
+  if (mock) {
+    await ctx.db.delete(mock._id);
+  }
 }
 
 export function isChatDocumentContentType(contentType?: string | null) {
@@ -38,18 +92,32 @@ export function validateChatAttachmentMetadata(
   metadata: StorageMetadata,
   policy: AttachmentPolicy = { allowDocuments: true, allowImages: true },
 ) {
+  return validateUploadMetadata(metadata, {
+    ...policy,
+    documentMaxBytes: CHAT_DOCUMENT_MAX_BYTES,
+    imageMaxBytes: CHAT_IMAGE_MAX_BYTES,
+  });
+}
+
+export function validateUploadMetadata(metadata: StorageMetadata, policy: UploadPolicy) {
   if (policy.allowImages && isChatImageContentType(metadata.contentType)) {
-    if (metadata.size > CHAT_IMAGE_MAX_BYTES) {
-      throw new Error("File exceeds the maximum size limit of 5MB for images");
+    const maxBytes = policy.imageMaxBytes ?? CHAT_IMAGE_MAX_BYTES;
+    if (metadata.size > maxBytes) {
+      throw new Error(`File exceeds the maximum size limit of ${formatBytes(maxBytes)} for images`);
     }
     return "image";
   }
 
   if (policy.allowDocuments && isChatDocumentContentType(metadata.contentType)) {
-    if (metadata.size > CHAT_DOCUMENT_MAX_BYTES) {
-      throw new Error("File exceeds the maximum size limit of 50MB for documents");
+    const maxBytes = policy.documentMaxBytes ?? CHAT_DOCUMENT_MAX_BYTES;
+    if (metadata.size > maxBytes) {
+      throw new Error(`File exceeds the maximum size limit of ${formatBytes(maxBytes)} for documents`);
     }
     return "document";
+  }
+
+  if (policy.invalidTypeMessage) {
+    throw new Error(policy.invalidTypeMessage);
   }
 
   const allowedKinds = [
@@ -58,4 +126,51 @@ export function validateChatAttachmentMetadata(
   ].filter(Boolean);
 
   throw new Error(`Invalid file type: only ${allowedKinds.join(" and ")} are allowed`);
+}
+
+function formatBytes(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return Number.isInteger(mb) ? `${mb}MB` : `${bytes} bytes`;
+}
+
+export function validateKnowledgeDocumentMetadata(metadata: StorageMetadata) {
+  return validateUploadMetadata(metadata, {
+    allowDocuments: true,
+    documentMaxBytes: CHAT_DOCUMENT_MAX_BYTES,
+  });
+}
+
+export function validateAdminImageMetadata(metadata: StorageMetadata) {
+  return validateUploadMetadata(metadata, {
+    allowImages: true,
+    imageMaxBytes: ADMIN_IMAGE_MAX_BYTES,
+    invalidTypeMessage: "Invalid file type: only images are allowed",
+  });
+}
+
+export function validateWidgetAttachmentMetadata(metadata: StorageMetadata) {
+  return validateUploadMetadata(metadata, {
+    allowImages: true,
+    imageMaxBytes: WIDGET_ATTACHMENT_IMAGE_MAX_BYTES,
+    invalidTypeMessage: "Invalid file type: strictly images only are allowed",
+  });
+}
+
+export async function validateStoredUpload(
+  ctx: StorageValidationCtx,
+  storageId: Id<"_storage">,
+  validator: (metadata: StorageMetadata) => "image" | "document",
+) {
+  const metadata = await getStoredUploadMetadata(ctx, storageId);
+  if (!metadata) {
+    throw new Error("Attached file not found in storage");
+  }
+
+  try {
+    return validator(metadata);
+  } catch (error) {
+    await deleteRejectedUpload(ctx, storageId);
+    if (error instanceof Error) throw error;
+    throw new Error("Invalid attachment");
+  }
 }

@@ -103,7 +103,7 @@ Phase tracking checklist:
 - [x] Phase 3: AI And Tool Execution Platform Layer
 - [x] Phase 4: Backend Service Boundary Refactor
 - [x] Phase 5: Frontend Platform Primitives
-- [ ] Phase 6: Data, Upload, And Knowledge Policy Layer
+- [x] Phase 6: Data, Upload, And Knowledge Policy Layer
 - [ ] Phase 7: E2E, Browser, And Regression Coverage Upgrade
 - [ ] Phase 8: Product-Core Extraction And Extension Points
 - [ ] Phase 9: Final Hardening And Release Readiness
@@ -430,7 +430,7 @@ Acceptance:
 
 ## Phase 6: Data, Upload, And Knowledge Policy Layer
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -451,12 +451,20 @@ Scope:
 
 Checklist:
 
-- [ ] Map every upload and ingestion entry point.
-- [ ] Centralize allowed file type, size, and storage policy checks.
-- [ ] Add tests for allowed and rejected file policies.
-- [ ] Normalize user-facing errors for rejected uploads.
-- [ ] Confirm tenant scoping for knowledge documents and chunks.
-- [ ] Document how future products should add file types.
+- [x] Map every upload and ingestion entry point.
+- [x] Centralize allowed file type, size, and storage policy checks.
+- [x] Add tests for allowed and rejected file policies.
+- [x] Normalize user-facing errors for rejected uploads.
+- [x] Confirm tenant scoping for knowledge documents and chunks.
+- [x] Document how future products should add file types.
+
+Completed data/upload policy slices:
+
+- Expanded the shared backend upload policy to cover chat attachments, knowledge documents, admin images, and anonymous widget image attachments.
+- Reused backend upload validation in chat, knowledge, widget, settings, agent avatar, and user profile storage flows.
+- Added frontend upload policy helpers and reused them in chat, assistant, knowledge, profile, widget logo, system logo, and agent avatar upload flows.
+- Added backend and frontend policy tests for allowed/rejected file types and size limits.
+- Documented upload entry points, current limits, tenant-scope requirements, and the future file-type extension process in `docs/upload-and-knowledge-policy.md`.
 
 Acceptance:
 

@@ -8,6 +8,11 @@ import {
   requireAdmin,
   requireSuperAdmin,
 } from "./authz";
+import {
+  validateAdminImageMetadata,
+  validateStoredUpload,
+  validateWidgetAttachmentMetadata,
+} from "./utils/uploadPolicy";
 
 export const getWidgetsByCompany = query({
   args: { companyId: v.id("companies") },
@@ -103,6 +108,7 @@ export const saveWidget = mutation({
 
     let finalLogoUrl = args.themeLogoUrl;
     if (finalLogoUrl && !finalLogoUrl.startsWith("http")) {
+       await validateStoredUpload(ctx, finalLogoUrl as Id<"_storage">, validateAdminImageMetadata);
        const url = await ctx.storage.getUrl(finalLogoUrl as Id<"_storage">);
        if (url) {
            finalLogoUrl = url;
@@ -263,23 +269,7 @@ export const finalizeWidgetUpload = mutation({
       throw new Error("Invalid thread mapping for target widget");
     }
 
-    const metadata = await ctx.storage.getMetadata(args.storageId);
-    if (!metadata) {
-      throw new Error("Uploaded file not found");
-    }
-
-    // Enforce 1MB limit (1024 * 1024 bytes)
-    const maxBytes = 1024 * 1024;
-    if (metadata.size > maxBytes) {
-      await ctx.storage.delete(args.storageId);
-      throw new Error("File exceeds the maximum size limit of 1MB");
-    }
-
-    // Enforce MIME type limit: strictly images only
-    if (!metadata.contentType || !metadata.contentType.startsWith("image/")) {
-      await ctx.storage.delete(args.storageId);
-      throw new Error("Invalid file type: strictly images only are allowed");
-    }
+    await validateStoredUpload(ctx, args.storageId, validateWidgetAttachmentMetadata);
 
     return { success: true, storageId: args.storageId };
   },
