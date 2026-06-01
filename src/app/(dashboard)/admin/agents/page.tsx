@@ -19,6 +19,10 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  AdminPageHeader,
+  AdminPagePrimaryAction,
+} from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import {
   AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
@@ -116,24 +120,16 @@ export default function AgentsPage() {
 
   return (
     <div className="flex flex-col gap-5 h-full">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Workflow className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-        </div>
-
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('new')}</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={<Workflow className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('description')}
+        action={
+          <AdminPagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+            {t('new')}
+          </AdminPagePrimaryAction>
+        }
+      />
 
       <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 

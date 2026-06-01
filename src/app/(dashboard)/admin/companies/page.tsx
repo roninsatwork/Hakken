@@ -16,6 +16,10 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  AdminPageHeader,
+  AdminPagePrimaryAction,
+} from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import {
   AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
@@ -126,24 +130,16 @@ export default function CompaniesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('subtitle')}</p>
-        </div>
-
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('newCompany')}</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={<Building2 className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('subtitle')}
+        action={
+          <AdminPagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+            {t('newCompany')}
+          </AdminPagePrimaryAction>
+        }
+      />
 
       <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 

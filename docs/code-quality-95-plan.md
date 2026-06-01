@@ -389,6 +389,7 @@ Checklist:
 
 - [x] Audit admin pages still hand-rolling table shells, filters, loading rows, empty rows, or pagination.
 - [x] Expand shared admin table primitives where patterns are genuinely repeated.
+- [x] Extract repeated admin page header/action primitives.
 - [ ] Create or improve shared detail-page primitives where pages repeat header/action/sidebar structures.
 - [ ] Create shared form field patterns only where they remove real duplication.
 - [ ] Standardize destructive action confirmation and disabled states.
@@ -399,6 +400,7 @@ Checklist:
 Completed frontend primitive slices:
 
 - Added shared admin table header row/cell primitives plus row action/icon-button primitives, then adopted them in the agents and companies tables.
+- Added a shared admin page header and primary action primitive, then adopted it in the agents and companies pages.
 
 Acceptance:
 
