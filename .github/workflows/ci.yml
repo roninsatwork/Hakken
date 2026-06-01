@@ -53,15 +53,9 @@ jobs:
       - name: Run coverage
         run: npm run test:coverage
 
-      - name: Publish coverage summary
+      - name: Check coverage thresholds
         if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('coverage/coverage-summary.json','utf8')).total; const rows=['lines','statements','branches','functions'].map((k)=>'| '+k+' | '+s[k].pct+'% | '+s[k].covered+'/'+s[k].total+' |').join('\n'); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '### Coverage Summary\n\n| Metric | Percent | Covered |\n| --- | ---: | ---: |\n'+rows+'\n');"
-          else
-            echo '### Coverage Summary' >> "$GITHUB_STEP_SUMMARY"
-            echo 'Coverage summary was not generated.' >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: npm run coverage:check
 
       - name: Upload coverage report
         if: always()

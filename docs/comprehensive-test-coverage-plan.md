@@ -499,6 +499,32 @@ Acceptance:
 
 Goal: raise standards gradually without creating churn.
 
+Progress:
+
+- Phase 8 completed on June 1, 2026.
+- Added `coverage-thresholds.json` as the single source of truth for:
+  - current enforced thresholds.
+  - the minimum allowed threshold floor.
+  - the latest measured coverage.
+  - the next ratchet target.
+  - long-term backend/frontend/browser goals.
+- Updated `vitest.config.ts` to read thresholds from `coverage-thresholds.json`.
+- Added `npm run coverage:check`, backed by `scripts/check-coverage-thresholds.mjs`, to:
+  - verify generated coverage meets the current thresholds.
+  - fail if the configured current thresholds drop below the floor.
+  - print the same coverage summary table locally and in GitHub Actions.
+- Updated CI to run `npm run coverage:check` after `npm run test:coverage`.
+- Current enforced floor:
+  - lines: 40 percent.
+  - statements: 40 percent.
+  - branches: 73 percent.
+  - functions: 74 percent.
+- Next ratchet target:
+  - lines: 45 percent.
+  - statements: 45 percent.
+  - branches: 73 percent.
+  - functions: 75 percent.
+
 Suggested ratchet:
 
 - Week 1: establish measured baseline and pass at current level.

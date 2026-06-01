@@ -1,0 +1,33 @@
+{
+  "lastMeasuredAt": "2026-06-01",
+  "current": {
+    "lines": 40,
+    "statements": 40,
+    "branches": 73,
+    "functions": 74
+  },
+  "floor": {
+    "lines": 40,
+    "statements": 40,
+    "branches": 73,
+    "functions": 74
+  },
+  "lastMeasured": {
+    "lines": 40.23,
+    "statements": 40.23,
+    "branches": 73.06,
+    "functions": 74.26
+  },
+  "nextRatchet": {
+    "lines": 45,
+    "statements": 45,
+    "branches": 73,
+    "functions": 75
+  },
+  "longTermTargets": {
+    "backendLines": 85,
+    "backendBranches": 75,
+    "frontendSharedComponents": 80,
+    "criticalBrowserSkips": 0
+  }
+}

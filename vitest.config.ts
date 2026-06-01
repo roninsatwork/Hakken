@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import type { UserConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
 import path from 'path'
 
 const rootAlias = {
@@ -10,6 +11,9 @@ const rootAlias = {
 type VitestPlugin = NonNullable<UserConfig['plugins']>[number]
 
 const reactPlugin = react() as unknown as VitestPlugin
+const coverageThresholds = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
+).current
 
 export default defineConfig({
   plugins: [reactPlugin],
@@ -44,12 +48,7 @@ export default defineConfig({
         'src/**/_generated/**',
         'vitest.setup.ts',
       ],
-      thresholds: {
-        lines: 40,
-        branches: 73,
-        functions: 74,
-        statements: 40,
-      },
+      thresholds: coverageThresholds,
     },
     projects: [
       {
