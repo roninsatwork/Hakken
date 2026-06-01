@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type AgentTool = Doc<"aiTools"> & { bindingId: Id<"agentTools"> };
 type ToolRole = Doc<"aiTools">["requiredRole"];
@@ -69,11 +70,7 @@ export default function AgentIntegrationsPage({ params }: { params: Promise<{ id
             </p>
           </div>
 	        </div>
-          {feedbackMessage && (
-            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-              {feedbackMessage}
-            </div>
-          )}
+          <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
 	        <div className="flex flex-col gap-4">
           <h3 className="text-[14px] font-semibold text-foreground">{t("sectionTitle")}</h3>

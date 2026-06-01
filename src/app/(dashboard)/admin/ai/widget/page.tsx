@@ -6,6 +6,7 @@ import type { ChangeEvent } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppWindow, Plus, Loader2, Save, MessageSquare, Volume2, X, Bell, Bot, UploadCloud } from "lucide-react";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
@@ -177,11 +178,7 @@ export default function GlobalWidgetPage() {
               </button>
           )}
 	        </header>
-          {feedbackMessage && (
-            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-              {feedbackMessage}
-            </div>
-          )}
+          <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
 	        {widgets === undefined ? (
           <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>

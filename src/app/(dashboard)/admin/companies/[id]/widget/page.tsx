@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { AppWindow, Plus, Loader2, Save, MessageSquare, Volume2, X, Bell, UploadCloud } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useQuery as useConvexQuery, useMutation as useConvexMutation } from "convex/react";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
@@ -184,11 +185,7 @@ export default function CompanyWidgetPage() {
               </button>
           )}
 	        </header>
-          {feedbackMessage && (
-            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-              {feedbackMessage}
-            </div>
-          )}
+          <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
 	        {widgets === undefined ? (
           <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>

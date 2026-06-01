@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AdminSaveAction, AdminSaveError, AdminSaveFeedback } from "./AdminSaveControls";
+import {
+  AdminFeedbackPill,
+  AdminSaveAction,
+  AdminSaveError,
+  AdminSaveFeedback,
+} from "./AdminSaveControls";
 
 describe("AdminSaveAction", () => {
   it("renders the save label and forwards click handling", () => {
@@ -102,5 +107,17 @@ describe("AdminSaveFeedback", () => {
 
     expect(screen.queryByText("Saved")).not.toBeInTheDocument();
     expect(screen.queryByText("Failed")).not.toBeInTheDocument();
+  });
+});
+
+describe("AdminFeedbackPill", () => {
+  it("renders compact success and error feedback", () => {
+    const { rerender } = render(<AdminFeedbackPill tone="success">Sent</AdminFeedbackPill>);
+
+    expect(screen.getByText("Sent").parentElement).toHaveClass("text-[#10b981]");
+
+    rerender(<AdminFeedbackPill tone="error">Send failed</AdminFeedbackPill>);
+
+    expect(screen.getByText("Send failed")).toHaveClass("leading-snug");
   });
 });

@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Mail, ShieldCheck, User as UserIcon, Loader2, Send, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, ShieldCheck, User as UserIcon, Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import {
+  AdminFeedbackPill,
+  AdminSaveAction,
+} from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 export default function InviteUsersPage() {
   const activeTemplate = useQuery(api.invites.getActiveTemplate);
@@ -273,16 +276,12 @@ export default function InviteUsersPage() {
           {/* Functional Feedback Stream */}
           <div className="h-[40px] mt-4 flex items-center justify-center w-full max-w-md">
             {sendSuccess && (
-              <div className="px-5 py-2 bg-[#10b981]/10 border border-[#10b981]/20 rounded-full text-[#10b981] text-[13px] flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in">
-                <CheckCircle2 className="w-4 h-4" />
+              <AdminFeedbackPill tone="success">
                 {t('messages.sendSuccess')}
-              </div>
+              </AdminFeedbackPill>
             )}
             {sendError && (
-              <div className="px-5 py-2 bg-red-500/10 border border-red-500/20 rounded-[12px] text-red-500 text-[13px] flex items-start gap-2.5 animate-in slide-in-from-bottom-2 fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="leading-snug text-center">{sendError}</span>
-              </div>
+              <AdminFeedbackPill tone="error">{sendError}</AdminFeedbackPill>
             )}
           </div>
         </div>

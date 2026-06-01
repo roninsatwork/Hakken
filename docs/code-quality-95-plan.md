@@ -102,7 +102,7 @@ Phase tracking checklist:
 - [x] Phase 2: Workflow Runtime Architecture Refactor
 - [x] Phase 3: AI And Tool Execution Platform Layer
 - [x] Phase 4: Backend Service Boundary Refactor
-- [ ] Phase 5: Frontend Platform Primitives
+- [x] Phase 5: Frontend Platform Primitives
 - [ ] Phase 6: Data, Upload, And Knowledge Policy Layer
 - [ ] Phase 7: E2E, Browser, And Regression Coverage Upgrade
 - [ ] Phase 8: Product-Core Extraction And Extension Points
@@ -364,7 +364,7 @@ Acceptance:
 
 ## Phase 5: Frontend Platform Primitives
 
-Status: Started.
+Status: Complete.
 
 Goal:
 
@@ -391,14 +391,14 @@ Checklist:
 - [x] Expand shared admin table primitives where patterns are genuinely repeated.
 - [x] Extract repeated admin page header/action primitives.
 - [x] Extract repeated detail-page tab navigation primitives.
-- [ ] Create or improve shared detail-page primitives where pages repeat header/action/sidebar structures.
+- [x] Create or improve shared detail-page primitives where pages repeat header/action/sidebar structures.
 - [x] Create shared form field patterns only where they remove real duplication.
 - [x] Extract repeated agents/companies destructive confirmation primitives.
-- [ ] Standardize destructive action confirmation and disabled states across remaining admin flows.
-- [ ] Standardize mutation toast/modal/error flows.
+- [x] Standardize destructive action confirmation and disabled states across remaining admin flows.
+- [x] Standardize mutation toast/modal/error flows.
 - [x] Extract repeated save action/error feedback primitives.
 - [x] Add tests for shared UI primitives.
-- [ ] Keep the current UI direction unless the user explicitly chooses a redesign.
+- [x] Keep the current UI direction unless the user explicitly chooses a redesign.
 
 Completed frontend primitive slices:
 
@@ -416,6 +416,11 @@ Completed frontend primitive slices:
 - Added shared admin animated save feedback banners, then adopted them in system prompt pages.
 - Reused shared admin animated save feedback banners on the analytics configuration page.
 - Reused shared admin save error feedback on the AI model pricing page.
+- Reused shared admin save error feedback on widget configuration and avatar upload flows.
+- Added a shared admin detail layout shell and adopted it in agent and company detail layouts.
+- Extended shared admin destructive confirmation modals to company user delete, invite revoke, and system-admin detach flows.
+- Reused shared admin save error feedback on agent integration and AI model sync flows.
+- Added a shared admin compact feedback pill and adopted it in invitation dispatch flows.
 
 Acceptance:
 

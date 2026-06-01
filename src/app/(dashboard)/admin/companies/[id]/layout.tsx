@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { Building2, ArrowLeft, Users, Mail, Activity, BookOpen, BrainCircuit, UserCheck, Loader2, TerminalSquare, FileText, AppWindow, MessageSquareText } from "lucide-react";
-import { AdminDetailTabs } from "@/src/app/(dashboard)/admin/_components/AdminDetailTabs";
+import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
 
 export default function CompanyDashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -49,19 +49,16 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full h-full pl-2">
-      <div className="flex flex-col gap-6 relative z-10">
-        
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Building2 className="w-6 h-6 text-brand" />
-              {company.name} Workspace
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">{company.description || "Manage workspace settings."}</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
+    <AdminDetailLayout
+      leading={
+        <Building2 className="w-6 h-6 text-brand shrink-0" />
+      }
+      title={`${company.name} Workspace`}
+      description={company.description || "Manage workspace settings."}
+      tabs={tabs}
+      rootHref={`/admin/companies/${companyId}`}
+      actions={
+        <>
             {currentUser?.role === "SUPER_ADMIN" && (
                 <button 
                   onClick={handleImpersonate}
@@ -80,15 +77,10 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Companies
             </Link>
-          </div>
-        </header>
-
-        <AdminDetailTabs tabs={tabs} rootHref={`/admin/companies/${companyId}`} />
-      </div>
-      
-      <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4">
-        {children}
-      </div>
-    </div>
+        </>
+      }
+    >
+      {children}
+    </AdminDetailLayout>
   );
 }

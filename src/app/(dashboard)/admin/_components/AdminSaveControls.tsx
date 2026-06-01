@@ -111,3 +111,25 @@ export function AdminSaveFeedback({
     </AnimatePresence>
   );
 }
+
+type AdminFeedbackPillProps = {
+  children: ReactNode;
+  tone: "success" | "error";
+};
+
+export function AdminFeedbackPill({ children, tone }: AdminFeedbackPillProps) {
+  const Icon = tone === "success" ? CheckCircle2 : AlertCircle;
+  const toneClassName =
+    tone === "success"
+      ? "bg-[#10b981]/10 border-[#10b981]/20 rounded-full text-[#10b981] items-center gap-2"
+      : "bg-red-500/10 border-red-500/20 rounded-[12px] text-red-500 items-start gap-2.5";
+
+  return (
+    <div
+      className={`px-5 py-2 border text-[13px] flex animate-in slide-in-from-bottom-2 fade-in ${toneClassName}`}
+    >
+      <Icon className={`w-4 h-4 shrink-0 ${tone === "error" ? "mt-0.5" : ""}`} />
+      <span className={tone === "error" ? "leading-snug text-center" : ""}>{children}</span>
+    </div>
+  );
+}

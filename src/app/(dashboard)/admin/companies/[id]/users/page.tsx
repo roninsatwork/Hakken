@@ -24,6 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
@@ -464,67 +465,34 @@ export default function CompanyUsersPage() {
         </form>
       </SonaeModal>
 
-      {/* Delete Confirmation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingUser}
         onClose={() => { setDeletingUser(null); setSubmitError(""); }}
         title="Delete User"
+        cancelLabel="Cancel"
+        confirmLabel={isSubmitting ? "Deleting..." : "Delete User"}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        error={submitError}
       >
-        <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px] leading-relaxed">
-             Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
-           </p>
-           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
-            onClick={() => setDeletingUser(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button 
-            type="button"
-            onClick={confirmDelete}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? "Deleting..." : "Delete User"}
-          </button>
-        </div>
-      </SonaeModal>
+        Are you sure you want to delete{" "}
+        <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
+      </AdminConfirmationModal>
 
       {/* Revoke Invitation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingInvite}
         onClose={() => { setDeletingInvite(null); setSubmitError(""); }}
         title="Revoke Access"
+        cancelLabel="Cancel"
+        confirmLabel={isSubmitting ? "Revoking..." : "Revoke Access"}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmRevoke}
+        error={submitError}
       >
-        <div className="flex flex-col gap-2 mb-6">
-           <p className="text-secondary text-[15px] leading-relaxed">
-             Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
-           </p>
-           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button 
-            type="button" 
-            onClick={() => setDeletingInvite(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button 
-            type="button"
-            onClick={confirmRevoke}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? "Revoking..." : "Revoke Access"}
-          </button>
-        </div>
-      </SonaeModal>
+        Are you sure you want to revoke the active invitation for{" "}
+        <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
+      </AdminConfirmationModal>
 
       {/* Assign System Admin Modal */}
       <SonaeModal
@@ -581,36 +549,18 @@ export default function CompanyUsersPage() {
         </form>
       </SonaeModal>
 
-      {/* Detach System Admin Confirmation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!detachingAdmin}
         onClose={() => { setDetachingAdmin(null); setSubmitError(""); }}
         title={t("detachSystemAdmin")}
+        cancelLabel="Cancel"
+        confirmLabel={isSubmitting ? t("detaching") : t("detach")}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDetach}
+        error={submitError}
       >
-        <div className="flex flex-col gap-2 mb-6">
-          <p className="text-secondary text-[15px] leading-relaxed">
-            {t("detachConfirm", { name: detachingAdmin?.name || "" })}
-          </p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDetachingAdmin(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={confirmDetach}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? t("detaching") : t("detach")}
-          </button>
-        </div>
-      </SonaeModal>
+        {t("detachConfirm", { name: detachingAdmin?.name || "" })}
+      </AdminConfirmationModal>
     </div>
   );
 }

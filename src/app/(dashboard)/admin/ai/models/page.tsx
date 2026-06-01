@@ -17,6 +17,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { getErrorMessage } from "@/src/lib/errors";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type ModelStatusFilter = "active" | "inactive";
 
@@ -103,11 +104,7 @@ export default function AIModelsPage() {
           {isSyncing ? t("syncButton.syncing") : t("syncButton.idle")}
         </button>
       </div>
-      {syncError && (
-        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-          {syncError}
-        </div>
-      )}
+      <AdminSaveError>{syncError}</AdminSaveError>
 
       <div className="w-full flex flex-col gap-2 rounded-[16px] border border-border-dim bg-card/40 p-2 shadow-sm backdrop-blur-xl md:flex-row md:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3">

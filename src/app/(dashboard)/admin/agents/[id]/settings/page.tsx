@@ -358,11 +358,7 @@ export default function AgentOverviewPage() {
 	          <p className="text-[13px] text-secondary">
 	            {t("uploadModal.subtitle")}
 	          </p>
-            {uploadError && (
-              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-                {uploadError}
-              </div>
-            )}
+            <AdminSaveError>{uploadError}</AdminSaveError>
 
 	          <div
             onDragEnter={handleDrag}

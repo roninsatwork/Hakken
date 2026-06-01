@@ -12,7 +12,7 @@ import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutD
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminDetailTabs } from "@/src/app/(dashboard)/admin/_components/AdminDetailTabs";
+import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
@@ -62,34 +62,32 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   ];
 
   return (
-    <div className="absolute inset-0 flex flex-col gap-6 pl-2 pr-4 pb-4 overflow-hidden">
-      <div className="flex flex-col gap-6 relative z-10 shrink-0 pr-4">
-
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            {agent.avatar ? (
-              <Image
-                src={agent.avatar}
-                alt="Avatar"
-                width={40}
-                height={40}
-                unoptimized
-                className="w-10 h-10 rounded-full border border-border-dim object-cover shadow-sm bg-card"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-[10px] bg-card border border-border-dim flex items-center justify-center text-brand shadow-sm">
-                <Bot className="w-5 h-5" />
-              </div>
-            )}
-            <div className="flex flex-col gap-0.5">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                {agent.name || t('unnamed')}
-              </h1>
-              <p className="text-[13px] text-secondary mt-1 max-w-[500px] truncate">{agent.description || t('noDescription')}</p>
-            </div>
+    <AdminDetailLayout
+      className="absolute inset-0 pl-2 pr-4 pb-4 overflow-hidden"
+      headerClassName="shrink-0 pr-4"
+      contentClassName="w-full pr-4 overflow-y-auto custom-scrollbar"
+      leading={
+        agent.avatar ? (
+          <Image
+            src={agent.avatar}
+            alt="Avatar"
+            width={40}
+            height={40}
+            unoptimized
+            className="w-10 h-10 rounded-full border border-border-dim object-cover shadow-sm bg-card"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-[10px] bg-card border border-border-dim flex items-center justify-center text-brand shadow-sm">
+            <Bot className="w-5 h-5" />
           </div>
-
-          <div className="flex items-center gap-3 z-20">
+        )
+      }
+      title={agent.name || t('unnamed')}
+      description={agent.description || t('noDescription')}
+      tabs={tabs}
+      rootHref={`/admin/agents/${agentId}`}
+      actions={
+        <>
             <button
               onClick={handleManualRun}
               disabled={isManualRunning}
@@ -105,15 +103,10 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
               <ArrowLeft className="w-3.5 h-3.5" />
               {t("backButton")}
             </Link>
-          </div>
-        </header>
-
-        <AdminDetailTabs tabs={tabs} rootHref={`/admin/agents/${agentId}`} />
-      </div>
-
-      <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4 w-full pr-4 overflow-y-auto custom-scrollbar">
-        {children}
-      </div>
+        </>
+      }
+    >
+      {children}
 
       <SonaeModal
         isOpen={!!modalState}
@@ -130,9 +123,9 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
              >
                 Acknowledge
              </button>
-           </div>
+          </div>
         </div>
       </SonaeModal>
-    </div>
+    </AdminDetailLayout>
   );
 }
