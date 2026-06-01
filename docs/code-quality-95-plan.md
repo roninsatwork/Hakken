@@ -105,7 +105,7 @@ Phase tracking checklist:
 - [x] Phase 5: Frontend Platform Primitives
 - [x] Phase 6: Data, Upload, And Knowledge Policy Layer
 - [x] Phase 7: E2E, Browser, And Regression Coverage Upgrade
-- [ ] Phase 8: Product-Core Extraction And Extension Points
+- [x] Phase 8: Product-Core Extraction And Extension Points
 - [ ] Phase 9: Final Hardening And Release Readiness
 
 Acceptance:
@@ -522,7 +522,7 @@ Acceptance:
 
 ## Phase 8: Product-Core Extraction And Extension Points
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -546,7 +546,7 @@ Scope:
 
 Checklist:
 
-- [ ] Document the intended platform layers:
+- [x] Document the intended platform layers:
   - app shell
   - admin shell
   - Convex backend
@@ -554,12 +554,23 @@ Checklist:
   - workflow runtime
   - integrations/tools
   - tenant settings
-- [ ] Document how to add a new admin section.
-- [ ] Document how to add a new workflow node type.
-- [ ] Document how to add a new AI tool.
-- [ ] Document how to add a new model/provider.
-- [ ] Document how to customize branding/navigation for a new product.
-- [ ] Add small examples where docs alone are not enough.
+- [x] Document how to add a new admin section.
+- [x] Document how to add a new workflow node type.
+- [x] Document how to add a new AI tool.
+- [x] Document how to add a new model/provider.
+- [x] Document how to customize branding/navigation for a new product.
+- [x] Add small examples where docs alone are not enough.
+
+Completed extension slices:
+
+- Added `docs/product-extension-guide.md` with the intended platform layers and the current source paths for app shell, admin shell, Convex backend, AI runtime, workflow runtime, integrations/tools, and tenant settings.
+- Documented the expected path for new admin sections, including shared admin primitives, Convex auth guards, sidebar entries, locale parity, pagination, and browser coverage.
+- Documented the workflow node extension path across editor types, config parsing, runtime execution, drawer UI, and parser/runtime tests.
+- Documented safe AI tool registration through `aiTools`, `agentTools`, provider declarations, role checks, tenant checks, and normalized tool result payloads.
+- Documented model/provider extension through stored model records, provider-neutral resolution, adapter services, and provider-specific tests.
+- Documented branding/navigation customization through system settings, `useSystemSettings`, sidebar route visibility, locale dictionaries, and diagnostic route flags.
+- Added small TypeScript/TSX examples for admin pages, Convex queries, workflow config readers, AI tool declarations, and provider-neutral model resolution.
+- Linked the extension guide from `docs/index.md`.
 
 Acceptance:
 
