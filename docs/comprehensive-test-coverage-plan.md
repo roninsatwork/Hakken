@@ -212,6 +212,37 @@ Acceptance:
 
 Goal: cover reusable UI behavior and pure frontend logic before testing every page directly.
 
+Progress:
+
+- Phase 3 completed on June 1, 2026.
+- Current measured coverage after Phase 3:
+  - `npm run test:run -- --project ui`: 46 frontend test files, 156 tests, all passing.
+  - `npm run test:coverage`: 111 total test files across frontend and backend, all passing.
+  - all files: 34.05 percent line coverage, 73.54 percent branch coverage, 76.82 percent function coverage.
+  - `convex`: 79.48 percent line coverage, 73.24 percent branch coverage, 88.81 percent function coverage.
+  - frontend page and route files remain the primary reason the global line coverage number is still below the final target; those are explicitly assigned to Phase 4 and Phase 6.
+- Added reusable frontend coverage for:
+  - assistant composer, model selector, thinking selector, upload tray, upload status, welcome hero, and modal behavior.
+  - widget configuration tabs, empty state, panels, welcome capture, greeting copy, conversation starters, integration snippet, appearance controls, and live preview panel.
+  - AI cost metric blocks, header controls, leaderboards, timeline chart, model distribution chart, token chart, and formatter helpers.
+  - settings identity, appearance, setting blocks, and audit log table loading, fallback, filtering, and navigation states.
+  - chart export wrapper behavior, timeframe dropdown interactions, chat status cards, shared atoms, theme/layout providers, schema builder, workflow sidebar/node basics, debounce hook, avatar constants, telemetry, transcript, date, and error helpers.
+- Coverage highlights after Phase 3:
+  - `src/app/(dashboard)/app/assistant/_components`: 96.63 percent lines.
+  - `src/app/(dashboard)/admin/companies/[id]/widget/_components`: 97.51 percent lines.
+  - `src/app/(dashboard)/admin/ai/costs/_components`: 98.15 percent lines.
+  - `src/ui/atoms`: 100 percent lines.
+  - `src/ui/components/charts`: 100 percent lines.
+  - `src/ui/components/settings`: 100 percent lines.
+  - `src/ui/providers`: 100 percent lines.
+  - `src/lib/constants`: 95.74 percent lines.
+- Remaining frontend gaps intentionally deferred:
+  - page-level route wiring and Convex query/mutation argument coverage, covered in Phase 4.
+  - deterministic authenticated browser flows, covered in Phase 5 and Phase 6.
+  - large workflow editor surfaces such as `ConfigDrawer`, `AgentEditorModal`, and `AgentNode`.
+  - operational settings surfaces such as purge configuration.
+  - broader layout/navigation shell files where meaningful coverage should come from page or browser tests rather than shallow component snapshots.
+
 Priority components and helpers:
 
 - Admin table primitives.
