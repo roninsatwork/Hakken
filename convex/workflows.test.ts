@@ -170,6 +170,203 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     expect(steps[0].input).toBe(JSON.stringify({ trigger: {} }));
   });
 
+  test("Workflow finalization fans out iterator items and merges fan-in dependencies", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { executionId, workflowId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Iterator Merge Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([
+          { id: "iterator", type: "iteratorNode" },
+          { id: "worker", type: "actionNode" },
+          { id: "manual-a", type: "actionNode" },
+          { id: "manual-b", type: "actionNode" },
+          { id: "merge", type: "mergeNode" },
+        ]),
+        edges: JSON.stringify([
+          { source: "iterator", target: "worker" },
+          { source: "manual-a", target: "merge" },
+          { source: "manual-b", target: "merge" },
+        ]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        state: JSON.stringify({ trigger: {} }),
+        startedAt: Date.now(),
+        startedBy: superAdminId,
+      });
+
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "iterator",
+        input: JSON.stringify({ trigger: {} }),
+        status: "RUNNING",
+        startedAt: 1,
+      });
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "manual-a",
+        input: JSON.stringify({ trigger: {} }),
+        status: "RUNNING",
+        startedAt: 2,
+      });
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "manual-b",
+        input: JSON.stringify({ trigger: {} }),
+        status: "RUNNING",
+        startedAt: 3,
+      });
+
+      return { executionId, workflowId };
+    });
+
+    const iteratorReady = await t.mutation(internal.workflowEngine.finalizeNodeStep, {
+      executionId,
+      nodeId: "iterator",
+      outputData: JSON.stringify({ _system: { isIterator: true }, items: ["one", "two"] }),
+    });
+
+    expect(iteratorReady).toEqual(["worker"]);
+
+    const workerInputs = await t.run(async (ctx) => {
+      const steps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "worker"))
+        .collect();
+
+      return steps.map((step) => JSON.parse(step.input));
+    });
+
+    expect(workerInputs).toHaveLength(2);
+    expect(workerInputs.map((input) => input.nodes.iterator.output.item)).toEqual(["one", "two"]);
+    expect(workerInputs.map((input) => input.nodes.iterator.output.index)).toEqual([0, 1]);
+
+    const firstMergeReady = await t.mutation(internal.workflowEngine.finalizeNodeStep, {
+      executionId,
+      nodeId: "manual-a",
+      outputData: JSON.stringify({ ok: "a" }),
+    });
+    expect(firstMergeReady).toEqual([]);
+
+    const secondMergeReady = await t.mutation(internal.workflowEngine.finalizeNodeStep, {
+      executionId,
+      nodeId: "manual-b",
+      outputData: JSON.stringify({ ok: "b" }),
+    });
+    expect(secondMergeReady).toEqual(["merge"]);
+
+    const mergeSteps = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "merge"))
+        .collect();
+    });
+
+    expect(workflowId).toBeDefined();
+    expect(mergeSteps).toHaveLength(1);
+    expect(mergeSteps[0].status).toBe("PENDING");
+  });
+
+  test("Workflow approval halt blocks downstream until resumed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { executionId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Approval Resume Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([
+          { id: "approval", type: "approvalNode" },
+          { id: "after-approval", type: "actionNode" },
+        ]),
+        edges: JSON.stringify([{ source: "approval", target: "after-approval" }]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        state: JSON.stringify({ trigger: {} }),
+        startedAt: Date.now(),
+        startedBy: superAdminId,
+      });
+
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "approval",
+        input: JSON.stringify({ trigger: {} }),
+        status: "RUNNING",
+        startedAt: 1,
+      });
+
+      return { executionId };
+    });
+
+    const haltedReady = await t.mutation(internal.workflowEngine.finalizeNodeStep, {
+      executionId,
+      nodeId: "approval",
+      outputData: JSON.stringify({ _system: { halt: true }, message: "Review" }),
+    });
+    expect(haltedReady).toEqual([]);
+
+    const haltedState = await t.run(async (ctx) => {
+      const approvalSteps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "approval"))
+        .collect();
+      const downstreamSteps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "after-approval"))
+        .collect();
+
+      return { approvalStep: approvalSteps[0], downstreamSteps };
+    });
+
+    expect(haltedState.approvalStep.status).toBe("PENDING_APPROVAL");
+    expect(haltedState.downstreamSteps).toHaveLength(0);
+
+    const resumedReady = await t.mutation(internal.workflowEngine.resumeNodeStep, {
+      executionId,
+      nodeId: "approval",
+    });
+    expect(resumedReady).toEqual(["after-approval"]);
+
+    const resumedState = await t.run(async (ctx) => {
+      const approvalSteps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "approval"))
+        .collect();
+      const downstreamSteps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution", (q) => q.eq("executionId", executionId).eq("nodeId", "after-approval"))
+        .collect();
+
+      return { approvalStep: approvalSteps[0], downstreamSteps };
+    });
+
+    expect(resumedState.approvalStep.status).toBe("SUCCESS");
+    expect(resumedState.downstreamSteps).toHaveLength(1);
+    expect(resumedState.downstreamSteps[0].status).toBe("PENDING");
+  });
+
   test("BOLA and Sandboxing inside Workflow Database Operations", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

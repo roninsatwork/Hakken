@@ -1,16 +1,20 @@
 "use node";
 
-import { internalAction, action } from "./_generated/server";
+import { internalAction, action, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { resolveTemplate } from "./utils/templateParser";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
 import {
   buildActionRequest,
+  buildActionResponseOutput,
+  buildCodeNodeOutput,
+  buildDatabaseNodeOutput,
   buildDatabaseOperationInput,
+  buildEmailDeliveryOutput,
   buildEmailMessage,
+  buildEmailSimulationOutput,
   buildMergeNodeOutput,
   buildWorkflowScheduleDecision,
   createWorkflowRuntimeContext,
@@ -20,8 +24,119 @@ import {
   executeLogicNode,
   executeWaitNode,
   getRuntimeErrorMessage,
-  parseRuntimeJson,
 } from "./workflowRuntimeService";
+
+async function executeAgentRuntimeNode(ctx: ActionCtx, args: { agentId: Id<"agents">; resolvedInput: string }) {
+  const result: { output: string } = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
+    agentId: args.agentId,
+    input: args.resolvedInput,
+  });
+  return result.output;
+}
+
+async function executeApiActionRuntimeNode(args: {
+  currentNodeData: Record<string, unknown>;
+  globalStatePayload: Record<string, unknown>;
+}) {
+  const { url, fetchOptions } = buildActionRequest(args.currentNodeData, args.globalStatePayload);
+  const res = await fetch(url, fetchOptions);
+  return buildActionResponseOutput(res.status, await res.text());
+}
+
+function executeCodeRuntimeNode(args: {
+  currentNodeData: Record<string, unknown>;
+  resolvedInput: string;
+  executionState: string | undefined;
+}) {
+  return buildCodeNodeOutput({
+    nodeData: args.currentNodeData,
+    resolvedInput: args.resolvedInput,
+    executionState: args.executionState,
+  });
+}
+
+async function executeDatabaseRuntimeNode(ctx: ActionCtx, args: {
+  currentNodeData: Record<string, unknown>;
+  globalStatePayload: Record<string, unknown>;
+  workflowId: Id<"workflows">;
+}) {
+  const { tableName, operation, docId, data } = buildDatabaseOperationInput(args.currentNodeData, args.globalStatePayload);
+  const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
+    tableName,
+    operation,
+    docId,
+    data,
+    workflowId: args.workflowId,
+  });
+
+  return buildDatabaseNodeOutput({ operation, tableName, result });
+}
+
+async function executeMergeRuntimeNode(ctx: ActionCtx, args: {
+  executionId: Id<"workflowExecutions">;
+  nodeId: string;
+  workflowEdges: string | undefined;
+}) {
+  const executionSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, { executionId: args.executionId });
+  const edges = parseWorkflowEdges(args.workflowEdges);
+  return buildMergeNodeOutput({ nodeId: args.nodeId, executionSteps, edges });
+}
+
+async function executeEmailRuntimeNode(args: {
+  currentNodeData: Record<string, unknown>;
+  globalStatePayload: Record<string, unknown>;
+}) {
+  const { fromAddress, toAddresses, subject, body } = buildEmailMessage({
+    nodeData: args.currentNodeData,
+    globalStatePayload: args.globalStatePayload,
+    defaultFromAddress: process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>",
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject });
+    return buildEmailSimulationOutput({ toAddresses, subject, body });
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: toAddresses,
+      subject,
+      html: body,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Resend API Rejection: ${errText}`);
+  }
+
+  const data = await response.json();
+  return buildEmailDeliveryOutput({ dispatchId: data, toAddresses, subject });
+}
+
+async function scheduleDownstreamNodes(ctx: ActionCtx, args: {
+  workflowId: Id<"workflows">;
+  executionId: Id<"workflowExecutions">;
+  outputPayload: string;
+  downstreamNodeIds: string[];
+}) {
+  const scheduleDecision = buildWorkflowScheduleDecision(args.outputPayload, args.downstreamNodeIds);
+  if (scheduleDecision.halt) return;
+
+  for (const schedule of scheduleDecision.schedules) {
+    await ctx.scheduler.runAfter(schedule.delayMs, internal.workflowRuntime.executeNode, {
+      workflowId: args.workflowId,
+      executionId: args.executionId,
+      nodeId: schedule.nodeId,
+    });
+  }
+}
 
 export const startWorkflow = internalAction({
   args: {
@@ -92,35 +207,25 @@ export const executeNode = internalAction({
       });
 
       if (node.type === "agentNode" && currentNodeData._agentId) {
-        const result = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
+        outputPayload = await executeAgentRuntimeNode(ctx, {
           agentId: currentNodeData._agentId,
-          input: resolvedInput,
+          resolvedInput,
         });
-        outputPayload = result.output;
       } 
       else if (node.type === "actionNode") {
         try {
-          const { url, fetchOptions } = buildActionRequest(currentNodeData, globalStatePayload);
-          const res = await fetch(url, fetchOptions);
-          const text = await res.text();
-          try { outputPayload = JSON.stringify({ status: res.status, data: JSON.parse(text) }); }
-          catch { outputPayload = JSON.stringify({ status: res.status, data: text }); }
+          outputPayload = await executeApiActionRuntimeNode({ currentNodeData, globalStatePayload });
         } catch (error: unknown) {
           throw new Error('API Action request failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "codeNode") {
         try {
-          const parseCtx = parseRuntimeJson(resolvedInput);
-          
-          // Fallback to safe templating resolution using the execution context
-          let templatePayload = parseCtx;
-          if (currentNodeData._inputTemplate && typeof currentNodeData._inputTemplate === "string") {
-              const safeGlobalPayload = { input: parseCtx, execution: parseRuntimeJson(execution.state || "{}", {}) };
-              templatePayload = resolveTemplate(currentNodeData._inputTemplate, safeGlobalPayload);
-          }
-          
-          outputPayload = JSON.stringify(templatePayload);
+          outputPayload = executeCodeRuntimeNode({
+            currentNodeData,
+            resolvedInput,
+            executionState: execution.state,
+          });
         } catch (error: unknown) {
           throw new Error("Safe code transformation failed: " + getRuntimeErrorMessage(error));
         }
@@ -135,17 +240,11 @@ export const executeNode = internalAction({
       }
       else if (node.type === "databaseNode") {
         try {
-          const { tableName, operation, docId, data } = buildDatabaseOperationInput(currentNodeData, globalStatePayload);
-
-          const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
-            tableName,
-            operation,
-            docId,
-            data,
+          outputPayload = await executeDatabaseRuntimeNode(ctx, {
+            currentNodeData,
+            globalStatePayload,
             workflowId: args.workflowId,
           });
-
-          outputPayload = JSON.stringify({ _system: { db: true }, operation, tableName, result });
         } catch (error: unknown) {
           throw new Error('Database Action failed: ' + getRuntimeErrorMessage(error));
         }
@@ -173,47 +272,21 @@ export const executeNode = internalAction({
       }
       else if (node.type === "mergeNode") {
         try {
-          const executionSteps = await ctx.runQuery(internal.workflowExecutions.getSteps, { executionId: args.executionId });
-          const edges = parseWorkflowEdges(workflow?.edges);
-          outputPayload = buildMergeNodeOutput({ nodeId: args.nodeId, executionSteps, edges });
+          outputPayload = await executeMergeRuntimeNode(ctx, {
+            executionId: args.executionId,
+            nodeId: args.nodeId,
+            workflowEdges: workflow.edges,
+          });
         } catch(error: unknown) {
           throw new Error('Merge / Sync processing failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "emailNode") {
         try {
-          const { fromAddress, toAddresses, subject, body } = buildEmailMessage({
-            nodeData: currentNodeData,
+          outputPayload = await executeEmailRuntimeNode({
+            currentNodeData,
             globalStatePayload,
-            defaultFromAddress: process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>",
           });
-          
-          if (!process.env.RESEND_API_KEY) {
-             console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject });
-             outputPayload = JSON.stringify({ success: true, simulated: true, to: toAddresses, subject, bodyPreview: body.substring(0, 100) });
-          } else {
-             const response = await fetch("https://api.resend.com/emails", {
-               method: "POST",
-               headers: {
-                 "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-                 "Content-Type": "application/json"
-               },
-               body: JSON.stringify({
-                 from: fromAddress,
-                 to: toAddresses,
-                 subject,
-                 html: body
-               })
-             });
-
-             if (!response.ok) {
-               const errText = await response.text();
-               throw new Error(`Resend API Rejection: ${errText}`);
-             }
-             
-             const data = await response.json();
-             outputPayload = JSON.stringify({ success: true, dispatchId: data?.id, to: toAddresses, subject });
-          }
         } catch(error: unknown) {
              throw new Error("Email dispatch failed: " + getRuntimeErrorMessage(error));
         }
@@ -230,18 +303,12 @@ export const executeNode = internalAction({
         outputData: outputPayload,
       });
 
-      const scheduleDecision = buildWorkflowScheduleDecision(outputPayload, downstreamNodesToSchedule);
-
-      if (scheduleDecision.halt) return; // Do not schedule next steps, workflow suspended.
-
-      // Recursively Schedule the next unlocked steps
-      for (const schedule of scheduleDecision.schedules) {
-        await ctx.scheduler.runAfter(schedule.delayMs, internal.workflowRuntime.executeNode, {
-          workflowId: args.workflowId,
-          executionId: args.executionId,
-          nodeId: schedule.nodeId
-        });
-      }
+      await scheduleDownstreamNodes(ctx, {
+        workflowId: args.workflowId,
+        executionId: args.executionId,
+        outputPayload,
+        downstreamNodeIds: downstreamNodesToSchedule,
+      });
 
     } catch (error: unknown) {
       console.error(`Workflow execution failed at node ${args.nodeId}:`, error);

@@ -99,7 +99,7 @@ Phase tracking checklist:
 
 - [x] Phase 0: Baseline, Inventory, And Safety Rails
 - [x] Phase 1: Provider Neutrality And Naming Cleanup
-- [ ] Phase 2: Workflow Runtime Architecture Refactor
+- [x] Phase 2: Workflow Runtime Architecture Refactor
 - [ ] Phase 3: AI And Tool Execution Platform Layer
 - [ ] Phase 4: Backend Service Boundary Refactor
 - [ ] Phase 5: Frontend Platform Primitives
@@ -179,7 +179,7 @@ Acceptance:
 
 ## Phase 2: Workflow Runtime Architecture Refactor
 
-Status: Started.
+Status: Complete.
 
 Goal:
 
@@ -212,35 +212,38 @@ Already completed:
 - [x] Add focused tests for malformed trigger input, malformed step input, malformed upstream output, invalid pure node config, and pure node output commands.
 - [x] Add typed config readers and request/input builders for action/API, database, and email nodes.
 - [x] Move downstream scheduling decisions and runtime error message normalization into tested service helpers.
+- [x] Extract action/API, agent, database, email, code, and merge runtime handlers so `executeNode` mainly orchestrates node dispatch.
+- [x] Add regression tests for iterator fan-out, merge fan-in, and approval halt/resume behavior.
+- [x] Normalize node response/output shaping for API action, code, database, and email nodes.
 
 Checklist:
 
 - [x] Create a typed workflow runtime context object for execution state, node data, parsed input, and global payload.
 - [ ] Extract node-specific handlers:
-  - action/API node
-  - agent node
-  - database node
+  - [x] action/API node
+  - [x] agent node
+  - [x] database node
   - [x] logic node
   - [x] iterator node
   - [x] merge node
   - [x] wait node
   - [x] approval node
-  - email node
+  - [x] email node
   - [x] bypass/default node
-- [ ] Add config readers/parsers for each node type.
+- [x] Add config readers/parsers for each node type.
 - [x] Replace local casts such as `as ActionConfig`, `as DatabaseConfig`, and `as LogicConfig`.
 - [ ] Normalize JSON parsing for:
   - [x] execution state
   - [x] step input
-  - step output
+  - [x] step output
   - [x] node config
   - [x] system commands
 - [x] Move scheduling decisions into a small tested helper.
 - [x] Move failure message formatting into a small helper.
 - [x] Add tests for invalid config per node type.
 - [x] Add tests for malformed execution state and malformed upstream output.
-- [ ] Add tests for iterator fan-out and merge fan-in behavior.
-- [ ] Add tests for approval halt/resume behavior.
+- [x] Add tests for iterator fan-out and merge fan-in behavior.
+- [x] Add tests for approval halt/resume behavior.
 
 Acceptance:
 

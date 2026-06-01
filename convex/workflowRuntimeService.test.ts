@@ -1,8 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
   buildActionRequest,
+  buildActionResponseOutput,
+  buildCodeNodeOutput,
+  buildDatabaseNodeOutput,
   buildDatabaseOperationInput,
+  buildEmailDeliveryOutput,
   buildEmailMessage,
+  buildEmailSimulationOutput,
   buildMergeNodeOutput,
   buildWorkflowScheduleDecision,
   createWorkflowRuntimeContext,
@@ -147,6 +152,38 @@ describe("workflow runtime service", () => {
     ).toThrow("SSRF Prevention");
   });
 
+  test("normalizes API action response output", () => {
+    expect(JSON.parse(buildActionResponseOutput(201, JSON.stringify({ id: 1 })))).toEqual({
+      status: 201,
+      data: { id: 1 },
+    });
+
+    expect(JSON.parse(buildActionResponseOutput(200, "plain text"))).toEqual({
+      status: 200,
+      data: "plain text",
+    });
+  });
+
+  test("builds safe code node output from parsed input and execution state", () => {
+    expect(
+      JSON.parse(
+        buildCodeNodeOutput({
+          nodeData: {},
+          resolvedInput: JSON.stringify({ ok: true }),
+          executionState: undefined,
+        })
+      )
+    ).toEqual({ ok: true });
+
+    expect(
+      buildCodeNodeOutput({
+        nodeData: { _inputTemplate: "Hello {{input.name}} from {{execution.trigger.source}}" },
+        resolvedInput: JSON.stringify({ name: "Ada" }),
+        executionState: JSON.stringify({ trigger: { source: "workflow" } }),
+      })
+    ).toBe(JSON.stringify("Hello Ada from workflow"));
+  });
+
   test("builds database operation input from mapping or JSON template", () => {
     expect(
       buildDatabaseOperationInput(
@@ -207,6 +244,38 @@ describe("workflow runtime service", () => {
       toAddresses: ["ada@example.com", "grace@example.com"],
       subject: "Hello Ada",
       body: "<p>Approved</p>",
+    });
+  });
+
+  test("builds database and email node outputs", () => {
+    expect(JSON.parse(buildDatabaseNodeOutput({ operation: "SELECT", tableName: "properties", result: [{ id: 1 }] }))).toEqual({
+      _system: { db: true },
+      operation: "SELECT",
+      tableName: "properties",
+      result: [{ id: 1 }],
+    });
+
+    expect(
+      JSON.parse(
+        buildEmailSimulationOutput({
+          toAddresses: "ada@example.com",
+          subject: "Hello",
+          body: "A".repeat(120),
+        })
+      )
+    ).toEqual({
+      success: true,
+      simulated: true,
+      to: "ada@example.com",
+      subject: "Hello",
+      bodyPreview: "A".repeat(100),
+    });
+
+    expect(JSON.parse(buildEmailDeliveryOutput({ dispatchId: { id: "email_123" }, toAddresses: ["ada@example.com"], subject: "Hello" }))).toEqual({
+      success: true,
+      dispatchId: "email_123",
+      to: ["ada@example.com"],
+      subject: "Hello",
     });
   });
 

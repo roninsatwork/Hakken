@@ -90,6 +90,12 @@ export type EmailMessage = {
   body: string;
 };
 
+export type EmailDeliveryOutputInput = {
+  dispatchId?: unknown;
+  toAddresses: string[] | string;
+  subject: string;
+};
+
 export type WorkflowScheduleDecision = {
   halt: boolean;
   schedules: Array<{
@@ -302,6 +308,32 @@ export function buildActionRequest(nodeData: WorkflowNodeData, globalStatePayloa
   return { url, fetchOptions };
 }
 
+export function buildActionResponseOutput(status: number, responseText: string) {
+  return JSON.stringify({
+    status,
+    data: parseRuntimeJson(responseText, responseText),
+  });
+}
+
+export function buildCodeNodeOutput(args: {
+  nodeData: WorkflowNodeData;
+  resolvedInput: string;
+  executionState: string | undefined;
+}) {
+  const parsedInput = parseRuntimeJson(args.resolvedInput);
+  let output: unknown = parsedInput;
+
+  if (typeof args.nodeData._inputTemplate === "string") {
+    const safeGlobalPayload = {
+      input: parsedInput,
+      execution: parseRuntimeJson(args.executionState || "{}", {}),
+    };
+    output = resolveTemplate(args.nodeData._inputTemplate, safeGlobalPayload);
+  }
+
+  return JSON.stringify(output);
+}
+
 export function buildDatabaseOperationInput(
   nodeData: WorkflowNodeData,
   globalStatePayload: WorkflowStatePayload
@@ -349,6 +381,34 @@ export function buildEmailMessage(args: {
   }
 
   return { fromAddress, toAddresses, subject, body };
+}
+
+export function buildDatabaseNodeOutput(args: { operation: DatabaseOperation; tableName: string; result: unknown }) {
+  return JSON.stringify({
+    _system: { db: true },
+    operation: args.operation,
+    tableName: args.tableName,
+    result: args.result,
+  });
+}
+
+export function buildEmailSimulationOutput(args: { toAddresses: string[] | string; subject: string; body: string }) {
+  return JSON.stringify({
+    success: true,
+    simulated: true,
+    to: args.toAddresses,
+    subject: args.subject,
+    bodyPreview: args.body.substring(0, 100),
+  });
+}
+
+export function buildEmailDeliveryOutput(args: EmailDeliveryOutputInput) {
+  return JSON.stringify({
+    success: true,
+    dispatchId: isRecord(args.dispatchId) ? args.dispatchId.id : undefined,
+    to: args.toAddresses,
+    subject: args.subject,
+  });
 }
 
 export function evaluateLogicBranch(config: LogicConfig, globalStatePayload: Record<string, unknown>) {
