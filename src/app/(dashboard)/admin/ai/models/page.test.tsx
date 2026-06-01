@@ -41,16 +41,16 @@ describe("AIModelsPage", () => {
     vi.mocked(useAction).mockReturnValue(vi.fn().mockResolvedValue({}) as unknown as ReturnType<typeof useAction>);
   });
 
-  it("omits statusFilter from the Convex query when All is selected", () => {
+  it("defaults to the active Convex query filter", () => {
     render(<AIModelsPage />);
 
     const queryArgs = vi.mocked(useQuery).mock.calls.at(-1)?.[1];
 
     expect(queryArgs).toMatchObject({
       searchTerm: "",
+      statusFilter: "active",
       page: 1,
     });
-    expect(queryArgs).not.toHaveProperty("statusFilter");
   });
 
   it("sends active and inactive status filters exactly when selected", () => {
@@ -67,8 +67,6 @@ describe("AIModelsPage", () => {
       statusFilter: "inactive",
       page: 1,
     });
-
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
-    expect(vi.mocked(useQuery).mock.calls.at(-1)?.[1]).not.toHaveProperty("statusFilter");
+    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
   });
 });
