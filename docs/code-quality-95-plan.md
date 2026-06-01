@@ -106,7 +106,7 @@ Phase tracking checklist:
 - [x] Phase 6: Data, Upload, And Knowledge Policy Layer
 - [x] Phase 7: E2E, Browser, And Regression Coverage Upgrade
 - [x] Phase 8: Product-Core Extraction And Extension Points
-- [ ] Phase 9: Final Hardening And Release Readiness
+- [x] Phase 9: Final Hardening And Release Readiness
 
 Acceptance:
 
@@ -579,7 +579,7 @@ Acceptance:
 
 ## Phase 9: Final Hardening And Release Readiness
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -587,18 +587,37 @@ Goal:
 
 Checklist:
 
-- [ ] Confirm no movement demo files changed unless explicitly allowed.
-- [ ] Run `npm run lint:all`.
-- [ ] Run `npm run check`.
-- [ ] Run `npm run build`.
-- [ ] Run `npm audit --audit-level=high`.
-- [ ] Run selected Playwright/browser tests.
-- [ ] Smoke test local app on `localhost:3000` with Convex running.
-- [ ] Review full diff.
-- [ ] Update this plan with completed phases and commits.
-- [ ] Commit only after explicit approval.
-- [ ] Push to `dev` only after explicit approval.
-- [ ] Push to `main` only after explicit live deploy approval.
+- [x] Confirm no movement demo files changed unless explicitly allowed.
+- [x] Run `npm run lint:all`.
+- [x] Run `npm run check`.
+- [x] Run `npm run build`.
+- [x] Run `npm audit --audit-level=high`.
+- [x] Run selected Playwright/browser tests.
+- [x] Smoke test local app on `localhost:3000` with Convex running.
+- [x] Review full diff.
+- [x] Update this plan with completed phases and commits.
+- [x] Commit only after explicit approval.
+- [x] Push to `dev` only after explicit approval.
+- [x] Push to `main` only after explicit live deploy approval.
+
+Final verification record:
+
+- Frozen movement demo review: no files changed under `src/app/(dashboard)/demos/movements/**`, `src/app/(dashboard)/demos/movement-capture/page.tsx`, or `convex/movements.ts` in the final Phase 5-9 review range.
+- `npm run lint:all`: passed.
+- `npm run check`: passed with 75 test files and 297 tests passing.
+- `npm run build`: passed.
+- `npm audit --audit-level=high`: passed with 0 vulnerabilities.
+- `npm run test:e2e`: passed with 25 tests passing and 7 authenticated-browser tests skipped because no seeded Playwright auth state is configured.
+- Local smoke: `npm run dev` served `http://localhost:3000/login` with HTTP 200 while `npm run convex:dev` reported functions ready.
+- Full diff review: Phase 5-9 changes are limited to shared admin/frontend primitives, upload and knowledge policy, browser regression coverage, extension documentation, and this final verification record.
+
+Phase completion commits:
+
+- Phase 5: `557b1b4` Complete frontend admin primitives phase.
+- Phase 6: `68ffa06` Complete upload policy layer phase.
+- Phase 7: `250d67c` Complete browser regression coverage phase.
+- Phase 8: `0a4cba8` Complete product extension guide phase.
+- Phase 9: final verification record commit.
 
 Acceptance:
 
