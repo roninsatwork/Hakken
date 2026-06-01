@@ -1,5 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { createTimelineMap, formatAnalyticsDateGroup, getAggregationType } from "./analyticsService";
+import {
+  buildModelCostContext,
+  computeCostFromMap,
+  convertUsdToGbp,
+  createTimelineMap,
+  formatAnalyticsDateGroup,
+  getAggregationType,
+  roundMetric,
+  USD_TO_GBP_RATE,
+} from "./analyticsService";
 
 describe("analytics service helpers", () => {
   test("selects daily, weekly, and monthly aggregation windows", () => {
@@ -26,5 +35,39 @@ describe("analytics service helpers", () => {
     );
 
     expect(Object.keys(timeline)).toEqual(["1 May", "2 May", "3 May"]);
+  });
+
+  test("builds model cost context and computes model-specific cost", () => {
+    const { modelMap, defaultModelId } = buildModelCostContext([
+      {
+        modelId: "default-model",
+        displayName: "Default Model",
+        isDefault: true,
+        isEnabled: true,
+        standardInputCostBelow200k: 1,
+        standardInputCostAbove200k: 2,
+        outputResponseCost: 4,
+      },
+      {
+        modelId: "disabled-default",
+        displayName: "Disabled Default",
+        isDefault: true,
+        isEnabled: false,
+        standardInputCostBelow200k: 100,
+        standardInputCostAbove200k: 100,
+        outputResponseCost: 100,
+      },
+    ]);
+
+    expect(defaultModelId).toBe("default-model");
+    expect(computeCostFromMap("default-model", 100000, 500000, modelMap)).toBe(2.1);
+    expect(computeCostFromMap("default-model", 300000, 500000, modelMap)).toBe(2.6);
+    expect(computeCostFromMap("missing-model", 300000, 500000, modelMap)).toBe(0);
+  });
+
+  test("converts and rounds analytics currency metrics", () => {
+    expect(USD_TO_GBP_RATE).toBe(0.78);
+    expect(convertUsdToGbp(10)).toBeCloseTo(7.8);
+    expect(roundMetric(1.23456, 2)).toBe(1.23);
   });
 });

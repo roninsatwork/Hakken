@@ -1,6 +1,6 @@
 import { internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { buildModelCostContext, computeCostFromMap } from "./analytics";
+import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 

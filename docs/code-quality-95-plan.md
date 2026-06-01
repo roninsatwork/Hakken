@@ -303,7 +303,7 @@ Acceptance:
 
 ## Phase 4: Backend Service Boundary Refactor
 
-Status: Not started.
+Status: Started.
 
 Goal:
 
@@ -324,10 +324,18 @@ Scope:
 - settings/plans helpers
 - audit helpers
 
+First backend audit slice:
+
+- `analytics.ts` and `analyticsHybrid.ts` mix auth, reads, cost math, timeline formatting, and leaderboard aggregation.
+- `users.ts` mixes auth, tenant checks, user mutation policy, audit logging, and purge orchestration.
+- `purges.ts` mixes schedule policy, purge execution, and cross-table deletion.
+- `knowledge.ts` mixes upload policy, tenant access, storage metadata, and document status transitions.
+- Workflow runtime files are large but were handled in Phase 2, so Phase 4 should avoid reworking them unless a gate breaks.
+
 Checklist:
 
-- [ ] Audit large Convex files by line count and responsibility.
-- [ ] Identify handlers that mix auth, query, filtering, formatting, and side effects.
+- [x] Audit large Convex files by line count and responsibility.
+- [x] Identify handlers that mix auth, query, filtering, formatting, and side effects.
 - [ ] Move pure filtering/formatting/calculation into service helpers.
 - [ ] Keep auth and tenant checks explicit at handler boundaries.
 - [ ] Use generated Convex types wherever possible.

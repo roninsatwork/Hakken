@@ -5,15 +5,14 @@ import type { QueryCtx } from "./_generated/server";
 import { requireAdmin, requireSuperAdmin } from "./authz";
 import {
     createTimelineMap,
+    buildModelCostContext,
+    computeCostFromMap,
     formatAnalyticsDateGroup,
     getAggregationType,
     resolveDateRange,
     resolveTimestampRange,
 } from "./analyticsService";
-import { getDefaultModelId } from "./aiModelService";
 
-type AiModelDoc = Doc<"aiModels">;
-type ModelCostMap = Map<string, AiModelDoc>;
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
     userId?: Id<"users">;
@@ -61,19 +60,6 @@ export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id
     }
 
     return admin;
-}
-
-export function buildModelCostContext(aiModelsFetch: AiModelDoc[]) {
-    const modelMap: ModelCostMap = new Map(aiModelsFetch.map((m) => [m.modelId, m]));
-    const defaultModelId = getDefaultModelId(aiModelsFetch);
-    return { modelMap, defaultModelId };
-}
-
-export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: ModelCostMap) {
-    const config = modelMap.get(model);
-    const inRate = config ? (inputs > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
-    const outRate = config ? (config.outputResponseCost || 0) : 0;
-    return (inputs / 1000000) * inRate + (outputs / 1000000) * outRate;
 }
 
 export const getGlobalAICosts = query({

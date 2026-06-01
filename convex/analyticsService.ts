@@ -1,3 +1,6 @@
+import type { Doc } from "./_generated/dataModel";
+import { getDefaultModelId } from "./aiModelService";
+
 type DashboardTimeframe =
   | "today"
   | "yesterday"
@@ -12,8 +15,21 @@ type DashboardTimeframe =
   | "custom";
 
 export type AnalyticsAggregation = "day" | "week" | "month";
+export type AiModelCostConfig = Pick<
+  Doc<"aiModels">,
+  | "modelId"
+  | "displayName"
+  | "friendlyName"
+  | "isDefault"
+  | "isEnabled"
+  | "standardInputCostBelow200k"
+  | "standardInputCostAbove200k"
+  | "outputResponseCost"
+>;
+export type ModelCostMap = Map<string, AiModelCostConfig>;
 
 const dayMs = 24 * 60 * 60 * 1000;
+export const USD_TO_GBP_RATE = 0.78;
 
 export function resolveTimestampRange(args: {
   timeframe: DashboardTimeframe;
@@ -120,4 +136,30 @@ export function createTimelineMap<T>(
   }
 
   return timelineMap;
+}
+
+export function buildModelCostContext(aiModelsFetch: AiModelCostConfig[]) {
+  const modelMap: ModelCostMap = new Map(aiModelsFetch.map((model) => [model.modelId, model]));
+  const defaultModelId = getDefaultModelId(aiModelsFetch);
+  return { modelMap, defaultModelId };
+}
+
+export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: ModelCostMap) {
+  const config = modelMap.get(model);
+  const inRate = config
+    ? inputs > 200000
+      ? config.standardInputCostAbove200k || 0
+      : config.standardInputCostBelow200k || 0
+    : 0;
+  const outRate = config ? config.outputResponseCost || 0 : 0;
+
+  return (inputs / 1000000) * inRate + (outputs / 1000000) * outRate;
+}
+
+export function convertUsdToGbp(value: number) {
+  return value * USD_TO_GBP_RATE;
+}
+
+export function roundMetric(value: number, decimals: number) {
+  return Number(value.toFixed(decimals));
 }
