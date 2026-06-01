@@ -236,6 +236,8 @@ Completed:
 
 ## Phase 6: Final Consistency Pass
 
+Status: Complete.
+
 Target:
 
 - All decomposed pages plus adjacent files touched during the phases.
@@ -265,3 +267,16 @@ Acceptance:
 - Shared feature components/hooks have focused tests where behavior moved.
 - Full verification passes.
 - The repo remains clean on `dev` after the final phase commit and push.
+
+Completed:
+
+- Confirmed target page sizes after decomposition:
+  - `src/app/(dashboard)/admin/settings/page.tsx`: 465 lines.
+  - `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx`: 34 lines.
+  - `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx`: 30 lines.
+  - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx`: 286 lines.
+  - `src/app/(dashboard)/app/assistant/page.tsx`: 279 lines.
+  - `src/app/(dashboard)/admin/ai/costs/page.tsx`: 74 lines.
+- Confirmed the frozen movement demo files were not part of the decomposition commits.
+- Verified with `npm run lint:all`, `npm run check`, `npm audit --audit-level=high`, `npm run build`, `npm run test:e2e`, `git diff --check`, and a `/login` smoke check.
+- Final verification results: 313 unit/integration tests passed, 25 E2E tests passed with 7 auth-gated skips, and `npm audit` found 0 vulnerabilities.
