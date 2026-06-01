@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import {
+  assertCanCreateManagedUser,
+  assertCanDeleteManagedUser,
+  assertCanUpdateManagedUser,
+} from "./userManagementService";
 
 export const getMe = query({
   args: {},
@@ -167,14 +172,12 @@ export const addUser = mutation({
     
     const activeCompanyId = getActiveCompanyId(caller);
 
-    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
-      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== args.companyId) {
-        throw new Error("Unauthorized");
-      }
-      if (args.role === "SUPER_ADMIN") {
-        throw new Error("Unauthorized: Insufficient privileges");
-      }
-    }
+    assertCanCreateManagedUser({
+      caller,
+      activeCompanyId,
+      newRole: args.role,
+      newCompanyId: args.companyId,
+    });
 
     // Basic implementation: manually created users get a distinct token pattern
     const fakeTokenId = `manual|${Date.now()}|${Math.random().toString(36).substring(7)}`;
@@ -219,17 +222,13 @@ export const updateUser = mutation({
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) throw new Error("User not found");
 
-    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
-      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== targetUser.companyId) {
-        throw new Error("Unauthorized");
-      }
-      if (targetUser.role === "SUPER_ADMIN") {
-        throw new Error("Unauthorized: Cannot modify a Super Administrator");
-      }
-      if (args.role === "SUPER_ADMIN" || (args.companyId && args.companyId !== activeCompanyId)) {
-        throw new Error("Unauthorized: Insufficient privileges");
-      }
-    }
+    assertCanUpdateManagedUser({
+      caller,
+      activeCompanyId,
+      targetUser,
+      nextRole: args.role,
+      nextCompanyId: args.companyId,
+    });
 
     const { id, role, companyId, ...updates } = args;
     await ctx.db.patch(id, {
@@ -294,14 +293,11 @@ export const deleteUser = mutation({
     const targetUser = await ctx.db.get(args.id);
     if (!targetUser) return false;
 
-    if (caller.role !== "SUPER_ADMIN" || caller.impersonatingCompanyId) {
-      if ((caller.role !== "ADMIN" && !caller.impersonatingCompanyId) || activeCompanyId !== targetUser.companyId) {
-        throw new Error("Unauthorized");
-      }
-      if (targetUser.role === "SUPER_ADMIN") {
-        throw new Error("Unauthorized: Cannot delete a Super Administrator");
-      }
-    }
+    assertCanDeleteManagedUser({
+      caller,
+      activeCompanyId,
+      targetUser,
+    });
 
     await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: args.id });
     await ctx.db.delete(args.id);

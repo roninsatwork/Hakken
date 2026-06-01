@@ -332,6 +332,11 @@ First backend audit slice:
 - `knowledge.ts` mixes upload policy, tenant access, storage metadata, and document status transitions.
 - Workflow runtime files are large but were handled in Phase 2, so Phase 4 should avoid reworking them unless a gate breaks.
 
+Completed service-boundary slices:
+
+- Moved AI model cost mapping, cost calculation, GBP conversion, and metric rounding into `analyticsService`.
+- Moved user-management create/update/delete role and tenant policy into `userManagementService`.
+
 Checklist:
 
 - [x] Audit large Convex files by line count and responsibility.
@@ -339,8 +344,8 @@ Checklist:
 - [ ] Move pure filtering/formatting/calculation into service helpers.
 - [ ] Keep auth and tenant checks explicit at handler boundaries.
 - [ ] Use generated Convex types wherever possible.
-- [ ] Add tests for extracted service helpers.
-- [ ] Add BOLA tests when a refactor touches tenant-scoped data.
+- [x] Add tests for extracted service helpers.
+- [x] Add BOLA tests when a refactor touches tenant-scoped data.
 - [ ] Keep external behavior unchanged unless the existing behavior is clearly wrong.
 
 Acceptance:
