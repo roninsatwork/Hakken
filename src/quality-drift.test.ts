@@ -156,11 +156,15 @@ describe('Quality Drift Guardrails', () => {
 
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
-
-      return /onClick=\{\(\) => deleteDocument/.test(contents) || !contents.includes('documentToDelete');
+      return !contents.includes('KnowledgeManager');
     });
 
-    expect(offenders, `Knowledge pages allow direct document deletion:\n${offenders.join('\n')}`).toEqual([]);
+    const managerContents = readRepoFile('src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx');
+    const managerAllowsDirectDelete = /onClick=\{\(\) => deleteDocument/.test(managerContents) ||
+      !managerContents.includes('documentToDelete');
+
+    expect(offenders, `Knowledge pages drifted away from the shared knowledge manager:\n${offenders.join('\n')}`).toEqual([]);
+    expect(managerAllowsDirectDelete, 'Shared knowledge manager must keep document deletes confirmation-gated.').toBe(false);
   });
 
   test('handoff and platform plans keep movement demo files out of scope', () => {

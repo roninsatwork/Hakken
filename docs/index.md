@@ -22,9 +22,11 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Deeper refactor roadmap for turning Sonae into a reusable product core with stronger contracts, naming, tests, and extension points.
 9.  **[Product Extension Guide](./product-extension-guide.md)**
     Extension points for adding admin sections, workflow nodes, AI tools, model providers, branding, navigation, and tenant settings.
-10. **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
+10. **[Large Page Decomposition Plan](./large-page-decomposition-plan.md)**
+    Follow-on plan for reducing page-level complexity in large non-movement product/admin pages.
+11. **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
     Completed 6-phase refactor checklist and verification record.
-11. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
+12. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
     Completed low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
 
 ---
