@@ -6,12 +6,10 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  AlertOctagon,
   FileText,
   Search,
   DatabaseZap,
   Loader2,
-  RefreshCcw,
   Trash2,
   CheckCircle2,
   XCircle,
@@ -20,7 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminPaginationFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate, formatTime } from "@/src/lib/dates";
 
@@ -215,42 +213,21 @@ export default function AgentLogsDashboard() {
         />
       </div>
 
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!logToDelete}
-        onClose={() => !isDeleting && setLogToDelete(null)}
+        onClose={() => setLogToDelete(null)}
         title="Delete Trace"
         size="sm"
+        cancelLabel="Cancel"
+        confirmLabel={isDeleting ? "Deleting..." : "Delete Trace"}
+        isSubmitting={isDeleting}
+        onConfirm={handleDelete}
       >
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-2">
-            <AlertOctagon className="w-12 h-12 text-rose-500 mb-2 opacity-80" />
-            <p className="text-[14px] text-secondary leading-relaxed">
-              This trace will be removed from the agent log history.
-            </p>
-            <p className="text-[13px] font-bold text-foreground mt-2">
-              This action cannot be undone.
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-border-dim">
-            <button
-              onClick={() => setLogToDelete(null)}
-              disabled={isDeleting}
-              className="px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors border border-border-dim disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
-            >
-              {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              <span>Delete Trace</span>
-            </button>
-          </div>
-        </div>
-      </SonaeModal>
+        <p>This trace will be removed from the agent log history.</p>
+        <p className="text-[13px] font-bold text-foreground">
+          This action cannot be undone.
+        </p>
+      </AdminConfirmationModal>
     </div>
   );
 }

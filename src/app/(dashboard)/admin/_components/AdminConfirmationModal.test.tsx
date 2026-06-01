@@ -27,6 +27,45 @@ describe("AdminConfirmationModal", () => {
     expect(screen.getByText("Delete failed")).toHaveClass("text-red-500");
   });
 
+  it("supports warning copy without a warning title", () => {
+    render(
+      <AdminConfirmationModal
+        isOpen
+        onClose={vi.fn()}
+        title="Delete Plan"
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        isSubmitting={false}
+        onConfirm={vi.fn()}
+        warning={{ description: "Existing subscribers may be affected." }}
+      >
+        <p>Delete this plan?</p>
+      </AdminConfirmationModal>
+    );
+
+    expect(screen.getByText("Existing subscribers may be affected.")).toBeInTheDocument();
+  });
+
+  it("can render as a compact confirmation dialog", () => {
+    render(
+      <AdminConfirmationModal
+        isOpen
+        onClose={vi.fn()}
+        title="Delete Trace"
+        size="sm"
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        isSubmitting={false}
+        onConfirm={vi.fn()}
+      >
+        <p>Remove this trace?</p>
+      </AdminConfirmationModal>
+    );
+
+    expect(screen.getByRole("heading", { name: "Delete Trace" })).toBeInTheDocument();
+    expect(screen.getByText("Remove this trace?")).toBeInTheDocument();
+  });
+
   it("forwards cancel and confirm actions", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();

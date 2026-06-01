@@ -5,7 +5,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 
 type AdminConfirmationWarningProps = {
-  title: ReactNode;
+  title?: ReactNode;
   description: ReactNode;
 };
 
@@ -13,6 +13,7 @@ type AdminConfirmationModalProps = {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  size?: "sm" | "md" | "lg" | "xl";
   children: ReactNode;
   cancelLabel: ReactNode;
   confirmLabel: ReactNode;
@@ -26,6 +27,7 @@ export function AdminConfirmationModal({
   isOpen,
   onClose,
   title,
+  size = "md",
   children,
   cancelLabel,
   confirmLabel,
@@ -39,14 +41,16 @@ export function AdminConfirmationModal({
   };
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={handleClose} title={title}>
+    <SonaeModal isOpen={isOpen} onClose={handleClose} title={title} size={size}>
       <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
         {children}
         {warning ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-[10px] p-4 text-red-500/90 text-[13px]">
-            <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">
-              {warning.title}
-            </strong>
+            {warning.title ? (
+              <strong className="font-semibold block mb-1 uppercase tracking-widest text-[11px]">
+                {warning.title}
+              </strong>
+            ) : null}
             {warning.description}
           </div>
         ) : null}

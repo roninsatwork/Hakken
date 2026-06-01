@@ -410,6 +410,8 @@ Completed frontend primitive slices:
 - Added shared admin detail tabs, then adopted them in the agent and company detail layouts.
 - Extended the shared admin destructive confirmation modal to the users and super-admins delete/revoke flows.
 - Extended the shared admin destructive confirmation modal to workflow and schedule delete flows.
+- Extended the shared admin destructive confirmation modal to subscription plan delete flows.
+- Extended the shared admin destructive confirmation modal to agent trace delete flows.
 
 Acceptance:
 
