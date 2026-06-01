@@ -1,6 +1,12 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { canAccessCompany, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import {
+  buildPlanRecord,
+  getAssignedPlanDeleteErrorMessage,
+  getPlanStatusFromCompany,
+  getPlanStatusFromUser,
+} from "./planService";
 
 const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
 
@@ -11,39 +17,19 @@ export const getMyCompanyPlanStatus = query({
     if (!current) return null;
     const { user } = current;
 
-    let planName = "System Default";
-    let messageLimit = -1;
-    let messagesUsed = 0;
-
     // Check Override first
     if (user.planOverrideId) {
        const userPlan = await ctx.db.get(user.planOverrideId);
-       if (userPlan) {
-           planName = `Custom ${userPlan.name}`;
-           messageLimit = userPlan.messageLimit;
-       }
-       messagesUsed = user.messagesUsedThisPeriod || 0;
-    } 
+       return getPlanStatusFromUser({ user, userPlan });
+    }
     // Fallback to Company
-    else if (user.companyId) {
+    if (user.companyId) {
        const company = await ctx.db.get(user.companyId);
-       if (company) {
-           messagesUsed = company.messagesUsedThisPeriod || 0;
-           if (company.planId) {
-               const plan = await ctx.db.get(company.planId);
-               if (plan) {
-                   planName = plan.name;
-                   messageLimit = plan.messageLimit;
-               }
-           }
-       }
+       const plan = company?.planId ? await ctx.db.get(company.planId) : null;
+       return getPlanStatusFromUser({ user, company, companyPlan: plan });
     }
 
-    return {
-       planName,
-       messageLimit,
-       messagesUsed
-    };
+    return getPlanStatusFromUser({ user });
   }
 });
 
@@ -58,27 +44,10 @@ export const getCompanyPlanStatus = query({
       return null; // Unauthorized
     }
 
-    let planName = "System Default";
-    let messageLimit = -1;
-    let messagesUsed = 0;
-
     const company = await ctx.db.get(args.companyId);
-    if (company) {
-       messagesUsed = company.messagesUsedThisPeriod || 0;
-       if (company.planId) {
-           const plan = await ctx.db.get(company.planId);
-           if (plan) {
-               planName = plan.name;
-               messageLimit = plan.messageLimit;
-           }
-       }
-    }
+    const plan = company?.planId ? await ctx.db.get(company.planId) : null;
 
-    return {
-       planName,
-       messageLimit,
-       messagesUsed
-    };
+    return getPlanStatusFromCompany(company, plan);
   }
 });
 
@@ -116,14 +85,13 @@ export const createPlan = mutation({
   handler: async (ctx, args) => {
     await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
 
-    const planId = await ctx.db.insert("plans", {
+    const planId = await ctx.db.insert("plans", buildPlanRecord({
       name: args.name,
       description: args.description,
       messageLimit: args.messageLimit,
       priceGBP: args.priceGBP,
       isActive: args.isActive,
-      createdAt: Date.now(),
-    });
+    }));
 
     return planId;
   },
@@ -158,7 +126,7 @@ export const deletePlan = mutation({
       .take(10000);
 
     if (companiesAssigned.length > 0) {
-      throw new Error(`Cannot delete this plan. It is actively assigned to ${companiesAssigned.length} companies.`);
+      throw new Error(getAssignedPlanDeleteErrorMessage(companiesAssigned.length));
     }
 
     await ctx.db.delete(args.id);
