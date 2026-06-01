@@ -6,10 +6,13 @@ import { validateChatAttachmentMetadata } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
 import {
   assertCanAccessKnowledgeScope,
+  buildKnowledgeChunkRecords,
+  buildKnowledgeDocumentRecord,
   canReadThreadKnowledgeDocuments,
-  getKnowledgeAuditScope,
-  getKnowledgeScopeFields,
+  getKnowledgeAuditMetadata,
+  getThreadVectorExpirationThreshold,
   isExpiredThreadKnowledgeDocument,
+  isWebsiteDocumentUnderRootDomain,
 } from "./knowledgeService";
 
 export const generateUploadUrl = mutation({
@@ -116,15 +119,16 @@ export const saveDocument = mutation({
     }
     validateChatAttachmentMetadata(metadata, { allowDocuments: true });
 
-    const documentId = await ctx.db.insert("knowledgeDocuments", {
+    const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
       fileId: args.storageId,
-      ...getKnowledgeScopeFields(args),
       status: "processing",
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
-    });
+      companyId: args.companyId,
+      agentId: args.agentId,
+    }));
 
     // Trigger off the heavy-duty background action for processing & embeddings
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
@@ -138,7 +142,7 @@ export const saveDocument = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ title: args.title, format: args.format, scope: getKnowledgeAuditScope(args) })
+      metadata: getKnowledgeAuditMetadata({ title: args.title, format: args.format, scope: args })
     });
 
     return documentId;
@@ -167,7 +171,7 @@ export const saveChatDocument = mutation({
     }
     validateChatAttachmentMetadata(metadata, { allowDocuments: true });
 
-    const documentId = await ctx.db.insert("knowledgeDocuments", {
+    const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
       fileId: args.storageId,
       threadId: args.threadId,
@@ -175,7 +179,7 @@ export const saveChatDocument = mutation({
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
-    });
+    }));
 
     // Fire ephemeral doc ingestion job
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
@@ -228,7 +232,7 @@ export const deleteDocument = mutation({
       entityType: "knowledgeDocuments",
       entityId: args.documentId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ title: doc.title, format: doc.format })
+      metadata: getKnowledgeAuditMetadata({ title: doc.title, format: doc.format })
     });
 
     return true;
@@ -256,8 +260,7 @@ export const getThreadDocumentsInternal = internalQuery({
 export const garbageCollectThreadVectors = internalMutation({
   args: {},
   handler: async (ctx) => {
-    // 24 Hours in milliseconds
-    const expirationThreshold = Date.now() - 24 * 60 * 60 * 1000;
+    const expirationThreshold = getThreadVectorExpirationThreshold();
     
     // Find all thread-scoped documents that have expired
     const expiredDocs = await ctx.db
@@ -302,15 +305,16 @@ export const saveManualText = mutation({
     const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
     assertCanAccessKnowledgeScope(user, args.companyId);
 
-    const documentId = await ctx.db.insert("knowledgeDocuments", {
+    const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
       textContent: args.textContent,
-      ...getKnowledgeScopeFields(args),
       status: "processing",
       format: "text/plain",
       createdBy: userId,
       createdAt: Date.now(),
-    });
+      companyId: args.companyId,
+      agentId: args.agentId,
+    }));
 
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
       documentId,
@@ -322,7 +326,7 @@ export const saveManualText = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ title: args.title, format: "text/plain", scope: getKnowledgeAuditScope(args) })
+      metadata: getKnowledgeAuditMetadata({ title: args.title, format: "text/plain", scope: args })
     });
 
     return documentId;
@@ -360,15 +364,16 @@ export const queueWebsiteUrls = mutation({
              continue;
         }
 
-        const documentId = await ctx.db.insert("knowledgeDocuments", {
+        const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
           title: url,
           sourceUrl: url,
-          ...getKnowledgeScopeFields(args),
           status: "pending",
           format: "url",
           createdBy: userId,
           createdAt: Date.now(),
-        });
+          companyId: args.companyId,
+          agentId: args.agentId,
+        }));
         docIds.push(documentId);
     }
 
@@ -397,7 +402,7 @@ export const deleteWebsiteBulk = mutation({
 
     let count = 0;
     for (const doc of docs) {
-        if (doc.format === "url" && doc.sourceUrl && doc.sourceUrl.startsWith(args.rootDomain)) {
+        if (isWebsiteDocumentUnderRootDomain(doc, args.rootDomain)) {
             await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
             await ctx.db.delete(doc._id);
             count++;
@@ -445,16 +450,16 @@ export const saveChunksInternal = internalMutation({
          await ctx.db.delete(chunk._id);
       }
 
-      for (const chunk of args.chunks) {
-         await ctx.db.insert("knowledgeChunks", {
-             documentId: args.documentId,
-             ...((args.companyId || args.agentId || args.threadId) ? { isGlobal: false } : { isGlobal: true }),
-             ...(args.companyId ? { companyId: args.companyId } : {}),
-             ...(args.agentId ? { agentId: args.agentId } : {}),
-             ...(args.threadId ? { threadId: args.threadId } : {}),
-             text: chunk.text,
-             embedding: chunk.embedding,
-         });
+      for (const chunk of buildKnowledgeChunkRecords({
+        documentId: args.documentId,
+        scope: {
+          companyId: args.companyId,
+          agentId: args.agentId,
+          threadId: args.threadId,
+        },
+        chunks: args.chunks,
+      })) {
+         await ctx.db.insert("knowledgeChunks", chunk);
       }
 
       await ctx.db.patch(args.documentId, {
