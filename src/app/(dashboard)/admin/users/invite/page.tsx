@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Mail, ShieldCheck, User as UserIcon, Loader2, Save, Send, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, ShieldCheck, User as UserIcon, Loader2, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
+import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 export default function InviteUsersPage() {
   const activeTemplate = useQuery(api.invites.getActiveTemplate);
@@ -182,18 +183,14 @@ export default function InviteUsersPage() {
               {t('steps.payload')}
             </h2>
 
-            <div className="flex items-center gap-3">
-              {saveSuccess && <span className="text-[#10b981] text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in"><CheckCircle2 className="w-3.5 h-3.5" /> {t('actions.synchronized')}</span>}
-              <button
-                type="button"
-                onClick={handleSaveTemplate}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-white/5 hover:bg-white/10 text-foreground text-[12px] font-medium border border-white/5 transition-all"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {isSaving ? t('actions.saving') : t('actions.saveTemplate')}
-              </button>
-            </div>
+            <AdminSaveAction
+              isSaving={isSaving}
+              label={t('actions.saveTemplate')}
+              savingLabel={t('actions.saving')}
+              successLabel={t('actions.synchronized')}
+              showSuccess={saveSuccess}
+              onClick={handleSaveTemplate}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

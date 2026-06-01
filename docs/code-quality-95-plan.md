@@ -412,6 +412,7 @@ Completed frontend primitive slices:
 - Extended the shared admin destructive confirmation modal to workflow and schedule delete flows.
 - Extended the shared admin destructive confirmation modal to subscription plan delete flows.
 - Extended the shared admin destructive confirmation modal to agent trace delete flows.
+- Extended shared admin save controls to invitation template save flows.
 
 Acceptance:
 
