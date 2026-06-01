@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("OWASP: Broken Access Control - Companies", () => {
@@ -100,4 +100,171 @@ describe("OWASP: Broken Access Control - Companies", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  test("SUPER_ADMIN can list companies with user counts and read individual companies", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, companyBId, superAdminId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() + 1 });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("users", {
+        email: "a-one@test.com",
+        role: "USER",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("users", {
+        email: "a-two@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("users", {
+        email: "b-one@test.com",
+        role: "USER",
+        companyId: companyBId,
+        createdAt: Date.now(),
+      });
+
+      return { companyAId, companyBId, superAdminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const companies = await superAdminClient.query(api.companies.getCompanies, {});
+    const companyA = companies.find((company) => company._id === companyAId);
+    const companyB = await superAdminClient.query(api.companies.getCompanyById, { id: companyBId });
+    const internalCompanyA = await t.run(async (ctx) =>
+      ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: companyAId })
+    );
+
+    expect(companyA).toMatchObject({ name: "Company A", userCount: 2 });
+    expect(companyB?.name).toBe("Company B");
+    expect(internalCompanyA?.name).toBe("Company A");
+  });
+
+  test("SUPER_ADMIN company updates patch profile fields, plan assignment, and audit logs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, planId, superAdminId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const companyId = await ctx.db.insert("companies", {
+        name: "Original Corp",
+        description: "Old description",
+        createdAt: Date.now(),
+      });
+      const planId = await ctx.db.insert("plans", {
+        name: "Growth",
+        messageLimit: 1_000,
+        priceGBP: 50,
+        isActive: true,
+        createdAt: Date.now(),
+      });
+
+      return { companyId, planId, superAdminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    await expect(
+      superAdminClient.mutation(api.companies.updateCompany, {
+        id: companyId,
+        name: "Updated Corp",
+        systemPrompt: "Be concise.",
+      })
+    ).resolves.toBe(companyId);
+    await expect(
+      superAdminClient.mutation(api.companies.updateCompanyPrompt, {
+        id: companyId,
+        systemPrompt: "Be precise.",
+      })
+    ).resolves.toBe(companyId);
+    await expect(
+      superAdminClient.mutation(api.companies.updateCompanyDescription, {
+        id: companyId,
+        description: "New description",
+      })
+    ).resolves.toBe(companyId);
+    await expect(
+      superAdminClient.mutation(api.companies.updateCompanyProfile, {
+        id: companyId,
+        name: "Profile Corp",
+        description: "Profile description",
+        overview: "Profile overview",
+      })
+    ).resolves.toBe(companyId);
+    await expect(superAdminClient.mutation(api.companies.assignPlanToCompany, { id: companyId, planId })).resolves.toBe(
+      companyId
+    );
+    await expect(superAdminClient.mutation(api.companies.assignPlanToCompany, { id: companyId })).resolves.toBe(companyId);
+
+    const { company, auditLogs } = await t.run(async (ctx) => ({
+      company: await ctx.db.get(companyId),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(company).toMatchObject({
+      name: "Profile Corp",
+      description: "Profile description",
+      overview: "Profile overview",
+      systemPrompt: "Be precise.",
+    });
+    expect(company?.planId).toBeUndefined();
+    expect(auditLogs.map((log) => log.actionType)).toEqual(["UPDATE_COMPANY", "UPDATE_COMPANY_PROFILE"]);
+    expect(auditLogs[0]).toMatchObject({
+      actorId: superAdminId,
+      entityId: companyId,
+      metadata: JSON.stringify({ previousName: "Original Corp", newName: "Updated Corp" }),
+    });
+    expect(auditLogs[1]).toMatchObject({
+      actorId: superAdminId,
+      entityId: companyId,
+      metadata: JSON.stringify({ previousName: "Updated Corp", newName: "Profile Corp" }),
+    });
+  });
+
+  test("SUPER_ADMIN delete removes company shell and writes delete audit", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, superAdminId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const companyId = await ctx.db.insert("companies", {
+        name: "Delete Corp",
+        createdAt: Date.now(),
+      });
+
+      return { companyId, superAdminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    await expect(superAdminClient.mutation(api.companies.deleteCompany, { id: companyId })).resolves.toBe(true);
+
+    const { deletedCompany, auditLogs } = await t.run(async (ctx) => ({
+      deletedCompany: await ctx.db.get(companyId),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(deletedCompany).toBeNull();
+    expect(auditLogs).toHaveLength(1);
+    expect(auditLogs[0]).toMatchObject({
+      actorId: superAdminId,
+      actionType: "DELETE_COMPANY",
+      entityId: companyId,
+      entityType: "companies",
+      metadata: JSON.stringify({ name: "Delete Corp" }),
+    });
+  });
 });

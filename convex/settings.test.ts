@@ -39,4 +39,69 @@ describe("OWASP: Broken Access Control - Settings", () => {
       maliciousClient.mutation(api.settings.generateUploadUrl)
     ).rejects.toThrow("Unauthorized");
   });
+
+  test("settings read defaults and super admins can insert, update, audit, and upload", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      })
+    );
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    expect(await t.query(api.settings.get, {})).toMatchObject({
+      platformName: "Sonae",
+      brandColorHex: "#E26D28",
+      diagnosticRoutingEnabled: false,
+    });
+
+    await expect(
+      superAdminClient.mutation(api.settings.update, {
+        platformName: "Sonae Ops",
+        currencySymbol: "$",
+        monthlyBasePrice: 100,
+        monthlySeatPrice: 10,
+        brandColorHex: "#123456",
+        headingFontFamily: "Inter",
+        bodyFontFamily: "Arial",
+        diagnosticRoutingEnabled: true,
+      })
+    ).resolves.toBe(true);
+    await expect(
+      superAdminClient.mutation(api.settings.update, {
+        platformName: "Sonae Ops Updated",
+        lightBg: "#ffffff",
+        darkBg: "#000000",
+      })
+    ).resolves.toBe(true);
+    await expect(superAdminClient.mutation(api.settings.generateUploadUrl, {})).resolves.toContain("http");
+
+    const settings = await t.query(api.settings.get, {});
+    const { settingsRows, auditLogs } = await t.run(async (ctx) => ({
+      settingsRows: await ctx.db.query("systemSettings").collect(),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(settings).toMatchObject({
+      platformName: "Sonae Ops Updated",
+      currencySymbol: "$",
+      monthlyBasePrice: 100,
+      monthlySeatPrice: 10,
+      brandColorHex: "#123456",
+      lightBg: "#ffffff",
+      darkBg: "#000000",
+      diagnosticRoutingEnabled: true,
+    });
+    expect(settingsRows).toHaveLength(1);
+    expect(auditLogs.map((log) => log.actionType)).toEqual(["UPDATE_SYSTEM_PREFERENCES", "UPDATE_SYSTEM_PREFERENCES"]);
+    expect(auditLogs[0]).toMatchObject({
+      actorId: superAdminId,
+      entityType: "systemSettings",
+      entityId: "global_settings",
+    });
+    expect(auditLogs[1].entityId).toBe(settingsRows[0]._id);
+  });
 });

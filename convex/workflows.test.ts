@@ -90,6 +90,83 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  test("Super admins can list, get, update schedules, trigger, and delete workflows", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      })
+    );
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const workflowId = await superAdminClient.mutation(api.workflows.createWorkflow, {
+      name: "Lifecycle Workflow",
+      description: "Initial",
+    });
+    expect(await superAdminClient.query(api.workflows.get, { id: workflowId })).toMatchObject({
+      name: "Lifecycle Workflow",
+      description: "Initial",
+      triggerType: "MANUAL",
+      isActive: true,
+    });
+    expect((await superAdminClient.query(api.workflows.list)).map((workflow) => workflow._id)).toContain(workflowId);
+
+    const scheduleNodes = JSON.stringify([
+      {
+        id: "trigger",
+        type: "triggerNode",
+        data: { _triggerType: "SCHEDULE", _scheduleInterval: "weekly" },
+      },
+    ]);
+    await superAdminClient.mutation(api.workflows.updateWorkflow, {
+      id: workflowId,
+      name: "Scheduled Lifecycle Workflow",
+      description: "Updated",
+      isActive: false,
+      nodes: scheduleNodes,
+    });
+    let schedule = await t.run(async (ctx) =>
+      ctx.db.query("schedules").withIndex("by_workflow", (q) => q.eq("workflowId", workflowId)).first()
+    );
+    expect(schedule).toMatchObject({
+      workflowId,
+      intervalStr: "weekly",
+      isActive: false,
+      createdBy: superAdminId,
+    });
+
+    await superAdminClient.mutation(api.workflows.updateWorkflow, {
+      id: workflowId,
+      nodes: JSON.stringify([{ id: "trigger", type: "triggerNode", data: { _triggerType: "MANUAL" } }]),
+    });
+    schedule = await t.run(async (ctx) =>
+      ctx.db.query("schedules").withIndex("by_workflow", (q) => q.eq("workflowId", workflowId)).first()
+    );
+    expect(schedule).toBeNull();
+
+    const executionId = await superAdminClient.mutation(api.workflows.triggerManualRun, {
+      id: workflowId,
+      initialInput: JSON.stringify({ source: "test" }),
+    });
+    expect(await t.run(async (ctx) => ctx.db.get(executionId))).toMatchObject({
+      workflowId,
+      triggerType: "MANUAL",
+      startedBy: superAdminId,
+    });
+
+    await expect(superAdminClient.mutation(api.workflows.deleteWorkflow, { id: workflowId })).resolves.toBe(true);
+    expect(await t.run(async (ctx) => ctx.db.get(workflowId))).toBeNull();
+    await expect(superAdminClient.query(api.workflows.get, { id: workflowId })).rejects.toThrow("Workflow not found");
+    const auditActions = await t.run(async (ctx) =>
+      (await ctx.db.query("auditLogs").collect()).map((log) => log.actionType)
+    );
+    expect(auditActions).toEqual(
+      expect.arrayContaining(["CREATE_WORKFLOW", "UPDATE_WORKFLOW", "DELETE_WORKFLOW"])
+    );
+  });
+
   test("Workflow graph updates reject malformed node and edge contracts", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

@@ -1,0 +1,159 @@
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useMutation, useQuery } from "convex/react";
+import { getFunctionName } from "convex/server";
+import SubscriptionPlansPage from "./page";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => {
+      const labels: Record<string, string> = {
+        activeLabel: "Active",
+        cancel: "Cancel",
+        createSubtitle: "Create plan",
+        createTitle: "Create Plan",
+        deleteTitle: "Delete Plan",
+        deleteWarning: "Deleting a plan can affect tenants.",
+        descLabel: "Description",
+        descPlaceholder: "Describe the plan",
+        editSubtitle: "Edit plan",
+        editTitle: "Edit Plan",
+        emptyState: "No plans",
+        "errors.deleteFailed": "Delete failed",
+        "errors.saveFailed": "Save failed",
+        "infoDesc": "Plan limits are enforced by usage checks.",
+        "infoTitle": "Billing plans",
+        limitLabel: "Message Limit",
+        limitPlaceholder: "1000",
+        nameLabel: "Plan Name",
+        namePlaceholder: "Enter plan name",
+        newPlan: "New Plan",
+        priceLabel: "Price",
+        pricePlaceholder: "49",
+        "pagination.entries": "entries",
+        "pagination.of": "of",
+        "pagination.showing": "Showing",
+        "pagination.to": "to",
+        savePlan: "Save Plan",
+        searchPlaceholder: "Search plans",
+        subtitle: "Manage subscriptions",
+        "table.actions": "Actions",
+        "table.limit": "Limit",
+        "table.name": "Name",
+        "table.price": "Price",
+        "table.status": "Status",
+        title: "Plans",
+        unlimited: "Unlimited",
+      };
+      return labels[key] ?? key;
+    };
+    t.rich = (key: string, values?: { name?: () => React.ReactNode }) => (key === "deleteConfirm" ? <>Delete {values?.name?.()}</> : key);
+    return t;
+  },
+}));
+
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: new Proxy(
+    {},
+    {
+      get: (_target, tag: string) => {
+        const MotionComponent = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(({ children, ...props }, ref) =>
+          React.createElement(tag, { ...props, ref }, children)
+        );
+        MotionComponent.displayName = `MotionMock(${tag})`;
+        return MotionComponent;
+      },
+    }
+  ),
+}));
+
+const plans = [
+  { _id: "plan_1", _creationTime: 1, name: "Growth", description: "Growing teams", messageLimit: 1000, priceGBP: 49, isActive: true },
+  { _id: "plan_2", _creationTime: 1, name: "Enterprise", description: "Unlimited scale", messageLimit: -1, priceGBP: 199, isActive: false },
+];
+
+function getConvexPath(functionReference: unknown) {
+  try {
+    return getFunctionName(functionReference as never);
+  } catch {
+    const maybeReference = functionReference as { _path?: unknown; name?: unknown };
+    return typeof maybeReference._path === "string" ? maybeReference._path : typeof maybeReference.name === "string" ? maybeReference.name : "";
+  }
+}
+
+describe("SubscriptionPlansPage", () => {
+  const createPlan = vi.fn();
+  const updatePlan = vi.fn();
+  const deletePlan = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useQuery).mockReturnValue(plans);
+    vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
+      const path = getConvexPath(mutationFn);
+      if (path.includes("createPlan")) return createPlan as unknown as ReturnType<typeof useMutation>;
+      if (path.includes("updatePlan")) return updatePlan as unknown as ReturnType<typeof useMutation>;
+      return deletePlan as unknown as ReturnType<typeof useMutation>;
+    });
+    createPlan.mockResolvedValue(undefined);
+    updatePlan.mockResolvedValue(undefined);
+    deletePlan.mockResolvedValue(undefined);
+  });
+
+  it("renders loading, populated, search, and empty states", () => {
+    vi.mocked(useQuery).mockReturnValueOnce(undefined);
+    const { container, rerender } = render(<SubscriptionPlansPage />);
+
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+
+    rerender(<SubscriptionPlansPage />);
+    expect(screen.getByText("Growth")).toBeInTheDocument();
+    expect(screen.getByText("Enterprise")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Search plans"), { target: { value: "enterprise" } });
+
+    expect(screen.queryByText("Growth")).not.toBeInTheDocument();
+    expect(screen.getByText("Enterprise")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Search plans"), { target: { value: "missing" } });
+    expect(screen.getAllByText("No plans").length).toBeGreaterThan(0);
+  });
+
+  it("creates, edits, and deletes plans through modal actions", async () => {
+    render(<SubscriptionPlansPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /New Plan/i }));
+    fireEvent.change(screen.getByPlaceholderText("Enter plan name"), { target: { value: "Starter" } });
+    fireEvent.change(screen.getByPlaceholderText("Describe the plan"), { target: { value: "Small teams" } });
+    fireEvent.change(screen.getByPlaceholderText("1000"), { target: { value: "250" } });
+    fireEvent.change(screen.getByPlaceholderText("49"), { target: { value: "19" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "New Plan" }).at(-1) as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(createPlan).toHaveBeenCalledWith({
+        name: "Starter",
+        description: "Small teams",
+        messageLimit: 250,
+        priceGBP: 19,
+        isActive: true,
+      });
+    });
+
+    fireEvent.click(screen.getAllByTitle("Delete Plan")[0].parentElement?.querySelector("button") as HTMLButtonElement);
+    fireEvent.change(screen.getByDisplayValue("Growth"), { target: { value: "Growth Plus" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Plan" }));
+
+    await waitFor(() => {
+      expect(updatePlan).toHaveBeenCalledWith(expect.objectContaining({ id: "plan_1", name: "Growth Plus" }));
+    });
+
+    fireEvent.click(screen.getAllByTitle("Delete Plan")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "actions.delete" }));
+
+    await waitFor(() => {
+      expect(deletePlan).toHaveBeenCalledWith({ id: "plan_1" });
+    });
+  });
+});

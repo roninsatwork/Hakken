@@ -3,6 +3,18 @@ import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
+const modelConfig = {
+  modelId: "sonae-test-model",
+  displayName: "Sonae Test Model",
+  friendlyName: "Test Model",
+  isEnabled: true,
+  isDefault: true,
+  lastSyncedAt: 1,
+  standardInputCostBelow200k: 1,
+  standardInputCostAbove200k: 1,
+  outputResponseCost: 2,
+};
+
 describe("Analytics MRR Strict Isolation", () => {
   test("MRR calculates only from companies with active plans", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -86,5 +98,350 @@ describe("Analytics MRR Strict Isolation", () => {
     
     // MRR should be exactly 2 * 100 = 200 (Active Corp + Another Active Corp)
     expect(analytics.aggregates.mrr).toBe(200);
+  });
+
+  test("global AI costs require super admin and aggregate bounded assistant messages", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const now = Date.now();
+    const { userId, superAdminId } = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const userId = await ctx.db.insert("users", {
+        email: "user@test.com",
+        name: "Regular User",
+        role: "USER",
+        createdAt: now,
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        title: "Costed Thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "A costed answer",
+        inputTokens: 1_000_000,
+        outputTokens: 500_000,
+        modelUsed: "sonae-test-model",
+        createdAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "user",
+        content: "User messages should not be costed",
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        modelUsed: "sonae-test-model",
+        createdAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Out of range",
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        modelUsed: "sonae-test-model",
+        createdAt: now - 10_000,
+      });
+
+      return { userId, superAdminId };
+    });
+
+    const userClient = t.withIdentity({ subject: userId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    await expect(
+      userClient.query(api.analytics.getGlobalAICosts, {
+        timeframe: "custom",
+        customStart: now - 1_000,
+        customEnd: now + 1_000,
+      })
+    ).rejects.toThrow("Unauthorized");
+
+    const costs = await superAdminClient.query(api.analytics.getGlobalAICosts, {
+      timeframe: "custom",
+      customStart: now - 1_000,
+      customEnd: now + 1_000,
+    });
+
+    expect(costs.periodProcessed).toBe(1);
+    expect(costs.periodInputTokens).toBe(1_000_000);
+    expect(costs.periodOutputTokens).toBe(500_000);
+    expect(costs.periodTokens).toBe(1_500_000);
+    expect(costs.periodCostGBP).toBe(1.56);
+    expect(costs.avgCostPerUser).toBe(1.56);
+    expect(costs.avgCostPerThread).toBe(1.56);
+    expect(costs.aggregationType).toBe("day");
+    expect(costs.timeline.reduce((sum, point) => sum + point.costGBP, 0)).toBeCloseTo(1.56, 6);
+  });
+
+  test("user cost overview is tenant-isolated and includes assistant thread costs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const now = Date.now();
+    const { companyAId, adminAId, userAId, userBId } = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: now,
+      });
+      const userAId = await ctx.db.insert("users", {
+        email: "user-a@test.com",
+        role: "USER",
+        companyId: companyAId,
+        createdAt: now,
+      });
+      const userBId = await ctx.db.insert("users", {
+        email: "user-b@test.com",
+        role: "USER",
+        companyId: companyBId,
+        createdAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId: userAId,
+        companyId: companyAId,
+        title: "User A Thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Costed answer",
+        inputTokens: 200_000,
+        outputTokens: 100_000,
+        modelUsed: "sonae-test-model",
+        createdAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "user",
+        content: "Ignored for cost but counted as thread depth",
+        createdAt: now,
+      });
+
+      return { companyAId, adminAId, userAId, userBId };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+
+    await expect(adminAClient.query(api.analytics.getUserCostOverview, { userId: userBId })).rejects.toThrow(
+      "Unauthorized: Company Admin clearance required."
+    );
+
+    const overview = await adminAClient.query(api.analytics.getUserCostOverview, { userId: userAId });
+
+    expect(overview.totalCostGBP).toBe(0.312);
+    expect(overview.totalTokens).toBe(300_000);
+    expect(overview.totalInputTokens).toBe(200_000);
+    expect(overview.totalOutputTokens).toBe(100_000);
+    expect(overview.threads).toHaveLength(1);
+    expect(overview.threads[0]).toMatchObject({
+      title: "User A Thread",
+      messageCount: 2,
+      threadTokens: 300_000,
+    });
+    expect(overview.threads[0].costGBP).toBeCloseTo(0.312, 6);
+    expect(companyAId).toBeDefined();
+  });
+
+  test("company metrics combine live usage, snapshots, plan MRR, knowledge count, and tenant authorization", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const now = Date.now();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const { companyAId, companyBId, adminAId, agentId, userAId } = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const planId = await ctx.db.insert("plans", {
+        name: "Growth",
+        messageLimit: 1_000,
+        priceGBP: 80,
+        isActive: true,
+        createdAt: now,
+      });
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", planId, createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: now,
+      });
+      const userAId = await ctx.db.insert("users", {
+        email: "user-a@test.com",
+        name: "User A",
+        role: "USER",
+        companyId: companyAId,
+        createdAt: now,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Support Agent",
+        modelId: "sonae-test-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId: companyAId,
+        agentId,
+        name: "Docs Widget",
+        allowedDomains: ["https://example.com"],
+        isActive: true,
+        createdBy: adminAId,
+        createdAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId: userAId,
+        companyId: companyAId,
+        agentId,
+        widgetId,
+        title: "Widget Thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Live company message",
+        inputTokens: 300_000,
+        outputTokens: 200_000,
+        modelUsed: "sonae-test-model",
+        createdAt: now,
+      });
+      await ctx.db.insert("agentTransactions", {
+        agentId,
+        userId: userAId,
+        companyId: companyAId,
+        actionContext: "Workflow",
+        inputTokens: 100_000,
+        outputTokens: 100_000,
+        modelUsed: "sonae-test-model",
+        costGBP: 0,
+        status: "SUCCESS",
+        createdAt: now,
+      });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday,
+        type: "company",
+        companyId: companyAId,
+        metrics: {
+          totalMessages: 2,
+          totalInputTokens: 10,
+          totalOutputTokens: 20,
+          costGBP: 3,
+        },
+        uniqueUserIds: [userAId],
+        modelMetrics: [{ model: "sonae-test-model", cost: 3, calls: 2 }],
+        leaderboards: {
+          topAgents: [
+            {
+              id: agentId,
+              name: "Support Agent",
+              avatar: "agent.png",
+              cost: 3,
+              interactions: 2,
+            },
+          ],
+          topUsers: [
+            {
+              id: userAId,
+              name: "User A",
+              image: "user.png",
+              email: "user-a@test.com",
+              cost: 3,
+              messages: 2,
+            },
+          ],
+        },
+      });
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "Company A Doc",
+        textContent: "Knowledge",
+        companyId: companyAId,
+        status: "ready",
+        format: "text/plain",
+        createdBy: adminAId,
+        createdAt: now,
+      });
+
+      return { companyAId, companyBId, adminAId, agentId, userAId };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+
+    await expect(
+      adminAClient.query(api.analytics.getCompanyMetrics, { companyId: companyBId, timeframe: "30d" })
+    ).rejects.toThrow("Unauthorized");
+
+    const metrics = await adminAClient.query(api.analytics.getCompanyMetrics, {
+      companyId: companyAId,
+      timeframe: "30d",
+    });
+
+    expect(metrics.aggregates).toMatchObject({
+      activeUsers: 1,
+      totalMessages: 4,
+      totalTokens: 700_030,
+      totalInputTokens: 400_010,
+      totalOutputTokens: 300_020,
+      totalCostGBP: 3.78,
+      costPerActiveUser: 3.78,
+      avgCostPerMessage: 0.945,
+      aggregationType: "day",
+      mrr: 80,
+      knowledgeDocuments: 1,
+      mau: 0,
+    });
+    expect(metrics.topUsers[0]).toMatchObject({ id: userAId, cost: 3.234, messages: 3 });
+    expect(metrics.topAgents[0]).toMatchObject({ id: agentId, interactions: 4, cost: 3.78 });
+    expect(metrics.timeline.reduce((sum, point) => sum + point.messages, 0)).toBe(4);
+  });
+
+  test("platform overview handles empty analytics data for super admins only", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { userId, superAdminId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "user@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+
+      return { userId, superAdminId };
+    });
+
+    const userClient = t.withIdentity({ subject: userId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    await expect(userClient.query(api.analytics.getPlatformOverview, {})).rejects.toThrow("Unauthorized");
+
+    const overview = await superAdminClient.query(api.analytics.getPlatformOverview, {});
+
+    expect(overview).toMatchObject({
+      totalUsers: 2,
+      wauCount: 0,
+      totalThreads: 0,
+      avgInteractionDepth: 1,
+      cost30DGBP: 0,
+      costPerActiveUserGBP: 0,
+      topUsers: [],
+    });
   });
 });

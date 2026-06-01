@@ -1,10 +1,29 @@
 import { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { createSecureHeaders } from 'next-secure-headers';
+import path from 'node:path';
 
- 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  ...(process.env.E2E_AUTH_ENABLED === '1'
+    ? {
+        turbopack: {
+          resolveAlias: {
+            'convex/react': './src/e2e/convexReactMock.tsx',
+          },
+        },
+      }
+    : {}),
+  webpack(config) {
+    if (process.env.E2E_AUTH_ENABLED === '1') {
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        'convex/react': path.resolve(process.cwd(), 'src/e2e/convexReactMock.tsx'),
+      };
+    }
+
+    return config;
+  },
   async headers() {
     const defaultHeaders = createSecureHeaders({
       contentSecurityPolicy: {
@@ -48,6 +67,6 @@ const nextConfig: NextConfig = {
     ];
   },
 };
- 
+
 const withNextIntl = createNextIntlPlugin();
 export default withNextIntl(nextConfig);

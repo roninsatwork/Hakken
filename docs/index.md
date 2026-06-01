@@ -24,9 +24,11 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Extension points for adding admin sections, workflow nodes, AI tools, model providers, branding, navigation, and tenant settings.
 10. **[Large Page Decomposition Plan](./large-page-decomposition-plan.md)**
     Follow-on plan for reducing page-level complexity in large non-movement product/admin pages.
-11. **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
+11. **[Comprehensive Test Coverage Plan](./comprehensive-test-coverage-plan.md)**
+    Phased plan for measurable frontend, backend, and browser coverage, including CI gates and authenticated e2e coverage.
+12. **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
     Completed 6-phase refactor checklist and verification record.
-12. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
+13. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
     Completed low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
 
 ---

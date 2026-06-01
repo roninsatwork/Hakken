@@ -8,19 +8,56 @@ export default defineConfig({
   workers: 1, // Restricted to 1 worker locally to avoid DB collision during Option A tests
   reporter: 'html',
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000/login',
-    reuseExistingServer: true,
+    command: 'E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 npm run dev -- -p 3100',
+    url: 'http://localhost:3100/login',
+    reuseExistingServer: false,
     timeout: 120000,
   },
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3100',
     trace: 'on-first-retry',
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
+      name: 'unauthenticated',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: [
+        /auth-journey\.spec\.ts/,
+        /admin-smoke\.spec\.ts/,
+        /security\.spec\.ts/,
+      ],
+    },
+    {
+      name: 'super-admin',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/super-admin.json',
+      },
+      testMatch: [
+        /admin\/journeys\.spec\.ts/,
+        /admin\/workflow-widget-journeys\.spec\.ts/,
+        /admin\/routes\.spec\.ts/,
+        /admin\/tables\.spec\.ts/,
+        /admin-roles\.spec\.ts/,
+        /exports\.spec\.ts/,
+      ],
+    },
+    {
+      name: 'user',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      testMatch: [
+        /user-chat-flow\.spec\.ts/,
+        /user-settings-flow\.spec\.ts/,
+      ],
     },
   ],
 });
