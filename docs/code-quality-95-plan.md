@@ -104,7 +104,7 @@ Phase tracking checklist:
 - [x] Phase 4: Backend Service Boundary Refactor
 - [x] Phase 5: Frontend Platform Primitives
 - [x] Phase 6: Data, Upload, And Knowledge Policy Layer
-- [ ] Phase 7: E2E, Browser, And Regression Coverage Upgrade
+- [x] Phase 7: E2E, Browser, And Regression Coverage Upgrade
 - [ ] Phase 8: Product-Core Extraction And Extension Points
 - [ ] Phase 9: Final Hardening And Release Readiness
 
@@ -474,7 +474,7 @@ Acceptance:
 
 ## Phase 7: E2E, Browser, And Regression Coverage Upgrade
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -496,14 +496,23 @@ Scope:
 
 Checklist:
 
-- [ ] Review existing Playwright tests and classify them as smoke, regression, or behavior tests.
-- [ ] Add route render tests for the highest-value admin sections.
-- [ ] Add shared admin table search/pagination browser coverage.
-- [ ] Add workflow designer and schedule page browser coverage where auth setup allows.
-- [ ] Add AI models/tools route coverage.
-- [ ] Add a test that catches Next.js shell crashes after route load.
-- [ ] Document any auth limitations that block deeper browser tests.
-- [ ] Keep tests deterministic and fast enough to run before deploy.
+- [x] Review existing Playwright tests and classify them as smoke, regression, or behavior tests.
+- [x] Add route render tests for the highest-value admin sections.
+- [x] Add shared admin table search/pagination browser coverage.
+- [x] Add workflow designer and schedule page browser coverage where auth setup allows.
+- [x] Add AI models/tools route coverage.
+- [x] Add a test that catches Next.js shell crashes after route load.
+- [x] Document any auth limitations that block deeper browser tests.
+- [x] Keep tests deterministic and fast enough to run before deploy.
+
+Completed browser coverage slices:
+
+- Added shared Playwright navigation helpers for non-5xx route checks, auth-aware skips, and page error collection.
+- Expanded high-value admin route coverage across AI models/tools/global knowledge/chat logs, workflows, users, companies, agents, and settings plans.
+- Hardened admin table, dashboard export, chat, and profile specs so authenticated behavior is tested when auth state exists and skipped cleanly otherwise.
+- Added workflow designer/schedule and AI models/tools route rendering coverage behind auth-aware gates.
+- Added Playwright web-server configuration for repeatable `npm run test:e2e` execution.
+- Documented coverage shape, commands, and current Convex Auth storage-state limitation in `e2e/README.md`.
 
 Acceptance:
 

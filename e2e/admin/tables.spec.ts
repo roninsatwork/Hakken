@@ -1,24 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from '../helpers/navigation';
 
 test.describe('Admin Dashboard Paginated Tables', () => {
   test.beforeEach(async ({ page }) => {
-    // Assuming standard Playwright auth state or login flow
-    // We will navigate directly to a paginated route
-    await page.goto('/admin/ai/models');
+    await gotoWithoutServerCrash(page, '/admin/ai/models');
+    await skipWhenRedirectedToLogin(page, 'Admin table behavior requires an authenticated admin storage state.');
   });
 
   test('Pagination limits and bounds correctly adjust', async ({ page }) => {
-    // Wait for the table to load
     await page.waitForSelector('table', { state: 'visible' });
 
-    // Ensure the fallback "Showing 1 to X of Y" is present
     await expect(page.getByText(/Showing 1 to/i)).toBeVisible();
 
-    // Verify Previous button is initially disabled
     const prevButton = page.locator('button', { has: page.locator('svg.lucide-chevron-left') });
     await expect(prevButton).toBeDisabled();
 
-    // Verify search debounce doesn't break the Next button states immediately
     const nextButton = page.locator('button', { has: page.locator('svg.lucide-chevron-right') });
     if (await nextButton.isEnabled()) {
         await nextButton.click();
@@ -27,8 +23,8 @@ test.describe('Admin Dashboard Paginated Tables', () => {
   });
 
   test('Search filtering natively resets pagination to page 1', async ({ page }) => {
-    // Navigate to a multi-page table
-    await page.goto('/admin/ai/rules');
+    await gotoWithoutServerCrash(page, '/admin/ai/rules');
+    await skipWhenRedirectedToLogin(page, 'Admin table behavior requires an authenticated admin storage state.');
     await page.waitForSelector('table', { state: 'visible' });
 
     const searchInput = page.getByPlaceholder(/Search|Cerca/i);

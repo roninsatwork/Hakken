@@ -1,17 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from './helpers/navigation';
 
 test.describe('End-User Profile & Settings Journey', () => {
   test('User can view profile, interact with fields, and save changes', async ({ page }) => {
-    // Navigate to the Profile management interface
-    await page.goto('/app/profile');
-    
-    // Check if the application enforced authentication and redirected to login
-    // If we are unauthenticated during a local smoke test, gracefully bypass the DOM assertions
-    if (page.url().includes('/login')) {
-       console.log('Skipping E2E Settings Execution: Environment is not authenticated.');
-       test.skip();
-       return;
-    }
+    await gotoWithoutServerCrash(page, '/app/profile');
+    await skipWhenRedirectedToLogin(page, 'Profile settings coverage requires an authenticated user storage state.');
 
     // 1. Ensure the Profile interface is mounted
     await expect(page.getByText('My Profile')).toBeVisible({ timeout: 10000 });

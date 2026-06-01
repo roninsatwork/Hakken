@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from './helpers/navigation';
 
 test.describe('Dashboard Exports', () => {
   test('Financial Analytics charts generate blob URLs on export', async ({ page }) => {
-    // Navigate to the Dashboard containing the MRR component (which wraps ChartExportWrapper)
-    await page.goto('/admin');
+    await gotoWithoutServerCrash(page, '/admin');
+    await skipWhenRedirectedToLogin(page, 'Dashboard export coverage requires an authenticated admin storage state.');
     
     // Listen for the download event
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);

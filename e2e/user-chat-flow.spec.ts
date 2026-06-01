@@ -1,17 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from './helpers/navigation';
 
 test.describe('End-User Chat Journey', () => {
   test('User can type a message, submit, and transition to a thread', async ({ page }) => {
-    // Navigate to the primary Assistant interaction interface
-    await page.goto('/app/assistant');
-    
-    // Check if the application enforced authentication and redirected to login
-    // If we are unauthenticated during a local smoke test, gracefully bypass the DOM assertions
-    if (page.url().includes('/login')) {
-       console.log('Skipping E2E Chat Execution: Environment is not authenticated.');
-       test.skip();
-       return;
-    }
+    await gotoWithoutServerCrash(page, '/app/assistant');
+    await skipWhenRedirectedToLogin(page, 'Chat execution requires an authenticated user storage state.');
 
     // 1. Ensure the core chat input area is mounted and visible
     const chatInput = page.locator('textarea');
