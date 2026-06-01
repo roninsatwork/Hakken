@@ -210,6 +210,8 @@ Already completed:
 - [x] Add config readers/parsers for logic, iterator, wait, and approval nodes.
 - [x] Normalize JSON parsing for trigger input, execution state, step input, and pure runtime node outputs.
 - [x] Add focused tests for malformed trigger input, malformed step input, malformed upstream output, invalid pure node config, and pure node output commands.
+- [x] Add typed config readers and request/input builders for action/API, database, and email nodes.
+- [x] Move downstream scheduling decisions and runtime error message normalization into tested service helpers.
 
 Checklist:
 
@@ -226,16 +228,16 @@ Checklist:
   - email node
   - [x] bypass/default node
 - [ ] Add config readers/parsers for each node type.
-- [ ] Replace local casts such as `as ActionConfig`, `as DatabaseConfig`, and `as LogicConfig`.
+- [x] Replace local casts such as `as ActionConfig`, `as DatabaseConfig`, and `as LogicConfig`.
 - [ ] Normalize JSON parsing for:
   - [x] execution state
   - [x] step input
   - step output
-  - node config
-  - system commands
-- [ ] Move scheduling decisions into a small tested helper.
-- [ ] Move failure message formatting into a small helper.
-- [ ] Add tests for invalid config per node type.
+  - [x] node config
+  - [x] system commands
+- [x] Move scheduling decisions into a small tested helper.
+- [x] Move failure message formatting into a small helper.
+- [x] Add tests for invalid config per node type.
 - [x] Add tests for malformed execution state and malformed upstream output.
 - [ ] Add tests for iterator fan-out and merge fan-in behavior.
 - [ ] Add tests for approval halt/resume behavior.

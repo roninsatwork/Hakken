@@ -1,4 +1,5 @@
 import { resolveTemplate } from "./utils/templateParser";
+import { validateSafeUrl } from "./utils/security";
 import {
   parseWorkflowOutput,
   parseWorkflowState,
@@ -7,6 +8,33 @@ import {
   type WorkflowNodeOutput,
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
+
+export type HeaderConfig = {
+  key?: string;
+  value?: string;
+};
+
+export type ActionConfig = {
+  method?: string;
+  url?: string;
+  headers?: HeaderConfig[];
+  body?: unknown;
+};
+
+export type DatabaseOperation = "INSERT" | "UPDATE" | "DELETE" | "SELECT";
+
+export type DatabaseConfig = {
+  tableName?: string;
+  operation?: DatabaseOperation;
+  docId?: string;
+};
+
+export type EmailConfig = {
+  to?: string;
+  from?: string;
+  subject?: string;
+  body?: string;
+};
 
 export type LogicConfig = {
   fallbackBranch?: string;
@@ -43,8 +71,78 @@ export type MergeStepInput = {
   status: string;
 };
 
+export type ActionRequest = {
+  url: string;
+  fetchOptions: RequestInit;
+};
+
+export type DatabaseOperationInput = {
+  tableName: string;
+  operation: DatabaseOperation;
+  docId?: string;
+  data: unknown;
+};
+
+export type EmailMessage = {
+  fromAddress: string;
+  toAddresses: string[] | string;
+  subject: string;
+  body: string;
+};
+
+export type WorkflowScheduleDecision = {
+  halt: boolean;
+  schedules: Array<{
+    nodeId: string;
+    delayMs: number;
+  }>;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isHeaderConfig(value: unknown): value is HeaderConfig {
+  if (!isRecord(value)) return false;
+  return (
+    (typeof value.key === "undefined" || typeof value.key === "string") &&
+    (typeof value.value === "undefined" || typeof value.value === "string")
+  );
+}
+
+function isActionConfig(value: unknown): value is ActionConfig {
+  if (!isRecord(value)) return false;
+  if (typeof value.method !== "undefined" && typeof value.method !== "string") return false;
+  if (typeof value.url !== "undefined" && typeof value.url !== "string") return false;
+  if (typeof value.headers !== "undefined" && (!Array.isArray(value.headers) || !value.headers.every(isHeaderConfig))) {
+    return false;
+  }
+  return true;
+}
+
+const DATABASE_OPERATIONS = new Set(["INSERT", "UPDATE", "DELETE", "SELECT"]);
+
+function isDatabaseConfig(value: unknown): value is DatabaseConfig {
+  if (!isRecord(value)) return false;
+  if (typeof value.tableName !== "undefined" && typeof value.tableName !== "string") return false;
+  if (
+    typeof value.operation !== "undefined" &&
+    (typeof value.operation !== "string" || !DATABASE_OPERATIONS.has(value.operation))
+  ) {
+    return false;
+  }
+  if (typeof value.docId !== "undefined" && typeof value.docId !== "string") return false;
+  return true;
+}
+
+function isEmailConfig(value: unknown): value is EmailConfig {
+  if (!isRecord(value)) return false;
+  return (
+    (typeof value.to === "undefined" || typeof value.to === "string") &&
+    (typeof value.from === "undefined" || typeof value.from === "string") &&
+    (typeof value.subject === "undefined" || typeof value.subject === "string") &&
+    (typeof value.body === "undefined" || typeof value.body === "string")
+  );
 }
 
 function isLogicConfig(value: unknown): value is LogicConfig {
@@ -85,6 +183,10 @@ function parseJsonValue(value: string): unknown {
   return JSON.parse(value) as unknown;
 }
 
+export function getRuntimeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export function createWorkflowRuntimeContext(args: {
   nodeData: WorkflowNodeData | undefined;
   stepInput: string | undefined;
@@ -114,6 +216,36 @@ export function parseRuntimeJson(value: string, fallback: unknown = value) {
   } catch {
     return fallback;
   }
+}
+
+export function getActionConfig(nodeData: WorkflowNodeData): ActionConfig {
+  const config = nodeData._actionConfig;
+  if (typeof config === "undefined") {
+    throw new Error("API Node is missing configuration");
+  }
+  if (!isActionConfig(config)) {
+    throw new Error("API node config must include optional string method/url values and valid headers.");
+  }
+  return config;
+}
+
+export function getDatabaseConfig(nodeData: WorkflowNodeData): DatabaseConfig {
+  const config = nodeData._dbConfig;
+  if (typeof config === "undefined") {
+    throw new Error("Database Node is missing configuration");
+  }
+  if (!isDatabaseConfig(config)) {
+    throw new Error("Database node config must include a valid operation, optional tableName, and optional docId.");
+  }
+  return config;
+}
+
+export function getEmailConfig(nodeData: WorkflowNodeData): EmailConfig {
+  const config = nodeData._emailConfig ?? {};
+  if (!isEmailConfig(config)) {
+    throw new Error("Email node config must include optional string to/from/subject/body values.");
+  }
+  return config;
 }
 
 export function getLogicConfig(nodeData: WorkflowNodeData): LogicConfig {
@@ -146,6 +278,77 @@ export function getIteratorConfig(nodeData: WorkflowNodeData): IteratorConfig {
     throw new Error("Iterator node config must include an optional string listVariable value.");
   }
   return config;
+}
+
+export function buildActionRequest(nodeData: WorkflowNodeData, globalStatePayload: WorkflowStatePayload): ActionRequest {
+  const config = resolveTemplate(getActionConfig(nodeData), globalStatePayload);
+  const method = config.method || "GET";
+  const url = config.url;
+  if (!url) throw new Error("Missing URL for Action Node");
+
+  validateSafeUrl(url, "Action Node");
+
+  const headers: Record<string, string> = {};
+  for (const header of config.headers ?? []) {
+    if (header.key) headers[header.key] = header.value ?? "";
+  }
+
+  const fetchOptions: RequestInit = { method, headers };
+  const body = config.body;
+  if (method !== "GET" && method !== "HEAD" && body) {
+    fetchOptions.body = typeof body === "object" ? JSON.stringify(body) : String(body);
+  }
+
+  return { url, fetchOptions };
+}
+
+export function buildDatabaseOperationInput(
+  nodeData: WorkflowNodeData,
+  globalStatePayload: WorkflowStatePayload
+): DatabaseOperationInput {
+  const config = getDatabaseConfig(nodeData);
+  const { tableName, operation, docId } = config;
+  if (!tableName) throw new Error("Database table not specified");
+  if (!operation) throw new Error("Database operation not specified");
+
+  const resolvedDocId = docId ? resolveTemplate(docId, globalStatePayload) : undefined;
+
+  let resolvedData: unknown = {};
+  if (isRecord(nodeData._inputMapping) && Object.keys(nodeData._inputMapping).length > 0) {
+    resolvedData = resolveTemplate(nodeData._inputMapping, globalStatePayload);
+  } else if (typeof nodeData._inputTemplate === "string") {
+    resolvedData = parseRuntimeJson(resolveTemplate(nodeData._inputTemplate, globalStatePayload), {});
+  }
+
+  return {
+    tableName,
+    operation,
+    docId: resolvedDocId,
+    data: sanitizeForConvexValue(resolvedData),
+  };
+}
+
+export function buildEmailMessage(args: {
+  nodeData: WorkflowNodeData;
+  globalStatePayload: WorkflowStatePayload;
+  defaultFromAddress: string;
+}): EmailMessage {
+  const config = getEmailConfig(args.nodeData);
+  const resolvedToRaw = resolveTemplate(config.to || "", args.globalStatePayload);
+  const resolvedFrom = resolveTemplate(config.from || "", args.globalStatePayload);
+  const subject = resolveTemplate(config.subject || "No Subject", args.globalStatePayload);
+  const body = resolveTemplate(config.body || "", args.globalStatePayload);
+  const fromAddress = resolvedFrom.trim() !== "" ? resolvedFrom : args.defaultFromAddress;
+
+  let toAddresses: string[] | string = resolvedToRaw;
+  if (resolvedToRaw.includes(",")) {
+    toAddresses = resolvedToRaw
+      .split(",")
+      .map((email) => email.trim())
+      .filter(Boolean);
+  }
+
+  return { fromAddress, toAddresses, subject, body };
 }
 
 export function evaluateLogicBranch(config: LogicConfig, globalStatePayload: Record<string, unknown>) {
@@ -286,4 +489,12 @@ export function getWorkflowSystemCommands(outputPayload: string) {
   }
 
   return { delayMs, halt };
+}
+
+export function buildWorkflowScheduleDecision(outputPayload: string, downstreamNodeIds: string[]): WorkflowScheduleDecision {
+  const { delayMs, halt } = getWorkflowSystemCommands(outputPayload);
+  return {
+    halt,
+    schedules: halt ? [] : downstreamNodeIds.map((nodeId) => ({ nodeId, delayMs })),
+  };
 }

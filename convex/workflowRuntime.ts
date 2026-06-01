@@ -4,51 +4,24 @@ import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { resolveTemplate } from "./utils/templateParser";
-import { validateSafeUrl } from "./utils/security";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
 import {
+  buildActionRequest,
+  buildDatabaseOperationInput,
+  buildEmailMessage,
   buildMergeNodeOutput,
+  buildWorkflowScheduleDecision,
   createWorkflowRuntimeContext,
   executeApprovalNode,
   executeBypassNode,
   executeIteratorNode,
   executeLogicNode,
   executeWaitNode,
-  getWorkflowSystemCommands,
+  getRuntimeErrorMessage,
   parseRuntimeJson,
-  sanitizeForConvexValue,
 } from "./workflowRuntimeService";
-
-type HeaderConfig = {
-  key?: string;
-  value?: string;
-};
-
-type ActionConfig = {
-  method?: string;
-  url?: string;
-  headers?: HeaderConfig[];
-  body?: unknown;
-};
-
-type DatabaseConfig = {
-  tableName?: string;
-  operation: "INSERT" | "UPDATE" | "DELETE" | "SELECT";
-  docId?: string;
-};
-
-type EmailConfig = {
-  to?: string;
-  from?: string;
-  subject?: string;
-  body?: string;
-};
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown error";
-}
 
 export const startWorkflow = internalAction({
   args: {
@@ -127,34 +100,13 @@ export const executeNode = internalAction({
       } 
       else if (node.type === "actionNode") {
         try {
-          if (!node.data?._actionConfig) throw new Error("API Node is missing configuration");
-          const config = resolveTemplate(node.data._actionConfig as ActionConfig, globalStatePayload);
-          const method = config.method || 'GET';
-          const url = config.url;
-          if (!url) throw new Error("Missing URL for Action Node");
-          // 🛡️ SECURITY: SSRF Prevention Shield
-          validateSafeUrl(url, "Action Node");
-          
-          const headers: Record<string, string> = {};
-          if (Array.isArray(config.headers)) {
-             config.headers.forEach((h: HeaderConfig) => {
-               if (h.key) headers[h.key] = h.value ?? "";
-             });
-          }
-
-          const fetchOptions: RequestInit = { method, headers };
-          
-          const body = config.body;
-          if (method !== 'GET' && method !== 'HEAD' && body) {
-             fetchOptions.body = typeof body === 'object' ? JSON.stringify(body) : String(body);
-          }
-          
+          const { url, fetchOptions } = buildActionRequest(currentNodeData, globalStatePayload);
           const res = await fetch(url, fetchOptions);
           const text = await res.text();
           try { outputPayload = JSON.stringify({ status: res.status, data: JSON.parse(text) }); }
           catch { outputPayload = JSON.stringify({ status: res.status, data: text }); }
         } catch (error: unknown) {
-          throw new Error('API Action request failed: ' + getErrorMessage(error));
+          throw new Error('API Action request failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "codeNode") {
@@ -170,7 +122,7 @@ export const executeNode = internalAction({
           
           outputPayload = JSON.stringify(templatePayload);
         } catch (error: unknown) {
-          throw new Error("Safe code transformation failed: " + getErrorMessage(error));
+          throw new Error("Safe code transformation failed: " + getRuntimeErrorMessage(error));
         }
       }
 
@@ -178,59 +130,45 @@ export const executeNode = internalAction({
         try {
           outputPayload = executeLogicNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Logic routing failed: ' + getErrorMessage(error));
+          throw new Error('Logic routing failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "databaseNode") {
         try {
-          if (!node.data?._dbConfig) throw new Error("Database Node is missing configuration");
-          const { tableName, operation, docId } = node.data._dbConfig as DatabaseConfig;
-          if (!tableName) throw new Error("Database table not specified");
-          
-          let resolvedDocId = docId;
-          if (docId) resolvedDocId = resolveTemplate(docId, globalStatePayload);
-
-          let resolvedData: unknown = {};
-          if (node.data._inputMapping && Object.keys(node.data._inputMapping).length > 0) {
-             resolvedData = resolveTemplate(node.data._inputMapping, globalStatePayload);
-          } else if (typeof node.data._inputTemplate === "string") {
-             try { resolvedData = JSON.parse(resolveTemplate(node.data._inputTemplate, globalStatePayload)); } catch {}
-          }
-
-          resolvedData = sanitizeForConvexValue(resolvedData);
+          const { tableName, operation, docId, data } = buildDatabaseOperationInput(currentNodeData, globalStatePayload);
 
           const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
             tableName,
             operation,
-            docId: resolvedDocId,
-            data: resolvedData,
+            docId,
+            data,
             workflowId: args.workflowId,
           });
 
           outputPayload = JSON.stringify({ _system: { db: true }, operation, tableName, result });
         } catch (error: unknown) {
-          throw new Error('Database Action failed: ' + getErrorMessage(error));
+          throw new Error('Database Action failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "waitNode") {
         try {
           outputPayload = executeWaitNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Wait config failed: ' + getErrorMessage(error));
+          throw new Error('Wait config failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "approvalNode") {
         try {
           outputPayload = executeApprovalNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Approval execution failed: ' + getErrorMessage(error));
+          throw new Error('Approval execution failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "iteratorNode") {
         try {
           outputPayload = executeIteratorNode(currentNodeData, globalStatePayload);
         } catch(error: unknown) {
-          throw new Error('Iterator logic failed: ' + getErrorMessage(error));
+          throw new Error('Iterator logic failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "mergeNode") {
@@ -239,27 +177,20 @@ export const executeNode = internalAction({
           const edges = parseWorkflowEdges(workflow?.edges);
           outputPayload = buildMergeNodeOutput({ nodeId: args.nodeId, executionSteps, edges });
         } catch(error: unknown) {
-          throw new Error('Merge / Sync processing failed: ' + getErrorMessage(error));
+          throw new Error('Merge / Sync processing failed: ' + getRuntimeErrorMessage(error));
         }
       }
       else if (node.type === "emailNode") {
         try {
-          const config = (node.data?._emailConfig || {}) as EmailConfig;
-          const resolvedToRaw = resolveTemplate(config.to || "", globalStatePayload);
-          const resolvedFrom = resolveTemplate(config.from || "", globalStatePayload);
-          const resolvedSubject = resolveTemplate(config.subject || "No Subject", globalStatePayload);
-          const resolvedBody = resolveTemplate(config.body || "", globalStatePayload);
-
-          const fromAddress = resolvedFrom.trim() !== '' ? resolvedFrom : (process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>");
-          
-          let toAddresses: string[] | string = resolvedToRaw;
-          if (resolvedToRaw.includes(',')) {
-             toAddresses = resolvedToRaw.split(',').map((e: string) => e.trim()).filter(Boolean);
-          }
+          const { fromAddress, toAddresses, subject, body } = buildEmailMessage({
+            nodeData: currentNodeData,
+            globalStatePayload,
+            defaultFromAddress: process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>",
+          });
           
           if (!process.env.RESEND_API_KEY) {
-             console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject: resolvedSubject });
-             outputPayload = JSON.stringify({ success: true, simulated: true, to: toAddresses, subject: resolvedSubject, bodyPreview: resolvedBody.substring(0, 100) });
+             console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject });
+             outputPayload = JSON.stringify({ success: true, simulated: true, to: toAddresses, subject, bodyPreview: body.substring(0, 100) });
           } else {
              const response = await fetch("https://api.resend.com/emails", {
                method: "POST",
@@ -270,8 +201,8 @@ export const executeNode = internalAction({
                body: JSON.stringify({
                  from: fromAddress,
                  to: toAddresses,
-                 subject: resolvedSubject,
-                 html: resolvedBody
+                 subject,
+                 html: body
                })
              });
 
@@ -281,10 +212,10 @@ export const executeNode = internalAction({
              }
              
              const data = await response.json();
-             outputPayload = JSON.stringify({ success: true, dispatchId: data?.id, to: toAddresses, subject: resolvedSubject });
+             outputPayload = JSON.stringify({ success: true, dispatchId: data?.id, to: toAddresses, subject });
           }
         } catch(error: unknown) {
-             throw new Error("Email dispatch failed: " + getErrorMessage(error));
+             throw new Error("Email dispatch failed: " + getRuntimeErrorMessage(error));
         }
       }
       else {
@@ -299,17 +230,16 @@ export const executeNode = internalAction({
         outputData: outputPayload,
       });
 
-      // Extract System commands
-      const { delayMs, halt } = getWorkflowSystemCommands(outputPayload);
+      const scheduleDecision = buildWorkflowScheduleDecision(outputPayload, downstreamNodesToSchedule);
 
-      if (halt) return; // Do not schedule next steps, workflow suspended.
+      if (scheduleDecision.halt) return; // Do not schedule next steps, workflow suspended.
 
       // Recursively Schedule the next unlocked steps
-      for (const nextNodeId of downstreamNodesToSchedule) {
-        await ctx.scheduler.runAfter(delayMs, internal.workflowRuntime.executeNode, {
+      for (const schedule of scheduleDecision.schedules) {
+        await ctx.scheduler.runAfter(schedule.delayMs, internal.workflowRuntime.executeNode, {
           workflowId: args.workflowId,
           executionId: args.executionId,
-          nodeId: nextNodeId
+          nodeId: schedule.nodeId
         });
       }
 
@@ -320,7 +250,7 @@ export const executeNode = internalAction({
         executionId: args.executionId,
         nodeId: args.nodeId,
         stepId: lockedStepId,
-        error: getErrorMessage(error),
+        error: getRuntimeErrorMessage(error),
       });
       // The fail mutation marks the global execution as FAILED, halting further steps
     }
