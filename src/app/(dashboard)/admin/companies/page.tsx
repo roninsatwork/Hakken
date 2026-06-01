@@ -17,8 +17,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AdminPaginationFooter,
+  AdminRowActions,
+  AdminRowIconButton,
   AdminSearchBar,
   AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
@@ -162,12 +166,12 @@ export default function CompaniesPage() {
         minWidthClassName="min-w-[800px]"
       >
             <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{t('tenantName')}</th>
-                <th className="px-4 py-3 font-medium">{t('provisionedDate')}</th>
-                <th className="px-4 py-3 font-medium">{t('assignedUsers')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('actions')}</th>
-              </tr>
+              <AdminTableHeaderRow>
+                <AdminTableHeaderCell>{t('tenantName')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('provisionedDate')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('assignedUsers')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell align="right">{t('actions')}</AdminTableHeaderCell>
+              </AdminTableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
@@ -211,14 +215,14 @@ export default function CompaniesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => handleOpenEdit(company)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                          <AdminRowActions>
+                            <AdminRowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
                               <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setDeletingCompany(company)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Company & Wipe Data">
+                            </AdminRowIconButton>
+                            <AdminRowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
                               <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                            </AdminRowIconButton>
+                          </AdminRowActions>
                         </td>
                       </motion.tr>
                     ))}

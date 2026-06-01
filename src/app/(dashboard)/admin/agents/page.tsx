@@ -20,8 +20,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AdminPaginationFooter,
+  AdminRowActions,
+  AdminRowIconButton,
   AdminSearchBar,
   AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
@@ -152,12 +156,12 @@ export default function AgentsPage() {
         minWidthClassName="min-w-[800px]"
       >
             <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{t('table.agent')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.model')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
-              </tr>
+              <AdminTableHeaderRow>
+                <AdminTableHeaderCell>{t('table.agent')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('table.model')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('table.status')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell align="right">{t('table.actions')}</AdminTableHeaderCell>
+              </AdminTableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
@@ -222,14 +226,14 @@ export default function AgentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/agents/${agent._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title={t('table.configure')}>
+                          <AdminRowActions>
+                            <AdminRowIconButton label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
                               <Settings className="w-4 h-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingAgent(agent); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.delete')}>
+                            </AdminRowIconButton>
+                            <AdminRowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
                               <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                            </AdminRowIconButton>
+                          </AdminRowActions>
                         </td>
                       </motion.tr>
                     ))}

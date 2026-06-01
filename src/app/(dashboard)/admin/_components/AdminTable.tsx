@@ -43,6 +43,32 @@ export function AdminTableShell({ children, footer, minWidthClassName = "min-w-[
   );
 }
 
+type AdminTableHeaderRowProps = {
+  children: ReactNode;
+};
+
+export function AdminTableHeaderRow({ children }: AdminTableHeaderRowProps) {
+  return (
+    <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+      {children}
+    </tr>
+  );
+}
+
+type AdminTableHeaderCellProps = {
+  children: ReactNode;
+  align?: "left" | "right";
+  className?: string;
+};
+
+export function AdminTableHeaderCell({ children, align = "left", className = "" }: AdminTableHeaderCellProps) {
+  return (
+    <th className={`px-4 py-3 font-medium ${align === "right" ? "text-right" : ""} ${className}`}>
+      {children}
+    </th>
+  );
+}
+
 type AdminTableLoadingRowProps = {
   colSpan: number;
   accentClassName?: string;
@@ -76,6 +102,47 @@ export function AdminTableEmptyRow({ colSpan, icon, label, action }: AdminTableE
         </div>
       </td>
     </tr>
+  );
+}
+
+type AdminRowActionsProps = {
+  children: ReactNode;
+};
+
+export function AdminRowActions({ children }: AdminRowActionsProps) {
+  return (
+    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {children}
+    </div>
+  );
+}
+
+type AdminRowIconButtonProps = {
+  children: ReactNode;
+  label: string;
+  onClick: () => void;
+  tone?: "default" | "danger";
+};
+
+export function AdminRowIconButton({ children, label, onClick, tone = "default" }: AdminRowIconButtonProps) {
+  const toneClass =
+    tone === "danger"
+      ? "hover:bg-red-500/10 text-secondary hover:text-red-500"
+      : "hover:bg-foreground/5 text-secondary hover:text-foreground";
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`p-2 rounded-full transition-colors ${toneClass}`}
+      title={label}
+      aria-label={label}
+    >
+      {children}
+    </button>
   );
 }
 

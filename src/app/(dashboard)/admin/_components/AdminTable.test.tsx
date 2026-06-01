@@ -1,6 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AdminPaginationFooter, AdminSearchBar, AdminTableEmptyRow, AdminTableLoadingRow } from "./AdminTable";
+import {
+  AdminPaginationFooter,
+  AdminRowActions,
+  AdminRowIconButton,
+  AdminSearchBar,
+  AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
+  AdminTableLoadingRow,
+} from "./AdminTable";
 
 describe("AdminPaginationFooter", () => {
   it("clamps stale page values after result counts change", () => {
@@ -51,5 +60,47 @@ describe("Admin table rows", () => {
 
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
     expect(document.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+
+  it("renders shared header cells with alignment", () => {
+    render(
+      <table>
+        <thead>
+          <AdminTableHeaderRow>
+            <AdminTableHeaderCell>Name</AdminTableHeaderCell>
+            <AdminTableHeaderCell align="right">Actions</AdminTableHeaderCell>
+          </AdminTableHeaderRow>
+        </thead>
+      </table>
+    );
+
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Actions")).toHaveClass("text-right");
+  });
+
+  it("renders shared row action buttons and stops row click propagation", () => {
+    const onRowClick = vi.fn();
+    const onActionClick = vi.fn();
+
+    render(
+      <table>
+        <tbody>
+          <tr onClick={onRowClick}>
+            <td>
+              <AdminRowActions>
+                <AdminRowIconButton label="Delete item" tone="danger" onClick={onActionClick}>
+                  X
+                </AdminRowIconButton>
+              </AdminRowActions>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete item" }));
+
+    expect(onActionClick).toHaveBeenCalledTimes(1);
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 });
