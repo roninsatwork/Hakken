@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function WorkflowsPage() {
@@ -287,37 +288,24 @@ export default function WorkflowsPage() {
         </form>
       </SonaeModal>
 
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingWorkflow}
-        onClose={() => { setDeletingWorkflow(null); setSubmitError(""); }}
+        onClose={() => {
+          setDeletingWorkflow(null);
+          setSubmitError("");
+        }}
         title={t('modal.deleteTitle')}
+        cancelLabel={t('buttons.cancel')}
+        confirmLabel={isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        error={submitError}
       >
-        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
-          <p>
-            {t('modal.deleteConfirm', { name: deletingWorkflow?.name ?? "" })}
-          </p>
-          <p className="text-[13px] text-muted">{t('modal.undone')}</p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingWorkflow(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-            disabled={isSubmitting}
-          >
-            {t('buttons.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? t('buttons.deleting') : t('buttons.delete')}
-          </button>
-        </div>
-      </SonaeModal>
+        <p>
+          {t('modal.deleteConfirm', { name: deletingWorkflow?.name ?? "" })}
+        </p>
+        <p className="text-[13px] text-muted">{t('modal.undone')}</p>
+      </AdminConfirmationModal>
     </div>
   );
 }

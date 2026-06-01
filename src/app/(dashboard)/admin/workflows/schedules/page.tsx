@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type ScheduleRow = Doc<"schedules"> & {
@@ -263,35 +264,19 @@ export default function SchedulesPage() {
 
 
 
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingSchedule}
         onClose={() => setDeletingSchedule(null)}
         title={t('modals.delete.title')}
+        cancelLabel={t('modals.delete.cancel')}
+        confirmLabel={isSubmitting ? t('modals.delete.submitting') : t('modals.delete.submit')}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
       >
-        <div className="text-secondary mb-6 text-[15px] leading-relaxed flex flex-col gap-4">
-          <p>
-            {t('modals.delete.confirm', { name: deletingSchedule?.name ?? "" })}
-          </p>
-        </div>
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingSchedule(null)}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-            disabled={isSubmitting}
-          >
-            {t('modals.delete.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? t('modals.delete.submitting') : t('modals.delete.submit')}
-          </button>
-        </div>
-      </SonaeModal>
+        <p>
+          {t('modals.delete.confirm', { name: deletingSchedule?.name ?? "" })}
+        </p>
+      </AdminConfirmationModal>
 
       {/* Generic Message Modal */}
       <SonaeModal
