@@ -101,7 +101,7 @@ Phase tracking checklist:
 - [x] Phase 1: Provider Neutrality And Naming Cleanup
 - [x] Phase 2: Workflow Runtime Architecture Refactor
 - [x] Phase 3: AI And Tool Execution Platform Layer
-- [ ] Phase 4: Backend Service Boundary Refactor
+- [x] Phase 4: Backend Service Boundary Refactor
 - [ ] Phase 5: Frontend Platform Primitives
 - [ ] Phase 6: Data, Upload, And Knowledge Policy Layer
 - [ ] Phase 7: E2E, Browser, And Regression Coverage Upgrade
@@ -303,7 +303,7 @@ Acceptance:
 
 ## Phase 4: Backend Service Boundary Refactor
 
-Status: Started.
+Status: Complete.
 
 Goal:
 
@@ -343,17 +343,18 @@ Completed service-boundary slices:
 - Moved system settings defaults, patch normalization, logo storage-reference detection, default merging, and settings audit metadata formatting into `settingsService`.
 - Moved system config keys, config write/patch shaping, analytics ID trimming, system prompt/analytics audit metadata, and admin PII config parsing into `systemService`.
 - Moved company record/profile patch shaping, user-count enrichment, company audit metadata, and purge continuation decisions into `companyService`.
+- Moved agent record/update patch shaping, global-agent filtering, agent audit metadata, and inline-agent/promotion defaults into `agentService`.
 
 Checklist:
 
 - [x] Audit large Convex files by line count and responsibility.
 - [x] Identify handlers that mix auth, query, filtering, formatting, and side effects.
-- [ ] Move pure filtering/formatting/calculation into service helpers.
-- [ ] Keep auth and tenant checks explicit at handler boundaries.
-- [ ] Use generated Convex types wherever possible.
+- [x] Move pure filtering/formatting/calculation into service helpers.
+- [x] Keep auth and tenant checks explicit at handler boundaries.
+- [x] Use generated Convex types wherever possible.
 - [x] Add tests for extracted service helpers.
 - [x] Add BOLA tests when a refactor touches tenant-scoped data.
-- [ ] Keep external behavior unchanged unless the existing behavior is clearly wrong.
+- [x] Keep external behavior unchanged unless the existing behavior is clearly wrong.
 
 Acceptance:
 

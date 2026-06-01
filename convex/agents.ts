@@ -2,6 +2,18 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
 import { getDefaultModelId } from "./aiModelService";
+import {
+  buildAgentUpdatePatch,
+  buildCreateAgentAuditMetadata,
+  buildCreateInlineAgentAuditMetadata,
+  buildDeleteAgentAuditMetadata,
+  buildGlobalAgentRecord,
+  buildInlineAgentRecord,
+  buildPromoteAgentAuditMetadata,
+  buildPromoteAgentPatch,
+  buildUpdateAgentAuditMetadata,
+  isGlobalAgent,
+} from "./agentService";
 
 export const list = query({
   args: {},
@@ -9,7 +21,7 @@ export const list = query({
     await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
 
     const allAgents = await ctx.db.query("agents").order("desc").take(10000);
-    return allAgents.filter(a => a.isGlobal !== false);
+    return allAgents.filter(isGlobalAgent);
   },
 });
 
@@ -47,26 +59,21 @@ export const createAgent = mutation({
     const { userId } = await requireSuperAdmin(ctx);
 
     const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
+    const now = Date.now();
 
-    const newAgentId = await ctx.db.insert("agents", {
+    const newAgentId = await ctx.db.insert("agents", buildGlobalAgentRecord({
       name: args.name,
       description: args.description,
       modelId: getDefaultModelId(defaultModels),
-      thinkingMode: false,
-      isActive: true, // defaults to true
-      temperature: 1.0, // Default deterministic score
-      humanApprovalRequired: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+    }, now));
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
       actorId: userId,
       entityType: "agents",
       entityId: newAgentId,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({ name: args.name, scope: "global" })
+      timestamp: now,
+      metadata: buildCreateAgentAuditMetadata(args.name)
     });
 
     return newAgentId;
@@ -103,20 +110,21 @@ export const updateAgent = mutation({
     if (storageId) {
       resolvedAvatarUrl = (await ctx.storage.getUrl(storageId)) ?? updates.avatar;
     }
-    
-    await ctx.db.patch(id, { 
-      ...updates,
-      ...(resolvedAvatarUrl !== undefined && { avatar: resolvedAvatarUrl }),
-      updatedAt: Date.now()
-    });
+
+    const now = Date.now();
+    await ctx.db.patch(id, buildAgentUpdatePatch({
+      updates,
+      resolvedAvatarUrl,
+      now,
+    }));
     
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_AGENT",
       actorId: userId,
       entityType: "agents",
       entityId: id,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({ updatedFields: Object.keys(updates) })
+      timestamp: now,
+      metadata: buildUpdateAgentAuditMetadata(Object.keys(updates))
     });
 
     return id;
@@ -142,13 +150,14 @@ export const deleteAgent = mutation({
 
     await ctx.db.delete(args.id);
 
+    const now = Date.now();
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_AGENT",
       actorId: userId,
       entityType: "agents",
       entityId: args.id,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({ name: agent?.name })
+      timestamp: now,
+      metadata: buildDeleteAgentAuditMetadata(agent?.name)
     });
 
     return true;
@@ -192,28 +201,20 @@ export const createInlineAgent = mutation({
     const { userId } = await requireSuperAdmin(ctx);
 
     const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
+    const now = Date.now();
 
-    const newAgentId = await ctx.db.insert("agents", {
-      name: "Sandbox Agent",
-      description: "Inline agent logic",
-      modelId: getDefaultModelId(defaultModels),
-      thinkingMode: false,
-      isActive: true, // defaults to true
-      temperature: 1.0,
-      humanApprovalRequired: false,
-      isGlobal: false,
+    const newAgentId = await ctx.db.insert("agents", buildInlineAgentRecord({
       workflowId: args.workflowId,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+      modelId: getDefaultModelId(defaultModels),
+    }, now));
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
       actorId: userId,
       entityType: "agents",
       entityId: newAgentId,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({ scope: "inline_workflow", workflowId: args.workflowId })
+      timestamp: now,
+      metadata: buildCreateInlineAgentAuditMetadata(args.workflowId)
     });
 
     return newAgentId;
@@ -224,20 +225,17 @@ export const promoteToGlobal = mutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
+    const now = Date.now();
 
-    await ctx.db.patch(args.id, {
-      isGlobal: true,
-      workflowId: undefined, // remove association
-      updatedAt: Date.now()
-    });
+    await ctx.db.patch(args.id, buildPromoteAgentPatch(now));
     
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_AGENT",
       actorId: userId,
       entityType: "agents",
       entityId: args.id,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({ action: "promoted_to_global" })
+      timestamp: now,
+      metadata: buildPromoteAgentAuditMetadata()
     });
 
     return true;

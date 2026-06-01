@@ -12,6 +12,7 @@ import type * as actionAuth from "../actionAuth.js";
 import type * as adminQueryService from "../adminQueryService.js";
 import type * as agentLogs from "../agentLogs.js";
 import type * as agentRuntime from "../agentRuntime.js";
+import type * as agentService from "../agentService.js";
 import type * as agentTransactions from "../agentTransactions.js";
 import type * as agents from "../agents.js";
 import type * as ai from "../ai.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   adminQueryService: typeof adminQueryService;
   agentLogs: typeof agentLogs;
   agentRuntime: typeof agentRuntime;
+  agentService: typeof agentService;
   agentTransactions: typeof agentTransactions;
   agents: typeof agents;
   ai: typeof ai;
