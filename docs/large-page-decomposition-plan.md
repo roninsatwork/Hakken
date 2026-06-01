@@ -69,6 +69,8 @@ Completed:
 
 ## Phase 2: Settings Page Sections
 
+Status: Complete.
+
 Target:
 
 - `src/app/(dashboard)/admin/settings/page.tsx`
@@ -101,6 +103,18 @@ Acceptance:
 - The page becomes a composition shell rather than a 1000+ line implementation.
 - Existing settings behavior remains unchanged.
 - `npm run check` and `npm run build` pass.
+
+Completed:
+
+- Added a settings component folder at `src/app/(dashboard)/admin/settings/_components`.
+- Extracted shared settings types, tab parsing, `SettingBlock`, and `ColorInput`.
+- Extracted identity/platform settings into `IdentitySettingsSection`.
+- Extracted typography, color, and brand controls into `AppearanceSettingsSection`.
+- Extracted audit log display into `AuditLogsSection`.
+- Extracted purge policy tables and purge modals into `PurgesSettingsSection`.
+- Added tab parser regression tests in `settingsTabs.test.ts`.
+- Reduced `src/app/(dashboard)/admin/settings/page.tsx` from about 1400 lines to 465 lines.
+- Verified with `npm run check`, `npm run lint:all`, `npm run build`, `npm run test:e2e`, `git diff --check`, and a `/login` smoke check.
 
 ## Phase 3: Widget Configuration Surface
 

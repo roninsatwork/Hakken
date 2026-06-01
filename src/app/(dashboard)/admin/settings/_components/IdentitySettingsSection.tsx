@@ -1,0 +1,80 @@
+import Image from "next/image";
+import type { ChangeEvent } from "react";
+import { Building2, ImageIcon, Loader2 } from "lucide-react";
+import { SettingBlock } from "./SettingBlock";
+import type { SystemSettingsFormData } from "./types";
+
+type IdentitySettingsSectionProps = {
+  formData: SystemSettingsFormData;
+  setFormData: (formData: SystemSettingsFormData) => void;
+  uploadingLight: boolean;
+  uploadingDark: boolean;
+  onFileUpload: (event: ChangeEvent<HTMLInputElement>, mode: "light" | "dark") => void;
+  t: (key: string) => string;
+};
+
+export function IdentitySettingsSection({
+  formData,
+  setFormData,
+  uploadingLight,
+  uploadingDark,
+  onFileUpload,
+  t,
+}: IdentitySettingsSectionProps) {
+  return (
+    <section className="flex flex-col gap-6">
+      <h3 className="text-[11px] font-mono tracking-[0.2em] text-muted uppercase ml-2 flex items-center gap-2">
+        <Building2 className="w-3.5 h-3.5" /> {t("identity.title")}
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SettingBlock title={t("identity.platformName")} sub={t("identity.platformNameSub")}>
+          <input
+            type="text"
+            value={formData.platformName || ""}
+            onChange={(event) => setFormData({ ...formData, platformName: event.target.value })}
+            className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[15px] font-bold text-foreground outline-none focus:border-brand transition-colors"
+            placeholder={t("identity.placeholder")}
+          />
+        </SettingBlock>
+
+        <SettingBlock title={t("identity.logoLight")} sub={t("identity.logoLightSub")}>
+          <div className="w-full h-[120px] rounded-[16px] border-2 border-dashed border-border-dim/50 flex items-center justify-center relative overflow-hidden bg-white hover:bg-white/90 transition-colors group">
+            {formData.logoUrlLight ? (
+              <Image
+                src={formData.logoUrlLight}
+                width={180}
+                height={80}
+                unoptimized
+                className="max-w-[80%] max-h-[80%] object-contain mix-blend-multiply"
+                alt="Light mode"
+              />
+            ) : (
+              <ImageIcon className="w-8 h-8 text-black/20" />
+            )}
+            <input type="file" onChange={(event) => onFileUpload(event, "light")} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+            {uploadingLight && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
+          </div>
+        </SettingBlock>
+
+        <SettingBlock title={t("identity.logoDark")} sub={t("identity.logoDarkSub")}>
+          <div className="w-full h-[120px] rounded-[16px] border-2 border-dashed border-border-dim/50 flex items-center justify-center relative overflow-hidden bg-black hover:bg-black/90 transition-colors group">
+            {formData.logoUrlDark ? (
+              <Image
+                src={formData.logoUrlDark}
+                width={180}
+                height={80}
+                unoptimized
+                className="max-w-[80%] max-h-[80%] object-contain"
+                alt="Dark mode"
+              />
+            ) : (
+              <ImageIcon className="w-8 h-8 text-white/20" />
+            )}
+            <input type="file" onChange={(event) => onFileUpload(event, "dark")} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+            {uploadingDark && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
+          </div>
+        </SettingBlock>
+      </div>
+    </section>
+  );
+}
