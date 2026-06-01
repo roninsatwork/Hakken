@@ -114,6 +114,7 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     expect(page.data[0].modelId).toBe("default-model"); // Default MUST be 0th
     expect(page.data[1].modelId).toBe("active-model"); // Enabled must be 1st
     expect(page.data[2].modelId).toBe("inactive-model"); // Disabled must be 2nd
+    expect(page.totalCount).toBe(3);
 
     const activePage = await client.query(api.aiModels.getOffsetPaginatedModels, {
       searchTerm: "",
@@ -135,5 +136,14 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     });
 
     expect(inactivePage.data.map((model) => model.modelId)).toEqual(["inactive-model"]);
+
+    await expect(
+      client.query(api.aiModels.getOffsetPaginatedModels, {
+        searchTerm: "",
+        statusFilter: "all" as "active",
+        page: 1,
+        pageSize: 15
+      })
+    ).rejects.toThrow(/Validator error|Value does not match validator/);
   });
 });
