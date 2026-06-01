@@ -5,12 +5,14 @@ import { api } from "@/convex/_generated/api";
 import { useState, useEffect, use } from "react";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  Save,
-  CheckCircle2,
   Code2
 } from "lucide-react";
 import JsonSchemaBuilder from "@/src/ui/components/settings/JsonSchemaBuilder";
 import { useTranslations } from "next-intl";
+import {
+  AdminSaveAction,
+  AdminSaveError,
+} from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.schemas");
@@ -71,23 +73,16 @@ export default function AgentSchemasPage({ params }: { params: Promise<{ id: Id<
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {saveSuccess && <span className="text-[#10b981] text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in"><CheckCircle2 className="w-3.5 h-3.5" /> {t("saveSuccess")}</span>}
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-white/5 hover:bg-white/10 text-foreground text-[12px] font-medium border border-white/5 transition-all"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {isSaving ? t("savingButton") : t("saveButton")}
-            </button>
-          </div>
+          <AdminSaveAction
+            isSaving={isSaving}
+            label={t("saveButton")}
+            savingLabel={t("savingButton")}
+            successLabel={t("saveSuccess")}
+            showSuccess={saveSuccess}
+            onClick={handleSave}
+          />
 	        </div>
-          {saveError && (
-            <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-              {saveError}
-            </div>
-          )}
+          <AdminSaveError>{saveError}</AdminSaveError>
 
 	        {/* Input Context Schema */}
         <div className="flex flex-col gap-4">

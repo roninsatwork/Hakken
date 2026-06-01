@@ -395,6 +395,7 @@ Checklist:
 - [x] Extract repeated agents/companies destructive confirmation primitives.
 - [ ] Standardize destructive action confirmation and disabled states across remaining admin flows.
 - [ ] Standardize mutation toast/modal/error flows.
+- [x] Extract repeated save action/error feedback primitives.
 - [x] Add tests for shared UI primitives.
 - [ ] Keep the current UI direction unless the user explicitly chooses a redesign.
 
@@ -404,6 +405,7 @@ Completed frontend primitive slices:
 - Added a shared admin page header and primary action primitive, then adopted it in the agents and companies pages.
 - Added shared admin modal form field, error, and footer action primitives, then adopted them in the agents and companies create/edit dialogs.
 - Added a shared admin destructive confirmation modal, then adopted it in the agents and companies delete flows.
+- Added shared admin save action and error feedback primitives, then adopted them in the agent settings and schema pages.
 
 Acceptance:
 

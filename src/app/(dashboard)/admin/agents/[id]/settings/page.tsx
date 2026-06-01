@@ -9,9 +9,8 @@ import type { DragEvent, FormEvent } from "react";
 import { useParams } from "next/navigation";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  Save,
-  CheckCircle2,
   Bot,
+  CheckCircle2,
   ImagePlus,
   Globe,
   Loader2
@@ -19,6 +18,10 @@ import {
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+import {
+  AdminSaveAction,
+  AdminSaveError,
+} from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 
@@ -187,23 +190,16 @@ export default function AgentOverviewPage() {
               {t("sections.identity.title")}
             </h2>
 
-            <div className="flex items-center gap-3">
-              {saveSuccess && <span className="text-[#10b981] text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in"><CheckCircle2 className="w-3.5 h-3.5" /> {t("sections.identity.synchronized")}</span>}
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-white/5 hover:bg-white/10 text-foreground text-[12px] font-medium border border-white/5 transition-all"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {isSaving ? t("sections.identity.saving") : t("sections.identity.saveButton")}
-              </button>
-            </div>
+            <AdminSaveAction
+              type="submit"
+              isSaving={isSaving}
+              label={t("sections.identity.saveButton")}
+              savingLabel={t("sections.identity.saving")}
+              successLabel={t("sections.identity.synchronized")}
+              showSuccess={saveSuccess}
+            />
 	          </div>
-            {saveError && (
-              <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-                {saveError}
-              </div>
-            )}
+            <AdminSaveError>{saveError}</AdminSaveError>
 
 	          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="flex flex-col sm:flex-row gap-8 md:col-span-2 w-full">
