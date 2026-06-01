@@ -45,10 +45,10 @@ export default defineConfig({
         'vitest.setup.ts',
       ],
       thresholds: {
-        lines: 17,
-        branches: 50,
-        functions: 58,
-        statements: 17,
+        lines: 40,
+        branches: 73,
+        functions: 74,
+        statements: 40,
       },
     },
     projects: [

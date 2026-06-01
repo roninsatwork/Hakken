@@ -455,6 +455,26 @@ Acceptance:
 
 Goal: make coverage part of normal delivery instead of an occasional local check.
 
+Progress:
+
+- Phase 7 completed on June 1, 2026.
+- Added `.github/workflows/ci.yml` for pushes and pull requests targeting `dev` and `main`.
+- CI now runs the full quality gate:
+  - `npm run lint`
+  - `npm run typecheck`
+  - `npm run test:run`
+  - `npm run test:e2e`
+  - `npm run test:coverage`
+- CI installs the Chromium Playwright browser before running browser tests.
+- CI publishes a coverage table to the GitHub job summary using `coverage/coverage-summary.json`.
+- CI uploads the full `coverage/` report on every run.
+- CI uploads the `playwright-report/` artifact on failures.
+- Raised Vitest coverage thresholds to the Phase 6 measured floor:
+  - lines: 40 percent.
+  - statements: 40 percent.
+  - branches: 73 percent.
+  - functions: 74 percent.
+
 Tasks:
 
 - Update CI to run:
