@@ -20,6 +20,13 @@ import {
   AdminPagePrimaryAction,
 } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import {
+  AdminModalFormActions,
+  AdminModalFormError,
+  AdminModalFormField,
+  adminModalInputClassName,
+  adminModalTextareaClassName,
+} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import {
   AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
@@ -236,42 +243,34 @@ export default function CompaniesPage() {
       >
         <div className="flex flex-col gap-2 mb-6">
           <p className="text-secondary text-[15px]">{editingCompany ? t('editSubtitle') : t('createSubtitle')}</p>
-          {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
+          <AdminModalFormError>{submitError}</AdminModalFormError>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('nameLabel')}</label>
+          <AdminModalFormField label={t('nameLabel')}>
             <input
               type="text"
               required
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+              className={adminModalInputClassName}
               placeholder={t('namePlaceholder')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[13px] font-medium text-secondary tracking-wide">{t('promptLabel')}</label>
-              <span className="text-[11px] text-muted">{t('promptOptional')}</span>
-            </div>
+          <AdminModalFormField label={t('promptLabel')} hint={t('promptOptional')}>
             <textarea
               value={formData.systemPrompt}
               onChange={e => setFormData({ ...formData, systemPrompt: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm min-h-[120px] resize-y custom-scrollbar leading-relaxed"
+              className={adminModalTextareaClassName}
               placeholder={t('promptPlaceholder')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[13px] font-medium text-secondary tracking-wide">Subscription Plan</label>
-            </div>
+          <AdminModalFormField label="Subscription Plan">
              <select
                  value={formData.planId}
                  onChange={e => setFormData({ ...formData, planId: e.target.value })}
-                 className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+                 className={adminModalInputClassName}
               >
                   <option value="">No Plan (Unlimited / System Default)</option>
                   {activePlans.map(plan => (
@@ -280,25 +279,14 @@ export default function CompaniesPage() {
                      </option>
                   ))}
              </select>
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-              disabled={isSubmitting}
-            >
-              {tCommon('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? tCommon('saving') : (editingCompany ? t('editTitle') : t('provisionTenant'))}
-            </button>
-          </div>
+          <AdminModalFormActions
+            cancelLabel={tCommon('cancel')}
+            submitLabel={isSubmitting ? tCommon('saving') : (editingCompany ? t('editTitle') : t('provisionTenant'))}
+            isSubmitting={isSubmitting}
+            onCancel={() => setIsAddModalOpen(false)}
+          />
         </form>
       </SonaeModal>
 

@@ -23,6 +23,12 @@ import {
   AdminPagePrimaryAction,
 } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import {
+  AdminModalFormActions,
+  AdminModalFormError,
+  AdminModalFormField,
+  adminModalInputClassName,
+} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import {
   AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
@@ -246,48 +252,35 @@ export default function AgentsPage() {
         title={t('modal.initTitle')}
       >
         <p className="text-secondary mb-6 text-[15px]">{t('modal.initDesc')}</p>
-        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
+        <AdminModalFormError className="mb-4">{submitError}</AdminModalFormError>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.name')}</label>
+          <AdminModalFormField label={t('modal.name')}>
             <input
               type="text"
               required
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+              className={adminModalInputClassName}
               placeholder={t('placeholders.name')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.description')}</label>
+          <AdminModalFormField label={t('modal.description')}>
             <input
               type="text"
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+              className={adminModalInputClassName}
               placeholder={t('placeholders.description')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-              disabled={isSubmitting}
-            >
-              {t('buttons.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? t('buttons.creating') : t('buttons.create')}
-            </button>
-          </div>
+          <AdminModalFormActions
+            cancelLabel={t('buttons.cancel')}
+            submitLabel={isSubmitting ? t('buttons.creating') : t('buttons.create')}
+            isSubmitting={isSubmitting}
+            onCancel={() => setIsAddModalOpen(false)}
+          />
         </form>
       </SonaeModal>
 
