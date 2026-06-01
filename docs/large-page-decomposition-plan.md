@@ -118,6 +118,8 @@ Completed:
 
 ## Phase 3: Widget Configuration Surface
 
+Status: Complete.
+
 Target:
 
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx`
@@ -145,6 +147,15 @@ Acceptance:
 - Widget settings behavior and preview remain unchanged.
 - Embed snippet helper has regression tests.
 - Page size and local state density drop significantly.
+
+Completed:
+
+- Added local widget configuration components under `src/app/(dashboard)/admin/companies/[id]/widget/_components`.
+- Extracted tab navigation, empty state, appearance settings, welcome screen settings, conversation starter editor, greeting controls, integration/embed controls, and the live widget preview.
+- Added pure widget config helpers for allowed domain parsing, embed snippet generation, logo preview URLs, and starter limits.
+- Added regression tests in `widgetConfigUtils.test.ts`.
+- Reduced `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` from about 587 lines to 286 lines.
+- Verified with `npm run check`, `npm run lint:all`, `npm run build`, `npm run test:e2e`, `git diff --check`, and a `/login` smoke check.
 
 ## Phase 4: Assistant Welcome Page
 
