@@ -414,6 +414,8 @@ Completed frontend primitive slices:
 - Extended the shared admin destructive confirmation modal to agent trace delete flows.
 - Extended shared admin save controls to invitation template save flows.
 - Added shared admin animated save feedback banners, then adopted them in system prompt pages.
+- Reused shared admin animated save feedback banners on the analytics configuration page.
+- Reused shared admin save error feedback on the AI model pricing page.
 
 Acceptance:
 

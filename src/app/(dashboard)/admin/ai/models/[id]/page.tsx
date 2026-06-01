@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, Loader2, Save, Settings2, Zap, Database, Cpu } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 export default function ModelPricingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -107,11 +108,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           SAVE PRICING CONFIGURATION
         </button>
 	      </div>
-      {saveError && (
-        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
-          {saveError}
-        </div>
-      )}
+      <AdminSaveError>{saveError}</AdminSaveError>
 
 	      <div className="flex flex-col gap-6">
         

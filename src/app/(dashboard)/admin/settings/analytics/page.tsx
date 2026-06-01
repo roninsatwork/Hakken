@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   LineChart, 
   Save, 
   RefreshCcw,
-  CheckCircle2,
-  AlertCircle
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
+import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 export default function AnalyticsPage() {
   const currentId = useQuery(api.system.getAnalyticsId);
@@ -40,7 +38,6 @@ export default function AnalyticsPage() {
     try {
       await updateId({ trackingId: trackingId.trim() });
       setSaveStatus("success");
-      // Reset success status after exactly 3.5s for seamless fluid feedback
       setTimeout(() => setSaveStatus("idle"), 3500);
     } catch (error: unknown) {
       console.error("Failed to save analytics configuration:", error);
@@ -104,44 +101,13 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      {/* Inline Sonae Success Feedback */}
-      <AnimatePresence mode="wait">
-        {saveStatus === "success" && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-center gap-3 w-full bg-[#10b981]/10 border border-[#10b981]/20 rounded-[12px] p-4 text-[#10b981]">
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-[13px] tracking-wide">Tracking Integrated</span>
-                <span className="text-[12px] opacity-80">The structural analytics script identifier was successfully deployed to the platform core.</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-        
-        {saveStatus === "error" && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="overflow-hidden"
-          >
-            <div className="flex items-center gap-3 w-full bg-red-500/10 border border-red-500/20 rounded-[12px] p-4 text-red-500">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-[13px] tracking-wide">Transmission Failure</span>
-                <span className="text-[12px] opacity-80">{errorMessage}</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AdminSaveFeedback
+        status={saveStatus}
+        successTitle="Tracking Integrated"
+        successMessage="The structural analytics script identifier was successfully deployed to the platform core."
+        errorTitle="Transmission Failure"
+        errorMessage={errorMessage}
+      />
 
       {/* Flat Content Flow Section */}
       <div className="w-full h-[1px] bg-border-dim my-2" />
