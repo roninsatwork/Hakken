@@ -336,6 +336,7 @@ Completed service-boundary slices:
 
 - Moved AI model cost mapping, cost calculation, GBP conversion, and metric rounding into `analyticsService`.
 - Moved user-management create/update/delete role and tenant policy into `userManagementService`.
+- Moved purge pipeline defaults, schedule config parsing, retention-floor validation, next-run normalization, and cutoff timestamp calculation into `purgeScheduleService`.
 
 Checklist:
 

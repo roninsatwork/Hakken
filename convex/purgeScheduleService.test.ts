@@ -1,5 +1,12 @@
-import { describe, expect, test } from "vitest";
-import { calculateNextPurgeRun } from "./purgeScheduleService";
+import { describe, expect, test, vi } from "vitest";
+import {
+  calculateNextPurgeRun,
+  calculatePurgeCutoffTimestamp,
+  DEFAULT_PURGE_CONFIGS,
+  getPurgeRetentionDays,
+  normalizePurgePipelineConfigForUpdate,
+  parsePurgePipelineConfig,
+} from "./purgeScheduleService";
 
 describe("purge schedule service", () => {
   test("rounds hourly schedules to the next UTC hour", () => {
@@ -34,6 +41,112 @@ describe("purge schedule service", () => {
 
     expect(calculateNextPurgeRun("Monthly", 2, undefined, 15, now)).toBe(
       Date.parse("2026-06-15T02:00:00.000Z")
+    );
+  });
+
+  test("parses missing or invalid pipeline config as defaults", () => {
+    expect(parsePurgePipelineConfig(undefined)).toEqual(DEFAULT_PURGE_CONFIGS);
+    expect(parsePurgePipelineConfig("not-json")).toEqual(DEFAULT_PURGE_CONFIGS);
+  });
+
+  test("merges saved pipeline config over defaults", () => {
+    const config = parsePurgePipelineConfig(
+      JSON.stringify({
+        agentLogs: {
+          enabled: true,
+          retentionDays: 45,
+          interval: "Daily",
+          hourUtc: 3,
+          nextRunTimestamp: 123,
+        },
+      })
+    );
+
+    expect(config.agentLogs.retentionDays).toBe(45);
+    expect(config.agentLogs.enabled).toBe(true);
+    expect(config.workflowLogs).toEqual(DEFAULT_PURGE_CONFIGS.workflowLogs);
+  });
+
+  test("normalizes enabled and disabled pipeline update configs", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-31T16:37:52.000Z"));
+
+    try {
+      const normalized = normalizePurgePipelineConfigForUpdate(
+        JSON.stringify({
+          agentLogs: {
+            enabled: true,
+            retentionDays: 45,
+            interval: "Daily",
+            hourUtc: 20,
+            nextRunTimestamp: 0,
+          },
+          workflowLogs: {
+            enabled: false,
+            retentionDays: 90,
+            interval: "Daily",
+            hourUtc: 2,
+            nextRunTimestamp: 999,
+          },
+        })
+      );
+
+      expect(normalized.agentLogs?.nextRunTimestamp).toBe(
+        Date.parse("2026-05-31T20:00:00.000Z")
+      );
+      expect(normalized.workflowLogs?.nextRunTimestamp).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("rejects invalid pipeline update JSON", () => {
+    expect(() => normalizePurgePipelineConfigForUpdate("not-json")).toThrow(
+      "Invalid configuration JSON payload"
+    );
+  });
+
+  test("rejects pipeline update retention below the minimum", () => {
+    expect(() =>
+      normalizePurgePipelineConfigForUpdate(
+        JSON.stringify({
+          agentLogs: {
+            enabled: true,
+            retentionDays: 29,
+            interval: "Daily",
+            hourUtc: 2,
+            nextRunTimestamp: 0,
+          },
+        })
+      )
+    ).toThrow("Retention policy for category 'agentLogs' must be at least 30 days.");
+  });
+
+  test("gets purge retention from config with fallback behavior", () => {
+    const config = JSON.stringify({
+      auditLogs: {
+        enabled: false,
+        retentionDays: 120,
+        interval: "Daily",
+        hourUtc: 2,
+        nextRunTimestamp: 0,
+      },
+    });
+
+    expect(getPurgeRetentionDays({ configStr: config, pipelineKey: "auditLogs" })).toBe(120);
+    expect(getPurgeRetentionDays({ configStr: "not-json", pipelineKey: "agentLogs" })).toBe(90);
+    expect(
+      getPurgeRetentionDays({
+        configStr: JSON.stringify({ agentLogs: { retentionDays: 0 } }),
+        pipelineKey: "agentLogs",
+        fallbackDays: 75,
+      })
+    ).toBe(75);
+  });
+
+  test("calculates purge cutoff timestamp from retention days", () => {
+    expect(calculatePurgeCutoffTimestamp(30, Date.parse("2026-06-01T12:00:00.000Z"))).toBe(
+      Date.parse("2026-05-02T12:00:00.000Z")
     );
   });
 });

@@ -3,67 +3,17 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireSuperAdmin } from "./authz";
-import { calculateNextPurgeRun, type PurgeScheduleInterval } from "./purgeScheduleService";
-
-interface PipelineConfig {
-  enabled: boolean;
-  retentionDays: number;
-  interval: PurgeScheduleInterval;
-  hourUtc: number; // 0 to 23
-  dayOfWeek?: number; // 0 (Sunday) to 6 (Saturday) - for Weekly
-  dayOfMonth?: number; // 1 to 28 - for Monthly
-  nextRunTimestamp: number;
-}
+import {
+  calculateNextPurgeRun,
+  calculatePurgeCutoffTimestamp,
+  assertMinimumPurgeRetentionDays,
+  getPurgeRetentionDays,
+  parsePurgePipelineConfig,
+  normalizePurgePipelineConfigForUpdate,
+  PURGE_PIPELINE_KEYS,
+} from "./purgeScheduleService";
 
 const superAdminPurgeMessage = "Unauthorized: Super Administrator privileges required.";
-
-const DEFAULT_CONFIGS: Record<string, PipelineConfig> = {
-  agentLogs: {
-    enabled: false,
-    retentionDays: 90,
-    interval: "Daily",
-    hourUtc: 2,
-    dayOfWeek: 0,
-    dayOfMonth: 1,
-    nextRunTimestamp: 0,
-  },
-  workflowLogs: {
-    enabled: false,
-    retentionDays: 90,
-    interval: "Daily",
-    hourUtc: 2,
-    dayOfWeek: 0,
-    dayOfMonth: 1,
-    nextRunTimestamp: 0,
-  },
-  userLogins: {
-    enabled: false,
-    retentionDays: 180,
-    interval: "Daily",
-    hourUtc: 2,
-    dayOfWeek: 0,
-    dayOfMonth: 1,
-    nextRunTimestamp: 0,
-  },
-  chatHistory: {
-    enabled: false,
-    retentionDays: 180,
-    interval: "Daily",
-    hourUtc: 2,
-    dayOfWeek: 0,
-    dayOfMonth: 1,
-    nextRunTimestamp: 0,
-  },
-  auditLogs: {
-    enabled: false,
-    retentionDays: 90,
-    interval: "Daily",
-    hourUtc: 2,
-    dayOfWeek: 0,
-    dayOfMonth: 1,
-    nextRunTimestamp: 0,
-  },
-};
 
 export const getPipelineConfig = query({
   args: {},
@@ -75,16 +25,7 @@ export const getPipelineConfig = query({
       .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
       .first();
 
-    if (!config || !config.value) {
-      return DEFAULT_CONFIGS;
-    }
-
-    try {
-      const parsed = JSON.parse(config.value);
-      return { ...DEFAULT_CONFIGS, ...parsed };
-    } catch {
-      return DEFAULT_CONFIGS;
-    }
+    return parsePurgePipelineConfig(config?.value);
   },
 });
 
@@ -95,31 +36,8 @@ export const updatePipelineConfig = mutation({
   handler: async (ctx, args) => {
     const { userId, user } = await requireSuperAdmin(ctx, superAdminPurgeMessage);
 
-    // Validate configStr to ensure it is valid JSON
-    let parsed: Record<string, PipelineConfig>;
-    try {
-      parsed = JSON.parse(args.configStr);
-    } catch {
-      throw new Error("Invalid configuration JSON payload");
-    }
-
-    // Process and calculate nextRunTimestamp for enabled configs if necessary
     const now = Date.now();
-    for (const key of Object.keys(DEFAULT_CONFIGS)) {
-      if (parsed[key]) {
-        const conf = parsed[key];
-        if (typeof conf.retentionDays !== "number" || conf.retentionDays < 30) {
-          throw new Error(`Retention policy for category '${key}' must be at least 30 days.`);
-        }
-        // If enabled and nextRunTimestamp is missing/zero or interval/hour changed, recalculate
-        if (conf.enabled) {
-          conf.nextRunTimestamp = calculateNextPurgeRun(conf.interval, conf.hourUtc, conf.dayOfWeek, conf.dayOfMonth);
-        } else {
-          conf.nextRunTimestamp = 0;
-        }
-      }
-    }
-
+    const parsed = normalizePurgePipelineConfigForUpdate(args.configStr);
     const finalConfigStr = JSON.stringify(parsed);
 
     const existingConfig = await ctx.db
@@ -216,23 +134,13 @@ export const runManualPurge = mutation({
       .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
       .first();
 
-    let retentionDays = 90;
-    if (configDoc && configDoc.value) {
-      try {
-        const configs = JSON.parse(configDoc.value);
-        if (configs[args.pipelineKey]) {
-          retentionDays = configs[args.pipelineKey].retentionDays || 90;
-        }
-      } catch {
-        // Use default
-      }
-    }
+    const retentionDays = getPurgeRetentionDays({
+      configStr: configDoc?.value,
+      pipelineKey: args.pipelineKey,
+    });
+    assertMinimumPurgeRetentionDays(retentionDays, "manual purge");
 
-    if (retentionDays < 30) {
-      throw new Error(`Retention policy for manual purge must be at least 30 days.`);
-    }
-
-    const cutoffTimestamp = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    const cutoffTimestamp = calculatePurgeCutoffTimestamp(retentionDays);
 
     // Create history record
     const historyId = await ctx.db.insert("purgeHistory", {
@@ -473,21 +381,13 @@ export const dispatcher = internalMutation({
       return;
     }
 
-    let configs: Record<string, PipelineConfig>;
-    try {
-      configs = JSON.parse(configDoc.value);
-    } catch {
-      return;
-    }
+    const configs = parsePurgePipelineConfig(configDoc.value);
 
     const now = Date.now();
     let configChanged = false;
 
-    for (const [pipelineKey, config] of Object.entries(configs)) {
-      const typedKey = pipelineKey as "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs";
-      if (!["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"].includes(typedKey)) {
-        continue;
-      }
+    for (const pipelineKey of PURGE_PIPELINE_KEYS) {
+      const config = configs[pipelineKey];
 
       if (!config.enabled) {
         continue;
@@ -506,15 +406,14 @@ export const dispatcher = internalMutation({
 
       if (now >= config.nextRunTimestamp) {
         console.log(
-          `Scheduler: triggering scheduled purge for pipeline: ${typedKey}`
+          `Scheduler: triggering scheduled purge for pipeline: ${pipelineKey}`
         );
 
-        const cutoffTimestamp =
-          now - config.retentionDays * 24 * 60 * 60 * 1000;
+        const cutoffTimestamp = calculatePurgeCutoffTimestamp(config.retentionDays, now);
 
         // Insert history record
         const historyId = await ctx.db.insert("purgeHistory", {
-          pipelineKey: typedKey,
+          pipelineKey,
           triggerType: "SCHEDULED",
           status: "RUNNING",
           recordsPurged: 0,
@@ -523,7 +422,7 @@ export const dispatcher = internalMutation({
 
         // Trigger execution asynchronously
         await ctx.scheduler.runAfter(0, internal.purges.executePurgeRecursive, {
-          pipelineKey: typedKey,
+          pipelineKey,
           cutoffTimestamp,
           historyId,
           deletedCount: 0,
