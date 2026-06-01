@@ -19,7 +19,7 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
-type ModelStatusFilter = "all" | "active" | "inactive";
+type ModelStatusFilter = "active" | "inactive";
 
 export default function AIModelsPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function AIModelsPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
-  const [statusFilter, setStatusFilter] = useState<ModelStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<ModelStatusFilter>("active");
   const [page, setPage] = useState(1);
   const [syncError, setSyncError] = useState("");
   const pageSize = ADMIN_PAGE_SIZE;
@@ -41,10 +41,9 @@ export default function AIModelsPage() {
     setPage(1);
   };
 
-  const statusFilterArg = statusFilter === "all" ? undefined : statusFilter;
   const modelsData = useQuery(api.aiModels.getOffsetPaginatedModels, {
     searchTerm: debouncedSearch,
-    ...(statusFilterArg ? { statusFilter: statusFilterArg } : {}),
+    statusFilter,
     page,
     pageSize
   });
@@ -119,9 +118,8 @@ export default function AIModelsPage() {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-1 rounded-[12px] border border-border-dim bg-background/40 p-1 md:w-[360px]">
+        <div className="grid grid-cols-2 gap-1 rounded-[12px] border border-border-dim bg-background/40 p-1 md:w-[300px]">
           {[
-            { value: "all" as const, label: "All" },
             { value: "active" as const, label: "Active" },
             { value: "inactive" as const, label: "Inactive" },
           ].map((option) => (
