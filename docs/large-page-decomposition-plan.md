@@ -159,6 +159,8 @@ Completed:
 
 ## Phase 4: Assistant Welcome Page
 
+Status: Complete.
+
 Target:
 
 - `src/app/(dashboard)/app/assistant/page.tsx`
@@ -188,6 +190,15 @@ Acceptance:
 - Page remains visually unchanged.
 - Upload behavior and model selection still pass existing chat/upload tests.
 - E2E user chat flow still passes or auth-skips as documented.
+
+Completed:
+
+- Added assistant welcome components under `src/app/(dashboard)/app/assistant/_components`.
+- Extracted the hero, composer shell, upload status, pending file tray, model selector, thinking selector, and modal content.
+- Added pure helpers for greeting buckets, transcript append behavior, upload error copy, and start eligibility.
+- Added regression tests in `assistantWelcomeUtils.test.ts`.
+- Reduced `src/app/(dashboard)/app/assistant/page.tsx` from about 559 lines to 279 lines.
+- Verified with `npm run check`, `npm run lint:all`, `npm run build`, `npm run test:e2e`, `git diff --check`, and a `/login` smoke check.
 
 ## Phase 5: AI Costs Dashboard
 
