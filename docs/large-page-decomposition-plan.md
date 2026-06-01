@@ -202,6 +202,8 @@ Completed:
 
 ## Phase 5: AI Costs Dashboard
 
+Status: Complete.
+
 Target:
 
 - `src/app/(dashboard)/admin/ai/costs/page.tsx`
@@ -222,6 +224,15 @@ Acceptance:
 - Dashboard output remains unchanged.
 - Formatting helpers are easier to test.
 - Browser route coverage for `/admin/ai/costs` remains green.
+
+Completed:
+
+- Added AI cost dashboard components under `src/app/(dashboard)/admin/ai/costs/_components`.
+- Extracted the header/timeframe controls, metric grid, timeline chart, model/token distribution charts, and leaderboards.
+- Added pure formatting helpers for GBP amounts, tiny-cost labels, chart ticks, and agent message counts.
+- Added regression tests in `costFormatters.test.ts`.
+- Reduced `src/app/(dashboard)/admin/ai/costs/page.tsx` from about 505 lines to 74 lines.
+- Verified with `npm run check`, `npm run lint:all`, `npm run build`, `npm run test:e2e`, `git diff --check`, and a `/login` smoke check.
 
 ## Phase 6: Final Consistency Pass
 
