@@ -276,6 +276,44 @@ Acceptance:
 
 Goal: protect the pages that wire together Convex queries, mutations, UI state, filters, pagination, forms, and navigation.
 
+Progress:
+
+- Phase 4 completed on June 1, 2026.
+- Current measured coverage after Phase 4:
+  - `npm run typecheck`: passing.
+  - `npm run lint`: passing.
+  - `npm run test:run`: 121 test files, 474 tests, all passing.
+  - `npm run test:e2e`: 27 passing browser tests, 7 skipped authenticated browser tests.
+  - `npm run test:coverage`: 121 test files, 474 tests, all passing.
+  - all files: 40.09 percent line coverage, 73.09 percent branch coverage, 74.16 percent function coverage.
+  - `convex`: 79.49 percent line coverage, 73.18 percent branch coverage, 88.78 percent function coverage.
+- Added page-level integration coverage for:
+  - AI tools connector listing, search, loading/empty states, external links, and delete confirmation.
+  - companies listing, search, navigation, create/edit/delete modals, and mutation payloads.
+  - users listing, search pagination arguments, load-more behavior, edit/delete/revoke actions, and invite visibility.
+  - subscription plans listing, search, loading/empty states, create/edit/delete modals, and mutation payloads.
+  - workflows listing, filtering, navigation, create, and delete behavior.
+  - workflow schedules listing, filtering, schedule creation route, enable/disable, manual run, and delete behavior.
+  - company widget initialization, publish behavior, and integration snippet copy.
+  - admin settings identity, security, and audit-tab behavior.
+  - assistant landing page user/model context and thread creation.
+  - app settings dashboard loading, no-organization, populated analytics, and timeframe query arguments.
+- Coverage highlights after Phase 4:
+  - `/admin/ai/tools`: 98.63 percent lines.
+  - `/admin/companies`: 97.17 percent lines.
+  - `/admin/users`: 94.98 percent lines.
+  - `/admin/settings`: 82.40 percent lines.
+  - `/admin/settings/plans`: 98.42 percent lines.
+  - `/admin/workflows`: 96.24 percent lines.
+  - `/admin/workflows/schedules`: 95.90 percent lines.
+  - `/admin/companies/[id]/widget`: 76.17 percent lines.
+  - `/app/settings`: 95.06 percent lines.
+  - `/app/assistant`: 64.60 percent lines.
+- Remaining page-level gaps intentionally deferred:
+  - authenticated browser role coverage, assigned to Phase 5.
+  - deeper end-to-end journeys that assert persisted UI outcomes, assigned to Phase 6.
+  - large nested editor/detail pages such as workflow schedule detail, agent detail, and company detail subroutes.
+
 Priority pages:
 
 - `/admin/ai/models`
