@@ -3,16 +3,16 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { usePathname, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { Building2, ArrowLeft, Users, Mail, Activity, BookOpen, BrainCircuit, UserCheck, Loader2, TerminalSquare, FileText, AppWindow, MessageSquareText } from "lucide-react";
+import { AdminDetailTabs } from "@/src/app/(dashboard)/admin/_components/AdminDetailTabs";
 
 export default function CompanyDashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const company = useQuery(api.companies.getCompanyById, { id: companyId });
-  const pathname = usePathname();
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const impersonateCompany = useMutation(api.users.impersonateCompany);
@@ -83,29 +83,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           </div>
         </header>
 
-        <div className="flex items-center gap-1 border-b border-border-dim/50 overflow-x-auto custom-scrollbar pb-px mt-2">
-          {tabs.map(tab => {
-             const Icon = tab.icon;
-             const isActive = tab.href === `/admin/companies/${companyId}` 
-               ? pathname === tab.href 
-               : pathname.startsWith(tab.href);
-               
-             return (
-               <Link 
-                 key={tab.href}
-                 href={tab.href}
-                 className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-all border-b-2 whitespace-nowrap ${
-                   isActive 
-                   ? 'border-brand text-brand bg-brand/5' 
-                   : 'border-transparent text-secondary hover:text-foreground hover:border-foreground/30'
-                 } rounded-t-[8px]`}
-               >
-                 <Icon className="w-4 h-4" />
-                 {tab.label}
-               </Link>
-             );
-          })}
-        </div>
+        <AdminDetailTabs tabs={tabs} rootHref={`/admin/companies/${companyId}`} />
       </div>
       
       <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4">

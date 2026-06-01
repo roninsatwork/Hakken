@@ -6,12 +6,13 @@ import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
-import { usePathname, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminDetailTabs } from "@/src/app/(dashboard)/admin/_components/AdminDetailTabs";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
@@ -19,7 +20,6 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const params = useParams();
   const agentId = params.id as Id<"agents">;
   const agent = useQuery(api.agents.get, { id: agentId });
-  const pathname = usePathname();
 
   const runManualSchedule = useMutation(api.scheduler.manualRunSchedule);
   const [isManualRunning, setIsManualRunning] = useState(false);
@@ -108,29 +108,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
           </div>
         </header>
 
-        <div className="flex items-center gap-1 border-b border-border-dim/50 overflow-x-auto custom-scrollbar pb-px mt-2">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            // Ensure exact match for root route so it doesn't stay highlighted
-            const isActive = tab.href === `/admin/agents/${agentId}`
-              ? pathname === tab.href
-              : pathname.startsWith(tab.href);
-
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-all border-b-2 whitespace-nowrap ${isActive
-                    ? 'border-brand text-brand bg-brand/5'
-                    : 'border-transparent text-secondary hover:text-foreground hover:border-foreground/30'
-                  } rounded-t-[8px]`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </Link>
-            );
-          })}
-        </div>
+        <AdminDetailTabs tabs={tabs} rootHref={`/admin/agents/${agentId}`} />
       </div>
 
       <div className="relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4 w-full pr-4 overflow-y-auto custom-scrollbar">

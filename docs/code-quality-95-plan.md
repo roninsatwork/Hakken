@@ -390,6 +390,7 @@ Checklist:
 - [x] Audit admin pages still hand-rolling table shells, filters, loading rows, empty rows, or pagination.
 - [x] Expand shared admin table primitives where patterns are genuinely repeated.
 - [x] Extract repeated admin page header/action primitives.
+- [x] Extract repeated detail-page tab navigation primitives.
 - [ ] Create or improve shared detail-page primitives where pages repeat header/action/sidebar structures.
 - [x] Create shared form field patterns only where they remove real duplication.
 - [x] Extract repeated agents/companies destructive confirmation primitives.
@@ -406,6 +407,7 @@ Completed frontend primitive slices:
 - Added shared admin modal form field, error, and footer action primitives, then adopted them in the agents and companies create/edit dialogs.
 - Added a shared admin destructive confirmation modal, then adopted it in the agents and companies delete flows.
 - Added shared admin save action and error feedback primitives, then adopted them in the agent settings and schema pages.
+- Added shared admin detail tabs, then adopted them in the agent and company detail layouts.
 
 Acceptance:
 
