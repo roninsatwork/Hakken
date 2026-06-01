@@ -22,6 +22,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 
@@ -410,65 +411,41 @@ export default function ManageUsersPage() {
         </form>
       </SonaeModal>
 
-      {/* Delete Confirmation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingUser}
-        onClose={() => { if (!isSubmitting) { setDeletingUser(null); setSubmitError(""); } }}
+        onClose={() => {
+          setDeletingUser(null);
+          setSubmitError("");
+        }}
         title={t('modal.deleteTitle')}
+        cancelLabel={t('buttons.cancel')}
+        confirmLabel={isSubmitting ? tCommon('deleting') : t('buttons.delete')}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmDelete}
+        error={submitError}
       >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
+        <p>
           {t('modal.deleteConfirm', { name: deletingUser?.name ?? "" })}
         </p>
-        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingUser(null)}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium disabled:opacity-50"
-          >
-            {t('buttons.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? tCommon('deleting') : t('buttons.delete')}
-          </button>
-        </div>
-      </SonaeModal>
+      </AdminConfirmationModal>
 
-      {/* Revoke Invitation Modal */}
-      <SonaeModal
+      <AdminConfirmationModal
         isOpen={!!deletingInvite}
-        onClose={() => { if (!isSubmitting) { setDeletingInvite(null); setSubmitError(""); } }}
+        onClose={() => {
+          setDeletingInvite(null);
+          setSubmitError("");
+        }}
         title={t('modal.revokeTitle')}
+        cancelLabel={t('buttons.cancel')}
+        confirmLabel={isSubmitting ? tCommon('deleting') : t('buttons.revoke')}
+        isSubmitting={isSubmitting}
+        onConfirm={confirmRevoke}
+        error={submitError}
       >
-        <p className="text-secondary mb-6 text-[15px] leading-relaxed">
+        <p>
           {t('modal.revokeConfirm', { email: deletingInvite?.email ?? "" })}
         </p>
-        {submitError && <p className="text-red-500 text-[13px] font-medium mb-4">{submitError}</p>}
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">
-          <button
-            type="button"
-            onClick={() => setDeletingInvite(null)}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium disabled:opacity-50"
-          >
-            {t('buttons.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={confirmRevoke}
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-          >
-            {isSubmitting ? tCommon('deleting') : t('buttons.revoke')}
-          </button>
-        </div>
-      </SonaeModal>
+      </AdminConfirmationModal>
     </div>
   );
 }

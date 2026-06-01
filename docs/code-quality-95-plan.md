@@ -408,6 +408,7 @@ Completed frontend primitive slices:
 - Added a shared admin destructive confirmation modal, then adopted it in the agents and companies delete flows.
 - Added shared admin save action and error feedback primitives, then adopted them in the agent settings and schema pages.
 - Added shared admin detail tabs, then adopted them in the agent and company detail layouts.
+- Extended the shared admin destructive confirmation modal to the users and super-admins delete/revoke flows.
 
 Acceptance:
 
