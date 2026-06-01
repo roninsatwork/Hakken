@@ -1,6 +1,17 @@
 import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin, requireSuperAdmin } from "./authz";
+import {
+  buildAnalyticsIdAuditMetadata,
+  buildSystemConfigPatch,
+  buildSystemConfigWrite,
+  buildSystemPromptAuditMetadata,
+  GOOGLE_ANALYTICS_CONFIG_KEY,
+  parseSystemPiiConfig,
+  PII_REDACTION_CONFIG_KEY,
+  SYSTEM_PROMPT_CONFIG_KEY,
+  trimAnalyticsTrackingId,
+} from "./systemService";
 
 // Public authenticated query for the Admin UI editor
 export const getSystemPrompt = query({
@@ -11,7 +22,7 @@ export const getSystemPrompt = query({
 
     const config = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "SYSTEM_PROMPT"))
+      .withIndex("by_key", (q) => q.eq("key", SYSTEM_PROMPT_CONFIG_KEY))
       .first();
 
     return config?.value || "";
@@ -24,7 +35,7 @@ export const getInternalSystemPrompt = internalQuery({
   handler: async (ctx) => {
     const config = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "SYSTEM_PROMPT"))
+      .withIndex("by_key", (q) => q.eq("key", SYSTEM_PROMPT_CONFIG_KEY))
       .first();
 
     return config?.value || null;
@@ -44,41 +55,42 @@ export const updateSystemPrompt = mutation({
 
     const existingConfig = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "SYSTEM_PROMPT"))
+      .withIndex("by_key", (q) => q.eq("key", SYSTEM_PROMPT_CONFIG_KEY))
       .first();
 
+    const now = Date.now();
     if (existingConfig) {
-      await ctx.db.patch(existingConfig._id, {
+      await ctx.db.patch(existingConfig._id, buildSystemConfigPatch({
         value: args.prompt,
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+        now,
+        userId,
+      }));
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_SYSTEM_PROMPT",
         actorId: userId,
         entityType: "systemConfig",
-        entityId: "SYSTEM_PROMPT",
-        timestamp: Date.now(),
-        metadata: JSON.stringify({ promptLength: args.prompt.length })
+        entityId: SYSTEM_PROMPT_CONFIG_KEY,
+        timestamp: now,
+        metadata: buildSystemPromptAuditMetadata(args.prompt)
       });
       
       return existingConfig._id;
     } else {
-      const id = await ctx.db.insert("systemConfig", {
-        key: "SYSTEM_PROMPT",
+      const id = await ctx.db.insert("systemConfig", buildSystemConfigWrite({
+        key: SYSTEM_PROMPT_CONFIG_KEY,
         value: args.prompt,
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+        now,
+        userId,
+      }));
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_SYSTEM_PROMPT",
         actorId: userId,
         entityType: "systemConfig",
-        entityId: "SYSTEM_PROMPT",
-        timestamp: Date.now(),
-        metadata: JSON.stringify({ promptLength: args.prompt.length })
+        entityId: SYSTEM_PROMPT_CONFIG_KEY,
+        timestamp: now,
+        metadata: buildSystemPromptAuditMetadata(args.prompt)
       });
       
       return id;
@@ -92,7 +104,7 @@ export const getAnalyticsId = query({
     /* intentionally public: required for frontend analytics mounting */
     const config = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "GOOGLE_ANALYTICS_ID"))
+      .withIndex("by_key", (q) => q.eq("key", GOOGLE_ANALYTICS_CONFIG_KEY))
       .first();
 
     return config?.value || null;
@@ -112,41 +124,43 @@ export const updateAnalyticsId = mutation({
 
     const existingConfig = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "GOOGLE_ANALYTICS_ID"))
+      .withIndex("by_key", (q) => q.eq("key", GOOGLE_ANALYTICS_CONFIG_KEY))
       .first();
 
+    const now = Date.now();
+    const trackingId = trimAnalyticsTrackingId(args.trackingId);
     if (existingConfig) {
-      await ctx.db.patch(existingConfig._id, {
-        value: args.trackingId.trim(),
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+      await ctx.db.patch(existingConfig._id, buildSystemConfigPatch({
+        value: trackingId,
+        now,
+        userId,
+      }));
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_ANALYTICS_ID",
         actorId: userId,
         entityType: "systemConfig",
-        entityId: "GOOGLE_ANALYTICS_ID",
-        timestamp: Date.now(),
-        metadata: JSON.stringify({ newTrackingId: args.trackingId.trim() })
+        entityId: GOOGLE_ANALYTICS_CONFIG_KEY,
+        timestamp: now,
+        metadata: buildAnalyticsIdAuditMetadata(args.trackingId)
       });
       
       return existingConfig._id;
     } else {
-      const id = await ctx.db.insert("systemConfig", {
-        key: "GOOGLE_ANALYTICS_ID",
-        value: args.trackingId.trim(),
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+      const id = await ctx.db.insert("systemConfig", buildSystemConfigWrite({
+        key: GOOGLE_ANALYTICS_CONFIG_KEY,
+        value: trackingId,
+        now,
+        userId,
+      }));
       
       await ctx.db.insert("auditLogs", {
         actionType: "UPDATE_ANALYTICS_ID",
         actorId: userId,
         entityType: "systemConfig",
-        entityId: "GOOGLE_ANALYTICS_ID",
-        timestamp: Date.now(),
-        metadata: JSON.stringify({ newTrackingId: args.trackingId.trim() })
+        entityId: GOOGLE_ANALYTICS_CONFIG_KEY,
+        timestamp: now,
+        metadata: buildAnalyticsIdAuditMetadata(args.trackingId)
       });
       
       return id;
@@ -161,21 +175,10 @@ export const getPiiConfig = query({
 
     const config = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .withIndex("by_key", (q) => q.eq("key", PII_REDACTION_CONFIG_KEY))
       .first();
 
-    if (!config || !config.value) {
-      // Return sensible defaults if not set yet
-      return {
-        enabled: false,
-        maskEmails: true,
-        maskCreditCards: true,
-        maskPhones: false,
-        maskNinos: true
-      };
-    }
-
-    return JSON.parse(config.value);
+    return parseSystemPiiConfig(config?.value);
   },
 });
 
@@ -188,30 +191,31 @@ export const updatePiiConfig = mutation({
 
     const existingConfig = await ctx.db
       .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", "PII_REDACTION_CONFIG"))
+      .withIndex("by_key", (q) => q.eq("key", PII_REDACTION_CONFIG_KEY))
       .first();
 
+    const now = Date.now();
     if (existingConfig) {
-      await ctx.db.patch(existingConfig._id, {
+      await ctx.db.patch(existingConfig._id, buildSystemConfigPatch({
         value: args.configStr,
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+        now,
+        userId,
+      }));
     } else {
-      await ctx.db.insert("systemConfig", {
-        key: "PII_REDACTION_CONFIG",
+      await ctx.db.insert("systemConfig", buildSystemConfigWrite({
+        key: PII_REDACTION_CONFIG_KEY,
         value: args.configStr,
-        updatedAt: Date.now(),
-        updatedBy: userId,
-      });
+        now,
+        userId,
+      }));
     }
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_PII_FIREWALL",
       actorId: userId,
       entityType: "systemConfig",
-      entityId: "PII_REDACTION_CONFIG",
-      timestamp: Date.now(),
+      entityId: PII_REDACTION_CONFIG_KEY,
+      timestamp: now,
       metadata: args.configStr
     });
 

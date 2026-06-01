@@ -63,6 +63,7 @@ import type * as settingsService from "../settingsService.js";
 import type * as swarmActions from "../swarmActions.js";
 import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
+import type * as systemService from "../systemService.js";
 import type * as testQuery from "../testQuery.js";
 import type * as userManagementService from "../userManagementService.js";
 import type * as users from "../users.js";
@@ -144,6 +145,7 @@ declare const fullApi: ApiFromModules<{
   swarmActions: typeof swarmActions;
   swarmRuntime: typeof swarmRuntime;
   system: typeof system;
+  systemService: typeof systemService;
   testQuery: typeof testQuery;
   userManagementService: typeof userManagementService;
   users: typeof users;
