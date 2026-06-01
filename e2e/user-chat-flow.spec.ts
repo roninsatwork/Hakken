@@ -5,14 +5,18 @@ test.describe('End-User Chat Journey', () => {
   test('User can type a message, submit, and transition to a thread', async ({ page }) => {
     await gotoWithoutServerCrash(page, '/app/assistant');
     await skipWhenRedirectedToLogin(page, 'Chat execution requires an authenticated user storage state.');
+    await expect(page.getByText(/E2E User/i).first()).toBeVisible({ timeout: 10000 });
 
     // 1. Ensure the core chat input area is mounted and visible
     const chatInput = page.locator('textarea');
     await expect(chatInput).toBeVisible({ timeout: 10000 });
+    await expect(chatInput).toHaveAttribute('placeholder', /Enter a prompt/i);
 
     // 2. Simulate User Input
     const testMessage = `Hello Sonae, run system diagnostic ${Date.now()}`;
-    await chatInput.fill(testMessage);
+    await chatInput.click();
+    await chatInput.pressSequentially(testMessage);
+    await expect(chatInput).toHaveValue(testMessage);
 
     // 3. Verify Submit Button becomes active and submit
     const submitButton = page.locator('button[type="submit"]');
@@ -29,7 +33,6 @@ test.describe('End-User Chat Journey', () => {
     
     // 6. Verify AI is generating or has generated a response
     // We expect either a streaming indicator or an assistant message block to appear
-    const assistantResponseBlock = page.locator('.assistant-message, .streaming-indicator, [data-role="assistant"]').first();
-    await expect(assistantResponseBlock).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/E2E assistant response ready|Thinking/i).first()).toBeVisible({ timeout: 20000 });
   });
 });

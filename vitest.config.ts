@@ -40,6 +40,7 @@ export default defineConfig({
         '**/*.config.{ts,tsx,js,mjs,cjs}',
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
+        'src/e2e/**',
         'src/**/_generated/**',
         'vitest.setup.ts',
       ],

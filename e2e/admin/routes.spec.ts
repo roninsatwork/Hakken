@@ -23,7 +23,7 @@ test.describe("Admin route coverage", () => {
       if (page.url().includes("/login")) {
         await expect(page.getByRole("button", { name: /google|continue|sign/i }).first()).toBeVisible();
       } else {
-        await expect(page.locator("main, body")).toBeVisible();
+        await expect(page.locator("main, body").first()).toBeVisible();
       }
 
       expect(pageErrors).toEqual([]);

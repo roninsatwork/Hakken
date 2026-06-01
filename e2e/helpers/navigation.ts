@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export function collectPageErrors(page: Page) {
   const errors: string[] = [];
@@ -25,6 +25,6 @@ export async function gotoWithoutServerCrash(page: Page, route: string) {
 
 export async function skipWhenRedirectedToLogin(page: Page, reason: string) {
   if (page.url().includes("/login")) {
-    test.skip(true, reason);
+    expect(page.url(), reason).not.toContain("/login");
   }
 }

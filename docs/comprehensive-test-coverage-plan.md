@@ -358,6 +358,31 @@ Acceptance:
 
 Goal: convert skipped authenticated e2e tests into reliable CI coverage.
 
+Progress:
+
+- Phase 5 completed on June 1, 2026.
+- Current measured coverage after Phase 5:
+  - `npm run typecheck`: passing.
+  - `npm run lint`: passing.
+  - `npm run test:run`: 121 test files, 474 tests, all passing.
+  - `npm run test:e2e`: 35 browser tests passing, 0 skipped.
+  - `npm run test:coverage`: 121 test files, 474 tests, all passing.
+  - all files: 40.23 percent line coverage, 73.06 percent branch coverage, 74.26 percent function coverage.
+  - `convex`: 80.03 percent line coverage, 73.10 percent branch coverage, 89.01 percent function coverage.
+- Added deterministic Playwright role projects:
+  - `setup` generates role storage state.
+  - `unauthenticated` covers auth redirects and public login access.
+  - `super-admin` covers authenticated admin routes, table behavior, role behavior, and exports.
+  - `user` covers authenticated assistant and profile journeys.
+- Added a test-only e2e auth cookie and Convex React mock that are enabled only when `E2E_AUTH_ENABLED=1` and `NEXT_PUBLIC_E2E_AUTH_ENABLED=1`.
+- Excluded `src/e2e/**` from product coverage totals so the browser harness does not count as uncovered application code.
+- Generated storage state files are written under `e2e/.auth/` and ignored by git.
+- Replaced authenticated skip behavior with assertions: `skipWhenRedirectedToLogin` now fails if an authenticated role project unexpectedly reaches `/login`.
+- Updated authenticated browser specs for the current UI copy and hydration timing:
+  - admin table pagination now asserts `Showing 1-15 of 18` and `Showing 16-18 of 18`.
+  - empty rule search asserts the empty first page.
+  - user chat waits for the hydrated e2e user shell before typing.
+
 Tasks:
 
 - Create deterministic test users:
