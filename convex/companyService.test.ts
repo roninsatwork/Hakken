@@ -1,0 +1,57 @@
+import { describe, expect, test } from "vitest";
+import type { Doc, Id } from "./_generated/dataModel";
+import {
+  buildCompanyProfilePatch,
+  buildCompanyRecord,
+  buildCreateCompanyAuditMetadata,
+  buildDeleteCompanyAuditMetadata,
+  buildUpdateCompanyAuditMetadata,
+  shouldContinueCompanyPurge,
+  withCompanyUserCount,
+} from "./companyService";
+
+describe("company service helpers", () => {
+  test("builds company creation records", () => {
+    expect(buildCompanyRecord({ name: "Acme", systemPrompt: "Be helpful" }, 123)).toEqual({
+      name: "Acme",
+      systemPrompt: "Be helpful",
+      createdAt: 123,
+    });
+  });
+
+  test("builds company profile patches", () => {
+    expect(buildCompanyProfilePatch({ name: "Acme", description: "Desc", overview: undefined })).toEqual({
+      name: "Acme",
+      description: "Desc",
+      overview: undefined,
+    });
+  });
+
+  test("adds user counts to companies", () => {
+    const company = {
+      _id: "company-1" as Id<"companies">,
+      _creationTime: 0,
+      name: "Acme",
+      createdAt: 123,
+    } satisfies Doc<"companies">;
+
+    expect(withCompanyUserCount(company, 7)).toEqual({
+      ...company,
+      userCount: 7,
+    });
+  });
+
+  test("serializes company audit metadata", () => {
+    expect(buildCreateCompanyAuditMetadata("Acme")).toBe(JSON.stringify({ name: "Acme" }));
+    expect(buildUpdateCompanyAuditMetadata({ previousName: "Old", newName: "New" })).toBe(
+      JSON.stringify({ previousName: "Old", newName: "New" })
+    );
+    expect(buildDeleteCompanyAuditMetadata("Acme")).toBe(JSON.stringify({ name: "Acme" }));
+  });
+
+  test("decides when company purge should continue", () => {
+    expect(shouldContinueCompanyPurge({ userBatchSize: 100, inviteBatchSize: 0 })).toBe(true);
+    expect(shouldContinueCompanyPurge({ userBatchSize: 0, inviteBatchSize: 100 })).toBe(true);
+    expect(shouldContinueCompanyPurge({ userBatchSize: 99, inviteBatchSize: 99 })).toBe(false);
+  });
+});

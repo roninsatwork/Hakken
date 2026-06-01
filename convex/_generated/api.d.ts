@@ -36,6 +36,7 @@ import type * as chatAdmin from "../chatAdmin.js";
 import type * as chatAdminService from "../chatAdminService.js";
 import type * as chatService from "../chatService.js";
 import type * as companies from "../companies.js";
+import type * as companyService from "../companyService.js";
 import type * as crons from "../crons.js";
 import type * as debug from "../debug.js";
 import type * as debugModels from "../debugModels.js";
@@ -118,6 +119,7 @@ declare const fullApi: ApiFromModules<{
   chatAdminService: typeof chatAdminService;
   chatService: typeof chatService;
   companies: typeof companies;
+  companyService: typeof companyService;
   crons: typeof crons;
   debug: typeof debug;
   debugModels: typeof debugModels;

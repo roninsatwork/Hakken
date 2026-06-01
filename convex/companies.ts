@@ -2,6 +2,15 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireSuperAdmin } from "./authz";
+import {
+  buildCompanyProfilePatch,
+  buildCompanyRecord,
+  buildCreateCompanyAuditMetadata,
+  buildDeleteCompanyAuditMetadata,
+  buildUpdateCompanyAuditMetadata,
+  shouldContinueCompanyPurge,
+  withCompanyUserCount,
+} from "./companyService";
 
 export const getCompanies = query({
   args: {},
@@ -22,10 +31,7 @@ export const getCompanies = query({
           .withIndex("by_company", (q) => q.eq("companyId", company._id))
           .take(10000);
           
-        return {
-          ...company,
-          userCount: users.length,
-        };
+        return withCompanyUserCount(company, users.length);
       })
     );
 
@@ -54,19 +60,19 @@ export const createCompany = mutation({
   handler: async (ctx, args) => {
     const { userId: adminId } = await requireSuperAdmin(ctx);
 
-    const newCompanyId = await ctx.db.insert("companies", {
+    const now = Date.now();
+    const newCompanyId = await ctx.db.insert("companies", buildCompanyRecord({
       name: args.name,
       systemPrompt: args.systemPrompt,
-      createdAt: Date.now(),
-    });
+    }, now));
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,
       actionType: "CREATE_COMPANY",
       entityId: newCompanyId,
       entityType: "companies",
-      metadata: JSON.stringify({ name: args.name }),
-      timestamp: Date.now()
+      metadata: buildCreateCompanyAuditMetadata(args.name),
+      timestamp: now
     });
 
     return newCompanyId;
@@ -79,6 +85,7 @@ export const updateCompany = mutation({
     const { userId: adminId } = await requireSuperAdmin(ctx);
 
     const previous = await ctx.db.get(args.id);
+    const now = Date.now();
     await ctx.db.patch(args.id, { name: args.name, systemPrompt: args.systemPrompt });
 
     await ctx.db.insert("auditLogs", {
@@ -86,8 +93,8 @@ export const updateCompany = mutation({
       actionType: "UPDATE_COMPANY",
       entityId: args.id,
       entityType: "companies",
-      metadata: JSON.stringify({ previousName: previous?.name, newName: args.name }),
-      timestamp: Date.now()
+      metadata: buildUpdateCompanyAuditMetadata({ previousName: previous?.name, newName: args.name }),
+      timestamp: now
     });
 
     return args.id;
@@ -102,6 +109,7 @@ export const deleteCompany = mutation({
     await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
 
     const company = await ctx.db.get(args.id);
+    const now = Date.now();
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
 
@@ -110,8 +118,8 @@ export const deleteCompany = mutation({
       actionType: "DELETE_COMPANY",
       entityId: args.id,
       entityType: "companies",
-      metadata: JSON.stringify({ name: company?.name }),
-      timestamp: Date.now()
+      metadata: buildDeleteCompanyAuditMetadata(company?.name),
+      timestamp: now
     });
 
     return true;
@@ -161,19 +169,20 @@ export const updateCompanyProfile = mutation({
     );
 
     const previous = await ctx.db.get(args.id);
-    await ctx.db.patch(args.id, { 
+    const now = Date.now();
+    await ctx.db.patch(args.id, buildCompanyProfilePatch({
       name: args.name, 
       description: args.description,
       overview: args.overview,
-    });
+    }));
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,
       actionType: "UPDATE_COMPANY_PROFILE",
       entityId: args.id,
       entityType: "companies",
-      metadata: JSON.stringify({ previousName: previous?.name, newName: args.name }),
-      timestamp: Date.now()
+      metadata: buildUpdateCompanyAuditMetadata({ previousName: previous?.name, newName: args.name }),
+      timestamp: now
     });
 
     return args.id;
@@ -197,8 +206,6 @@ export const assignPlanToCompany = mutation({
 export const purgeCompanyEntitiesInternal = internalMutation({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    let hasMore = false;
-    
     const users = await ctx.db
       .query("users")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
@@ -208,8 +215,6 @@ export const purgeCompanyEntitiesInternal = internalMutation({
        await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: user._id });
        await ctx.db.delete(user._id);
     }
-    
-    if (users.length === 100) hasMore = true;
 
     const invites = await ctx.db
       .query("invitations")
@@ -219,10 +224,8 @@ export const purgeCompanyEntitiesInternal = internalMutation({
     for (const invite of invites) {
       await ctx.db.delete(invite._id);
     }
-    
-    if (invites.length === 100) hasMore = true;
 
-    if (hasMore) {
+    if (shouldContinueCompanyPurge({ userBatchSize: users.length, inviteBatchSize: invites.length })) {
        await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.companyId });
     }
   }
