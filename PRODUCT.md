@@ -2,7 +2,7 @@
 
 ## 1. Platform Vision & Overview
 
-Sonae is an enterprise-grade, multi-tenant AI orchestration and intelligence platform natively integrated with Google Cloud Vertex AI and Gemini architectures. It is designed to allow organizational administrators to deploy, configure, and monitor autonomous AI agents that possess deep contextual knowledge of the business, enforcing strict behavioral rules and interacting with both internal teams and external customers via secure web widgets.
+Sonae is an enterprise-grade, multi-tenant AI orchestration and intelligence platform with provider-configured model execution. It is designed to allow organizational administrators to deploy, configure, and monitor autonomous AI agents that possess deep contextual knowledge of the business, enforcing strict behavioral rules and interacting with both internal teams and external customers via secure web widgets.
 
 The core value proposition of Sonae is blending extreme scalability (Convex edge-streaming, React Server Components) with militarized data isolation, allowing multiple distinct businesses (Tenants) to operate intelligence workflows on a single deployment without any possibility of cross-contamination.
 
@@ -22,10 +22,10 @@ The platform's hierarchy ensures data and administrative capabilities are strict
 
 Sonae does not rely on a single, massive prompt. It operates a dynamic assembly pipeline to ensure the AI behaves exclusively according to enterprise requirements.
 
-*   **Dynamic Model Resolution:** Admins can effortlessly toggle which Vertex LLM model powers the platform globally (e.g., routing from a fast, cheap model to a highly cognitive model like `gemini-1.5-pro-preview`) without requiring code deployments.
+*   **Dynamic Model Resolution:** Admins can toggle which configured model powers the platform globally, routing from a faster low-cost model to a deeper reasoning model without requiring code deployments.
 *   **The Behavioral Rule Engine:** Workspaces can configure explicit "Rules" (e.g., `"IF USER ASKS ABOUT PRICING -> NEVER REVEAL THE COST, DIRECT TO SALES"`). During message processing, these active rules are dynamically aggregated and forcefully injected into the AI's system instruction, violently overriding its baseline training.
 *   **Turing-Complete Workflow Orchestrator:** Allows the creation of expansive, visually structured Directed Acyclic Graphs (DAG) where internal AI agents natively interconnect with programmatic logic. The built-in runtime natively executes Javascript V8 Sandboxes, HTTP API boundaries, database mutations, and human-in-the-loop checkpoints asynchronously, allowing you to sequence thousands of dynamic computational loops without exhausting server limits.
-*   **Generative Flow Configuration:** An integrated AI copilot completely removes the low-code barrier for executives. Rather than writing manual JSON array logic to link complex graph connections together, users simply instruct the nodes in plain English. Sonae algorithmically scrapes the visual acyclic structure and commands Vertex AI to securely compile and inject the computational state map automatically.
+*   **Generative Flow Configuration:** An integrated AI copilot removes the low-code barrier for executives. Rather than writing manual JSON array logic to link complex graph connections together, users instruct the nodes in plain English. Sonae traverses the visual acyclic structure and asks the configured model provider to compile and inject the computational state map.
 
 ---
 
@@ -54,7 +54,7 @@ Sonae calculates computing resources natively on the edge to support robust tena
 
 *   **Subscription Usage & Limits:** The platform operates a dynamic, B2B "Subscription Plan" system. Workspaces are assigned explicit tiers (e.g., Enterprise, Unlimited) that dictate their core computing quotas (message limits).
 *   **Value-Focused Dashboard Analytics:** Rather than exposing internal API fractional costs, the dashboard highlights structural automation value. Administrators can securely view Action interaction volumes (Internal AI Ops vs. External Widget interactions) alongside their proprietary "Knowledge Assets" utilization in real-time.
-*   **Token & Operations Telemetry:** `inputTokens` and `outputTokens` are aggregated transparently to prove system load and efficiency without translating it into raw backend AWS/Google compute costs for the client.
+*   **Token & Operations Telemetry:** `inputTokens` and `outputTokens` are aggregated transparently to prove system load and efficiency without exposing raw provider compute costs to the client.
 *   **Telemetric Exporting:** Critical Sonae analytics (Traffic Pipelines, Interaction Feeds, Plan Usage) are structurally decoupled for corporate reporting. Authorized administrators can dynamically extract vector-perfect `.png` snapshots of live charts directly from the dashboard, natively syncing with the active Light/Dark OS theme.
 
 ---

@@ -22,7 +22,7 @@ describe("Agent Logs Authorization", () => {
       });
       const agentId = await ctx.db.insert("agents", {
         name: "Support Agent",
-        modelId: "gemini",
+        modelId: "test-model",
         thinkingMode: false,
         isActive: true,
         temperature: 1,

@@ -47,7 +47,7 @@ export const generateReport = internalAction({
         throw new Error("Could not extract any CSV data from the knowledge base.");
     }
 
-    // 4. Initialize Gemini (vertexai) identical to knowledgeActions.ts
+    // 4. Initialize the configured Vertex client, matching knowledgeActions.ts
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
     const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
       

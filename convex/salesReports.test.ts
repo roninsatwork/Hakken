@@ -23,7 +23,7 @@ describe("Sales report access controls", () => {
     const agentId = await t.run(async (ctx) => {
       return await ctx.db.insert("agents", {
         name: "Reporter",
-        modelId: "gemini-2.5-flash",
+        modelId: "test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: Date.now(),

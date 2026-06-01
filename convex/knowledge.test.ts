@@ -20,7 +20,7 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     const agentId = await t.run(async (ctx) => {
       return await ctx.db.insert("agents", {
         name: "Knowledge Agent",
-        modelId: "gemini-2.5-flash",
+        modelId: "test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: Date.now(),

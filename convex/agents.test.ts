@@ -29,7 +29,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     const dummyAgentId = await t.run(async (ctx) => {
       return await ctx.db.insert("agents", {
          name: "Dummy",
-         modelId: "gemini",
+         modelId: "test-model",
          thinkingMode: false,
          isActive: true,
          temperature: 1.0,

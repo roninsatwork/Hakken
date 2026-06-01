@@ -8,9 +8,9 @@ export const enableAllModels = internalMutation({
       await ctx.db.patch(model._id, { isEnabled: true });
     }
     // Set a default
-    const geminiPro = allModels.find(m => m.modelId === "gemini-3.1-pro-preview");
-    if (geminiPro) {
-      await ctx.db.patch(geminiPro._id, { isDefault: true });
+    const defaultModelCandidate = allModels.find(m => m.modelId === "gemini-3.1-pro-preview");
+    if (defaultModelCandidate) {
+      await ctx.db.patch(defaultModelCandidate._id, { isDefault: true });
     }
     return true;
   },

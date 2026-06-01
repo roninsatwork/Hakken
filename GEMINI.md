@@ -16,6 +16,6 @@ Future coding agents should read `AGENTS.md` first and treat it as the source of
 - AI model configuration rules
 - code quality priorities
 
-The previous Gemini-specific operating notes have been retired so they do not conflict with Codex-led development.
+The previous provider-specific operating notes have been retired so they do not conflict with Codex-led development.
 
-Important: this does not mean the product is moving away from Vertex AI or Gemini model support. Vertex/Gemini remains the intended product AI provider at this stage. This file only changes the coding-agent handoff guidance.
+Important: this file only changes the coding-agent handoff guidance. Product AI provider support is owned by the runtime configuration and provider integration code.

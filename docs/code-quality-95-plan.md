@@ -61,7 +61,7 @@ Do not refactor code only because it is imperfect. Refactor when it improves one
 
 ## Phase 0: Baseline, Inventory, And Safety Rails
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -79,13 +79,34 @@ Scope:
 
 Checklist:
 
-- [ ] Record current baseline: `npm run check`, `npm run build`, `npm audit --audit-level=high`.
-- [ ] Confirm the local app still runs on `localhost:3000` with Convex.
-- [ ] Review `src/quality-drift.test.ts` and add missing drift checks for new platform rules.
-- [ ] Add or update a drift check for movement demo no-touch paths if needed.
-- [ ] Add a provider-language drift check for accidental new Gemini references outside allowed locations.
-- [ ] Add a docs checklist entry for each deeper refactor phase.
-- [ ] Confirm CI deploy docs still match workflow behavior.
+- [x] Record current baseline: `npm run check`, `npm run build`, `npm audit --audit-level=high`.
+- [x] Confirm the local app still runs on `localhost:3000` with Convex.
+- [x] Review `src/quality-drift.test.ts` and add missing drift checks for new platform rules.
+- [x] Add or update a drift check for movement demo no-touch paths if needed.
+- [x] Add a provider-language drift check for accidental new Gemini references outside allowed locations.
+- [x] Add a docs checklist entry for each deeper refactor phase.
+- [x] Confirm CI deploy docs still match workflow behavior.
+
+Baseline recorded on June 1, 2026:
+
+- `npm run lint:all`: passed
+- `npm run check`: passed, 58 test files and 177 tests
+- `npm run build`: passed
+- `npm audit --audit-level=high`: passed, 0 vulnerabilities
+- Local app smoke: `npm run dev` served `http://localhost:3000/login` with HTTP 200 while `npm run convex:dev` reported functions ready
+
+Phase tracking checklist:
+
+- [x] Phase 0: Baseline, Inventory, And Safety Rails
+- [x] Phase 1: Provider Neutrality And Naming Cleanup
+- [ ] Phase 2: Workflow Runtime Architecture Refactor
+- [ ] Phase 3: AI And Tool Execution Platform Layer
+- [ ] Phase 4: Backend Service Boundary Refactor
+- [ ] Phase 5: Frontend Platform Primitives
+- [ ] Phase 6: Data, Upload, And Knowledge Policy Layer
+- [ ] Phase 7: E2E, Browser, And Regression Coverage Upgrade
+- [ ] Phase 8: Product-Core Extraction And Extension Points
+- [ ] Phase 9: Final Hardening And Release Readiness
 
 Acceptance:
 
@@ -95,7 +116,7 @@ Acceptance:
 
 ## Phase 1: Provider Neutrality And Naming Cleanup
 
-Status: Not started.
+Status: Complete.
 
 Goal:
 
@@ -125,14 +146,22 @@ Do not remove:
 
 Checklist:
 
-- [ ] Search for `Gemini`, `gemini`, `Vertex`, `vertex`, `Google`, and `google`.
-- [ ] Classify each hit as `keep by design`, `rename`, `document`, or `delete`.
-- [ ] Rename provider-specific helper names to provider-neutral names where the code is not genuinely Gemini-only.
-- [ ] Rename stale test descriptions that imply Gemini-only behavior.
-- [ ] Remove comments that refer to old temporary phases or old agents.
-- [ ] Shorten long function names only where the shorter name improves the platform API.
-- [ ] Add a small allowlist for intentional provider terms.
-- [ ] Add or update drift tests so accidental Gemini-isms do not return.
+- [x] Search for `Gemini`, `gemini`, `Vertex`, `vertex`, `Google`, and `google`.
+- [x] Classify each hit as `keep by design`, `rename`, `document`, or `delete`.
+- [x] Rename provider-specific helper names to provider-neutral names where the code is not genuinely Gemini-only.
+- [x] Rename stale test descriptions that imply Gemini-only behavior.
+- [x] Remove comments that refer to old temporary phases or old agents.
+- [x] Shorten long function names only where the shorter name improves the platform API.
+- [x] Add a small allowlist for intentional provider terms.
+- [x] Add or update drift tests so accidental Gemini-isms do not return.
+
+Completed on June 1, 2026:
+
+- Provider-language inventory is now classified through `src/quality-drift.test.ts`.
+- Stale product and architecture docs now describe configured model providers rather than a Gemini-specific platform.
+- Dummy test data now uses provider-neutral model names unless a real model ID is required.
+- Intentional remaining Gemini references are limited to actual model IDs, the current Vertex model sync list, seed/default configuration, and this plan/legacy-agent notes.
+- Google/Vertex references remain where they describe real OAuth, analytics, Cloud Run, Google GenAI, or Vertex integration boundaries.
 
 Naming guidelines:
 

@@ -8,7 +8,7 @@ The Sonae Platform is built as a high-performance, real-time AI orchestration en
 - **Styling**: Tailwind CSS v4 + Framer Motion for high-fidelity animations.
 - **Backend**: [Convex](https://www.convex.dev/) (V8 Edge runtime, Mutations, Queries, and Actions).
 - **Database**: Convex Document Store (schematized JSON-like storage).
-- **AI Integration**: Google GenAI SDK (Gemini models) via Convex Actions.
+- **AI Integration**: Provider-backed model execution via Convex Actions.
 - **Infrastructure**: Google Cloud Run (Containerized Next.js).
 
 ## 🛡️ Administrative Governance
@@ -37,7 +37,7 @@ Sonae's intelligence is split into two main components:
 
 ### RAG Pipeline (Knowledge Engine)
 
-Knowledge is ingested, embedded using Gemini embeddings, and stored in a vector index.
+Knowledge is ingested, embedded through the configured embedding provider, and stored in a vector index.
 - **Isolation**: Knowledge chunks are tagged with `companyId` or `agentId` to ensure data privacy between tenants.
 - **Storage**: Files are persisted in Convex Storage, and processed asynchronously in Node.js Actions.
 

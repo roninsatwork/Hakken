@@ -30,7 +30,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
     const agentId = await t.run(async (ctx) => {
       return await ctx.db.insert("agents", {
         name: "Test Agent",
-        modelId: "gemini-2.5-flash",
+        modelId: "test-model",
         thinkingMode: false,
         isActive: true,
         createdAt: Date.now(),
@@ -47,7 +47,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
           actionContext: "Test Action",
           inputTokens: 100,
           outputTokens: 50,
-          modelUsed: "gemini-2.5-flash",
+          modelUsed: "test-model",
           costGBP: 0.05,
           status: "SUCCESS",
           createdAt: Date.now()
@@ -59,7 +59,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
           actionContext: "Test Action",
           inputTokens: 100,
           outputTokens: 50,
-          modelUsed: "gemini-2.5-flash",
+          modelUsed: "test-model",
           costGBP: 0.05,
           status: "SUCCESS",
           createdAt: Date.now()

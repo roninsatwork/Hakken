@@ -233,7 +233,7 @@ export default defineSchema({
     embedding: v.array(v.number()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
-    dimensions: 768, // Gemini text-embedding-004 uses 768 length vectors
+    dimensions: 768, // Current text embedding provider uses 768-length vectors
     filterFields: ["companyId", "agentId", "documentId", "isGlobal", "threadId"],
   }).index("by_document", ["documentId"]),
 
@@ -271,7 +271,7 @@ export default defineSchema({
     name: v.string(),
     description: v.optional(v.string()),
     avatar: v.optional(v.string()), // Optional icon/avatar
-    modelId: v.string(), // e.g. "gemini-3.1-pro-preview"
+    modelId: v.string(), // Provider model identifier
     thinkingMode: v.boolean(),
     systemPrompt: v.optional(v.string()),
     // Link to specific rule IDs
@@ -362,7 +362,7 @@ export default defineSchema({
   }).index("by_thread", ["threadId", "order"]),
 
   aiModels: defineTable({
-    modelId: v.string(), // e.g. "gemini-3.1-pro-preview"
+    modelId: v.string(), // Provider model identifier
     displayName: v.string(),
     description: v.optional(v.string()), // A short description 
     isEnabled: v.boolean(),

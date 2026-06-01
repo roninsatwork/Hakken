@@ -20,7 +20,7 @@ describe("chat telemetry helpers", () => {
     expect(estimateMessageCostGbp({
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
-      modelUsed: "gemini-flash",
+      modelUsed: "model-flash",
     })).toBeCloseTo(0.2925);
   });
 
@@ -28,7 +28,7 @@ describe("chat telemetry helpers", () => {
     expect(estimateMessageCostGbp({
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
-      modelUsed: "gemini-pro",
+      modelUsed: "model-pro",
     })).toBeCloseTo(10.92);
   });
 

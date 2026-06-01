@@ -9,7 +9,7 @@ describe("admin query service", () => {
   });
 
   test("checks optional text values against a normalized term", () => {
-    expect(includesSearchTerm("Gemini Flash", "flash")).toBe(true);
+    expect(includesSearchTerm("Model Flash", "flash")).toBe(true);
     expect(includesSearchTerm(undefined, "flash")).toBe(false);
   });
 

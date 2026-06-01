@@ -9,8 +9,8 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const modelId = await t.run(async (ctx) => {
        return await ctx.db.insert("aiModels", {
-         modelId: "gemini-1.5-pro",
-         displayName: "Gemini 1.5 Pro",
+         modelId: "expensive-model",
+         displayName: "Expensive Model",
          isEnabled: false,
          isDefault: false,
          lastSyncedAt: Date.now()
@@ -39,8 +39,8 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const modelId = await t.run(async (ctx) => {
        return await ctx.db.insert("aiModels", {
-         modelId: "gemini-1.5-pro",
-         displayName: "Gemini 1.5 Pro",
+         modelId: "candidate-model",
+         displayName: "Candidate Model",
          isEnabled: false,
          isDefault: false,
          lastSyncedAt: Date.now()
@@ -77,24 +77,24 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     await t.run(async (ctx) => {
       // Inactive
       await ctx.db.insert("aiModels", {
-        modelId: "gemini-1.0-pro",
-        displayName: "Gemini 1",
+        modelId: "inactive-model",
+        displayName: "Inactive Model",
         isEnabled: false,
         isDefault: false,
         lastSyncedAt: Date.now()
       });
       // Active but not default
       await ctx.db.insert("aiModels", {
-        modelId: "gemini-1.5-pro",
-        displayName: "Gemini 1.5",
+        modelId: "active-model",
+        displayName: "Active Model",
         isEnabled: true,
         isDefault: false,
         lastSyncedAt: Date.now()
       });
       // Default
       await ctx.db.insert("aiModels", {
-        modelId: "gemini-2.0-pro",
-        displayName: "Gemini 2.0",
+        modelId: "default-model",
+        displayName: "Default Model",
         isEnabled: true,
         isDefault: true, // Should float to top
         lastSyncedAt: Date.now()
@@ -111,9 +111,9 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     
     // Sort logic validation: Default -> Active -> Disabled
     expect(page.data.length).toBe(3);
-    expect(page.data[0].modelId).toBe("gemini-2.0-pro"); // Default MUST be 0th
-    expect(page.data[1].modelId).toBe("gemini-1.5-pro"); // Enabled must be 1st
-    expect(page.data[2].modelId).toBe("gemini-1.0-pro"); // Disabled must be 2nd
+    expect(page.data[0].modelId).toBe("default-model"); // Default MUST be 0th
+    expect(page.data[1].modelId).toBe("active-model"); // Enabled must be 1st
+    expect(page.data[2].modelId).toBe("inactive-model"); // Disabled must be 2nd
 
     const activePage = await client.query(api.aiModels.getOffsetPaginatedModels, {
       searchTerm: "",
@@ -123,8 +123,8 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     });
 
     expect(activePage.data.map((model) => model.modelId)).toEqual([
-      "gemini-2.0-pro",
-      "gemini-1.5-pro",
+      "default-model",
+      "active-model",
     ]);
 
     const inactivePage = await client.query(api.aiModels.getOffsetPaginatedModels, {
@@ -134,6 +134,6 @@ describe("OWASP: Broken Access Control - AI Models", () => {
       pageSize: 15
     });
 
-    expect(inactivePage.data.map((model) => model.modelId)).toEqual(["gemini-1.0-pro"]);
+    expect(inactivePage.data.map((model) => model.modelId)).toEqual(["inactive-model"]);
   });
 });

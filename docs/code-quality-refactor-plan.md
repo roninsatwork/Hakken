@@ -125,13 +125,13 @@ Status:
 - Workflow execution approval now calls the typed Convex action with the required `action: "APPROVED"` payload instead of going through `api as any`.
 - Super-admin tests now use typed hook mocks instead of broad `any` casts.
 - User profile and small shared UI hooks/components now remove stale imports, typed upload storage IDs, and replace the touched profile avatar preview with Next `Image`.
-- Gemini rule drift has been corrected for touched admin surfaces: no native alert usage, admin list pagination now uses 15 rows, and new feedback text has English/Italian locale parity.
+- Legacy agent rule drift has been corrected for touched admin surfaces: no native alert usage, admin list pagination now uses 15 rows, and new feedback text has English/Italian locale parity.
 - App settings, properties, shared chat/layout components, and the progressive loading hook now remove broad local `any` usage, raw touched avatar/property images, dead imports, and render-time random/time purity warnings.
 - Small E2E, login, sandbox, and widget warnings now avoid unused variables and unescaped text where touched.
 - Chat input now uses typed AI model rows, typed modal test mocks, and escaped modal copy without local `any` warnings.
 - Reports page now uses typed chart tooltip values and inferred report row types, removes dead chart imports/data, and escapes remaining board-report copy.
 - Backend tail modules, seed/test helpers, assistant/widget pages, arcade, movement capture, movement library, preview components, and the high-fidelity movement playback page now avoid broad local `any`, dead imports, unsafe render-time ref reads, and effect cleanup drift.
-- Gemini rule drift has been tightened further: `/demos` is now protected by auth middleware, remaining admin table page sizes are 15, and native browser `alert`/`confirm`/`prompt` calls have been replaced with in-app feedback or confirmation flows.
+- Legacy agent rule drift has been tightened further: `/demos` is now protected by auth middleware, remaining admin table page sizes are 15, and native browser `alert`/`confirm`/`prompt` calls have been replaced with in-app feedback or confirmation flows.
 - Current warning backlog after this slice: `npm run lint:all` reports 0 warnings and 0 errors.
 
 ## Phase 5: UI Code Cleanup
