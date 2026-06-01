@@ -413,6 +413,7 @@ Completed frontend primitive slices:
 - Extended the shared admin destructive confirmation modal to subscription plan delete flows.
 - Extended the shared admin destructive confirmation modal to agent trace delete flows.
 - Extended shared admin save controls to invitation template save flows.
+- Added shared admin animated save feedback banners, then adopted them in system prompt pages.
 
 Acceptance:
 

@@ -1,7 +1,8 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { CheckCircle2, Save } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, CheckCircle2, Save } from "lucide-react";
 
 type AdminSaveActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   isSaving: boolean;
@@ -52,5 +53,61 @@ export function AdminSaveError({ children }: AdminSaveErrorProps) {
     <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-400">
       {children}
     </div>
+  );
+}
+
+type AdminSaveFeedbackProps = {
+  status: "idle" | "success" | "error";
+  successTitle: ReactNode;
+  successMessage: ReactNode;
+  errorTitle: ReactNode;
+  errorMessage: ReactNode;
+};
+
+export function AdminSaveFeedback({
+  status,
+  successTitle,
+  successMessage,
+  errorTitle,
+  errorMessage,
+}: AdminSaveFeedbackProps) {
+  return (
+    <AnimatePresence mode="wait">
+      {status === "success" ? (
+        <motion.div
+          initial={{ opacity: 0, y: -10, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -10, height: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          className="overflow-hidden"
+        >
+          <div className="flex items-center gap-3 w-full bg-[#10b981]/10 border border-[#10b981]/20 rounded-[12px] p-4 text-[#10b981]">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-semibold text-[13px] tracking-wide">{successTitle}</span>
+              <span className="text-[12px] opacity-80">{successMessage}</span>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+
+      {status === "error" ? (
+        <motion.div
+          initial={{ opacity: 0, y: -10, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -10, height: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          className="overflow-hidden"
+        >
+          <div className="flex items-center gap-3 w-full bg-red-500/10 border border-red-500/20 rounded-[12px] p-4 text-red-500">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-semibold text-[13px] tracking-wide">{errorTitle}</span>
+              <span className="text-[12px] opacity-80">{errorMessage}</span>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
