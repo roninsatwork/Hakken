@@ -340,6 +340,7 @@ Completed service-boundary slices:
 - Moved knowledge document/chunk record shaping, audit metadata formatting, thread-vector expiry threshold calculation, and website bulk-delete matching into `knowledgeService`.
 - Moved audit purge config defaults, monthly schedule calculation, cutoff math, config serialization, and recent-log actor-name decoration into `auditLogService`.
 - Moved plan-status derivation, plan creation record shaping, and assigned-plan delete error formatting into `planService`.
+- Moved system settings defaults, patch normalization, logo storage-reference detection, default merging, and settings audit metadata formatting into `settingsService`.
 
 Checklist:
 

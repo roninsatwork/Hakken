@@ -59,6 +59,7 @@ import type * as seedAgents from "../seedAgents.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as settings from "../settings.js";
+import type * as settingsService from "../settingsService.js";
 import type * as swarmActions from "../swarmActions.js";
 import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
@@ -139,6 +140,7 @@ declare const fullApi: ApiFromModules<{
   seedUsers: typeof seedUsers;
   seedWorkflows: typeof seedWorkflows;
   settings: typeof settings;
+  settingsService: typeof settingsService;
   swarmActions: typeof swarmActions;
   swarmRuntime: typeof swarmRuntime;
   system: typeof system;
