@@ -27,6 +27,13 @@ export default defineConfig({
       exclude: [
         'adk-python/**',
         'convex/_generated/**',
+        'convex/crons.ts',
+        'convex/debug.ts',
+        'convex/debugModels.ts',
+        'convex/http.ts',
+        'convex/migrations.ts',
+        'convex/seed*.ts',
+        'convex/testQuery.ts',
         'coverage/**',
         'node_modules/**',
         '.next/**',

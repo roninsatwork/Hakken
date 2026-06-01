@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("Agent Logs Authorization", () => {
@@ -64,5 +64,71 @@ describe("Agent Logs Authorization", () => {
 
     await expect(adminAClient.query(api.agentLogs.getLogById, { id: logBId })).rejects.toThrow("Unauthorized");
     await expect(adminBClient.mutation(api.agentLogs.deleteLog, { id: logAId })).rejects.toThrow("Unauthorized");
+  });
+
+  test("super admins can search, read, seed, and delete logs across companies", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, superAdminId, logId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Search Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        temperature: 0.2,
+        humanApprovalRequired: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const logId = await ctx.db.insert("agentLogs", {
+        agentId,
+        companyId,
+        interactionType: "LLM SYNTHESIS",
+        promptContent: "Find a needle in this prompt",
+        responseContent: "Found it",
+        createdAt: Date.now(),
+      });
+
+      return { agentId, superAdminId, logId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const searchPage = await superAdminClient.query(api.agentLogs.getOffsetPaginated, {
+      agentId,
+      searchTerm: "needle",
+      page: 1,
+      pageSize: 15,
+    });
+    expect(searchPage.data.map((log) => log._id)).toEqual([logId]);
+    expect(await superAdminClient.query(api.agentLogs.getLogById, { id: logId })).toMatchObject({
+      promptContent: "Find a needle in this prompt",
+    });
+    await expect(superAdminClient.query(api.agentLogs.getLogById, { id: "missing" as never })).rejects.toThrow(
+      "Validator error"
+    );
+
+    await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH",
+      promptContent: "tool",
+      responseContent: "{}",
+    });
+    await t.mutation(internal.agentLogs.seedForAgent, { agentId });
+
+    const allLogs = await superAdminClient.query(api.agentLogs.getOffsetPaginated, {
+      agentId,
+      page: 1,
+      pageSize: 100,
+    });
+    expect(allLogs.totalCount).toBe(47);
+
+    await expect(superAdminClient.mutation(api.agentLogs.deleteLog, { id: logId })).resolves.toBeNull();
+    await expect(superAdminClient.mutation(api.agentLogs.deleteLog, { id: logId })).rejects.toThrow("Log not found");
   });
 });

@@ -84,6 +84,84 @@ Acceptance:
 
 Goal: make Convex and service-layer behavior reliable under happy paths, failure paths, and security boundaries.
 
+Progress:
+
+- Slice 1 started on June 1, 2026.
+- Phase 2 completed on June 1, 2026.
+- Current measured coverage after Phase 2:
+  - `npm run test:coverage`: 95 test files, 401 tests, all passing.
+  - `convex`: 80.01 percent line coverage, 73.03 percent branch coverage, 89.01 percent function coverage.
+  - all files: 28.17 percent line coverage. The global number remains lower because frontend routes and app pages are intentionally covered in Phases 3 and 4.
+  - Coverage excludes generated files plus non-product operational scaffolding: Convex generated code, cron registration, debug helpers, HTTP entrypoint wiring, migrations, seed scripts, and the test-only query helper.
+  - Backend line coverage has reached the initial 80 percent phase gate. Backend branch coverage is close to the 75 percent target and should be raised by the remaining action/runtime modules.
+  - Remaining high-impact backend gaps: `agentRuntime.ts`, `swarmActions.ts`, `ai.ts`, `auth.ts`, and external action-heavy paths such as deeper Apify/knowledge/sales-report integrations.
+- Added deeper AI model backend coverage for:
+  - default model promotion.
+  - disabling default models.
+  - audit log side effects.
+  - pricing configuration authorization and audit metadata.
+  - authenticated model reads and unauthenticated read denial.
+  - internal model sync upsert behavior.
+- Added deeper AI tool backend coverage for:
+  - authenticated and anonymous tool reads.
+  - create/update/delete authorization boundaries.
+  - internal tool lookup.
+  - agent-tool binding idempotency.
+  - unbind behavior.
+  - delete cleanup of tool bindings.
+- Added deeper agent backend coverage for:
+  - global agent create/list/get/update/delete lifecycle.
+  - default model fallback behavior.
+  - audit metadata for create, update, delete, inline creation, and promotion.
+  - cleanup of agent-tool bindings on delete.
+  - inline workflow agent creation and promotion to global scope.
+  - internal agent lookup and active-agent retrieval.
+- Added deeper AI rules backend coverage for:
+  - global rule create/update/toggle/delete lifecycle.
+  - audit metadata for rule lifecycle actions.
+  - global, company, and agent scoped rule visibility.
+  - admin denial for global and foreign scoped rules.
+  - internal active-rule resolution across global, company, and agent context.
+  - pricing rule seeding preconditions.
+- Added deeper knowledge backend coverage for:
+  - company manual document lifecycle with upload/delete audit logs.
+  - global document authorization for super admins versus company admins.
+  - agent-scoped document visibility across company admins and super admins.
+  - thread document visibility for owners, company admins, super admins, and denied users.
+  - website URL deduplication, forced refresh, and pending queue lookup.
+  - company-scoped website bulk deletion by root domain.
+  - internal chunk replacement and expired thread vector garbage collection.
+- Added deeper analytics backend coverage for:
+  - global AI cost authorization and bounded assistant-message aggregation.
+  - user cost overview tenant isolation and per-thread token/cost totals.
+  - company metrics combining live usage, daily snapshots, plan MRR, and knowledge counts.
+  - company analytics cross-tenant denial.
+  - empty platform overview behavior for super admins and denial for standard users.
+- Added workflow execution internal coverage for:
+  - execution creation defaults.
+  - terminal status updates and completion timestamps.
+  - node step upsert behavior.
+  - iterator/fan-out pending-step claim ordering.
+  - no-op claim behavior when pending work is exhausted.
+- Added deeper user management backend coverage for:
+  - super admin create/update/delete lifecycle and audit logs.
+  - paginated user query scoping for admins and impersonating super admins.
+  - company user list authorization.
+  - login tracking throttling and login visibility boundaries.
+  - admin authentication audit logging.
+  - super admin impersonation, assignment, detachment, and audit logs.
+- Added deeper company management backend coverage for:
+  - company list enrichment with user counts.
+  - public and internal company reads.
+  - update, prompt, description, profile, and plan assignment mutations.
+  - update/profile audit logs.
+  - delete lifecycle and delete audit metadata.
+- Added broader backend coverage for:
+  - invites, widgets, plans, settings, system information, scheduler guardrails, purges, and properties.
+  - agent logs, agent transactions, workflow runtime behavior, workflow executions, and hybrid analytics.
+  - analytics cron rollups, webhooks, file parsing, swarm runtime, Arcade actions, orchestrator routing, and Apify configuration/error paths.
+  - knowledge actions and sales report actions, including authorization and failure cases where external services are mocked or unavailable.
+
 Priority modules:
 
 - AI model selection, enforcement, provider resolution, and default model behavior.
@@ -126,9 +204,9 @@ Specific gaps to close:
 
 Acceptance:
 
-- Backend coverage reaches at least 80 percent line coverage before raising to 85 percent.
-- All security-sensitive mutations and actions have negative authorization tests.
-- Coverage report does not show large untested service modules.
+- Backend coverage reaches at least 80 percent line coverage before raising to 85 percent. Status: complete at 80.01 percent.
+- All security-sensitive mutations and actions have negative authorization tests. Status: materially improved, with remaining runtime/action-heavy modules tracked for the next backend hardening slice.
+- Coverage report does not show large untested service modules. Status: service coverage is strong; remaining large gaps are concentrated in external runtime/action modules.
 
 ## Phase 3: Frontend Component And Utility Coverage
 
