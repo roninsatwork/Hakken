@@ -605,10 +605,38 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     const filteredProps = await t.mutation(internal.workflowEngine.executeDatabaseOperation, {
       workflowId: adminAWorkflowId,
       tableName: "properties",
-      operation: "SELECT"
+      operation: "SELECT",
+      query: {
+        indexName: "by_company",
+        equals: [],
+        order: "desc",
+        limit: 15,
+      },
     }) as Doc<"properties">[];
     expect(filteredProps.length).toBe(1);
     expect(filteredProps[0]._id).toBe(propertyAId);
+
+    await expect(
+      t.mutation(internal.workflowEngine.executeDatabaseOperation, {
+        workflowId: adminAWorkflowId,
+        tableName: "properties",
+        operation: "SELECT",
+      })
+    ).rejects.toThrow(/Database SELECT requires a target document ID or an indexed query contract./);
+
+    await expect(
+      t.mutation(internal.workflowEngine.executeDatabaseOperation, {
+        workflowId: adminAWorkflowId,
+        tableName: "properties",
+        operation: "SELECT",
+        query: {
+          indexName: "by_company",
+          equals: [{ field: "companyId", value: companyBId }],
+          order: "desc",
+          limit: 15,
+        },
+      })
+    ).rejects.toThrow(/Unauthorized: Cannot query a foreign company index./);
 
     // 🔒 SCENARIO 4: Workflow created by standard Admin A inserts/modifies property
     // Verify it rejects spoofing attempts with foreign companyId
@@ -652,7 +680,13 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     const allUsers = await t.mutation(internal.workflowEngine.executeDatabaseOperation, {
       workflowId: superAdminWorkflowId,
       tableName: "users",
-      operation: "SELECT"
+      operation: "SELECT",
+      query: {
+        indexName: "by_company",
+        equals: [{ field: "companyId", value: companyAId }],
+        order: "desc",
+        limit: 15,
+      },
     }) as Doc<"users">[];
     expect(allUsers.length).toBeGreaterThan(0);
 

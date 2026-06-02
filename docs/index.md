@@ -36,6 +36,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Locked phased plan for scaling analytics, AI running costs, admin dashboards, and company dashboards without losing tenant isolation.
 16. **[Platform Scale Hardening Plan](./platform-scale-hardening-plan.md)**
     Belt-and-braces plan for bounded admin inventory, knowledge, chat logs, workflows, inventory rollups, and legacy/debug cleanup.
+17. **[Post Scale Hardening Plan](./post-scale-hardening-plan.md)**
+    Follow-up plan for production smoke checks, inventory rollup backfill, workflow database-node contracts, scheduler optimization, and dependency cleanup.
 
 ---
 

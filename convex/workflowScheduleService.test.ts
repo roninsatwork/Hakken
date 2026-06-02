@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { getLegacyScheduleIntervalMs, parseScheduleConfig, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import {
+  getLegacyScheduleIntervalMs,
+  getNextWorkflowScheduleRunAt,
+  parseScheduleConfig,
+  shouldRunWorkflowSchedule,
+} from "./workflowScheduleService";
 
 describe("workflow schedule service", () => {
   test("supports legacy interval strings", () => {
@@ -40,5 +45,30 @@ describe("workflow schedule service", () => {
 
     expect(shouldRunWorkflowSchedule({ intervalStr, lastRunTs: 0, now })).toBe(true);
     expect(shouldRunWorkflowSchedule({ intervalStr, lastRunTs: now.getTime(), now })).toBe(false);
+  });
+
+  test("computes next interval and calendar run times", () => {
+    const now = new Date("2026-05-31T12:00:00.000Z");
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({ mode: "interval", intervalUnit: "minutes", intervalVal: 15 }),
+        now,
+      })
+    ).toBe(new Date("2026-05-31T12:15:00.000Z").getTime());
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({ mode: "daily", time: "09:30" }),
+        now,
+      })
+    ).toBe(new Date("2026-06-01T09:30:00.000Z").getTime());
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({ mode: "weekly", time: "10:00", dayOfWeek: 1 }),
+        now,
+      })
+    ).toBe(new Date("2026-06-01T10:00:00.000Z").getTime());
   });
 });

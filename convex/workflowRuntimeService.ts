@@ -23,10 +23,23 @@ export type ActionConfig = {
 
 export type DatabaseOperation = "INSERT" | "UPDATE" | "DELETE" | "SELECT";
 
+export type DatabaseQueryFilter = {
+  field?: string;
+  value?: unknown;
+};
+
+export type DatabaseQueryConfig = {
+  indexName?: string;
+  equals?: DatabaseQueryFilter[];
+  order?: "asc" | "desc";
+  limit?: number | string;
+};
+
 export type DatabaseConfig = {
   tableName?: string;
   operation?: DatabaseOperation;
   docId?: string;
+  query?: DatabaseQueryConfig;
 };
 
 export type EmailConfig = {
@@ -80,6 +93,12 @@ export type DatabaseOperationInput = {
   tableName: string;
   operation: DatabaseOperation;
   docId?: string;
+  query?: {
+    indexName: string;
+    equals: Array<{ field: string; value: unknown }>;
+    order: "asc" | "desc";
+    limit: number;
+  };
   data: unknown;
 };
 
@@ -138,6 +157,32 @@ function isDatabaseConfig(value: unknown): value is DatabaseConfig {
     return false;
   }
   if (typeof value.docId !== "undefined" && typeof value.docId !== "string") return false;
+  if (typeof value.query !== "undefined" && !isDatabaseQueryConfig(value.query)) return false;
+  return true;
+}
+
+function isDatabaseQueryFilter(value: unknown): value is DatabaseQueryFilter {
+  if (!isRecord(value)) return false;
+  return typeof value.field === "undefined" || typeof value.field === "string";
+}
+
+function isDatabaseQueryConfig(value: unknown): value is DatabaseQueryConfig {
+  if (!isRecord(value)) return false;
+  if (typeof value.indexName !== "undefined" && typeof value.indexName !== "string") return false;
+  if (
+    typeof value.equals !== "undefined" &&
+    (!Array.isArray(value.equals) || !value.equals.every(isDatabaseQueryFilter))
+  ) {
+    return false;
+  }
+  if (typeof value.order !== "undefined" && value.order !== "asc" && value.order !== "desc") return false;
+  if (
+    typeof value.limit !== "undefined" &&
+    typeof value.limit !== "number" &&
+    typeof value.limit !== "string"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -241,7 +286,7 @@ export function getDatabaseConfig(nodeData: WorkflowNodeData): DatabaseConfig {
     throw new Error("Database Node is missing configuration");
   }
   if (!isDatabaseConfig(config)) {
-    throw new Error("Database node config must include a valid operation, optional tableName, and optional docId.");
+    throw new Error("Database node config must include a valid operation, optional tableName, optional docId, and optional indexed query.");
   }
   return config;
 }
@@ -339,11 +384,16 @@ export function buildDatabaseOperationInput(
   globalStatePayload: WorkflowStatePayload
 ): DatabaseOperationInput {
   const config = getDatabaseConfig(nodeData);
-  const { tableName, operation, docId } = config;
+  const { tableName, operation, docId, query } = config;
   if (!tableName) throw new Error("Database table not specified");
   if (!operation) throw new Error("Database operation not specified");
 
   const resolvedDocId = docId ? resolveTemplate(docId, globalStatePayload) : undefined;
+  const resolvedQuery = query ? buildDatabaseQueryInput(query, globalStatePayload) : undefined;
+
+  if (operation === "SELECT" && !resolvedDocId && !resolvedQuery) {
+    throw new Error("Database SELECT requires a target document ID or an indexed query contract.");
+  }
 
   let resolvedData: unknown = {};
   if (isRecord(nodeData._inputMapping) && Object.keys(nodeData._inputMapping).length > 0) {
@@ -356,7 +406,36 @@ export function buildDatabaseOperationInput(
     tableName,
     operation,
     docId: resolvedDocId,
+    ...(resolvedQuery ? { query: resolvedQuery } : {}),
     data: sanitizeForConvexValue(resolvedData),
+  };
+}
+
+function buildDatabaseQueryInput(query: DatabaseQueryConfig, globalStatePayload: WorkflowStatePayload) {
+  const indexName = query.indexName?.trim();
+  if (!indexName) throw new Error("Database SELECT query requires an indexName.");
+
+  const limit = Number(resolveTemplate(String(query.limit ?? 15), globalStatePayload));
+  if (!Number.isFinite(limit) || limit < 1 || limit > 100) {
+    throw new Error("Database SELECT query limit must be between 1 and 100.");
+  }
+
+  const equals = (query.equals ?? [])
+    .map((filter) => {
+      const field = filter.field?.trim();
+      if (!field) throw new Error("Database SELECT query filters require a field.");
+      const value =
+        typeof filter.value === "string"
+          ? resolveTemplate(filter.value, globalStatePayload)
+          : resolveTemplate(filter.value, globalStatePayload);
+      return { field, value: sanitizeForConvexValue(value) };
+    });
+
+  return {
+    indexName,
+    equals,
+    order: query.order ?? "desc",
+    limit: Math.floor(limit),
   };
 }
 

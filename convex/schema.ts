@@ -426,12 +426,14 @@ export default defineSchema({
     intervalStr: v.string(), // "daily", "weekly"
     isActive: v.boolean(),
     lastRunTs: v.optional(v.number()),
+    nextRunAt: v.optional(v.number()),
     createdAt: v.number(),
     createdBy: v.id("users"),
   })
     .index("by_workflow", ["workflowId"])
     .index("by_agent", ["agentId"])
     .index("by_createdAt", ["createdAt"])
+    .index("by_active_next_run", ["isActive", "nextRunAt"])
     .index("by_active_workflow_last_run", ["isActive", "workflowId", "lastRunTs"])
     .index("by_active_last_run", ["isActive", "lastRunTs"]),
 

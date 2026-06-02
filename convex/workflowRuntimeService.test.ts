@@ -226,6 +226,59 @@ describe("workflow runtime service", () => {
     ).toEqual({});
   });
 
+  test("requires indexed query contracts for database SELECT list reads", () => {
+    expect(() =>
+      buildDatabaseOperationInput(
+        {
+          _dbConfig: { tableName: "properties", operation: "SELECT" },
+        },
+        {}
+      )
+    ).toThrow("Database SELECT requires a target document ID or an indexed query contract.");
+
+    expect(
+      buildDatabaseOperationInput(
+        {
+          _dbConfig: {
+            tableName: "properties",
+            operation: "SELECT",
+            query: {
+              indexName: "by_rightmoveId",
+              equals: [{ field: "rightmoveId", value: "{{propertyId}}" }],
+              order: "desc",
+              limit: "{{limit}}",
+            },
+          },
+        },
+        { propertyId: "rm-123", limit: 5 }
+      )
+    ).toEqual({
+      tableName: "properties",
+      operation: "SELECT",
+      docId: undefined,
+      query: {
+        indexName: "by_rightmoveId",
+        equals: [{ field: "rightmoveId", value: "rm-123" }],
+        order: "desc",
+        limit: 5,
+      },
+      data: {},
+    });
+
+    expect(() =>
+      buildDatabaseOperationInput(
+        {
+          _dbConfig: {
+            tableName: "properties",
+            operation: "SELECT",
+            query: { indexName: "by_company", equals: [], limit: 101 },
+          },
+        },
+        {}
+      )
+    ).toThrow("Database SELECT query limit must be between 1 and 100.");
+  });
+
   test("builds templated email messages with fallback sender and recipient lists", () => {
     expect(
       buildEmailMessage({

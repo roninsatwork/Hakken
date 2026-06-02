@@ -9,7 +9,7 @@ import {
   parseWorkflowState,
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
-import { shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
 
 const allowedWorkflowTables = [
   "properties",
@@ -27,9 +27,277 @@ const allowedWorkflowTables = [
 
 type WorkflowDbTable = (typeof allowedWorkflowTables)[number];
 type TenantScopedRecord = { companyId?: Id<"companies"> };
+type WorkflowDbSelectQuery = {
+  indexName: string;
+  equals: Array<{ field: string; value: unknown }>;
+  order: "asc" | "desc";
+  limit: number;
+};
 
 const WORKFLOW_DB_SELECT_LIMIT = 100;
 const ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT = 500;
+
+function getQueryValue(query: WorkflowDbSelectQuery, field: string) {
+  return query.equals.find((filter) => filter.field === field)?.value;
+}
+
+function getRequiredStringQueryValue(query: WorkflowDbSelectQuery, field: string) {
+  const value = getQueryValue(query, field);
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ConvexError(`Database SELECT index '${query.indexName}' requires string filter '${field}'.`);
+  }
+  return value;
+}
+
+function getSelectLimit(query: WorkflowDbSelectQuery) {
+  if (!Number.isFinite(query.limit) || query.limit < 1 || query.limit > WORKFLOW_DB_SELECT_LIMIT) {
+    throw new ConvexError(`Database SELECT limit must be between 1 and ${WORKFLOW_DB_SELECT_LIMIT}.`);
+  }
+  return Math.floor(query.limit);
+}
+
+function getWorkflowCompanyFilter(query: WorkflowDbSelectQuery, workflowCompanyId: Id<"companies"> | undefined) {
+  const requestedCompanyId = getQueryValue(query, "companyId");
+  if (typeof requestedCompanyId !== "undefined" && typeof requestedCompanyId !== "string") {
+    throw new ConvexError("Database SELECT companyId filter must be a string.");
+  }
+  if (workflowCompanyId && requestedCompanyId && requestedCompanyId !== workflowCompanyId) {
+    throw new ConvexError("Unauthorized: Cannot query a foreign company index.");
+  }
+  const companyId = requestedCompanyId || workflowCompanyId;
+  if (!companyId) {
+    throw new ConvexError("Database SELECT requires an explicit companyId filter for this index.");
+  }
+  return companyId as Id<"companies">;
+}
+
+function ensureTenantRows<T extends TenantScopedRecord>(
+  rows: T[],
+  workflowCompanyId: Id<"companies"> | undefined
+) {
+  if (!workflowCompanyId) return rows;
+  return rows.filter((row) => row.companyId === workflowCompanyId);
+}
+
+async function executeIndexedSelect(ctx: MutationCtx, args: {
+  tableName: string;
+  query: WorkflowDbSelectQuery | undefined;
+  workflowCompanyId: Id<"companies"> | undefined;
+  isSuperAdmin: boolean;
+}) {
+  if (!args.query) {
+    throw new ConvexError("Database SELECT requires a target document ID or an indexed query contract.");
+  }
+
+  const query = args.query;
+  const limit = getSelectLimit(query);
+  const order = query.order;
+
+  switch (args.tableName) {
+    case "properties": {
+      if (query.indexName === "by_company") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        return await ctx.db
+          .query("properties")
+          .withIndex("by_company", (q) => q.eq("companyId", companyId))
+          .order(order)
+          .take(limit);
+      }
+      if (query.indexName === "by_rightmoveId") {
+        const rows = await ctx.db
+          .query("properties")
+          .withIndex("by_rightmoveId", (q) => q.eq("rightmoveId", getRequiredStringQueryValue(query, "rightmoveId")))
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      if (query.indexName === "by_runId") {
+        const rows = await ctx.db
+          .query("properties")
+          .withIndex("by_runId", (q) => q.eq("runId", getRequiredStringQueryValue(query, "runId")))
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      break;
+    }
+    case "companies": {
+      if (!args.isSuperAdmin) break;
+      if (query.indexName === "by_name") {
+        return await ctx.db
+          .query("companies")
+          .withIndex("by_name", (q) => q.eq("name", getRequiredStringQueryValue(query, "name")))
+          .take(limit);
+      }
+      if (query.indexName === "by_plan") {
+        return await ctx.db
+          .query("companies")
+          .withIndex("by_plan", (q) => q.eq("planId", getRequiredStringQueryValue(query, "planId") as Id<"plans">))
+          .take(limit);
+      }
+      break;
+    }
+    case "threads": {
+      if (query.indexName === "by_company") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        return await ctx.db
+          .query("threads")
+          .withIndex("by_company", (q) => q.eq("companyId", companyId))
+          .order(order)
+          .take(limit);
+      }
+      if (query.indexName === "by_user") {
+        const rows = await ctx.db
+          .query("threads")
+          .withIndex("by_user", (q) => q.eq("userId", getRequiredStringQueryValue(query, "userId") as Id<"users">))
+          .order(order)
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      if (query.indexName === "by_widget") {
+        const rows = await ctx.db
+          .query("threads")
+          .withIndex("by_widget", (q) => q.eq("widgetId", getRequiredStringQueryValue(query, "widgetId") as Id<"widgets">))
+          .order(order)
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      break;
+    }
+    case "messages": {
+      if (query.indexName === "by_thread") {
+        const threadId = getRequiredStringQueryValue(query, "threadId") as Id<"threads">;
+        const thread = await ctx.db.get(threadId);
+        if (!thread) return [];
+        if (!args.isSuperAdmin && thread.companyId !== args.workflowCompanyId) {
+          throw new ConvexError("Unauthorized: Access denied to foreign company thread.");
+        }
+        return await ctx.db
+          .query("messages")
+          .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+          .order(order)
+          .take(limit);
+      }
+      if (query.indexName === "by_company_role_created") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        const role = getRequiredStringQueryValue(query, "role");
+        if (role !== "user" && role !== "assistant") {
+          throw new ConvexError("Database SELECT messages role must be 'user' or 'assistant'.");
+        }
+        return await ctx.db
+          .query("messages")
+          .withIndex("by_company_role_created", (q) => q.eq("companyId", companyId).eq("role", role))
+          .order(order)
+          .take(limit);
+      }
+      break;
+    }
+    case "knowledgeDocuments": {
+      if (query.indexName === "by_company") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        return await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_company", (q) => q.eq("companyId", companyId))
+          .order(order)
+          .take(limit);
+      }
+      if (query.indexName === "by_agent") {
+        const rows = await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_agent", (q) => q.eq("agentId", getRequiredStringQueryValue(query, "agentId") as Id<"agents">))
+          .order(order)
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      if (query.indexName === "by_thread") {
+        const rows = await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_thread", (q) => q.eq("threadId", getRequiredStringQueryValue(query, "threadId") as Id<"threads">))
+          .order(order)
+          .take(limit);
+        return ensureTenantRows(rows, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+      }
+      if (query.indexName === "by_status") {
+        if (!args.isSuperAdmin) {
+          throw new ConvexError("Unauthorized: status-wide knowledge document queries require SUPER_ADMIN.");
+        }
+        const status = getRequiredStringQueryValue(query, "status");
+        if (status !== "pending" && status !== "processing" && status !== "ready" && status !== "failed") {
+          throw new ConvexError("Database SELECT knowledge status is invalid.");
+        }
+        return await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_status", (q) => q.eq("status", status))
+          .order(order)
+          .take(limit);
+      }
+      break;
+    }
+    case "knowledgeChunks": {
+      if (query.indexName === "by_document") {
+        const documentId = getRequiredStringQueryValue(query, "documentId") as Id<"knowledgeDocuments">;
+        const document = await ctx.db.get(documentId);
+        if (!document) return [];
+        if (!args.isSuperAdmin && document.companyId !== args.workflowCompanyId) {
+          throw new ConvexError("Unauthorized: Access denied to foreign company knowledge document.");
+        }
+        return await ctx.db
+          .query("knowledgeChunks")
+          .withIndex("by_document", (q) => q.eq("documentId", documentId))
+          .take(limit);
+      }
+      break;
+    }
+    case "aiRules": {
+      if (query.indexName === "by_company_created") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        return await ctx.db
+          .query("aiRules")
+          .withIndex("by_company_created", (q) => q.eq("companyId", companyId))
+          .order(order)
+          .take(limit);
+      }
+      if (query.indexName === "by_agent_company_created") {
+        const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
+        return await ctx.db
+          .query("aiRules")
+          .withIndex("by_agent_company_created", (q) =>
+            q.eq("agentId", getRequiredStringQueryValue(query, "agentId") as Id<"agents">).eq("companyId", companyId)
+          )
+          .order(order)
+          .take(limit);
+      }
+      break;
+    }
+    case "users": {
+      if (!args.isSuperAdmin) break;
+      if (query.indexName === "by_company") {
+        const companyId = getWorkflowCompanyFilter(query, undefined);
+        return await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", companyId)).take(limit);
+      }
+      if (query.indexName === "email") {
+        return await ctx.db.query("users").withIndex("email", (q) => q.eq("email", getRequiredStringQueryValue(query, "email"))).take(limit);
+      }
+      break;
+    }
+    case "agents": {
+      if (!args.isSuperAdmin) break;
+      if (query.indexName === "by_active_created") {
+        const isActive = getQueryValue(query, "isActive");
+        if (typeof isActive !== "boolean") throw new ConvexError("Database SELECT agents isActive filter must be boolean.");
+        return await ctx.db.query("agents").withIndex("by_active_created", (q) => q.eq("isActive", isActive)).order(order).take(limit);
+      }
+      break;
+    }
+    case "aiTools": {
+      if (!args.isSuperAdmin) break;
+      if (query.indexName === "by_createdAt") {
+        return await ctx.db.query("aiTools").withIndex("by_createdAt").order(order).take(limit);
+      }
+      break;
+    }
+  }
+
+  throw new ConvexError(`Unsupported indexed SELECT contract '${args.tableName}.${query.indexName}'.`);
+}
 
 async function getLatestExecutionStep(
   ctx: MutationCtx,
@@ -345,6 +613,15 @@ export const executeDatabaseOperation = internalMutation({
     tableName: v.string(),
     operation: v.union(v.literal("INSERT"), v.literal("UPDATE"), v.literal("DELETE"), v.literal("SELECT")),
     docId: v.optional(v.string()),
+    query: v.optional(v.object({
+      indexName: v.string(),
+      equals: v.array(v.object({
+        field: v.string(),
+        value: v.any(),
+      })),
+      order: v.union(v.literal("asc"), v.literal("desc")),
+      limit: v.number(),
+    })),
     data: v.optional(v.any()),
     workflowId: v.id("workflows"),
   },
@@ -376,8 +653,12 @@ export const executeDatabaseOperation = internalMutation({
           }
           return doc;
         } else {
-          const docs = await ctx.db.query(table).take(WORKFLOW_DB_SELECT_LIMIT);
-          return docs.filter((doc) => "companyId" in doc && doc.companyId === companyId);
+          return await executeIndexedSelect(ctx, {
+            tableName: args.tableName,
+            query: args.query,
+            workflowCompanyId: companyId,
+            isSuperAdmin: false,
+          });
         }
       } else if (args.operation === "INSERT") {
         const insertData = args.data || {};
@@ -418,7 +699,12 @@ export const executeDatabaseOperation = internalMutation({
             const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>);
             return doc || { error: "Document not found" };
          } else {
-            return await ctx.db.query(table).order("desc").take(WORKFLOW_DB_SELECT_LIMIT);
+            return await executeIndexedSelect(ctx, {
+              tableName: args.tableName,
+              query: args.query,
+              workflowCompanyId: undefined,
+              isSuperAdmin: true,
+            });
          }
       } else if (args.operation === "INSERT") {
         const id = await ctx.db.insert(table, args.data || {});
@@ -439,14 +725,13 @@ export const executeDatabaseOperation = internalMutation({
 export const scheduleDispatcher = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const activeSchedules = await ctx.db
-      .query("schedules")
-      .withIndex("by_active_last_run", (q) => q.eq("isActive", true))
-      .take(ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT);
-    const activeWorkflowSchedules = activeSchedules.filter(s => s.workflowId);
-    
     const nowObj = new Date();
     const now = nowObj.getTime();
+    const activeSchedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_active_next_run", (q) => q.eq("isActive", true).lte("nextRunAt", now))
+      .take(ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT);
+    const activeWorkflowSchedules = activeSchedules.filter(s => s.workflowId);
 
     for (const schedule of activeWorkflowSchedules) {
         if (!schedule.workflowId) continue;
@@ -476,7 +761,20 @@ export const scheduleDispatcher = internalMutation({
              });
 
              await ctx.db.patch(schedule._id, {
-                lastRunTs: now
+                lastRunTs: now,
+                nextRunAt: getNextWorkflowScheduleRunAt({
+                  intervalStr: schedule.intervalStr,
+                  lastRunTs: now,
+                  now: nowObj,
+                }),
+             });
+        } else if (schedule.nextRunAt === undefined) {
+             await ctx.db.patch(schedule._id, {
+                nextRunAt: getNextWorkflowScheduleRunAt({
+                  intervalStr: schedule.intervalStr,
+                  lastRunTs: schedule.lastRunTs,
+                  now: nowObj,
+                }),
              });
         }
     }

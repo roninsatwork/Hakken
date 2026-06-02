@@ -52,6 +52,7 @@ describe("Scheduler Authorization", () => {
 
     expect(schedule?.createdBy).toBe(superAdminId);
     expect(schedule?.workflowId).toBe(workflowId);
+    expect(schedule?.nextRunAt).toEqual(expect.any(Number));
   });
 
   test("super admins can update, toggle, delete, manually run, and inspect schedules and executions", async () => {
@@ -112,6 +113,7 @@ describe("Scheduler Authorization", () => {
     expect(await superAdminClient.query(api.scheduler.getSchedule, { scheduleId: workflowScheduleId })).toMatchObject({
       name: "Daily Workflow",
       workflowId,
+      nextRunAt: expect.any(Number),
     });
 
     await expect(
@@ -134,6 +136,10 @@ describe("Scheduler Authorization", () => {
     await expect(superAdminClient.mutation(api.scheduler.toggleSchedule, { scheduleId: workflowScheduleId, isActive: true })).resolves.toBe(
       true
     );
+    expect(await superAdminClient.query(api.scheduler.getSchedule, { scheduleId: workflowScheduleId })).toMatchObject({
+      isActive: true,
+      nextRunAt: expect.any(Number),
+    });
 
     await expect(superAdminClient.mutation(api.scheduler.manualRunSchedule, {})).rejects.toThrow(
       "Cannot run: no target specified."
@@ -222,5 +228,70 @@ describe("Scheduler Authorization", () => {
       startedAt: 74,
     });
     expect(executions.at(-1)).toMatchObject({ startedAt: 25 });
+  });
+
+  test("dispatcher reads due active schedules and advances nextRunAt", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { dueScheduleId, futureScheduleId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Super Admin",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const dueWorkflowId = await ctx.db.insert("workflows", {
+        name: "Due Workflow",
+        isActive: true,
+        triggerType: "SCHEDULE",
+        nodes: JSON.stringify([{ id: "start", type: "triggerNode" }]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const futureWorkflowId = await ctx.db.insert("workflows", {
+        name: "Future Workflow",
+        isActive: true,
+        triggerType: "SCHEDULE",
+        nodes: JSON.stringify([{ id: "start", type: "triggerNode" }]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      const dueScheduleId = await ctx.db.insert("schedules", {
+        name: "Due",
+        workflowId: dueWorkflowId,
+        intervalStr: "hourly",
+        isActive: true,
+        nextRunAt: Date.now() - 1_000,
+        createdAt: 1,
+        createdBy: superAdminId,
+      });
+      const futureScheduleId = await ctx.db.insert("schedules", {
+        name: "Future",
+        workflowId: futureWorkflowId,
+        intervalStr: "hourly",
+        isActive: true,
+        nextRunAt: Date.now() + 60 * 60 * 1000,
+        createdAt: 2,
+        createdBy: superAdminId,
+      });
+
+      return { dueScheduleId, futureScheduleId };
+    });
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const { dueSchedule, futureSchedule, executions } = await t.run(async (ctx) => ({
+      dueSchedule: await ctx.db.get(dueScheduleId),
+      futureSchedule: await ctx.db.get(futureScheduleId),
+      executions: await ctx.db.query("workflowExecutions").collect(),
+    }));
+
+    expect(executions).toHaveLength(1);
+    expect(dueSchedule?.lastRunTs).toEqual(expect.any(Number));
+    expect(dueSchedule?.nextRunAt).toBeGreaterThan(Date.now());
+    expect(futureSchedule?.lastRunTs).toBeUndefined();
   });
 });

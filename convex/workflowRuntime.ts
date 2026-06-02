@@ -60,11 +60,12 @@ async function executeDatabaseRuntimeNode(ctx: ActionCtx, args: {
   globalStatePayload: Record<string, unknown>;
   workflowId: Id<"workflows">;
 }) {
-  const { tableName, operation, docId, data } = buildDatabaseOperationInput(args.currentNodeData, args.globalStatePayload);
+  const { tableName, operation, docId, query, data } = buildDatabaseOperationInput(args.currentNodeData, args.globalStatePayload);
   const result = await ctx.runMutation(internal.workflowEngine.executeDatabaseOperation, {
     tableName,
     operation,
     docId,
+    query,
     data,
     workflowId: args.workflowId,
   });

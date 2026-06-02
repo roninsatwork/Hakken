@@ -55,6 +55,7 @@ export function getLegacyScheduleIntervalMs(intervalStr: string) {
   if (intervalStr === "daily") return 24 * 60 * 60 * 1000;
   if (intervalStr === "hourly") return 60 * 60 * 1000;
   if (intervalStr === "weekly") return 7 * 24 * 60 * 60 * 1000;
+  if (intervalStr === "monthly") return 30 * 24 * 60 * 60 * 1000;
 
   return 0;
 }
@@ -88,4 +89,45 @@ export function shouldRunWorkflowSchedule(args: {
 
   const legacyMs = getLegacyScheduleIntervalMs(args.intervalStr);
   return legacyMs > 0 && nowMs - lastRunTs >= legacyMs;
+}
+
+export function getNextWorkflowScheduleRunAt(args: {
+  intervalStr: string;
+  lastRunTs?: number;
+  now: Date;
+}) {
+  const nowMs = args.now.getTime();
+  const config = parseScheduleConfig(args.intervalStr);
+
+  if (config?.mode) {
+    if (config.mode === "interval") {
+      const ms = intervalToMs(config.intervalUnit || "minutes", config.intervalVal || 15);
+      if (ms <= 0) return undefined;
+      const base = args.lastRunTs && args.lastRunTs > nowMs ? args.lastRunTs : nowMs;
+      return base + ms;
+    }
+
+    const [targetH, targetM] = (config.time || "00:00").split(":").map(Number);
+    const safeHour = Number.isFinite(targetH) ? targetH : 0;
+    const safeMinute = Number.isFinite(targetM) ? targetM : 0;
+    const targetDayOfWeek = config.dayOfWeek ?? 0;
+    const targetDayOfMonth = config.dayOfMonth ?? 1;
+
+    for (let offset = 0; offset <= 370; offset += 1) {
+      const candidate = new Date(args.now);
+      candidate.setUTCDate(candidate.getUTCDate() + offset);
+      candidate.setUTCHours(safeHour, safeMinute, 0, 0);
+      if (candidate.getTime() <= nowMs) continue;
+      if (config.mode === "daily") return candidate.getTime();
+      if (config.mode === "weekly" && candidate.getUTCDay() === targetDayOfWeek) return candidate.getTime();
+      if (config.mode === "monthly" && candidate.getUTCDate() === targetDayOfMonth) return candidate.getTime();
+    }
+
+    return undefined;
+  }
+
+  const legacyMs = getLegacyScheduleIntervalMs(args.intervalStr);
+  if (legacyMs <= 0) return undefined;
+  const base = args.lastRunTs && args.lastRunTs > nowMs ? args.lastRunTs : nowMs;
+  return base + legacyMs;
 }

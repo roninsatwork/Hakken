@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireSuperAdmin } from "./authz";
+import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
 const SCHEDULE_LIST_LIMIT = 100;
 const WORKFLOW_EXECUTION_LIST_LIMIT = 50;
@@ -66,6 +67,9 @@ export const createSchedule = mutation({
       agentId: args.agentId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
+      nextRunAt: args.isActive
+        ? getNextWorkflowScheduleRunAt({ intervalStr: args.intervalStr, now: new Date() })
+        : undefined,
       createdAt: Date.now(),
       createdBy: userId,
     });
@@ -102,6 +106,9 @@ export const updateSchedule = mutation({
       agentId: args.agentId,
       intervalStr: args.intervalStr,
       isActive: args.isActive,
+      nextRunAt: args.isActive
+        ? getNextWorkflowScheduleRunAt({ intervalStr: args.intervalStr, now: new Date() })
+        : undefined,
     });
     return true;
   },
@@ -114,9 +121,17 @@ export const toggleSchedule = mutation({
   },
   handler: async (ctx, args) => {
     await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
+    const schedule = await ctx.db.get(args.scheduleId);
 
     await ctx.db.patch(args.scheduleId, {
-      isActive: args.isActive
+      isActive: args.isActive,
+      nextRunAt: args.isActive && schedule
+        ? getNextWorkflowScheduleRunAt({
+            intervalStr: schedule.intervalStr,
+            lastRunTs: schedule.lastRunTs,
+            now: new Date(),
+          })
+        : undefined,
     });
     return true;
   },

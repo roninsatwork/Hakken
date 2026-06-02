@@ -204,6 +204,8 @@ Acceptance:
 Status:
 
 - Added `docs/platform-scale-hardening-plan.md` as the phased source of truth.
+- Completed the main platform scale-hardening phases and promoted them through `main`.
+- Use `docs/post-scale-hardening-plan.md` for the remaining operational follow-up work: production smoke checks, inventory rollup backfill, workflow database-node query contracts, scheduler `nextRunAt`, and dependency cleanup.
 
 ## Phase 6: Release Readiness Checklist
 

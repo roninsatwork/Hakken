@@ -31,6 +31,12 @@ export type WorkflowDatabaseConfig = {
   operation: "INSERT" | "UPDATE" | "DELETE" | "SELECT";
   tableName: string;
   docId?: string;
+  query?: {
+    indexName: string;
+    equals: Array<{ field: string; value: unknown }>;
+    order?: "asc" | "desc";
+    limit?: number;
+  };
 };
 
 export type WorkflowLogicRule = {

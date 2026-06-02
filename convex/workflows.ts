@@ -6,6 +6,7 @@ import { Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
 import { requireSuperAdmin } from "./authz";
 import { requireActionSuperAdmin } from "./actionAuth";
+import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -149,14 +150,23 @@ export const updateWorkflow = mutation({
 
       if (triggerType === 'SCHEDULE') {
         const intervalStr = triggerNode?.data?._scheduleInterval || 'daily';
+        const isActive = args.isActive !== false;
+        const nextRunAt = isActive
+          ? getNextWorkflowScheduleRunAt({
+              intervalStr,
+              lastRunTs: existingSchedule?.lastRunTs,
+              now: new Date(),
+            })
+          : undefined;
         if (existingSchedule) {
-          await ctx.db.patch(existingSchedule._id, { intervalStr, isActive: args.isActive !== false });
+          await ctx.db.patch(existingSchedule._id, { intervalStr, isActive, nextRunAt });
         } else {
           await ctx.db.insert("schedules", {
             name: `Workflow ${id} Schedule`,
             workflowId: id,
             intervalStr,
-            isActive: args.isActive !== false,
+            isActive,
+            nextRunAt,
             createdBy: userId,
             createdAt: Date.now(),
           });

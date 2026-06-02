@@ -65,6 +65,67 @@ const defaultActionConfig: WorkflowActionConfig = { method: "GET", url: "", head
 const defaultDbConfig: WorkflowDatabaseConfig = { operation: "INSERT", tableName: "", docId: "" };
 const defaultLogicConfig: WorkflowLogicConfig = { rules: [], fallbackBranch: "" };
 
+type WorkflowDbSelectIndexOption = {
+  indexName: string;
+  label: string;
+  filters: string[];
+};
+
+const workflowDbSelectIndexes: Record<string, WorkflowDbSelectIndexOption[]> = {
+  companies: [
+    { indexName: "by_name", label: "Name", filters: ["name"] },
+    { indexName: "by_plan", label: "Plan", filters: ["planId"] },
+  ],
+  properties: [
+    { indexName: "by_company", label: "Company", filters: ["companyId"] },
+    { indexName: "by_rightmoveId", label: "Rightmove ID", filters: ["rightmoveId"] },
+    { indexName: "by_runId", label: "Run ID", filters: ["runId"] },
+  ],
+  threads: [
+    { indexName: "by_company", label: "Company", filters: ["companyId"] },
+    { indexName: "by_user", label: "User", filters: ["userId"] },
+    { indexName: "by_widget", label: "Widget", filters: ["widgetId"] },
+  ],
+  messages: [
+    { indexName: "by_thread", label: "Thread", filters: ["threadId"] },
+    { indexName: "by_company_role_created", label: "Company + Role", filters: ["companyId", "role"] },
+  ],
+  knowledgeDocuments: [
+    { indexName: "by_company", label: "Company", filters: ["companyId"] },
+    { indexName: "by_agent", label: "Agent", filters: ["agentId"] },
+    { indexName: "by_thread", label: "Thread", filters: ["threadId"] },
+    { indexName: "by_status", label: "Status", filters: ["status"] },
+  ],
+  knowledgeChunks: [
+    { indexName: "by_document", label: "Document", filters: ["documentId"] },
+  ],
+  aiRules: [
+    { indexName: "by_company_created", label: "Company", filters: ["companyId"] },
+    { indexName: "by_agent_company_created", label: "Agent + Company", filters: ["agentId", "companyId"] },
+  ],
+  users: [
+    { indexName: "by_company", label: "Company", filters: ["companyId"] },
+    { indexName: "email", label: "Email", filters: ["email"] },
+  ],
+  agents: [
+    { indexName: "by_active_created", label: "Active", filters: ["isActive"] },
+  ],
+  aiTools: [
+    { indexName: "by_createdAt", label: "Created", filters: [] },
+  ],
+};
+
+function getDefaultSelectQuery(tableName: string): WorkflowDatabaseConfig["query"] | undefined {
+  const option = workflowDbSelectIndexes[tableName]?.[0];
+  if (!option) return undefined;
+  return {
+    indexName: option.indexName,
+    equals: option.filters.map((field) => ({ field, value: "" })),
+    order: "desc",
+    limit: 15,
+  };
+}
+
 export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdateNode }: ConfigDrawerProps) {
   
   const getUpstreamNodes = (): WorkflowCanvasNode[] => {
@@ -119,6 +180,20 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
   const [isGenerating, setIsGenerating] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const generateConfig = useAction(api.ai.generateNodeConfig);
+
+  const updateDbConfig = (updates: Partial<WorkflowDatabaseConfig>) => {
+    setFormData((current) => {
+      const nextConfig = { ...current._dbConfig, ...updates };
+      if (updates.tableName) {
+        nextConfig.query = nextConfig.operation === "SELECT" ? getDefaultSelectQuery(updates.tableName) : undefined;
+      }
+      if (updates.operation) {
+        nextConfig.query = updates.operation === "SELECT" ? getDefaultSelectQuery(nextConfig.tableName) : undefined;
+        if (updates.operation === "INSERT") nextConfig.docId = "";
+      }
+      return { ...current, _dbConfig: nextConfig };
+    });
+  };
 
   useEffect(() => {
     if (node) {
@@ -541,7 +616,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                  <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Database Operation</label>
                  <select 
                     value={formData._dbConfig?.operation || 'INSERT'}
-                    onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, operation: e.target.value as WorkflowDatabaseConfig["operation"] } })}
+                    onChange={(e) => updateDbConfig({ operation: e.target.value as WorkflowDatabaseConfig["operation"] })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                  >
                     {['INSERT', 'UPDATE', 'DELETE', 'SELECT'].map(m => <option key={m} value={m}>{m}</option>)}
@@ -552,7 +627,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                  <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Target Table</label>
                  <select 
                     value={formData._dbConfig?.tableName || ''}
-                    onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, tableName: e.target.value } })}
+                    onChange={(e) => updateDbConfig({ tableName: e.target.value })}
                     className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                  >
                     <option value="">-- Select Target Table --</option>
@@ -568,10 +643,82 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                    <input
                       type="text"
                       value={formData._dbConfig?.docId || ''}
-                      onChange={(e) => setFormData({ ...formData, _dbConfig: { ...formData._dbConfig, docId: e.target.value } })}
-                      placeholder={formData._dbConfig?.operation === 'SELECT' ? "Leave blank to fetch all records" : "e.g. {{nodes.agent-123.output.docId}} or jd7abcd..."}
+                      onChange={(e) => updateDbConfig({ docId: e.target.value })}
+                      placeholder={formData._dbConfig?.operation === 'SELECT' ? "Optional direct document ID" : "e.g. {{nodes.agent-123.output.docId}} or jd7abcd..."}
                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[12px] font-mono outline-none focus:border-brand/50"
                    />
+                 </div>
+               )}
+
+               {formData._dbConfig?.operation === 'SELECT' && !formData._dbConfig?.docId && (
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                   <div className="flex flex-col gap-2 md:col-span-3">
+                     <label className="text-[12px] font-medium text-secondary uppercase tracking-wider">Indexed Query</label>
+                     <select
+                       value={formData._dbConfig.query?.indexName || ''}
+                       onChange={(e) => {
+                         const tableIndexes = workflowDbSelectIndexes[formData._dbConfig.tableName] || [];
+                         const selected = tableIndexes.find((option) => option.indexName === e.target.value);
+                         updateDbConfig({
+                           query: selected
+                             ? {
+                                 indexName: selected.indexName,
+                                 equals: selected.filters.map((field) => ({ field, value: "" })),
+                                 order: formData._dbConfig.query?.order || "desc",
+                                 limit: formData._dbConfig.query?.limit || 15,
+                               }
+                             : undefined,
+                         });
+                       }}
+                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
+                     >
+                       <option value="">-- Select Index --</option>
+                       {(workflowDbSelectIndexes[formData._dbConfig.tableName] || []).map((option) => (
+                         <option key={option.indexName} value={option.indexName}>{option.label} ({option.indexName})</option>
+                       ))}
+                     </select>
+                   </div>
+
+                   {(formData._dbConfig.query?.equals || []).map((filter, index) => (
+                     <div key={`${filter.field}-${index}`} className="flex flex-col gap-2">
+                       <label className="text-[11px] font-medium text-secondary uppercase tracking-wider">{filter.field}</label>
+                       <input
+                         type="text"
+                         value={String(filter.value ?? '')}
+                         onChange={(e) => {
+                           const equals = [...(formData._dbConfig.query?.equals || [])];
+                           equals[index] = { ...equals[index], value: e.target.value };
+                           updateDbConfig({ query: { ...formData._dbConfig.query!, equals } });
+                         }}
+                         placeholder={filter.field === "companyId" ? "Blank uses workflow tenant" : `{{${filter.field}}}`}
+                         className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[12px] font-mono outline-none focus:border-brand/50"
+                       />
+                     </div>
+                   ))}
+
+                   <div className="flex flex-col gap-2">
+                     <label className="text-[11px] font-medium text-secondary uppercase tracking-wider">Limit</label>
+                     <input
+                       type="number"
+                       min={1}
+                       max={100}
+                       value={formData._dbConfig.query?.limit || 15}
+                       onChange={(e) => updateDbConfig({ query: { ...formData._dbConfig.query!, limit: Number(e.target.value) } })}
+                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
+                     />
+                   </div>
+
+                   <div className="flex flex-col gap-2">
+                     <label className="text-[11px] font-medium text-secondary uppercase tracking-wider">Order</label>
+                     <select
+                       value={formData._dbConfig.query?.order || "desc"}
+                       onChange={(e) => updateDbConfig({ query: { ...formData._dbConfig.query!, order: e.target.value as "asc" | "desc" } })}
+                       className="px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
+                     >
+                       <option value="desc">Newest first</option>
+                       <option value="asc">Oldest first</option>
+                     </select>
+                   </div>
                  </div>
                )}
             </div>
