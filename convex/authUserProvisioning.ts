@@ -1,6 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { logAuthEvent } from "./authEvents";
+import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_ONLY_ACCESS_DENIED = "Access Denied: This is an invite-only platform. Please contact your administrator.";
@@ -131,13 +132,15 @@ export async function createOrUpdateSonaeAuthUser(
   const isInitialSuperAdmin = !!process.env.INITIAL_SUPER_ADMIN_EMAIL && email === process.env.INITIAL_SUPER_ADMIN_EMAIL.toLowerCase();
 
   if (isInitialSuperAdmin) {
-    return await ctx.db.insert("users", {
+    const initialUserId = await ctx.db.insert("users", {
       email,
       name,
       image,
       role: "SUPER_ADMIN",
       createdAt: now,
     });
+    await incrementGlobalInventoryTotals(ctx, { usersDelta: 1 });
+    return initialUserId;
   }
 
   const invite = await ctx.db
@@ -169,6 +172,7 @@ export async function createOrUpdateSonaeAuthUser(
     companyId: invite.companyId,
     createdAt: now,
   });
+  await incrementGlobalInventoryTotals(ctx, { usersDelta: 1 });
 
   if (invite.status === "ACCEPTED") {
     await logAuthEvent(ctx, {

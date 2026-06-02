@@ -16,6 +16,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_name", ["name"])
+    .index("by_plan", ["planId"])
     .searchIndex("search_name", { searchField: "name" }),
   
   systemSettings: defineTable({
@@ -57,6 +58,21 @@ export default defineSchema({
     darkRing: v.optional(v.string()),
     diagnosticRoutingEnabled: v.optional(v.boolean())
   }),
+
+  inventoryRollups: defineTable({
+    key: v.string(),
+    totalProvisionedUsers: v.number(),
+    totalProvisionedCompanies: v.number(),
+    mrr: v.number(),
+    planInventory: v.array(v.object({
+      planId: v.string(),
+      name: v.string(),
+      priceGBP: v.number(),
+      isActive: v.boolean(),
+      companies: v.number(),
+    })),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
   
   arcadeScores: defineTable({
     userId: v.id("users"),
@@ -350,6 +366,7 @@ export default defineSchema({
   }).index("by_name", ["name"])
     .index("by_workflow", ["workflowId", "isGlobal"])
     .index("by_workflow_created", ["workflowId", "createdAt"])
+    .index("by_active_created", ["isActive", "createdAt"])
     .searchIndex("search_name", { searchField: "name" }),
 
   // Global Tool Library

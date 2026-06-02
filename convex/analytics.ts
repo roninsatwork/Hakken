@@ -13,6 +13,7 @@ import {
     resolveDateRange,
     resolveTimestampRange,
 } from "./analyticsService";
+import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -665,44 +666,16 @@ export const getGlobalInventoryMetrics = query({
   handler: async (ctx) => {
     await requireAnalyticsSuperAdmin(ctx);
 
-    const users = await ctx.db.query("users").take(10000);
-    const companies = await ctx.db.query("companies").take(10000);
-    const plans = await ctx.db.query("plans")
-       .withIndex("by_active", q => q.eq("isActive", true))
-       .take(10000);
-
-    const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
-    const planNameMap = new Map(plans.map(p => [p._id, p.name || "Unknown Plan"]));
-
-    let mrr = 0;
-    const planDistributionMap: Record<string, { planId: string; name: string; mrr: number; companies: number }> = {};
-
-    companies.forEach(company => {
-        if (company.planId && planMap.has(company.planId)) {
-             const planPrice = planMap.get(company.planId) || 0;
-             mrr += planPrice;
-
-             if (!planDistributionMap[company.planId]) {
-                 planDistributionMap[company.planId] = {
-                     planId: company.planId,
-                     name: planNameMap.get(company.planId) || "Unknown Plan",
-                     mrr: 0,
-                     companies: 0
-                 };
-             }
-             planDistributionMap[company.planId].mrr += planPrice;
-             planDistributionMap[company.planId].companies += 1;
-        }
-    });
+    const rollup = await getGlobalInventoryRollup(ctx);
 
     return {
       aggregates: {
-        mrr: Number(mrr.toFixed(2)),
+        mrr: rollup?.mrr ?? 0,
       },
-      planDistribution: Object.values(planDistributionMap).sort((a,b) => b.mrr - a.mrr),
+      planDistribution: getPlanDistributionFromRollup(rollup),
       systemIntegrity: {
-        totalProvisionedUsers: users.length,
-        totalProvisionedCompanies: companies.length,
+        totalProvisionedUsers: rollup?.totalProvisionedUsers ?? 0,
+        totalProvisionedCompanies: rollup?.totalProvisionedCompanies ?? 0,
       }
     };
   }

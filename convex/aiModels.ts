@@ -5,11 +5,15 @@ import type { Doc } from "./_generated/dataModel";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { resolveExecutionModel } from "./aiModelService";
 
+const MODEL_CATALOG_LIMIT = 500;
+const MODEL_SEARCH_LIMIT = 250;
+const DEFAULT_MODEL_LIMIT = 10;
+
 export const getModels = query({
   args: {},
   handler: async (ctx) => {
     await requireCurrentUser(ctx, "Unauthenticated request");
-    return await ctx.db.query("aiModels").order("asc").take(10000);
+    return await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT);
   },
 });
 
@@ -31,20 +35,20 @@ export const getOffsetPaginatedModels = query({
         ctx.db
           .query("aiModels")
           .withSearchIndex("search_display_name", (q) => q.search("displayName", term))
-          .take(500),
+          .take(MODEL_SEARCH_LIMIT),
         ctx.db
           .query("aiModels")
           .withSearchIndex("search_model_id", (q) => q.search("modelId", term))
-          .take(500),
+          .take(MODEL_SEARCH_LIMIT),
       ]);
       models = Array.from(new Map([...displayNameMatches, ...modelIdMatches].map((model) => [model._id, model])).values());
     } else if (statusEnabled !== undefined) {
       models = await ctx.db
         .query("aiModels")
         .withIndex("by_enabled", (q) => q.eq("isEnabled", statusEnabled))
-        .take(1000);
+        .take(MODEL_CATALOG_LIMIT);
     } else {
-      models = await ctx.db.query("aiModels").order("asc").take(10000);
+      models = await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT);
     }
 
     if (term) {
@@ -91,7 +95,7 @@ export const resolveModelForExecution = internalQuery({
     const defaultModels = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
-      .take(10000);
+      .take(DEFAULT_MODEL_LIMIT);
 
     return resolveExecutionModel({
       requestedModelId: args.requestedModelId,
@@ -134,7 +138,7 @@ export const setDefaultModel = mutation({
     const currentDefaults = await ctx.db
       .query("aiModels")
       .withIndex("by_default", (q) => q.eq("isDefault", true))
-      .take(10000);
+      .take(DEFAULT_MODEL_LIMIT);
 
     for (const model of currentDefaults) {
       if (model._id !== args.modelId) {
@@ -235,6 +239,6 @@ export const updatePricingConfig = mutation({
 export const getAllModelsInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("aiModels").take(10000);
+    return await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
   },
 });

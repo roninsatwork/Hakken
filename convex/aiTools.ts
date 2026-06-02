@@ -3,6 +3,9 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
+const TOOL_CATALOG_LIMIT = 250;
+const AGENT_TOOL_BINDING_LIMIT = 250;
+
 // Fetch all registered AI system tools
 export const getTools = query({
   args: {},
@@ -11,7 +14,7 @@ export const getTools = query({
     if (!current) return [];
     
     // Tools are strictly globally configured by admins
-    return await ctx.db.query("aiTools").order("desc").take(10000);
+    return await ctx.db.query("aiTools").order("desc").take(TOOL_CATALOG_LIMIT);
   },
 });
 
@@ -111,7 +114,7 @@ export const deleteTool = mutation({
     const bindings = await ctx.db
        .query("agentTools")
        .withIndex("by_tool", q => q.eq("toolId", args.id))
-       .take(10000);
+       .take(AGENT_TOOL_BINDING_LIMIT);
        
     for (const binding of bindings) {
         await ctx.db.delete(binding._id);
@@ -132,7 +135,7 @@ export const getAgentTools = query({
     const bindings = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
-       .take(10000);
+       .take(AGENT_TOOL_BINDING_LIMIT);
 
     // Map tools
     const tools = [];

@@ -70,24 +70,7 @@ const isIgnoredRepoFile = (filePath: string) => {
 const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/agentTransactions.ts', exportName: 'getForAgent', table: 'agentTransactions', category: 'admin_runtime', phase: 'Phase 4', reason: 'agent transaction detail still uses a capped indexed read before runtime pagination hardening' },
   { filePath: 'convex/agentTransactions.ts', exportName: 'seedForAgent', table: 'aiModels', category: 'maintenance', phase: 'Phase 7', reason: 'seed helper reads model catalogue before legacy and seed quarantine' },
-  { filePath: 'convex/agents.ts', exportName: 'list', table: 'agents', category: 'admin_inventory', phase: 'Phase 1', reason: 'admin agent inventory list is scheduled for paginated indexed contracts' },
-  { filePath: 'convex/agents.ts', exportName: 'createAgent', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'default model lookup remains a small catalogue read until catalogue boundaries are classified' },
-  { filePath: 'convex/agents.ts', exportName: 'deleteAgent', table: 'agentTools', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'agent tool cleanup reads bounded configuration bindings before catalogue hardening' },
-  { filePath: 'convex/agents.ts', exportName: 'getAgentToolsInternal', table: 'agentTools', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'agent tool binding lookup is part of catalogue hardening' },
-  { filePath: 'convex/agents.ts', exportName: 'getForCompanyInternal', table: 'agents', category: 'admin_inventory', phase: 'Phase 1', reason: 'company agent lookup needs bounded company-scoped pagination in admin inventory work' },
-  { filePath: 'convex/agents.ts', exportName: 'createInlineAgent', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'inline agent default model lookup remains a catalogue read pending catalogue hardening' },
-  { filePath: 'convex/aiModels.ts', exportName: 'getModels', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'model catalogue list is scheduled for explicit bounded catalogue classification' },
-  { filePath: 'convex/aiModels.ts', exportName: 'getOffsetPaginatedModels', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'model admin pagination still starts from catalogue-wide data before catalogue hardening' },
-  { filePath: 'convex/aiModels.ts', exportName: 'resolveModelForExecution', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'runtime model resolution reads catalogue data while remaining configuration-driven' },
-  { filePath: 'convex/aiModels.ts', exportName: 'setDefaultModel', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'default model update is a catalogue maintenance path' },
   { filePath: 'convex/aiModels.ts', exportName: 'internalBatchUpsert', table: 'aiModels', category: 'maintenance', phase: 'Phase 7', reason: 'provider sync upsert is internal maintenance and will be quarantined or bounded' },
-  { filePath: 'convex/aiModels.ts', exportName: 'getAllModelsInternal', table: 'aiModels', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'internal model catalogue read is scheduled for explicit bounded catalogue classification' },
-  { filePath: 'convex/aiRules.ts', exportName: 'getRules', table: 'aiRules', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'AI rule lists are catalogue-style reads pending bounded classification' },
-  { filePath: 'convex/aiRules.ts', exportName: 'getOffsetPaginatedRules', table: 'aiRules', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'AI rule pagination currently reads catalogue-wide data before catalogue hardening' },
-  { filePath: 'convex/aiRules.ts', exportName: 'getActiveRulesInternal', table: 'aiRules', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'active rule runtime catalogue read needs bounded catalogue classification' },
-  { filePath: 'convex/aiTools.ts', exportName: 'getTools', table: 'aiTools', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'tool catalogue list is scheduled for explicit bounded catalogue classification' },
-  { filePath: 'convex/aiTools.ts', exportName: 'deleteTool', table: 'agentTools', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'tool binding cleanup is catalogue maintenance pending catalogue hardening' },
-  { filePath: 'convex/aiTools.ts', exportName: 'getAgentTools', table: 'agentTools', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'agent tool lookup is a catalogue binding read pending bounded classification' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'analytics cost calculation reads model catalogue while resolving configured costs' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'bounded live-day analytics overlay is protected by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'platform overview reads model catalogue for configured cost resolution' },
@@ -104,9 +87,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'company live transaction overlay is indexed and analytics-protected' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'knowledgeDocuments', category: 'knowledge_inventory', phase: 'Phase 2', reason: 'knowledge document count is scheduled for document-level rollup or bounded pagination' },
   { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'company snapshot read is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalInventoryMetrics', table: 'users', category: 'inventory_rollup', phase: 'Phase 5', reason: 'exact global user inventory is intentionally split from analytics until rollups replace it' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalInventoryMetrics', table: 'companies', category: 'inventory_rollup', phase: 'Phase 5', reason: 'exact global company inventory is intentionally split from analytics until rollups replace it' },
-  { filePath: 'convex/analytics.ts', exportName: 'getGlobalInventoryMetrics', table: 'plans', category: 'inventory_rollup', phase: 'Phase 5', reason: 'plan distribution inventory is scheduled for rollup-backed admin overview reads' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'global analytics reads model catalogue for configured cost resolution' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live message overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live transaction overlay is bounded by analytics-specific drift tests' },
@@ -165,8 +145,9 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/companies.ts', exportName: 'getCompanies', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'company user counts need rollup or bounded lookup during admin inventory hardening' },
   { filePath: 'convex/debug.ts', exportName: 'enableAllModels', table: 'aiModels', category: 'debug', phase: 'Phase 7', reason: 'debug model helper is scheduled for legacy/debug quarantine' },
   { filePath: 'convex/debugModels.ts', exportName: 'dump', table: 'aiModels', category: 'debug', phase: 'Phase 7', reason: 'debug dump helper is scheduled for legacy/debug quarantine' },
-  { filePath: 'convex/invites.ts', exportName: 'getActiveTemplate', table: 'emailTemplates', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'email template catalogue remains small pending bounded catalogue classification' },
-  { filePath: 'convex/invites.ts', exportName: 'getInvitesByCompany', table: 'invitations', category: 'admin_inventory', phase: 'Phase 1', reason: 'company invite list needs bounded pagination before large invitation history grows' },
+  { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollup', table: 'users', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild is an explicit repair path for existing inventory data' },
+  { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollup', table: 'companies', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild is an explicit repair path for existing inventory data' },
+  { filePath: 'convex/inventoryRollups.ts', exportName: 'rebuildGlobalInventoryRollup', table: 'plans', category: 'maintenance', phase: 'Phase 5', reason: 'super-admin rollup rebuild is an explicit repair path for existing inventory data' },
   { filePath: 'convex/knowledge.ts', exportName: 'getDocuments', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'knowledge document list is scheduled for paginated status/date contracts' },
   { filePath: 'convex/knowledge.ts', exportName: 'getThreadDocuments', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'thread knowledge lookup needs bounded document-scoped behavior' },
   { filePath: 'convex/knowledge.ts', exportName: 'getThreadDocumentsInternal', table: 'knowledgeDocuments', category: 'knowledge', phase: 'Phase 2', reason: 'internal thread knowledge lookup needs bounded document-scoped behavior' },
@@ -180,9 +161,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/migrations.ts', exportName: 'runSaaSMigration', table: 'users', category: 'maintenance', phase: 'Phase 7', reason: 'migration helper is maintenance-only and should stay quarantined from product UI' },
   { filePath: 'convex/migrations.ts', exportName: 'runSaaSMigration', table: 'threads', category: 'maintenance', phase: 'Phase 7', reason: 'migration helper is maintenance-only and should stay quarantined from product UI' },
   { filePath: 'convex/movements.ts', exportName: 'list', table: 'movements', category: 'frozen_movement_demo', phase: 'Frozen', reason: 'movement demo is explicitly frozen and out of scope unless user requests it' },
-  { filePath: 'convex/plans.ts', exportName: 'getPlans', table: 'plans', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'plan catalogue list is scheduled for explicit bounded catalogue classification' },
-  { filePath: 'convex/plans.ts', exportName: 'getActivePlans', table: 'plans', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'active plan catalogue list is scheduled for explicit bounded catalogue classification' },
-  { filePath: 'convex/plans.ts', exportName: 'deletePlan', table: 'companies', category: 'inventory_rollup', phase: 'Phase 5', reason: 'plan delete dependency check needs indexed count or rollup-backed inventory behavior' },
   { filePath: 'convex/plans.ts', exportName: 'resetBillingCycle', table: 'companies', category: 'maintenance', phase: 'Phase 7', reason: 'billing reset is internal maintenance and should become paginated batch work' },
   { filePath: 'convex/plans.ts', exportName: 'resetBillingCycle', table: 'users', category: 'maintenance', phase: 'Phase 7', reason: 'billing reset is internal maintenance and should become paginated batch work' },
   { filePath: 'convex/properties.ts', exportName: 'listProperties', table: 'properties', category: 'admin_inventory', phase: 'Phase 1', reason: 'property list needs bounded indexed pagination if this surface grows' },
@@ -205,8 +183,6 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/users.ts', exportName: 'getMyLoginsCount', table: 'logins', category: 'admin_inventory', phase: 'Phase 1', reason: 'login count needs indexed count strategy rather than capped reads' },
   { filePath: 'convex/users.ts', exportName: 'recordLogin', table: 'logins', category: 'maintenance', phase: 'Phase 7', reason: 'login duplicate cleanup should become bounded by user/session indexes' },
   { filePath: 'convex/users.ts', exportName: 'getUnassignedSuperAdmins', table: 'users', category: 'admin_inventory', phase: 'Phase 1', reason: 'unassigned super-admin selector needs bounded role/company lookup before large admin growth' },
-  { filePath: 'convex/widgets.ts', exportName: 'getWidgetsByCompany', table: 'widgets', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'company widget catalogue needs bounded company-scoped pagination if volume grows' },
-  { filePath: 'convex/widgets.ts', exportName: 'getGlobalWidgets', table: 'widgets', category: 'configuration_catalogue', phase: 'Phase 6', reason: 'global widget catalogue needs bounded pagination if volume grows' },
   { filePath: 'convex/widgets.ts', exportName: 'generateWidgetUploadUrl', table: 'messages', category: 'chat_runtime', phase: 'Phase 3', reason: 'widget upload thread lookup should be indexed and bounded in chat hardening' },
   { filePath: 'convex/workflows.ts', exportName: 'list', table: 'workflows', category: 'admin_inventory', phase: 'Phase 1', reason: 'workflow admin inventory list is scheduled for paginated indexed contracts' },
 ] as const;
@@ -501,6 +477,26 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
   });
 
+  test('global inventory metrics stay rollup-backed', () => {
+    const inventoryBody = extractExportBody('convex/analytics.ts', 'getGlobalInventoryMetrics');
+    const forbiddenPatterns = [
+      /ctx\.db\s*\.query\("users"\)/,
+      /ctx\.db\s*\.query\("companies"\)/,
+      /ctx\.db\s*\.query\("plans"\)/,
+      /\.take\(10000\)/,
+      /\.collect\(\)/,
+    ];
+    const offenders = forbiddenPatterns
+      .filter((pattern) => pattern.test(inventoryBody))
+      .map((pattern) => pattern.source);
+
+    expect(inventoryBody).toContain('getGlobalInventoryRollup');
+    expect(
+      offenders,
+      `getGlobalInventoryMetrics must read the inventory rollup instead of exact raw inventory scans:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
   test('user cost aggregate stays separate from per-thread message scans', () => {
     const userCostOverviewBody = extractExportBody('convex/analytics.ts', 'getUserCostOverview');
     const forbiddenPatterns = [
@@ -597,18 +593,6 @@ describe('Quality Drift Guardrails', () => {
     const exceptions = [
       {
         filePath: 'convex/analytics.ts',
-        exportName: 'getGlobalInventoryMetrics',
-        table: 'users',
-        reason: 'explicit inventory query split away from hot-path analytics',
-      },
-      {
-        filePath: 'convex/analytics.ts',
-        exportName: 'getGlobalInventoryMetrics',
-        table: 'companies',
-        reason: 'explicit inventory query split away from hot-path analytics',
-      },
-      {
-        filePath: 'convex/analytics.ts',
         exportName: 'debugDb',
         table: 'plans',
         reason: 'internal debug query only',
@@ -676,6 +660,54 @@ describe('Quality Drift Guardrails', () => {
     expect(
       weakAllowlistEntries,
       `Platform scale broad-read allowlist entries need category, phase, and useful reasons:\n${weakAllowlistEntries.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('configuration catalogue reads stay explicitly bounded', () => {
+    const staleCatalogueExceptions = platformScaleBroadReadAllowlist
+      .filter(({ category, phase }) => String(category) === 'configuration_catalogue' || String(phase) === 'Phase 6')
+      .map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`);
+    const catalogueExports = [
+      { filePath: 'convex/agents.ts', exportName: 'list' },
+      { filePath: 'convex/agents.ts', exportName: 'createAgent' },
+      { filePath: 'convex/agents.ts', exportName: 'deleteAgent' },
+      { filePath: 'convex/agents.ts', exportName: 'getAgentToolsInternal' },
+      { filePath: 'convex/agents.ts', exportName: 'getForCompanyInternal' },
+      { filePath: 'convex/agents.ts', exportName: 'createInlineAgent' },
+      { filePath: 'convex/aiModels.ts', exportName: 'getModels' },
+      { filePath: 'convex/aiModels.ts', exportName: 'getOffsetPaginatedModels' },
+      { filePath: 'convex/aiModels.ts', exportName: 'resolveModelForExecution' },
+      { filePath: 'convex/aiModels.ts', exportName: 'setDefaultModel' },
+      { filePath: 'convex/aiModels.ts', exportName: 'getAllModelsInternal' },
+      { filePath: 'convex/aiRules.ts', exportName: 'getRules' },
+      { filePath: 'convex/aiRules.ts', exportName: 'getOffsetPaginatedRules' },
+      { filePath: 'convex/aiRules.ts', exportName: 'getActiveRulesInternal' },
+      { filePath: 'convex/aiTools.ts', exportName: 'getTools' },
+      { filePath: 'convex/aiTools.ts', exportName: 'deleteTool' },
+      { filePath: 'convex/aiTools.ts', exportName: 'getAgentTools' },
+      { filePath: 'convex/invites.ts', exportName: 'getActiveTemplate' },
+      { filePath: 'convex/invites.ts', exportName: 'getInvitesByCompany' },
+      { filePath: 'convex/plans.ts', exportName: 'getPlans' },
+      { filePath: 'convex/plans.ts', exportName: 'getActivePlans' },
+      { filePath: 'convex/widgets.ts', exportName: 'getWidgetsByCompany' },
+      { filePath: 'convex/widgets.ts', exportName: 'getGlobalWidgets' },
+    ];
+    const broadCatalogueReads = catalogueExports.flatMap(({ filePath, exportName }) => {
+      const contents = extractExportBody(filePath, exportName);
+
+      return Array.from(contents.matchAll(/\.(take\(10000\)|collect\(\))/g)).map((match) => {
+        const lineNumber = contents.slice(0, match.index ?? 0).split('\n').length;
+        return `${filePath}:${exportName}:${lineNumber}:${match[1]}`;
+      });
+    });
+
+    expect(
+      staleCatalogueExceptions,
+      `Configuration catalogue broad-read exceptions should be retired or moved to a later phase:\n${staleCatalogueExceptions.join('\n')}`
+    ).toEqual([]);
+    expect(
+      broadCatalogueReads,
+      `Configuration catalogue files must use named bounded limits instead of broad reads:\n${broadCatalogueReads.join('\n')}`
     ).toEqual([]);
   });
 

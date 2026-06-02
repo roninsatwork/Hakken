@@ -51,8 +51,12 @@ describe("Sonae auth user provisioning", () => {
         .query("invitations")
         .withIndex("by_email", (q) => q.eq("email", "invited@example.com"))
         .first();
+      const inventoryRollup = await ctx.db
+        .query("inventoryRollups")
+        .withIndex("by_key", (q) => q.eq("key", "global"))
+        .first();
 
-      return { user, invite };
+      return { user, invite, inventoryRollup };
     });
 
     expect(snapshot.user).toMatchObject({
@@ -63,6 +67,9 @@ describe("Sonae auth user provisioning", () => {
     });
     expect(snapshot.invite).toMatchObject({
       status: "PENDING",
+    });
+    expect(snapshot.inventoryRollup).toMatchObject({
+      totalProvisionedUsers: 1,
     });
     expect(snapshot.invite?.acceptedAt).toBeUndefined();
     expect(await getAuthEventTypes(t, "invited@example.com")).toEqual(

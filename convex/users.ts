@@ -9,6 +9,7 @@ import {
   assertCanDeleteManagedUser,
   assertCanUpdateManagedUser,
 } from "./userManagementService";
+import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 type UserPaginationResult = {
@@ -225,6 +226,7 @@ export const addUser = mutation({
       tokenIdentifier: fakeTokenId,
       createdAt: Date.now(),
     });
+    await incrementGlobalInventoryTotals(ctx, { usersDelta: 1 });
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_USER",
@@ -336,6 +338,7 @@ export const deleteUser = mutation({
 
     await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: args.id });
     await ctx.db.delete(args.id);
+    await incrementGlobalInventoryTotals(ctx, { usersDelta: -1 });
 
     await ctx.db.insert("auditLogs", {
       actionType: "DELETE_USER",

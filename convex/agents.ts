@@ -17,12 +17,20 @@ import {
 } from "./agentService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
+const AGENT_CATALOG_LIMIT = 500;
+const DEFAULT_MODEL_LIMIT = 10;
+const AGENT_TOOL_BINDING_LIMIT = 250;
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
     await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
 
-    const allAgents = await ctx.db.query("agents").order("desc").take(10000);
+    const allAgents = await ctx.db
+      .query("agents")
+      .withIndex("by_workflow_created", (q) => q.eq("workflowId", undefined))
+      .order("desc")
+      .take(AGENT_CATALOG_LIMIT);
     return allAgents.filter(isGlobalAgent);
   },
 });
@@ -87,7 +95,7 @@ export const createAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
+    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(DEFAULT_MODEL_LIMIT);
     const now = Date.now();
 
     const newAgentId = await ctx.db.insert("agents", buildGlobalAgentRecord({
@@ -172,7 +180,7 @@ export const deleteAgent = mutation({
     const toolBindings = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.id))
-       .take(10000);
+       .take(AGENT_TOOL_BINDING_LIMIT);
        
     for (const binding of toolBindings) {
         await ctx.db.delete(binding._id);
@@ -207,7 +215,7 @@ export const getAgentToolsInternal = internalQuery({
     return await ctx.db
       .query("agentTools")
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .take(10000);
+      .take(AGENT_TOOL_BINDING_LIMIT);
   },
 });
 
@@ -218,8 +226,9 @@ export const getForCompanyInternal = internalQuery({
     // Return all agents (for now agents are global, but filtered by isActive)
     return await ctx.db
       .query("agents")
-      .filter(q => q.eq(q.field("isActive"), true))
-      .take(10000);
+      .withIndex("by_active_created", (q) => q.eq("isActive", true))
+      .order("desc")
+      .take(AGENT_CATALOG_LIMIT);
   },
 });
 
@@ -230,7 +239,7 @@ export const createInlineAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(10000);
+    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(DEFAULT_MODEL_LIMIT);
     const now = Date.now();
 
     const newAgentId = await ctx.db.insert("agents", buildInlineAgentRecord({

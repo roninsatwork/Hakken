@@ -11,6 +11,7 @@ import {
 import { requireActionUser } from "./actionAuth";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const COMPANY_INVITE_LIST_LIMIT = 100;
 
 // --- QUERIES & MUTATIONS ---
 
@@ -114,7 +115,7 @@ export const getInvitesByCompany = query({
       .query("invitations")
       .withIndex("by_company_status", q => q.eq("companyId", args.companyId).eq("status", "PENDING"))
       .order("desc")
-      .take(10000);
+      .take(COMPANY_INVITE_LIST_LIMIT);
   },
 });
 

@@ -299,6 +299,17 @@ Acceptance:
 - Rollup values are tested against seeded exact data.
 - Exact inventory scans are no longer product UI dependencies.
 
+Status:
+
+- Added a global inventory rollup table for provisioned user count, provisioned company count, MRR, and plan inventory.
+- Moved `analytics.getGlobalInventoryMetrics` to the rollup row instead of exact user/company/plan scans.
+- Added rollup maintenance on company create/delete/plan assignment, user create/delete, auth invite provisioning, and plan create/update/delete.
+- Added `inventoryRollups.rebuildGlobalInventoryRollup` as a super-admin repair/backfill mutation for existing production data.
+- Tightened plan delete dependency checks with the `companies.by_plan` index instead of a broad company scan.
+- Added drift coverage so `getGlobalInventoryMetrics` cannot drift back to raw inventory scans.
+- Added regression coverage for rollup-backed MRR, mutation-maintained inventory counts, plan price/name changes, and auth-provisioned users.
+- Operational note: after deploying this phase, invoke `inventoryRollups.rebuildGlobalInventoryRollup` once as a signed-in super admin in the target environment to seed the rollup from existing data.
+
 ## Phase 6: Configuration Catalogues
 
 Goal: decide which small catalogues are truly bounded and make the rest paginated.
@@ -326,6 +337,15 @@ Acceptance:
 - Small catalogue exceptions are documented and tested through drift checks.
 - Company-scoped catalogues do not require global full-list reads.
 - Provider-neutral language checks remain green.
+
+Status:
+
+- Classified model, tool, agent, plan, widget, invite-template, and AI-rule surfaces as bounded configuration catalogues rather than unbounded inventory tables.
+- Replaced old `take(10000)` catalogue reads with explicit catalogue limits for AI models, AI tools, agent tool bindings, global/active agents, plans, and company invites.
+- Added an active-agent created-date index so runtime agent catalogue lookup is indexed and bounded.
+- Kept model selection configuration-driven through stored model rows and existing resolver helpers.
+- Removed retired Phase 6 broad-read exceptions from the platform drift allowlist.
+- Remaining catalogue follow-up: analytics cost paths still read the model catalogue under the analytics plan, and provider-sync/debug helpers remain scheduled for Phase 7 maintenance quarantine.
 
 ## Phase 7: Legacy, Debug, Seed, And Maintenance Paths
 

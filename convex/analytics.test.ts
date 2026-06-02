@@ -94,6 +94,7 @@ describe("Analytics MRR Strict Isolation", () => {
     });
 
     // Run Inventory Metrics
+    await client.mutation(api.inventoryRollups.rebuildGlobalInventoryRollup, {});
     const inventory = await client.query(api.analytics.getGlobalInventoryMetrics, {});
     
     // MRR should be exactly 2 * 100 = 200 (Active Corp + Another Active Corp)
@@ -107,6 +108,66 @@ describe("Analytics MRR Strict Isolation", () => {
         companies: 2,
       },
     ]);
+  });
+
+  test("global inventory metrics read maintained rollups after admin mutations", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      })
+    );
+    const client = t.withIdentity({ subject: superAdminId });
+
+    await client.mutation(api.inventoryRollups.rebuildGlobalInventoryRollup, {});
+
+    const planId = await client.mutation(api.plans.createPlan, {
+      name: "Growth",
+      description: "Growth tier",
+      messageLimit: -1,
+      priceGBP: 80,
+      isActive: true,
+    });
+    const companyId = await client.mutation(api.companies.createCompany, {
+      name: "Growth Corp",
+    });
+    await client.mutation(api.companies.assignPlanToCompany, { id: companyId, planId });
+    const userId = await client.mutation(api.users.addUser, {
+      name: "Ada",
+      email: "ada@test.com",
+      role: "USER",
+      companyId,
+    });
+
+    const inventory = await client.query(api.analytics.getGlobalInventoryMetrics, {});
+    expect(inventory).toMatchObject({
+      aggregates: { mrr: 80 },
+      systemIntegrity: {
+        totalProvisionedUsers: 2,
+        totalProvisionedCompanies: 1,
+      },
+      planDistribution: [{ planId, name: "Growth", mrr: 80, companies: 1 }],
+    });
+
+    await client.mutation(api.plans.updatePlan, { id: planId, priceGBP: 120, name: "Scale" });
+    expect(await client.query(api.analytics.getGlobalInventoryMetrics, {})).toMatchObject({
+      aggregates: { mrr: 120 },
+      planDistribution: [{ planId, name: "Scale", mrr: 120, companies: 1 }],
+    });
+
+    await client.mutation(api.users.deleteUser, { id: userId });
+    await client.mutation(api.companies.deleteCompany, { id: companyId });
+    expect(await client.query(api.analytics.getGlobalInventoryMetrics, {})).toMatchObject({
+      aggregates: { mrr: 0 },
+      systemIntegrity: {
+        totalProvisionedUsers: 1,
+        totalProvisionedCompanies: 0,
+      },
+      planDistribution: [],
+    });
   });
 
   test("global AI costs require super admin and aggregate bounded assistant messages", async () => {

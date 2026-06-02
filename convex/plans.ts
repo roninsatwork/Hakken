@@ -8,8 +8,10 @@ import {
   getPlanStatusFromCompany,
   getPlanStatusFromUser,
 } from "./planService";
+import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 
 const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
+const PLAN_CATALOG_LIMIT = 100;
 
 export const getMyCompanyPlanStatus = query({
   args: {},
@@ -58,7 +60,7 @@ export const getPlans = query({
     // Anyone authenticated can read available plans
     await requireCurrentUser(ctx, "Unauthenticated request");
 
-    return await ctx.db.query("plans").order("asc").take(10000);
+    return await ctx.db.query("plans").order("asc").take(PLAN_CATALOG_LIMIT);
   },
 });
 
@@ -94,7 +96,7 @@ export const getActivePlans = query({
       .query("plans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .order("asc")
-      .take(10000);
+      .take(PLAN_CATALOG_LIMIT);
   },
 });
 
@@ -116,6 +118,10 @@ export const createPlan = mutation({
       priceGBP: args.priceGBP,
       isActive: args.isActive,
     }));
+    const plan = await ctx.db.get(planId);
+    if (plan) {
+      await upsertGlobalInventoryPlan(ctx, plan);
+    }
 
     return planId;
   },
@@ -135,6 +141,10 @@ export const updatePlan = mutation({
 
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
+    const plan = await ctx.db.get(id);
+    if (plan) {
+      await upsertGlobalInventoryPlan(ctx, plan);
+    }
   },
 });
 
@@ -146,14 +156,15 @@ export const deletePlan = mutation({
     // Ensure we don't delete plans strictly assigned to companies
     const companiesAssigned = await ctx.db
       .query("companies")
-      .filter((q) => q.eq(q.field("planId"), args.id))
-      .take(10000);
+      .withIndex("by_plan", (q) => q.eq("planId", args.id))
+      .take(101);
 
     if (companiesAssigned.length > 0) {
-      throw new Error(getAssignedPlanDeleteErrorMessage(companiesAssigned.length));
+      throw new Error(getAssignedPlanDeleteErrorMessage(Math.min(companiesAssigned.length, 100)));
     }
 
     await ctx.db.delete(args.id);
+    await removeGlobalInventoryPlan(ctx, args.id);
   },
 });
 

@@ -12,6 +12,10 @@ import {
   shouldContinueCompanyPurge,
   withCompanyUserCount,
 } from "./companyService";
+import {
+  adjustGlobalInventoryCompanyPlan,
+  incrementGlobalInventoryTotals,
+} from "./utils/inventoryRollupService";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
@@ -143,6 +147,7 @@ export const createCompany = mutation({
       name: args.name,
       systemPrompt: args.systemPrompt,
     }, now));
+    await incrementGlobalInventoryTotals(ctx, { companiesDelta: 1 });
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,
@@ -184,12 +189,17 @@ export const deleteCompany = mutation({
   handler: async (ctx, args) => {
     const { userId: adminId } = await requireSuperAdmin(ctx);
 
-    await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
-
     const company = await ctx.db.get(args.id);
     const now = Date.now();
+    const previousPlan = company?.planId ? await ctx.db.get(company.planId) : null;
+
+    await ctx.scheduler.runAfter(0, internal.companies.purgeCompanyEntitiesInternal, { companyId: args.id });
+
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);
+    if (company) {
+      await adjustGlobalInventoryCompanyPlan(ctx, { previousPlan, companiesDelta: -1 });
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,
@@ -276,7 +286,15 @@ export const assignPlanToCompany = mutation({
       "Unauthenticated Admin Request"
     );
 
+    const company = await ctx.db.get(args.id);
+    if (!company) throw new Error("Company not found");
+
+    const previousPlan = company.planId ? await ctx.db.get(company.planId) : null;
+    const nextPlan = args.planId ? await ctx.db.get(args.planId) : null;
+    if (args.planId && !nextPlan) throw new Error("Plan not found");
+
     await ctx.db.patch(args.id, { planId: args.planId });
+    await adjustGlobalInventoryCompanyPlan(ctx, { previousPlan, nextPlan });
     return args.id;
   },
 });
@@ -292,6 +310,7 @@ export const purgeCompanyEntitiesInternal = internalMutation({
     for (const user of users) {
        await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: user._id });
        await ctx.db.delete(user._id);
+       await incrementGlobalInventoryTotals(ctx, { usersDelta: -1 });
     }
 
     const invites = await ctx.db
