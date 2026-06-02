@@ -83,6 +83,12 @@ describe("OWASP: Broken Access Control - Chat Logs", () => {
     });
     expect(companyThreads.data.map((thread) => thread._id)).toEqual([threadAId]);
 
+    const paginatedCompanyThreads = await adminAClient.query(api.chatAdmin.getPaginatedCompanyThreads, {
+      companyId: companyAId,
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+    expect(paginatedCompanyThreads.page.map((thread) => thread._id)).toEqual([threadAId]);
+
     await expect(
       adminAClient.query(api.chatAdmin.getOffsetPaginatedCompanyThreads, {
         companyId: companyBId,
@@ -102,5 +108,45 @@ describe("OWASP: Broken Access Control - Chat Logs", () => {
     await expect(adminAClient.query(api.chatAdmin.getAdminThreadMessages, { threadId: threadBId })).rejects.toThrow(
       "Unauthorized: Cross-boundary access denied."
     );
+  });
+
+  test("super admins can page global chat logs without loading all historical threads", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, newerThreadId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "user@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("threads", {
+        userId,
+        title: "Older Thread",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const newerThreadId = await ctx.db.insert("threads", {
+        userId,
+        title: "Newer Thread",
+        createdAt: Date.now() + 1,
+        updatedAt: Date.now() + 1,
+      });
+
+      return { superAdminId, newerThreadId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const firstPage = await superAdminClient.query(api.chatAdmin.getPaginatedThreads, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.page[0]._id).toBe(newerThreadId);
+    expect(firstPage.isDone).toBe(false);
   });
 });

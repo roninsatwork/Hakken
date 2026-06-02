@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalQuery } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
 import { getDefaultModelId } from "./aiModelService";
@@ -23,6 +24,33 @@ export const list = query({
 
     const allAgents = await ctx.db.query("agents").order("desc").take(10000);
     return allAgents.filter(isGlobalAgent);
+  },
+});
+
+export const getPaginatedAgents = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
+
+    const searchTerm = args.searchTerm?.trim();
+    const result = searchTerm
+      ? await ctx.db
+        .query("agents")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("agents")
+        .withIndex("by_workflow_created", (q) => q.eq("workflowId", undefined))
+        .order("desc")
+        .paginate(args.paginationOpts);
+
+    return {
+      ...result,
+      page: result.page.filter(isGlobalAgent),
+    };
   },
 });
 

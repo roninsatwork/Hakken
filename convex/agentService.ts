@@ -17,6 +17,7 @@ export function buildGlobalAgentRecord(args: {
     isActive: true,
     temperature: 1.0,
     humanApprovalRequired: false,
+    isGlobal: true,
     createdAt: now,
     updatedAt: now,
   };

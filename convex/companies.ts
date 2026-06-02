@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireSuperAdmin } from "./authz";
@@ -11,6 +12,10 @@ import {
   shouldContinueCompanyPurge,
   withCompanyUserCount,
 } from "./companyService";
+
+const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
+const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
+const COMPANY_OPTIONS_MAX_LIMIT = 200;
 
 export const getCompanies = query({
   args: {},
@@ -36,6 +41,79 @@ export const getCompanies = query({
     );
 
     return enrichedCompanies;
+  },
+});
+
+export const getPaginatedCompanies = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
+
+    const searchTerm = args.searchTerm?.trim();
+    const companiesPage = searchTerm
+      ? await ctx.db
+        .query("companies")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db.query("companies").order("desc").paginate(args.paginationOpts);
+
+    const page = await Promise.all(
+      companiesPage.page.map(async (company) => {
+        const users = await ctx.db
+          .query("users")
+          .withIndex("by_company", (q) => q.eq("companyId", company._id))
+          .take(COMPANY_INVENTORY_USER_COUNT_LIMIT + 1);
+
+        return {
+          ...withCompanyUserCount(company, Math.min(users.length, COMPANY_INVENTORY_USER_COUNT_LIMIT)),
+          userCountIsCapped: users.length > COMPANY_INVENTORY_USER_COUNT_LIMIT,
+        };
+      })
+    );
+
+    return {
+      ...companiesPage,
+      page,
+    };
+  },
+});
+
+export const getCompanyOptions = query({
+  args: {
+    searchTerm: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(
+      ctx,
+      "Unauthorized: System level clearance required.",
+      "Unauthenticated Admin Request"
+    );
+
+    const limit = Math.min(Math.max(Math.floor(args.limit ?? COMPANY_OPTIONS_DEFAULT_LIMIT), 1), COMPANY_OPTIONS_MAX_LIMIT);
+    const searchTerm = args.searchTerm?.trim();
+
+    const companies = searchTerm
+      ? await ctx.db
+        .query("companies")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .take(limit)
+      : await ctx.db
+        .query("companies")
+        .withIndex("by_name")
+        .take(limit);
+
+    return companies.map((company) => ({
+      _id: company._id,
+      name: company.name,
+    }));
   },
 });
 

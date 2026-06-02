@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 
+const EXECUTION_STEP_LIST_LIMIT = 500;
+
 export const createExecution = internalMutation({
   args: {
     workflowId: v.id("workflows"),
@@ -44,13 +46,13 @@ export const upsertStep = internalMutation({
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existingSteps = await ctx.db
+    const existing = await ctx.db
       .query("workflowExecutionSteps")
-      .withIndex("by_execution", (q) =>
+      .withIndex("by_execution_node_started", (q) =>
         q.eq("executionId", args.executionId).eq("nodeId", args.nodeId)
       )
-      .collect();
-    const existing = existingSteps.sort((a,b) => b.startedAt - a.startedAt)[0];
+      .order("desc")
+      .first();
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -74,8 +76,9 @@ export const getSteps = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("workflowExecutionSteps")
-      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-      .take(10000);
+      .withIndex("by_execution_started", (q) => q.eq("executionId", args.executionId))
+      .order("asc")
+      .take(EXECUTION_STEP_LIST_LIMIT);
   },
 });
 
@@ -89,14 +92,13 @@ export const getExecution = internalQuery({
 export const claimNextPendingStep = internalMutation({
   args: { executionId: v.id("workflowExecutions"), nodeId: v.string() },
   handler: async (ctx, args) => {
-    const steps = await ctx.db
+    const pendingStep = await ctx.db
       .query("workflowExecutionSteps")
-      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
-      .collect();
-      
-    const pendingStep = steps
-      .filter((s) => s.status === "PENDING")
-      .sort((a, b) => a.startedAt - b.startedAt)[0]; // Oldest first to process sequentially
+      .withIndex("by_execution_node_status_started", (q) =>
+        q.eq("executionId", args.executionId).eq("nodeId", args.nodeId).eq("status", "PENDING")
+      )
+      .order("asc")
+      .first();
       
     if (!pendingStep) return null;
     

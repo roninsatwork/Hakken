@@ -2,6 +2,7 @@ import { mutation, query, internalQuery, internalMutation } from "./_generated/s
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 import {
   assertCanCreateManagedUser,
@@ -9,6 +10,13 @@ import {
   assertCanUpdateManagedUser,
 } from "./userManagementService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
+
+type UserPaginationResult = {
+  page: Doc<"users">[];
+  isDone: boolean;
+  continueCursor: string;
+  splitCursor?: string | null;
+};
 
 export const getMe = query({
   args: {},
@@ -43,34 +51,60 @@ export const getPaginatedUsers = query({
     
     const activeCompanyId = getActiveCompanyId(caller);
 
+    const enrichUsers = async (users: Doc<"users">[]) => {
+      const companyNames = new Map<string, string>();
+
+      return await Promise.all(users.map(async (user) => {
+        if (!user.companyId) {
+          return { ...user, companyName: null };
+        }
+
+        const cachedName = companyNames.get(user.companyId);
+        if (cachedName) {
+          return { ...user, companyName: cachedName };
+        }
+
+        const company = await ctx.db.get(user.companyId);
+        if (company) {
+          companyNames.set(user.companyId, company.name);
+        }
+
+        return { ...user, companyName: company?.name ?? null };
+      }));
+    };
+    const withCompanyNames = async (pageResult: UserPaginationResult) => ({
+      ...pageResult,
+      page: await enrichUsers(pageResult.page),
+    });
+
     if (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId)) {
       if (!activeCompanyId) throw new Error("Unauthorized");
       // Admins are locked to their specific tenant scope
       if (args.searchTerm && args.searchTerm.trim() !== "") {
-        return await ctx.db
+        return await withCompanyNames(await ctx.db
           .query("users")
           .withSearchIndex("search_email", (q) => q.search("email", args.searchTerm!))
           .filter(q => q.eq(q.field("companyId"), activeCompanyId))
-          .paginate(args.paginationOpts);
+          .paginate(args.paginationOpts));
       } else {
-        return await ctx.db
+        return await withCompanyNames(await ctx.db
           .query("users")
           .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
           .order("desc")
-          .paginate(args.paginationOpts);
+          .paginate(args.paginationOpts));
       }
     } else if (caller.role === "SUPER_ADMIN") {
       // Super Admins map globally
       if (args.searchTerm && args.searchTerm.trim() !== "") {
-        return await ctx.db
+        return await withCompanyNames(await ctx.db
           .query("users")
           .withSearchIndex("search_email", (q) => q.search("email", args.searchTerm!))
-          .paginate(args.paginationOpts);
+          .paginate(args.paginationOpts));
       } else {
-        return await ctx.db
+        return await withCompanyNames(await ctx.db
           .query("users")
           .order("desc")
-          .paginate(args.paginationOpts);
+          .paginate(args.paginationOpts));
       }
     }
 

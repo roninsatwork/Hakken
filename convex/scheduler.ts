@@ -3,13 +3,20 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireSuperAdmin } from "./authz";
 
+const SCHEDULE_LIST_LIMIT = 100;
+const WORKFLOW_EXECUTION_LIST_LIMIT = 50;
+const WORKFLOW_EXECUTION_STEP_DETAIL_LIMIT = 500;
+
 export const getSchedules = query({
   args: {},
   handler: async (ctx) => {
     await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-    
-    // We fetch all schedules. Assume admin access or scoped later.
-    const schedules = await ctx.db.query("schedules").order("desc").take(10000);
+
+    const schedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(SCHEDULE_LIST_LIMIT);
     
     // Enrich with workflow or agent names
     return await Promise.all(
@@ -191,7 +198,11 @@ export const getWorkflowExecutions = query({
   handler: async (ctx) => {
     await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
 
-    const execs = await ctx.db.query("workflowExecutions").order("desc").take(50);
+    const execs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .take(WORKFLOW_EXECUTION_LIST_LIMIT);
     
     // Enrich
     return await Promise.all(
@@ -221,11 +232,9 @@ export const getWorkflowExecution = query({
 
     const steps = await ctx.db
       .query("workflowExecutionSteps")
-      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-      .take(10000);
-
-    // Sort steps chronologically
-    steps.sort((a, b) => a.startedAt - b.startedAt);
+      .withIndex("by_execution_started", (q) => q.eq("executionId", args.executionId))
+      .order("asc")
+      .take(WORKFLOW_EXECUTION_STEP_DETAIL_LIMIT);
 
     return {
       ...exec,

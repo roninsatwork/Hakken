@@ -1,5 +1,6 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
@@ -7,6 +8,16 @@ import {
   requireCurrentUser,
 } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+
+function uniqueRulesById(rules: Doc<"aiRules">[]) {
+  const seen = new Set<string>();
+
+  return rules.filter((rule) => {
+    if (seen.has(rule._id)) return false;
+    seen.add(rule._id);
+    return true;
+  });
+}
 
 // Fetch rules based on company context. If companyId is absent, fetches global rules.
 export const getRules = query({
@@ -27,33 +38,34 @@ export const getRules = query({
 
     if (args.agentId) {
        // Agents are global. But an ADMIN can only see rules for an agent if the rule ALSO has their companyId.
-       // So we filter the results below if they are an ADMIN.
-       let results = await ctx.db
+       if (user.role === "ADMIN") {
+           return await ctx.db
+            .query("aiRules")
+            .withIndex("by_agent_company_created", q => q.eq("agentId", args.agentId).eq("companyId", user.companyId))
+            .order("desc")
+            .take(100);
+       }
+
+       return await ctx.db
         .query("aiRules")
         .withIndex("by_agent", q => q.eq("agentId", args.agentId))
         .order("desc")
-        .take(10000);
-       
-       if (user.role === "ADMIN") {
-           results = results.filter(r => r.companyId === user.companyId);
-       }
-       return results;
+        .take(100);
     } else if (args.companyId) {
        return await ctx.db
         .query("aiRules")
-        .withIndex("by_company_active", q => q.eq("companyId", args.companyId))
+        .withIndex("by_company_created", q => q.eq("companyId", args.companyId))
         .order("desc")
-        .take(10000);
+        .take(100);
     } else {
+       if (user.role !== "SUPER_ADMIN") return [];
+
        // Manual filter for undefined companyId & agentId (Global)
        return await ctx.db
          .query("aiRules")
-         .filter(q => q.and(
-            q.eq(q.field("companyId"), undefined),
-            q.eq(q.field("agentId"), undefined)
-         ))
+         .withIndex("by_global_created", q => q.eq("companyId", undefined).eq("agentId", undefined))
          .order("desc")
-         .take(10000);
+         .take(100);
     }
   },
 });
@@ -77,32 +89,35 @@ export const getOffsetPaginatedRules = query({
         }
     }
 
-    let rawResults = [];
+    let rawResults: Doc<"aiRules">[] = [];
 
     if (args.agentId) {
-       rawResults = await ctx.db
-        .query("aiRules")
-        .withIndex("by_agent", q => q.eq("agentId", args.agentId))
-        .order("desc")
-        .take(1000); // UI performance cap limit
-
        if (user.role === "ADMIN") {
-           rawResults = rawResults.filter(r => r.companyId === user.companyId);
+           rawResults = await ctx.db
+            .query("aiRules")
+            .withIndex("by_agent_company_created", q => q.eq("agentId", args.agentId).eq("companyId", user.companyId))
+            .order("desc")
+            .take(1000);
+       } else {
+           rawResults = await ctx.db
+            .query("aiRules")
+            .withIndex("by_agent", q => q.eq("agentId", args.agentId))
+            .order("desc")
+            .take(1000); // UI performance cap limit
        }
     } else if (args.companyId) {
        rawResults = await ctx.db
         .query("aiRules")
-        .withIndex("by_company_active", q => q.eq("companyId", args.companyId))
+        .withIndex("by_company_created", q => q.eq("companyId", args.companyId))
         .order("desc")
         .take(1000);
     } else {
+       if (user.role !== "SUPER_ADMIN") return { data: [], totalCount: 0, totalPages: 1 };
+
        // Global
        rawResults = await ctx.db
          .query("aiRules")
-         .filter(q => q.and(
-            q.eq(q.field("companyId"), undefined),
-            q.eq(q.field("agentId"), undefined)
-         ))
+         .withIndex("by_global_created", q => q.eq("companyId", undefined).eq("agentId", undefined))
          .order("desc")
          .take(1000);
     }
@@ -132,18 +147,27 @@ export const getActiveRulesInternal = internalQuery({
      agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const activeRules = await ctx.db
+    const globalRules = await ctx.db
       .query("aiRules")
-      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .withIndex("by_global_active_created", (q) => q.eq("companyId", undefined).eq("agentId", undefined).eq("isActive", true))
       .order("desc")
-      .take(10000);
-      
-    // Filter to global rules, company rules, or agent specific rules depending on context
-    return activeRules.filter(r => 
-        (r.companyId === undefined && r.agentId === undefined) || // Global
-        (args.companyId && r.companyId === args.companyId) || // Company Overrides
-        (args.agentId && r.agentId === args.agentId) // Agent Overrides
-    );
+      .take(1000);
+    const companyRules = args.companyId
+      ? await ctx.db
+        .query("aiRules")
+        .withIndex("by_company_active_created", (q) => q.eq("companyId", args.companyId).eq("isActive", true))
+        .order("desc")
+        .take(1000)
+      : [];
+    const agentRules = args.agentId
+      ? await ctx.db
+        .query("aiRules")
+        .withIndex("by_agent_active_created", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
+        .order("desc")
+        .take(1000)
+      : [];
+
+    return uniqueRulesById([...globalRules, ...companyRules, ...agentRules]);
   },
 });
 

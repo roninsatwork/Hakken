@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -14,20 +14,27 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function ConnectorsDashboard() {
-  const tools = useQuery(api.aiTools.getTools);
   const deleteToolMutation = useMutation(api.aiTools.deleteTool);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<Id<"aiTools"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Derived Filter State
-  const filteredTools = tools?.filter(
-    tool => tool.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            tool.description.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const {
+    results: tools,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.aiTools.getPaginatedTools,
+    { searchTerm },
+    { initialNumItems: ADMIN_PAGE_SIZE }
+  );
+  const isLoading = status === "LoadingFirstPage";
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   const handleDeleteTool = async (id: Id<"aiTools">) => {
     if (isDeleting) return;
@@ -97,18 +104,18 @@ export default function ConnectorsDashboard() {
 
       {/* Listing Area */}
       <div className="flex flex-col gap-3">
-        {tools === undefined ? (
+        {isLoading ? (
           // Skeletons
           [1,2,3].map(i => (
              <div key={i} className="w-full h-[80px] bg-card/60 animate-pulse rounded-[14px] border border-border-dim/50" />
           ))
-        ) : filteredTools.length === 0 ? (
+        ) : tools.length === 0 ? (
           <div className="w-full py-16 flex flex-col items-center justify-center gap-4 border border-dashed border-border-dim rounded-[14px]">
              <Globe className="w-8 h-8 text-muted/30" />
              <span className="text-muted text-[13px] font-medium tracking-widest uppercase">No Connectors Enabled</span>
           </div>
         ) : (
-          filteredTools.map((tool, idx) => (
+          tools.map((tool, idx) => (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -183,6 +190,18 @@ export default function ConnectorsDashboard() {
           ))
         )}
       </div>
+      <AdminLoadMoreFooter
+        visibleCount={tools.length}
+        canLoadMore={canLoadMore}
+        isLoading={isLoadingMore}
+        onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+        labels={{
+          empty: "No Connectors Enabled",
+          showing: (count) => `Showing ${count} connectors`,
+          loadMore: "Load more connectors",
+          loading: "Loading connectors...",
+        }}
+      />
     </div>
   );
 }

@@ -161,4 +161,66 @@ describe("Scheduler Authorization", () => {
     await expect(superAdminClient.mutation(api.scheduler.deleteSchedule, { scheduleId: agentScheduleId })).resolves.toBe(true);
     expect(await superAdminClient.query(api.scheduler.getSchedule, { scheduleId: agentScheduleId })).toBeNull();
   });
+
+  test("schedule and execution admin lists stay bounded and newest first", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, workflowId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Super Admin",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "High Volume Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      for (let i = 0; i < 120; i += 1) {
+        await ctx.db.insert("schedules", {
+          name: `Schedule ${i}`,
+          workflowId,
+          intervalStr: "daily",
+          isActive: true,
+          createdAt: i,
+          createdBy: superAdminId,
+        });
+      }
+
+      for (let i = 0; i < 75; i += 1) {
+        await ctx.db.insert("workflowExecutions", {
+          workflowId,
+          triggerType: "MANUAL",
+          status: "SUCCESS",
+          startedAt: i,
+          completedAt: i + 1,
+          startedBy: superAdminId,
+        });
+      }
+
+      return { superAdminId, workflowId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const schedules = await superAdminClient.query(api.scheduler.getSchedules, {});
+    expect(schedules).toHaveLength(100);
+    expect(schedules[0]).toMatchObject({ name: "Schedule 119", workflowName: "High Volume Workflow" });
+    expect(schedules.at(-1)).toMatchObject({ name: "Schedule 20" });
+
+    const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {});
+    expect(executions).toHaveLength(50);
+    expect(executions[0]).toMatchObject({
+      workflowId,
+      workflowName: "High Volume Workflow",
+      startedByName: "Super Admin",
+      startedAt: 74,
+    });
+    expect(executions.at(-1)).toMatchObject({ startedAt: 25 });
+  });
 });

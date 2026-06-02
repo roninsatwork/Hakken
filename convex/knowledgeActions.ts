@@ -11,29 +11,7 @@ import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { requireActionAdmin } from "./actionAuth";
-
-function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
-  const chunks: string[] = [];
-  let startIndex = 0;
-
-  const cleanedText = text.replace(/\s+/g, ' ').trim();
-
-  while (startIndex < cleanedText.length) {
-    let endIndex = startIndex + chunkSize;
-
-    if (endIndex < cleanedText.length) {
-      const boundaryIndex = cleanedText.indexOf('.', endIndex - 50);
-      if (boundaryIndex !== -1 && boundaryIndex - endIndex < 50) {
-          endIndex = boundaryIndex + 1;
-      }
-    }
-
-    chunks.push(cleanedText.substring(startIndex, endIndex));
-    startIndex = endIndex - overlap; 
-  }
-
-  return chunks;
-}
+import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
 
 export const ingestDocument = internalAction({
   args: {
@@ -162,7 +140,7 @@ async function embedAndStoreDoc(
   threadId: Id<"threads"> | undefined,
   rawText: string
 ) {
-      const chunks = chunkText(rawText);
+      const chunks = chunkKnowledgeText(rawText);
 
       const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
       const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
@@ -211,6 +189,8 @@ async function embedAndStoreDoc(
              ...(agentId ? { agentId: agentId } : {}),
              ...(threadId ? { threadId: threadId } : {}),
              chunks: batch,
+             replaceExisting: i === 0,
+             markReady: i + chunkSize >= embeddedChunks.length,
           });
       }
 }

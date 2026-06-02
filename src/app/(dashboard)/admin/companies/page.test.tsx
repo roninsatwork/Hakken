@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompaniesPage from "./page";
 
@@ -40,6 +40,7 @@ vi.mock("next-intl", () => ({
         provisionedDate: "Provisioned",
         searchPlaceholder: "Search companies",
         showing: "Showing",
+        showingLoaded: `Showing ${values?.count ?? 0} companies`,
         subtitle: "Tenant operations",
         tenantName: "Tenant",
         title: "Companies",
@@ -97,8 +98,13 @@ describe("CompaniesPage", () => {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
       if (path.includes("getActivePlans")) return activePlans;
-      return companies;
+      return undefined;
     });
+    vi.mocked(usePaginatedQuery).mockImplementation(() => ({
+      results: companies,
+      status: "Exhausted",
+      loadMore: vi.fn(),
+    }) as unknown as ReturnType<typeof usePaginatedQuery>);
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("createCompany")) return createCompany as unknown as ReturnType<typeof useMutation>;
@@ -113,10 +119,23 @@ describe("CompaniesPage", () => {
   });
 
   it("renders loading, populated, search, and row navigation states", () => {
-    vi.mocked(useQuery).mockReturnValueOnce(undefined).mockReturnValueOnce(activePlans);
+    vi.mocked(usePaginatedQuery).mockReturnValueOnce({
+      results: [],
+      status: "LoadingFirstPage",
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
     const { container, rerender } = render(<CompaniesPage />);
 
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+
+    vi.mocked(usePaginatedQuery).mockImplementation((_queryFn: unknown, args: unknown) => {
+      const searchTerm = typeof args === "object" && args && "searchTerm" in args ? String(args.searchTerm || "") : "";
+      return {
+        results: searchTerm ? companies.filter((company) => company.name.toLowerCase().includes(searchTerm.toLowerCase())) : companies,
+        status: "Exhausted",
+        loadMore: vi.fn(),
+      } as unknown as ReturnType<typeof usePaginatedQuery>;
+    });
 
     rerender(<CompaniesPage />);
     expect(screen.getByText("Acme")).toBeInTheDocument();

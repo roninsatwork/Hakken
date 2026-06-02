@@ -1,5 +1,6 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 
 // Fetch all registered AI system tools
@@ -11,6 +12,29 @@ export const getTools = query({
     
     // Tools are strictly globally configured by admins
     return await ctx.db.query("aiTools").order("desc").take(10000);
+  },
+});
+
+export const getPaginatedTools = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+
+    const searchTerm = args.searchTerm?.trim();
+
+    return searchTerm
+      ? await ctx.db
+        .query("aiTools")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("aiTools")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .paginate(args.paginationOpts);
   },
 });
 

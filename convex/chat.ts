@@ -16,6 +16,11 @@ import {
   validateChatAttachments,
 } from "./chatService";
 
+const USER_THREAD_LIST_LIMIT = 100;
+const USER_THREAD_MESSAGE_LIMIT = 500;
+const AI_CONTEXT_MESSAGE_LIMIT = 40;
+const THREAD_DELETE_MESSAGE_BATCH_SIZE = 100;
+
 function getThreadMessageDimensions(thread: Doc<"threads"> | null) {
   return {
     companyId: thread?.companyId,
@@ -35,7 +40,7 @@ export const getThreads = query({
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc") // newest first
-      .take(10000);
+      .take(USER_THREAD_LIST_LIMIT);
   },
 });
 
@@ -52,7 +57,7 @@ export const getMessages = query({
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc") // chronological order for rendering UI
-      .take(10000);
+      .take(USER_THREAD_MESSAGE_LIMIT);
   },
 });
 
@@ -60,11 +65,13 @@ export const getMessagesForAI = internalQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     // Unchecked auth: This is completely secure because internalQuery can strictly ONLY be invoked by our own verified backend Actions, bypassing the dropped Edge auth context.
-    return await ctx.db
+    const recentMessages = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
-      .order("asc")
-      .take(10000);
+      .order("desc")
+      .take(AI_CONTEXT_MESSAGE_LIMIT);
+
+    return recentMessages.reverse();
   },
 });
 
@@ -274,7 +281,7 @@ export const deleteThread = mutation({
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
-      .take(10000);
+      .take(THREAD_DELETE_MESSAGE_BATCH_SIZE);
       
     for (const msg of messages) {
       await ctx.db.delete(msg._id);

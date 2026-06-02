@@ -130,6 +130,11 @@ describe("Widget Authorization", () => {
     expect((await adminAClient.query(api.widgets.getWidgetsByCompany, { companyId: companyAId })).map((widget) => widget._id)).toEqual([
       widgetId,
     ]);
+    expect(await adminAClient.query(api.widgets.getPrimaryWidgetByCompany, { companyId: companyAId })).toMatchObject({
+      _id: widgetId,
+      name: "Website Bot",
+      companyId: companyAId,
+    });
     expect(await t.query(api.widgets.getWidgetById, { widgetId })).toMatchObject({
       _id: widgetId,
       name: "Website Bot",
@@ -164,6 +169,11 @@ describe("Widget Authorization", () => {
       isGlobal: true,
     });
     expect((await superAdminClient.query(api.widgets.getGlobalWidgets, {})).map((widget) => widget._id)).toEqual([globalWidgetId]);
+    expect(await superAdminClient.query(api.widgets.getPrimaryGlobalWidget, {})).toMatchObject({
+      _id: globalWidgetId,
+      name: "Global Widget",
+      isGlobal: true,
+    });
 
     await expect(adminAClient.mutation(api.widgets.deleteWidget, { widgetId: globalWidgetId, companyId: companyAId })).rejects.toThrow(
       "Unauthorized"

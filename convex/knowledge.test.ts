@@ -242,6 +242,51 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     expect(companyDocuments.map((doc) => doc._id)).toEqual([companyDocumentId]);
   });
 
+  test("admins can page company knowledge documents through the bounded inventory query", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, adminId, firstDocumentId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      const firstDocumentId = await ctx.db.insert("knowledgeDocuments", {
+        title: "First Handbook",
+        textContent: "A",
+        companyId,
+        status: "ready",
+        createdBy: adminId,
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "Second Handbook",
+        textContent: "B",
+        companyId,
+        status: "ready",
+        createdBy: adminId,
+        format: "text/plain",
+        createdAt: Date.now() + 1,
+      });
+
+      return { companyId, adminId, firstDocumentId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    const firstPage = await adminClient.query(api.knowledge.getPaginatedDocuments, {
+      companyId,
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(firstPage.page[0]._id).not.toBe(firstDocumentId);
+  });
+
   test("agent-scoped reads are company-isolated for admins and complete for super admins", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -564,7 +609,24 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
         { text: "alpha", embedding: [0.1, 0.2] },
         { text: "beta", embedding: [0.3, 0.4] },
       ],
+      markReady: false,
     });
+
+    await t.mutation(internal.knowledge.saveChunksInternal, {
+      documentId: readyDocumentId,
+      companyId,
+      chunks: [{ text: "gamma", embedding: [0.7, 0.8] }],
+      replaceExisting: false,
+    });
+
+    const chunksAfterAppend = await t.run(async (ctx) =>
+      ctx.db
+        .query("knowledgeChunks")
+        .withIndex("by_document", (q) => q.eq("documentId", readyDocumentId))
+        .collect()
+    );
+
+    expect(chunksAfterAppend.map((chunk) => chunk.text).sort()).toEqual(["alpha", "beta", "gamma"]);
 
     await t.mutation(internal.knowledge.saveChunksInternal, {
       documentId: readyDocumentId,

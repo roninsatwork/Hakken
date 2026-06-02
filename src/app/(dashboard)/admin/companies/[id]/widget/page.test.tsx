@@ -97,7 +97,7 @@ describe("CompanyWidgetPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(navigator, { clipboard: { writeText } });
-    vi.mocked(useQuery).mockReturnValue([widget]);
+    vi.mocked(useQuery).mockReturnValue(widget);
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("saveWidget")) return saveWidget as unknown as ReturnType<typeof useMutation>;
@@ -112,7 +112,7 @@ describe("CompanyWidgetPage", () => {
 
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
 
-    vi.mocked(useQuery).mockReturnValue([]);
+    vi.mocked(useQuery).mockReturnValue(null);
     rerender(<CompanyWidgetPage />);
     fireEvent.click(screen.getByRole("button", { name: "Initialize Widget" }));
 
@@ -120,7 +120,7 @@ describe("CompanyWidgetPage", () => {
       expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ companyId: "company_1", widgetId: undefined, name: "Website Bot" }));
     });
 
-    vi.mocked(useQuery).mockReturnValue([widget]);
+    vi.mocked(useQuery).mockReturnValue(widget);
     rerender(<CompanyWidgetPage />);
     await screen.findByDisplayValue("Existing Bot");
     fireEvent.change(screen.getByLabelText("Bot name"), { target: { value: "Support Bot" } });

@@ -41,7 +41,7 @@ export const getAgentKnowledgeDocumentsQuery = internalQuery({
       return await ctx.db.query("knowledgeDocuments")
           .withIndex("by_agent", q => q.eq("agentId", args.agentId))
           .order("desc") // Get newest first
-          .take(10000);
+          .take(1);
   }
 });
 

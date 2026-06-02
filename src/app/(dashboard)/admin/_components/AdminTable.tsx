@@ -212,3 +212,48 @@ export function AdminPaginationFooter({
     </div>
   );
 }
+
+type AdminLoadMoreFooterProps = {
+  visibleCount: number;
+  canLoadMore: boolean;
+  isLoading: boolean;
+  onLoadMore: () => void;
+  labels?: {
+    empty?: string;
+    showing?: (count: number) => string;
+    loadMore?: string;
+    loading?: string;
+  };
+};
+
+export function AdminLoadMoreFooter({
+  visibleCount,
+  canLoadMore,
+  isLoading,
+  onLoadMore,
+  labels,
+}: AdminLoadMoreFooterProps) {
+  return (
+    <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+      <div className="text-[12px] font-medium text-secondary">
+        {visibleCount > 0 ? (
+          <span>{labels?.showing?.(visibleCount) ?? `Showing ${visibleCount}`}</span>
+        ) : (
+          <span>{labels?.empty ?? "No entries found"}</span>
+        )}
+      </div>
+
+      {canLoadMore && (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-40 disabled:pointer-events-none text-foreground border border-border-dim"
+        >
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isLoading ? labels?.loading ?? "Loading..." : labels?.loadMore ?? "Load more"}
+        </button>
+      )}
+    </div>
+  );
+}

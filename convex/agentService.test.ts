@@ -42,6 +42,7 @@ describe("agent service helpers", () => {
       modelId: "model-1",
       thinkingMode: false,
       isActive: true,
+      isGlobal: true,
       temperature: 1.0,
       humanApprovalRequired: false,
       createdAt: 123,

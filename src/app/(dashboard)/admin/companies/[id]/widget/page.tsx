@@ -30,11 +30,9 @@ export default function CompanyWidgetPage() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
 
-  const widgets = useConvexQuery(api.widgets.getWidgetsByCompany, { companyId });
+  const widget = useConvexQuery(api.widgets.getPrimaryWidgetByCompany, { companyId });
   const saveWidget = useConvexMutation(api.widgets.saveWidget);
   const generateUploadUrl = useConvexMutation(api.users.generateUploadUrl);
-
-  const widget = widgets && widgets.length > 0 ? widgets[0] : null;
 
   const [activeTab, setActiveTab] = useState<WidgetConfigTab>("Appearance");
   const [isSaving, setIsSaving] = useState(false);
@@ -194,7 +192,7 @@ export default function CompanyWidgetPage() {
 
       <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
-      {widgets === undefined ? (
+      {widget === undefined ? (
         <div className="py-24 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-brand" />
         </div>

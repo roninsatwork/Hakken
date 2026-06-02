@@ -12,11 +12,9 @@ import { validateUploadFile } from "@/src/lib/constants/uploads";
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
 export default function GlobalWidgetPage() {
-  const widgets = useQuery(api.widgets.getGlobalWidgets);
+  const widget = useQuery(api.widgets.getPrimaryGlobalWidget);
   const saveWidget = useMutation(api.widgets.saveWidget);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
-
-  const widget = widgets && widgets.length > 0 ? widgets[0] : null;
 
   const [activeTab, setActiveTab] = useState<Tab>('Appearance');
 
@@ -182,7 +180,7 @@ export default function GlobalWidgetPage() {
 	        </header>
           <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
-	        {widgets === undefined ? (
+	        {widget === undefined ? (
           <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>
         ) : !widget ? (
           <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">

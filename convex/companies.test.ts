@@ -147,6 +147,73 @@ describe("OWASP: Broken Access Control - Companies", () => {
     expect(internalCompanyA?.name).toBe("Company A");
   });
 
+  test("SUPER_ADMIN can page and search company inventory without loading every company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, superAdminId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Acme Searchable", createdAt: Date.now() });
+      await ctx.db.insert("companies", { name: "Beta Workspace", createdAt: Date.now() + 1 });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("users", {
+        email: "acme-user@test.com",
+        role: "USER",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+
+      return { companyAId, superAdminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const firstPage = await superAdminClient.query(api.companies.getPaginatedCompanies, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    const searchPage = await superAdminClient.query(api.companies.getPaginatedCompanies, {
+      searchTerm: "Acme",
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(searchPage.page).toHaveLength(1);
+    expect(searchPage.page[0]).toMatchObject({ _id: companyAId, name: "Acme Searchable", userCount: 1 });
+  });
+
+  test("SUPER_ADMIN can read bounded company options for selectors", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, superAdminId } = await t.run(async (ctx) => {
+      const alphaId = await ctx.db.insert("companies", { name: "Alpha Workspace", createdAt: Date.now() });
+      await ctx.db.insert("companies", { name: "Beta Workspace", createdAt: Date.now() + 1 });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId: alphaId,
+        createdAt: Date.now(),
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+
+      return { adminId, superAdminId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const options = await superAdminClient.query(api.companies.getCompanyOptions, { searchTerm: "Alpha", limit: 1 });
+
+    expect(options).toEqual([expect.objectContaining({ name: "Alpha Workspace" })]);
+    await expect(adminClient.query(api.companies.getCompanyOptions, {})).rejects.toThrow("Unauthorized");
+  });
+
   test("SUPER_ADMIN company updates patch profile fields, plan assignment, and audit logs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

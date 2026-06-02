@@ -265,6 +265,9 @@
             "emptyState": "Nessun workspace attivo trovato nel protocollo.",
             "users": "{count, plural, =0 {Nessun utente} one {1 utente} other {# utenti}}",
             "showing": "Visualizzazione da",
+            "showingLoaded": "Visualizzazione di {count} workspace",
+            "loadMore": "Carica altri workspace",
+            "loadingMore": "Caricamento workspace...",
             "to": "a",
             "of": "di",
             "companies": "workspace",
@@ -311,6 +314,9 @@
             "deleteWarning": "Non puoi eliminare un piano attualmente assegnato a delle aziende.",
             "emptyState": "Nessun piano creato.",
             "searchPlaceholder": "Cerca piani...",
+            "showingLoaded": "{count} piani visualizzati",
+            "loadMore": "Carica altri piani",
+            "loadingMore": "Caricamento piani...",
             "table": {
                 "name": "Nome",
                 "limit": "Limite",
@@ -376,7 +382,10 @@
                 "empty": "Nessun workflow autonomo configurato corrispondente alla ricerca.",
                 "active": "Attivo",
                 "draft": "Bozza",
-                "visualBuilder": "Apri Visual Designer"
+                "visualBuilder": "Apri Visual Designer",
+                "showingLoaded": "Visualizzazione di {count} workflow",
+                "loadMore": "Carica altri workflow",
+                "loadingMore": "Caricamento workflow..."
             },
             "pagination": {
                 "showing": "Visualizzazione da",
@@ -693,7 +702,10 @@
                 "empty": "Nessun agent trovato corrispondente alla ricerca.",
                 "active": "Attivo",
                 "draft": "Bozza",
-                "configure": "Configura Agent"
+                "configure": "Configura Agent",
+                "showingLoaded": "Visualizzazione di {count} agent",
+                "loadMore": "Carica altri agent",
+                "loadingMore": "Caricamento agent..."
             },
             "modal": {
                 "initTitle": "Inizializza Nuovo Agent",

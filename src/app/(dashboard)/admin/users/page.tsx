@@ -27,6 +27,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+type UserRow = Doc<"users"> & { companyName?: string | null };
 
 type UserFormData = {
   name: string;
@@ -39,11 +40,11 @@ type UserFormData = {
 export default function ManageUsersPage() {
   const currentUser = useQuery(api.users.getMe);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
+  const companyOptions = useQuery(api.companies.getCompanyOptions, isSuperAdmin ? {} : "skip") || [];
   const t = useTranslations('admin.users');
   const tCommon = useTranslations('common');
 
-  const getCompanyName = (id: string) => companies.find((c) => c._id === id)?.name || t('table.systemLevel');
+  const getCompanyName = (id: string) => companyOptions.find((c) => c._id === id)?.name || t('table.systemLevel');
 
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -61,8 +62,8 @@ export default function ManageUsersPage() {
   const updateUser = useMutation(api.users.updateUser);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<Doc<"users"> | null>(null);
-  const [deletingUser, setDeletingUser] = useState<Doc<"users"> | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
   const [deletingInvite, setDeletingInvite] = useState<Doc<"invitations"> | null>(null);
 
   const [formData, setFormData] = useState<UserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
@@ -73,7 +74,7 @@ export default function ManageUsersPage() {
     (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenEdit = (user: Doc<"users">) => {
+  const handleOpenEdit = (user: UserRow) => {
     setFormData({ name: user.name ?? "", email: user.email ?? "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
     setEditingUser(user);
     setSubmitError("");
@@ -277,7 +278,7 @@ export default function ManageUsersPage() {
                         </td>
                         {isSuperAdmin && (
                           <td className="px-4 py-2.5">
-                            <span className="text-[12px] text-secondary">{user.companyId ? getCompanyName(user.companyId) : t('table.sonaeGlobal')}</span>
+                            <span className="text-[12px] text-secondary">{user.companyId ? user.companyName ?? getCompanyName(user.companyId) : t('table.sonaeGlobal')}</span>
                           </td>
                         )}
                         <td className="px-4 py-2.5 text-[12px] text-secondary">
@@ -372,7 +373,7 @@ export default function ManageUsersPage() {
                 className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
               >
                 <option value="">{t('table.systemLevel')}</option>
-                {companies.map((c) => (
+                {companyOptions.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>

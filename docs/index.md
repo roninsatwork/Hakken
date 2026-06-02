@@ -34,6 +34,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Completed low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
 15. **[Analytics Scale Optimization Plan](./analytics-scale-optimization-plan.md)**
     Locked phased plan for scaling analytics, AI running costs, admin dashboards, and company dashboards without losing tenant isolation.
+16. **[Platform Scale Hardening Plan](./platform-scale-hardening-plan.md)**
+    Belt-and-braces plan for bounded admin inventory, knowledge, chat logs, workflows, inventory rollups, and legacy/debug cleanup.
 
 ---
 

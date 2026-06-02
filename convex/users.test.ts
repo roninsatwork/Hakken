@@ -366,6 +366,7 @@ describe("OWASP: Broken Access Control - Users", () => {
     const impersonatedAll = await impersonatingSuperClient.query(api.users.getAllUsers);
 
     expect(adminPage.page.map((user) => user._id).sort()).toEqual([adminAId, userAId].sort());
+    expect(adminPage.page.find((user) => user._id === userAId)?.companyName).toBe("Company A");
     expect(companyPage.page.map((user) => user._id).sort()).toEqual([adminAId, userAId].sort());
     expect(impersonatedPage.page.map((user) => user._id).sort()).toEqual([adminAId, userAId].sort());
     expect(impersonatedAll.map((user) => user._id).sort()).toEqual([adminAId, userAId].sort());

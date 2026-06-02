@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -11,8 +11,6 @@ import {
   MessageSquareText,
   ShieldAlert,
   Bot,
-  ChevronLeft,
-  ChevronRight,
   Database,
   Copy,
   Check
@@ -20,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
+import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
@@ -30,20 +29,15 @@ export default function ChatLogsDashboard() {
   const [isCopied, setIsCopied] = useState(false);
   const t = useTranslations("ai.chatLogs");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
 
-  // Pagination bounds
-  const paginatedData = useQuery(api.chatAdmin.getOffsetPaginatedThreads, {
-    searchTerm,
-    page: currentPage,
-    pageSize: itemsPerPage,
-  });
-
-  const results = paginatedData?.data || [];
-  const status = paginatedData === undefined ? "LoadingFirstPage" : "Done";
-  const totalCount = paginatedData?.totalCount || 0;
-  const totalPages = paginatedData?.totalPages || 1;
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.chatAdmin.getPaginatedThreads,
+    { searchTerm },
+    { initialNumItems: itemsPerPage }
+  );
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   // Message Extractor securely bound to current selection
   const messages = useQuery(
@@ -120,10 +114,7 @@ export default function ChatLogsDashboard() {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t("searchPlaceholder")}
                 className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-muted/60 tracking-wide"
               />
@@ -191,29 +182,18 @@ export default function ChatLogsDashboard() {
             </AnimatePresence>
           </div>
 
-          {/* Pagination Footer constraints adapted for 320px sidebar */}
-          <div className="flex items-center justify-between p-3 border-t border-border-dim bg-background/50 shrink-0">
-             <div className="text-[11px] text-muted tracking-wide flex flex-col xl:flex-row xl:gap-1">
-                 <span>Showing <strong className="text-foreground">{totalCount === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</strong></span>
-                 <span>to <strong className="text-foreground">{Math.min(currentPage * itemsPerPage, totalCount)}</strong> of <strong className="text-foreground">{totalCount}</strong></span>
-             </div>
-             <div className="flex items-center gap-1.5">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-             </div>
-          </div>
+          <AdminLoadMoreFooter
+            visibleCount={results.length}
+            canLoadMore={canLoadMore}
+            isLoading={isLoadingMore}
+            onLoadMore={() => loadMore(itemsPerPage)}
+            labels={{
+              empty: t("status.noTraces"),
+              showing: (count) => `Showing ${count} threads`,
+              loadMore: "Load more threads",
+              loading: "Loading threads...",
+            }}
+          />
         </div>
 
         {/* Right Column: Interaction Sandbox Viewer */}

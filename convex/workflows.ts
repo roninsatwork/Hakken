@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalQuery, action, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -25,6 +26,29 @@ export const list = query({
     await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
 
     return await ctx.db.query("workflows").order("desc").take(10000);
+  },
+});
+
+export const getPaginatedWorkflows = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
+
+    const searchTerm = args.searchTerm?.trim();
+
+    return searchTerm
+      ? await ctx.db
+        .query("workflows")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("workflows")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .paginate(args.paginationOpts);
   },
 });
 

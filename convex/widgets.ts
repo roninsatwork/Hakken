@@ -23,7 +23,21 @@ export const getWidgetsByCompany = query({
     return await ctx.db
       .query("widgets")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .take(10000);
+      .take(100);
+  },
+});
+
+export const getPrimaryWidgetByCompany = query({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const { user } = await requireAdmin(ctx, "Unauthorized Access", "Unauthorized");
+    assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
+
+    return await ctx.db
+      .query("widgets")
+      .withIndex("by_company_created", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .first();
   },
 });
 
@@ -35,7 +49,20 @@ export const getGlobalWidgets = query({
     return await ctx.db
       .query("widgets")
       .withIndex("by_global", (q) => q.eq("isGlobal", true))
-      .take(10000);
+      .take(100);
+  },
+});
+
+export const getPrimaryGlobalWidget = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized Access", "Unauthorized");
+
+    return await ctx.db
+      .query("widgets")
+      .withIndex("by_global_created", (q) => q.eq("isGlobal", true))
+      .order("desc")
+      .first();
   },
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -30,7 +30,7 @@ import {
   adminModalInputClassName,
 } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
-  AdminPaginationFooter,
+  AdminLoadMoreFooter,
   AdminRowActions,
   AdminRowIconButton,
   AdminSearchBar,
@@ -40,11 +40,7 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import {
-  ADMIN_PAGE_SIZE,
-  matchesAdminSearchTerm,
-  paginateAdminItems,
-} from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type Agent = Doc<"agents">;
 
@@ -52,9 +48,7 @@ type Agent = Doc<"agents">;
 export default function AgentsPage() {
   const router = useRouter();
   const t = useTranslations('admin.agents');
-  const agentsData = useQuery(api.agents.list);
   const activeModelsData = useQuery(api.aiModels.getModels);
-  const agents = agentsData || [];
   const activeModels = activeModelsData || [];
   const createAgent = useMutation(api.agents.createAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
@@ -67,23 +61,22 @@ export default function AgentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
-  const isLoading = agentsData === undefined || activeModelsData === undefined;
-
-  const filteredAgents = agents.filter((agent) =>
-    matchesAdminSearchTerm(searchTerm, [agent.name, agent.description])
-  );
-
   const {
-    items: paginatedAgents,
-    totalItems,
-    totalPages,
-  } = paginateAdminItems(filteredAgents, currentPage, itemsPerPage);
+    results: paginatedAgents,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.agents.getPaginatedAgents,
+    { searchTerm },
+    { initialNumItems: itemsPerPage }
+  );
+  const isLoading = status === "LoadingFirstPage" || activeModelsData === undefined;
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-    setCurrentPage(1);
   };
 
   const handleOpenAdd = () => {
@@ -143,16 +136,16 @@ export default function AgentsPage() {
       {/* Table */}
       <AdminTableShell
         footer={
-          <AdminPaginationFooter
-            page={currentPage}
-            totalPages={totalPages}
-            totalCount={totalItems}
-            pageSize={itemsPerPage}
-            isLoading={isLoading}
-            onPageChange={setCurrentPage}
+          <AdminLoadMoreFooter
+            visibleCount={paginatedAgents.length}
+            canLoadMore={canLoadMore}
+            isLoading={isLoadingMore}
+            onLoadMore={() => loadMore(itemsPerPage)}
             labels={{
               empty: t('table.empty'),
-              showing: (start, end, total) => `Showing ${start} to ${end} of ${total} agents`,
+              showing: (count) => t('table.showingLoaded', { count }),
+              loadMore: t('table.loadMore'),
+              loading: t('table.loadingMore'),
             }}
           />
         }

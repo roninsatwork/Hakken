@@ -19,7 +19,7 @@ export default function InviteUsersPage() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const companies = useQuery(api.companies.getCompanies) || [];
+  const companyOptions = useQuery(api.companies.getCompanyOptions, isSuperAdmin ? {} : "skip") || [];
   const t = useTranslations('admin.users.invitePage');
 
   const [formData, setFormData] = useState({
@@ -168,7 +168,7 @@ export default function InviteUsersPage() {
                 className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all appearance-none"
               >
                 <option value="">{t('fields.company.noCompany')}</option>
-                {companies.map((c) => (
+                {companyOptions.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>

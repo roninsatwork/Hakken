@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { canAccessCompany, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 import {
   buildPlanRecord,
@@ -58,6 +59,29 @@ export const getPlans = query({
     await requireCurrentUser(ctx, "Unauthenticated request");
 
     return await ctx.db.query("plans").order("asc").take(10000);
+  },
+});
+
+export const getPaginatedPlans = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
+
+    const searchTerm = args.searchTerm?.trim();
+
+    return searchTerm
+      ? await ctx.db
+        .query("plans")
+        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("plans")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .paginate(args.paginationOpts);
   },
 });
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import ConnectorsDashboard from "./page";
 
 vi.mock("next/link", () => ({
@@ -53,7 +53,15 @@ describe("ConnectorsDashboard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue(tools);
+    vi.mocked(usePaginatedQuery).mockImplementation((_queryFn: unknown, args: unknown) => {
+      const searchTerm = typeof args === "object" && args && "searchTerm" in args ? String(args.searchTerm || "") : "";
+
+      return {
+        results: searchTerm ? tools.filter((tool) => tool.name.toLowerCase().includes(searchTerm.toLowerCase())) : tools,
+        status: "Exhausted",
+        loadMore: vi.fn(),
+      } as unknown as ReturnType<typeof usePaginatedQuery>;
+    });
     vi.mocked(useMutation).mockReturnValue(deleteTool as unknown as ReturnType<typeof useMutation>);
   });
 
@@ -75,13 +83,21 @@ describe("ConnectorsDashboard", () => {
   it("renders loading and empty states", () => {
     const { container, rerender } = render(<ConnectorsDashboard />);
 
-    vi.mocked(useQuery).mockReturnValue(undefined);
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "LoadingFirstPage",
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
     rerender(<ConnectorsDashboard />);
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
 
-    vi.mocked(useQuery).mockReturnValue([]);
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
     rerender(<ConnectorsDashboard />);
-    expect(screen.getByText("No Connectors Enabled")).toBeInTheDocument();
+    expect(screen.getAllByText("No Connectors Enabled").length).toBeGreaterThan(0);
   });
 
   it("requires confirmation before deleting a connector", async () => {

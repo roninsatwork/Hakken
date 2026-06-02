@@ -137,6 +137,14 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     expect(inactivePage.data.map((model) => model.modelId)).toEqual(["inactive-model"]);
 
+    const modelIdSearchPage = await client.query(api.aiModels.getOffsetPaginatedModels, {
+      searchTerm: "default-model",
+      page: 1,
+      pageSize: 15
+    });
+
+    expect(modelIdSearchPage.data.map((model) => model.modelId)).toEqual(["default-model"]);
+
     await expect(
       client.query(api.aiModels.getOffsetPaginatedModels, {
         searchTerm: "",

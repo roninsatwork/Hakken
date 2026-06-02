@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import {
@@ -18,7 +18,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import {
-  AdminPaginationFooter,
+  AdminLoadMoreFooter,
   AdminSearchBar,
   AdminTableEmptyRow,
   AdminTableLoadingRow,
@@ -26,8 +26,6 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import {
   ADMIN_PAGE_SIZE,
-  matchesAdminSearchTerm,
-  paginateAdminItems,
 } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type Plan = Doc<"plans">;
@@ -36,8 +34,6 @@ export default function SubscriptionPlansPage() {
   const t = useTranslations('admin.plans');
   const tCommon = useTranslations('common');
   
-  const plansData = useQuery(api.plans.getPlans) as Plan[] | undefined;
-  const plans = plansData || [];
   const createPlan = useMutation(api.plans.createPlan);
   const updatePlan = useMutation(api.plans.updatePlan);
   const deletePlan = useMutation(api.plans.deletePlan);
@@ -58,23 +54,22 @@ export default function SubscriptionPlansPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
-  const isLoading = plansData === undefined;
-
-  const filteredPlans = plans.filter((p) =>
-    matchesAdminSearchTerm(searchTerm, [p.name, p.description])
-  );
-
   const {
-    items: paginatedPlans,
-    totalItems,
-    totalPages,
-  } = paginateAdminItems(filteredPlans, currentPage, itemsPerPage);
+    results: paginatedPlans,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.plans.getPaginatedPlans,
+    { searchTerm },
+    { initialNumItems: itemsPerPage }
+  );
+  const isLoading = status === "LoadingFirstPage";
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-    setCurrentPage(1);
   };
 
   const handleOpenAdd = () => {
@@ -178,16 +173,16 @@ export default function SubscriptionPlansPage() {
       {/* Table */}
       <AdminTableShell
         footer={
-          <AdminPaginationFooter
-            page={currentPage}
-            totalPages={totalPages}
-            totalCount={totalItems}
-            pageSize={itemsPerPage}
-            isLoading={isLoading}
-            onPageChange={setCurrentPage}
+          <AdminLoadMoreFooter
+            visibleCount={paginatedPlans.length}
+            canLoadMore={canLoadMore}
+            isLoading={isLoadingMore}
+            onLoadMore={() => loadMore(itemsPerPage)}
             labels={{
               empty: t('emptyState'),
-              showing: (start, end, total) => `${tCommon('pagination.showing')} ${start} ${tCommon('pagination.to')} ${end} ${tCommon('pagination.of')} ${total} ${tCommon('pagination.entries')}`,
+              showing: (count) => t('showingLoaded', { count }),
+              loadMore: t('loadMore'),
+              loading: t('loadingMore'),
             }}
           />
         }

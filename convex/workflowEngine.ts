@@ -27,6 +27,50 @@ const allowedWorkflowTables = [
 
 type WorkflowDbTable = (typeof allowedWorkflowTables)[number];
 type TenantScopedRecord = { companyId?: Id<"companies"> };
+
+const WORKFLOW_DB_SELECT_LIMIT = 100;
+const ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT = 500;
+
+async function getLatestExecutionStep(
+  ctx: MutationCtx,
+  args: { executionId: Id<"workflowExecutions">; nodeId: string }
+) {
+  return await ctx.db
+    .query("workflowExecutionSteps")
+    .withIndex("by_execution_node_started", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
+    .order("desc")
+    .first();
+}
+
+async function getLatestExecutionStepByStatus(
+  ctx: MutationCtx,
+  args: {
+    executionId: Id<"workflowExecutions">;
+    nodeId: string;
+    status: Doc<"workflowExecutionSteps">["status"];
+  }
+) {
+  return await ctx.db
+    .query("workflowExecutionSteps")
+    .withIndex("by_execution_node_status_started", (q) =>
+      q.eq("executionId", args.executionId).eq("nodeId", args.nodeId).eq("status", args.status)
+    )
+    .order("desc")
+    .first();
+}
+
+async function hasExecutionStepWithStatus(
+  ctx: MutationCtx,
+  args: { executionId: Id<"workflowExecutions">; status: Doc<"workflowExecutionSteps">["status"] }
+) {
+  const step = await ctx.db
+    .query("workflowExecutionSteps")
+    .withIndex("by_execution_status_started", (q) => q.eq("executionId", args.executionId).eq("status", args.status))
+    .first();
+
+  return step !== null;
+}
+
 export const initExecution = internalMutation({
   args: {
     workflowId: v.id("workflows"),
@@ -93,11 +137,7 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
     if (args.stepId) {
         step = await ctx.db.get(args.stepId);
     } else {
-        const stepQuery = await ctx.db
-          .query("workflowExecutionSteps")
-          .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
-          .collect();
-        step = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
+        step = await getLatestExecutionStep(ctx, args);
     }
 
     let nextStatus: Doc<"workflowExecutionSteps">["status"] = "SUCCESS";
@@ -150,11 +190,10 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
       if (nextNodeDef?.type === 'mergeNode' && nextNodeDef.data?._mergeConfig?.mode === 'WAIT_FOR_ANY') {
          allDependenciesSatisfied = false;
          for (const edge of incomingEdges) {
-            const depSteps = await ctx.db
-              .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
-              .collect();
-            const depStep = depSteps.sort((a, b) => b.startedAt - a.startedAt)[0];
+            const depStep = await getLatestExecutionStep(ctx, {
+              executionId: args.executionId,
+              nodeId: edge.source,
+            });
               
             if (depStep && depStep.status === "SUCCESS") {
                allDependenciesSatisfied = true;
@@ -164,21 +203,20 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
 
          // Block duplicate duplicate executions if WAIT_FOR_ANY already fired from a sister path
          if (allDependenciesSatisfied) {
-            const existingMergeAttempts = await ctx.db
-              .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", dId))
-              .collect();
-            if (existingMergeAttempts.length > 0) {
+            const existingMergeAttempt = await getLatestExecutionStep(ctx, {
+              executionId: args.executionId,
+              nodeId: dId,
+            });
+            if (existingMergeAttempt) {
                allDependenciesSatisfied = false; 
             }
          }
       } else {
          for (const edge of incomingEdges) {
-            const depSteps = await ctx.db
-              .query("workflowExecutionSteps")
-              .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", edge.source))
-              .collect();
-            const depStep = depSteps.sort((a, b) => b.startedAt - a.startedAt)[0];
+            const depStep = await getLatestExecutionStep(ctx, {
+              executionId: args.executionId,
+              nodeId: edge.source,
+            });
               
             if (!depStep || depStep.status !== "SUCCESS") {
               allDependenciesSatisfied = false;
@@ -219,13 +257,12 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
     }
 
     if (readyToSchedule.length === 0) {
-      const allSteps = await ctx.db
-        .query("workflowExecutionSteps")
-        .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-        .take(10000);
-      
-      const incompleteSteps = allSteps.filter((step) => step.status === "PENDING" || step.status === "RUNNING");
-      if (incompleteSteps.length === 0) {
+      const hasIncompleteStep =
+        (await hasExecutionStepWithStatus(ctx, { executionId: args.executionId, status: "PENDING" })) ||
+        (await hasExecutionStepWithStatus(ctx, { executionId: args.executionId, status: "RUNNING" })) ||
+        (await hasExecutionStepWithStatus(ctx, { executionId: args.executionId, status: "PENDING_APPROVAL" }));
+
+      if (!hasIncompleteStep) {
         await ctx.db.patch(args.executionId, {
             status: "SUCCESS",
             completedAt: Date.now()
@@ -256,11 +293,11 @@ export const resumeNodeStep = internalMutation({
     const execution = await ctx.db.get(args.executionId);
     if (!execution || execution.status !== "RUNNING") throw new Error("Execution is not running");
 
-    const stepQuery = await ctx.db
-      .query("workflowExecutionSteps")
-      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
-      .collect();
-    const step = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
+    const step = await getLatestExecutionStepByStatus(ctx, {
+      executionId: args.executionId,
+      nodeId: args.nodeId,
+      status: "PENDING_APPROVAL",
+    });
 
     if (!step || step.status !== "PENDING_APPROVAL") throw new Error("Step is not pending approval");
 
@@ -285,11 +322,7 @@ export const failNodeStep = internalMutation({
     if (args.stepId) {
         targetStep = await ctx.db.get(args.stepId);
     } else {
-        const stepQuery = await ctx.db
-          .query("workflowExecutionSteps")
-          .withIndex("by_execution", (q) => q.eq("executionId", args.executionId).eq("nodeId", args.nodeId))
-          .collect();
-        targetStep = stepQuery.sort((a, b) => b.startedAt - a.startedAt)[0];
+        targetStep = await getLatestExecutionStep(ctx, args);
     }
 
     if (targetStep) {
@@ -343,7 +376,7 @@ export const executeDatabaseOperation = internalMutation({
           }
           return doc;
         } else {
-          const docs = await ctx.db.query(table).collect();
+          const docs = await ctx.db.query(table).take(WORKFLOW_DB_SELECT_LIMIT);
           return docs.filter((doc) => "companyId" in doc && doc.companyId === companyId);
         }
       } else if (args.operation === "INSERT") {
@@ -385,7 +418,7 @@ export const executeDatabaseOperation = internalMutation({
             const doc = await ctx.db.get(args.docId as Id<WorkflowDbTable>);
             return doc || { error: "Document not found" };
          } else {
-            return await ctx.db.query(table).order("desc").collect();
+            return await ctx.db.query(table).order("desc").take(WORKFLOW_DB_SELECT_LIMIT);
          }
       } else if (args.operation === "INSERT") {
         const id = await ctx.db.insert(table, args.data || {});
@@ -406,8 +439,11 @@ export const executeDatabaseOperation = internalMutation({
 export const scheduleDispatcher = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const schedules = await ctx.db.query("schedules").collect();
-    const activeWorkflowSchedules = schedules.filter(s => s.isActive && s.workflowId);
+    const activeSchedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_active_last_run", (q) => q.eq("isActive", true))
+      .take(ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT);
+    const activeWorkflowSchedules = activeSchedules.filter(s => s.workflowId);
     
     const nowObj = new Date();
     const now = nowObj.getTime();

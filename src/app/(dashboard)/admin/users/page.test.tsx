@@ -92,8 +92,8 @@ vi.mock("framer-motion", () => ({
 }));
 
 const users = [
-  { _id: "user_1", name: "Ada Lovelace", email: "ada@example.com", role: "ADMIN", companyId: "company_1", createdAt: Date.UTC(2026, 5, 1) },
-  { _id: "user_2", name: "Grace Hopper", email: "grace@example.com", role: "USER", companyId: "company_2", createdAt: Date.UTC(2026, 5, 2) },
+  { _id: "user_1", name: "Ada Lovelace", email: "ada@example.com", role: "ADMIN", companyId: "company_1", companyName: "Acme", createdAt: Date.UTC(2026, 5, 1) },
+  { _id: "user_2", name: "Grace Hopper", email: "grace@example.com", role: "USER", companyId: "company_2", companyName: "Beta", createdAt: Date.UTC(2026, 5, 2) },
 ];
 const invites = [{ _id: "invite_1", email: "pending@example.com", role: "USER", companyId: "company_1", invitedAt: Date.UTC(2026, 5, 3) }];
 const companies = [{ _id: "company_1", name: "Acme" }, { _id: "company_2", name: "Beta" }];
@@ -119,7 +119,7 @@ describe("ManageUsersPage", () => {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
       if (path.includes("getMe")) return { _id: "me", role: "SUPER_ADMIN" };
-      if (path.includes("getCompanies")) return companies;
+      if (path.includes("getCompanyOptions")) return companies;
       if (path.includes("getPendingInvites")) return invites;
       return [];
     });

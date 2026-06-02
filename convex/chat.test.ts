@@ -141,4 +141,39 @@ describe("Message Quotas Enforcements", () => {
       modelUsed: "sonae-test-model",
     });
   });
+
+  test("AI context fetch keeps only recent messages in chronological order", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const threadId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "context@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        title: "Context Window",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      for (let index = 0; index < 45; index++) {
+        await ctx.db.insert("messages", {
+          threadId,
+          role: index % 2 === 0 ? "user" : "assistant",
+          content: `message-${index}`,
+          createdAt: Date.now() + index,
+        });
+      }
+
+      return threadId;
+    });
+
+    const messages = await t.run(async (ctx) => ctx.runQuery(internal.chat.getMessagesForAI, { threadId }));
+
+    expect(messages).toHaveLength(40);
+    expect(messages[0].content).toBe("message-5");
+    expect(messages.at(-1)?.content).toBe("message-44");
+  });
 });

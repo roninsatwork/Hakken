@@ -3,7 +3,7 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, KeyboardEvent, ReactNode } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -23,6 +23,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
@@ -51,7 +53,15 @@ export function KnowledgeManager({
   deleteDocumentDescription,
 }: KnowledgeManagerProps) {
   const scopeArgs = buildScopeArgs(scope);
-  const documents = useQuery(api.knowledge.getDocuments, scopeArgs) as Doc<"knowledgeDocuments">[] | undefined;
+  const {
+    results: documents,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.knowledge.getPaginatedDocuments,
+    scopeArgs,
+    { initialNumItems: ADMIN_PAGE_SIZE }
+  );
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
   const deleteDocument = useMutation(api.knowledge.deleteDocument);
@@ -83,6 +93,9 @@ export function KnowledgeManager({
   const [documentToDelete, setDocumentToDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [documentDeleteError, setDocumentDeleteError] = useState("");
+  const isLoadingDocuments = status === "LoadingFirstPage";
+  const isLoadingMoreDocuments = status === "LoadingMore";
+  const canLoadMoreDocuments = status === "CanLoadMore";
 
   const processFile = async (file: File) => {
     const validation = validateUploadFile(file, "knowledgeDocument");
@@ -243,7 +256,7 @@ export function KnowledgeManager({
   };
 
   const websiteGroups = useMemo(() => groupWebsiteDocuments(documents), [documents]);
-  const documentFiles = useMemo(() => documents?.filter((document) => document.format !== "url") ?? [], [documents]);
+  const documentFiles = useMemo(() => documents.filter((document) => document.format !== "url"), [documents]);
 
   const toggleGroup = (root: string) => {
     setExpandedGroups((prev) => ({ ...prev, [root]: !prev[root] }));
@@ -442,7 +455,7 @@ export function KnowledgeManager({
               </button>
             </div>
 
-            {documents === undefined ? (
+            {isLoadingDocuments ? (
               <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>
             ) : documentFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
@@ -501,6 +514,19 @@ export function KnowledgeManager({
             )}
           </div>
         )}
+
+        <AdminLoadMoreFooter
+          visibleCount={documents.length}
+          canLoadMore={canLoadMoreDocuments}
+          isLoading={isLoadingMoreDocuments}
+          onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+          labels={{
+            empty: "No knowledge documents loaded",
+            showing: (count) => `Showing ${count} knowledge documents`,
+            loadMore: "Load more documents",
+            loading: "Loading documents...",
+          }}
+        />
       </div>
 
       <SonaeModal

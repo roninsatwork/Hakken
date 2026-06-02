@@ -120,6 +120,50 @@ describe("Plans Authorization", () => {
     });
   });
 
+  test("SUPER_ADMIN can page and search plan inventory without loading every plan", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, searchablePlanId } = await t.run(async (ctx) => {
+      const searchablePlanId = await ctx.db.insert("plans", {
+        name: "Scale Search Plan",
+        description: "Searchable",
+        messageLimit: 5000,
+        priceGBP: 99,
+        isActive: true,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("plans", {
+        name: "Legacy Archive",
+        messageLimit: 100,
+        priceGBP: 9,
+        isActive: false,
+        createdAt: Date.now() + 1,
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super-plans@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+
+      return { superAdminId, searchablePlanId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const firstPage = await superAdminClient.query(api.plans.getPaginatedPlans, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    const searchPage = await superAdminClient.query(api.plans.getPaginatedPlans, {
+      searchTerm: "Scale",
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(searchPage.page).toHaveLength(1);
+    expect(searchPage.page[0]).toMatchObject({ _id: searchablePlanId, name: "Scale Search Plan" });
+  });
+
   test("super admins can create, update, delete, and reset billing counters", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

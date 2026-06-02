@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import WorkflowsPage from "./page";
 
@@ -38,7 +38,10 @@ vi.mock("next-intl", () => ({
         "table.active": "Active",
         "table.draft": "Draft",
         "table.empty": "No workflows",
+        "table.loadMore": "Load More Workflows",
+        "table.loadingMore": "Loading Workflows",
         "table.name": "Name",
+        "table.showingLoaded": `Showing ${values?.count ?? 0} workflows`,
         "table.status": "Status",
         "table.trigger": "Trigger",
         "table.visualBuilder": "Visual Builder",
@@ -87,7 +90,15 @@ describe("WorkflowsPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue(workflows);
+    vi.mocked(usePaginatedQuery).mockImplementation((_queryFn: unknown, args: unknown) => {
+      const searchTerm = typeof args === "object" && args && "searchTerm" in args ? String(args.searchTerm || "") : "";
+
+      return {
+        results: searchTerm ? workflows.filter((workflow) => workflow.name.toLowerCase().includes(searchTerm.toLowerCase())) : workflows,
+        status: "Exhausted",
+        loadMore: vi.fn(),
+      } as unknown as ReturnType<typeof usePaginatedQuery>;
+    });
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("createWorkflow")) return createWorkflow as unknown as ReturnType<typeof useMutation>;

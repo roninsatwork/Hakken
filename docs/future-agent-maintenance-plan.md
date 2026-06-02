@@ -181,6 +181,30 @@ Status:
 
 - Added `docs/analytics-scale-optimization-plan.md` as the phased source of truth.
 
+## Phase 5C: Platform Scale Hardening
+
+After the analytics hot path is scale-hardened, the next belt-and-braces work is to make admin inventory, knowledge, chat logs, workflow runtime, global inventory, and legacy/debug paths bounded before data volume makes those patterns expensive.
+
+Targets:
+
+- Replace product/admin UI `take(10000)` style reads with paginated, indexed, server-filtered contracts.
+- Keep knowledge documents, chunks, and ingestion queues document-scoped or status/date bounded.
+- Keep chat/admin log browsing bounded by tenant, date, and pagination.
+- Replace workflow runtime broad execution/step/database lookups with narrow indexes.
+- Move exact global inventory/MRR reads toward rollups when scale requires it.
+- Quarantine or delete legacy/debug broad-scan modules that should not power product UI.
+
+Acceptance:
+
+- Use `docs/platform-scale-hardening-plan.md` as the locked source of truth.
+- New broad reads are classified by drift tests or removed.
+- Tenant isolation, admin pagination, provider-neutral language, and analytics scale checks remain green.
+- Movement demo files stay untouched unless the user explicitly changes scope.
+
+Status:
+
+- Added `docs/platform-scale-hardening-plan.md` as the phased source of truth.
+
 ## Phase 6: Release Readiness Checklist
 
 Before any push intended for `main`, run:

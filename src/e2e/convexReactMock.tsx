@@ -243,6 +243,9 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "companies:getCompanies") {
     return [{ _id: companyId, _creationTime: now, name: "E2E Company", createdAt: now, userCount: 2 }];
   }
+  if (path === "companies:getCompanyOptions") {
+    return [{ _id: companyId, name: "E2E Company" }];
+  }
   if (path === "widgets:getWidgetsByCompany") {
     return [
       {
@@ -267,6 +270,29 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
         updatedAt: now,
       },
     ];
+  }
+  if (path === "widgets:getPrimaryWidgetByCompany" || path === "widgets:getPrimaryGlobalWidget") {
+    return {
+      _id: widgetId,
+      _creationTime: now,
+      companyId: path === "widgets:getPrimaryGlobalWidget" ? undefined : companyId,
+      name: path === "widgets:getPrimaryGlobalWidget" ? "E2E Global Widget" : "E2E Website Bot",
+      isActive: true,
+      isGlobal: path === "widgets:getPrimaryGlobalWidget",
+      allowedDomains: ["example.com"],
+      themeGreeting: "Welcome to the E2E widget.",
+      themePrimaryColor: "#2563eb",
+      themeLogoUrl: "",
+      themePlaceholder: "Ask the E2E assistant...",
+      enableSounds: false,
+      showPopupPreview: false,
+      requireName: false,
+      requireEmail: true,
+      enableGreeting: true,
+      conversationStarters: ["What can you help with?"],
+      createdAt: now,
+      updatedAt: now,
+    };
   }
   if (path === "plans:getActivePlans" || path === "plans:getPlans") {
     return [{ _id: "plan_e2e", _creationTime: now, name: "Pro", description: "E2E plan", priceGBP: 99, messageLimit: 1000, isActive: true, createdAt: now }];
@@ -321,6 +347,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     return [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }];
   }
   if (path === "chat:getMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
+  if (path === "chatAdmin:getAdminThreadMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
   if (path === "knowledge:getThreadDocuments") return [];
   if (path.endsWith(":get") || path.endsWith(":list") || path.includes("getAll") || path.includes("getPending")) return [];
 
@@ -360,6 +387,86 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
       results: [
         { _id: superAdminId, _creationTime: now, name: "E2E Super Admin", email: "super.e2e@example.com", role: "SUPER_ADMIN", createdAt: now },
         { _id: userId, _creationTime: now, name: "E2E User", email: "user.e2e@example.com", role: "USER", companyId, createdAt: now },
+      ],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "companies:getPaginatedCompanies") {
+    return {
+      results: [{ _id: companyId, _creationTime: now, name: "E2E Company", createdAt: now, userCount: 2 }],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "agents:getPaginatedAgents") {
+    return {
+      results: [{ _id: "agent_e2e", _creationTime: now, name: "E2E Assistant", modelId: "e2e-primary-model", isActive: true, createdAt: now, updatedAt: now }],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "workflows:getPaginatedWorkflows") {
+    return {
+      results: [workflowFixture()],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "aiTools:getPaginatedTools") {
+    return {
+      results: [
+        {
+          _id: "tool_e2e",
+          _creationTime: now,
+          name: "Rightmove Connector",
+          description: "Property search connector",
+          handlerMapping: "rightmove.search",
+          requiredRole: "ADMIN",
+          createdAt: now,
+          createdBy: superAdminId,
+        },
+      ],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "plans:getPaginatedPlans") {
+    return {
+      results: [
+        {
+          _id: "plan_e2e",
+          _creationTime: now,
+          name: "Pro",
+          description: "E2E plan",
+          priceGBP: 99,
+          messageLimit: 1000,
+          isActive: true,
+          createdAt: now,
+        },
+      ],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "chatAdmin:getPaginatedThreads" || path === "chatAdmin:getPaginatedCompanyThreads") {
+    return {
+      results: [
+        {
+          _id: "thread_e2e_seed",
+          _creationTime: now,
+          companyId,
+          title: "E2E Conversation",
+          createdAt: now,
+          updatedAt: now,
+          user: { name: "E2E User", email: "user.e2e@example.com", image: "https://api.dicebear.com/7.x/notionists/svg" },
+        },
       ],
       status: "Exhausted",
       loadMore: async () => {},

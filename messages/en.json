@@ -246,6 +246,9 @@
             "emptyState": "No active workspaces found in protocol.",
             "users": "{count, plural, =0 {No users} one {1 user} other {# users}}",
             "showing": "Showing",
+            "showingLoaded": "Showing {count} companies",
+            "loadMore": "Load more companies",
+            "loadingMore": "Loading companies...",
             "to": "to",
             "of": "of",
             "companies": "companies",
@@ -292,6 +295,9 @@
             "deleteWarning": "You cannot delete a plan that is actively assigned to companies.",
             "emptyState": "No subscription plans created yet.",
             "searchPlaceholder": "Search plans...",
+            "showingLoaded": "Showing {count} plans",
+            "loadMore": "Load more plans",
+            "loadingMore": "Loading plans...",
             "table": {
                 "name": "Plan Name",
                 "limit": "Message Limit",
@@ -357,7 +363,10 @@
                 "empty": "No workflows found.",
                 "active": "Active",
                 "draft": "Draft",
-                "visualBuilder": "Edit Workflow"
+                "visualBuilder": "Edit Workflow",
+                "showingLoaded": "Showing {count} workflows",
+                "loadMore": "Load more workflows",
+                "loadingMore": "Loading workflows..."
             },
             "pagination": {
                 "showing": "Showing",
@@ -674,7 +683,10 @@
                 "empty": "No agents found matching your query.",
                 "active": "Active",
                 "draft": "Draft",
-                "configure": "Configure Agent"
+                "configure": "Configure Agent",
+                "showingLoaded": "Showing {count} agents",
+                "loadMore": "Load more agents",
+                "loadingMore": "Loading agents..."
             },
             "modal": {
                 "initTitle": "Initialize New Agent",

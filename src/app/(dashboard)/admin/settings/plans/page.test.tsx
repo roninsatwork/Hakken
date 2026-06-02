@@ -1,13 +1,13 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import SubscriptionPlansPage from "./page";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => {
-    const t = (key: string) => {
+    const t = (key: string, values?: Record<string, string | number>) => {
       const labels: Record<string, string> = {
         activeLabel: "Active",
         cancel: "Cancel",
@@ -24,6 +24,8 @@ vi.mock("next-intl", () => ({
         "errors.saveFailed": "Save failed",
         "infoDesc": "Plan limits are enforced by usage checks.",
         "infoTitle": "Billing plans",
+        loadMore: "Load more plans",
+        loadingMore: "Loading plans...",
         limitLabel: "Message Limit",
         limitPlaceholder: "1000",
         nameLabel: "Plan Name",
@@ -37,6 +39,7 @@ vi.mock("next-intl", () => ({
         "pagination.to": "to",
         savePlan: "Save Plan",
         searchPlaceholder: "Search plans",
+        showingLoaded: `Showing ${values?.count ?? 0} plans`,
         subtitle: "Manage subscriptions",
         "table.actions": "Actions",
         "table.limit": "Limit",
@@ -90,7 +93,15 @@ describe("SubscriptionPlansPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue(plans);
+    vi.mocked(usePaginatedQuery).mockImplementation((_queryFn: unknown, args: unknown) => {
+      const searchTerm = typeof args === "object" && args && "searchTerm" in args ? String(args.searchTerm || "") : "";
+
+      return {
+        results: searchTerm ? plans.filter((plan) => plan.name.toLowerCase().includes(searchTerm.toLowerCase())) : plans,
+        status: "Exhausted",
+        loadMore: vi.fn(),
+      } as unknown as ReturnType<typeof usePaginatedQuery>;
+    });
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("createPlan")) return createPlan as unknown as ReturnType<typeof useMutation>;
@@ -103,7 +114,11 @@ describe("SubscriptionPlansPage", () => {
   });
 
   it("renders loading, populated, search, and empty states", () => {
-    vi.mocked(useQuery).mockReturnValueOnce(undefined);
+    vi.mocked(usePaginatedQuery).mockReturnValueOnce({
+      results: [],
+      status: "LoadingFirstPage",
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
     const { container, rerender } = render(<SubscriptionPlansPage />);
 
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();

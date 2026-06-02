@@ -167,6 +167,39 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     );
   });
 
+  test("Super admins can page and search workflows without loading the full table", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+      })
+    );
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const leadWorkflowId = await superAdminClient.mutation(api.workflows.createWorkflow, {
+      name: "Lead Router Workflow",
+      description: "Routes inbound leads.",
+    });
+    await superAdminClient.mutation(api.workflows.createWorkflow, {
+      name: "Daily Digest Workflow",
+      description: "Builds a daily digest.",
+    });
+
+    const firstPage = await superAdminClient.query(api.workflows.getPaginatedWorkflows, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    const searchPage = await superAdminClient.query(api.workflows.getPaginatedWorkflows, {
+      searchTerm: "Lead",
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(searchPage.page.map((workflow) => workflow._id)).toEqual([leadWorkflowId]);
+  });
+
   test("Workflow graph updates reject malformed node and edge contracts", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

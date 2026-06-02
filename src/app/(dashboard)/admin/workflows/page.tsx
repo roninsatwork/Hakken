@@ -1,7 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -9,23 +9,39 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import {
   Network,
   Plus,
-  Search,
   Trash2,
   Settings,
-  ChevronLeft,
-  ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import {
+  AdminPageHeader,
+  AdminPagePrimaryAction,
+} from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import {
+  AdminModalFormActions,
+  AdminModalFormField,
+  adminModalInputClassName,
+} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import {
+  AdminLoadMoreFooter,
+  AdminRowActions,
+  AdminRowIconButton,
+  AdminSearchBar,
+  AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function WorkflowsPage() {
   const router = useRouter();
   const t = useTranslations('admin.workflows');
-  const workflows = (useQuery(api.workflows.list) || []) as Doc<"workflows">[];
   const createWorkflow = useMutation(api.workflows.createWorkflow);
   const deleteWorkflow = useMutation(api.workflows.deleteWorkflow);
 
@@ -37,21 +53,22 @@ export default function WorkflowsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
-
-  const filteredWorkflows = workflows.filter((w) =>
-    (w.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (w.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const {
+    results: paginatedWorkflows,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.workflows.getPaginatedWorkflows,
+    { searchTerm },
+    { initialNumItems: itemsPerPage }
   );
-
-  const totalItems = filteredWorkflows.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedWorkflows = filteredWorkflows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const isLoading = status === "LoadingFirstPage";
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-    setCurrentPage(1);
   };
 
   const handleOpenAdd = () => {
@@ -94,55 +111,54 @@ export default function WorkflowsPage() {
 
   return (
     <div className="flex flex-col gap-5 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Network className="w-6 h-6 text-brand" />
-            {t('title')}
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">{t('description')}</p>
-        </div>
+      <AdminPageHeader
+        icon={<Network className="w-6 h-6 text-brand" />}
+        title={t('title')}
+        description={t('description')}
+        action={
+          <AdminPagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+            {t('new')}
+          </AdminPagePrimaryAction>
+        }
+      />
 
-        <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-          <div className="flex-1 sm:w-[250px] flex items-center gap-2 px-3 py-2 bg-sidebar/50 border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all shadow-sm">
-            <Search className="w-4 h-4 text-muted" />
-            <input
-              type="text"
-              placeholder={t('searchPlaceholder')}
-              value={searchTerm}
-              onChange={e => handleSearch(e.target.value)}
-              className="bg-transparent border-none outline-none w-full text-[13px] placeholder:text-muted"
-            />
-          </div>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('new')}</span>
-          </button>
-        </div>
-      </div>
+      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
-      <div className="bg-sidebar/40 border border-border-dim rounded-[16px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col w-full">
-        <div className="overflow-x-auto flex-1 h-full">
-          <table className="w-full text-left border-collapse">
+      <AdminTableShell
+        footer={
+          <AdminLoadMoreFooter
+            visibleCount={paginatedWorkflows.length}
+            canLoadMore={canLoadMore}
+            isLoading={isLoadingMore}
+            onLoadMore={() => loadMore(itemsPerPage)}
+            labels={{
+              empty: t('table.empty'),
+              showing: (count) => t('table.showingLoaded', { count }),
+              loadMore: t('table.loadMore'),
+              loading: t('table.loadingMore'),
+            }}
+          />
+        }
+        minWidthClassName="min-w-[800px]"
+      >
             <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{t('table.name')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.trigger')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
-              </tr>
+              <AdminTableHeaderRow>
+                <AdminTableHeaderCell>{t('table.name')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('table.trigger')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell>{t('table.status')}</AdminTableHeaderCell>
+                <AdminTableHeaderCell align="right">{t('table.actions')}</AdminTableHeaderCell>
+              </AdminTableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
-                {paginatedWorkflows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      {t('table.empty')}
-                    </td>
-                  </tr>
+                {isLoading ? (
+                  <AdminTableLoadingRow colSpan={4} />
+                ) : paginatedWorkflows.length === 0 ? (
+                  <AdminTableEmptyRow
+                    colSpan={4}
+                    icon={<Network className="w-8 h-8 text-muted/30" />}
+                    label={t('table.empty')}
+                  />
                 ) : (
                   <>
                     {paginatedWorkflows.map((workflow) => (
@@ -185,14 +201,14 @@ export default function WorkflowsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/workflows/${workflow._id}`); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors" title={t('table.visualBuilder')}>
+                          <AdminRowActions>
+                            <AdminRowIconButton label={t('table.visualBuilder')} onClick={() => router.push(`/admin/workflows/${workflow._id}`)}>
                               <Settings className="w-4 h-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingWorkflow(workflow); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.delete')}>
+                            </AdminRowIconButton>
+                            <AdminRowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingWorkflow(workflow)}>
                               <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                            </AdminRowIconButton>
+                          </AdminRowActions>
                         </td>
                       </motion.tr>
                     ))}
@@ -200,40 +216,7 @@ export default function WorkflowsPage() {
                 )}
               </AnimatePresence>
             </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-            <div className="flex items-center gap-2 text-[12px] text-muted">
-              <span>{t('pagination.showing')}</span>
-              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-              <span>{t('pagination.to')}</span>
-              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-              <span>{t('pagination.of')}</span>
-              <span className="font-medium text-foreground">{totalItems}</span>
-              <span>{t('pagination.items')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      </AdminTableShell>
 
       <SonaeModal
         isOpen={isAddModalOpen}
@@ -245,46 +228,33 @@ export default function WorkflowsPage() {
           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.name')}</label>
+          <AdminModalFormField label={t('modal.name')}>
             <input
               type="text"
               required
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+              className={adminModalInputClassName}
               placeholder={t('placeholders.name')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.description')}</label>
+          <AdminModalFormField label={t('modal.description')}>
             <input
               type="text"
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
+              className={adminModalInputClassName}
               placeholder={t('placeholders.description')}
             />
-          </div>
+          </AdminModalFormField>
 
-          <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(false)}
-              className="px-5 py-2.5 rounded-[10px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-all text-sm font-medium"
-              disabled={isSubmitting}
-            >
-              {t('buttons.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-            >
-              {isSubmitting ? t('buttons.creating') : t('buttons.create')}
-            </button>
-          </div>
+          <AdminModalFormActions
+            cancelLabel={t('buttons.cancel')}
+            submitLabel={isSubmitting ? t('buttons.creating') : t('buttons.create')}
+            isSubmitting={isSubmitting}
+            onCancel={() => setIsAddModalOpen(false)}
+          />
         </form>
       </SonaeModal>
 

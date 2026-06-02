@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { requireCurrentUser, requireSuperAdmin } from "./authz";
+import type { Doc } from "./_generated/dataModel";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { resolveExecutionModel } from "./aiModelService";
 
@@ -21,9 +22,31 @@ export const getOffsetPaginatedModels = query({
   },
   handler: async (ctx, args) => {
     await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-    let models = await ctx.db.query("aiModels").order("asc").take(10000);
-
     const term = normalizeSearchTerm(args.searchTerm);
+    const statusEnabled = args.statusFilter === undefined ? undefined : args.statusFilter === "active";
+    let models: Doc<"aiModels">[] = [];
+
+    if (term) {
+      const [displayNameMatches, modelIdMatches] = await Promise.all([
+        ctx.db
+          .query("aiModels")
+          .withSearchIndex("search_display_name", (q) => q.search("displayName", term))
+          .take(500),
+        ctx.db
+          .query("aiModels")
+          .withSearchIndex("search_model_id", (q) => q.search("modelId", term))
+          .take(500),
+      ]);
+      models = Array.from(new Map([...displayNameMatches, ...modelIdMatches].map((model) => [model._id, model])).values());
+    } else if (statusEnabled !== undefined) {
+      models = await ctx.db
+        .query("aiModels")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", statusEnabled))
+        .take(1000);
+    } else {
+      models = await ctx.db.query("aiModels").order("asc").take(10000);
+    }
+
     if (term) {
       models = models.filter((m) =>
         includesSearchTerm(m.displayName, term) ||

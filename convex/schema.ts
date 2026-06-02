@@ -14,7 +14,9 @@ export default defineSchema({
     planId: v.optional(v.id("plans")),
     messagesUsedThisPeriod: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .searchIndex("search_name", { searchField: "name" }),
   
   systemSettings: defineTable({
     platformName: v.string(),
@@ -72,7 +74,9 @@ export default defineSchema({
     priceGBP: v.number(),
     isActive: v.boolean(),
     createdAt: v.number(),
-  }).index("by_active", ["isActive"]),
+  }).index("by_active", ["isActive"])
+    .index("by_createdAt", ["createdAt"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   users: defineTable({
     name: v.optional(v.string()),
@@ -232,7 +236,13 @@ export default defineSchema({
   })
     .index("by_active", ["isActive", "createdAt"])
     .index("by_company_active", ["companyId", "isActive"])
-    .index("by_agent", ["agentId", "createdAt"]),
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_active_created", ["companyId", "isActive", "createdAt"])
+    .index("by_agent", ["agentId", "createdAt"])
+    .index("by_agent_company_created", ["agentId", "companyId", "createdAt"])
+    .index("by_agent_active_created", ["agentId", "isActive", "createdAt"])
+    .index("by_global_created", ["companyId", "agentId", "createdAt"])
+    .index("by_global_active_created", ["companyId", "agentId", "isActive", "createdAt"]),
 
   // Knowledge Base Vector Engine & Document Storage
   knowledgeDocuments: defineTable({
@@ -248,8 +258,15 @@ export default defineSchema({
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
+    .index("by_company_format", ["companyId", "format", "createdAt"])
     .index("by_thread", ["threadId", "createdAt"])
-    .index("by_agent", ["agentId", "createdAt"]),
+    .index("by_agent", ["agentId", "createdAt"])
+    .index("by_agent_format", ["agentId", "format", "createdAt"])
+    .index("by_agent_company", ["agentId", "companyId", "createdAt"])
+    .index("by_global", ["companyId", "agentId", "threadId", "createdAt"])
+    .index("by_global_format", ["companyId", "agentId", "threadId", "format", "createdAt"])
+    .index("by_status", ["status", "createdAt"])
+    .index("by_source_company", ["sourceUrl", "companyId", "agentId"]),
 
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({
@@ -331,7 +348,9 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_name", ["name"])
-    .index("by_workflow", ["workflowId", "isGlobal"]),
+    .index("by_workflow", ["workflowId", "isGlobal"])
+    .index("by_workflow_created", ["workflowId", "createdAt"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   // Global Tool Library
   aiTools: defineTable({
@@ -341,7 +360,10 @@ export default defineSchema({
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     createdAt: v.number(),
     createdBy: v.id("users"),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_createdAt", ["createdAt"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   // Junction table: Authorized Tools per Agent
   agentTools: defineTable({
@@ -364,7 +386,10 @@ export default defineSchema({
     updatedAt: v.number(),
     createdBy: v.id("users"),
     webhookSecret: v.optional(v.string()),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_createdAt", ["createdAt"])
+    .searchIndex("search_name", { searchField: "name" }),
 
   workflowExecutions: defineTable({
     workflowId: v.optional(v.id("workflows")),
@@ -388,7 +413,10 @@ export default defineSchema({
     createdBy: v.id("users"),
   })
     .index("by_workflow", ["workflowId"])
-    .index("by_agent", ["agentId"]),
+    .index("by_agent", ["agentId"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_active_workflow_last_run", ["isActive", "workflowId", "lastRunTs"])
+    .index("by_active_last_run", ["isActive", "lastRunTs"]),
 
   swarmLogs: defineTable({
     threadId: v.id("threads"),
@@ -416,7 +444,9 @@ export default defineSchema({
   })
     .index("by_model_id", ["modelId"])
     .index("by_enabled", ["isEnabled"])
-    .index("by_default", ["isDefault"]),
+    .index("by_default", ["isDefault"])
+    .searchIndex("search_display_name", { searchField: "displayName" })
+    .searchIndex("search_model_id", { searchField: "modelId" }),
 
   workflowExecutionSteps: defineTable({
     executionId: v.id("workflowExecutions"),
@@ -428,7 +458,12 @@ export default defineSchema({
     error: v.optional(v.string()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
-  }).index("by_execution", ["executionId", "nodeId"]),
+  })
+    .index("by_execution", ["executionId", "nodeId"])
+    .index("by_execution_started", ["executionId", "startedAt"])
+    .index("by_execution_node_started", ["executionId", "nodeId", "startedAt"])
+    .index("by_execution_node_status_started", ["executionId", "nodeId", "status", "startedAt"])
+    .index("by_execution_status_started", ["executionId", "status", "startedAt"]),
 
   // Generated Agent Reports
   salesReports: defineTable({
@@ -513,7 +548,9 @@ export default defineSchema({
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId"])
-    .index("by_global", ["isGlobal"]),
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_global", ["isGlobal"])
+    .index("by_global_created", ["isGlobal", "createdAt"]),
 
   // Aggregated Analytics Snapshots
   analyticsDailySnapshots: defineTable({

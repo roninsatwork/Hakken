@@ -73,6 +73,7 @@ import type * as testQuery from "../testQuery.js";
 import type * as userManagementService from "../userManagementService.js";
 import type * as users from "../users.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
+import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
@@ -160,6 +161,7 @@ declare const fullApi: ApiFromModules<{
   userManagementService: typeof userManagementService;
   users: typeof users;
   "utils/fileParser": typeof utils_fileParser;
+  "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
   "utils/pii": typeof utils_pii;
   "utils/security": typeof utils_security;
   "utils/templateParser": typeof utils_templateParser;

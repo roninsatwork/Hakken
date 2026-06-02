@@ -76,6 +76,38 @@ describe("AI Tools Authorization", () => {
     expect(internalTool?.name).toBe(toolInput.name);
   });
 
+  test("super admins can page and search tool inventory", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+    });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const crmToolId = await superAdminClient.mutation(api.aiTools.createTool, toolInput);
+    await superAdminClient.mutation(api.aiTools.createTool, {
+      name: "Calendar Connector",
+      description: "Book meetings.",
+      handlerMapping: "calendar.book",
+      requiredRole: "ADMIN",
+    });
+
+    const firstPage = await superAdminClient.query(api.aiTools.getPaginatedTools, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    const searchPage = await superAdminClient.query(api.aiTools.getPaginatedTools, {
+      searchTerm: "CRM",
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(searchPage.page.map((tool) => tool._id)).toEqual([crmToolId]);
+  });
+
   test("super admins can update tools and standard users cannot", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

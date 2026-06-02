@@ -158,4 +158,52 @@ describe("workflow execution internals", () => {
 
     expect(claimedSteps.map((step) => step.status)).toEqual(["RUNNING", "RUNNING"]);
   });
+
+  test("returns execution steps in chronological bounded order", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { executionId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Step Timeline Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: "[]",
+        edges: "[]",
+        createdBy: userId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        startedAt: Date.now(),
+        startedBy: userId,
+      });
+
+      for (let i = 0; i < 520; i += 1) {
+        await ctx.db.insert("workflowExecutionSteps", {
+          executionId,
+          nodeId: `step-${i}`,
+          input: String(i),
+          status: "SUCCESS",
+          startedAt: 520 - i,
+          completedAt: 521 - i,
+        });
+      }
+
+      return { executionId };
+    });
+
+    const steps = await t.query(internal.workflowExecutions.getSteps, { executionId });
+
+    expect(steps).toHaveLength(500);
+    expect(steps[0]).toMatchObject({ input: "519", startedAt: 1 });
+    expect(steps.at(-1)).toMatchObject({ input: "20", startedAt: 500 });
+  });
 });

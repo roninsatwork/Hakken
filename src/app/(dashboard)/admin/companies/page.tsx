@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -28,7 +28,7 @@ import {
   adminModalTextareaClassName,
 } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
-  AdminPaginationFooter,
+  AdminLoadMoreFooter,
   AdminRowActions,
   AdminRowIconButton,
   AdminSearchBar,
@@ -40,20 +40,16 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import {
   ADMIN_PAGE_SIZE,
-  matchesAdminSearchTerm,
-  paginateAdminItems,
 } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 
-type CompanyRow = Doc<"companies"> & { userCount: number };
+type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean };
 type CompanyFormData = { name: string; systemPrompt: string; planId: string };
 
 export default function CompaniesPage() {
   const router = useRouter();
   const t = useTranslations('admin.companies');
   const tCommon = useTranslations('common');
-  const companiesData = useQuery(api.companies.getCompanies) as CompanyRow[] | undefined;
-  const companies = companiesData || [];
   const createCompany = useMutation(api.companies.createCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
   const deleteCompany = useMutation(api.companies.deleteCompany);
@@ -69,23 +65,22 @@ export default function CompaniesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ADMIN_PAGE_SIZE;
-  const isLoading = companiesData === undefined;
-
-  const filteredCompanies = companies.filter((c) =>
-    matchesAdminSearchTerm(searchTerm, [c.name])
-  );
-
   const {
-    items: paginatedCompanies,
-    totalItems,
-    totalPages,
-  } = paginateAdminItems(filteredCompanies, currentPage, itemsPerPage);
+    results: paginatedCompanies,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.companies.getPaginatedCompanies,
+    { searchTerm },
+    { initialNumItems: itemsPerPage }
+  );
+  const isLoading = status === "LoadingFirstPage";
+  const isLoadingMore = status === "LoadingMore";
+  const canLoadMore = status === "CanLoadMore";
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
-    setCurrentPage(1);
   };
 
   const handleOpenAdd = () => {
@@ -154,16 +149,16 @@ export default function CompaniesPage() {
       {/* Table */}
       <AdminTableShell
         footer={
-          <AdminPaginationFooter
-            page={currentPage}
-            totalPages={totalPages}
-            totalCount={totalItems}
-            pageSize={itemsPerPage}
-            isLoading={isLoading}
-            onPageChange={setCurrentPage}
+          <AdminLoadMoreFooter
+            visibleCount={paginatedCompanies.length}
+            canLoadMore={canLoadMore}
+            isLoading={isLoadingMore}
+            onLoadMore={() => loadMore(itemsPerPage)}
             labels={{
               empty: t('emptyState'),
-              showing: (start, end, total) => `${t('showing')} ${start} ${t('to')} ${end} ${t('of')} ${total} ${t('companies')}`,
+              showing: (count) => `${t('showingLoaded', { count })}`,
+              loadMore: t('loadMore'),
+              loading: t('loadingMore'),
             }}
           />
         }
@@ -214,7 +209,7 @@ export default function CompaniesPage() {
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {t('users', { count: company.userCount || 0 })}
+                              {t('users', { count: company.userCount || 0 })}{company.userCountIsCapped ? "+" : ""}
                             </span>
                           </div>
                         </td>

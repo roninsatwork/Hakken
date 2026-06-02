@@ -163,6 +163,69 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(auditMetadata[2]).toEqual({ name: "Updated Support Agent" });
   });
 
+  test("SUPER_ADMIN can page and search global agents without inline workflow agents leaking in", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, workflowId } = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: adminId,
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        lastSyncedAt: Date.now(),
+      });
+      await ctx.db.insert("agents", {
+        name: "Inline Sandbox",
+        modelId: "default-agent-model",
+        thinkingMode: false,
+        isActive: true,
+        isGlobal: false,
+        workflowId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      return { adminId, workflowId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    const supportAgentId = await client.mutation(api.agents.createAgent, {
+      name: "Support Search Agent",
+      description: "Handles support workflows.",
+    });
+    const salesAgentId = await client.mutation(api.agents.createAgent, {
+      name: "Sales Agent",
+      description: "Handles sales workflows.",
+    });
+
+    const firstPage = await client.query(api.agents.getPaginatedAgents, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    const searchPage = await client.query(api.agents.getPaginatedAgents, {
+      searchTerm: "Support",
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+    expect(searchPage.page.map((agent) => agent._id)).toEqual([supportAgentId]);
+    expect(searchPage.page.map((agent) => agent._id)).not.toContain(workflowId);
+    expect(salesAgentId).toBeDefined();
+  });
+
   test("SUPER_ADMIN can create inline workflow agents and promote them to global", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
