@@ -4,6 +4,9 @@ import { paginationOptsValidator } from "convex/server";
 import { requireAdmin } from "./authz";
 import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
 
+const AGENT_TRANSACTION_STATS_LIMIT = 1000;
+const MODEL_SEED_CATALOG_LIMIT = 500;
+
 export const getForAgent = query({
   args: {
     agentId: v.id("agents"),
@@ -40,9 +43,9 @@ export const getStatsForAgent = query({
       if (!user.companyId) throw new Error("Unauthorized");
       return baseQuery
         .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
-        .take(10000);
+        .take(AGENT_TRANSACTION_STATS_LIMIT);
     })()
-      : baseQuery.take(10000));
+      : baseQuery.take(AGENT_TRANSACTION_STATS_LIMIT));
       
     const totalGenerations = txs.length;
     let totalTokensIngested = 0;
@@ -75,7 +78,7 @@ export const seedForAgent = internalMutation({
 
     // Generate 15 dummy transactions
     const actions = ["Document Summarization", "Search Intent Analysis", "Competitor Data Aggregation", "Email Drafting", "Code Review"];
-    const activeModels = await ctx.db.query("aiModels").take(10000);
+    const activeModels = await ctx.db.query("aiModels").take(MODEL_SEED_CATALOG_LIMIT);
     const modelMap = new Map(activeModels.map(m => [m.modelId, m]));
     const models = getExecutionModelPool(activeModels);
     

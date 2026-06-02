@@ -1,6 +1,8 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { internal } from "./_generated/api";
+import type { MutationCtx } from "./_generated/server";
 import { canAccessCompany, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 import {
   buildPlanRecord,
@@ -12,6 +14,7 @@ import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/in
 
 const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
 const PLAN_CATALOG_LIMIT = 100;
+const BILLING_RESET_BATCH_SIZE = 500;
 
 export const getMyCompanyPlanStatus = query({
   args: {},
@@ -168,29 +171,65 @@ export const deletePlan = mutation({
   },
 });
 
+async function resetCompanyBillingBatch(ctx: MutationCtx, cursor: string | null) {
+  const companies = await ctx.db
+    .query("companies")
+    .paginate({ numItems: BILLING_RESET_BATCH_SIZE, cursor });
+
+  for (const company of companies.page) {
+    if (company.messagesUsedThisPeriod !== 0) {
+      await ctx.db.patch(company._id, { messagesUsedThisPeriod: 0 });
+    }
+  }
+
+  return companies.isDone ? null : companies.continueCursor;
+}
+
+async function resetUserBillingBatch(ctx: MutationCtx, cursor: string | null) {
+  const users = await ctx.db
+    .query("users")
+    .paginate({ numItems: BILLING_RESET_BATCH_SIZE, cursor });
+
+  for (const user of users.page) {
+    if (user.planOverrideId && user.messagesUsedThisPeriod !== 0) {
+      await ctx.db.patch(user._id, { messagesUsedThisPeriod: 0 });
+    }
+  }
+
+  return users.isDone ? null : users.continueCursor;
+}
+
 export const resetBillingCycle = internalMutation({
   args: {},
   handler: async (ctx) => {
-    // Reset all pool counters to 0 smoothly without deleting data
-    
-    // 1. Reset all companies (Shared Pools)
-    const companies = await ctx.db.query("companies").take(10000);
-    for (const c of companies) {
-      if (c.messagesUsedThisPeriod !== 0) {
-          await ctx.db.patch(c._id, { messagesUsedThisPeriod: 0 });
-      }
+    const companyCursor = await resetCompanyBillingBatch(ctx, null);
+    const userCursor = await resetUserBillingBatch(ctx, null);
+
+    if (companyCursor) {
+      await ctx.scheduler.runAfter(0, internal.plans.resetCompanyBillingCycleBatch, { cursor: companyCursor });
     }
-    
-    // 2. Reset all users (who had individual overrides)
-    const usersWithOverrides = await ctx.db
-      .query("users")
-      .filter((q) => q.neq(q.field("planOverrideId"), undefined))
-      .take(10000);
-      
-    for (const u of usersWithOverrides) {
-        if (u.messagesUsedThisPeriod !== 0) {
-            await ctx.db.patch(u._id, { messagesUsedThisPeriod: 0 });
-        }
+    if (userCursor) {
+      await ctx.scheduler.runAfter(0, internal.plans.resetUserBillingCycleBatch, { cursor: userCursor });
     }
   }
+});
+
+export const resetCompanyBillingCycleBatch = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const nextCursor = await resetCompanyBillingBatch(ctx, args.cursor);
+    if (nextCursor) {
+      await ctx.scheduler.runAfter(0, internal.plans.resetCompanyBillingCycleBatch, { cursor: nextCursor });
+    }
+  },
+});
+
+export const resetUserBillingCycleBatch = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const nextCursor = await resetUserBillingBatch(ctx, args.cursor);
+    if (nextCursor) {
+      await ctx.scheduler.runAfter(0, internal.plans.resetUserBillingCycleBatch, { cursor: nextCursor });
+    }
+  },
 });

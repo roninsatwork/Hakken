@@ -326,7 +326,7 @@ Scope:
 
 First backend audit slice:
 
-- `analytics.ts` and `analyticsHybrid.ts` mix auth, reads, cost math, timeline formatting, and leaderboard aggregation.
+- `analytics.ts` mixes auth, reads, cost math, timeline formatting, and leaderboard aggregation; the old `analyticsHybrid.ts` fallback has since been removed.
 - `users.ts` mixes auth, tenant checks, user mutation policy, audit logging, and purge orchestration.
 - `purges.ts` mixes schedule policy, purge execution, and cross-table deletion.
 - `knowledge.ts` mixes upload policy, tenant access, storage metadata, and document status transitions.

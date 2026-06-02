@@ -374,6 +374,16 @@ Acceptance:
 - Debug/test query files are not exposed as production user-facing features.
 - Drift tests separate test-only broad reads from production broad reads.
 
+Status:
+
+- Deleted the legacy `analyticsHybrid` module and its dedicated tests; product UI was already on the newer analytics paths.
+- Deleted standalone debug/query helpers: `debug`, `debugModels`, and `testQuery`.
+- Deleted obsolete one-off `migrations` and `seedAgents` helpers so they cannot be exposed through generated Convex APIs.
+- Tightened analytics debug output to small bounded reads.
+- Converted billing reset maintenance into cursor-batched internal work kicked off by the existing cron entry point.
+- Bounded agent transaction stats and seed model catalogue reads with named limits.
+- Added drift coverage so deleted legacy/debug modules stay out of the repo and generated API surface.
+
 ## Phase 8: Drift Tests And Release Gates
 
 Goal: make the plan enforceable.
@@ -390,6 +400,16 @@ Acceptance:
 - `npm run check` catches new unclassified broad reads.
 - `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check` pass before merge/push.
 - Production gate commands remain documented in `docs/deployment.md`.
+
+Status:
+
+- Extended the platform drift guard across the scale-hardening phases so broad reads, deleted legacy modules, analytics raw scans, admin pagination drift, locale parity, native-dialog usage, chart stability, tenant isolation, and provider-neutral runtime paths stay covered by tests.
+- Verified the final Phase 7 cleanup and Phase 8 release gate locally with:
+  - `npm run lint:all`
+  - `npm run check`
+  - `npm run build`
+  - `git diff --check`
+- Local app services were restarted after the build gate so manual QA can continue from `http://localhost:3000`.
 
 ## Recommended Execution Order
 

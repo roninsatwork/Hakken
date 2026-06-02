@@ -25,7 +25,6 @@ Scope:
 - `convex/workflows.ts`
 - Remaining sensitive parts of `convex/users.ts`
 - `convex/analytics.ts`
-- `convex/analyticsHybrid.ts`
 - `convex/knowledge.ts`
 - Any remaining repeated auth helpers
 
