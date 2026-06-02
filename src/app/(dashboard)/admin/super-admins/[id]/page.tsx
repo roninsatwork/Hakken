@@ -272,13 +272,16 @@ export default function UserProfilePage() {
 }
 
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = ADMIN_PAGE_SIZE;
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });
+  const { results: costThreads, status: costThreadStatus, loadMore: loadMoreCostThreads } = usePaginatedQuery(
+    api.analytics.getUserCostThreads,
+    { userId },
+    { initialNumItems: ADMIN_PAGE_SIZE }
+  );
 
-  if (costs === undefined) {
+  if (costs === undefined || costThreadStatus === "LoadingFirstPage") {
     return (
       <div className="flex justify-center p-8 w-full mt-4">
         <Loader2 className="w-5 h-5 animate-spin text-secondary opacity-50" />
@@ -286,14 +289,9 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
     );
   }
 
-  const filteredThreads = costs.threads.filter((t) =>
+  const filteredThreads = costThreads.filter((t) =>
     t.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const totalItems = filteredThreads.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedThreads = filteredThreads.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="flex flex-col gap-6 mt-4 w-full">
@@ -323,10 +321,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
               type="text"
               placeholder="Search conversations..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-background/10 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
             />
           </div>
@@ -347,11 +342,11 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
               {filteredThreads.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">
-                    {costs.threads.length === 0 ? "No AI conversations logged for this user." : "No conversations match your search."}
+                    {costThreads.length === 0 ? "No AI conversations logged for this user." : "No conversations match your search."}
                   </td>
                 </tr>
               ) : (
-                paginatedThreads.map((thread) => (
+                filteredThreads.map((thread) => (
                   <tr key={thread.threadId} className="group hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-4">
                       <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
@@ -379,22 +374,15 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         
         <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
           <span className="text-[12px] text-secondary">
-            Showing {totalItems > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} entries
+            Showing {filteredThreads.length > 0 ? 1 : 0} to {filteredThreads.length} of {costThreads.length} entries
           </span>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
+              onClick={() => loadMoreCostThreads(ADMIN_PAGE_SIZE)}
+              disabled={costThreadStatus !== "CanLoadMore"}
               className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
             >
-              Previous
-            </button>
-            <button 
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            >
-              Next
+              Load More
             </button>
           </div>
         </div>

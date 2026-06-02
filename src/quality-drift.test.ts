@@ -23,6 +23,31 @@ const walkFiles = (dir: string, extensions: ReadonlySet<string>): string[] => {
 
 const relativePath = (filePath: string) => path.relative(repoRoot, filePath);
 const readRepoFile = (relativeFilePath: string) => fs.readFileSync(path.join(repoRoot, relativeFilePath), 'utf8');
+const extractExportBody = (relativeFilePath: string, exportName: string) => {
+  const contents = readRepoFile(relativeFilePath);
+  const startNeedle = `export const ${exportName} =`;
+  const startIndex = contents.indexOf(startNeedle);
+
+  if (startIndex === -1) {
+    return '';
+  }
+
+  const body = contents.slice(startIndex);
+  const nextExportMatch = /\nexport (?:const|async function|function) \w+/.exec(body.slice(startNeedle.length));
+
+  return nextExportMatch ? body.slice(0, startNeedle.length + nextExportMatch.index) : body;
+};
+const queryBlocksForTable = (body: string, tableName: string) => {
+  const queryPattern = new RegExp(`ctx\\.db\\s*\\.query\\("${tableName}"\\)`, 'g');
+
+  return Array.from(body.matchAll(queryPattern)).map((match) => {
+    const startIndex = match.index ?? 0;
+    const rest = body.slice(startIndex);
+    const endIndex = rest.indexOf(';');
+
+    return endIndex === -1 ? rest : rest.slice(0, endIndex + 1);
+  });
+};
 const repoTextExtensions = new Set(['.js', '.jsx', '.json', '.md', '.mjs', '.ts', '.tsx', '.zsh']);
 const ignoredRepoPathPrefixes = [
   '.git/',
@@ -110,6 +135,52 @@ describe('Quality Drift Guardrails', () => {
     });
 
     expect(offenders, `Non-standard admin pagination found:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  test('dashboard Recharts containers have stable parent heights', () => {
+    const dashboardFiles = [
+      ...walkFiles(path.join(repoRoot, 'src/app/(dashboard)/admin'), new Set(['.tsx'])),
+      ...walkFiles(path.join(repoRoot, 'src/app/(dashboard)/app/settings'), new Set(['.tsx'])),
+    ].filter((filePath) => !filePath.endsWith('.test.tsx'));
+
+    const forbiddenChartParentPatterns = [
+      /className="[^"]*\bw-full flex-1 min-h-\[[^\]]+\][^"]*"/,
+      /className="[^"]*\bflex-1 w-full flex items-center justify-center p-4\b[^"]*"/,
+    ];
+
+    const offenders = dashboardFiles.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      if (!contents.includes('ResponsiveContainer')) {
+        return [];
+      }
+
+      return contents.split('\n').flatMap((line, index) =>
+        forbiddenChartParentPatterns.some((pattern) => pattern.test(line))
+          ? [`${relativePath(filePath)}:${index + 1}: ${line.trim()}`]
+          : []
+      );
+    });
+    const percentageHeightContainers = dashboardFiles.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      if (!contents.includes('ResponsiveContainer')) {
+        return [];
+      }
+
+      return contents.split('\n').flatMap((line, index) =>
+        /<ResponsiveContainer width="100%" height="100%"/.test(line)
+          ? [`${relativePath(filePath)}:${index + 1}: ${line.trim()}`]
+          : []
+      );
+    });
+
+    expect(
+      offenders,
+      `Dashboard chart containers need explicit heights/aspects so Recharts can measure them:\n${offenders.join('\n')}`
+    ).toEqual([]);
+    expect(
+      percentageHeightContainers,
+      `Dashboard ResponsiveContainer usage needs numeric heights so Recharts can render immediately:\n${percentageHeightContainers.join('\n')}`
+    ).toEqual([]);
   });
 
   test('admin list pages keep using shared table primitives after cleanup', () => {
@@ -211,6 +282,178 @@ describe('Quality Drift Guardrails', () => {
     expect(missingCommands, `Production gate commands are out of sync:\n${missingCommands.join('\n')}`).toEqual([]);
     expect(workflow).toContain('branches:\n      - main');
     expect(deploymentDocs).toContain('Pushing to `main` triggers a production deployment');
+  });
+
+  test('global analytics hot path stays separate from broad inventory scans', () => {
+    const analyticsContents = readRepoFile('convex/analytics.ts');
+    const globalAnalyticsBody = analyticsContents.split('export const getGlobalAnalytics = query({')[1]?.split('export const debugTime = internalQuery({')[0] || '';
+    const forbiddenPatterns = [
+      /ctx\.db\s*\.query\("threads"\)\s*\.take\(10000\)/,
+      /ctx\.db\s*\.query\("users"\)\s*\.take\(10000\)/,
+      /ctx\.db\s*\.query\("companies"\)\s*\.take\(10000\)/,
+      /ctx\.db\s*\.query\("agents"\)\s*\.take\(10000\)/,
+      /ctx\.db\s*\.query\("plans"\)/,
+    ];
+
+    const offenders = forbiddenPatterns
+      .filter((pattern) => pattern.test(globalAnalyticsBody))
+      .map((pattern) => pattern.source);
+
+    expect(
+      offenders,
+      `getGlobalAnalytics drifted back into broad inventory/table scans. Move inventory fields to getGlobalInventoryMetrics or use bounded observed-ID lookups:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('user cost aggregate stays separate from per-thread message scans', () => {
+    const userCostOverviewBody = extractExportBody('convex/analytics.ts', 'getUserCostOverview');
+    const forbiddenPatterns = [
+      /\.withIndex\("by_thread"/,
+      /\.query\("threads"\)[\s\S]*\.map\(async \(thread\)/,
+    ];
+
+    const offenders = forbiddenPatterns
+      .filter((pattern) => pattern.test(userCostOverviewBody))
+      .map((pattern) => pattern.source);
+
+    expect(
+      offenders,
+      `getUserCostOverview drifted back into per-thread message aggregation. Keep aggregate totals snapshot/index based and use getUserCostThreads for paginated detail rows:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('analytics transaction reads stay indexed in dashboard and snapshot paths', () => {
+    const protectedExports = [
+      { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics' },
+      { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics' },
+      { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots' },
+    ];
+
+    const offenders = protectedExports.flatMap(({ filePath, exportName }) => {
+      const body = extractExportBody(filePath, exportName);
+
+      return queryBlocksForTable(body, 'agentTransactions')
+        .filter((block) => !/\.withIndex\("by_(?:createdAt|company_created)"/.test(block))
+        .map((block) => `${filePath}:${exportName}: ${block.replace(/\s+/g, ' ').trim()}`);
+    });
+
+    expect(
+      offenders,
+      `agentTransactions reads in analytics hot paths must use created-at or company/date indexes:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('analytics snapshot reads are date-bounded before dashboard aggregation', () => {
+    const protectedExports = [
+      { filePath: 'convex/analytics.ts', exportName: 'getGlobalAICosts' },
+      { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics' },
+      { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics' },
+      { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview' },
+    ];
+
+    const offenders = protectedExports.flatMap(({ filePath, exportName }) => {
+      const body = extractExportBody(filePath, exportName);
+
+      return queryBlocksForTable(body, 'analyticsDailySnapshots')
+        .filter((block) => {
+          const hasSnapshotIndex = /\.withIndex\("by_(?:company_date|type_date|user_date)"/.test(block);
+          const hasDateUpperBound = /\.filter\(\(q\) => q\.lt\(q\.field\("date"\), todayDate\)\)/.test(block) ||
+            /\.filter\(q => q\.lt\(q\.field\("date"\), todayDate\)\)/.test(block);
+          const hasDateLowerBound = /\.gte\("date", snapshotStartDate\)/.test(block);
+          const lowerBoundRequired = exportName !== 'getUserCostOverview';
+
+          return !hasSnapshotIndex || !hasDateUpperBound || (lowerBoundRequired && !hasDateLowerBound);
+        })
+        .map((block) => `${filePath}:${exportName}: ${block.replace(/\s+/g, ' ').trim()}`);
+    });
+
+    expect(
+      offenders,
+      `Dashboard snapshot reads must be indexed and bounded by snapshot dates before aggregation:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('analytics live message reads use indexed created-at bounds', () => {
+    const protectedExports = [
+      { filePath: 'convex/analytics.ts', exportName: 'getPlatformOverview' },
+      { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics' },
+      { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics' },
+      { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview' },
+      { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots' },
+    ];
+
+    const offenders = protectedExports.flatMap(({ filePath, exportName }) => {
+      const body = extractExportBody(filePath, exportName);
+
+      return queryBlocksForTable(body, 'messages')
+        .filter((block) => !/\.withIndex\("by_(?:role_created|company_role_created|user_role_created)"/.test(block) ||
+          !/\.gte\("createdAt",/.test(block))
+        .map((block) => `${filePath}:${exportName}: ${block.replace(/\s+/g, ' ').trim()}`);
+    });
+
+    expect(
+      offenders,
+      `Live analytics message reads must be indexed and lower-bounded by createdAt:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('analytics broad-scan exceptions stay explicitly allowlisted', () => {
+    const exceptions = [
+      {
+        filePath: 'convex/analytics.ts',
+        exportName: 'getGlobalInventoryMetrics',
+        table: 'users',
+        reason: 'explicit inventory query split away from hot-path analytics',
+      },
+      {
+        filePath: 'convex/analytics.ts',
+        exportName: 'getGlobalInventoryMetrics',
+        table: 'companies',
+        reason: 'explicit inventory query split away from hot-path analytics',
+      },
+      {
+        filePath: 'convex/analytics.ts',
+        exportName: 'debugDb',
+        table: 'plans',
+        reason: 'internal debug query only',
+      },
+      {
+        filePath: 'convex/analytics.ts',
+        exportName: 'debugDb',
+        table: 'companies',
+        reason: 'internal debug query only',
+      },
+      {
+        filePath: 'convex/analyticsCron.ts',
+        exportName: 'wipeSnapshots',
+        table: 'analyticsDailySnapshots',
+        reason: 'internal destructive maintenance query used only to reset generated analytics snapshots',
+      },
+    ];
+    const allowed = new Set(exceptions.map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`));
+    const files = ['convex/analytics.ts', 'convex/analyticsCron.ts'];
+    const broadScanPattern = /ctx\.db\s*\.query\("(threads|users|companies|agents|plans|analyticsDailySnapshots)"\)\s*(?![\s\S]*?\.withIndex\()[\s\S]*?\.take\(10000\)/g;
+    const offenders = files.flatMap((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return Array.from(contents.matchAll(/\nexport const (\w+) =/g)).flatMap((match) => {
+        const exportName = match[1];
+        const body = extractExportBody(filePath, exportName);
+
+        return Array.from(body.matchAll(broadScanPattern))
+          .filter((broadScanMatch) => !allowed.has(`${filePath}:${exportName}:${broadScanMatch[1]}`))
+          .map((broadScanMatch) => `${filePath}:${exportName}:${broadScanMatch[1]}: ${broadScanMatch[0].replace(/\s+/g, ' ').trim()}`);
+      });
+    });
+    const weakExceptionReasons = exceptions
+      .filter(({ reason }) => reason.length < 24)
+      .map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`);
+
+    expect(
+      offenders,
+      `Broad analytics scans must be removed, indexed, or explicitly allowlisted with a reason:\n${offenders.join('\n')}`
+    ).toEqual([]);
+    expect(weakExceptionReasons, `Analytics scale exceptions need useful reasons:\n${weakExceptionReasons.join('\n')}`).toEqual([]);
   });
 
   test('new Gemini-era language must be classified before it spreads', () => {

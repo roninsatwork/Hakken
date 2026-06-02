@@ -52,4 +52,12 @@ crons.daily(
   {}
 );
 
+// Daily Platform Alerts
+crons.daily(
+  "dispatch-platform-alerts",
+  { hourUTC: 0, minuteUTC: 25 },
+  internal.analyticsCron.dispatchPlatformAlerts,
+  { daysBack: 7 }
+);
+
 export default crons;

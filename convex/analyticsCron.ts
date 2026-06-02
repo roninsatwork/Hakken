@@ -1,8 +1,17 @@
-import { internalMutation, internalAction } from "./_generated/server";
+import { internalMutation, internalAction, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
+import {
+  buildAnalyticsHealthPlatformAlertDecision,
+  buildPlatformAlertEmailHtml,
+  parsePlatformAlertRecipients,
+  type AnalyticsHealthReport,
+} from "./platformAlertService";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { requireSuperAdmin } from "./authz";
 
 type SystemAgentId = "system_assistant";
 type SnapshotInteraction = {
@@ -28,8 +37,312 @@ type CompanyAggregate = {
   modelMetrics: Map<string, ModelMetric>;
 };
 type UserAggregate = { messages: number; inTokens: number; outTokens: number; costGBP: number };
+type MessageAnalyticsPatch = {
+  companyId?: Id<"companies">;
+  userId?: Id<"users">;
+  agentId?: Id<"agents">;
+  widgetId?: Id<"widgets">;
+  analyticsDimensionsVersion?: number;
+};
+type SnapshotDuplicateGroup = {
+  count: number;
+  date: string;
+  scopeId: string;
+  type: "global" | "company" | "user";
+};
+type AnalyticsDataHealthArgs = {
+  daysBack?: number;
+};
 
 const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatUtcDate(timestamp: number) {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function getUtcDayStart(timestamp: number) {
+  const date = new Date(timestamp);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function getHealthLookbackDays(daysBack?: number) {
+  if (!Number.isFinite(daysBack)) return 7;
+  return Math.min(Math.max(Math.floor(daysBack ?? 7), 1), 90);
+}
+
+function getMissingMessageAnalyticsPatch(message: Doc<"messages">, thread: Doc<"threads">): MessageAnalyticsPatch {
+  const patch: MessageAnalyticsPatch = {};
+
+  if (message.companyId === undefined && thread.companyId !== undefined) patch.companyId = thread.companyId;
+  if (message.userId === undefined && thread.userId !== undefined) patch.userId = thread.userId;
+  if (message.agentId === undefined && thread.agentId !== undefined) patch.agentId = thread.agentId;
+  if (message.widgetId === undefined && thread.widgetId !== undefined) patch.widgetId = thread.widgetId;
+  if (message.analyticsDimensionsVersion === undefined) patch.analyticsDimensionsVersion = 1;
+
+  return patch;
+}
+
+function hasPatchValues(patch: MessageAnalyticsPatch) {
+  return Object.keys(patch).length > 0;
+}
+
+function hasMessageAnalyticsMismatch(message: Doc<"messages">, thread: Doc<"threads">) {
+  return (
+    (message.companyId !== undefined && thread.companyId !== undefined && message.companyId !== thread.companyId) ||
+    (message.userId !== undefined && thread.userId !== undefined && message.userId !== thread.userId) ||
+    (message.agentId !== undefined && thread.agentId !== undefined && message.agentId !== thread.agentId) ||
+    (message.widgetId !== undefined && thread.widgetId !== undefined && message.widgetId !== thread.widgetId)
+  );
+}
+
+async function getAnalyticsDataHealthReport(ctx: QueryCtx, args: AnalyticsDataHealthArgs): Promise<AnalyticsHealthReport> {
+  const daysBack = getHealthLookbackDays(args.daysBack);
+  const todayStartTs = getUtcDayStart(Date.now());
+  const checkedDates = Array.from({ length: daysBack }, (_, index) => {
+    const offsetDays = daysBack - index;
+    return formatUtcDate(todayStartTs - offsetDays * DAY_MS);
+  });
+  const firstCheckedDate = checkedDates[0];
+  const recentWindowStartTs = todayStartTs - daysBack * DAY_MS;
+
+  const dateRows = [];
+  const missingGlobalDates: string[] = [];
+  const duplicateSnapshotGroups: SnapshotDuplicateGroup[] = [];
+  let totalSnapshots = 0;
+
+  for (const date of checkedDates) {
+    const snapshots = await ctx.db
+      .query("analyticsDailySnapshots")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .take(10000);
+    totalSnapshots += snapshots.length;
+
+    const counts = {
+      global: snapshots.filter((snapshot) => snapshot.type === "global").length,
+      company: snapshots.filter((snapshot) => snapshot.type === "company").length,
+      user: snapshots.filter((snapshot) => snapshot.type === "user").length,
+    };
+
+    if (counts.global === 0) {
+      missingGlobalDates.push(date);
+    }
+
+    const duplicateMap = new Map<string, SnapshotDuplicateGroup>();
+    snapshots.forEach((snapshot) => {
+      const scopeId = snapshot.type === "company"
+        ? String(snapshot.companyId ?? "missing-company")
+        : snapshot.type === "user"
+          ? String(snapshot.userId ?? "missing-user")
+          : "global";
+      const key = `${snapshot.type}:${scopeId}`;
+      const existing = duplicateMap.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        duplicateMap.set(key, {
+          count: 1,
+          date,
+          scopeId,
+          type: snapshot.type,
+        });
+      }
+    });
+    duplicateSnapshotGroups.push(...Array.from(duplicateMap.values()).filter((group) => group.count > 1));
+
+    dateRows.push({
+      companySnapshots: counts.company,
+      date,
+      globalSnapshots: counts.global,
+      hasGlobalSnapshot: counts.global > 0,
+      userSnapshots: counts.user,
+    });
+  }
+
+  const recentMessages = await ctx.db
+    .query("messages")
+    .withIndex("by_createdAt", (q) => q.gte("createdAt", recentWindowStartTs))
+    .take(10000);
+
+  let missingDimensions = 0;
+  let missingThreads = 0;
+  let mismatched = 0;
+  const messageExamples: string[] = [];
+
+  for (const message of recentMessages) {
+    const thread = await ctx.db.get(message.threadId);
+    if (!thread) {
+      missingThreads++;
+      if (messageExamples.length < 20) messageExamples.push(message._id);
+      continue;
+    }
+
+    const patch = getMissingMessageAnalyticsPatch(message, thread);
+    const hasMissingDimensions = hasPatchValues(patch);
+    const hasMismatch = hasMessageAnalyticsMismatch(message, thread);
+
+    if (hasMissingDimensions) missingDimensions++;
+    if (hasMismatch) mismatched++;
+    if ((hasMissingDimensions || hasMismatch) && messageExamples.length < 20) {
+      messageExamples.push(message._id);
+    }
+  }
+
+  const liveAssistantMessages = await ctx.db
+    .query("messages")
+    .withIndex("by_role_created", (q) => q.eq("role", "assistant").gte("createdAt", todayStartTs))
+    .take(10000);
+  const liveAgentTransactions = await ctx.db
+    .query("agentTransactions")
+    .withIndex("by_createdAt", (q) => q.gte("createdAt", todayStartTs))
+    .take(10000);
+
+  return {
+    checkedDates,
+    daysBack,
+    liveToday: {
+      agentTransactions: liveAgentTransactions.length,
+      assistantMessages: liveAssistantMessages.length,
+      date: formatUtcDate(todayStartTs),
+    },
+    messageDimensions: {
+      examples: messageExamples,
+      mismatched,
+      missingDimensions,
+      missingThreads,
+      scanned: recentMessages.length,
+      windowStartDate: firstCheckedDate,
+    },
+    snapshotCoverage: {
+      dates: dateRows,
+      duplicateSnapshotGroups,
+      missingGlobalDates,
+      totalSnapshots,
+    },
+  };
+}
+
+export const backfillMessageAnalyticsDimensions = internalMutation({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("messages")
+      .withIndex("by_createdAt")
+      .order("asc")
+      .paginate(args.paginationOpts);
+
+    let patched = 0;
+    let patchCandidates = 0;
+    let skippedAlreadyComplete = 0;
+    let skippedMissingThread = 0;
+    let mismatched = 0;
+
+    for (const message of page.page) {
+      const thread = await ctx.db.get(message.threadId);
+      if (!thread) {
+        skippedMissingThread++;
+        continue;
+      }
+
+      if (hasMessageAnalyticsMismatch(message, thread)) {
+        mismatched++;
+      }
+
+      const patch = getMissingMessageAnalyticsPatch(message, thread);
+      if (!hasPatchValues(patch)) {
+        skippedAlreadyComplete++;
+        continue;
+      }
+
+      patchCandidates++;
+      if (!args.dryRun) {
+        await ctx.db.patch(message._id, patch);
+        patched++;
+      }
+    }
+
+    return {
+      scanned: page.page.length,
+      patchCandidates,
+      patched,
+      skippedAlreadyComplete,
+      skippedMissingThread,
+      mismatched,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+      dryRun: args.dryRun === true,
+    };
+  },
+});
+
+export const validateMessageAnalyticsDimensions = internalQuery({
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("messages")
+      .withIndex("by_createdAt")
+      .order("asc")
+      .paginate(args.paginationOpts);
+
+    let missingDimensions = 0;
+    let missingThreads = 0;
+    let mismatched = 0;
+    const examples: string[] = [];
+
+    for (const message of page.page) {
+      const thread = await ctx.db.get(message.threadId);
+      if (!thread) {
+        missingThreads++;
+        if (examples.length < 20) examples.push(message._id);
+        continue;
+      }
+
+      const patch = getMissingMessageAnalyticsPatch(message, thread);
+      const hasMissingDimensions = hasPatchValues(patch);
+      const hasMismatch = hasMessageAnalyticsMismatch(message, thread);
+
+      if (hasMissingDimensions) missingDimensions++;
+      if (hasMismatch) mismatched++;
+      if ((hasMissingDimensions || hasMismatch) && examples.length < 20) {
+        examples.push(message._id);
+      }
+    }
+
+    return {
+      scanned: page.page.length,
+      missingDimensions,
+      missingThreads,
+      mismatched,
+      examples,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    };
+  },
+});
+
+export const getAnalyticsDataHealth = internalQuery({
+  args: {
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await getAnalyticsDataHealthReport(ctx, args);
+  },
+});
+
+export const getAnalyticsDataHealthForAdmin = query({
+  args: {
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+    return await getAnalyticsDataHealthReport(ctx, args);
+  },
+});
 
 export const generateDailySnapshots = internalMutation({
   args: { 
@@ -78,7 +391,7 @@ export const generateDailySnapshots = internalMutation({
       .take(10000);
 
     const agentTxs = await ctx.db.query("agentTransactions")
-      .filter(q => q.gte(q.field("createdAt"), startTs))
+      .withIndex("by_createdAt", q => q.gte("createdAt", startTs))
       .filter(q => q.lte(q.field("createdAt"), endTs))
       .take(10000);
 
@@ -93,31 +406,66 @@ export const generateDailySnapshots = internalMutation({
        return;
     }
 
-    // Helper caches
-    const threads = await ctx.db.query("threads").take(10000); // In a huge DB, this would need to be paginated, but for now we rely on the same architecture
-    const threadUserMap = new Map(threads.map(t => [t._id, t.userId]));
-    const threadAgentMap = new Map(threads.map(t => [t._id, t.agentId]));
-    const threadWidgetMap = new Map(threads.map(t => [t._id, t.widgetId]));
+    const threadMap = new Map<Id<"threads">, Doc<"threads"> | null>();
+    for (const threadId of new Set(rawMessages.map((message) => message.threadId))) {
+      threadMap.set(threadId, await ctx.db.get(threadId));
+    }
 
-    const users = await ctx.db.query("users").take(10000);
-    const userMap = new Map(users.map(u => [u._id, u]));
+    const observedUserIds = new Set<Id<"users">>();
+    const observedCompanyIds = new Set<Id<"companies">>();
+    const observedAgentIds = new Set<Id<"agents">>();
 
-    const companies = await ctx.db.query("companies").take(10000);
-    const companyMap = new Map(companies.map(c => [c._id, c]));
+    rawMessages.forEach((message) => {
+      const thread = threadMap.get(message.threadId);
+      const userId = message.userId ?? thread?.userId;
+      const companyId = message.companyId ?? thread?.companyId;
+      const agentId = message.agentId ?? thread?.agentId;
 
-    const agents = await ctx.db.query("agents").take(10000);
-    const agentMap = new Map(agents.map(a => [a._id, a]));
+      if (userId) observedUserIds.add(userId);
+      if (companyId) observedCompanyIds.add(companyId);
+      if (agentId) observedAgentIds.add(agentId);
+    });
+
+    agentTxs.forEach((transaction) => {
+      if (transaction.userId) observedUserIds.add(transaction.userId);
+      if (transaction.companyId) observedCompanyIds.add(transaction.companyId);
+      if (transaction.agentId) observedAgentIds.add(transaction.agentId);
+    });
+
+    const userMap = new Map<Id<"users">, Doc<"users">>();
+    for (const userId of observedUserIds) {
+      const user = await ctx.db.get(userId);
+      if (user) {
+        userMap.set(userId, user);
+        if (user.companyId) observedCompanyIds.add(user.companyId);
+      }
+    }
+
+    const companyMap = new Map<Id<"companies">, Doc<"companies">>();
+    for (const companyId of observedCompanyIds) {
+      const company = await ctx.db.get(companyId);
+      if (company) companyMap.set(companyId, company);
+    }
+
+    const agentMap = new Map<Id<"agents">, Doc<"agents">>();
+    for (const agentId of observedAgentIds) {
+      const agent = await ctx.db.get(agentId);
+      if (agent) agentMap.set(agentId, agent);
+    }
 
     const unifiedInteractions: SnapshotInteraction[] = [
-       ...rawMessages.map(m => ({
-          userId: threadUserMap.get(m.threadId),
-          widgetId: threadWidgetMap.get(m.threadId),
-          companyId: undefined, // Resolved below
-          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
+       ...rawMessages.map(m => {
+          const thread = threadMap.get(m.threadId);
+          return {
+          userId: m.userId ?? thread?.userId,
+          widgetId: m.widgetId ?? thread?.widgetId,
+          companyId: m.companyId ?? thread?.companyId,
+          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
-       })),
+       };
+       }),
        ...agentTxs.map(t => ({
           userId: t.userId,
           widgetId: undefined,
@@ -231,7 +579,13 @@ export const generateDailySnapshots = internalMutation({
                if (!ca) {
                   ca = msg.agentId === "system_assistant" 
                      ? { id: "system_assistant", name: "Platform Assistant", avatar: "", cost: 0, interactions: 0 }
-                     : { id: msg.agentId, name: agentMap.get(msg.agentId)?.name || "Unknown", avatar: "", cost: 0, interactions: 0 };
+                     : {
+                         id: msg.agentId,
+                         name: agentMap.get(msg.agentId)?.name || "Unknown",
+                         avatar: agentMap.get(msg.agentId)?.avatar || "",
+                         cost: 0,
+                         interactions: 0
+                       };
                   cAgg.topAgents.set(msg.agentId, ca);
                }
                ca.cost += costGBP;
@@ -346,6 +700,93 @@ export const seedHistoricalSnapshots = internalAction({
             console.log(`Dispatched snapshot job for ${dateStr}`);
         }
     }
+});
+
+export const dispatchPlatformAlerts = internalAction({
+  args: {
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const report = await ctx.runQuery(internal.analyticsCron.getAnalyticsDataHealth, { daysBack: args.daysBack ?? 7 });
+    const decision = buildAnalyticsHealthPlatformAlertDecision(report);
+
+    if (!decision.shouldAlert) {
+      return {
+        alerted: false,
+        alertType: decision.alertType,
+        reason: "healthy",
+        summary: decision.summary,
+      };
+    }
+
+    const recipients = parsePlatformAlertRecipients(
+      process.env.PLATFORM_ALERT_EMAILS ||
+        process.env.PLATFORM_ALERT_EMAIL ||
+        process.env.ANALYTICS_ALERT_EMAILS ||
+        process.env.ANALYTICS_ALERT_EMAIL ||
+        process.env.INITIAL_SUPER_ADMIN_EMAIL
+    );
+
+    if (recipients.length === 0) {
+      console.warn("Platform alert triggered but no alert recipients are configured.", decision.summary);
+      return {
+        alerted: false,
+        alertType: decision.alertType,
+        reason: "missing_recipients",
+        signals: decision.signals,
+        summary: decision.summary,
+      };
+    }
+
+    const html = buildPlatformAlertEmailHtml(report, decision);
+
+    if (!process.env.RESEND_API_KEY) {
+      console.warn("RESEND_API_KEY not found. Simulating platform alert dispatch.", {
+        recipients,
+        subject: decision.subject,
+      });
+      return {
+        alerted: true,
+        alertType: decision.alertType,
+        recipients,
+        simulated: true,
+        signals: decision.signals,
+        summary: decision.summary,
+      };
+    }
+
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Operations <noreply@ronins.co.uk>";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: recipients,
+        subject: decision.subject,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Platform alert dispatch failed: ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      alerted: true,
+      alertType: decision.alertType,
+      id: data?.id,
+      recipients,
+      simulated: false,
+      signals: decision.signals,
+      summary: decision.summary,
+    };
+  },
 });
 
 export const wipeSnapshots = internalMutation({

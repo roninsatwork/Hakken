@@ -198,6 +198,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])
+    .index("by_createdAt", ["createdAt"])
     .index("by_company_created", ["companyId", "createdAt"]),
 
   // Agent Raw Debug Logs (Execution Payload Storage)
@@ -289,10 +290,19 @@ export default defineSchema({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    agentId: v.optional(v.id("agents")),
+    widgetId: v.optional(v.id("widgets")),
+    analyticsDimensionsVersion: v.optional(v.number()),
     attachments: v.optional(v.array(v.id("_storage"))),
   })
     .index("by_thread", ["threadId", "createdAt"])
-    .index("by_role_created", ["role", "createdAt"]),
+    .index("by_createdAt", ["createdAt"])
+    .index("by_role_created", ["role", "createdAt"])
+    .index("by_company_role_created", ["companyId", "role", "createdAt"])
+    .index("by_user_role_created", ["userId", "role", "createdAt"])
+    .index("by_agent_role_created", ["agentId", "role", "createdAt"]),
 
   // Agent Orchestration Engine
   agents: defineTable({

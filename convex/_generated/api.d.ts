@@ -53,6 +53,7 @@ import type * as movements from "../movements.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as planService from "../planService.js";
 import type * as plans from "../plans.js";
+import type * as platformAlertService from "../platformAlertService.js";
 import type * as properties from "../properties.js";
 import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
@@ -139,6 +140,7 @@ declare const fullApi: ApiFromModules<{
   orchestrator: typeof orchestrator;
   planService: typeof planService;
   plans: typeof plans;
+  platformAlertService: typeof platformAlertService;
   properties: typeof properties;
   purgeScheduleService: typeof purgeScheduleService;
   purges: typeof purges;

@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("analytics cron snapshots", () => {
@@ -166,5 +166,338 @@ describe("analytics cron snapshots", () => {
       },
       uniqueUserIds: [userId],
     });
+  });
+
+  test("message analytics dimension backfill is paginated, idempotent, and non-destructive", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.UTC(2026, 4, 3);
+
+    const setup = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const userId = await ctx.db.insert("users", {
+        email: "user@example.com",
+        role: "USER",
+        companyId: companyAId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Support Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId: companyAId,
+        agentId,
+        name: "Support Widget",
+        allowedDomains: ["https://example.com"],
+        isActive: true,
+        createdBy: userId,
+        createdAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId: companyAId,
+        agentId,
+        widgetId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const orphanThreadId = await ctx.db.insert("threads", {
+        userId,
+        companyId: companyAId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const legacyAssistantId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Legacy assistant",
+        createdAt: now,
+      });
+      const legacyUserId = await ctx.db.insert("messages", {
+        threadId,
+        role: "user",
+        content: "Legacy user",
+        createdAt: now + 1,
+      });
+      const completeMessageId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Already complete",
+        companyId: companyAId,
+        userId,
+        agentId,
+        widgetId,
+        analyticsDimensionsVersion: 1,
+        createdAt: now + 2,
+      });
+      const mismatchedMessageId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Mismatched but already filled",
+        companyId: companyBId,
+        userId,
+        agentId,
+        widgetId,
+        analyticsDimensionsVersion: 1,
+        createdAt: now + 3,
+      });
+      const orphanMessageId = await ctx.db.insert("messages", {
+        threadId: orphanThreadId,
+        role: "assistant",
+        content: "Orphan message",
+        createdAt: now + 4,
+      });
+      await ctx.db.delete(orphanThreadId);
+
+      return {
+        companyAId,
+        companyBId,
+        userId,
+        agentId,
+        widgetId,
+        legacyAssistantId,
+        legacyUserId,
+        completeMessageId,
+        mismatchedMessageId,
+        orphanMessageId,
+      };
+    });
+
+    const firstValidation = await t.query(internal.analyticsCron.validateMessageAnalyticsDimensions, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    expect(firstValidation).toMatchObject({
+      scanned: 5,
+      missingDimensions: 2,
+      missingThreads: 1,
+      mismatched: 1,
+      isDone: true,
+    });
+    expect(firstValidation.examples).toContain(setup.legacyAssistantId);
+    expect(firstValidation.examples).toContain(setup.orphanMessageId);
+
+    const dryRun = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+      paginationOpts: { numItems: 10, cursor: null },
+      dryRun: true,
+    });
+
+    expect(dryRun).toMatchObject({
+      scanned: 5,
+      patchCandidates: 2,
+      patched: 0,
+      skippedMissingThread: 1,
+      mismatched: 1,
+      isDone: true,
+      dryRun: true,
+    });
+
+    const backfill = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    expect(backfill).toMatchObject({
+      scanned: 5,
+      patchCandidates: 2,
+      patched: 2,
+      skippedMissingThread: 1,
+      mismatched: 1,
+      isDone: true,
+      dryRun: false,
+    });
+
+    const messages = await t.run(async (ctx) => {
+      const legacyAssistant = await ctx.db.get(setup.legacyAssistantId);
+      const legacyUser = await ctx.db.get(setup.legacyUserId);
+      const completeMessage = await ctx.db.get(setup.completeMessageId);
+      const mismatchedMessage = await ctx.db.get(setup.mismatchedMessageId);
+      return { legacyAssistant, legacyUser, completeMessage, mismatchedMessage };
+    });
+
+    expect(messages.legacyAssistant).toMatchObject({
+      companyId: setup.companyAId,
+      userId: setup.userId,
+      agentId: setup.agentId,
+      widgetId: setup.widgetId,
+      analyticsDimensionsVersion: 1,
+    });
+    expect(messages.legacyUser).toMatchObject({
+      companyId: setup.companyAId,
+      userId: setup.userId,
+      agentId: setup.agentId,
+      widgetId: setup.widgetId,
+      analyticsDimensionsVersion: 1,
+    });
+    expect(messages.completeMessage).toMatchObject({
+      companyId: setup.companyAId,
+      userId: setup.userId,
+      agentId: setup.agentId,
+      widgetId: setup.widgetId,
+      analyticsDimensionsVersion: 1,
+    });
+    expect(messages.mismatchedMessage).toMatchObject({
+      companyId: setup.companyBId,
+      userId: setup.userId,
+      agentId: setup.agentId,
+      widgetId: setup.widgetId,
+      analyticsDimensionsVersion: 1,
+    });
+
+    const secondBackfill = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    expect(secondBackfill).toMatchObject({
+      scanned: 5,
+      patchCandidates: 0,
+      patched: 0,
+      skippedMissingThread: 1,
+      mismatched: 1,
+      isDone: true,
+    });
+
+    const secondValidation = await t.query(internal.analyticsCron.validateMessageAnalyticsDimensions, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    expect(secondValidation).toMatchObject({
+      scanned: 5,
+      missingDimensions: 0,
+      missingThreads: 1,
+      mismatched: 1,
+      isDone: true,
+    });
+    expect(secondValidation.examples).toContain(setup.mismatchedMessageId);
+    expect(secondValidation.examples).toContain(setup.orphanMessageId);
+  });
+
+  test("analytics data health reports snapshot gaps, duplicates, dimension drift, and live-day counts", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+    const today = new Date(now);
+    const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const dates = [3, 2, 1].map((daysAgo) => new Date(todayStart - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+
+    const setup = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const userId = await ctx.db.insert("users", {
+        email: "health@example.com",
+        role: "USER",
+        companyId: companyAId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Health Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId: companyAId,
+        agentId,
+        createdAt: todayStart,
+        updatedAt: todayStart,
+      });
+
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: dates[0],
+        type: "global",
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+      });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: dates[0],
+        type: "global",
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+      });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: dates[2],
+        type: "global",
+        metrics: { totalMessages: 1, totalInputTokens: 1, totalOutputTokens: 1, costGBP: 1, activeUsersCount: 1 },
+      });
+
+      const missingDimensionMessageId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Missing dimensions",
+        createdAt: todayStart + 100,
+      });
+      const mismatchedMessageId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "Wrong company dimension",
+        companyId: companyBId,
+        userId,
+        agentId,
+        analyticsDimensionsVersion: 1,
+        createdAt: todayStart + 200,
+      });
+      await ctx.db.insert("agentTransactions", {
+        agentId,
+        userId,
+        companyId: companyAId,
+        actionContext: "Health check",
+        inputTokens: 1,
+        outputTokens: 1,
+        modelUsed: "model-test",
+        costGBP: 1,
+        status: "SUCCESS",
+        createdAt: todayStart + 300,
+      });
+
+      return { mismatchedMessageId, missingDimensionMessageId };
+    });
+
+    const health = await t.query(internal.analyticsCron.getAnalyticsDataHealth, { daysBack: 3 });
+
+    expect(health.checkedDates).toEqual(dates);
+    expect(health.snapshotCoverage.missingGlobalDates).toEqual([dates[1]]);
+    expect(health.snapshotCoverage.duplicateSnapshotGroups).toEqual([
+      { count: 2, date: dates[0], scopeId: "global", type: "global" },
+    ]);
+    expect(health.liveToday).toMatchObject({
+      agentTransactions: 1,
+      assistantMessages: 2,
+    });
+    expect(health.messageDimensions).toMatchObject({
+      mismatched: 1,
+      missingDimensions: 1,
+      missingThreads: 0,
+      scanned: 2,
+    });
+    expect(health.messageDimensions.examples).toContain(setup.missingDimensionMessageId);
+    expect(health.messageDimensions.examples).toContain(setup.mismatchedMessageId);
+  });
+
+  test("analytics data health public query is super-admin only", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, superAdminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Health Auth", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      return { adminId, superAdminId };
+    });
+
+    await expect(
+      t.withIdentity({ subject: adminId }).query(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
+    ).rejects.toThrow("Unauthorized");
+
+    await expect(
+      t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
+    ).resolves.toMatchObject({ daysBack: 7 });
   });
 });

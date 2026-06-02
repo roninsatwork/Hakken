@@ -68,6 +68,7 @@ export default function AdminDashboard() {
     customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
     customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined
   });
+  const inventoryData = useQuery(api.analytics.getGlobalInventoryMetrics);
 
   const getAggregationLabel = (agg: string) => {
     if (agg === "month") return t('charts.monthly');
@@ -103,7 +104,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Synchronized Loader */}
-      {data === undefined ? (
+      {data === undefined || inventoryData === undefined ? (
         <div className="w-full h-[400px] flex items-center justify-center p-20">
           <Loader2 className="w-8 h-8 animate-spin text-brand opacity-80" />
         </div>
@@ -129,9 +130,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="w-full flex-1 min-h-[300px]">
+              <div className="w-full h-[300px] min-h-[300px]">
                 {data.timeline && data.timeline.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300} debounce={50}>
                     <AreaChart data={data.timeline}>
                       <defs>
                         <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
@@ -217,7 +218,7 @@ export default function AdminDashboard() {
               largeText={true}
               icon={CreditCard}
               title={t('metrics.mrr')}
-              value={`£${(data.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              value={`£${(inventoryData.aggregates.mrr || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               sub={t('metrics.mrrSub')}
               delay={0}
             />
@@ -226,7 +227,7 @@ export default function AdminDashboard() {
             <MetricBlock
               icon={Building2}
               title="Registered Companies"
-              value={(data.systemIntegrity?.totalProvisionedCompanies ?? 0).toLocaleString()}
+              value={(inventoryData.systemIntegrity?.totalProvisionedCompanies ?? 0).toLocaleString()}
               sub="TOTAL ORGANIZATIONS"
               delay={0.1}
             />
@@ -290,11 +291,11 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Invocations by LLM</span>
                 </div>
-                <div className="flex-1 w-full flex items-center justify-center p-4">
+                <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
                   {(!data.modelDistribution || data.modelDistribution.length === 0) ? (
                     <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Data</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={260} debounce={50}>
                       <PieChart>
                         <Pie
                           data={data.modelDistribution}
@@ -336,11 +337,11 @@ export default function AdminDashboard() {
                 </div>
                 <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Input vs Output</span>
               </div>
-              <div className="flex-1 w-full flex items-center justify-center p-4">
+              <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
                 {(!data.timeline || data.timeline.length === 0) ? (
                   <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Data</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
                     <BarChart data={data.timeline}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888' }} dy={10} hide />
@@ -478,12 +479,12 @@ export default function AdminDashboard() {
                 </div>
                 <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Revenue by Tier</span>
               </div>
-              <div className="flex-1 w-full flex items-center justify-center p-4">
-                {(!data.planDistribution || data.planDistribution.length === 0) ? (
+              <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
+                {(!inventoryData.planDistribution || inventoryData.planDistribution.length === 0) ? (
                   <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Packages Active</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.planDistribution} layout="vertical" margin={{ left: 20 }}>
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
+                    <BarChart data={inventoryData.planDistribution} layout="vertical" margin={{ left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ffffff10" />
                       <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
                       <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#ccc', fontWeight: 600 }} width={80} />

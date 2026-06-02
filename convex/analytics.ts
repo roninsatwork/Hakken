@@ -1,5 +1,6 @@
 import { query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { requireAdmin, requireSuperAdmin } from "./authz";
@@ -26,6 +27,33 @@ type AnalyticsInteraction = {
 };
 type CompanyLeaderboardEntry = { id: string; name: string; logo: string; cost: number; messages: number };
 const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
+
+function formatSnapshotDate(date: Date) {
+    return date.toISOString().slice(0, 10);
+}
+
+type ThreadAnalyticsContext = Pick<Doc<"threads">, "_id" | "userId" | "companyId" | "agentId" | "widgetId">;
+
+async function loadThreadAnalyticsContext(
+    ctx: QueryCtx,
+    threadIds: Iterable<Id<"threads">>
+) {
+    const threadMap = new Map<Id<"threads">, ThreadAnalyticsContext>();
+    const uniqueThreadIds = Array.from(new Set(threadIds));
+
+    for (const threadId of uniqueThreadIds) {
+        const thread = await ctx.db.get(threadId);
+        if (thread) threadMap.set(threadId, thread);
+    }
+
+    return threadMap;
+}
+
+function getMessageFallbackThreadIds(messages: Doc<"messages">[]) {
+    return messages
+        .filter((message) => !message.analyticsDimensionsVersion)
+        .map((message) => message.threadId);
+}
 
 export async function requireAnalyticsSuperAdmin(ctx: QueryCtx, unauthenticatedMessage = "Unauthorized") {
     return await requireSuperAdmin(ctx, "Unauthorized", unauthenticatedMessage);
@@ -82,10 +110,8 @@ export const getGlobalAICosts = query({
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", startDate))
       .filter(q => q.lte(q.field("createdAt"), endDate))
       .take(10000);
-    
-    // Relational Map
-    const threads = await ctx.db.query("threads").take(10000);
-    const threadUserHashed = new Map(threads.map(t => [t._id, t.userId]));
+
+    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(messages));
 
     // Execution Variables
     let periodInputTokens = 0;
@@ -120,7 +146,7 @@ export const getGlobalAICosts = query({
        periodCostUSD += msgCost;
        
        periodUniqueThreads.add(msg.threadId);
-       const userId = threadUserHashed.get(msg.threadId);
+       const userId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
        if (userId) periodUniqueUsers.add(userId);
 
        // Time-Based Timeline Grouping
@@ -162,13 +188,6 @@ export const getPlatformOverview = query({
     // 1. Core Authorization Check
     await requireAnalyticsSuperAdmin(ctx);
 
-    // 2. Base Structural Telemetry
-    const users = await ctx.db.query("users").take(10000);
-    const totalUsers = users.length;
-    const threads = await ctx.db.query("threads").take(10000);
-    const totalThreads = threads.length;
-
-    // 3. Map Aggregation Parameters (Last 30 Days & Last 7 Days)
     const now = Date.now();
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
@@ -177,63 +196,59 @@ export const getPlatformOverview = query({
       .query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
       .take(10000);
-    const avgInteractionDepth = totalThreads > 0 ? (recentMessages.length / totalThreads) : 1.0;
 
-    // 4. Financial Calculation Engine
     let total30DCostUSD = 0;
-    
-    // Unique user trackers
     const activeWeeklyUsers = new Set<string>();
+    const periodUniqueThreads = new Set<string>();
     const userLeaderboardMap = new Map<string, { userId: string; name: string; email: string; image: string; costGBP: number; messageCount: number }>();
+    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(recentMessages));
+    const userCache = new Map<Id<"users">, Doc<"users"> | null>();
+    const loadUser = async (userId: Id<"users">) => {
+      if (!userCache.has(userId)) userCache.set(userId, await ctx.db.get(userId));
+      return userCache.get(userId) ?? null;
+    };
 
-    // Bind messages to the physical structural accounts 
-    const threadUserMap = new Map<string, string>();
-    for (const t of threads) {
-      if (t.userId) threadUserMap.set(t._id, t.userId);
+    for (const msg of recentMessages) {
+      const inputs = msg.inputTokens || 0;
+      const outputs = msg.outputTokens || 0;
+      const model = msg.modelUsed || defaultModelId;
+      const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
+
+      total30DCostUSD += msgCost;
+      periodUniqueThreads.add(msg.threadId);
+
+      const userId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
+      if (userId) {
+        if (msg.createdAt >= sevenDaysAgo) activeWeeklyUsers.add(userId);
+
+        let leader = userLeaderboardMap.get(userId);
+        if (!leader) {
+          const u = await loadUser(userId);
+          leader = {
+            userId,
+            name: u?.name || "Unknown",
+            email: u?.email || "",
+            image: u?.image || "https://api.dicebear.com/7.x/notionists/svg",
+            costGBP: 0,
+            messageCount: 0
+          };
+          userLeaderboardMap.set(userId, leader);
+        }
+        leader.costGBP += (msgCost * 0.78);
+        leader.messageCount += 1;
+      }
     }
-
-    recentMessages.forEach(msg => {
-       const inputs = msg.inputTokens || 0;
-       const outputs = msg.outputTokens || 0;
-       const model = msg.modelUsed || defaultModelId; 
-
-       const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
-       
-       total30DCostUSD += msgCost;
-
-       const userId = threadUserMap.get(msg.threadId);
-       if (userId) {
-          // Log WAU
-          if (msg.createdAt >= sevenDaysAgo) activeWeeklyUsers.add(userId);
-
-          // Update Leaderboard Object
-          let leader = userLeaderboardMap.get(userId);
-          if (!leader) {
-             const u = users.find(x => x._id === userId);
-             leader = {
-               userId,
-               name: u?.name || "Unknown",
-               email: u?.email || "",
-               image: u?.image || "https://api.dicebear.com/7.x/notionists/svg",
-               costGBP: 0,
-               messageCount: 0
-             };
-             userLeaderboardMap.set(userId, leader);
-          }
-          leader.costGBP += (msgCost * 0.78);
-          leader.messageCount += 1;
-       }
-    });
 
     const cost30DGBP = total30DCostUSD * 0.78;
     const costPerActiveUserGBP = userLeaderboardMap.size > 0 ? (cost30DGBP / userLeaderboardMap.size) : 0;
+    const avgInteractionDepth = periodUniqueThreads.size > 0 ? (recentMessages.length / periodUniqueThreads.size) : 1.0;
 
     const topUsers = Array.from(userLeaderboardMap.values()).sort((a,b) => b.costGBP - a.costGBP);
 
     return {
-       totalUsers,
+       totalUsers: userLeaderboardMap.size,
        wauCount: activeWeeklyUsers.size,
-       totalThreads,
+       totalThreads: periodUniqueThreads.size,
        avgInteractionDepth: Number(avgInteractionDepth.toFixed(1)),
        cost30DGBP: Number(cost30DGBP.toFixed(5)),
        costPerActiveUserGBP: Number(costPerActiveUserGBP.toFixed(5)),
@@ -253,21 +268,93 @@ export const getUserCostOverview = query({
     if (!targetUser) throw new Error("User not found");
     assertAnalyticsUserAccess(admin, targetUser);
 
-    // 2. Fetch User Threads
-    
+    const now = new Date();
+    const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
+    const todayDate = formatSnapshotDate(new Date(todayStartTs));
+
+    const snapshots = await ctx.db
+      .query("analyticsDailySnapshots")
+      .withIndex("by_user_date", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.lt(q.field("date"), todayDate))
+      .take(10000);
+
+    let totalCostGBP = 0;
+    let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+
+    snapshots.forEach((snapshot) => {
+      totalCostGBP += snapshot.metrics.costGBP;
+      totalInputTokens += snapshot.metrics.totalInputTokens;
+      totalOutputTokens += snapshot.metrics.totalOutputTokens;
+      totalTokens += snapshot.metrics.totalInputTokens + snapshot.metrics.totalOutputTokens;
+    });
+
+    const liveAssistantMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_user_role_created", (q) => q.eq("userId", args.userId).eq("role", "assistant").gte("createdAt", todayStartTs))
+      .take(10000);
+
     const threads = await ctx.db
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
       .take(10000);
+    const threadIds = new Set(threads.map((thread) => thread._id));
 
-    let totalCostUSD = 0;
-    let totalTokens = 0;
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
+    const legacyLiveMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_role_created", (q) => q.eq("role", "assistant").gte("createdAt", todayStartTs))
+      .take(10000);
+
+    const liveMessages = [
+      ...liveAssistantMessages,
+      ...legacyLiveMessages.filter((message) => !message.analyticsDimensionsVersion && !message.userId && threadIds.has(message.threadId)),
+    ];
+
+    liveMessages.forEach((message) => {
+      const inputs = message.inputTokens || 0;
+      const outputs = message.outputTokens || 0;
+      const model = message.modelUsed || defaultModelId;
+      const msgCostGBP = computeCostFromMap(model, inputs, outputs, modelMap) * 0.78;
+
+      totalCostGBP += msgCostGBP;
+      totalInputTokens += inputs;
+      totalOutputTokens += outputs;
+      totalTokens += inputs + outputs;
+    });
+
+    return {
+      totalCostGBP: Number(totalCostGBP.toFixed(6)),
+      totalTokens,
+      totalInputTokens,
+      totalOutputTokens,
+      threads: []
+    };
+  }
+});
+
+export const getUserCostThreads = query({
+  args: {
+    userId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
+    const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
+    const admin = await requireAnalyticsAdmin(ctx);
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) throw new Error("User not found");
+    assertAnalyticsUserAccess(admin, targetUser);
+
+    const threads = await ctx.db
+      .query("threads")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .paginate(args.paginationOpts);
 
     const enrichedThreads = await Promise.all(
-      threads.map(async (thread) => {
+      threads.page.map(async (thread) => {
         const messages = await ctx.db
           .query("messages")
           .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
@@ -275,8 +362,6 @@ export const getUserCostOverview = query({
           
         let threadCostUSD = 0;
         let threadTokens = 0;
-        let threadInputTokens = 0;
-        let threadOutputTokens = 0;
         const messageCount = messages.length;
 
         messages.filter(m => m.role === "assistant").forEach(msg => {
@@ -284,19 +369,11 @@ export const getUserCostOverview = query({
           const outputs = msg.outputTokens || 0;
           const model = msg.modelUsed || defaultModelId;
 
-          threadInputTokens += inputs;
-          threadOutputTokens += outputs;
-
           const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
 
           threadCostUSD += msgCost;
           threadTokens += (inputs + outputs);
         });
-
-        totalCostUSD += threadCostUSD;
-        totalTokens += threadTokens;
-        totalInputTokens += threadInputTokens;
-        totalOutputTokens += threadOutputTokens;
 
         return {
           threadId: thread._id,
@@ -310,11 +387,8 @@ export const getUserCostOverview = query({
     );
 
     return {
-      totalCostGBP: Number((totalCostUSD * 0.78).toFixed(6)),
-      totalTokens,
-      totalInputTokens,
-      totalOutputTokens,
-      threads: enrichedThreads.sort((a, b) => b.createdAt - a.createdAt)
+      ...threads,
+      page: enrichedThreads
     };
   }
 });
@@ -359,20 +433,11 @@ export const getCompanyMetrics = query({
        if (planObj && planObj.isActive) mrr = planObj.priceGBP || 0;
     }
 
-    const agents = await ctx.db.query("agents").take(10000);
-    const agentMap = new Map(agents.map((a) => [a._id, a]));
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
-    for (const a of agents) {
-       agentLeaderboard[a._id] = { id: a._id, name: a.name, avatar: a.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${a._id}`, cost: 0, interactions: 0 };
-    }
-    // Also inject the system assistant
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
 
     const companyUsers = await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
-    
-    // Natively fetch only threads related to this tenant
-    const companyThreads = await ctx.db.query("threads").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(10000);
-    const companyThreadIds = new Set(companyThreads.map((t) => t._id));
+    const companyUserMap = new Map(companyUsers.map((u) => [u._id, u]));
 
     const startTimeStamp = startDate.getTime();
     const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
@@ -380,12 +445,22 @@ export const getCompanyMetrics = query({
     const endTimeStamp = endDate.getTime();
 
     // Bound Message and Tx retrieval natively to temporal bounds and indexes
-    const rawMessages = await ctx.db.query("messages")
+    const companyScopedMessages = await ctx.db.query("messages")
+      .withIndex("by_company_role_created", q => q.eq("companyId", args.companyId).eq("role", "assistant").gte("createdAt", realStartTimeStamp))
+      .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
+      .take(10000);
+
+    const legacyMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", realStartTimeStamp))
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
       .take(10000);
+
+    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(legacyMessages));
       
-    const periodRawMessages = rawMessages.filter((m) => companyThreadIds.has(m.threadId));
+    const periodRawMessages = [
+      ...companyScopedMessages,
+      ...legacyMessages.filter((m) => !m.analyticsDimensionsVersion && !m.companyId && legacyThreadMap.get(m.threadId)?.companyId === args.companyId),
+    ];
 
     const periodAgentTxs = await ctx.db.query("agentTransactions")
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
@@ -394,9 +469,6 @@ export const getCompanyMetrics = query({
        
     const knowledgeDocs = await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(10000);
 
-    const threadUserMap = new Map(companyThreads.map((t) => [t._id, t.userId]));
-    const threadAgentMap = new Map(companyThreads.map((t) => [t._id, t.agentId]));
-    const threadWidgetMap = new Map(companyThreads.map((t) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; email: string; cost: number; messages: number }> = {};
     for (const u of companyUsers) {
        userLeaderboard[u._id] = {
@@ -420,18 +492,23 @@ export const getCompanyMetrics = query({
     };
     
     const unifiedInteractions: AnalyticsInteraction[] = [
-       ...periodRawMessages.map((m) => ({
-          userId: threadUserMap.get(m.threadId),
-          widgetId: threadWidgetMap.get(m.threadId),
-          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
+       ...periodRawMessages.map((m) => {
+          const thread = legacyThreadMap.get(m.threadId);
+          return {
+          userId: m.userId ?? thread?.userId,
+          widgetId: m.widgetId ?? thread?.widgetId,
+          companyId: m.companyId ?? thread?.companyId ?? args.companyId,
+          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
-       })),
+       };
+       }),
        ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined, // Txs don't have thread visibility easily, but they follow raw messages
+          companyId: args.companyId,
           agentId: t.agentId,
           inputTokens: t.inputTokens || 0,
           outputTokens: t.outputTokens || 0,
@@ -442,8 +519,11 @@ export const getCompanyMetrics = query({
 
 
     const snapshotStartTs = startDate.getTime();
+    const snapshotStartDate = formatSnapshotDate(startDate);
+    const todayDate = formatSnapshotDate(new Date(todayStartTs));
     const snapshots = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_company_date", q => q.eq("companyId", args.companyId))
+        .withIndex("by_company_date", q => q.eq("companyId", args.companyId).gte("date", snapshotStartDate))
+        .filter(q => q.lt(q.field("date"), todayDate))
         .take(10000);
         
     const validSnapshots = snapshots.filter(s => {
@@ -469,18 +549,33 @@ export const getCompanyMetrics = query({
 
         if (s.leaderboards?.topAgents) {
             s.leaderboards.topAgents.forEach(a => {
-                if (agentLeaderboard[a.id]) {
-                    agentLeaderboard[a.id].cost += a.cost;
-                    agentLeaderboard[a.id].interactions += a.interactions;
+                if (!agentLeaderboard[a.id]) {
+                    agentLeaderboard[a.id] = {
+                        id: a.id,
+                        name: a.name,
+                        avatar: a.avatar,
+                        cost: 0,
+                        interactions: 0
+                    };
                 }
+                agentLeaderboard[a.id].cost += a.cost;
+                agentLeaderboard[a.id].interactions += a.interactions;
             });
         }
         if (s.leaderboards?.topUsers) {
             s.leaderboards.topUsers.forEach((u) => {
-                if (userLeaderboard[u.id]) {
-                    userLeaderboard[u.id].cost += u.cost;
-                    userLeaderboard[u.id].messages += u.messages;
+                if (!userLeaderboard[u.id]) {
+                    userLeaderboard[u.id] = {
+                        id: u.id,
+                        name: u.name || "Unknown",
+                        image: u.image || "https://api.dicebear.com/7.x/notionists/svg",
+                        email: u.email || "",
+                        cost: 0,
+                        messages: 0
+                    };
                 }
+                userLeaderboard[u.id].cost += u.cost;
+                userLeaderboard[u.id].messages += u.messages;
             });
         }
         if (s.modelMetrics) {
@@ -535,11 +630,11 @@ export const getCompanyMetrics = query({
           activePeriodUsers.add(msg.userId);
           
           const isWidgetThread = !!msg.widgetId;
-          const isRegistered = companyUsers.some((u) => u._id === msg.userId);
+          const isRegistered = companyUserMap.has(msg.userId);
           const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
           
           if (!userLeaderboard[targetLeaderId]) {
-             const userObj = companyUsers.find((u) => u._id === targetLeaderId);
+             const userObj = companyUserMap.get(targetLeaderId as Id<"users">);
              userLeaderboard[targetLeaderId] = {
                 id: targetLeaderId,
                 name: userObj?.name || "Unknown",
@@ -564,7 +659,7 @@ export const getCompanyMetrics = query({
                    interactions: 0
                 };
              } else {
-                 const agentObj = agentMap.get(msg.agentId);
+                 const agentObj = await ctx.db.get(msg.agentId);
                  agentLeaderboard[msg.agentId] = {
                     id: msg.agentId,
                     name: agentObj?.name || "Unknown Agent",
@@ -623,6 +718,54 @@ export const getCompanyMetrics = query({
   }
 });
 
+export const getGlobalInventoryMetrics = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAnalyticsSuperAdmin(ctx);
+
+    const users = await ctx.db.query("users").take(10000);
+    const companies = await ctx.db.query("companies").take(10000);
+    const plans = await ctx.db.query("plans")
+       .withIndex("by_active", q => q.eq("isActive", true))
+       .take(10000);
+
+    const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
+    const planNameMap = new Map(plans.map(p => [p._id, p.name || "Unknown Plan"]));
+
+    let mrr = 0;
+    const planDistributionMap: Record<string, { planId: string; name: string; mrr: number; companies: number }> = {};
+
+    companies.forEach(company => {
+        if (company.planId && planMap.has(company.planId)) {
+             const planPrice = planMap.get(company.planId) || 0;
+             mrr += planPrice;
+
+             if (!planDistributionMap[company.planId]) {
+                 planDistributionMap[company.planId] = {
+                     planId: company.planId,
+                     name: planNameMap.get(company.planId) || "Unknown Plan",
+                     mrr: 0,
+                     companies: 0
+                 };
+             }
+             planDistributionMap[company.planId].mrr += planPrice;
+             planDistributionMap[company.planId].companies += 1;
+        }
+    });
+
+    return {
+      aggregates: {
+        mrr: Number(mrr.toFixed(2)),
+      },
+      planDistribution: Object.values(planDistributionMap).sort((a,b) => b.mrr - a.mrr),
+      systemIntegrity: {
+        totalProvisionedUsers: users.length,
+        totalProvisionedCompanies: companies.length,
+      }
+    };
+  }
+});
+
 export const getGlobalAnalytics = query({
   args: { 
     timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
@@ -637,12 +780,21 @@ export const getGlobalAnalytics = query({
     const { now, start: startDate, end: endDate } = resolveDateRange(args);
     const aggregationType = getAggregationType(startDate.getTime(), endDate.getTime());
 
-    const users = await ctx.db.query("users").take(10000);
-    const companies = await ctx.db.query("companies").take(10000);
-    const companyMap = new Map(companies.map((c) => [c._id, c]));
-
-    const agents = await ctx.db.query("agents").take(10000);
-    const agentMap = new Map(agents.map((a) => [a._id, a]));
+    const userMap = new Map<Id<"users">, Doc<"users"> | null>();
+    const companyMap = new Map<Id<"companies">, Doc<"companies"> | null>();
+    const agentMap = new Map<Id<"agents">, Doc<"agents"> | null>();
+    const loadUser = async (userId: Id<"users">) => {
+       if (!userMap.has(userId)) userMap.set(userId, await ctx.db.get(userId));
+       return userMap.get(userId) ?? null;
+    };
+    const loadCompany = async (companyId: Id<"companies">) => {
+       if (!companyMap.has(companyId)) companyMap.set(companyId, await ctx.db.get(companyId));
+       return companyMap.get(companyId) ?? null;
+    };
+    const loadAgent = async (agentId: Id<"agents">) => {
+       if (!agentMap.has(agentId)) agentMap.set(agentId, await ctx.db.get(agentId));
+       return agentMap.get(agentId) ?? null;
+    };
 
     let totalMessages = 0;
     let totalTokens = 0;
@@ -658,18 +810,9 @@ export const getGlobalAnalytics = query({
 
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
-    for (const c of companies) {
-       companyLeaderboard[c._id] = { id: c._id, name: c.name, logo: c.logo || "", cost: 0, messages: 0 };
-    }
 
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
-    for (const a of agents) {
-       agentLeaderboard[a._id] = { id: a._id, name: a.name, avatar: a.avatar || `https://api.dicebear.com/7.x/shapes/svg?seed=${a._id}`, cost: 0, interactions: 0 };
-    }
-    // Also inject the system assistant
     agentLeaderboard["system_assistant"] = { id: "system_assistant", name: "Platform Assistant (Web)", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=system_assistant", cost: 0, interactions: 0 };
-
-    const threads = await ctx.db.query("threads").take(10000);
     
     const startTimeStamp = startDate.getTime();
     const todayStartTs = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
@@ -682,7 +825,7 @@ export const getGlobalAnalytics = query({
       .take(10000);
       
     const periodAgentTxs = await ctx.db.query("agentTransactions")
-      .filter((q) => q.gte(q.field("createdAt"), realStartTimeStamp))
+      .withIndex("by_createdAt", q => q.gte("createdAt", realStartTimeStamp))
       .filter((q) => q.lte(q.field("createdAt"), endTimeStamp))
       .take(10000);
       
@@ -690,35 +833,25 @@ export const getGlobalAnalytics = query({
     const thirtyDayMessages = await ctx.db.query("messages")
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
       .take(10000);
-    const threadUserMapAll = new Map(threads.map((t) => [t._id, t.userId]));
+
+    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, [
+      ...getMessageFallbackThreadIds(periodRawMessages),
+      ...getMessageFallbackThreadIds(thirtyDayMessages),
+    ]);
+
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
-       const uId = threadUserMapAll.get(msg.threadId);
+       const uId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
        if (uId) mauSet.add(uId);
     }
     const thirtyDayTxs = await ctx.db.query("agentTransactions")
-       .filter((q) => q.gte(q.field("createdAt"), thirtyDaysAgo))
+       .withIndex("by_createdAt", q => q.gte("createdAt", thirtyDaysAgo))
        .take(10000);
     for (const tx of thirtyDayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
 
-    const threadUserMap = new Map(threads.map((t) => [t._id, t.userId]));
-    const threadAgentMap = new Map(threads.map((t) => [t._id, t.agentId]));
-    const threadWidgetMap = new Map(threads.map((t) => [t._id, t.widgetId]));
     const userLeaderboard: Record<string, { id: string; name: string; image: string; companyName: string; email: string; cost: number; messages: number }> = {};
-    for (const u of users) {
-       const compObj = u.companyId ? companyMap.get(u.companyId) : null;
-       userLeaderboard[u._id] = {
-           id: u._id,
-           name: u.name || "Unknown",
-           image: u.image || "https://api.dicebear.com/7.x/notionists/svg",
-           email: u.email || "",
-           companyName: compObj?.name || "Independent",
-           cost: 0,
-           messages: 0
-       };
-    }
     const activePeriodUsers = new Set<string>();
     
     userLeaderboard["WIDGET_USER_GROUP"] = {
@@ -732,16 +865,19 @@ export const getGlobalAnalytics = query({
     };
     
     const unifiedInteractions: AnalyticsInteraction[] = [
-       ...periodRawMessages.map((m) => ({
-          userId: threadUserMap.get(m.threadId),
-          widgetId: threadWidgetMap.get(m.threadId),
-          companyId: undefined, // Resolved in loop
-          agentId: threadAgentMap.get(m.threadId) ?? SYSTEM_AGENT_ID,
+       ...periodRawMessages.map((m) => {
+          const thread = legacyThreadMap.get(m.threadId);
+          return {
+          userId: m.userId ?? thread?.userId,
+          widgetId: m.widgetId ?? thread?.widgetId,
+          companyId: m.companyId ?? thread?.companyId,
+          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
-       })),
+       };
+       }),
        ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined,
@@ -756,8 +892,11 @@ export const getGlobalAnalytics = query({
 
 
     const snapshotStartTs = startDate.getTime();
+    const snapshotStartDate = formatSnapshotDate(startDate);
+    const todayDate = formatSnapshotDate(new Date(todayStartTs));
     const snapshots = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_type_date", q => q.eq("type", "global"))
+        .withIndex("by_type_date", q => q.eq("type", "global").gte("date", snapshotStartDate))
+        .filter(q => q.lt(q.field("date"), todayDate))
         .take(10000);
         
     const validSnapshots = snapshots.filter(s => {
@@ -782,18 +921,34 @@ export const getGlobalAnalytics = query({
 
         if (s.leaderboards?.topAgents) {
             s.leaderboards.topAgents.forEach(a => {
-                if (agentLeaderboard[a.id]) {
-                    agentLeaderboard[a.id].cost += a.cost;
-                    agentLeaderboard[a.id].interactions += a.interactions;
+                if (!agentLeaderboard[a.id]) {
+                    agentLeaderboard[a.id] = {
+                        id: a.id,
+                        name: a.name,
+                        avatar: a.avatar,
+                        cost: 0,
+                        interactions: 0
+                    };
                 }
+                agentLeaderboard[a.id].cost += a.cost;
+                agentLeaderboard[a.id].interactions += a.interactions;
             });
         }
         if (s.leaderboards?.topUsers) {
             s.leaderboards.topUsers.forEach((u) => {
-                if (userLeaderboard[u.id]) {
-                    userLeaderboard[u.id].cost += u.cost;
-                    userLeaderboard[u.id].messages += u.messages;
+                if (!userLeaderboard[u.id]) {
+                    userLeaderboard[u.id] = {
+                        id: u.id,
+                        name: u.name,
+                        image: u.image,
+                        email: u.email || "",
+                        companyName: u.companyName || "Independent",
+                        cost: 0,
+                        messages: 0
+                    };
                 }
+                userLeaderboard[u.id].cost += u.cost;
+                userLeaderboard[u.id].messages += u.messages;
             });
         }
         if (s.modelMetrics) {
@@ -810,13 +965,17 @@ export const getGlobalAnalytics = query({
     });
 
     const companySnaps = await ctx.db.query("analyticsDailySnapshots")
-        .withIndex("by_type_date", q => q.eq("type", "company"))
+        .withIndex("by_type_date", q => q.eq("type", "company").gte("date", snapshotStartDate))
+        .filter(q => q.lt(q.field("date"), todayDate))
         .take(10000);
     companySnaps.filter(s => {
         const t = new Date(s.date).getTime();
         return t >= snapshotStartTs && t < todayStartTs;
     }).forEach(s => {
-        if (s.companyId && companyLeaderboard[s.companyId]) {
+        if (s.companyId) {
+            if (!companyLeaderboard[s.companyId]) {
+                companyLeaderboard[s.companyId] = { id: s.companyId, name: "Unknown Company", logo: "", cost: 0, messages: 0 };
+            }
             companyLeaderboard[s.companyId].cost += s.metrics.costGBP;
             companyLeaderboard[s.companyId].messages += s.metrics.totalMessages;
         }
@@ -855,15 +1014,15 @@ export const getGlobalAnalytics = query({
 
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
+          const userObj = await loadUser(msg.userId);
           
           const isWidgetThread = !!msg.widgetId;
-          const isRegistered = users.some((u) => u._id === msg.userId);
+          const isRegistered = !!userObj;
           const targetLeaderId = (isRegistered && !isWidgetThread) ? msg.userId : "WIDGET_USER_GROUP";
           
           if (!userLeaderboard[targetLeaderId]) {
-             const userObj = users.find((u) => u._id === targetLeaderId);
              const companyId = msg.companyId ?? userObj?.companyId;
-             const compObj = companyId ? companyMap.get(companyId) : null;
+             const compObj = companyId ? await loadCompany(companyId) : null;
              userLeaderboard[targetLeaderId] = {
                 id: targetLeaderId,
                 name: userObj?.name || "Unknown",
@@ -878,10 +1037,10 @@ export const getGlobalAnalytics = query({
           userLeaderboard[targetLeaderId].messages += 1;
        }
 
-       const activeCompanyId = msg.companyId || (msg.userId ? users.find((u) => u._id === msg.userId)?.companyId : undefined);
+       const activeCompanyId = msg.companyId || (msg.userId ? (await loadUser(msg.userId))?.companyId : undefined);
        if (activeCompanyId) {
           if (!companyLeaderboard[activeCompanyId]) {
-             const compObj = companyMap.get(activeCompanyId);
+             const compObj = await loadCompany(activeCompanyId);
              companyLeaderboard[activeCompanyId] = {
                 id: activeCompanyId,
                 name: compObj?.name || "Unknown Company",
@@ -905,7 +1064,7 @@ export const getGlobalAnalytics = query({
                    interactions: 0
                 };
              } else {
-                 const agentObj = agentMap.get(msg.agentId);
+                 const agentObj = await loadAgent(msg.agentId);
                  agentLeaderboard[msg.agentId] = {
                     id: msg.agentId,
                     name: agentObj?.name || "Unknown Agent",
@@ -928,6 +1087,14 @@ export const getGlobalAnalytics = query({
        outputTokens: timelineMap[k].outputTokens
     }));
 
+    for (const company of Object.values(companyLeaderboard)) {
+       if (company.name === "Unknown Company") {
+          const companyObj = await loadCompany(company.id as Id<"companies">);
+          company.name = companyObj?.name || "Unknown Company";
+          company.logo = companyObj?.logo || "";
+       }
+    }
+
     const topCompanies = Object.values(companyLeaderboard)
        .sort((a,b) => b.cost - a.cost)
        .slice(0, 10);
@@ -940,37 +1107,8 @@ export const getGlobalAnalytics = query({
        .sort((a,b) => b.cost - a.cost)
        .slice(0, 10);
 
-    const costPerActiveUser = users.length > 0 ? (totalCostGBP / users.length) : 0;
+    const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
-
-    const plans = await ctx.db.query("plans")
-       .withIndex("by_active", q => q.eq("isActive", true))
-       .take(10000);
-    const planMap = new Map(plans.map(p => [p._id, p.priceGBP || 0]));
-    const planNameMap = new Map(plans.map(p => [p._id, p.name || "Unknown Plan"]));
-
-    let mrr = 0;
-    const planDistributionMap: Record<string, { planId: string; name: string; mrr: number; companies: number }> = {};
-    
-    companies.forEach(company => {
-        if (company.planId && planMap.has(company.planId)) {
-             const planPrice = planMap.get(company.planId) || 0;
-             mrr += planPrice;
-             
-             if (!planDistributionMap[company.planId]) {
-                 planDistributionMap[company.planId] = {
-                     planId: company.planId,
-                     name: planNameMap.get(company.planId) || "Unknown Plan",
-                     mrr: 0,
-                     companies: 0
-                 };
-             }
-             planDistributionMap[company.planId].mrr += planPrice;
-             planDistributionMap[company.planId].companies += 1;
-        }
-    });
-
-    const planDistribution = Object.values(planDistributionMap).sort((a,b) => b.mrr - a.mrr);
     const modelBreakdown = Object.values(modelDistribution).sort((a,b) => b.cost - a.cost);
 
     return {
@@ -978,7 +1116,6 @@ export const getGlobalAnalytics = query({
        aggregates: {
           activeUsers: activePeriodUsers.size,
           mau: mauSet.size,
-          mrr: Number(mrr.toFixed(2)),
           totalMessages,
           totalTokens,
           totalInputTokens,
@@ -992,11 +1129,8 @@ export const getGlobalAnalytics = query({
        topUsers,
        topAgents,
        modelDistribution: modelBreakdown,
-       planDistribution,
-       systemIntegrity: {
-          totalProvisionedUsers: users.length,
-          totalProvisionedCompanies: companies.length
-       }
+       planDistribution: [],
+       systemIntegrity: undefined
     };
   }
 });

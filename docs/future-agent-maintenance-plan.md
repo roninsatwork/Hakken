@@ -159,6 +159,28 @@ Status:
 - `docs/ai-provider-tool-extension.md` documents provider adapter boundaries.
 - `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
 
+## Phase 5B: Analytics Scale Optimization
+
+Analytics, admin dashboards, AI running costs, and company dashboards should move toward snapshot-first reads and indexed live-day overlays. Use `docs/analytics-scale-optimization-plan.md` as the locked source of truth for this work.
+
+Targets:
+
+- Keep company and global analytics reads bounded by indexed date ranges.
+- Store analytics dimensions on message rows so live company/user/agent/widget metrics do not depend on broad thread joins.
+- Prefer daily snapshots for historical totals, leaderboards, model distribution, and user activity.
+- Keep legacy fallbacks only until backfills are complete, then remove or sharply limit them.
+
+Acceptance:
+
+- Tenant isolation tests stay green for company/admin analytics.
+- Dashboard totals remain stable across snapshot + live overlays.
+- Query changes preserve model-cost configuration and avoid hardcoded model literals.
+- `npm run check` and analytics-focused tests cover each completed phase.
+
+Status:
+
+- Added `docs/analytics-scale-optimization-plan.md` as the phased source of truth.
+
 ## Phase 6: Release Readiness Checklist
 
 Before any push intended for `main`, run:

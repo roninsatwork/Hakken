@@ -63,7 +63,7 @@ const analytics = {
     totalTokens: 21000,
   },
   modelDistribution: [{ name: "E2E Primary Model", value: 42, cost: 12.34 }],
-  planDistribution: [{ plan: "Pro", count: 2, mrr: 2400 }],
+  planDistribution: [{ planId: "plan_pro_e2e", name: "Pro", companies: 2, mrr: 2400 }],
   systemIntegrity: { totalProvisionedCompanies: 2 },
   timeline: [
     { date: "2026-06-01", cost: 6.12, messages: 21, tokens: 10000 },
@@ -316,7 +316,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       },
     ];
   }
-  if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics") return analytics;
+  if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics" || path === "analytics:getGlobalInventoryMetrics") return analytics;
   if (path === "chat:getThreads") {
     return [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }];
   }

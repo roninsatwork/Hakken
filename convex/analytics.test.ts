@@ -93,11 +93,20 @@ describe("Analytics MRR Strict Isolation", () => {
       });
     });
 
-    // Run Analytics
-    const analytics = await client.query(api.analytics.getGlobalAnalytics, { timeframe: "30d" });
+    // Run Inventory Metrics
+    const inventory = await client.query(api.analytics.getGlobalInventoryMetrics, {});
     
     // MRR should be exactly 2 * 100 = 200 (Active Corp + Another Active Corp)
-    expect(analytics.aggregates.mrr).toBe(200);
+    expect(inventory.aggregates.mrr).toBe(200);
+    expect(inventory.systemIntegrity.totalProvisionedCompanies).toBe(4);
+    expect(inventory.planDistribution).toEqual([
+      {
+        planId: activePlanId,
+        name: "Enterprise",
+        mrr: 200,
+        companies: 2,
+      },
+    ]);
   });
 
   test("global AI costs require super admin and aggregate bounded assistant messages", async () => {
@@ -186,6 +195,7 @@ describe("Analytics MRR Strict Isolation", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const now = Date.now();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const { companyAId, adminAId, userAId, userBId } = await t.run(async (ctx) => {
       await ctx.db.insert("aiModels", modelConfig);
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
@@ -230,6 +240,18 @@ describe("Analytics MRR Strict Isolation", () => {
         content: "Ignored for cost but counted as thread depth",
         createdAt: now,
       });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday,
+        type: "user",
+        userId: userAId,
+        metrics: {
+          totalMessages: 1,
+          totalInputTokens: 10,
+          totalOutputTokens: 20,
+          costGBP: 1.5,
+        },
+        uniqueUserIds: [userAId],
+      });
 
       return { companyAId, adminAId, userAId, userBId };
     });
@@ -242,17 +264,24 @@ describe("Analytics MRR Strict Isolation", () => {
 
     const overview = await adminAClient.query(api.analytics.getUserCostOverview, { userId: userAId });
 
-    expect(overview.totalCostGBP).toBe(0.312);
-    expect(overview.totalTokens).toBe(300_000);
-    expect(overview.totalInputTokens).toBe(200_000);
-    expect(overview.totalOutputTokens).toBe(100_000);
-    expect(overview.threads).toHaveLength(1);
-    expect(overview.threads[0]).toMatchObject({
+    expect(overview.totalCostGBP).toBe(1.812);
+    expect(overview.totalTokens).toBe(300_030);
+    expect(overview.totalInputTokens).toBe(200_010);
+    expect(overview.totalOutputTokens).toBe(100_020);
+    expect(overview.threads).toHaveLength(0);
+
+    const threadCosts = await adminAClient.query(api.analytics.getUserCostThreads, {
+      userId: userAId,
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+
+    expect(threadCosts.page).toHaveLength(1);
+    expect(threadCosts.page[0]).toMatchObject({
       title: "User A Thread",
       messageCount: 2,
       threadTokens: 300_000,
     });
-    expect(overview.threads[0].costGBP).toBeCloseTo(0.312, 6);
+    expect(threadCosts.page[0].costGBP).toBeCloseTo(0.312, 6);
     expect(companyAId).toBeDefined();
   });
 
@@ -319,6 +348,11 @@ describe("Analytics MRR Strict Isolation", () => {
         outputTokens: 200_000,
         modelUsed: "sonae-test-model",
         createdAt: now,
+        companyId: companyAId,
+        userId: userAId,
+        agentId,
+        widgetId,
+        analyticsDimensionsVersion: 1,
       });
       await ctx.db.insert("agentTransactions", {
         agentId,
@@ -366,6 +400,18 @@ describe("Analytics MRR Strict Isolation", () => {
           ],
         },
       });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: new Date(now - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        type: "company",
+        companyId: companyAId,
+        metrics: {
+          totalMessages: 999,
+          totalInputTokens: 999,
+          totalOutputTokens: 999,
+          costGBP: 999,
+        },
+        uniqueUserIds: [userAId],
+      });
       await ctx.db.insert("knowledgeDocuments", {
         title: "Company A Doc",
         textContent: "Knowledge",
@@ -409,6 +455,64 @@ describe("Analytics MRR Strict Isolation", () => {
     expect(metrics.timeline.reduce((sum, point) => sum + point.messages, 0)).toBe(4);
   });
 
+  test("company metrics keep snapshot leaderboard metadata for missing user records", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const now = Date.now();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: now,
+      });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday,
+        type: "company",
+        companyId,
+        metrics: {
+          totalMessages: 2,
+          totalInputTokens: 10,
+          totalOutputTokens: 20,
+          costGBP: 3,
+        },
+        uniqueUserIds: ["deleted-user"],
+        leaderboards: {
+          topAgents: [],
+          topUsers: [
+            {
+              id: "deleted-user",
+              name: "Deleted User",
+              image: "deleted.png",
+              email: "deleted@test.com",
+              cost: 3,
+              messages: 2,
+            },
+          ],
+        },
+      });
+
+      return { companyId, adminId };
+    });
+
+    const metrics = await t.withIdentity({ subject: adminId }).query(api.analytics.getCompanyMetrics, {
+      companyId,
+      timeframe: "30d",
+    });
+
+    expect(metrics.topUsers[0]).toMatchObject({
+      id: "deleted-user",
+      name: "Deleted User",
+      image: "deleted.png",
+      email: "deleted@test.com",
+      cost: 3,
+      messages: 2,
+    });
+  });
+
   test("platform overview handles empty analytics data for super admins only", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -435,7 +539,7 @@ describe("Analytics MRR Strict Isolation", () => {
     const overview = await superAdminClient.query(api.analytics.getPlatformOverview, {});
 
     expect(overview).toMatchObject({
-      totalUsers: 2,
+      totalUsers: 0,
       wauCount: 0,
       totalThreads: 0,
       avgInteractionDepth: 1,

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { redactPII } from "./utils/pii";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import {
@@ -14,6 +15,16 @@ import {
   resolveTargetAgentId,
   validateChatAttachments,
 } from "./chatService";
+
+function getThreadMessageDimensions(thread: Doc<"threads"> | null) {
+  return {
+    companyId: thread?.companyId,
+    userId: thread?.userId,
+    agentId: thread?.agentId,
+    widgetId: thread?.widgetId,
+    analyticsDimensionsVersion: 1,
+  };
+}
 
 export const getThreads = query({
   args: {},
@@ -140,18 +151,21 @@ export const sendMessage = mutation({
 
     // 3. Evaluate Limit
     if (isChatQuotaExceeded(quota)) {
+       const messageDimensions = getThreadMessageDimensions(thread);
        // Sonae Rejection Soft Block
        await ctx.db.insert("messages", {
           threadId: args.threadId,
           role: "user",
           content: args.content,
           createdAt: now,
+          ...messageDimensions,
        });
        await ctx.db.insert("messages", {
           threadId: args.threadId,
           role: "assistant",
           content: "I apologise, but your company has exhausted its AI allocation for this period. Please ask your administrator to review your plan.",
           createdAt: now + 1,
+          ...messageDimensions,
        });
        await ctx.db.patch(args.threadId, { updatedAt: now + 1 });
        return true;
@@ -173,6 +187,7 @@ export const sendMessage = mutation({
       content: safeContent,
       createdAt: now,
       attachments: args.fileIds,
+      ...getThreadMessageDimensions(thread),
     });
 
     // 2. Update Thread timestamp
@@ -228,6 +243,8 @@ export const saveAssistantMessage = internalMutation({
     modelUsed: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+
     await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
@@ -235,7 +252,8 @@ export const saveAssistantMessage = internalMutation({
       createdAt: Date.now(),
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
-      modelUsed: args.modelUsed
+      modelUsed: args.modelUsed,
+      ...getThreadMessageDimensions(thread),
     });
   },
 });

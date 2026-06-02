@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { 
+  Activity,
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  Database,
   LineChart, 
+  MessageSquare,
   Save, 
   RefreshCcw,
 } from "lucide-react";
@@ -11,8 +17,13 @@ import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
+function formatCount(value: number) {
+  return new Intl.NumberFormat("en-GB").format(value);
+}
+
 export default function AnalyticsPage() {
   const currentId = useQuery(api.system.getAnalyticsId);
+  const health = useQuery(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 });
   const updateId = useMutation(api.system.updateAnalyticsId);
   
   const [trackingId, setTrackingId] = useState("");
@@ -28,6 +39,15 @@ export default function AnalyticsPage() {
   }, [currentId]);
 
   const hasUnsavedChanges = currentId !== undefined && trackingId !== currentId;
+  const healthIssueCount = health
+    ? health.snapshotCoverage.missingGlobalDates.length +
+      health.snapshotCoverage.duplicateSnapshotGroups.length +
+      health.messageDimensions.missingDimensions +
+      health.messageDimensions.mismatched +
+      health.messageDimensions.missingThreads
+    : 0;
+  const isHealthLoading = health === undefined;
+  const isHealthy = !isHealthLoading && healthIssueCount === 0;
 
   const handleSave = async () => {
     if (!hasUnsavedChanges || isSaving) return;
@@ -110,6 +130,132 @@ export default function AnalyticsPage() {
       />
 
       {/* Flat Content Flow Section */}
+      <div className="w-full h-[1px] bg-border-dim my-2" />
+
+      <section className="flex flex-col gap-5 relative">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/10">
+              <Activity className="w-3 h-3" />
+            </div>
+            <div>
+              <span className="text-foreground text-[14px] font-bold tracking-wide">Analytics Data Health</span>
+              <p className="text-[12px] text-muted mt-0.5">
+                Snapshot coverage, dimension drift, and live ingestion over the last 7 days.
+              </p>
+            </div>
+          </div>
+
+          <div className={`inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full border text-[10px] uppercase font-mono tracking-widest ${
+            isHealthLoading
+              ? "border-border-dim text-muted bg-card"
+              : isHealthy
+                ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10"
+                : "border-amber-500/20 text-amber-500 bg-amber-500/10"
+          }`}>
+            {isHealthLoading ? (
+              <RefreshCcw className="w-3 h-3 animate-spin" />
+            ) : isHealthy ? (
+              <CheckCircle2 className="w-3 h-3" />
+            ) : (
+              <AlertTriangle className="w-3 h-3" />
+            )}
+            <span>{isHealthLoading ? "Checking" : isHealthy ? "Healthy" : `${healthIssueCount} signals`}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Snapshots</span>
+              <Database className="w-4 h-4 text-brand" />
+            </div>
+            <div className="text-2xl font-semibold text-foreground">
+              {health ? formatCount(health.snapshotCoverage.totalSnapshots) : "--"}
+            </div>
+            <p className="text-[12px] text-secondary leading-relaxed">
+              {health
+                ? `${formatCount(health.snapshotCoverage.missingGlobalDates.length)} missing global dates, ${formatCount(health.snapshotCoverage.duplicateSnapshotGroups.length)} duplicate groups.`
+                : "Loading snapshot coverage."}
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Dimensions</span>
+              <MessageSquare className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="text-2xl font-semibold text-foreground">
+              {health ? formatCount(health.messageDimensions.scanned) : "--"}
+            </div>
+            <p className="text-[12px] text-secondary leading-relaxed">
+              {health
+                ? `${formatCount(health.messageDimensions.missingDimensions)} missing, ${formatCount(health.messageDimensions.mismatched)} mismatched, ${formatCount(health.messageDimensions.missingThreads)} missing threads.`
+                : "Loading recent message checks."}
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Live Today</span>
+              <Activity className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="text-2xl font-semibold text-foreground">
+              {health ? formatCount(health.liveToday.assistantMessages) : "--"}
+            </div>
+            <p className="text-[12px] text-secondary leading-relaxed">
+              {health
+                ? `${formatCount(health.liveToday.agentTransactions)} agent transactions on ${health.liveToday.date}.`
+                : "Loading today's live ingestion."}
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-border-dim bg-card/40 p-4 flex flex-col gap-3 min-h-[132px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">Window</span>
+              <CalendarDays className="w-4 h-4 text-rose-500" />
+            </div>
+            <div className="text-2xl font-semibold text-foreground">
+              {health ? `${health.daysBack}d` : "--"}
+            </div>
+            <p className="text-[12px] text-secondary leading-relaxed">
+              {health
+                ? `${health.checkedDates[0]} through ${health.checkedDates[health.checkedDates.length - 1]}.`
+                : "Loading checked date range."}
+            </p>
+          </div>
+        </div>
+
+        {health && !isHealthy ? (
+          <div className="rounded-[10px] border border-amber-500/20 bg-amber-500/10 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-amber-500">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-[12px] font-bold uppercase tracking-widest">Operator attention needed</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[12px] text-secondary leading-relaxed">
+              <p>
+                Missing snapshot dates: {health.snapshotCoverage.missingGlobalDates.length > 0
+                  ? health.snapshotCoverage.missingGlobalDates.join(", ")
+                  : "none"}.
+              </p>
+              <p>
+                Duplicate snapshot groups: {health.snapshotCoverage.duplicateSnapshotGroups.length > 0
+                  ? health.snapshotCoverage.duplicateSnapshotGroups.map((group) => `${group.date} ${group.type}:${group.scopeId}`).join(", ")
+                  : "none"}.
+              </p>
+              <p>
+                Message dimension examples: {health.messageDimensions.examples.length > 0
+                  ? health.messageDimensions.examples.join(", ")
+                  : "none"}.
+              </p>
+              <p>
+                Next action: run the documented Convex health/backfill commands before removing legacy analytics fallbacks.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
       <div className="w-full h-[1px] bg-border-dim my-2" />
 
       <section className="flex flex-col gap-6 relative">

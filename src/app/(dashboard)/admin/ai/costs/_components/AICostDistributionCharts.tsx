@@ -32,13 +32,13 @@ export function AICostDistributionCharts({ modelDistribution, timeline }: AICost
                 Cost drivers by LLM
               </span>
             </div>
-            <div className="flex-1 w-full flex items-center justify-center p-4">
+            <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
               {!modelDistribution || modelDistribution.length === 0 ? (
                 <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
                   No Data
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={260} debounce={50}>
                   <PieChart>
                     <Pie
                       data={modelDistribution}
@@ -95,13 +95,13 @@ export function AICostDistributionCharts({ modelDistribution, timeline }: AICost
                 Input vs Output Volume
               </span>
             </div>
-            <div className="flex-1 w-full flex items-center justify-center p-4">
+            <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
               {!timeline || timeline.length === 0 ? (
                 <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
                   No Data
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={260} debounce={50}>
                   <BarChart data={timeline}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#888" }} dy={10} hide />
