@@ -66,7 +66,8 @@ Current completed improvements:
 - `agentTransactions` has a direct created-at index for global time-window reads.
 - Global and company snapshot reads are bounded by indexed date ranges.
 - Company live analytics uses the company-indexed message fast path.
-- Legacy rows without message dimensions are still included through a temporary fallback.
+- Production and dev historical message rows have been backfilled and validated.
+- The temporary live-message legacy thread-join fallback has been removed from dashboard analytics paths.
 - Historical message dimension backfill functions exist with dry-run, pagination, validation, and mismatch reporting.
 - Dev message dimension backfill has been run and validated cleanly.
 - Global analytics cost data is separated from broad platform inventory metrics through `getGlobalInventoryMetrics`.
@@ -77,9 +78,8 @@ Current completed improvements:
 Current remaining scale risks:
 
 - Some live analytics paths still load broad `threads`, `users`, `companies`, or `agents` sets to enrich leaderboards.
-- Production old message rows still require thread joins until the production backfill has been run and validated.
 - Several reads still have `take(10000)` limits as temporary safety rails, not true scale design.
-- Some query-drift monitoring is automated, but production data-health visibility still needs to be surfaced in the admin UI or alerting.
+- Query-drift monitoring is automated, and production data-health visibility is surfaced through the admin UI and platform alerts.
 
 ## Target Architecture
 
@@ -96,7 +96,7 @@ Live data:
 - Today's activity can be computed from raw `messages` and `agentTransactions`.
 - Live reads must use date-bounded indexes.
 - Company/user/agent/widget dimensions must be available directly on live rows.
-- Thread joins should be a temporary fallback only for legacy rows.
+- Live analytics should not join threads for message dimensions; platform alerts should catch missing or mismatched dimensions.
 
 Metadata:
 
@@ -190,14 +190,14 @@ Tasks:
 - Write analytics dimensions when inserting user messages.
 - Write analytics dimensions when inserting assistant messages.
 - Include dimensions on quota rejection messages.
-- Keep temporary legacy fallback for older rows until backfill is complete.
+- Use message analytics dimensions directly after backfill validation.
 - Update tests so the write path is protected.
 
 Acceptance:
 
 - New user and assistant message inserts carry analytics dimensions.
 - Company dashboard can read live assistant messages by company index.
-- Legacy rows are still counted until backfilled.
+- Historical rows are counted through message analytics dimensions after backfill.
 - Tests cover denormalized message writes.
 
 Status:
@@ -205,7 +205,7 @@ Status:
 - Completed optional message analytics fields and company/user/agent message indexes.
 - Completed dimension writes for user and assistant chat messages.
 - Completed `analyticsDimensionsVersion` marker for new and backfilled messages.
-- Completed company live-message fast path with a temporary legacy fallback.
+- Completed company live-message fast path and removed the temporary legacy fallback after production validation.
 
 ## Phase 3: Backfill Historical Message Dimensions
 
@@ -231,7 +231,7 @@ Acceptance:
 - Backfill can stop and resume safely.
 - Backfill does not overwrite already-correct analytics dimensions.
 - No tenant data changes except filling message dimensions from the owning thread.
-- Legacy fallback has a documented removal condition.
+- Legacy fallback removal has a documented completion condition.
 
 Status:
 
@@ -241,7 +241,7 @@ Status:
 - Completed mismatch reporting for rows with already-filled dimensions that differ from the owning thread.
 - Completed idempotency and non-destructive regression tests.
 - Dev execution completed on June 2, 2026: 171 messages patched, 0 missing dimensions, 0 mismatches, 0 missing threads after validation.
-- Production execution is still pending.
+- Production execution completed on June 2, 2026: 104 messages patched, 0 missing dimensions, 0 mismatches, 0 missing threads after validation.
 
 Operational runbook:
 
@@ -283,7 +283,7 @@ Operational notes:
 Backout:
 
 - Because this only fills optional fields from existing thread ownership, backout should not normally be needed.
-- If a bug is found, stop the backfill immediately and keep legacy fallback enabled.
+- If a bug is found before fallback removal, stop the backfill immediately and keep legacy fallback enabled.
 - Add a repair mutation only if incorrect fields were written.
 
 Removal condition for legacy fallback:
@@ -292,6 +292,12 @@ Removal condition for legacy fallback:
 - A validation query reports zero messages missing required analytics dimensions for threads that still exist.
 - Snapshot generation has run successfully after backfill.
 - Company/global analytics tests pass without the fallback path.
+
+Removal status:
+
+- Completed after production validation on June 2, 2026.
+- Production backfill patched 104 messages.
+- Production validation reported 0 missing dimensions, 0 mismatches, and 0 missing threads.
 
 ## Phase 4: Snapshot-First Dashboards
 
@@ -331,8 +337,8 @@ Backout:
 Status:
 
 - Completed initial bounded live-overlay refactor.
-- Global analytics no longer loads all threads for live message enrichment; it loads thread context only for live rows missing `analyticsDimensionsVersion`.
-- Company analytics no longer loads all company threads for live message enrichment; it loads thread context only for legacy live rows that need fallback.
+- Global analytics no longer loads threads for live message dimension enrichment.
+- Company analytics no longer loads threads for live message dimension enrichment.
 - Global and company analytics no longer load all agents before rendering leaderboards; they hydrate snapshot-provided agents and live-observed agents only.
 - User and company table loads remain because current response fields still expose total provisioned users, total provisioned companies, MRR, and plan distribution.
 - Completed initial inventory split: `getGlobalAnalytics` handles analytics/costs, while `getGlobalInventoryMetrics` handles MRR, plan distribution, and total provisioned company/user counts.
@@ -363,7 +369,7 @@ Status:
 - `getUserCostThreads` returns thread-level detail rows through Convex pagination.
 - Admin and super-admin user profile cost tabs now load thread detail rows in 15-row chunks.
 - Added drift guard preventing `getUserCostOverview` from regressing into per-thread message aggregation.
-- Temporary today-only legacy fallback remains until production message dimension backfill is validated.
+- Temporary today-only legacy fallback was removed after production message dimension backfill validation.
 
 ## Phase 6: Dashboard Metadata And Leaderboard Scaling
 
@@ -425,10 +431,10 @@ Status:
   - date-bounded snapshot reads in dashboard aggregation paths
   - indexed live message overlays
   - explicit allowlisted reasons for remaining broad analytics scans
-- Removed the `getGlobalAICosts` all-thread scan by using message analytics dimensions and bounded legacy thread fallback.
+- Removed the `getGlobalAICosts` all-thread scan by using message analytics dimensions directly.
 - Removed the `getPlatformOverview` all-user/all-thread scans by making it a bounded recent-cost overview and leaving exact inventory counts to `getGlobalInventoryMetrics`.
 - Removed daily snapshot metadata scans by hydrating only users, companies, agents, and threads observed in the snapshot activity window.
-- Remaining drift work should cover production data-health signals and any future removal of temporary exception entries after their refactors land.
+- Remaining drift work should remove or narrow temporary broad-scan exception entries after their refactors land.
 
 ## Phase 8: Operational Readiness
 
@@ -508,7 +514,7 @@ Alert thresholds:
 | --- | --- | --- | --- |
 | Phase 1: Bound Existing Reads | Completed initial slice | `convex/analytics.ts`, `convex/analyticsCron.ts`, `convex/schema.ts` | Analytics and cron snapshot tests |
 | Phase 2: Message Dimensions | Completed initial slice | `convex/chat.ts`, `convex/schema.ts`, `convex/analytics.ts` | Chat write-path and company metrics tests |
-| Phase 3: Historical Backfill | Implementation complete; production execution pending | `convex/analyticsCron.ts` | Backfill idempotency and validation tests |
+| Phase 3: Historical Backfill | Production execution complete | `convex/analyticsCron.ts` | Backfill idempotency and validation tests |
 | Phase 4: Snapshot-First Dashboards | Initial bounded live-overlay slice complete | `convex/analytics.ts`, shared analytics helpers | Snapshot + live overlay tests |
 | Phase 5: User Cost Pages | Initial aggregate/detail split complete | `convex/analytics.ts`, user profile pages | User cost and tenant-boundary tests |
 | Phase 6: Metadata Scaling | Initial hardening complete | `convex/analytics.ts`, `convex/analyticsCron.ts` | Missing metadata and leaderboard tests |
@@ -578,7 +584,7 @@ Every analytics change must answer yes to these questions:
 - Are token totals and cost totals preserved across old and new paths?
 - Are snapshots excluded from today's live overlay to prevent double counting?
 - Are out-of-range snapshots excluded by date bounds?
-- Are legacy rows handled until backfill is complete?
+- Have historical rows been backfilled and validated before removing fallback paths?
 
 ## Change Control
 
@@ -601,4 +607,4 @@ Deliverables:
 - Run the production message-dimension backfill if the dry run is sensible.
 - Validate production analytics health.
 - Confirm the scheduled alert action is visible in Convex deployment logs after one cycle.
-- Keep the temporary legacy message fallback documented until production backfill validation passes.
+- Confirm the next scheduled platform alert cycle stays healthy after fallback removal.

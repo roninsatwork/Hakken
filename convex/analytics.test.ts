@@ -136,9 +136,11 @@ describe("Analytics MRR Strict Isolation", () => {
         threadId,
         role: "assistant",
         content: "A costed answer",
+        userId,
         inputTokens: 1_000_000,
         outputTokens: 500_000,
         modelUsed: "sonae-test-model",
+        analyticsDimensionsVersion: 1,
         createdAt: now,
       });
       await ctx.db.insert("messages", {
@@ -154,9 +156,11 @@ describe("Analytics MRR Strict Isolation", () => {
         threadId,
         role: "assistant",
         content: "Out of range",
+        userId,
         inputTokens: 1_000_000,
         outputTokens: 1_000_000,
         modelUsed: "sonae-test-model",
+        analyticsDimensionsVersion: 1,
         createdAt: now - 10_000,
       });
 
@@ -229,9 +233,12 @@ describe("Analytics MRR Strict Isolation", () => {
         threadId,
         role: "assistant",
         content: "Costed answer",
+        companyId: companyAId,
+        userId: userAId,
         inputTokens: 200_000,
         outputTokens: 100_000,
         modelUsed: "sonae-test-model",
+        analyticsDimensionsVersion: 1,
         createdAt: now,
       });
       await ctx.db.insert("messages", {

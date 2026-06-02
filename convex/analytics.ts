@@ -32,29 +32,6 @@ function formatSnapshotDate(date: Date) {
     return date.toISOString().slice(0, 10);
 }
 
-type ThreadAnalyticsContext = Pick<Doc<"threads">, "_id" | "userId" | "companyId" | "agentId" | "widgetId">;
-
-async function loadThreadAnalyticsContext(
-    ctx: QueryCtx,
-    threadIds: Iterable<Id<"threads">>
-) {
-    const threadMap = new Map<Id<"threads">, ThreadAnalyticsContext>();
-    const uniqueThreadIds = Array.from(new Set(threadIds));
-
-    for (const threadId of uniqueThreadIds) {
-        const thread = await ctx.db.get(threadId);
-        if (thread) threadMap.set(threadId, thread);
-    }
-
-    return threadMap;
-}
-
-function getMessageFallbackThreadIds(messages: Doc<"messages">[]) {
-    return messages
-        .filter((message) => !message.analyticsDimensionsVersion)
-        .map((message) => message.threadId);
-}
-
 export async function requireAnalyticsSuperAdmin(ctx: QueryCtx, unauthenticatedMessage = "Unauthorized") {
     return await requireSuperAdmin(ctx, "Unauthorized", unauthenticatedMessage);
 }
@@ -111,8 +88,6 @@ export const getGlobalAICosts = query({
       .filter(q => q.lte(q.field("createdAt"), endDate))
       .take(10000);
 
-    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(messages));
-
     // Execution Variables
     let periodInputTokens = 0;
     let periodOutputTokens = 0;
@@ -146,8 +121,7 @@ export const getGlobalAICosts = query({
        periodCostUSD += msgCost;
        
        periodUniqueThreads.add(msg.threadId);
-       const userId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
-       if (userId) periodUniqueUsers.add(userId);
+       if (msg.userId) periodUniqueUsers.add(msg.userId);
 
        // Time-Based Timeline Grouping
        const dateString = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType, { includeWeekYear: true });
@@ -201,7 +175,6 @@ export const getPlatformOverview = query({
     const activeWeeklyUsers = new Set<string>();
     const periodUniqueThreads = new Set<string>();
     const userLeaderboardMap = new Map<string, { userId: string; name: string; email: string; image: string; costGBP: number; messageCount: number }>();
-    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(recentMessages));
     const userCache = new Map<Id<"users">, Doc<"users"> | null>();
     const loadUser = async (userId: Id<"users">) => {
       if (!userCache.has(userId)) userCache.set(userId, await ctx.db.get(userId));
@@ -217,22 +190,21 @@ export const getPlatformOverview = query({
       total30DCostUSD += msgCost;
       periodUniqueThreads.add(msg.threadId);
 
-      const userId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
-      if (userId) {
-        if (msg.createdAt >= sevenDaysAgo) activeWeeklyUsers.add(userId);
+      if (msg.userId) {
+        if (msg.createdAt >= sevenDaysAgo) activeWeeklyUsers.add(msg.userId);
 
-        let leader = userLeaderboardMap.get(userId);
+        let leader = userLeaderboardMap.get(msg.userId);
         if (!leader) {
-          const u = await loadUser(userId);
+          const u = await loadUser(msg.userId);
           leader = {
-            userId,
+            userId: msg.userId,
             name: u?.name || "Unknown",
             email: u?.email || "",
             image: u?.image || "https://api.dicebear.com/7.x/notionists/svg",
             costGBP: 0,
             messageCount: 0
           };
-          userLeaderboardMap.set(userId, leader);
+          userLeaderboardMap.set(msg.userId, leader);
         }
         leader.costGBP += (msgCost * 0.78);
         leader.messageCount += 1;
@@ -295,24 +267,7 @@ export const getUserCostOverview = query({
       .withIndex("by_user_role_created", (q) => q.eq("userId", args.userId).eq("role", "assistant").gte("createdAt", todayStartTs))
       .take(10000);
 
-    const threads = await ctx.db
-      .query("threads")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .take(10000);
-    const threadIds = new Set(threads.map((thread) => thread._id));
-
-    const legacyLiveMessages = await ctx.db
-      .query("messages")
-      .withIndex("by_role_created", (q) => q.eq("role", "assistant").gte("createdAt", todayStartTs))
-      .take(10000);
-
-    const liveMessages = [
-      ...liveAssistantMessages,
-      ...legacyLiveMessages.filter((message) => !message.analyticsDimensionsVersion && !message.userId && threadIds.has(message.threadId)),
-    ];
-
-    liveMessages.forEach((message) => {
+    liveAssistantMessages.forEach((message) => {
       const inputs = message.inputTokens || 0;
       const outputs = message.outputTokens || 0;
       const model = message.modelUsed || defaultModelId;
@@ -450,17 +405,7 @@ export const getCompanyMetrics = query({
       .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
       .take(10000);
 
-    const legacyMessages = await ctx.db.query("messages")
-      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", realStartTimeStamp))
-      .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
-      .take(10000);
-
-    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, getMessageFallbackThreadIds(legacyMessages));
-      
-    const periodRawMessages = [
-      ...companyScopedMessages,
-      ...legacyMessages.filter((m) => !m.analyticsDimensionsVersion && !m.companyId && legacyThreadMap.get(m.threadId)?.companyId === args.companyId),
-    ];
+    const periodRawMessages = companyScopedMessages;
 
     const periodAgentTxs = await ctx.db.query("agentTransactions")
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
@@ -492,19 +437,16 @@ export const getCompanyMetrics = query({
     };
     
     const unifiedInteractions: AnalyticsInteraction[] = [
-       ...periodRawMessages.map((m) => {
-          const thread = legacyThreadMap.get(m.threadId);
-          return {
-          userId: m.userId ?? thread?.userId,
-          widgetId: m.widgetId ?? thread?.widgetId,
-          companyId: m.companyId ?? thread?.companyId ?? args.companyId,
-          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
+       ...periodRawMessages.map((m) => ({
+          userId: m.userId,
+          widgetId: m.widgetId,
+          companyId: m.companyId ?? args.companyId,
+          agentId: m.agentId ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
-       };
-       }),
+       })),
        ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined, // Txs don't have thread visibility easily, but they follow raw messages
@@ -834,15 +776,9 @@ export const getGlobalAnalytics = query({
       .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
       .take(10000);
 
-    const legacyThreadMap = await loadThreadAnalyticsContext(ctx, [
-      ...getMessageFallbackThreadIds(periodRawMessages),
-      ...getMessageFallbackThreadIds(thirtyDayMessages),
-    ]);
-
     const mauSet = new Set<string>();
     for (const msg of thirtyDayMessages) {
-       const uId = msg.userId ?? legacyThreadMap.get(msg.threadId)?.userId;
-       if (uId) mauSet.add(uId);
+       if (msg.userId) mauSet.add(msg.userId);
     }
     const thirtyDayTxs = await ctx.db.query("agentTransactions")
        .withIndex("by_createdAt", q => q.gte("createdAt", thirtyDaysAgo))
@@ -865,19 +801,16 @@ export const getGlobalAnalytics = query({
     };
     
     const unifiedInteractions: AnalyticsInteraction[] = [
-       ...periodRawMessages.map((m) => {
-          const thread = legacyThreadMap.get(m.threadId);
-          return {
-          userId: m.userId ?? thread?.userId,
-          widgetId: m.widgetId ?? thread?.widgetId,
-          companyId: m.companyId ?? thread?.companyId,
-          agentId: m.agentId ?? thread?.agentId ?? SYSTEM_AGENT_ID,
+       ...periodRawMessages.map((m) => ({
+          userId: m.userId,
+          widgetId: m.widgetId,
+          companyId: m.companyId,
+          agentId: m.agentId ?? SYSTEM_AGENT_ID,
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
           createdAt: m.createdAt
-       };
-       }),
+       })),
        ...periodAgentTxs.map((t) => ({
           userId: t.userId,
           widgetId: undefined,
