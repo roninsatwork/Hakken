@@ -31,6 +31,8 @@ import type * as arcade from "../arcade.js";
 import type * as auditLogService from "../auditLogService.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
+import type * as authEvents from "../authEvents.js";
+import type * as authUserProvisioning from "../authUserProvisioning.js";
 import type * as authz from "../authz.js";
 import type * as chat from "../chat.js";
 import type * as chatAdmin from "../chatAdmin.js";
@@ -115,6 +117,8 @@ declare const fullApi: ApiFromModules<{
   auditLogService: typeof auditLogService;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
+  authEvents: typeof authEvents;
+  authUserProvisioning: typeof authUserProvisioning;
   authz: typeof authz;
   chat: typeof chat;
   chatAdmin: typeof chatAdmin;

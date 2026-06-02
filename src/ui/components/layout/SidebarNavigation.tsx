@@ -160,6 +160,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
   if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
+  if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
   if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
@@ -173,6 +174,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
   if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
+  if (pathname.startsWith('/app/settings/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/app/agents')) return 'Agents';
   if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
   if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
@@ -193,7 +195,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     agents: isAgentsActive,
     workflows: false,
     users: false,
-    settings: pathname.startsWith('/admin/settings'),
+    settings: pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/auth-diagnostics'),
     reports: false,
     organization: false,
     arcade: false,
@@ -379,6 +381,7 @@ export default function SidebarNavigation() {
                           <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
                           <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
                           <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
+                          <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>
 
                         <NavItem
@@ -457,7 +460,7 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={Building2}
                         label="Organization"
-                        isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team'}
+                        isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team' || activeItem === 'Auth Diagnostics'}
                         onClick={() => setActiveItem('Organization Dashboard')}
                         hasChildren
                         isOpen={openSections.organization}
@@ -465,6 +468,7 @@ export default function SidebarNavigation() {
                       >
                         <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
                         <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                        <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                       </NavItem>
                     )}
 

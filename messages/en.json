@@ -89,7 +89,7 @@
         "or": "OR",
         "continueWithGoogle": "Continue with Google",
         "thankYou": "Check your inbox",
-        "magicLinkSent": "A magic link has been sent to {email}. Click it to sign in.",
+        "magicLinkSent": "If this email is invited, you will receive a sign-in link shortly.",
         "tryDifferentEmail": "Try a different email address"
     },
     "nav": {
@@ -129,6 +129,7 @@
         "settings": "Settings",
         "systemSettings": "System Settings",
         "analytics": "Analytics",
+        "authDiagnostics": "Auth Diagnostics",
         "workspace": "Workspace",
         "assistant": "Assistant",
         "agenticTesting": "Agentic Testing",
@@ -197,6 +198,40 @@
                 "90d": "90 Days",
                 "ytd": "Year to Date",
                 "custom": "Custom Range"
+            }
+        },
+        "authDiagnostics": {
+            "title": "Auth Diagnostics",
+            "description": "Review safe login and invite events without exposing public account status.",
+            "restrictedTitle": "Diagnostics restricted",
+            "restrictedDescription": "Only administrators can inspect authentication diagnostics.",
+            "filters": {
+                "searchPlaceholder": "Search email, event, reason, provider, or object ID...",
+                "eventType": "Event type",
+                "time": "Time range",
+                "company": "Company",
+                "allEvents": "All events",
+                "allCompanies": "All companies",
+                "last24h": "Last 24 hours",
+                "last7d": "Last 7 days",
+                "last30d": "Last 30 days",
+                "allTime": "All time"
+            },
+            "table": {
+                "event": "Event",
+                "email": "Email",
+                "company": "Company",
+                "reason": "Reason",
+                "provider": "Provider",
+                "timestamp": "Timestamp",
+                "empty": "No auth events recorded",
+                "noMatches": "No auth events match these filters",
+                "unscoped": "Global / unscoped",
+                "unknownProvider": "Unknown"
+            },
+            "pagination": {
+                "showing": "Showing {start} to {end} of {total} auth events",
+                "page": "Page {current} of {total}"
             }
         },
         "companies": {

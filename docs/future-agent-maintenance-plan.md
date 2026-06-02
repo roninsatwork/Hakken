@@ -9,6 +9,7 @@ This plan is for future agents taking over Sonae development without relying on 
 - Batch cleanup work and push at the end of a verified slice.
 - Keep the app runnable locally on port 3000 with Convex running alongside it when the user is testing.
 - Do not touch the movement demo unless the user asks or it breaks a required gate.
+- Keep platform language and generic runtime code provider-neutral. Gemini-era wording belongs only in real model IDs, provider adapters, provider sync code, and explicitly allowlisted provider documentation.
 
 ## Frozen Demo Scope
 
@@ -130,6 +131,33 @@ Acceptance:
 - Workflow tests remain green.
 - Invalid payloads fail clearly.
 - Frontend/backend file policy drift is covered by tests.
+
+## Phase 5A: Provider-Neutral Platform Cleanup
+
+Sonae should be a platform with provider adapters, not a Gemini-shaped app with provider support bolted on. Keep true provider details isolated while removing stale provider-specific language from generic product, admin, workflow, and runtime surfaces.
+
+Targets:
+
+- Keep provider-specific SDK setup inside adapter modules such as `convex/vertexProviderService.ts`.
+- Resolve execution models through stored configuration and `convex/aiModelService.ts`, not hardcoded runtime literals.
+- Rename stale Gemini-era product/platform copy to provider-neutral language unless the reference is a real model ID, provider catalogue entry, or provider adapter note.
+- Keep provider-specific tool-call and response shapes behind normalization helpers.
+- Update `docs/ai-provider-tool-extension.md` when a provider boundary or adapter rule changes.
+- Avoid leaking provider names into React pages, generic Convex services, workflow nodes, audit labels, or admin UX unless the user is managing that provider directly.
+
+Acceptance:
+
+- `src/quality-drift.test.ts` continues to classify Gemini-era references before they spread.
+- Any newly allowed provider-specific reference is added to the drift test allowlist with a clear reason.
+- Generic tests use neutral model IDs such as `model-fast`, `safe-model`, or `sonae-test-model` unless testing a provider adapter.
+- Runtime model selection remains configuration-driven.
+- `npm run check` passes.
+
+Status:
+
+- `GEMINI.md` is now a compatibility pointer to `AGENTS.md`, not an active source of development instructions.
+- `docs/ai-provider-tool-extension.md` documents provider adapter boundaries.
+- `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
 
 ## Phase 6: Release Readiness Checklist
 

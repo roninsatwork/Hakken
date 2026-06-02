@@ -1,27 +1,8 @@
 import { convexAuth } from "@convex-dev/auth/server";
-import type { MutationCtx } from "./_generated/server";
 
 import Google from "@auth/core/providers/google";
 import Resend from "@auth/core/providers/resend";
-
-type AuthProfile = {
-  email?: string;
-  name?: string;
-  image?: string;
-  picture?: string;
-};
-
-type AuthUser = {
-  email?: string;
-  name?: string;
-  image?: string;
-};
-
-type CreateOrUpdateUserArgs = {
-  profile?: AuthProfile;
-  email?: string;
-  user?: AuthUser;
-};
+import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -36,74 +17,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   ],
 
   callbacks: {
-    async createOrUpdateUser(ctx: Pick<MutationCtx, "db">, args: CreateOrUpdateUserArgs) {
-      const rawEmail = args.profile?.email || args.email || args.user?.email || "";
-      const email = rawEmail.toLowerCase();
-      const name = args.profile?.name || args.user?.name || email.split("@")[0] || "User";
-      const image = args.profile?.image || args.profile?.picture || args.user?.image || "";
-
-      if (!email) {
-        throw new Error("Invalid login: No email provided.");
-      }
-
-      // Find if user already exists
-      const existingUser = await ctx.db
-        .query("users")
-        .withIndex("email", (q) => q.eq("email", email))
-        .first();
-
-      const isInitialSuperAdmin = !!process.env.INITIAL_SUPER_ADMIN_EMAIL && email === process.env.INITIAL_SUPER_ADMIN_EMAIL.toLowerCase();
-
-      if (!existingUser) {
-        // If not the initial super admin, check for pending invites!
-        if (!isInitialSuperAdmin) {
-          const pendingInvite = await ctx.db
-            .query("invitations")
-            .withIndex("by_email", (q) => q.eq("email", email))
-            .filter((q) => q.eq(q.field("status"), "PENDING"))
-            .first();
-
-          if (!pendingInvite) {
-            throw new Error("Access Denied: This is an invite-only platform. Please contact your administrator.");
-          }
-
-          // Enforce 7-day expiration (7 * 24 * 60 * 60 * 1000 = 604800000 ms)
-          if (Date.now() - pendingInvite.invitedAt > 604800000) {
-            throw new Error("Access Denied: Your invitation has expired. Please request a new one.");
-          }
-
-          // If they have a pending invite, provision them securely
-          const newUserId = await ctx.db.insert("users", {
-            email,
-            name,
-            image,
-            role: pendingInvite.role,
-            companyId: pendingInvite.companyId,
-            createdAt: Date.now(),
-          });
-
-          // Lock the invite as ACCEPTED
-          await ctx.db.patch(pendingInvite._id, {
-            status: "ACCEPTED",
-            acceptedAt: Date.now(),
-          });
-
-          return newUserId;
-        }
-
-        // Auto-provision the primary admin ONLY ONCE on creation
-        return await ctx.db.insert("users", {
-          email,
-          name,
-          image,
-          role: "SUPER_ADMIN",
-          createdAt: Date.now(),
-        });
-      }
-
-      // If user exists (was invited or registered before)
-      // We update their profile details silently (from OAuth) but KEEP their role mapping
-      return existingUser._id;
-    },
+    createOrUpdateUser: createOrUpdateSonaeAuthUser,
   },
 });
