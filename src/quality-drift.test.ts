@@ -843,6 +843,7 @@ describe('Quality Drift Guardrails', () => {
       'convex/aiModelService.ts',
       'convex/aiModelService.test.ts',
       'convex/aiModels.test.ts',
+      'convex/aiModelsActions.test.ts',
       'convex/aiModelsActions.ts',
       'convex/anthropicProviderService.test.ts',
       'convex/chat.test.ts',

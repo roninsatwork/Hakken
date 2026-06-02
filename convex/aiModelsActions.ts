@@ -76,6 +76,26 @@ function isOpenAITextGenerationModel(modelId: string) {
     normalized.startsWith("chatgpt-");
 }
 
+const CURATED_OPENAI_TEXT_MODELS = [
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "gpt-4.1",
+  "gpt-4.1-mini",
+  "gpt-4.1-nano",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "o4-mini",
+  "o3",
+  "o3-mini",
+  "o1",
+];
+
+export function getOpenAITextModelCatalogue(modelIds: string[]) {
+  const liveTextModelIds = modelIds.filter(isOpenAITextGenerationModel);
+  return Array.from(new Set([...CURATED_OPENAI_TEXT_MODELS, ...liveTextModelIds]));
+}
+
 async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
   // In @google/genai with Vertex, we fetch available models using the standard method
   // Unfortunately models.list does not currently support Vertex AI perfectly in some beta SDK versions.
@@ -120,9 +140,22 @@ async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
 }
 
 async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
-  const modelIds = await listOpenAIModels();
-  const formattedModels = modelIds
-    .filter(isOpenAITextGenerationModel)
+  let modelIds: string[] = [];
+  let fallbackMessage = "";
+
+  try {
+    modelIds = await listOpenAIModels();
+  } catch (error) {
+    fallbackMessage = getErrorMessage(error);
+    modelIds = CURATED_OPENAI_TEXT_MODELS;
+  }
+
+  const liveTextModelIds = modelIds.filter(isOpenAITextGenerationModel);
+  if (modelIds.length > 0 && liveTextModelIds.length === 0) {
+    fallbackMessage = fallbackMessage || "OpenAI returned no text-generation models from the live catalogue.";
+  }
+
+  const formattedModels = getOpenAITextModelCatalogue(modelIds)
     .map((modelId) => ({
       modelId,
       providerModelId: modelId,
@@ -137,6 +170,23 @@ async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
     providerDisplayName: "OpenAI",
     models: formattedModels,
   });
+
+  if (fallbackMessage) {
+    const credentialsMissing = fallbackMessage.includes("OPENAI_API_KEY");
+    const healthArgs = {
+      providerKey: OPENAI_PROVIDER_KEY,
+      displayName: "OpenAI",
+      status: credentialsMissing ? "error" : "degraded",
+      syncStatus: "catalog-fallback",
+      settings: JSON.stringify({
+        lastHealthMessage: `OpenAI live sync unavailable. Seeded curated catalogue. ${fallbackMessage}`,
+      }),
+    } as const;
+
+    await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, credentialsMissing
+      ? { ...healthArgs, isEnabled: false }
+      : healthArgs);
+  }
 
   return formattedModels;
 }

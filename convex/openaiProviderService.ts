@@ -26,15 +26,31 @@ type OpenAIModelListPayload = {
 
 export type OpenAIProviderEnv = {
   OPENAI_API_KEY?: string;
+  OPEN_AI_API_KEY?: string;
+  OPENAI_KEY?: string;
 };
 
+function getOpenAIApiKey(env: OpenAIProviderEnv) {
+  return env.OPENAI_API_KEY?.trim() || env.OPEN_AI_API_KEY?.trim() || env.OPENAI_KEY?.trim();
+}
+
+function getProcessOpenAIEnv(): OpenAIProviderEnv {
+  return {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY,
+    OPENAI_KEY: process.env.OPENAI_KEY,
+  };
+}
+
 export function buildOpenAIProviderConfig(args: { env: OpenAIProviderEnv }) {
-  if (!args.env.OPENAI_API_KEY) {
+  const apiKey = getOpenAIApiKey(args.env);
+
+  if (!apiKey) {
     throw new Error("OpenAI credentials are missing OPENAI_API_KEY.");
   }
 
   return {
-    apiKey: args.env.OPENAI_API_KEY,
+    apiKey,
     baseUrl: "https://api.openai.com/v1/responses",
   };
 }
@@ -53,7 +69,7 @@ export function createOpenAIProviderAdapter(args: {
   env?: OpenAIProviderEnv;
   fetchImpl?: ProviderFetch;
 } = {}): AiProviderAdapter {
-  const env = args.env ?? { OPENAI_API_KEY: process.env.OPENAI_API_KEY };
+  const env = args.env ?? getProcessOpenAIEnv();
   const config = buildOpenAIProviderConfig({ env });
   const fetchImpl = args.fetchImpl ?? fetch;
 
@@ -99,7 +115,7 @@ export async function listOpenAIModels(args: {
   env?: OpenAIProviderEnv;
   fetchImpl?: ProviderFetch;
 } = {}) {
-  const env = args.env ?? { OPENAI_API_KEY: process.env.OPENAI_API_KEY };
+  const env = args.env ?? getProcessOpenAIEnv();
   const config = buildOpenAIProviderConfig({ env });
   const fetchImpl = args.fetchImpl ?? fetch;
 

@@ -11,6 +11,12 @@ describe("openai provider service", () => {
     expect(() => buildOpenAIProviderConfig({ env: {} })).toThrow("OpenAI credentials are missing OPENAI_API_KEY.");
   });
 
+  test("accepts common OpenAI API key environment aliases", () => {
+    expect(buildOpenAIProviderConfig({ env: { OPENAI_API_KEY: " primary-key " } }).apiKey).toBe("primary-key");
+    expect(buildOpenAIProviderConfig({ env: { OPEN_AI_API_KEY: "split-key" } }).apiKey).toBe("split-key");
+    expect(buildOpenAIProviderConfig({ env: { OPENAI_KEY: "short-key" } }).apiKey).toBe("short-key");
+  });
+
   test("extracts response text from output_text or content blocks", () => {
     expect(extractOpenAIResponseText({ output_text: "Hello" })).toBe("Hello");
     expect(extractOpenAIResponseText({

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Bot, RefreshCw, Loader2, Search, Star } from "lucide-react";
+import { Bot, Cpu, List, RefreshCw, Loader2, Search, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -21,6 +21,7 @@ import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSav
 
 type ModelStatusFilter = "active" | "inactive";
 type SyncProviderKey = "google" | "openai" | "anthropic";
+type ModelAdminTab = "models" | "defaults";
 type GlobalDefaultRow = {
   useCase: string;
   default: {
@@ -64,6 +65,10 @@ function formatModelTag(value: string) {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function isSyncProviderKey(value: string): value is SyncProviderKey {
+  return value === "google" || value === "openai" || value === "anthropic";
 }
 
 function ModelTagList({ values, emptyLabel, limit = 3 }: {
@@ -118,6 +123,7 @@ export default function AIModelsPage() {
   const [providerFilter, setProviderFilter] = useState("all");
   const [capabilityFilter, setCapabilityFilter] = useState("all");
   const [useCaseFilter, setUseCaseFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<ModelAdminTab>("models");
   const [page, setPage] = useState(1);
   const [syncError, setSyncError] = useState("");
   const [savingDefaultUseCase, setSavingDefaultUseCase] = useState<string | null>(null);
@@ -283,36 +289,14 @@ export default function AIModelsPage() {
             {t("subtitle")}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { key: "google" as const, label: "Google" },
-            { key: "openai" as const, label: "OpenAI" },
-            { key: "anthropic" as const, label: "Anthropic" },
-          ].map((provider) => {
-            const isSyncing = syncingProvider === provider.key;
-            return (
-              <button
-                key={provider.key}
-                onClick={() => syncProvider(provider.key)}
-                disabled={syncingProvider !== null}
-                className="h-9 px-4 rounded-full bg-foreground text-background font-medium text-[13px] flex items-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
-              >
-                {isSyncing ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3.5 h-3.5" />
-                )}
-                {isSyncing ? t("syncButton.syncing") : `Sync ${provider.label}`}
-              </button>
-            );
-          })}
-        </div>
       </div>
       <AdminSaveError>{syncError}</AdminSaveError>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {providers.map((provider) => {
           const isTesting = testingProvider === provider.providerKey;
+          const syncProviderKey: SyncProviderKey | null = isSyncProviderKey(provider.providerKey) ? provider.providerKey : null;
+          const isSyncing = syncProviderKey !== null && syncingProvider === syncProviderKey;
           const healthMessage = getProviderHealthMessage(provider.settings);
           const status = provider.isEnabled ? provider.status || "unknown" : "disabled";
 
@@ -357,12 +341,21 @@ export default function AIModelsPage() {
                 <p className="mt-3 line-clamp-2 text-[12px] leading-relaxed text-secondary">{healthMessage}</p>
               )}
 
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
+                  disabled={!syncProviderKey || syncingProvider !== null}
+                  className="flex h-9 items-center justify-center gap-2 rounded-[10px] border border-brand/25 bg-brand/10 px-3 text-[11px] font-bold uppercase tracking-wider text-brand transition-colors hover:border-brand/40 hover:bg-brand/15 hover:text-foreground disabled:opacity-50"
+                >
+                  {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Sync
+                </button>
                 <button
                   type="button"
                   onClick={() => testProvider(provider.providerKey)}
                   disabled={isTesting}
-                  className="flex h-9 flex-1 items-center justify-center gap-2 rounded-[10px] border border-border-dim px-3 text-[11px] font-bold uppercase tracking-wider text-secondary transition-colors hover:border-brand/40 hover:text-foreground disabled:opacity-60"
+                  className="flex h-9 items-center justify-center gap-2 rounded-[10px] border border-border-dim px-3 text-[11px] font-bold uppercase tracking-wider text-secondary transition-colors hover:border-brand/40 hover:text-foreground disabled:opacity-60"
                 >
                   {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   Test
@@ -385,61 +378,92 @@ export default function AIModelsPage() {
         })}
       </div>
 
-      <section className="overflow-hidden rounded-[16px] border border-border-dim bg-card/40 shadow-sm backdrop-blur-xl">
-        <div className="border-b border-border-dim px-5 py-4">
-          <h2 className="text-[14px] font-bold text-foreground">Platform Defaults</h2>
-          <p className="mt-1 text-[12px] text-secondary">
-            Assign the default model for each runtime use case. Company, agent, and workflow overrides inherit from these rows.
-          </p>
-        </div>
-        <div className="divide-y divide-border-dim/70">
-          {globalDefaults.length === 0 ? (
-            <div className="px-5 py-6 text-[13px] text-muted">No default rows loaded yet.</div>
-          ) : (
-            globalDefaults.map((row) => {
-              const candidates = allModels.filter((model) => model.isEnabled && modelSupportsUseCase(model, row.useCase));
-              const isSaving = savingDefaultUseCase === row.useCase;
+      <div className="flex border-b border-border-dim">
+        {[
+          { value: "models" as const, label: "Model Catalogue", icon: List },
+          { value: "defaults" as const, label: "Platform Defaults", icon: Cpu },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.value;
 
-              return (
-                <div key={row.useCase} className="grid grid-cols-1 gap-3 px-5 py-4 md:grid-cols-[170px_1fr_120px] md:items-center">
-                  <div>
-                    <p className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</p>
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-muted">{row.useCase}</p>
-                  </div>
-                  <select
-                    value={row.default?.modelId || ""}
-                    disabled={isSaving}
-                    onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
-                    className="min-w-0 rounded-[12px] border border-border-dim bg-background/60 px-3 py-2.5 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60"
-                  >
-                    <option value="">No platform default</option>
-                    {candidates.map((model) => (
-                      <option key={model.modelId} value={model.modelId}>
-                        {getProviderDisplayName(model.providerKey)} / {model.friendlyName || model.displayName || model.modelId}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex justify-start md:justify-end">
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                    ) : (
-                      <span className={cn(
-                        "rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
-                        row.default
-                          ? "border-brand/20 bg-brand/10 text-brand"
-                          : "border-border-dim bg-foreground/5 text-muted"
-                      )}>
-                        {row.default ? "Configured" : "Unset"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                "flex h-14 items-center gap-3 border-b-2 px-5 text-[13px] font-bold transition-colors",
+                isActive
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-transparent text-secondary hover:bg-foreground/5 hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
+      {activeTab === "defaults" && (
+        <section className="overflow-hidden rounded-[16px] border border-border-dim bg-card/40 shadow-sm backdrop-blur-xl">
+          <div className="border-b border-border-dim px-5 py-4">
+            <h2 className="text-[14px] font-bold text-foreground">Platform Defaults</h2>
+            <p className="mt-1 text-[12px] text-secondary">
+              Assign the default model for each runtime use case. Company, agent, and workflow overrides inherit from these rows.
+            </p>
+          </div>
+          <div className="divide-y divide-border-dim/70">
+            {globalDefaults.length === 0 ? (
+              <div className="px-5 py-6 text-[13px] text-muted">No default rows loaded yet.</div>
+            ) : (
+              globalDefaults.map((row) => {
+                const candidates = allModels.filter((model) => model.isEnabled && modelSupportsUseCase(model, row.useCase));
+                const isSaving = savingDefaultUseCase === row.useCase;
+
+                return (
+                  <div key={row.useCase} className="grid grid-cols-1 gap-3 px-5 py-4 md:grid-cols-[170px_1fr_120px] md:items-center">
+                    <div>
+                      <p className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</p>
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-muted">{row.useCase}</p>
+                    </div>
+                    <select
+                      value={row.default?.modelId || ""}
+                      disabled={isSaving}
+                      onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
+                      className="min-w-0 rounded-[12px] border border-border-dim bg-background/60 px-3 py-2.5 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60"
+                    >
+                      <option value="">No platform default</option>
+                      {candidates.map((model) => (
+                        <option key={model.modelId} value={model.modelId}>
+                          {getProviderDisplayName(model.providerKey)} / {model.friendlyName || model.displayName || model.modelId}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex justify-start md:justify-end">
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                      ) : (
+                        <span className={cn(
+                          "rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
+                          row.default
+                            ? "border-brand/20 bg-brand/10 text-brand"
+                            : "border-border-dim bg-foreground/5 text-muted"
+                        )}>
+                          {row.default ? "Configured" : "Unset"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === "models" && (
+        <>
       <div className="w-full flex flex-col gap-2 rounded-[16px] border border-border-dim bg-card/40 p-2 shadow-sm backdrop-blur-xl md:flex-row md:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
           <Search className="w-4 h-4 flex-shrink-0 text-muted" />
@@ -636,6 +660,8 @@ export default function AIModelsPage() {
                 )}
             </tbody>
       </AdminTableShell>
+        </>
+      )}
     </div>
   );
 }

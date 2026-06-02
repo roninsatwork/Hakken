@@ -99,4 +99,20 @@ describe("AIModelsPage", () => {
       page: 1,
     });
   });
+
+  it("switches between model catalogue and platform defaults tabs", () => {
+    render(<AIModelsPage />);
+
+    expect(screen.getByPlaceholderText("Search model names or IDs...")).toBeInTheDocument();
+    expect(screen.queryByText("No default rows loaded yet.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Platform Defaults" }));
+
+    expect(screen.getByText("No default rows loaded yet.")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Search model names or IDs...")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Model Catalogue" }));
+
+    expect(screen.getByPlaceholderText("Search model names or IDs...")).toBeInTheDocument();
+  });
 });
