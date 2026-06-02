@@ -155,6 +155,34 @@ export default defineSchema({
     .index("by_company", ["companyId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
 
+  authEvents: defineTable({
+    email: v.string(),
+    eventType: v.union(
+      v.literal("MAGIC_LINK_REQUESTED"),
+      v.literal("MAGIC_LINK_STARTED"),
+      v.literal("INVITE_FOUND"),
+      v.literal("INVITE_MISSING"),
+      v.literal("INVITE_EXPIRED"),
+      v.literal("INVITE_REVOKED"),
+      v.literal("INVITE_STALE_ACCEPTED_RECOVERED"),
+      v.literal("USER_FOUND"),
+      v.literal("EMAIL_DISPATCH_SIMULATED"),
+      v.literal("EMAIL_DISPATCH_STARTED"),
+      v.literal("EMAIL_DISPATCH_FAILED"),
+      v.literal("MAGIC_LINK_VERIFIED")
+    ),
+    timestamp: v.number(),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    inviteId: v.optional(v.id("invitations")),
+    provider: v.optional(v.string()),
+    reasonCode: v.optional(v.string()),
+  })
+    .index("by_email", ["email", "timestamp"])
+    .index("by_company", ["companyId", "timestamp"])
+    .index("by_type", ["eventType", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
   // AI Agent Usage Billing & Activity Logs
   agentTransactions: defineTable({
     agentId: v.id("agents"),

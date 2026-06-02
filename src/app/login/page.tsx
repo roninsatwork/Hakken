@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ChevronRight, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { FluidBackground } from "../../ui/components/layout/FluidBackground";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 
 export default function LoginPage() {
   const t = useTranslations('login');
   const { signIn } = useAuthActions();
+  const recordMagicLinkRequestAttempt = useMutation(api.authEvents.recordMagicLinkRequestAttempt);
   const [email, setEmail] = useState("");
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
@@ -25,7 +28,12 @@ export default function LoginPage() {
     if (!email) return;
     setIsSubmittingEmail(true);
     try {
-      await signIn("resend", { email });
+      try {
+        await recordMagicLinkRequestAttempt({ email, provider: "resend" });
+      } catch {
+        console.debug("Auth diagnostics skipped.");
+      }
+      await signIn("resend", { email, redirectTo: "/app" });
     } catch {
       // Fail silently to thwart user enumeration attacks
       console.debug("Auth action processed.");
@@ -136,7 +144,7 @@ export default function LoginPage() {
                 </div>
                 <h3 className="text-xl font-medium text-foreground mb-2">{t('thankYou')}</h3>
                 <p className="text-[15px] text-secondary leading-relaxed max-w-[280px]">
-                  {t.rich('magicLinkSent', { email: () => <strong className="text-foreground">{email}</strong> })}
+                  {t('magicLinkSent')}
                 </p>
                 <button
                   type="button"

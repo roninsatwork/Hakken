@@ -1,6 +1,7 @@
 import { convexAuthNextjsMiddleware, createRouteMatcher, isAuthenticatedNextjs, nextjsMiddlewareRedirect } from "@convex-dev/auth/nextjs/server";
 
 const isSignInPage = createRouteMatcher(["/login"]);
+const isLandingPage = createRouteMatcher(["/"]);
 const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)", "/demos(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
@@ -18,9 +19,9 @@ export default convexAuthNextjsMiddleware(async (request) => {
     }
   }
 
-  // If user is already authenticated and visits login, redirect to admin Dashboard
+  // If user is already authenticated and visits public entry points, redirect to the app
   const isAuth = await isAuthenticatedNextjs();
-  if (isSignInPage(request) && isAuth) {
+  if ((isSignInPage(request) || isLandingPage(request)) && isAuth) {
     return nextjsMiddlewareRedirect(request, "/app");
   }
   // If user is unauthenticated and visits protected admin area, redirect to login

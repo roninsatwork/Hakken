@@ -50,12 +50,12 @@ describe("ManageSuperAdminsPage", () => {
 
   let currentMockUser: MockUser | undefined = mockCurrentUser;
   let currentMockInvites: MockInvite[] = mockPendingInvites;
-  let mockLoadMore: ReturnType<typeof vi.fn>;
+  let mockLoadMore: (numItems: number) => void;
   let useQueryCallCount = 0;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLoadMore = vi.fn();
+    mockLoadMore = vi.fn() as (numItems: number) => void;
     currentMockUser = mockCurrentUser;
     currentMockInvites = mockPendingInvites;
     useQueryCallCount = 0;

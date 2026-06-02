@@ -89,7 +89,7 @@
         "or": "OPPURE",
         "continueWithGoogle": "Continua con Google",
         "thankYou": "Controlla la tua posta",
-        "magicLinkSent": "Un link magico è stato inviato a {email}. Cliccalo per accedere.",
+        "magicLinkSent": "Se questa email è stata invitata, riceverai a breve un link di accesso.",
         "tryDifferentEmail": "Prova un altro indirizzo email"
     },
     "nav": {
@@ -129,6 +129,7 @@
         "settings": "Impostazioni",
         "systemSettings": "Impostazioni di Sistema",
         "analytics": "Analytics",
+        "authDiagnostics": "Diagnostica Auth",
         "workspace": "Workspace",
         "assistant": "Assistente",
         "agenticTesting": "Test Agentico",
@@ -216,6 +217,40 @@
                 "90d": "90 Giorni",
                 "ytd": "Dall'inizio dell'anno",
                 "custom": "Intervallo Personalizzato"
+            }
+        },
+        "authDiagnostics": {
+            "title": "Diagnostica Auth",
+            "description": "Consulta eventi sicuri di accesso e invito senza esporre lo stato degli account pubblicamente.",
+            "restrictedTitle": "Diagnostica riservata",
+            "restrictedDescription": "Solo gli amministratori possono consultare la diagnostica di autenticazione.",
+            "filters": {
+                "searchPlaceholder": "Cerca email, evento, motivo, provider o ID oggetto...",
+                "eventType": "Tipo evento",
+                "time": "Intervallo",
+                "company": "Azienda",
+                "allEvents": "Tutti gli eventi",
+                "allCompanies": "Tutte le aziende",
+                "last24h": "Ultime 24 ore",
+                "last7d": "Ultimi 7 giorni",
+                "last30d": "Ultimi 30 giorni",
+                "allTime": "Tutto il periodo"
+            },
+            "table": {
+                "event": "Evento",
+                "email": "Email",
+                "company": "Azienda",
+                "reason": "Motivo",
+                "provider": "Provider",
+                "timestamp": "Timestamp",
+                "empty": "Nessun evento auth registrato",
+                "noMatches": "Nessun evento auth corrisponde ai filtri",
+                "unscoped": "Globale / non associato",
+                "unknownProvider": "Sconosciuto"
+            },
+            "pagination": {
+                "showing": "Visualizzati {start}-{end} di {total} eventi auth",
+                "page": "Pagina {current} di {total}"
             }
         },
         "companies": {
