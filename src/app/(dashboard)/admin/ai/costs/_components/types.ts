@@ -24,6 +24,12 @@ export type ModelDistributionRow = {
   name: string;
 };
 
+export type ProviderDistributionRow = {
+  calls: number;
+  cost: number;
+  providerKey: string;
+};
+
 export type CompanyLeaderboardRow = {
   cost: number;
   id: string;
@@ -63,6 +69,7 @@ export type AnalyticsAggregates = {
 export type AICostsData = {
   aggregates: AnalyticsAggregates;
   modelDistribution?: ModelDistributionRow[];
+  providerDistribution?: ProviderDistributionRow[];
   timeline?: TimelinePoint[];
   topAgents?: AgentLeaderboardRow[];
   topCompanies?: CompanyLeaderboardRow[];

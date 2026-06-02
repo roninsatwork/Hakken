@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { 
@@ -17,7 +17,7 @@ import {
   FileText,
   X
 } from "lucide-react";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
@@ -71,8 +71,8 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
      onTranscribe: (text) => setContent(prev => prev + (prev && prev.length > 0 ? " " : "") + text)
   });
 
-  const allModels = useQuery(api.aiModels.getModels) as Doc<"aiModels">[] | undefined;
-  const activeModels = (allModels ?? []).filter((model) => model.isEnabled);
+  const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "chat" });
+  const activeModels = useMemo(() => activeModelsData ?? [], [activeModelsData]);
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);

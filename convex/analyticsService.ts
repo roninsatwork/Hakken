@@ -18,6 +18,8 @@ export type AnalyticsAggregation = "day" | "week" | "month";
 export type AiModelCostConfig = Pick<
   Doc<"aiModels">,
   | "modelId"
+  | "providerKey"
+  | "providerModelId"
   | "displayName"
   | "friendlyName"
   | "isDefault"
@@ -139,7 +141,16 @@ export function createTimelineMap<T>(
 }
 
 export function buildModelCostContext(aiModelsFetch: AiModelCostConfig[]) {
-  const modelMap: ModelCostMap = new Map(aiModelsFetch.map((model) => [model.modelId, model]));
+  const modelMap: ModelCostMap = new Map();
+  for (const model of aiModelsFetch) {
+    modelMap.set(model.modelId, model);
+    if (model.providerModelId) {
+      modelMap.set(model.providerModelId, model);
+      if (model.providerKey) {
+        modelMap.set(`${model.providerKey}:${model.providerModelId}`, model);
+      }
+    }
+  }
   const defaultModelId = getDefaultModelId(aiModelsFetch);
   return { modelMap, defaultModelId };
 }

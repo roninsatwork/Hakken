@@ -87,6 +87,7 @@ const metrics = {
     totalCostGBP: 1.23456,
     totalMessages: 42,
   },
+  providerDistribution: [{ providerKey: "openai", calls: 7, cost: 0.1234 }],
   timeline: [{ date: "2026-06-01", cost: 1.23, messages: 42 }],
   topAgents: [{ id: "agent_1", name: "Sales Agent", avatar: "/agent.png", interactions: 12, cost: 0.25 }],
   topUsers: [{ id: "user_1", name: "Ada", image: "/ada.png", email: "ada@example.com", messages: 20, cost: 0.5 }],
@@ -134,6 +135,9 @@ describe("CompanySettingsDashboard", () => {
     expect(useQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "today" }));
     expect(screen.getByText("Organization Dashboard")).toBeInTheDocument();
     expect(screen.getByText("£99.00")).toBeInTheDocument();
+    expect(screen.getByText("Provider Usage")).toBeInTheDocument();
+    expect(screen.getByText("OpenAI")).toBeInTheDocument();
+    expect(screen.getByText("7 calls")).toBeInTheDocument();
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByText("Sales Agent")).toBeInTheDocument();
 

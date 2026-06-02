@@ -17,7 +17,8 @@ import {
   PoundSterling,
   Building2,
   CreditCard,
-  Target
+  Target,
+  Network
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -37,6 +38,16 @@ type MetricBlockProps = {
   className?: string;
   largeText?: boolean;
 };
+
+const PROVIDER_COLORS = ['#14b8a6', '#3b82f6', '#f97316', '#94a3b8', '#8b5cf6', '#f43f5e'];
+
+function formatProviderName(providerKey: string) {
+  if (providerKey === "google") return "Google Vertex AI";
+  if (providerKey === "openai") return "OpenAI";
+  if (providerKey === "anthropic") return "Anthropic";
+  if (providerKey === "unknown") return "Unknown / Legacy";
+  return providerKey;
+}
 
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: MetricBlockProps) => (
   <motion.div
@@ -75,6 +86,11 @@ export default function AdminDashboard() {
     if (agg === "week") return t('charts.weekly');
     return t('charts.daily');
   };
+
+  const providerDistribution = data?.providerDistribution?.map((provider) => ({
+    ...provider,
+    name: formatProviderName(provider.providerKey),
+  }));
 
   return (
     <div className="flex flex-col gap-8 w-full pb-12 antialiased">
@@ -277,7 +293,7 @@ export default function AdminDashboard() {
 
           {/* Advanced Analytics Grid */}
           <div className="flex flex-col gap-6 mt-2">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Model Distribution (Donut) */}
               <ChartExportWrapper exportName="admin-model-logistics" className="lg:col-span-1 flex flex-col h-full w-full">
               <motion.section
@@ -324,10 +340,57 @@ export default function AdminDashboard() {
             </motion.section>
             </ChartExportWrapper>
 
+            {/* Provider Distribution (Donut) */}
+            <ChartExportWrapper exportName="admin-provider-distribution" className="lg:col-span-1 flex flex-col h-full w-full">
+            <motion.section
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
+            >
+              <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
+                <div className="flex items-center gap-3">
+                  <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
+                  <h2 className="text-[14px] font-bold text-foreground">Provider Distribution</h2>
+                </div>
+                <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Cost drivers by provider</span>
+              </div>
+              <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
+                {(!providerDistribution || providerDistribution.length === 0) ? (
+                  <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Data</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
+                    <PieChart>
+                      <Pie
+                        data={providerDistribution}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={65}
+                        outerRadius={85}
+                        paddingAngle={5}
+                        dataKey="cost"
+                        nameKey="name"
+                        stroke="none"
+                      >
+                        {providerDistribution.map((_, index) => (
+                          <Cell key={`provider-cell-${index}`} fill={PROVIDER_COLORS[index % PROVIDER_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
+                        formatter={(value) => `£${Number(value).toFixed(4)}`}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </motion.section>
+            </ChartExportWrapper>
+
             {/* Token Flux (Stacked Bar) */}
             <ChartExportWrapper exportName="admin-token-flux" className="lg:col-span-1 flex flex-col h-full w-full">
             <motion.section
-              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
               className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
             >
               <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">

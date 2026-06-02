@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
@@ -52,9 +52,7 @@ export default function AssistantWelcomePage() {
   const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
   const saveChatDocument = useMutation(api.knowledge.saveChatDocument);
   const user = useQuery(api.users.getMe);
-  const allModels = useQuery(api.aiModels.getModels) as Doc<"aiModels">[] | undefined;
-
-  const activeModels = (allModels ?? []).filter((model) => model.isEnabled);
+  const activeModels = useQuery(api.aiModels.getActiveModels, { useCase: "chat" }) ?? [];
   const defaultModel = activeModels.find((model) => model.isDefault) || activeModels[0];
   const effectiveSelectedModelId = selectedModelId || defaultModel?.modelId || null;
   const selectedModelData = activeModels.find((model) => model.modelId === effectiveSelectedModelId);

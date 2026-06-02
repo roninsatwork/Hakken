@@ -60,7 +60,11 @@ export default function AICostsDashboard() {
             timeline={data.timeline}
           />
           <AICostsMetricGrid aggregates={data.aggregates} t={t} />
-          <AICostDistributionCharts modelDistribution={data.modelDistribution} timeline={data.timeline} />
+          <AICostDistributionCharts
+            modelDistribution={data.modelDistribution}
+            providerDistribution={data.providerDistribution}
+            timeline={data.timeline}
+          />
           <AICostLeaderboards
             adminOverview={adminOverview}
             topAgents={data.topAgents}

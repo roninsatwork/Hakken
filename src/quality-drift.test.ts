@@ -762,9 +762,12 @@ describe('Quality Drift Guardrails', () => {
     const allowedGeminiReferenceFiles = new Set([
       'convex/aiModelService.ts',
       'convex/aiModelsActions.ts',
+      'convex/aiModels.test.ts',
       'convex/seedWorkflows.ts',
       'docs/code-quality-95-plan.md',
       'docs/future-agent-maintenance-plan.md',
+      'docs/index.md',
+      'docs/model-provider-agnostic-plan.md',
       'src/quality-drift.test.ts',
     ]);
 
@@ -791,6 +794,89 @@ describe('Quality Drift Guardrails', () => {
     expect(
       offenders,
       `Unclassified Gemini-era references found. Keep actual model IDs/provider docs allowlisted, but rename stale platform language:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('provider SDK imports remain classified while adapters mature', () => {
+    const allowedProviderSdkImportFiles = new Set([
+      'convex/agentRuntime.ts',
+      'convex/ai.ts',
+      'convex/googleProviderAdapter.ts',
+      'convex/orchestrator.ts',
+      'convex/salesReportActions.ts',
+      'convex/swarmActions.ts',
+      'convex/vertexProviderService.test.ts',
+      'convex/vertexProviderService.ts',
+      'src/quality-drift.test.ts',
+    ]);
+
+    const files = [
+      ...walkFiles(path.join(repoRoot, 'convex'), new Set(['.ts'])),
+      ...walkFiles(path.join(repoRoot, 'src'), new Set(['.ts', '.tsx'])),
+    ].filter((filePath) => !relativePath(filePath).replaceAll(path.sep, '/').includes('/_generated/'));
+    const providerSdkImport = /from\s+["']@google\/genai["']|new\s+GoogleGenAI\s*\(/;
+    const offenders = files.flatMap((filePath) => {
+      const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+
+      if (allowedProviderSdkImportFiles.has(normalizedPath)) {
+        return [];
+      }
+
+      return fs
+        .readFileSync(filePath, 'utf8')
+        .split('\n')
+        .flatMap((line, index) =>
+          providerSdkImport.test(line)
+            ? [`${normalizedPath}:${index + 1}: ${line.trim()}`]
+            : []
+        );
+    });
+
+    expect(
+      offenders,
+      `Unclassified provider SDK imports found. Keep provider SDK usage in adapters or explicitly classified transitional runtime files:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('provider model ID literals remain classified', () => {
+    const allowedProviderModelLiteralFiles = new Set([
+      'convex/aiModelService.ts',
+      'convex/aiModelService.test.ts',
+      'convex/aiModels.test.ts',
+      'convex/aiModelsActions.ts',
+      'convex/anthropicProviderService.test.ts',
+      'convex/chat.test.ts',
+      'convex/globalSystems.test.ts',
+      'convex/knowledge.test.ts',
+      'convex/openaiProviderService.test.ts',
+      'convex/seedWorkflows.ts',
+      'docs/model-provider-agnostic-plan.md',
+      'src/app/(dashboard)/admin/ai/costs/_components/AICostCharts.test.tsx',
+      'src/quality-drift.test.ts',
+    ]);
+
+    const providerModelLiteral = /\b(?:gemini-[a-z0-9.-]+|text-embedding-\d(?:-[a-z]+)?|gpt-[a-z0-9.-]+|claude-[a-z0-9.-]+)\b/;
+    const files = walkRepoFiles(repoRoot, repoTextExtensions);
+    const offenders = files.flatMap((filePath) => {
+      const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+
+      if (allowedProviderModelLiteralFiles.has(normalizedPath)) {
+        return [];
+      }
+
+      return fs
+        .readFileSync(filePath, 'utf8')
+        .split('\n')
+        .flatMap((line, index) =>
+          providerModelLiteral.test(line)
+            ? [`${normalizedPath}:${index + 1}: ${line.trim()}`]
+            : []
+        );
+    });
+
+    expect(
+      offenders,
+      `Unclassified provider model ID literals found. Store runtime model choices in the model catalogue/defaults instead of hardcoding IDs:\n${offenders.join('\n')}`
     ).toEqual([]);
   });
 });

@@ -443,7 +443,11 @@
                         "label": "Cognitive Engine",
                         "placeholder": "Select LLM unit...",
                         "systemDefault": "(System Default)",
-                        "legacy": "({id}) (Restricted)"
+                        "legacy": "({id}) (Restricted)",
+                        "modes": {
+                            "inherit": "Inherit workflow default",
+                            "override": "Override with model"
+                        }
                     },
                     "thinking": {
                         "label": "Deep Reasoning",
@@ -771,9 +775,14 @@
                             "title": "AI Model Settings",
                             "model": {
                                 "label": "Language Model",
+                                "modeLabel": "Model Source",
                                 "placeholder": "Select a model...",
                                 "systemDefault": "(System Default)",
-                                "legacy": "({id}) (Legacy)"
+                                "legacy": "({id}) (Legacy)",
+                                "modes": {
+                                    "inherit": "Inherit platform default",
+                                    "override": "Override with model"
+                                }
                             },
                             "reasoning": {
                                 "label": "Reasoning Effort",

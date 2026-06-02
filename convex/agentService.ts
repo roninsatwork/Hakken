@@ -8,11 +8,13 @@ export function buildGlobalAgentRecord(args: {
   name: string;
   description?: string;
   modelId: string;
+  modelSelectionMode?: "inherit" | "override";
 }, now = Date.now()) {
   return {
     name: args.name,
     description: args.description,
     modelId: args.modelId,
+    modelSelectionMode: args.modelSelectionMode ?? "inherit",
     thinkingMode: false,
     isActive: true,
     temperature: 1.0,
@@ -26,11 +28,13 @@ export function buildGlobalAgentRecord(args: {
 export function buildInlineAgentRecord(args: {
   workflowId: Id<"workflows">;
   modelId: string;
+  modelSelectionMode?: "inherit" | "override";
 }, now = Date.now()) {
   return {
     name: "Sandbox Agent",
     description: "Inline agent logic",
     modelId: args.modelId,
+    modelSelectionMode: args.modelSelectionMode ?? "inherit",
     thinkingMode: false,
     isActive: true,
     temperature: 1.0,

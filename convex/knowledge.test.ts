@@ -605,6 +605,10 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     await t.mutation(internal.knowledge.saveChunksInternal, {
       documentId: readyDocumentId,
       companyId,
+      embeddingProviderKey: "google",
+      embeddingModelId: "text-embedding-004",
+      embeddingProviderModelId: "text-embedding-004",
+      embeddingDimensions: 768,
       chunks: [
         { text: "alpha", embedding: [0.1, 0.2] },
         { text: "beta", embedding: [0.3, 0.4] },
@@ -615,6 +619,10 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     await t.mutation(internal.knowledge.saveChunksInternal, {
       documentId: readyDocumentId,
       companyId,
+      embeddingProviderKey: "google",
+      embeddingModelId: "text-embedding-004",
+      embeddingProviderModelId: "text-embedding-004",
+      embeddingDimensions: 768,
       chunks: [{ text: "gamma", embedding: [0.7, 0.8] }],
       replaceExisting: false,
     });
@@ -631,6 +639,10 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     await t.mutation(internal.knowledge.saveChunksInternal, {
       documentId: readyDocumentId,
       companyId,
+      embeddingProviderKey: "google",
+      embeddingModelId: "text-embedding-004",
+      embeddingProviderModelId: "text-embedding-004",
+      embeddingDimensions: 768,
       chunks: [{ text: "replacement", embedding: [0.5, 0.6] }],
     });
 
@@ -650,6 +662,16 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
       isGlobal: false,
       text: "replacement",
       embedding: [0.5, 0.6],
+      embeddingProviderKey: "google",
+      embeddingModelId: "text-embedding-004",
+      embeddingProviderModelId: "text-embedding-004",
+      embeddingDimensions: 768,
+    });
+    expect(documentAfterChunks).toMatchObject({
+      embeddingProviderKey: "google",
+      embeddingModelId: "text-embedding-004",
+      embeddingProviderModelId: "text-embedding-004",
+      embeddingDimensions: 768,
     });
 
     await t.mutation(internal.knowledge.garbageCollectThreadVectors, {});

@@ -69,6 +69,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const agent = await t.run(async (ctx) => await ctx.db.get(agentId));
     expect(agent?.modelId).toBe(SYSTEM_FAILSAFE_MODEL_ID);
+    expect(agent?.modelSelectionMode).toBe("inherit");
   });
 
   test("SUPER_ADMIN can create, list, get, update, and delete global agents with audit logs and binding cleanup", async () => {
@@ -85,6 +86,15 @@ describe("OWASP: Broken Access Control - Agents", () => {
         displayName: "Default Agent Model",
         isEnabled: true,
         isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now()
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "new-agent-model",
+        displayName: "New Agent Model",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["agent"],
         lastSyncedAt: Date.now()
       });
 
@@ -105,6 +115,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       name: "Support Agent",
       description: "Handles support workflows.",
       modelId: "default-agent-model",
+      modelSelectionMode: "inherit",
       isActive: true,
     });
 
@@ -156,6 +167,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(auditMetadata[1].updatedFields.toSorted()).toEqual([
       "humanApprovalRequired",
       "modelId",
+      "modelSelectionMode",
       "name",
       "temperature",
       "thinkingMode",
@@ -239,6 +251,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
         displayName: "Workflow Model",
         isEnabled: true,
         isDefault: true,
+        supportedUseCases: ["workflow"],
         lastSyncedAt: Date.now()
       });
       const workflowId = await ctx.db.insert("workflows", {
@@ -263,6 +276,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
       isGlobal: false,
       workflowId,
       modelId: "workflow-model",
+      modelSelectionMode: "inherit",
     });
     expect(await client.query(api.agents.list, {})).toEqual([]);
 
@@ -281,5 +295,99 @@ describe("OWASP: Broken Access Control - Agents", () => {
       { scope: "inline_workflow", workflowId },
       { action: "promoted_to_global" },
     ]);
+  });
+
+  test("agent model overrides must use enabled models that support the agent use case", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, agentId } = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "disabled-agent-model",
+        displayName: "Disabled Agent Model",
+        isEnabled: false,
+        isDefault: false,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "chat-only-model",
+        displayName: "Chat Only Model",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["chat"],
+        lastSyncedAt: Date.now(),
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "override-agent-model",
+        displayName: "Override Agent Model",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      const agentId = await ctx.db.insert("agents", {
+        name: "Validated Agent",
+        modelId: "default-agent-model",
+        modelSelectionMode: "inherit",
+        thinkingMode: false,
+        isActive: true,
+        temperature: 1,
+        humanApprovalRequired: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      return { adminId, agentId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      modelSelectionMode: "override",
+      modelId: "disabled-agent-model",
+    })).rejects.toThrow("Selected AI model is not enabled");
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      modelSelectionMode: "override",
+      modelId: "chat-only-model",
+    })).rejects.toThrow("Selected AI model does not support the agent use case");
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      modelSelectionMode: "override",
+      modelId: "override-agent-model",
+    })).resolves.toBe(agentId);
+
+    const overriddenAgent = await t.run(async (ctx) => ctx.db.get(agentId));
+    expect(overriddenAgent).toMatchObject({
+      modelId: "override-agent-model",
+      modelSelectionMode: "override",
+    });
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      modelSelectionMode: "inherit",
+    })).resolves.toBe(agentId);
+
+    const inheritedAgent = await t.run(async (ctx) => ctx.db.get(agentId));
+    expect(inheritedAgent).toMatchObject({
+      modelId: "default-agent-model",
+      modelSelectionMode: "inherit",
+    });
   });
 });

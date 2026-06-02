@@ -38,6 +38,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Belt-and-braces plan for bounded admin inventory, knowledge, chat logs, workflows, inventory rollups, and legacy/debug cleanup.
 17. **[Post Scale Hardening Plan](./post-scale-hardening-plan.md)**
     Follow-up plan for production smoke checks, inventory rollup backfill, workflow database-node contracts, scheduler optimization, and dependency cleanup.
+18. **[Model Provider Agnostic Platform Plan](./model-provider-agnostic-plan.md)**
+    Sitewide plan for Gemini, OpenAI, Anthropic, provider adapters, model defaults, runtime selection, telemetry, and analytics dashboards.
 
 ---
 

@@ -5,9 +5,76 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, Loader2, Save, Settings2, Zap, Database, Cpu } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Settings2, Zap, Database, Cpu, Layers, Tags } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+
+function formatTag(value: string) {
+  return value
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatProviderName(providerKey?: string) {
+  if (!providerKey) return "Unclassified";
+  if (providerKey === "google") return "Google Vertex AI";
+  if (providerKey === "openai") return "OpenAI";
+  if (providerKey === "anthropic") return "Anthropic";
+  return providerKey;
+}
+
+function formatNumber(value?: number) {
+  if (value === undefined) return "Not recorded";
+  return new Intl.NumberFormat("en-GB").format(value);
+}
+
+function formatTokenCount(value?: number) {
+  if (value === undefined) return "Not recorded";
+  return `${formatNumber(value)} tokens`;
+}
+
+function formatDate(value?: number) {
+  if (!value) return "Not recorded";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function MetadataValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
+      <p className="break-words text-[13px] font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function TagList({ label, values, emptyLabel }: { label: string; values?: string[]; emptyLabel: string }) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
+      {values && values.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((value) => (
+            <span
+              key={value}
+              className="rounded-[6px] border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary"
+            >
+              {formatTag(value)}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[13px] font-medium text-muted">{emptyLabel}</p>
+      )}
+    </div>
+  );
+}
 
 export default function ModelPricingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -85,7 +152,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              {model.displayName} Pricing
+              {model.displayName} Configuration
             </h1>
             <div className="flex items-center gap-2 mt-1 text-[13px] font-mono tracking-wide">
               <span className="text-secondary">{model.modelId}</span>
@@ -138,6 +205,59 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           </div>
         </section>
 
+        {/* Provider Metadata */}
+        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
+          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <Layers className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-foreground">Provider Metadata</h3>
+              <p className="text-[12px] text-secondary">Read-only catalogue details used by model selection, defaults, and analytics.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <MetadataValue label="Provider" value={formatProviderName(model.providerKey)} />
+              <MetadataValue label="Provider Model ID" value={model.providerModelId || model.modelId} />
+              <MetadataValue label="Internal Model ID" value={model.modelId} />
+              <MetadataValue label="Catalogue Status" value={model.status ? formatTag(model.status) : model.isEnabled ? "Available" : "Disabled"} />
+              <MetadataValue label="Context Window" value={formatTokenCount(model.contextWindowTokens)} />
+              <MetadataValue label="Max Output" value={formatTokenCount(model.maxOutputTokens)} />
+              <MetadataValue label="Last Synced" value={formatDate(model.lastSyncedAt)} />
+              <MetadataValue label="Pricing Source" value={model.pricingSource || "Manual"} />
+            </div>
+            <div className="flex flex-col gap-5">
+              <TagList label="Capabilities" values={model.capabilities} emptyLabel="No capabilities recorded yet." />
+              <TagList label="Supported Use Cases" values={model.supportedUseCases} emptyLabel="Uses legacy default compatibility." />
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <MetadataValue label="Input Unit" value={model.inputTokenUnit || "Per 1M tokens"} />
+                <MetadataValue label="Output Unit" value={model.outputTokenUnit || "Per 1M tokens"} />
+                <MetadataValue label="Currency" value={model.currency || "USD"} />
+                <MetadataValue label="Pricing Effective" value={formatDate(model.pricingEffectiveAt)} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Capability Summary */}
+        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
+          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <Tags className="w-4 h-4 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-foreground">Selection Summary</h3>
+              <p className="text-[12px] text-secondary">How this model can appear in platform, company, agent, and workflow selectors.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-5 p-6 sm:grid-cols-3">
+            <MetadataValue label="Availability" value={model.isEnabled ? "Selectable" : "Hidden from selectors"} />
+            <MetadataValue label="Legacy Default" value={model.isDefault ? "Yes" : "No"} />
+            <MetadataValue label="Display Name" value={model.friendlyName || model.displayName} />
+          </div>
+        </section>
+
         {/* Standard Input */}
         <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
           <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
@@ -186,8 +306,8 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
               <Database className="w-4 h-4 text-blue-500" />
             </div>
             <div>
-              <h3 className="text-[14px] font-bold text-foreground">Cached Input (Context Caching)</h3>
-              <p className="text-[12px] text-secondary">Discounted price per 1M tokens when using Vertex Context Caching.</p>
+              <h3 className="text-[14px] font-bold text-foreground">Cached Input</h3>
+              <p className="text-[12px] text-secondary">Discounted price per 1M cached input tokens when the provider supports caching.</p>
             </div>
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">

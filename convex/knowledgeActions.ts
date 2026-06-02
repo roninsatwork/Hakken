@@ -5,13 +5,14 @@ import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { GoogleGenAI } from "@google/genai";
 // @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
 import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { requireActionAdmin } from "./actionAuth";
 import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
+import { createVertexGenAIClient } from "./vertexProviderService";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
 
 export const ingestDocument = internalAction({
   args: {
@@ -142,26 +143,17 @@ async function embedAndStoreDoc(
 ) {
       const chunks = chunkKnowledgeText(rawText);
 
-      const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-      const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-      
-      const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
+      const ai = createVertexGenAIClient();
+      const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+        companyId,
       });
+      const providerModelId = getGoogleVertexProviderModelId(embeddingModel, "knowledge embedding generation");
 
       const embeddedChunks = [];
       for (const textChunk of chunks) {
          try {
              const embedResponse = await ai.models.embedContent({
-                 model: "text-embedding-004", 
+                 model: providerModelId,
                  contents: textChunk,
              });
              
@@ -188,6 +180,10 @@ async function embedAndStoreDoc(
              ...(companyId ? { companyId: companyId } : {}),
              ...(agentId ? { agentId: agentId } : {}),
              ...(threadId ? { threadId: threadId } : {}),
+             embeddingProviderKey: embeddingModel.providerKey,
+             embeddingModelId: embeddingModel.modelId,
+             embeddingProviderModelId: embeddingModel.providerModelId,
+             embeddingDimensions: embeddingModel.embeddingDimensions,
              chunks: batch,
              replaceExisting: i === 0,
              markReady: i + chunkSize >= embeddedChunks.length,

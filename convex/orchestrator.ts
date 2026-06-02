@@ -2,10 +2,12 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, Schema } from "@google/genai";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { requireActionUser } from "./actionAuth";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { createVertexGenAIClient } from "./vertexProviderService";
 
 export const routeAgentIntent = action({
   args: {
@@ -14,21 +16,6 @@ export const routeAgentIntent = action({
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
     const { user } = await requireActionUser(ctx, "Unauthorized", "User not found in system");
-
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
 
     try {
         // Fetch pool of active agents available to this company
@@ -39,6 +26,8 @@ export const routeAgentIntent = action({
         if (!agents || agents.length === 0) {
             return { matchedAgentId: null, confidence: 0 };
         }
+
+        const ai = createVertexGenAIClient();
 
         // Build the routing context
         let contextBlock = "Available Sonae Agents:\n\n";
@@ -76,7 +65,11 @@ Output your intent alignment as JSON.
         `;
 
         // Execute routing via system default model
-        const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+            companyId: user.companyId,
+            useCase: "router",
+        });
+        const defaultModel = getGoogleVertexProviderModelId(modelConfig, "intent routing");
         
         const response = await ai.models.generateContent({
              model: defaultModel,

@@ -27,10 +27,21 @@ const models = Array.from({ length: 18 }, (_, index) => ({
   displayName: index === 0 ? "E2E Primary Model" : `E2E Model ${index + 1}`,
   isDefault: index === 0,
   isEnabled: index < 16,
-  provider: "google",
+  providerKey: "google",
+  providerModelId: index === 0 ? "e2e-primary-model" : `e2e-model-${index + 1}`,
   inputTokenCostGBP: 0.000001,
   outputTokenCostGBP: 0.000003,
 }));
+
+const modelProviders = [
+  {
+    _id: "provider_google",
+    _creationTime: now,
+    providerKey: "google",
+    displayName: "Google Vertex AI",
+    isEnabled: true,
+  },
+];
 
 const workflowId = "workflow_e2e";
 const createdWorkflowId = "workflow_e2e_created";
@@ -211,14 +222,25 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "settings:get") return settings;
   if (path === "system:getAnalyticsId") return null;
   if (path === "aiModels:getModels") return models;
+  if (path === "aiModels:getActiveModels") {
+    const useCase = typeof queryArgs.useCase === "string" ? queryArgs.useCase : undefined;
+    return models.filter((model) => {
+      if (!model.isEnabled) return false;
+      if (!useCase || !("supportedUseCases" in model) || !Array.isArray(model.supportedUseCases)) return true;
+      return model.supportedUseCases.includes(useCase);
+    });
+  }
+  if (path === "aiModels:getProviders") return modelProviders;
   if (path === "aiModels:getOffsetPaginatedModels") {
     const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
     const statusFilter = queryArgs.statusFilter;
+    const providerFilter = String(queryArgs.providerFilter || "all");
     const filtered = models.filter((model) => {
       const matchesSearch = !searchTerm || model.displayName.toLowerCase().includes(searchTerm) || model.modelId.includes(searchTerm);
       const matchesStatus =
         statusFilter === "active" ? model.isEnabled : statusFilter === "inactive" ? !model.isEnabled : true;
-      return matchesSearch && matchesStatus;
+      const matchesProvider = providerFilter === "all" || model.providerKey === providerFilter;
+      return matchesSearch && matchesStatus && matchesProvider;
     });
     return pageData(filtered, Number(queryArgs.page || 1), Number(queryArgs.pageSize || 15));
   }

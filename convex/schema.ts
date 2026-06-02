@@ -59,6 +59,41 @@ export default defineSchema({
     diagnosticRoutingEnabled: v.optional(v.boolean())
   }),
 
+  aiProviders: defineTable({
+    providerKey: v.string(),
+    displayName: v.string(),
+    isEnabled: v.boolean(),
+    authMode: v.optional(v.string()),
+    status: v.optional(v.union(
+      v.literal("unknown"),
+      v.literal("healthy"),
+      v.literal("degraded"),
+      v.literal("disabled"),
+      v.literal("error")
+    )),
+    lastHealthCheckAt: v.optional(v.number()),
+    lastSyncedAt: v.optional(v.number()),
+    syncStatus: v.optional(v.string()),
+    settings: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_provider_key", ["providerKey"])
+    .index("by_enabled", ["isEnabled"]),
+
+  aiModelDefaults: defineTable({
+    scope: v.union(v.literal("global"), v.literal("company")),
+    companyId: v.optional(v.id("companies")),
+    useCase: v.string(),
+    providerKey: v.string(),
+    modelId: v.string(),
+    fallbackModelId: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  })
+    .index("by_scope_use_case", ["scope", "useCase"])
+    .index("by_company_use_case", ["companyId", "useCase"]),
+
   inventoryRollups: defineTable({
     key: v.string(),
     totalProvisionedUsers: v.number(),
@@ -213,13 +248,16 @@ export default defineSchema({
     inputTokens: v.number(),
     outputTokens: v.number(),
     modelUsed: v.string(),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
     costGBP: v.number(), // Processed cost for this transaction
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_company_created", ["companyId", "createdAt"]),
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_provider_created", ["providerKey", "createdAt"]),
 
   // Agent Raw Debug Logs (Execution Payload Storage)
   agentLogs: defineTable({
@@ -271,6 +309,10 @@ export default defineSchema({
     threadId: v.optional(v.id("threads")),
     status: v.union(v.literal("pending"), v.literal("processing"), v.literal("ready"), v.literal("failed")),
     format: v.string(), // "application/pdf", "text/plain", "url"
+    embeddingProviderKey: v.optional(v.string()),
+    embeddingModelId: v.optional(v.string()),
+    embeddingProviderModelId: v.optional(v.string()),
+    embeddingDimensions: v.optional(v.number()),
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
@@ -293,6 +335,10 @@ export default defineSchema({
     isGlobal: v.boolean(),
     text: v.string(),
     embedding: v.array(v.number()),
+    embeddingProviderKey: v.optional(v.string()),
+    embeddingModelId: v.optional(v.string()),
+    embeddingProviderModelId: v.optional(v.string()),
+    embeddingDimensions: v.optional(v.number()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
     dimensions: 768, // Current text embedding provider uses 768-length vectors
@@ -323,6 +369,8 @@ export default defineSchema({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
     agentId: v.optional(v.id("agents")),
@@ -335,7 +383,8 @@ export default defineSchema({
     .index("by_role_created", ["role", "createdAt"])
     .index("by_company_role_created", ["companyId", "role", "createdAt"])
     .index("by_user_role_created", ["userId", "role", "createdAt"])
-    .index("by_agent_role_created", ["agentId", "role", "createdAt"]),
+    .index("by_agent_role_created", ["agentId", "role", "createdAt"])
+    .index("by_provider_created", ["providerKey", "createdAt"]),
 
   // Agent Orchestration Engine
   agents: defineTable({
@@ -343,6 +392,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     avatar: v.optional(v.string()), // Optional icon/avatar
     modelId: v.string(), // Provider model identifier
+    modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
     thinkingMode: v.boolean(),
     systemPrompt: v.optional(v.string()),
     // Link to specific rule IDs
@@ -448,10 +498,22 @@ export default defineSchema({
 
   aiModels: defineTable({
     modelId: v.string(), // Provider model identifier
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
     displayName: v.string(),
     description: v.optional(v.string()), // A short description 
     isEnabled: v.boolean(),
     isDefault: v.boolean(),
+    status: v.optional(v.string()),
+    capabilities: v.optional(v.array(v.string())),
+    supportedUseCases: v.optional(v.array(v.string())),
+    contextWindowTokens: v.optional(v.number()),
+    maxOutputTokens: v.optional(v.number()),
+    inputTokenUnit: v.optional(v.string()),
+    outputTokenUnit: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    pricingSource: v.optional(v.string()),
+    pricingEffectiveAt: v.optional(v.number()),
     lastSyncedAt: v.number(),
     friendlyName: v.optional(v.string()), // A short user-friendly name
     standardInputCostBelow200k: v.optional(v.number()),
@@ -462,6 +524,9 @@ export default defineSchema({
     outputReasoningCost: v.optional(v.number()),
   })
     .index("by_model_id", ["modelId"])
+    .index("by_provider", ["providerKey"])
+    .index("by_provider_model", ["providerKey", "providerModelId"])
+    .index("by_provider_enabled", ["providerKey", "isEnabled"])
     .index("by_enabled", ["isEnabled"])
     .index("by_default", ["isDefault"])
     .searchIndex("search_display_name", { searchField: "displayName" })

@@ -158,6 +158,7 @@ Status:
 - `GEMINI.md` is now a compatibility pointer to `AGENTS.md`, not an active source of development instructions.
 - `docs/ai-provider-tool-extension.md` documents provider adapter boundaries.
 - `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
+- Use `docs/model-provider-agnostic-plan.md` as the locked source of truth for sitewide Gemini/OpenAI/Anthropic model selection, provider adapters, defaults, telemetry, and analytics dashboard work.
 
 ## Phase 5B: Analytics Scale Optimization
 

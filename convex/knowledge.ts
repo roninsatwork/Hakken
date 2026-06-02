@@ -508,6 +508,10 @@ export const saveChunksInternal = internalMutation({
       companyId: v.optional(v.id("companies")),
       agentId: v.optional(v.id("agents")),
       threadId: v.optional(v.id("threads")),
+      embeddingProviderKey: v.optional(v.string()),
+      embeddingModelId: v.optional(v.string()),
+      embeddingProviderModelId: v.optional(v.string()),
+      embeddingDimensions: v.optional(v.number()),
       chunks: v.array(v.object({
           text: v.string(),
           embedding: v.array(v.number()),
@@ -530,14 +534,24 @@ export const saveChunksInternal = internalMutation({
           agentId: args.agentId,
           threadId: args.threadId,
         },
-        chunks: args.chunks,
+        chunks: args.chunks.map((chunk) => ({
+          ...chunk,
+          embeddingProviderKey: args.embeddingProviderKey,
+          embeddingModelId: args.embeddingModelId,
+          embeddingProviderModelId: args.embeddingProviderModelId,
+          embeddingDimensions: args.embeddingDimensions,
+        })),
       })) {
          await ctx.db.insert("knowledgeChunks", chunk);
       }
 
       if (args.markReady !== false) {
         await ctx.db.patch(args.documentId, {
-            status: "ready"
+            status: "ready",
+            embeddingProviderKey: args.embeddingProviderKey,
+            embeddingModelId: args.embeddingModelId,
+            embeddingProviderModelId: args.embeddingProviderModelId,
+            embeddingDimensions: args.embeddingDimensions,
         });
       }
   }

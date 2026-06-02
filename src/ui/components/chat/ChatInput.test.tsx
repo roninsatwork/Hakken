@@ -23,7 +23,7 @@ vi.mock('@/convex/_generated/api', () => ({
       generateChatUploadUrl: 'mock_generate_upload_url'
     },
     knowledge: { saveChatDocument: 'mock_save_chat_document' },
-    aiModels: { getModels: 'mock_get_models' }
+    aiModels: { getActiveModels: 'mock_get_active_models' }
   },
 }))
 

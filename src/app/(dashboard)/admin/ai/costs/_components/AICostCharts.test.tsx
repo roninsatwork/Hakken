@@ -74,7 +74,7 @@ describe("AI cost charts", () => {
 
     expect(screen.getByText("Daily Cost (£ GBP)")).toBeInTheDocument();
     expect(screen.getByText("No spend yet")).toBeInTheDocument();
-    expect(screen.getAllByText("No Data")).toHaveLength(2);
+    expect(screen.getAllByText("No Data")).toHaveLength(3);
   });
 
   it("renders populated timeline and distribution charts", () => {
@@ -91,15 +91,20 @@ describe("AI cost charts", () => {
             { name: "gpt-4.1", calls: 10, cost: 1.5 },
             { name: "gpt-4.1-mini", calls: 20, cost: 0.5 },
           ]}
+          providerDistribution={[
+            { providerKey: "openai", calls: 20, cost: 1.75 },
+            { providerKey: "unknown", calls: 2, cost: 0.05 },
+          ]}
           timeline={[{ date: "2026-06-01", inputTokens: 1000, outputTokens: 500 }]}
         />
       </>
     );
 
     expect(screen.getByText("Model Invocations")).toBeInTheDocument();
+    expect(screen.getByText("Provider Distribution")).toBeInTheDocument();
     expect(screen.getByText("Token Flux")).toBeInTheDocument();
     expect(screen.getAllByTestId("chart-tooltip")[0]).toHaveTextContent("Spend");
-    expect(screen.getAllByTestId("chart-cell")).toHaveLength(2);
+    expect(screen.getAllByTestId("chart-cell")).toHaveLength(4);
     expect(screen.queryByText("No Data")).not.toBeInTheDocument();
   });
 });

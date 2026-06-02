@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Loader2,
   BrainCircuit,
-  Layers
+  Layers,
+  Network
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from "next-intl";
@@ -32,6 +33,20 @@ type MetricBlockProps = {
   delay?: number;
 };
 
+type ProviderDistributionRow = {
+  providerKey: string;
+  calls: number;
+  cost: number;
+};
+
+function formatProviderName(providerKey: string) {
+  if (providerKey === "google") return "Google Vertex AI";
+  if (providerKey === "openai") return "OpenAI";
+  if (providerKey === "anthropic") return "Anthropic";
+  if (providerKey === "unknown") return "Unknown / Legacy";
+  return providerKey;
+}
+
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: MetricBlockProps) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
@@ -49,6 +64,44 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0 }: MetricBlockPr
       <span className="text-[11px] font-mono tracking-widest uppercase text-muted/80">{sub}</span>
     </div>
   </motion.div>
+);
+
+const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[] }) => (
+  <motion.section
+    initial={{ opacity: 0, y: 15 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.45 }}
+    className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-lg backdrop-blur-xl"
+  >
+    <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
+      <div className="flex items-center gap-3">
+        <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
+        <h2 className="text-[14px] font-bold text-foreground">Provider Usage</h2>
+      </div>
+      <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">Tenant spend by provider</span>
+    </div>
+    <div className="flex flex-col">
+      {!providers || providers.length === 0 ? (
+        <div className="p-8 text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">No Provider Data</div>
+      ) : (
+        providers.map((provider) => (
+          <div key={provider.providerKey} className="flex items-center justify-between px-6 py-4 border-b border-border-dim/50 last:border-0">
+            <div className="flex min-w-0 flex-col">
+              <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
+                {formatProviderName(provider.providerKey)}
+              </span>
+              <span className="text-[10px] text-secondary/70 font-mono tracking-widest uppercase">
+                {provider.calls.toLocaleString()} calls
+              </span>
+            </div>
+            <span className="text-[13px] font-bold text-foreground tracking-tight">
+              £{provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  </motion.section>
 );
 
 export default function CompanyOverviewPage() {
@@ -230,6 +283,8 @@ export default function CompanyOverviewPage() {
             </motion.div>
             </ChartExportWrapper>
           </div>
+
+          <ProviderUsageList providers={data.providerDistribution} />
 
           {/* Deep Dark Leaderboards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">

@@ -2,27 +2,14 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
-import { ThinkingLevel, Type } from "@google/genai";
-import type { GenerateContentConfig, Part } from "@google/genai";
+import { Type } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
 import { createVertexGenAIClient } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
-
-function parseThinkingLevel(value: string): ThinkingLevel | undefined {
-  switch (value) {
-    case "MINIMAL":
-      return ThinkingLevel.MINIMAL;
-    case "LOW":
-      return ThinkingLevel.LOW;
-    case "MEDIUM":
-      return ThinkingLevel.MEDIUM;
-    case "HIGH":
-      return ThinkingLevel.HIGH;
-    default:
-      return undefined;
-  }
-}
+import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import type { AiContentPart } from "./aiRuntimeTypes";
 
 export const generateSonaeResponse = internalAction({
   args: {
@@ -40,22 +27,14 @@ export const generateSonaeResponse = internalAction({
 
     const ai = createVertexGenAIClient();
     
-    // Direct mapping configuration
-    let actualModelStr = args.modelId;
-    
-    const generationConfig: GenerateContentConfig = {};
-    if (args.thinkingLevel && args.thinkingLevel !== "NONE") {
-        const thinkingLevel = parseThinkingLevel(args.thinkingLevel);
-        if (thinkingLevel) {
-            generationConfig.thinkingConfig = { thinkingLevel };
-        }
-    }
-
-    actualModelStr = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {
-        requestedModelId: actualModelStr
-    });
-    
     try {
+        const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+            requestedModelId: args.modelId,
+            companyId: thread?.companyId,
+            useCase: "chat",
+        });
+
         // --- Vector Pipeline Synchronization Guard ---
         // Sleep the action loop natively until async chunking completes
         let docsReady = false;
@@ -86,7 +65,6 @@ export const generateSonaeResponse = internalAction({
         });
 
         // Dynamically extract the live Administrator protocol rulebook
-        const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         const [customPrompt, customRules, company] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
             ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
@@ -112,14 +90,18 @@ export const generateSonaeResponse = internalAction({
         let ragContext = "";
         
         try {
+            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+                companyId: thread?.companyId,
+            });
+            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "assistant RAG search");
             const userEmbeddingResp = await ai.models.embedContent({
-                model: "text-embedding-004",
+                model: embeddingProviderModelId,
                 contents: args.content
             });
             
             const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
             
-            if (queryVector && queryVector.length === 768) {
+            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
                 // Execute multi-tier RAG search
                 const [companyChunks, globalChunks, threadChunks] = await Promise.all([
                     thread?.companyId 
@@ -176,7 +158,7 @@ User Prompt: ${args.content}`;
         }
 
         // --- Ad-hoc File Parsing for Chat Uploads ---
-        const payloadContents: Part[] = [];
+        const payloadContents: AiContentPart[] = [];
         
         if (args.fileIds && args.fileIds.length > 0) {
             for (const fileId of args.fileIds) {
@@ -200,10 +182,9 @@ User Prompt: ${args.content}`;
                             const buffer = Buffer.from(arrayBuffer);
                             
                             payloadContents.push({
-                                inlineData: {
-                                    data: buffer.toString('base64'),
-                                    mimeType: mimeType
-                                }
+                                type: "inlineData",
+                                data: buffer.toString('base64'),
+                                mimeType: mimeType
                             });
                         }
                     }
@@ -214,27 +195,26 @@ User Prompt: ${args.content}`;
         }
         
         // Push the main textual context
-        payloadContents.push({ text: combinedPrompt });
+        payloadContents.push({ type: "text", text: combinedPrompt });
 
-        // Dynamically inject rules into generation architecture
-        generationConfig.systemInstruction = activeSystemInstruction;
-
-        const response = await ai.models.generateContent({
-            model: actualModelStr, // Dynamically use Sonae user preference
+        const response = await generateTextWithResolvedModel({
+            model: modelConfig,
             contents: payloadContents,
-            config: generationConfig
+            systemInstruction: activeSystemInstruction,
+            thinkingLevel: args.thinkingLevel,
         });
 
         const assistantReply = response.text || "I was unable to assemble a coherent analysis.";
-        const telemetry = response.usageMetadata;
 
         // Write response back to DB via an internal mutation alongside the exact financial traces
         await ctx.runMutation(internal.chat.saveAssistantMessage, {
             threadId: args.threadId,
             content: assistantReply,
-            inputTokens: telemetry?.promptTokenCount,
-            outputTokens: telemetry?.candidatesTokenCount,
-            modelUsed: actualModelStr
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+            modelUsed: modelConfig.modelId,
+            providerKey: modelConfig.providerKey,
+            providerModelId: modelConfig.providerModelId
         });
 
     } catch (error) {
@@ -259,10 +239,13 @@ export const transcribeAudio = action({
     const ai = createVertexGenAIClient({ location: "us-central1" }); // Enforce central routing for stable multimodal models
 
     try {
-        const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+            useCase: "transcription",
+        });
+        const providerModelId = getGoogleVertexProviderModelId(modelConfig, "audio transcription");
         
         const response = await ai.models.generateContent({
-            model: defaultModel,
+            model: providerModelId,
             contents: [
                 { text: "Transcribe the following audio exactly. Output ONLY the raw transcription text without any prefix, markdown, or commentary." },
                 { inlineData: { mimeType: args.mimeType, data: args.audioBase64 } }
@@ -283,18 +266,18 @@ export const generateThreadTitle = internalAction({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    const ai = createVertexGenAIClient();
-
     try {
-      const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+      const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+      const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+        companyId: thread?.companyId,
+        useCase: "title",
+      });
       
-      const response = await ai.models.generateContent({
-        model: defaultModel,
-        contents: `User Message: "${args.content}"`,
-        config: {
-          systemInstruction: "You are a professional assistant. Generate a concise, 3-to-4 word description of the user's message. Use standard Title Case. Do not include quotes, periods, or other punctuation. Your output must ONLY be the title.",
-          temperature: 0.2,
-        }
+      const response = await generateTextWithResolvedModel({
+        model: modelConfig,
+        contents: [{ type: "text", text: `User Message: "${args.content}"` }],
+        systemInstruction: "You are a professional assistant. Generate a concise, 3-to-4 word description of the user's message. Use standard Title Case. Do not include quotes, periods, or other punctuation. Your output must ONLY be the title.",
+        temperature: 0.2,
       });
 
       const title = response.text?.trim().replace(/^["']|["']$/g, '');
@@ -326,12 +309,15 @@ export const generateNodeConfig = action({
     const ai = createVertexGenAIClient();
 
     try {
-      const defaultModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});
+      const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+        useCase: "workflow",
+      });
+      const providerModelId = getGoogleVertexProviderModelId(modelConfig, "workflow validation");
       
       const nodesContext = args.availableNodes.map(n => `- ID: ${n.id} (Type: ${n.type}, Label: ${n.label || 'Unnamed'})`).join("\n");
       
       const response = await ai.models.generateContent({
-        model: defaultModel,
+        model: providerModelId,
         contents: `User Prompt: "${args.prompt}"`,
         config: {
           systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.

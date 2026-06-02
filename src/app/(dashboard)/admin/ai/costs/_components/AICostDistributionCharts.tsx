@@ -1,21 +1,40 @@
 import { motion } from "framer-motion";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
-import type { ModelDistributionRow, TimelinePoint } from "./types";
+import type { ModelDistributionRow, ProviderDistributionRow, TimelinePoint } from "./types";
 import { formatTokenAxisTick } from "./costFormatters";
 
 const MODEL_COLORS = ["#8b5cf6", "#10b981", "#f43f5e", "#3b82f6", "#f59e0b", "#14b8a6"];
+const PROVIDER_COLORS = ["#14b8a6", "#3b82f6", "#f97316", "#94a3b8", "#8b5cf6", "#f43f5e"];
+
+function formatProviderName(providerKey: string) {
+  if (providerKey === "google") return "Google Vertex AI";
+  if (providerKey === "openai") return "OpenAI";
+  if (providerKey === "anthropic") return "Anthropic";
+  if (providerKey === "unknown") return "Unknown / Legacy";
+  return providerKey;
+}
+
+function withProviderNames(providerDistribution?: ProviderDistributionRow[]) {
+  return providerDistribution?.map((provider) => ({
+    ...provider,
+    name: formatProviderName(provider.providerKey),
+  }));
+}
 
 type AICostDistributionChartsProps = {
   modelDistribution?: ModelDistributionRow[];
+  providerDistribution?: ProviderDistributionRow[];
   timeline?: TimelinePoint[];
 };
 
-export function AICostDistributionCharts({ modelDistribution, timeline }: AICostDistributionChartsProps) {
+export function AICostDistributionCharts({ modelDistribution, providerDistribution, timeline }: AICostDistributionChartsProps) {
+  const providerChartData = withProviderNames(providerDistribution);
+
   return (
     <div className="flex flex-col gap-6 mt-2">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <ChartExportWrapper exportName="ai-model-logistics" className="lg:col-span-1 flex flex-col h-full w-full">
           <motion.section
             initial={{ opacity: 0, y: 15 }}
@@ -79,11 +98,75 @@ export function AICostDistributionCharts({ modelDistribution, timeline }: AICost
           </motion.section>
         </ChartExportWrapper>
 
-        <ChartExportWrapper exportName="ai-token-flux" className="lg:col-span-1 flex flex-col h-full w-full">
+        <ChartExportWrapper exportName="ai-provider-distribution" className="lg:col-span-1 flex flex-col h-full w-full">
           <motion.section
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
+            className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
+          >
+            <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
+              <div className="flex items-center gap-3">
+                <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
+                <h2 className="text-[14px] font-bold text-foreground">Provider Distribution</h2>
+              </div>
+              <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
+                Cost drivers by provider
+              </span>
+            </div>
+            <div className="h-[260px] min-h-[260px] w-full flex items-center justify-center p-4">
+              {!providerChartData || providerChartData.length === 0 ? (
+                <div className="text-center text-secondary text-sm font-mono tracking-widest uppercase opacity-50">
+                  No Data
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260} debounce={50}>
+                  <PieChart>
+                    <Pie
+                      data={providerChartData}
+                      cx="50%"
+                      cy="45%"
+                      innerRadius={65}
+                      outerRadius={85}
+                      paddingAngle={5}
+                      dataKey="cost"
+                      nameKey="name"
+                      stroke="none"
+                    >
+                      {providerChartData.map((_, index) => (
+                        <Cell key={`provider-cell-${index}`} fill={PROVIDER_COLORS[index % PROVIDER_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(0,0,0,0.8)",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                      itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
+                      formatter={(value: unknown) => `£${Number(value).toFixed(4)}`}
+                    />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "#888",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </motion.section>
+        </ChartExportWrapper>
+
+        <ChartExportWrapper exportName="ai-token-flux" className="lg:col-span-1 flex flex-col h-full w-full">
+          <motion.section
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
             className="bg-[#00000005] dark:bg-[#ffffff05] border border-border-dim rounded-[24px] shadow-lg backdrop-blur-xl flex flex-col min-h-[350px] w-full"
           >
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">

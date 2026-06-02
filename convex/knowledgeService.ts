@@ -23,6 +23,10 @@ export type KnowledgeDocumentRecordInput = KnowledgeScope & {
 export type KnowledgeChunkInput = {
   text: string;
   embedding: number[];
+  embeddingProviderKey?: string;
+  embeddingModelId?: string;
+  embeddingProviderModelId?: string;
+  embeddingDimensions?: number;
 };
 
 export function assertCanAccessKnowledgeScope(
@@ -99,6 +103,10 @@ export function buildKnowledgeChunkRecords(args: {
     isGlobal,
     text: chunk.text,
     embedding: chunk.embedding,
+    ...(chunk.embeddingProviderKey !== undefined ? { embeddingProviderKey: chunk.embeddingProviderKey } : {}),
+    ...(chunk.embeddingModelId !== undefined ? { embeddingModelId: chunk.embeddingModelId } : {}),
+    ...(chunk.embeddingProviderModelId !== undefined ? { embeddingProviderModelId: chunk.embeddingProviderModelId } : {}),
+    ...(chunk.embeddingDimensions !== undefined ? { embeddingDimensions: chunk.embeddingDimensions } : {}),
   }));
 }
 

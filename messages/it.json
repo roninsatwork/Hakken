@@ -462,7 +462,11 @@
                         "label": "Motore Cognitivo",
                         "placeholder": "Seleziona unità LLM...",
                         "systemDefault": "(Default di Sistema)",
-                        "legacy": "({id}) (Ristretto)"
+                        "legacy": "({id}) (Ristretto)",
+                        "modes": {
+                            "inherit": "Eredita default workflow",
+                            "override": "Sovrascrivi con modello"
+                        }
                     },
                     "thinking": {
                         "label": "Ragionamento Profondo",
@@ -790,9 +794,14 @@
                             "title": "Configurazione Motore Cognitivo",
                             "model": {
                                 "label": "Modello LLM Core",
+                                "modeLabel": "Origine Modello",
                                 "placeholder": "Seleziona unità di intelligenza...",
                                 "systemDefault": "(Default di Sistema)",
-                                "legacy": "({id}) (Legacy / Disabilitato)"
+                                "legacy": "({id}) (Legacy / Disabilitato)",
+                                "modes": {
+                                    "inherit": "Eredita default piattaforma",
+                                    "override": "Sovrascrivi con modello"
+                                }
                             },
                             "reasoning": {
                                 "label": "Intensità di Ragionamento",

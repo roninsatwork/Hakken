@@ -48,7 +48,7 @@ type Agent = Doc<"agents">;
 export default function AgentsPage() {
   const router = useRouter();
   const t = useTranslations('admin.agents');
-  const activeModelsData = useQuery(api.aiModels.getModels);
+  const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const activeModels = activeModelsData || [];
   const createAgent = useMutation(api.agents.createAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);

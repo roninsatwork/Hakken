@@ -2,9 +2,10 @@
 
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { createVertexGenAIClient } from "./vertexProviderService";
 
 export const executeSwarmObjective = internalAction({
   args: {
@@ -14,20 +15,7 @@ export const executeSwarmObjective = internalAction({
   handler: async (ctx, args) => {
     await ctx.runMutation(internal.swarmRuntime.clearSwarmLogs, { threadId: args.threadId });
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-    
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
-    });
+    const ai = createVertexGenAIClient();
 
     let order = 0;
 
@@ -62,6 +50,11 @@ export const executeSwarmObjective = internalAction({
     let lastOutput = "";
     let totalInTokens = 0;
     let totalOutTokens = 0;
+    let finalModelConfig: {
+      modelId: string;
+      providerKey: string;
+      providerModelId: string;
+    } | null = null;
 
     for (const agent of demoAgents) {
        if (!agent) continue;
@@ -91,12 +84,16 @@ export const executeSwarmObjective = internalAction({
 
        try {
            if (agent.name.includes("Architect")) {
+               const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+                 companyId: tenantContext.companyId ?? undefined,
+               });
+               const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "swarm RAG search");
                const { embeddings } = await ai.models.embedContent({
-                 model: "text-embedding-004",
+                 model: embeddingProviderModelId,
                  contents: args.content,
                });
                
-               if (embeddings && embeddings.length > 0) {
+               if (embeddings && embeddings.length > 0 && embeddings[0].values?.length === embeddingModel.embeddingDimensions) {
                  const results = tenantContext.companyId
                    ? await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                        vector: embeddings[0].values as number[],
@@ -116,7 +113,13 @@ export const executeSwarmObjective = internalAction({
                }
            }
 
-           const targetModel = agent.modelId || await ctx.runQuery(internal.aiModels.resolveModelForExecution, {});  
+           const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+              requestedModelId: agent.modelId,
+              companyId: tenantContext.companyId ?? undefined,
+              useCase: "workflow",
+           });
+           const targetModel = getGoogleVertexProviderModelId(modelConfig, "swarm workflow execution");
+           finalModelConfig = modelConfig;
            
            let safePayload = memoryPayload;
            if (safePayload.length > 10000) {
@@ -160,7 +163,9 @@ export const executeSwarmObjective = internalAction({
       content: lastOutput,
       inputTokens: totalInTokens,
       outputTokens: totalOutTokens,
-      modelUsed: "sonae-swarm-cluster-v1",
+      modelUsed: finalModelConfig?.modelId ?? "sonae-swarm-cluster-v1",
+      providerKey: finalModelConfig?.providerKey,
+      providerModelId: finalModelConfig?.providerModelId,
     });
   },
 });

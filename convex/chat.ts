@@ -248,6 +248,8 @@ export const saveAssistantMessage = internalMutation({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db.get(args.threadId);
@@ -260,6 +262,8 @@ export const saveAssistantMessage = internalMutation({
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
       modelUsed: args.modelUsed,
+      providerKey: args.providerKey,
+      providerModelId: args.providerModelId,
       ...getThreadMessageDimensions(thread),
     });
   },

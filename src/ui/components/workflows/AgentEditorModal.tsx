@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { WorkflowCanvasEdge, WorkflowCanvasNode, WorkflowNodeUpdateHandler } from "./types";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
+type ModelSelectionMode = "inherit" | "override";
 
 type AgentEditorFormData = {
   name: string;
@@ -17,6 +18,7 @@ type AgentEditorFormData = {
   inputSchema: string;
   outputSchema: string;
   modelId: string;
+  modelSelectionMode: ModelSelectionMode;
   thinkingMode: boolean;
   reasoningEffort: ReasoningEffort;
   allowInternetAccess: boolean;
@@ -67,8 +69,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
   const agentId = node?.data?._agentId;
   const agent = useQuery(api.agents.get, agentId ? { id: agentId } : "skip");
-  const allModels = useQuery(api.aiModels.getModels);
-  const activeModels = useMemo(() => (allModels ?? []).filter((m) => m.isEnabled), [allModels]);
+  const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "workflow" });
+  const activeModels = useMemo(() => activeModelsData ?? [], [activeModelsData]);
   const defaultModelId = useMemo(() => activeModels.find((m) => m.isDefault)?.modelId || "", [activeModels]);
   const params = useParams();
 
@@ -82,6 +84,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     inputSchema: "",
     outputSchema: "",
     modelId: defaultModelId,
+    modelSelectionMode: "inherit",
     thinkingMode: false,
     reasoningEffort: "MEDIUM",
     allowInternetAccess: false,
@@ -110,6 +113,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         inputSchema: agent.inputSchema || "",
         outputSchema: agent.outputSchema || "",
         modelId: agent.modelId || defaultModelId,
+        modelSelectionMode: agent.modelSelectionMode || "override",
         thinkingMode: agent.thinkingMode || false,
         reasoningEffort: agent.reasoningEffort || "MEDIUM",
         allowInternetAccess: agent.allowInternetAccess || false,
@@ -194,7 +198,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         systemPrompt: formData.systemPrompt,
         inputSchema: generatedInputSchema,
         outputSchema: generatedOutputSchema,
-        modelId: formData.modelId,
+        modelSelectionMode: formData.modelSelectionMode,
+        ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
         thinkingMode: formData.thinkingMode,
         reasoningEffort: formData.reasoningEffort,
         allowInternetAccess: formData.allowInternetAccess,
@@ -213,7 +218,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         label: formData.name,
         inputSchema: generatedInputSchema,
         outputSchema: generatedOutputSchema,
-        modelId: formData.modelId,
+        modelId: formData.modelSelectionMode === "override" ? formData.modelId : defaultModelId,
         _agentId: targetAgentId,
         _inputMapping: parsedMapping,
         _inputTemplate: formData._inputTemplate,
@@ -337,8 +342,17 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                     <Settings2 className="w-4 h-4" /> {t('engine.label')}
                   </label>
                   <select
+                    value={formData.modelSelectionMode}
+                    onChange={e => setFormData({ ...formData, modelSelectionMode: e.target.value as ModelSelectionMode })}
+                    className="px-3 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
+                  >
+                    <option value="inherit">{t('engine.modes.inherit')}</option>
+                    <option value="override">{t('engine.modes.override')}</option>
+                  </select>
+                  <select
                     value={formData.modelId || ''}
                     onChange={e => setFormData({ ...formData, modelId: e.target.value })}
+                    disabled={formData.modelSelectionMode === "inherit"}
                     className="px-3 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-sm outline-none focus:border-brand/50"
                   >
                     <option value="" disabled>{t('engine.placeholder')}</option>

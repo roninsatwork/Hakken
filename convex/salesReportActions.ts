@@ -3,8 +3,10 @@
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, Schema } from "@google/genai";
 import { Doc } from "./_generated/dataModel";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { createVertexGenAIClient } from "./vertexProviderService";
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error during AI Generation";
 
@@ -47,21 +49,14 @@ export const generateReport = internalAction({
         throw new Error("Could not extract any CSV data from the knowledge base.");
     }
 
-    // 4. Initialize the configured Vertex client, matching knowledgeActions.ts
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || "sonae-dev-491717";
-    const location = process.env.GOOGLE_CLOUD_LOCATION || "global";
-      
-    const ai = new GoogleGenAI({ 
-        project: projectId, 
-        location: location,
-        vertexai: true,
-        googleAuthOptions: {
-          credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          }
-        }
+    // 4. Initialize the configured Vertex client for the currently Google-specific report schema flow.
+    const ai = createVertexGenAIClient();
+    const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+      requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+      companyId: args.companyId,
+      useCase: "report",
     });
+    const targetModel = getGoogleVertexProviderModelId(modelConfig, "sales report generation");
 
     // 5. Define the Response Schema mapped exactly to our salesReports Convex Schema
     const responseSchema: Schema = {
@@ -223,7 +218,7 @@ Total length: 600-900 words. Never pad.
 
     try {
         const modelResponse = await ai.models.generateContent({
-            model: agent.modelId,
+            model: targetModel,
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -252,7 +247,7 @@ Total length: 600-900 words. Never pad.
         
         const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {}) as Doc<"aiModels">[];
         const modelMap = new Map(allModelsRaw.map((model) => [model.modelId, model]));
-        const config = modelMap.get(agent.modelId);
+        const config = modelMap.get(modelConfig.modelId);
         
         const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
         const outRate = config ? (config.outputResponseCost || 0) : 0;
@@ -262,7 +257,9 @@ Total length: 600-900 words. Never pad.
             agentId: args.agentId,
             companyId: args.companyId,
             actionContext: "Sales Pipeline Intelligence Engine",
-            modelUsed: agent.modelId,
+            modelUsed: modelConfig.modelId,
+            providerKey: modelConfig.providerKey,
+            providerModelId: modelConfig.providerModelId,
             inputTokens: inTokens,
             outputTokens: outTokens,
             costGBP: calculatedCost,

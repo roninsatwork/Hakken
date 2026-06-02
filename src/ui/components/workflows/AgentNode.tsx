@@ -6,7 +6,7 @@ import { cn } from '@/src/ui/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export type AgentNodeData = {
   label: string;
@@ -21,7 +21,7 @@ export type AgentNodeType = Node<AgentNodeData, 'agentNode'>;
 
 export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<AgentNodeType>) => {
   const t = useTranslations('admin.workflows.designer.node');
-  const allModels = useQuery(api.aiModels.getModels) || [];
+  const allModels = useQuery(api.aiModels.getActiveModels, { useCase: "agent" }) || [];
   // Pretty-print fallback for unknown models
   const formatFallback = (id?: string) => {
     if (!id) return '';
@@ -32,7 +32,7 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
   
   // Use live agent config if available, otherwise trust the local canvas snapshot
   const liveModelId = agent ? agent.modelId : data.modelId;
-  const modelConfig = (allModels as Doc<"aiModels">[]).find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
+  const modelConfig = allModels.find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
   const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || liveModelId) : formatFallback(liveModelId);
 
   // Parse schemas to show properties visually if available

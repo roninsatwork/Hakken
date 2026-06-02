@@ -6,10 +6,12 @@ import {
   SYSTEM_FAILSAFE_MODEL_ID,
 } from "./aiModelService";
 
-const model = (modelId: string, isEnabled: boolean, isDefault = false) => ({
+const model = (modelId: string, isEnabled: boolean, isDefault = false, providerKey?: string, providerModelId?: string) => ({
   modelId,
   isEnabled,
   isDefault,
+  providerKey,
+  providerModelId,
 });
 
 describe("aiModelService", () => {
@@ -45,12 +47,14 @@ describe("aiModelService", () => {
   test("resolves requested execution model when enabled", () => {
     expect(
       resolveExecutionModel({
-        requestedModelId: "requested",
-        requestedModel: model("requested", true),
+        requestedModelId: "openai:gpt-test",
+        requestedModel: model("openai:gpt-test", true, false, "openai", "gpt-test"),
         defaultModels: [model("default", true, true)],
       })
     ).toEqual({
-      modelId: "requested",
+      modelId: "openai:gpt-test",
+      providerKey: "openai",
+      providerModelId: "gpt-test",
       source: "requested",
     });
   });
@@ -64,6 +68,8 @@ describe("aiModelService", () => {
       })
     ).toEqual({
       modelId: "default",
+      providerKey: "google",
+      providerModelId: "default",
       source: "default",
     });
   });
@@ -77,6 +83,8 @@ describe("aiModelService", () => {
       })
     ).toEqual({
       modelId: SYSTEM_FAILSAFE_MODEL_ID,
+      providerKey: "google",
+      providerModelId: SYSTEM_FAILSAFE_MODEL_ID,
       source: "failsafe",
     });
   });

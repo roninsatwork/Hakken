@@ -24,9 +24,12 @@ type AnalyticsInteraction = {
     inputTokens: number;
     outputTokens: number;
     modelUsed: string;
+    providerKey?: string;
+    providerModelId?: string;
     createdAt: number;
 };
 type CompanyLeaderboardEntry = { id: string; name: string; logo: string; cost: number; messages: number };
+type ProviderDistributionEntry = { providerKey: string; cost: number; calls: number };
 const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
 
 function formatSnapshotDate(date: Date) {
@@ -381,6 +384,7 @@ export const getCompanyMetrics = query({
     );
 
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
+    const providerDistribution: Record<string, ProviderDistributionEntry> = {};
 
     const companyObj = await ctx.db.get(args.companyId);
     let mrr = 0;
@@ -446,6 +450,8 @@ export const getCompanyMetrics = query({
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
+          providerKey: m.providerKey,
+          providerModelId: m.providerModelId,
           createdAt: m.createdAt
        })),
        ...periodAgentTxs.map((t) => ({
@@ -456,6 +462,8 @@ export const getCompanyMetrics = query({
           inputTokens: t.inputTokens || 0,
           outputTokens: t.outputTokens || 0,
           modelUsed: t.modelUsed || defaultModelId,
+          providerKey: t.providerKey,
+          providerModelId: t.providerModelId,
           createdAt: t.createdAt
        }))
     ];
@@ -538,7 +546,9 @@ export const getCompanyMetrics = query({
     for (const msg of unifiedInteractions) {
        const inputs = msg.inputTokens || 0;
        const outputs = msg.outputTokens || 0;
-       const model = msg.modelUsed || defaultModelId; 
+       const model = msg.modelUsed || msg.providerModelId || defaultModelId;
+       const modelConfig = modelMap.get(model);
+       const providerKey = msg.providerKey ?? modelConfig?.providerKey ?? "unknown";
        const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
        const gbpCost = msgCost * 0.78;
 
@@ -564,10 +574,16 @@ export const getCompanyMetrics = query({
        timelineMap[dateGroup].outputTokens += outputs;
 
        if (!modelDistribution[model]) {
-          modelDistribution[model] = { name: model, cost: 0, calls: 0 };
+          modelDistribution[model] = { name: modelConfig?.friendlyName || modelConfig?.displayName || model, cost: 0, calls: 0 };
        }
        modelDistribution[model].cost += gbpCost;
        modelDistribution[model].calls += 1;
+
+       if (!providerDistribution[providerKey]) {
+          providerDistribution[providerKey] = { providerKey, cost: 0, calls: 0 };
+       }
+       providerDistribution[providerKey].cost += gbpCost;
+       providerDistribution[providerKey].calls += 1;
 
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
@@ -656,7 +672,9 @@ export const getCompanyMetrics = query({
        },
        topUsers,
        topAgents,
-       topCompanies: [] as CompanyLeaderboardEntry[]
+       topCompanies: [] as CompanyLeaderboardEntry[],
+       modelDistribution: Object.values(modelDistribution).sort((a,b) => b.cost - a.cost),
+       providerDistribution: Object.values(providerDistribution).sort((a,b) => b.cost - a.cost),
     };
   }
 });
@@ -724,6 +742,7 @@ export const getGlobalAnalytics = query({
     );
 
     const modelDistribution: Record<string, { name: string; cost: number; calls: number }> = {};
+    const providerDistribution: Record<string, ProviderDistributionEntry> = {};
     const companyLeaderboard: Record<string, { id: string; name: string; logo: string; cost: number; messages: number }> = {};
 
     const agentLeaderboard: Record<string, { id: string; name: string; avatar: string; cost: number; interactions: number }> = {};
@@ -782,6 +801,8 @@ export const getGlobalAnalytics = query({
           inputTokens: m.inputTokens || 0,
           outputTokens: m.outputTokens || 0,
           modelUsed: m.modelUsed || defaultModelId,
+          providerKey: m.providerKey,
+          providerModelId: m.providerModelId,
           createdAt: m.createdAt
        })),
        ...periodAgentTxs.map((t) => ({
@@ -792,6 +813,8 @@ export const getGlobalAnalytics = query({
           inputTokens: t.inputTokens || 0,
           outputTokens: t.outputTokens || 0,
           modelUsed: t.modelUsed || defaultModelId,
+          providerKey: t.providerKey,
+          providerModelId: t.providerModelId,
           createdAt: t.createdAt
        }))
     ];
@@ -891,7 +914,9 @@ export const getGlobalAnalytics = query({
     for (const msg of unifiedInteractions) {
        const inputs = msg.inputTokens || 0;
        const outputs = msg.outputTokens || 0;
-       const model = msg.modelUsed || defaultModelId; 
+       const model = msg.modelUsed || msg.providerModelId || defaultModelId;
+       const modelObj = modelMap.get(model);
+       const providerKey = msg.providerKey ?? modelObj?.providerKey ?? "unknown";
        const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
        const gbpCost = msgCost * 0.78;
 
@@ -909,7 +934,6 @@ export const getGlobalAnalytics = query({
        timelineMap[dateGroup].inputTokens += inputs;
        timelineMap[dateGroup].outputTokens += outputs;
 
-       const modelObj = modelMap.get(model);
        if (modelObj) {
            if (!modelDistribution[model]) {
               modelDistribution[model] = { name: modelObj.friendlyName || modelObj.displayName || model, cost: 0, calls: 0 };
@@ -917,6 +941,12 @@ export const getGlobalAnalytics = query({
            modelDistribution[model].cost += gbpCost;
            modelDistribution[model].calls += 1;
        }
+
+       if (!providerDistribution[providerKey]) {
+          providerDistribution[providerKey] = { providerKey, cost: 0, calls: 0 };
+       }
+       providerDistribution[providerKey].cost += gbpCost;
+       providerDistribution[providerKey].calls += 1;
 
        if (msg.userId) {
           activePeriodUsers.add(msg.userId);
@@ -1016,6 +1046,7 @@ export const getGlobalAnalytics = query({
     const costPerActiveUser = activePeriodUsers.size > 0 ? (totalCostGBP / activePeriodUsers.size) : 0;
     const avgCostPerMessage = totalMessages > 0 ? (totalCostGBP / totalMessages) : 0;
     const modelBreakdown = Object.values(modelDistribution).sort((a,b) => b.cost - a.cost);
+    const providerBreakdown = Object.values(providerDistribution).sort((a,b) => b.cost - a.cost);
 
     return {
        timeline,
@@ -1035,6 +1066,7 @@ export const getGlobalAnalytics = query({
        topUsers,
        topAgents,
        modelDistribution: modelBreakdown,
+       providerDistribution: providerBreakdown,
        planDistribution: [],
        systemIntegrity: undefined
     };

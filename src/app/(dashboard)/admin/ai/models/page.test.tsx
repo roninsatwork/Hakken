@@ -41,14 +41,23 @@ describe("AIModelsPage", () => {
     vi.mocked(useAction).mockReturnValue(vi.fn().mockResolvedValue({}) as unknown as ReturnType<typeof useAction>);
   });
 
+  function latestModelQueryArgs() {
+    return vi.mocked(useQuery).mock.calls
+      .map((call) => call[1])
+      .findLast((args) => args && typeof args === "object" && "page" in args);
+  }
+
   it("defaults to the active Convex query filter", () => {
     render(<AIModelsPage />);
 
-    const queryArgs = vi.mocked(useQuery).mock.calls.at(-1)?.[1];
+    const queryArgs = latestModelQueryArgs();
 
     expect(queryArgs).toMatchObject({
       searchTerm: "",
       statusFilter: "active",
+      providerFilter: "all",
+      capabilityFilter: "all",
+      useCaseFilter: "all",
       page: 1,
     });
   });
@@ -57,16 +66,37 @@ describe("AIModelsPage", () => {
     render(<AIModelsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Active" }));
-    expect(vi.mocked(useQuery).mock.calls.at(-1)?.[1]).toMatchObject({
+    expect(latestModelQueryArgs()).toMatchObject({
       statusFilter: "active",
       page: 1,
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Inactive" }));
-    expect(vi.mocked(useQuery).mock.calls.at(-1)?.[1]).toMatchObject({
+    expect(latestModelQueryArgs()).toMatchObject({
       statusFilter: "inactive",
       page: 1,
     });
     expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+  });
+
+  it("sends capability and use-case filters when selected", () => {
+    render(<AIModelsPage />);
+
+    fireEvent.change(screen.getByLabelText("Capability filter"), {
+      target: { value: "tool-calling" },
+    });
+    expect(latestModelQueryArgs()).toMatchObject({
+      capabilityFilter: "tool-calling",
+      page: 1,
+    });
+
+    fireEvent.change(screen.getByLabelText("Use case filter"), {
+      target: { value: "agent" },
+    });
+    expect(latestModelQueryArgs()).toMatchObject({
+      capabilityFilter: "tool-calling",
+      useCaseFilter: "agent",
+      page: 1,
+    });
   });
 });

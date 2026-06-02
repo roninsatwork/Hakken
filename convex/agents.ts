@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalQuery } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
-import { getDefaultModelId } from "./aiModelService";
+import { SYSTEM_FAILSAFE_MODEL_ID, getDefaultModelId } from "./aiModelService";
 import {
   buildAgentUpdatePatch,
   buildCreateAgentAuditMetadata,
@@ -20,6 +21,63 @@ import { validateAdminImageMetadata, validateStoredUpload } from "./utils/upload
 const AGENT_CATALOG_LIMIT = 500;
 const DEFAULT_MODEL_LIMIT = 10;
 const AGENT_TOOL_BINDING_LIMIT = 250;
+type AgentModelSelectionMode = "inherit" | "override";
+type AgentModelUseCase = "agent" | "workflow";
+
+async function getModelByStableId(ctx: MutationCtx, modelId: string) {
+  return await ctx.db
+    .query("aiModels")
+    .withIndex("by_model_id", (q) => q.eq("modelId", modelId))
+    .first();
+}
+
+function modelSupportsUseCase(model: { supportedUseCases?: string[] }, useCase: AgentModelUseCase) {
+  return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
+}
+
+async function resolveDefaultModelIdForUseCase(ctx: MutationCtx, useCase: AgentModelUseCase) {
+  const defaultRow = await ctx.db
+    .query("aiModelDefaults")
+    .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
+    .first();
+
+  const defaultModel = defaultRow ? await getModelByStableId(ctx, defaultRow.modelId) : null;
+  if (defaultModel?.isEnabled && modelSupportsUseCase(defaultModel, useCase)) return defaultModel.modelId;
+
+  if (defaultRow?.fallbackModelId) {
+    const fallbackModel = await getModelByStableId(ctx, defaultRow.fallbackModelId);
+    if (fallbackModel?.isEnabled && modelSupportsUseCase(fallbackModel, useCase)) return fallbackModel.modelId;
+  }
+
+  const legacyDefaults = await ctx.db
+    .query("aiModels")
+    .withIndex("by_default", (q) => q.eq("isDefault", true))
+    .take(DEFAULT_MODEL_LIMIT);
+
+  return getDefaultModelId(legacyDefaults.filter((model) => modelSupportsUseCase(model, useCase))) || SYSTEM_FAILSAFE_MODEL_ID;
+}
+
+async function assertModelOverrideAllowed(ctx: MutationCtx, args: { modelId: string; useCase: AgentModelUseCase }) {
+  const model = await getModelByStableId(ctx, args.modelId);
+  if (!model?.isEnabled) {
+    throw new Error("Selected AI model is not enabled.");
+  }
+
+  if (!modelSupportsUseCase(model, args.useCase)) {
+    throw new Error(`Selected AI model does not support the ${args.useCase} use case.`);
+  }
+
+  if (model.providerKey) {
+    const provider = await ctx.db
+      .query("aiProviders")
+      .withIndex("by_provider_key", (q) => q.eq("providerKey", model.providerKey as string))
+      .first();
+
+    if (provider && !provider.isEnabled) {
+      throw new Error("Selected AI model provider is disabled.");
+    }
+  }
+}
 
 export const list = query({
   args: {},
@@ -95,13 +153,14 @@ export const createAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(DEFAULT_MODEL_LIMIT);
     const now = Date.now();
+    const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "agent");
 
     const newAgentId = await ctx.db.insert("agents", buildGlobalAgentRecord({
       name: args.name,
       description: args.description,
-      modelId: getDefaultModelId(defaultModels),
+      modelId: defaultModelId,
+      modelSelectionMode: "inherit",
     }, now));
 
     await ctx.db.insert("auditLogs", {
@@ -124,6 +183,7 @@ export const updateAgent = mutation({
     description: v.optional(v.string()),
     avatar: v.optional(v.string()),
     modelId: v.optional(v.string()),
+    modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
     thinkingMode: v.optional(v.boolean()),
     systemPrompt: v.optional(v.string()),
     ruleIds: v.optional(v.array(v.id("aiRules"))),
@@ -142,6 +202,19 @@ export const updateAgent = mutation({
     const { userId } = await requireSuperAdmin(ctx);
 
     const { id, storageId, ...updates } = args;
+    const existingAgent = await ctx.db.get(id);
+    if (!existingAgent) throw new Error("Agent not found");
+    const useCase: AgentModelUseCase = existingAgent.workflowId ? "workflow" : "agent";
+    const modelSelectionMode: AgentModelSelectionMode | undefined = updates.modelSelectionMode;
+
+    if (modelSelectionMode === "inherit") {
+      updates.modelId = await resolveDefaultModelIdForUseCase(ctx, useCase);
+    } else if (modelSelectionMode === "override" || updates.modelId !== undefined) {
+      updates.modelSelectionMode = "override";
+      const targetModelId = updates.modelId ?? existingAgent.modelId;
+      await assertModelOverrideAllowed(ctx, { modelId: targetModelId, useCase });
+      updates.modelId = targetModelId;
+    }
     
     let resolvedAvatarUrl = updates.avatar;
     if (storageId) {
@@ -239,12 +312,13 @@ export const createInlineAgent = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
 
-    const defaultModels = await ctx.db.query("aiModels").withIndex("by_default", (q) => q.eq("isDefault", true)).take(DEFAULT_MODEL_LIMIT);
     const now = Date.now();
+    const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "workflow");
 
     const newAgentId = await ctx.db.insert("agents", buildInlineAgentRecord({
       workflowId: args.workflowId,
-      modelId: getDefaultModelId(defaultModels),
+      modelId: defaultModelId,
+      modelSelectionMode: "inherit",
     }, now));
 
     await ctx.db.insert("auditLogs", {

@@ -25,12 +25,14 @@ import {
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
+type ModelSelectionMode = "inherit" | "override";
 
 type AgentSettingsFormData = {
   name: string;
   description: string;
   avatar: string;
   modelId: string;
+  modelSelectionMode: ModelSelectionMode;
   thinkingMode: boolean;
   reasoningEffort: ReasoningEffort;
   allowInternetAccess: boolean;
@@ -43,6 +45,7 @@ const emptyFormData: AgentSettingsFormData = {
   description: "",
   avatar: "",
   modelId: "",
+  modelSelectionMode: "inherit",
   thinkingMode: false,
   reasoningEffort: "MEDIUM",
   allowInternetAccess: false,
@@ -58,10 +61,10 @@ export default function AgentOverviewPage() {
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
-  const allModels = useQuery(api.aiModels.getModels);
+  const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const activeModels = useMemo(
-    () => ((allModels ?? []) as Doc<"aiModels">[]).filter((model) => model.isEnabled),
-    [allModels],
+    () => (activeModelsData ?? []) as Doc<"aiModels">[],
+    [activeModelsData],
   );
   const defaultModelId = useMemo(
     () => activeModels.find((model) => model.isDefault)?.modelId ?? "",
@@ -86,7 +89,7 @@ export default function AgentOverviewPage() {
 
   useEffect(() => {
     if (!agent || initializedAgentIdRef.current === agent._id) return;
-    if (!agent.modelId && allModels === undefined) return;
+    if (!agent.modelId && activeModelsData === undefined) return;
 
     initializedAgentIdRef.current = agent._id;
     setFormData({
@@ -94,13 +97,14 @@ export default function AgentOverviewPage() {
       description: agent.description || "",
       avatar: agent.avatar || "",
       modelId: agent.modelId || defaultModelId,
+      modelSelectionMode: agent.modelSelectionMode || "override",
       thinkingMode: agent.thinkingMode || false,
       reasoningEffort: agent.reasoningEffort || "MEDIUM",
       allowInternetAccess: agent.allowInternetAccess || false,
       isActive: agent.isActive ?? true,
       storageId: undefined,
     });
-  }, [agent, allModels, defaultModelId]);
+  }, [agent, activeModelsData, defaultModelId]);
 
   const handleSave = async (e?: FormEvent) => {
     if (e) {
@@ -114,7 +118,8 @@ export default function AgentOverviewPage() {
         name: formData.name,
         description: formData.description,
         avatar: formData.avatar,
-        modelId: formData.modelId,
+        modelSelectionMode: formData.modelSelectionMode,
+        ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
         thinkingMode: formData.thinkingMode,
         reasoningEffort: formData.reasoningEffort,
         allowInternetAccess: formData.allowInternetAccess,
@@ -273,10 +278,23 @@ export default function AgentOverviewPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="flex flex-col gap-2 md:col-span-2 md:w-1/2">
+              <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.model.modeLabel")}</label>
+              <select
+                value={formData.modelSelectionMode}
+                onChange={e => setFormData({ ...formData, modelSelectionMode: e.target.value as ModelSelectionMode })}
+                className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
+              >
+                <option value="inherit">{t("sections.engine.model.modes.inherit")}</option>
+                <option value="override">{t("sections.engine.model.modes.override")}</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-2 md:col-span-2 md:w-1/2">
               <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.model.label")}</label>
               <select
                 value={formData.modelId || ''}
                 onChange={e => setFormData({ ...formData, modelId: e.target.value })}
+                disabled={formData.modelSelectionMode === "inherit"}
                 className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
               >
                 <option value="" disabled>{t("sections.engine.model.placeholder")}</option>

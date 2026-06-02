@@ -102,7 +102,7 @@ describe("AssistantWelcomePage", () => {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
       if (path.includes("getMe")) return { _id: "user_1", name: "Ada Lovelace" };
-      if (path.includes("getModels")) return models;
+      if (path.includes("getActiveModels")) return models.filter((model) => model.isEnabled);
       return null;
     });
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {

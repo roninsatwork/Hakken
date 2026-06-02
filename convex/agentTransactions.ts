@@ -115,6 +115,8 @@ export const insertTransactionInternal = internalMutation({
     userId: v.optional(v.id("users")),
     actionContext: v.string(),
     modelUsed: v.string(),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
     inputTokens: v.number(),
     outputTokens: v.number(),
     costGBP: v.number(),

@@ -40,7 +40,9 @@ describe("analytics service helpers", () => {
   test("builds model cost context and computes model-specific cost", () => {
     const { modelMap, defaultModelId } = buildModelCostContext([
       {
-        modelId: "default-model",
+        modelId: "openai:default-model",
+        providerKey: "openai",
+        providerModelId: "default-model",
         displayName: "Default Model",
         isDefault: true,
         isEnabled: true,
@@ -59,9 +61,10 @@ describe("analytics service helpers", () => {
       },
     ]);
 
-    expect(defaultModelId).toBe("default-model");
-    expect(computeCostFromMap("default-model", 100000, 500000, modelMap)).toBe(2.1);
+    expect(defaultModelId).toBe("openai:default-model");
+    expect(computeCostFromMap("openai:default-model", 100000, 500000, modelMap)).toBe(2.1);
     expect(computeCostFromMap("default-model", 300000, 500000, modelMap)).toBe(2.6);
+    expect(computeCostFromMap("openai:default-model", 300000, 500000, modelMap)).toBe(2.6);
     expect(computeCostFromMap("missing-model", 300000, 500000, modelMap)).toBe(0);
   });
 

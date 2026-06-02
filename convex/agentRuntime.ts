@@ -17,6 +17,7 @@ import {
   type ToolAccessRole,
 } from "./aiToolExecutionService";
 import { createVertexGenAIClient } from "./vertexProviderService";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown Engine Exception";
@@ -41,13 +42,16 @@ export const generateAgentResponse = internalAction({
            ? agent.systemPrompt 
            : "You are an autonomous Sonae Agent. Use available tools to fulfill user requests.";
 
-        const targetModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, { 
-           requestedModelId: agent.modelId 
-        });
-
         // 2. Fetch Conversation History 
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         if (!thread) throw new Error("Thread context missing");
+
+        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+           requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+           companyId: thread.companyId,
+           useCase: "agent",
+        });
+        const targetModel = getGoogleVertexProviderModelId(modelConfig, "agent tool runtime");
 
         const messages = await ctx.runQuery(internal.chat.getMessagesForAI, {
             threadId: args.threadId,
@@ -112,14 +116,18 @@ export const generateAgentResponse = internalAction({
         // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
         let ragContext = "";
         try {
+            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+                companyId: thread.companyId,
+            });
+            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "agent RAG search");
             const userEmbeddingResp = await ai.models.embedContent({
-                model: "text-embedding-004",
+                model: embeddingProviderModelId,
                 contents: args.content
             });
             
             const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
             
-            if (queryVector && queryVector.length === 768) {
+            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
                 const vectorMatches = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
                     vector: queryVector as number[],
                     limit: 100, // Matching the maximum RAG boundary limit
@@ -259,7 +267,7 @@ export const generateAgentResponse = internalAction({
         // Calculate dynamic cost based on the exact model utilized
         const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
         const modelMap = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]));
-        const config = modelMap.get(targetModel);
+        const config = modelMap.get(modelConfig.modelId);
         
         const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
         const outRate = config ? (config.outputResponseCost || 0) : 0;
@@ -271,7 +279,9 @@ export const generateAgentResponse = internalAction({
             content: assistantReply,
             inputTokens: inTokens,
             outputTokens: outTokens,
-            modelUsed: targetModel
+            modelUsed: modelConfig.modelId,
+            providerKey: modelConfig.providerKey,
+            providerModelId: modelConfig.providerModelId
         });
 
         // Log Telemetry: Final Output
@@ -293,7 +303,9 @@ export const generateAgentResponse = internalAction({
                     userId: thread.userId,
                     companyId: thread.companyId,
                     actionContext: "Sandbox Execution",
-                    modelUsed: targetModel,
+                    modelUsed: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
                     inputTokens: inTokens,
                     outputTokens: outTokens,
                     costGBP: calculatedCost,
@@ -335,9 +347,11 @@ export const executeAgentNode = internalAction({
     const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
     if (!agent) throw new Error("Agent not found.");
 
-    const targetModel = await ctx.runQuery(internal.aiModels.resolveModelForExecution, { 
-       requestedModelId: agent.modelId 
+    const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+       requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+       useCase: "workflow",
     });
+    const targetModel = getGoogleVertexProviderModelId(modelConfig, "workflow agent execution");
 
     const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
     

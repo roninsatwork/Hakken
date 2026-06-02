@@ -122,6 +122,8 @@ describe("Message Quotas Enforcements", () => {
       inputTokens: 10,
       outputTokens: 20,
       modelUsed: "sonae-test-model",
+      providerKey: "openai",
+      providerModelId: "gpt-test",
     });
 
     const messages = await t.run(async (ctx) =>
@@ -139,6 +141,8 @@ describe("Message Quotas Enforcements", () => {
       inputTokens: 10,
       outputTokens: 20,
       modelUsed: "sonae-test-model",
+      providerKey: "openai",
+      providerModelId: "gpt-test",
     });
   });
 
