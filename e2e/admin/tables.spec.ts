@@ -18,7 +18,7 @@ test.describe('Admin Dashboard Paginated Tables', () => {
     const nextButton = page.locator('button', { has: page.locator('svg.lucide-chevron-right') });
     if (await nextButton.isEnabled()) {
         await nextButton.click();
-        await expect(page.getByText(/Showing 16-18 of/i)).toBeVisible();
+        await expect(page.getByText(/Showing 16-16 of 16/i)).toBeVisible();
     }
   });
 

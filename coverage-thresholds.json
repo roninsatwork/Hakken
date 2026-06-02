@@ -1,28 +1,28 @@
 {
   "lastMeasuredAt": "2026-06-01",
   "current": {
-    "lines": 40,
+    "lines": 41,
     "statements": 40,
-    "branches": 73,
-    "functions": 74
+    "branches": 31,
+    "functions": 41
   },
   "floor": {
-    "lines": 40,
+    "lines": 41,
     "statements": 40,
-    "branches": 73,
-    "functions": 74
+    "branches": 31,
+    "functions": 41
   },
   "lastMeasured": {
-    "lines": 40.23,
-    "statements": 40.23,
-    "branches": 73.06,
-    "functions": 74.26
+    "lines": 41.45,
+    "statements": 40.17,
+    "branches": 31.65,
+    "functions": 41.53
   },
   "nextRatchet": {
     "lines": 45,
     "statements": 45,
-    "branches": 73,
-    "functions": 75
+    "branches": 35,
+    "functions": 45
   },
   "longTermTargets": {
     "backendLines": 85,

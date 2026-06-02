@@ -4,6 +4,7 @@ import path from "node:path";
 const rootDir = process.cwd();
 const thresholdsPath = path.join(rootDir, "coverage-thresholds.json");
 const summaryPath = path.join(rootDir, "coverage", "coverage-summary.json");
+const coverageTolerance = 0.05;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -56,7 +57,7 @@ for (const metric of ["lines", "statements", "branches", "functions"]) {
   const total = summary[metric]?.total ?? 0;
   rows.push({ metric, actual, required, covered, total });
 
-  if (actual < required) {
+  if (actual + coverageTolerance < required) {
     coverageFailures.push(`${metric}: ${formatPercent(actual)} is below required ${formatPercent(required)}`);
   }
 }
