@@ -40,6 +40,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Follow-up plan for production smoke checks, inventory rollup backfill, workflow database-node contracts, scheduler optimization, and dependency cleanup.
 18. **[Model Provider Agnostic Platform Plan](./model-provider-agnostic-plan.md)**
     Sitewide plan for Gemini, OpenAI, Anthropic, provider adapters, model defaults, runtime selection, telemetry, and analytics dashboards.
+19. **[Final Scale Readiness Plan](./final-scale-readiness-plan.md)**
+    Morning-ready checklist for clearing the remaining lint warnings, adding the System Settings maintenance scripts UI, production smoke, low-risk scale confidence review, and locking the repo before the next major refactor.
 
 ---
 

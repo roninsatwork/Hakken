@@ -765,4 +765,19 @@ export default defineSchema({
   })
     .index("by_started", ["startedAt"])
     .index("by_pipeline_started", ["pipelineKey", "startedAt"]),
+
+  maintenanceScriptRuns: defineTable({
+    scriptId: v.string(),
+    status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    actorId: v.id("users"),
+    actorName: v.optional(v.string()),
+    actorEmail: v.optional(v.string()),
+    summary: v.optional(v.string()),
+    error: v.optional(v.string()),
+    metadata: v.optional(v.string()),
+  })
+    .index("by_script_started", ["scriptId", "startedAt"])
+    .index("by_started", ["startedAt"]),
 });

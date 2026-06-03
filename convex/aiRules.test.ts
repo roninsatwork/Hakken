@@ -413,7 +413,7 @@ describe("AI Rules Validation", () => {
       return await ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId, agentId });
     });
 
-    expect(rules.map((rule) => rule._id).toSorted()).toEqual([globalRuleId, companyRuleId, agentRuleId].toSorted());
+    expect(rules.map((rule) => rule._id)).toEqual([globalRuleId, companyRuleId, agentRuleId]);
   });
 
   test("seedPricingRule requires an existing super admin and creates the pricing protocol", async () => {

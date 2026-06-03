@@ -129,6 +129,8 @@
         "settings": "Impostazioni",
         "systemSettings": "Impostazioni di Sistema",
         "analytics": "Analytics",
+        "maintenance": "Manutenzione",
+        "scripts": "Script",
         "authDiagnostics": "Diagnostica Auth",
         "workspace": "Workspace",
         "assistant": "Assistente",

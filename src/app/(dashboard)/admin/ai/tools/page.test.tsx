@@ -21,9 +21,15 @@ vi.mock("framer-motion", () => ({
         const MotionComponent = React.forwardRef<
           HTMLElement,
           React.HTMLAttributes<HTMLElement> & { initial?: unknown; animate?: unknown; exit?: unknown; layoutId?: unknown; transition?: unknown }
-        >(({ children, initial: _initial, animate: _animate, exit: _exit, layoutId: _layoutId, transition: _transition, ...props }, ref) =>
-          React.createElement(tag, { ...props, ref }, children)
-        );
+        >(({ children, ...props }, ref) => {
+          const domProps = { ...props };
+          delete domProps.initial;
+          delete domProps.animate;
+          delete domProps.exit;
+          delete domProps.layoutId;
+          delete domProps.transition;
+          return React.createElement(tag, { ...domProps, ref }, children);
+        });
         MotionComponent.displayName = `MotionMock(${tag})`;
         return MotionComponent;
       },

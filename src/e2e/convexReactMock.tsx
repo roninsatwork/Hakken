@@ -203,7 +203,9 @@ function functionPath(functionReference: FunctionReference) {
 }
 
 export class ConvexReactClient {
-  constructor(_url: string) {}
+  constructor(url: string) {
+    void url;
+  }
 }
 
 export function ConvexProvider({ children }: { children: ReactNode }) {
@@ -396,7 +398,8 @@ export function useMutation(functionReference: FunctionReference) {
   };
 }
 
-export function useAction(_functionReference: FunctionReference) {
+export function useAction(functionReference: FunctionReference) {
+  void functionReference;
   return async () => true;
 }
 

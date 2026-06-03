@@ -19,9 +19,10 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ unoptimized: _unoptimized, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => (
-    <img {...props} />
-  ),
+  default: ({ unoptimized, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => {
+    void unoptimized;
+    return React.createElement("img", { ...props, alt: alt ?? "" });
+  },
 }));
 
 vi.mock("next-intl", () => ({

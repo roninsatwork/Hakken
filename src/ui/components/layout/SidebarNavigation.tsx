@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Settings,
   Workflow,
-  Home
+  Home,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -165,6 +166,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
   if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
+  if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
   if (pathname.startsWith('/admin/settings')) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
@@ -195,7 +197,8 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     agents: isAgentsActive,
     workflows: false,
     users: false,
-    settings: pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/auth-diagnostics'),
+    settings: pathname.startsWith('/admin/settings') && !pathname.startsWith('/admin/settings/scripts'),
+    maintenance: pathname.startsWith('/admin/settings/scripts') || pathname.startsWith('/admin/auth-diagnostics'),
     reports: false,
     organization: false,
     arcade: false,
@@ -372,7 +375,7 @@ export default function SidebarNavigation() {
                         <NavItem
                           icon={Settings}
                           label={t('settings')}
-                          isActive={activeItem === 'System Settings' || activeItem === 'Analytics'}
+                          isActive={(pathname.startsWith('/admin/settings') && !pathname.startsWith('/admin/settings/scripts')) || activeItem === 'System Settings' || activeItem === 'Analytics'}
                           onClick={() => setActiveItem('System Settings')}
                           hasChildren
                           isOpen={openSections.settings}
@@ -381,6 +384,18 @@ export default function SidebarNavigation() {
                           <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
                           <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
                           <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
+                        </NavItem>
+
+                        <NavItem
+                          icon={Wrench}
+                          label={t('maintenance')}
+                          isActive={activeItem === 'Maintenance' || activeItem === 'Scripts' || activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/settings/scripts') || pathname.startsWith('/admin/auth-diagnostics')}
+                          onClick={() => setActiveItem('Maintenance')}
+                          hasChildren
+                          isOpen={openSections.maintenance}
+                          onToggle={() => toggleSection('maintenance')}
+                        >
+                          <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
                           <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>
 
