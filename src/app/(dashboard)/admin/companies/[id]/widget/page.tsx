@@ -60,22 +60,50 @@ export default function CompanyWidgetPage() {
     setHostOrigin(window.location.origin);
   }, []);
 
-  useEffect(() => {
-    if (!widget) return;
+  const hasWidget = Boolean(widget);
+  const widgetName = widget?.name || "";
+  const widgetAllowedDomains = widget?.allowedDomains ? widget.allowedDomains.join(", ") : "";
+  const widgetThemeGreeting = widget?.themeGreeting || "";
+  const widgetThemePrimaryColor = widget?.themePrimaryColor || "#000000";
+  const widgetThemeLogoUrl = widget?.themeLogoUrl || "";
+  const widgetThemePlaceholder = widget?.themePlaceholder || "Write a reply...";
+  const widgetEnableSounds = widget?.enableSounds || false;
+  const widgetShowPopupPreview = widget?.showPopupPreview || false;
+  const widgetRequireName = widget?.requireName || false;
+  const widgetRequireEmail = widget?.requireEmail || false;
+  const widgetEnableGreeting = widget?.enableGreeting ?? true;
+  const widgetConversationStartersKey = widget?.conversationStarters ? widget.conversationStarters.join("\n") : "";
 
-    setName(widget.name || "");
-    setAllowedDomains(widget.allowedDomains ? widget.allowedDomains.join(", ") : "");
-    setThemeGreeting(widget.themeGreeting || "");
-    setThemePrimaryColor(widget.themePrimaryColor || "#000000");
-    setThemeLogoUrl(widget.themeLogoUrl || "");
-    setThemePlaceholder(widget.themePlaceholder || "Write a reply...");
-    setEnableSounds(widget.enableSounds || false);
-    setShowPopupPreview(widget.showPopupPreview || false);
-    setRequireName(widget.requireName || false);
-    setRequireEmail(widget.requireEmail || false);
-    setEnableGreeting(widget.enableGreeting ?? true);
-    setConversationStarters(widget.conversationStarters || []);
-  }, [widget]);
+  useEffect(() => {
+    if (!hasWidget) return;
+
+    setName(widgetName);
+    setAllowedDomains(widgetAllowedDomains);
+    setThemeGreeting(widgetThemeGreeting);
+    setThemePrimaryColor(widgetThemePrimaryColor);
+    setThemeLogoUrl(widgetThemeLogoUrl);
+    setThemePlaceholder(widgetThemePlaceholder);
+    setEnableSounds(widgetEnableSounds);
+    setShowPopupPreview(widgetShowPopupPreview);
+    setRequireName(widgetRequireName);
+    setRequireEmail(widgetRequireEmail);
+    setEnableGreeting(widgetEnableGreeting);
+    setConversationStarters(widgetConversationStartersKey ? widgetConversationStartersKey.split("\n") : []);
+  }, [
+    hasWidget,
+    widgetName,
+    widgetAllowedDomains,
+    widgetThemeGreeting,
+    widgetThemePrimaryColor,
+    widgetThemeLogoUrl,
+    widgetThemePlaceholder,
+    widgetEnableSounds,
+    widgetShowPopupPreview,
+    widgetRequireName,
+    widgetRequireEmail,
+    widgetEnableGreeting,
+    widgetConversationStartersKey,
+  ]);
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -160,8 +188,13 @@ export default function CompanyWidgetPage() {
   const activeColor = themePrimaryColor || "#000000";
   const logoPreviewUrl = getWidgetLogoPreviewUrl(themeLogoUrl);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(codeSnippet);
+  const handleCopy = async () => {
+    setFeedbackMessage("");
+    try {
+      await navigator.clipboard.writeText(codeSnippet);
+    } catch {
+      setFeedbackMessage("Clipboard access was blocked. Select and copy the snippet manually.");
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

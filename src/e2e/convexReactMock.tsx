@@ -279,7 +279,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
   const hasHydrated = useHasHydrated();
 
-  if (path === "users:getMe") return hasHydrated ? getCurrentUser() : null;
+  if (path === "users:getMe") return hasHydrated ? getCurrentUser() : undefined;
   if (path === "settings:get") return settings;
   if (path === "system:getAnalyticsId") return null;
   if (path === "aiModels:getModels") return models;

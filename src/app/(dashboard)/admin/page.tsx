@@ -500,7 +500,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
                         <Image
-                          src={u.image}
+                          src={u.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${u.name ?? u.id}`}
                           alt={u.name}
                           width={32}
                           height={32}
@@ -584,7 +584,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
                         <Image
-                          src={a.avatar}
+                          src={a.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${a.name ?? a.id}`}
                           alt={a.name}
                           width={32}
                           height={32}
