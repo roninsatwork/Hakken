@@ -29,6 +29,7 @@ export default defineConfig({
       testMatch: [
         /auth-journey\.spec\.ts/,
         /admin-smoke\.spec\.ts/,
+        /movement-demo-smoke\.spec\.ts/,
         /security\.spec\.ts/,
       ],
     },
@@ -44,6 +45,7 @@ export default defineConfig({
         /admin\/workflow-widget-journeys\.spec\.ts/,
         /admin\/routes\.spec\.ts/,
         /admin\/tables\.spec\.ts/,
+        /movement-demo-authenticated\.spec\.ts/,
         /admin-roles\.spec\.ts/,
         /exports\.spec\.ts/,
       ],

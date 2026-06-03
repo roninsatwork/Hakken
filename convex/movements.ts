@@ -1,6 +1,25 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { paginationOptsValidator } from "convex/server";
+import type { Id } from "./_generated/dataModel";
+
+const movementDifficultyValidator = v.union(
+  v.literal("Beginner"),
+  v.literal("Intermediate"),
+  v.literal("Advanced")
+);
+
+const movementDataFormatValidator = v.union(
+  v.literal("legacy-inline-json"),
+  v.literal("legacy-storage-json"),
+  v.literal("storage-json-v1")
+);
+
+function isInlinePoseData(value: string) {
+  const trimmed = value.trim();
+  return trimmed.startsWith("[") || trimmed.startsWith("{");
+}
 
 export const list = query({
   args: {},
@@ -11,22 +30,31 @@ export const list = query({
     return await ctx.db
       .query("movements")
       .order("desc")
-      .collect();
+      .take(100);
   },
 });
 
-import { paginationOptsValidator } from "convex/server";
-
 export const getPaginated = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
 
-    return await ctx.db
-      .query("movements")
-      .order("desc")
-      .paginate(args.paginationOpts);
+    const searchTerm = args.searchTerm?.trim();
+
+    return searchTerm
+      ? await ctx.db
+        .query("movements")
+        .withSearchIndex("search_title", (q) => q.search("title", searchTerm))
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("movements")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .paginate(args.paginationOpts);
   },
 });
 
@@ -43,8 +71,14 @@ export const get = query({
 export const create = mutation({
   args: {
     title: v.string(),
-    difficulty: v.string(),
+    difficulty: movementDifficultyValidator,
     poseData: v.string(),
+    poseDataFormat: v.optional(movementDataFormatValidator),
+    poseStorageId: v.optional(v.id("_storage")),
+    frameCount: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    captureFps: v.optional(v.number()),
+    schemaVersion: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -54,6 +88,13 @@ export const create = mutation({
       title: args.title,
       difficulty: args.difficulty,
       poseData: args.poseData,
+      poseDataFormat: args.poseDataFormat ?? (isInlinePoseData(args.poseData) ? "legacy-inline-json" : "legacy-storage-json"),
+      poseStorageId: args.poseStorageId,
+      frameCount: args.frameCount,
+      durationMs: args.durationMs,
+      captureFps: args.captureFps,
+      schemaVersion: args.schemaVersion,
+      createdBy: userId,
       createdAt: Date.now(),
     });
   },
@@ -64,6 +105,17 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+
+    const movement = await ctx.db.get(args.id);
+    const storageId: Id<"_storage"> | null = movement?.poseStorageId ?? (
+      movement?.poseData && !isInlinePoseData(movement.poseData)
+        ? movement.poseData as Id<"_storage">
+        : null
+    );
+
+    if (storageId) {
+      await ctx.storage.delete(storageId).catch(() => {});
+    }
 
     await ctx.db.delete(args.id);
   },
@@ -88,4 +140,3 @@ export const getFileUrl = query({
     return await ctx.storage.getUrl(args.storageId);
   },
 });
-

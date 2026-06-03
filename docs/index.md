@@ -42,6 +42,12 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Sitewide plan for Gemini, OpenAI, Anthropic, provider adapters, model defaults, runtime selection, telemetry, and analytics dashboards.
 19. **[Final Scale Readiness Plan](./final-scale-readiness-plan.md)**
     Morning-ready checklist for clearing the remaining lint warnings, adding the System Settings maintenance scripts UI, production smoke, low-risk scale confidence review, and locking the repo before the next major refactor.
+20. **[Movement Demo Refactor Plan](./movement-demo-refactor-plan.md)**
+    Scoped plan for safely reopening the movement demo, stabilizing capture/playback/scoring, tightening data contracts, and making the demo maintainable.
+21. **[Movement Demo Manual Smoke Checklist](./movement-demo-manual-smoke-checklist.md)**
+    Repeatable signed-in browser checklist for camera, MediaPipe model loading, capture, save, detail playback, and match-play smoke before demos or pushes.
+22. **[Movement Demo Whole-Body Tracking Accuracy Plan](./movement-demo-whole-body-tracking-plan.md)**
+    Phased plan for calibration, debug overlays, head accuracy, arm/hand chains, lower-body constraints, avatar profiles, and whole-body tracking regression checks.
 
 ---
 

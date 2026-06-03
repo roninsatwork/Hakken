@@ -733,8 +733,20 @@ export default defineSchema({
     title: v.string(),
     difficulty: v.string(),
     poseData: v.string(),
+    poseDataFormat: v.optional(v.union(
+      v.literal("legacy-inline-json"),
+      v.literal("legacy-storage-json"),
+      v.literal("storage-json-v1")
+    )),
+    poseStorageId: v.optional(v.id("_storage")),
+    frameCount: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    captureFps: v.optional(v.number()),
+    schemaVersion: v.optional(v.number()),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
-  }).index("by_createdAt", ["createdAt"]),
+  }).index("by_createdAt", ["createdAt"])
+    .searchIndex("search_title", { searchField: "title" }),
 
   mockStorageMetadata: defineTable({
     storageId: v.string(),

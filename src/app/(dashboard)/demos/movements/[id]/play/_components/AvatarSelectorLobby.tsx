@@ -2,7 +2,7 @@
 
 import React from "react";
 import { AVATAR_ROSTER } from "@/src/lib/constants/avatars";
-import { ArrowRight, User, Skull } from "lucide-react";
+import { ArrowRight, GraduationCap, UserRound } from "lucide-react";
 
 interface Props {
   playerAvatarUrl: string;
@@ -10,6 +10,58 @@ interface Props {
   instructorAvatarUrl: string;
   setInstructorAvatarUrl: (url: string) => void;
   onStart: () => void;
+}
+
+interface AvatarColumnProps {
+  accentClassName: string;
+  icon: React.ReactNode;
+  label: string;
+  selectedUrl: string;
+  selectedIndicatorClassName: string;
+  onSelect: (url: string) => void;
+}
+
+function AvatarColumn({
+  accentClassName,
+  icon,
+  label,
+  selectedUrl,
+  selectedIndicatorClassName,
+  onSelect,
+}: AvatarColumnProps) {
+  return (
+    <section className="flex min-w-0 flex-col">
+      <div className={`mb-4 flex items-center gap-3 px-5 py-4 text-black ${accentClassName}`}>
+        {icon}
+        <h3 className="text-lg font-black uppercase sm:text-xl">{label}</h3>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {AVATAR_ROSTER.map((avatar) => {
+          const isSelected = selectedUrl === avatar.path;
+
+          return (
+            <button
+              key={`${label}-${avatar.id}`}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelect(avatar.path)}
+              className={`flex min-h-14 items-center justify-between border border-white/10 px-5 py-3 text-left transition-colors ${
+                isSelected
+                  ? `bg-white/10 text-white ${selectedIndicatorClassName}`
+                  : "bg-transparent text-white/60 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="min-w-0 truncate text-base font-bold uppercase sm:text-lg">
+                {avatar.name}
+              </span>
+              {isSelected && <span className="ml-4 h-3 w-3 shrink-0 bg-current" />}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export default function AvatarSelectorLobby({
@@ -20,91 +72,52 @@ export default function AvatarSelectorLobby({
   onStart,
 }: Props) {
   return (
-    <div className="absolute inset-0 z-50 bg-[#050510] flex flex-col justify-center items-center overflow-hidden">
-      {/* Massive Background Typography */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
-        <h1 className="text-[20vw] font-black text-white leading-none whitespace-nowrap tracking-tighter">
-          FIGHTER
-        </h1>
+    <div className="absolute inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#050510] px-4 py-8">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
+        <p className="whitespace-nowrap text-[18vw] font-black leading-none text-white">
+          PRACTICE
+        </p>
       </div>
 
-      <div className="w-full max-w-7xl px-8 flex flex-col gap-16 relative z-10">
-        
-        {/* Header */}
-        <div className="flex justify-between items-end border-b-2 border-white/10 pb-6">
+      <div className="relative z-10 flex w-full max-w-7xl flex-col gap-8">
+        <div className="flex flex-col gap-5 border-b-2 border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col">
-            <span className="text-[#CCFF00] font-bold tracking-[0.2em] text-sm mb-2 uppercase">Initialisation Protocol</span>
-            <h2 className="text-5xl font-black text-white uppercase tracking-tight">Select Combatants</h2>
+            <span className="mb-2 text-sm font-bold uppercase text-[#CCFF00]">
+              Movement Practice
+            </span>
+            <h2 className="text-4xl font-black uppercase text-white sm:text-5xl">
+              Choose Avatars
+            </h2>
           </div>
-          
-          <button 
+
+          <button
+            type="button"
             onClick={onStart}
-            className="group flex items-center gap-4 bg-white text-black px-8 py-4 font-black uppercase tracking-widest hover:bg-[#CCFF00] transition-colors"
+            className="group flex w-full items-center justify-center gap-4 bg-white px-8 py-4 font-black uppercase text-black transition-colors hover:bg-[#CCFF00] sm:w-auto"
           >
-            Engage
-            <ArrowRight className="w-6 h-6 transform group-hover:translate-x-2 transition-transform" />
+            Begin Session
+            <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-2" />
           </button>
         </div>
 
-        {/* Selection Columns */}
-        <div className="grid grid-cols-2 gap-12">
-          
-          {/* Player Column */}
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3 bg-[#CCFF00] text-black px-6 py-4 mb-6">
-              <User className="w-6 h-6" />
-              <h3 className="text-2xl font-black uppercase tracking-widest">Player 1 (You)</h3>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              {AVATAR_ROSTER.map((avatar) => {
-                const isSelected = playerAvatarUrl === avatar.path;
-                return (
-                  <button
-                    key={avatar.id}
-                    onClick={() => setPlayerAvatarUrl(avatar.path)}
-                    className={`flex items-center justify-between px-6 py-4 text-left border border-white/10 transition-all ${
-                      isSelected 
-                        ? "bg-white/10 border-[#CCFF00] text-[#CCFF00]" 
-                        : "bg-transparent text-white/50 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-xl font-bold uppercase tracking-wider">{avatar.name}</span>
-                    {isSelected && <span className="w-3 h-3 bg-[#CCFF00]" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+          <AvatarColumn
+            accentClassName="bg-[#CCFF00]"
+            icon={<UserRound className="h-6 w-6" />}
+            label="Player"
+            selectedUrl={playerAvatarUrl}
+            selectedIndicatorClassName="border-[#CCFF00] text-[#CCFF00]"
+            onSelect={setPlayerAvatarUrl}
+          />
 
-          {/* Instructor Column */}
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3 bg-[#FF3300] text-black px-6 py-4 mb-6">
-              <Skull className="w-6 h-6" />
-              <h3 className="text-2xl font-black uppercase tracking-widest">Instructor</h3>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              {AVATAR_ROSTER.map((avatar) => {
-                const isSelected = instructorAvatarUrl === avatar.path;
-                return (
-                  <button
-                    key={`inst-${avatar.id}`}
-                    onClick={() => setInstructorAvatarUrl(avatar.path)}
-                    className={`flex items-center justify-between px-6 py-4 text-left border border-white/10 transition-all ${
-                      isSelected 
-                        ? "bg-white/10 border-[#FF3300] text-[#FF3300]" 
-                        : "bg-transparent text-white/50 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-xl font-bold uppercase tracking-wider">{avatar.name}</span>
-                    {isSelected && <span className="w-3 h-3 bg-[#FF3300]" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
+          <AvatarColumn
+            accentClassName="bg-[#FF6B35]"
+            icon={<GraduationCap className="h-6 w-6" />}
+            label="Instructor"
+            selectedUrl={instructorAvatarUrl}
+            selectedIndicatorClassName="border-[#FF6B35] text-[#FF6B35]"
+            onSelect={setInstructorAvatarUrl}
+          />
         </div>
       </div>
     </div>

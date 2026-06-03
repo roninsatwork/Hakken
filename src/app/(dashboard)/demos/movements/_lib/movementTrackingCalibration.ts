@@ -1,0 +1,751 @@
+import type { MovementHandSide } from "./movementTypes";
+
+export type TrackingLandmark = {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+};
+
+export type MovementHeadAngles = {
+  pitch: number;
+  yaw: number;
+  roll: number;
+  confidence: number;
+  source: "face" | "pose" | "none";
+};
+
+export type MovementCalibration = {
+  calibratedAt: number;
+  headNeutral: MovementHeadAngles;
+  hipCenter: { x: number; y: number; z: number };
+  shoulderWidth: number;
+  torsoHeight: number;
+  floorY: number;
+  quality: number;
+};
+
+export type MovementAvatarTrackingProfile = {
+  headPitchOffset: number;
+  headYawOffset: number;
+  headRollOffset: number;
+  minHeadPitch: number;
+  maxHeadPitch: number;
+  maxHeadYaw: number;
+  maxHeadRoll: number;
+  headSlerp: number;
+  neckPitchShare: number;
+  neckYawShare: number;
+  neckRollShare: number;
+  neckSlerp: number;
+  upperArmSlerp: number;
+  lowerArmSlerp: number;
+  legSlerp: number;
+  footSlerp: number;
+  armStoreVisibility: number;
+  legStoreVisibility: number;
+  armVisibility: number;
+  legVisibility: number;
+  footVisibility: number;
+  floorCorrectionScale: number;
+  floorCorrectionLimit: number;
+};
+
+export type MovementTrackingDebugState = {
+  updatedAt: number;
+  headRaw: MovementHeadAngles;
+  headApplied: MovementHeadAngles;
+  bodyConfidence: Record<string, number>;
+  fallbacks: Record<string, string>;
+  profileName?: string;
+  calibrationQuality?: number;
+};
+
+export type MovementTrackingHealthLevel = "waiting" | "needs-attention" | "watch" | "ready";
+
+export type MovementTrackingHealthSummary = {
+  score: number;
+  level: MovementTrackingHealthLevel;
+  label: string;
+  primaryAction: string;
+  warnings: string[];
+};
+
+export type MovementTrackingHealthOptions = {
+  now?: number;
+  staleAfterMs?: number;
+};
+
+export type MovementTrackingSource = "pose" | "hand" | "synthetic" | "last-good";
+
+export type MovementTrackingEndpointSelection = {
+  target: TrackingLandmark | null;
+  source: MovementTrackingSource;
+  confidence: number;
+};
+
+export type MovementHandsForConfidence = Partial<
+  Record<MovementHandSide, { landmarks?: TrackingLandmark[] } | null>
+>;
+
+export const DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE: MovementAvatarTrackingProfile = {
+  headPitchOffset: 0,
+  headYawOffset: 0,
+  headRollOffset: 0,
+  minHeadPitch: -0.45,
+  maxHeadPitch: 0.85,
+  maxHeadYaw: 1.3,
+  maxHeadRoll: 0.75,
+  headSlerp: 0.82,
+  neckPitchShare: 0.28,
+  neckYawShare: 0.18,
+  neckRollShare: 0.18,
+  neckSlerp: 0.35,
+  upperArmSlerp: 0.78,
+  lowerArmSlerp: 0.9,
+  legSlerp: 0.62,
+  footSlerp: 0.55,
+  armStoreVisibility: 0.25,
+  legStoreVisibility: 0.35,
+  armVisibility: 0.05,
+  legVisibility: 0.12,
+  footVisibility: 0.18,
+  floorCorrectionScale: 1.6,
+  floorCorrectionLimit: 0.35,
+};
+
+const MIN_CALIBRATION_QUALITY = 0.45;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function average(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function visibility(landmark?: TrackingLandmark | null) {
+  return landmark?.visibility ?? 0.8;
+}
+
+function midpoint(a: TrackingLandmark, b: TrackingLandmark) {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    z: ((a.z ?? 0) + (b.z ?? 0)) / 2,
+  };
+}
+
+function distance2D(a: TrackingLandmark, b: TrackingLandmark) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function estimateHeadAnglesFromFace(faceLandmarks?: TrackingLandmark[] | null): MovementHeadAngles | null {
+  if (!faceLandmarks || faceLandmarks.length < 264) return null;
+
+  const nose = faceLandmarks[1] ?? faceLandmarks[4];
+  const leftEye = faceLandmarks[33];
+  const rightEye = faceLandmarks[263];
+
+  if (!nose || !leftEye || !rightEye) return null;
+
+  const eyeDistance = distance2D(leftEye, rightEye);
+  if (eyeDistance < 0.001) return null;
+
+  const eyeCenter = midpoint(leftEye, rightEye);
+  const roll = -Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+  const yaw = clamp(((nose.x - eyeCenter.x) / eyeDistance) * 1.4, -1.2, 1.2);
+  const pitch = clamp(((nose.y - eyeCenter.y) / eyeDistance - 0.18) * 1.2, -1.2, 1.2);
+
+  return {
+    pitch,
+    yaw,
+    roll,
+    confidence: 0.95,
+    source: "face",
+  };
+}
+
+function estimateHeadAnglesFromPose(poseLandmarks: TrackingLandmark[]): MovementHeadAngles {
+  const leftEar = poseLandmarks[7];
+  const rightEar = poseLandmarks[8];
+  const nose = poseLandmarks[0];
+
+  if (!leftEar || !rightEar || !nose) {
+    return { pitch: 0, yaw: 0, roll: 0, confidence: 0, source: "none" };
+  }
+
+  const dx = Math.abs(rightEar.x - leftEar.x);
+  const dy = -(rightEar.y - leftEar.y);
+  const dz = (leftEar.z ?? 0) - (rightEar.z ?? 0);
+  const headSize = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.1;
+  const earsY = (leftEar.y + rightEar.y) / 2;
+  const normalizedY = (nose.y - earsY) / headSize;
+
+  return {
+    pitch: clamp(-(normalizedY - 0.2) * 2.0, -1.2, 1.2),
+    yaw: clamp(Math.atan2(dz, dx || 0.001) * 1.5, -1.3, 1.3),
+    roll: clamp(-Math.atan2(dy, dx || 0.001), -0.9, 0.9),
+    confidence: clamp(average([visibility(leftEar), visibility(rightEar), visibility(nose)]), 0, 1),
+    source: "pose",
+  };
+}
+
+export function estimateMovementHeadAngles({
+  poseLandmarks,
+  faceLandmarks,
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+}): MovementHeadAngles {
+  return estimateHeadAnglesFromFace(faceLandmarks) ?? estimateHeadAnglesFromPose(poseLandmarks);
+}
+
+export function getMovementBodyConfidence(
+  poseLandmarks: TrackingLandmark[],
+  hands: MovementHandsForConfidence = {},
+) {
+  const leftShoulder = poseLandmarks[11];
+  const rightShoulder = poseLandmarks[12];
+  const leftHip = poseLandmarks[23];
+  const rightHip = poseLandmarks[24];
+
+  return {
+    head: average([visibility(poseLandmarks[0]), visibility(poseLandmarks[7]), visibility(poseLandmarks[8])]),
+    torso: average([
+      visibility(leftShoulder),
+      visibility(rightShoulder),
+      visibility(leftHip),
+      visibility(rightHip),
+    ]),
+    leftShoulder: visibility(leftShoulder),
+    rightShoulder: visibility(rightShoulder),
+    leftElbow: visibility(poseLandmarks[13]),
+    rightElbow: visibility(poseLandmarks[14]),
+    leftWrist: visibility(poseLandmarks[15]),
+    rightWrist: visibility(poseLandmarks[16]),
+    leftHand: hands.left?.landmarks?.[0] ? visibility(hands.left.landmarks[0]) : 0,
+    rightHand: hands.right?.landmarks?.[0] ? visibility(hands.right.landmarks[0]) : 0,
+    hips: average([visibility(leftHip), visibility(rightHip)]),
+    leftKnee: visibility(poseLandmarks[25]),
+    rightKnee: visibility(poseLandmarks[26]),
+    leftAnkle: visibility(poseLandmarks[27]),
+    rightAnkle: visibility(poseLandmarks[28]),
+    leftFoot: average([visibility(poseLandmarks[29]), visibility(poseLandmarks[31])]),
+    rightFoot: average([visibility(poseLandmarks[30]), visibility(poseLandmarks[32])]),
+  };
+}
+
+export function buildMovementCalibration({
+  poseLandmarks,
+  faceLandmarks,
+  now = Date.now(),
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+  now?: number;
+}): MovementCalibration | null {
+  if (poseLandmarks.length < 33) return null;
+
+  const leftShoulder = poseLandmarks[11];
+  const rightShoulder = poseLandmarks[12];
+  const leftHip = poseLandmarks[23];
+  const rightHip = poseLandmarks[24];
+
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return null;
+
+  const bodyConfidence = getMovementBodyConfidence(poseLandmarks);
+  const coreQuality = average([
+    bodyConfidence.torso,
+    bodyConfidence.head,
+    bodyConfidence.leftKnee,
+    bodyConfidence.rightKnee,
+  ]);
+
+  if (coreQuality < MIN_CALIBRATION_QUALITY) return null;
+
+  const shoulders = midpoint(leftShoulder, rightShoulder);
+  const hips = midpoint(leftHip, rightHip);
+
+  return {
+    calibratedAt: now,
+    headNeutral: estimateMovementHeadAngles({ poseLandmarks, faceLandmarks }),
+    hipCenter: hips,
+    shoulderWidth: distance2D(leftShoulder, rightShoulder),
+    torsoHeight: distance2D(shoulders, hips),
+    floorY: Math.max(
+      poseLandmarks[27]?.y ?? hips.y,
+      poseLandmarks[28]?.y ?? hips.y,
+      poseLandmarks[31]?.y ?? hips.y,
+      poseLandmarks[32]?.y ?? hips.y,
+    ),
+    quality: clamp(coreQuality, 0, 1),
+  };
+}
+
+export function averageMovementCalibrations(
+  samples: MovementCalibration[],
+): MovementCalibration | null {
+  if (samples.length === 0) return null;
+
+  return {
+    calibratedAt: samples[samples.length - 1]?.calibratedAt ?? Date.now(),
+    headNeutral: {
+      pitch: average(samples.map((sample) => sample.headNeutral.pitch)),
+      yaw: average(samples.map((sample) => sample.headNeutral.yaw)),
+      roll: average(samples.map((sample) => sample.headNeutral.roll)),
+      confidence: average(samples.map((sample) => sample.headNeutral.confidence)),
+      source: samples.some((sample) => sample.headNeutral.source === "face") ? "face" : "pose",
+    },
+    hipCenter: {
+      x: average(samples.map((sample) => sample.hipCenter.x)),
+      y: average(samples.map((sample) => sample.hipCenter.y)),
+      z: average(samples.map((sample) => sample.hipCenter.z)),
+    },
+    shoulderWidth: average(samples.map((sample) => sample.shoulderWidth)),
+    torsoHeight: average(samples.map((sample) => sample.torsoHeight)),
+    floorY: average(samples.map((sample) => sample.floorY)),
+    quality: average(samples.map((sample) => sample.quality)),
+  };
+}
+
+export function applyHeadCalibration({
+  rawHead,
+  calibration,
+  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+}: {
+  rawHead: MovementHeadAngles;
+  calibration?: MovementCalibration | null;
+  profile?: MovementAvatarTrackingProfile;
+}): MovementHeadAngles {
+  const neutral = calibration?.headNeutral;
+
+  return {
+    pitch: clamp(
+      rawHead.pitch - (neutral?.pitch ?? 0) + profile.headPitchOffset,
+      profile.minHeadPitch,
+      profile.maxHeadPitch,
+    ),
+    yaw: clamp(
+      rawHead.yaw - (neutral?.yaw ?? 0) + profile.headYawOffset,
+      -profile.maxHeadYaw,
+      profile.maxHeadYaw,
+    ),
+    roll: clamp(
+      rawHead.roll - (neutral?.roll ?? 0) + profile.headRollOffset,
+      -profile.maxHeadRoll,
+      profile.maxHeadRoll,
+    ),
+    confidence: rawHead.confidence,
+    source: rawHead.source,
+  };
+}
+
+export function getNeutralMovementHeadAngles(
+  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+): MovementHeadAngles {
+  return {
+    pitch: clamp(profile.headPitchOffset, profile.minHeadPitch, profile.maxHeadPitch),
+    yaw: clamp(profile.headYawOffset, -profile.maxHeadYaw, profile.maxHeadYaw),
+    roll: clamp(profile.headRollOffset, -profile.maxHeadRoll, profile.maxHeadRoll),
+    confidence: 1,
+    source: "none",
+  };
+}
+
+export function selectMovementTrackingEndpoint({
+  poseTarget,
+  secondaryTarget,
+  secondarySource = "hand",
+  poseVisibilityThreshold = 0.2,
+  secondaryVisibilityThreshold = 0.15,
+  preferSecondaryWhenPoseBelow = 0.55,
+}: {
+  poseTarget?: TrackingLandmark | null;
+  secondaryTarget?: TrackingLandmark | null;
+  secondarySource?: Exclude<MovementTrackingSource, "pose" | "last-good">;
+  poseVisibilityThreshold?: number;
+  secondaryVisibilityThreshold?: number;
+  preferSecondaryWhenPoseBelow?: number;
+}): MovementTrackingEndpointSelection {
+  const poseConfidence = poseTarget ? visibility(poseTarget) : 0;
+  const secondaryConfidence = secondaryTarget ? visibility(secondaryTarget) : 0;
+  const hasPose = Boolean(poseTarget && poseConfidence >= poseVisibilityThreshold);
+  const hasSecondary = Boolean(
+    secondaryTarget && secondaryConfidence >= secondaryVisibilityThreshold,
+  );
+
+  if (hasSecondary && (!hasPose || poseConfidence < preferSecondaryWhenPoseBelow)) {
+    return {
+      target: secondaryTarget ?? null,
+      source: secondarySource,
+      confidence: secondaryConfidence,
+    };
+  }
+
+  if (hasPose) {
+    return {
+      target: poseTarget ?? null,
+      source: "pose",
+      confidence: poseConfidence,
+    };
+  }
+
+  if (hasSecondary) {
+    return {
+      target: secondaryTarget ?? null,
+      source: secondarySource,
+      confidence: secondaryConfidence,
+    };
+  }
+
+  return {
+    target: null,
+    source: "last-good",
+    confidence: Math.max(poseConfidence, secondaryConfidence),
+  };
+}
+
+export function getCalibratedFloorCorrection({
+  calibration,
+  currentFloorY,
+  floorConfidence,
+  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+}: {
+  calibration?: MovementCalibration | null;
+  currentFloorY?: number | null;
+  floorConfidence: number;
+  profile?: MovementAvatarTrackingProfile;
+}) {
+  if (!calibration || currentFloorY === undefined || currentFloorY === null) return 0;
+  if (floorConfidence < 0.35) return 0;
+
+  return clamp(
+    (currentFloorY - calibration.floorY) * profile.floorCorrectionScale,
+    -profile.floorCorrectionLimit,
+    profile.floorCorrectionLimit,
+  );
+}
+
+export function selectMovementKneeTarget({
+  hip,
+  knee,
+  ankle,
+  side,
+  minBend = 0.04,
+  visibilityThreshold = 0.25,
+}: {
+  hip?: TrackingLandmark | null;
+  knee?: TrackingLandmark | null;
+  ankle?: TrackingLandmark | null;
+  side: MovementHandSide;
+  minBend?: number;
+  visibilityThreshold?: number;
+}): MovementTrackingEndpointSelection {
+  const hipConfidence = hip ? visibility(hip) : 0;
+  const kneeConfidence = knee ? visibility(knee) : 0;
+  const ankleConfidence = ankle ? visibility(ankle) : 0;
+  const hasKnee = Boolean(knee && kneeConfidence >= visibilityThreshold);
+  const hasChain = Boolean(
+    hip &&
+      ankle &&
+      hipConfidence >= visibilityThreshold &&
+      ankleConfidence >= visibilityThreshold,
+  );
+
+  if (!hasKnee && !hasChain) {
+    return {
+      target: null,
+      source: "last-good",
+      confidence: Math.max(hipConfidence, kneeConfidence, ankleConfidence),
+    };
+  }
+
+  const chainMidpoint = hip && ankle ? midpoint(hip, ankle) : null;
+  const sideDirection = side === "left" ? -1 : 1;
+  const minimumKneeX = chainMidpoint ? chainMidpoint.x + sideDirection * minBend : undefined;
+
+  if (hasKnee && knee) {
+    const shouldCorrect =
+      minimumKneeX !== undefined &&
+      ((side === "left" && knee.x > minimumKneeX) ||
+        (side === "right" && knee.x < minimumKneeX));
+
+    if (!shouldCorrect) {
+      return {
+        target: knee,
+        source: "pose",
+        confidence: kneeConfidence,
+      };
+    }
+
+    return {
+      target: {
+        ...knee,
+        x: minimumKneeX,
+        visibility: knee.visibility,
+      },
+      source: "synthetic",
+      confidence: kneeConfidence,
+    };
+  }
+
+  if (chainMidpoint && hip && ankle) {
+    return {
+      target: {
+        x: chainMidpoint.x + sideDirection * minBend,
+        y: chainMidpoint.y,
+        z: chainMidpoint.z,
+        visibility: Math.min(hipConfidence, ankleConfidence) * 0.8,
+      },
+      source: "synthetic",
+      confidence: Math.min(hipConfidence, ankleConfidence) * 0.8,
+    };
+  }
+
+  return {
+    target: null,
+    source: "last-good",
+    confidence: Math.max(hipConfidence, kneeConfidence, ankleConfidence),
+  };
+}
+
+export function getMovementTrackingHealthWarnings(
+  debugState: MovementTrackingDebugState | null | undefined,
+  options: MovementTrackingHealthOptions = {},
+) {
+  if (!debugState) return ["Waiting for tracking data"];
+
+  const warnings: string[] = [];
+  const confidence = debugState.bodyConfidence;
+  const staleAfterMs = options.staleAfterMs ?? 1200;
+  const leftArmConfidence = Math.max(confidence.leftWrist ?? 0, confidence.leftHand ?? 0);
+  const rightArmConfidence = Math.max(confidence.rightWrist ?? 0, confidence.rightHand ?? 0);
+  const leftFootConfidence = confidence.leftFoot ?? 0;
+  const rightFootConfidence = confidence.rightFoot ?? 0;
+
+  if (options.now !== undefined && options.now - debugState.updatedAt > staleAfterMs) {
+    warnings.push("Tracking data is stale");
+  }
+
+  if (debugState.calibrationQuality === undefined) {
+    warnings.push("Calibration is missing");
+  } else if (debugState.calibrationQuality < 0.55) {
+    warnings.push("Calibration quality is low");
+  }
+
+  if (debugState.headRaw.source !== "face") {
+    warnings.push("Head is using pose tracking");
+  }
+
+  if (debugState.headApplied.pitch >= 0.72 || debugState.headApplied.pitch <= -0.38) {
+    warnings.push("Head pitch is near clamp");
+  }
+
+  if (Math.abs(debugState.headApplied.yaw) >= 1.1) {
+    warnings.push("Head yaw is near clamp");
+  }
+
+  if (Math.abs(debugState.headApplied.roll) >= 0.62) {
+    warnings.push("Head roll is near clamp");
+  }
+
+  if ((confidence.torso ?? 0) < 0.55) {
+    warnings.push("Torso confidence is low");
+  }
+
+  if ((confidence.leftWrist ?? 0) < 0.35 && (confidence.leftHand ?? 0) < 0.35) {
+    warnings.push("Left arm endpoint is weak");
+  }
+
+  if ((confidence.rightWrist ?? 0) < 0.35 && (confidence.rightHand ?? 0) < 0.35) {
+    warnings.push("Right arm endpoint is weak");
+  }
+
+  if (debugState.fallbacks.leftArm === "last-good") {
+    warnings.push("Left arm is holding last good pose");
+  }
+
+  if (debugState.fallbacks.rightArm === "last-good") {
+    warnings.push("Right arm is holding last good pose");
+  }
+
+  if (
+    rightArmConfidence >= 0.35 &&
+    rightArmConfidence < 0.65 &&
+    leftArmConfidence - rightArmConfidence >= 0.28
+  ) {
+    warnings.push("Right arm confidence trails left");
+  }
+
+  if (
+    leftArmConfidence >= 0.35 &&
+    leftArmConfidence < 0.65 &&
+    rightArmConfidence - leftArmConfidence >= 0.28
+  ) {
+    warnings.push("Left arm confidence trails right");
+  }
+
+  if ((confidence.leftFoot ?? 0) < 0.35) {
+    warnings.push("Left foot confidence is low");
+  }
+
+  if ((confidence.rightFoot ?? 0) < 0.35) {
+    warnings.push("Right foot confidence is low");
+  }
+
+  if (debugState.fallbacks.leftFoot === "last-good") {
+    warnings.push("Left foot is holding last good pose");
+  }
+
+  if (debugState.fallbacks.rightFoot === "last-good") {
+    warnings.push("Right foot is holding last good pose");
+  }
+
+  if (
+    rightFootConfidence >= 0.35 &&
+    rightFootConfidence < 0.65 &&
+    leftFootConfidence - rightFootConfidence >= 0.28
+  ) {
+    warnings.push("Right foot confidence trails left");
+  }
+
+  if (
+    leftFootConfidence >= 0.35 &&
+    leftFootConfidence < 0.65 &&
+    rightFootConfidence - leftFootConfidence >= 0.28
+  ) {
+    warnings.push("Left foot confidence trails right");
+  }
+
+  if (debugState.fallbacks.floor === "fixed-floor") {
+    warnings.push("Floor is using fixed fallback");
+  }
+
+  if (debugState.fallbacks.leftKnee === "synthetic" || debugState.fallbacks.rightKnee === "synthetic") {
+    warnings.push("Knee guard is correcting pose");
+  }
+
+  if (debugState.fallbacks.head === "last-good") {
+    warnings.push("Head is holding last good pose");
+  }
+
+  return warnings.length > 0 ? warnings : ["Tracking health looks good"];
+}
+
+function confidenceValue(
+  confidence: Record<string, number>,
+  key: string,
+) {
+  return clamp(confidence[key] ?? 0, 0, 1);
+}
+
+function fallbackConfidence(source: string | undefined, liveConfidence: number) {
+  if (source === "last-good") return Math.min(liveConfidence, 0.35);
+  if (source === "synthetic") return Math.max(Math.min(liveConfidence, 0.72), 0.45);
+  return liveConfidence;
+}
+
+function healthLabel(level: MovementTrackingHealthLevel) {
+  if (level === "ready") return "Ready";
+  if (level === "watch") return "Watch";
+  if (level === "needs-attention") return "Needs attention";
+  return "Waiting";
+}
+
+function getMovementTrackingPrimaryAction(warnings: string[]) {
+  if (warnings.includes("Waiting for tracking data")) return "Wait for tracking data";
+  if (warnings.includes("Tracking data is stale")) return "Restart camera tracking";
+  if (warnings.includes("Calibration is missing")) return "Run calibration";
+  if (warnings.includes("Calibration quality is low")) return "Recalibrate neutral stance";
+  if (warnings.includes("Head is holding last good pose")) return "Reacquire face tracking";
+  if (warnings.includes("Head is using pose tracking")) return "Tune face/head tracking";
+  if (warnings.includes("Head pitch is near clamp")) return "Tune head pitch offset";
+  if (warnings.includes("Head yaw is near clamp")) return "Tune head yaw offset";
+  if (warnings.includes("Head roll is near clamp")) return "Tune head roll offset";
+  if (warnings.includes("Torso confidence is low")) return "Recalibrate torso stance";
+  if (warnings.includes("Right arm is holding last good pose")) return "Reacquire right arm tracking";
+  if (warnings.includes("Left arm is holding last good pose")) return "Reacquire left arm tracking";
+  if (warnings.includes("Right arm endpoint is weak")) return "Tune right arm endpoint";
+  if (warnings.includes("Left arm endpoint is weak")) return "Tune left arm endpoint";
+  if (warnings.includes("Right arm confidence trails left")) return "Tune right arm balance";
+  if (warnings.includes("Left arm confidence trails right")) return "Tune left arm balance";
+  if (warnings.includes("Knee guard is correcting pose")) return "Check knee/leg constraints";
+  if (warnings.includes("Floor is using fixed fallback")) return "Tune floor calibration";
+  if (warnings.includes("Right foot is holding last good pose")) return "Reacquire right foot tracking";
+  if (warnings.includes("Left foot is holding last good pose")) return "Reacquire left foot tracking";
+  if (warnings.includes("Right foot confidence is low")) return "Tune right foot tracking";
+  if (warnings.includes("Left foot confidence is low")) return "Tune left foot tracking";
+  if (warnings.includes("Right foot confidence trails left")) return "Tune right foot balance";
+  if (warnings.includes("Left foot confidence trails right")) return "Tune left foot balance";
+  return "Tracking ready";
+}
+
+export function getMovementTrackingHealthSummary(
+  debugState: MovementTrackingDebugState | null | undefined,
+  options: MovementTrackingHealthOptions = {},
+): MovementTrackingHealthSummary {
+  const warnings = getMovementTrackingHealthWarnings(debugState, options);
+
+  if (!debugState) {
+    return {
+      score: 0,
+      level: "waiting",
+      label: healthLabel("waiting"),
+      primaryAction: getMovementTrackingPrimaryAction(warnings),
+      warnings,
+    };
+  }
+
+  const confidence = debugState.bodyConfidence;
+  const headSourceMultiplier = debugState.headRaw.source === "face" ? 1 : 0.72;
+  const headScore = clamp(debugState.headRaw.confidence * headSourceMultiplier, 0, 1);
+  const leftArmScore = Math.max(
+    confidenceValue(confidence, "leftWrist"),
+    confidenceValue(confidence, "leftHand"),
+  );
+  const rightArmScore = Math.max(
+    confidenceValue(confidence, "rightWrist"),
+    confidenceValue(confidence, "rightHand"),
+  );
+  const leftKneeScore = fallbackConfidence(
+    debugState.fallbacks.leftKnee,
+    confidenceValue(confidence, "leftKnee"),
+  );
+  const rightKneeScore = fallbackConfidence(
+    debugState.fallbacks.rightKnee,
+    confidenceValue(confidence, "rightKnee"),
+  );
+
+  const weightedScore =
+    headScore * 0.22 +
+    confidenceValue(confidence, "torso") * 0.18 +
+    leftArmScore * 0.14 +
+    rightArmScore * 0.14 +
+    confidenceValue(confidence, "leftFoot") * 0.09 +
+    confidenceValue(confidence, "rightFoot") * 0.09 +
+    leftKneeScore * 0.05 +
+    rightKneeScore * 0.05 +
+    clamp(debugState.calibrationQuality ?? 0, 0, 1) * 0.04;
+
+  const rawScore = Math.round(clamp(weightedScore, 0, 1) * 100);
+  const isStale = warnings.includes("Tracking data is stale");
+  const score = isStale ? Math.min(rawScore, 50) : rawScore;
+  const level: MovementTrackingHealthLevel =
+    isStale
+      ? "needs-attention"
+      : score >= 80 && warnings.length === 1 && warnings[0] === "Tracking health looks good"
+        ? "ready"
+        : score >= 62
+          ? "watch"
+          : "needs-attention";
+
+  return {
+    score,
+    level,
+    label: healthLabel(level),
+    primaryAction: getMovementTrackingPrimaryAction(warnings),
+    warnings,
+  };
+}

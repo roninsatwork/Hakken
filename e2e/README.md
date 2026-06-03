@@ -35,6 +35,7 @@ Unauthenticated coverage:
 
 - Protected admin and app routes redirect to `/login`.
 - High-value admin, workflow, AI, table, chat-log, and settings routes return non-5xx responses.
+- Movement demo routes redirect cleanly to `/login` without non-5xx responses.
 - `/login` remains publicly accessible.
 
 Authenticated coverage:
@@ -51,5 +52,6 @@ Authenticated coverage:
 - Role-based admin access behavior.
 - Dashboard export flow.
 - End-user assistant and profile flows.
+- Movement library, capture shell, detail viewer, and play avatar lobby with deterministic movement fixture data.
 
-The Phase 6 suite currently runs 40 browser tests with no expected skips.
+The browser suite is expected to run with no expected skips.

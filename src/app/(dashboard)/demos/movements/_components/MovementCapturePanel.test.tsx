@@ -1,0 +1,96 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
+import type Webcam from "react-webcam";
+import { describe, expect, it, vi } from "vitest";
+import MovementCapturePanel from "./MovementCapturePanel";
+
+vi.mock("react-webcam", async () => {
+  const ReactModule = await import("react");
+  const MockWebcam = ReactModule.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    function MockWebcam(props, ref) {
+      return <div ref={ref} data-testid="mock-webcam" {...props} />;
+    },
+  );
+
+  return { default: MockWebcam };
+});
+
+const baseProps = {
+  webcamRef: React.createRef<Webcam>(),
+  canvasRef: React.createRef<HTMLCanvasElement>(),
+  cameraError: false,
+  isRecording: false,
+  isVisionReady: false,
+  visionStatus: "loading" as const,
+  visionError: null,
+  isPoseReady: false,
+  frameCount: 0,
+  trackingQuality: 0,
+  onCameraError: vi.fn(),
+  onRetryVision: vi.fn(),
+  onToggleRecording: vi.fn(),
+};
+
+describe("MovementCapturePanel", () => {
+  it("shows camera permission guidance", () => {
+    render(<MovementCapturePanel {...baseProps} cameraError />);
+
+    expect(screen.getByText("Camera Access Denied")).toBeInTheDocument();
+    expect(screen.getByText(/allow camera access/i)).toBeInTheDocument();
+  });
+
+  it("renders vision status, frame stats, and disabled capture until ready", () => {
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        frameCount={4}
+        trackingQuality={72}
+      />,
+    );
+
+    expect(screen.getByText("Initializing Model...")).toBeInTheDocument();
+    expect(screen.getByText("Frames 4")).toBeInTheDocument();
+    expect(screen.getByText("Tracking 72%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start movement capture" })).toBeDisabled();
+  });
+
+  it("forwards retry and recording actions", () => {
+    const onRetryVision = vi.fn();
+    const onToggleRecording = vi.fn();
+
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        isVisionReady
+        visionStatus="failed"
+        visionError="Model failed"
+        onRetryVision={onRetryVision}
+        onToggleRecording={onToggleRecording}
+      />,
+    );
+
+    expect(screen.getByText("AI Vision: Failed")).toBeInTheDocument();
+    expect(screen.getByText("Model failed")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry Models" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start movement capture" }));
+
+    expect(onRetryVision).toHaveBeenCalledTimes(1);
+    expect(onToggleRecording).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows active capture state", () => {
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        isRecording
+        isVisionReady
+        visionStatus="ready"
+        isPoseReady
+      />,
+    );
+
+    expect(screen.getByText("AI Vision: Active")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop capture and export data" })).toBeEnabled();
+  });
+});

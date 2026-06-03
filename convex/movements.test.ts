@@ -11,7 +11,7 @@ describe("Movements API Authentication Hardening", () => {
     const movementId = await t.run(async (ctx) => {
       return await ctx.db.insert("movements", {
         title: "Test Movement",
-        difficulty: "Easy",
+        difficulty: "Beginner",
         poseData: "[]",
         createdAt: Date.now()
       });
@@ -22,12 +22,17 @@ describe("Movements API Authentication Hardening", () => {
       t.query(api.movements.list)
     ).rejects.toThrow("Unauthorized");
 
-    // 2. get query
+    // 2. paginated list query
+    await expect(
+      t.query(api.movements.getPaginated, { paginationOpts: { numItems: 15, cursor: null } })
+    ).rejects.toThrow("Unauthorized");
+
+    // 3. get query
     await expect(
       t.query(api.movements.get, { id: movementId })
     ).rejects.toThrow("Unauthorized");
 
-    // 3. create mutation
+    // 4. create mutation
     await expect(
       t.mutation(api.movements.create, {
         title: "Pilates Roll Up",
@@ -36,12 +41,12 @@ describe("Movements API Authentication Hardening", () => {
       })
     ).rejects.toThrow("Unauthorized");
 
-    // 4. remove mutation
+    // 5. remove mutation
     await expect(
       t.mutation(api.movements.remove, { id: movementId })
     ).rejects.toThrow("Unauthorized");
 
-    // 5. generateUploadUrl mutation
+    // 6. generateUploadUrl mutation
     await expect(
       t.mutation(api.movements.generateUploadUrl)
     ).rejects.toThrow("Unauthorized");
@@ -50,7 +55,7 @@ describe("Movements API Authentication Hardening", () => {
       return await ctx.storage.store(new Blob(["test content"], { type: "text/plain" }));
     });
 
-    // 6. getFileUrl query
+    // 7. getFileUrl query
     await expect(
       t.query(api.movements.getFileUrl, { storageId })
     ).rejects.toThrow("Unauthorized");
@@ -76,7 +81,12 @@ describe("Movements API Authentication Hardening", () => {
     const movementId = await authedClient.mutation(api.movements.create, {
       title: "Hundred",
       difficulty: "Advanced",
-      poseData: "[1, 2, 3]"
+      poseData: "[1, 2, 3]",
+      poseDataFormat: "legacy-inline-json",
+      frameCount: 1,
+      durationMs: 1000,
+      captureFps: 30,
+      schemaVersion: 1,
     });
     expect(movementId).toBeDefined();
 
@@ -88,10 +98,48 @@ describe("Movements API Authentication Hardening", () => {
     // 4. Get by ID should work
     const fetched = await authedClient.query(api.movements.get, { id: movementId });
     expect(fetched?.title).toBe("Hundred");
+    expect(fetched?.poseDataFormat).toBe("legacy-inline-json");
+    expect(fetched?.createdBy).toBe(normalUserId);
 
     // 5. Remove should delete it
     await authedClient.mutation(api.movements.remove, { id: movementId });
     const emptyList = await authedClient.query(api.movements.list);
     expect(emptyList.length).toBe(0);
+  });
+
+  test("Authenticated USER can page and search movement records", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const normalUserId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "student@pilates.com",
+        role: "USER"
+      });
+    });
+
+    const authedClient = t.withIdentity({ subject: normalUserId });
+
+    await authedClient.mutation(api.movements.create, {
+      title: "Morning Hundred",
+      difficulty: "Beginner",
+      poseData: "[]",
+    });
+    await authedClient.mutation(api.movements.create, {
+      title: "Evening Roll Up",
+      difficulty: "Intermediate",
+      poseData: "[]",
+    });
+
+    const firstPage = await authedClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 1, cursor: null },
+    });
+    expect(firstPage.page).toHaveLength(1);
+    expect(firstPage.isDone).toBe(false);
+
+    const searchPage = await authedClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 15, cursor: null },
+      searchTerm: "Roll",
+    });
+    expect(searchPage.page.map((movement) => movement.title)).toEqual(["Evening Roll Up"]);
   });
 });

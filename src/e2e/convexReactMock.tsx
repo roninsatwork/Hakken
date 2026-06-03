@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { getFunctionName } from "convex/server";
 
 type E2ERole = "super-admin" | "company-admin" | "user";
@@ -46,6 +46,7 @@ const modelProviders = [
 const workflowId = "workflow_e2e";
 const createdWorkflowId = "workflow_e2e_created";
 const widgetId = "widget_e2e";
+const movementId = "movement_e2e_roll_down";
 
 const rules = [
   {
@@ -83,6 +84,42 @@ const analytics = {
   topAgents: [{ id: "agent_e2e", name: "E2E Assistant", cost: 4.2, messages: 12 }],
   topCompanies: [{ id: companyId, name: "E2E Company", cost: 8.1, messages: 24 }],
   topUsers: [{ id: userId, name: "E2E User", email: "user.e2e@example.com", cost: 2.1, messages: 6 }],
+};
+
+const movementFrames = Array.from({ length: 2 }, (_, frameIndex) => ({
+  timestamp: frameIndex * 33,
+  landmarks: Array.from({ length: 33 }, (_, landmarkIndex) => ({
+    x: 0.2 + (landmarkIndex % 8) * 0.08,
+    y: 0.18 + Math.floor(landmarkIndex / 8) * 0.16,
+    z: frameIndex * 0.01,
+    visibility: 0.95,
+  })),
+  worldLandmarks: Array.from({ length: 33 }, (_, landmarkIndex) => ({
+    x: (landmarkIndex % 8) * 0.04,
+    y: Math.floor(landmarkIndex / 8) * 0.05,
+    z: frameIndex * 0.01,
+    visibility: 0.95,
+  })),
+}));
+
+const movementFixture = {
+  _id: movementId,
+  _creationTime: now,
+  title: "E2E Roll Down",
+  difficulty: "Beginner",
+  poseData: JSON.stringify({
+    schemaVersion: 1,
+    capturedAt: now,
+    fps: 30,
+    frames: movementFrames,
+  }),
+  poseDataFormat: "storage-json-v1",
+  frameCount: movementFrames.length,
+  durationMs: 67,
+  captureFps: 30,
+  schemaVersion: 1,
+  createdAt: now,
+  updatedAt: now,
 };
 
 function workflowFixture(id = workflowId, name = "E2E Workflow") {
@@ -202,6 +239,27 @@ function functionPath(functionReference: FunctionReference) {
   }
 }
 
+function subscribeToHydration(onStoreChange: () => void) {
+  queueMicrotask(onStoreChange);
+  return () => {};
+}
+
+function getHydratedClientSnapshot() {
+  return true;
+}
+
+function getHydratedServerSnapshot() {
+  return false;
+}
+
+function useHasHydrated() {
+  return useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot,
+  );
+}
+
 export class ConvexReactClient {
   constructor(url: string) {
     void url;
@@ -219,8 +277,9 @@ export function ConvexProviderWithAuth({ children }: { children: ReactNode }) {
 export function useQuery(functionReference: FunctionReference, args?: unknown): unknown {
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+  const hasHydrated = useHasHydrated();
 
-  if (path === "users:getMe") return getCurrentUser();
+  if (path === "users:getMe") return hasHydrated ? getCurrentUser() : null;
   if (path === "settings:get") return settings;
   if (path === "system:getAnalyticsId") return null;
   if (path === "aiModels:getModels") return models;
@@ -367,6 +426,12 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     ];
   }
   if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics" || path === "analytics:getGlobalInventoryMetrics") return analytics;
+  if (path === "movements:get") {
+    return queryArgs.id === movementId ? movementFixture : null;
+  }
+  if (path === "movements:getFileUrl") {
+    return null;
+  }
   if (path === "chat:getThreads") {
     return [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }];
   }
@@ -437,6 +502,19 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   if (path === "workflows:getPaginatedWorkflows") {
     return {
       results: [workflowFixture()],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+  if (path === "movements:getPaginated") {
+    const searchTerm = String(queryArgs.searchTerm || "").toLowerCase();
+    const results = searchTerm && !movementFixture.title.toLowerCase().includes(searchTerm)
+      ? []
+      : [movementFixture];
+
+    return {
+      results,
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,
