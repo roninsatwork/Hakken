@@ -52,6 +52,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Audited plan for making AI provider calls pause, retry, and continue safely after throttling, transient provider errors, and SDK/network failures.
 24. **[Agent Scheduler Upgrade Plan](./agent-scheduler-upgrade-plan.md)**
     Plan for upgrading the admin schedule builder with recurring cadence, targeted times, timezone previews, structured configs, and agent dispatch support.
+25. **[System Health Alerts Expansion Plan](./system-health-alerts-plan.md)**
+    Plan for adding agent failures, schedule failures, stale runs, and overdue schedules to the daily platform alert path.
 
 ---
 

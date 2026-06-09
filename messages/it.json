@@ -130,6 +130,7 @@
         "systemSettings": "Impostazioni di Sistema",
         "analytics": "Analytics",
         "maintenance": "Manutenzione",
+        "systemHealth": "Salute del Sistema",
         "scripts": "Script",
         "authDiagnostics": "Diagnostica Auth",
         "workspace": "Workspace",

@@ -2,8 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   buildAnalyticsHealthPlatformAlertDecision,
   buildPlatformAlertEmailHtml,
+  buildSystemHealthPlatformAlertDecision,
+  buildSystemHealthPlatformAlertEmailHtml,
   parsePlatformAlertRecipients,
   type AnalyticsHealthReport,
+  type OperationalHealthReport,
+  type SystemHealthReport,
 } from "./platformAlertService";
 
 function buildReport(overrides: Partial<AnalyticsHealthReport> = {}): AnalyticsHealthReport {
@@ -29,6 +33,33 @@ function buildReport(overrides: Partial<AnalyticsHealthReport> = {}): AnalyticsH
       missingGlobalDates: [],
       totalSnapshots: 3,
     },
+    ...overrides,
+  };
+}
+
+function buildOperationalReport(overrides: Partial<OperationalHealthReport> = {}): OperationalHealthReport {
+  return {
+    agentFailures: { count: 0, examples: [] },
+    failedAgentTransactions: { count: 0, examples: [] },
+    failedScheduledExecutions: { count: 0, examples: [] },
+    overdueSchedules: { count: 0, examples: [] },
+    schedulesMissingNextRun: { count: 0, examples: [] },
+    staleRunningScheduledExecutions: { count: 0, examples: [] },
+    ...overrides,
+  };
+}
+
+function buildSystemReport(overrides: Partial<SystemHealthReport> = {}): SystemHealthReport {
+  return {
+    analytics: buildReport(),
+    checkedAt: Date.parse("2026-06-02T10:00:00.000Z"),
+    checkedDate: "2026-06-02",
+    daysBack: 7,
+    operations: buildOperationalReport(),
+    overdueScheduleThresholdMinutes: 15,
+    staleRunningThresholdMinutes: 60,
+    windowStartDate: "2026-05-26",
+    windowStartTs: Date.parse("2026-05-26T10:00:00.000Z"),
     ...overrides,
   };
 }
@@ -96,6 +127,77 @@ describe("platform alert service", () => {
     expect(html).toContain("Message dimension mismatches");
     expect(html).toContain("message_&lt;script&gt;");
     expect(html).not.toContain("message_<script>");
+  });
+
+  test("does not alert when system health report is clean", () => {
+    const decision = buildSystemHealthPlatformAlertDecision(buildSystemReport());
+
+    expect(decision).toMatchObject({
+      alertType: "systemHealth",
+      shouldAlert: false,
+      signals: [],
+      subject: "[Sonae] Platform alerts healthy: system health",
+    });
+    expect(decision.summary).toContain("clean");
+  });
+
+  test("alerts for operational health failures", () => {
+    const decision = buildSystemHealthPlatformAlertDecision(buildSystemReport({
+      operations: buildOperationalReport({
+        agentFailures: {
+          count: 1,
+          examples: [{
+            id: "log_1",
+            label: "ERROR",
+            occurredAt: Date.parse("2026-06-02T09:00:00.000Z"),
+            summary: "Provider failed",
+            targetName: "Sales Agent",
+            targetType: "agent",
+          }],
+        },
+        failedScheduledExecutions: {
+          count: 2,
+          examples: [{
+            id: "exec_1",
+            label: "SCHEDULE",
+            occurredAt: Date.parse("2026-06-02T08:00:00.000Z"),
+            summary: "Node failed",
+            targetName: "Daily Workflow",
+            targetType: "workflow",
+          }],
+        },
+      }),
+    }));
+
+    expect(decision.shouldAlert).toBe(true);
+    expect(decision.subject).toBe("[Sonae] Platform alert: system health (3 signals)");
+    expect(decision.signals.map((signal) => signal.key)).toEqual(["agentErrorLogs", "failedScheduledExecutions"]);
+    expect(decision.signals[0].details[0]).toContain("Sales Agent");
+    expect(decision.signals[1].details[0]).toContain("Daily Workflow");
+  });
+
+  test("renders escaped system health email content", () => {
+    const report = buildSystemReport({
+      operations: buildOperationalReport({
+        overdueSchedules: {
+          count: 1,
+          examples: [{
+            id: "schedule_1",
+            label: "Bad <script>",
+            summary: "Overdue <script>",
+            targetName: "Schedule <script>",
+            targetType: "schedule",
+          }],
+        },
+      }),
+    });
+    const decision = buildSystemHealthPlatformAlertDecision(report);
+    const html = buildSystemHealthPlatformAlertEmailHtml(report, decision);
+
+    expect(html).toContain("Alert type: systemHealth");
+    expect(html).toContain("Overdue active schedules");
+    expect(html).toContain("Schedule &lt;script&gt;");
+    expect(html).not.toContain("Schedule <script>");
   });
 
   test("parses comma-separated platform alert recipients", () => {

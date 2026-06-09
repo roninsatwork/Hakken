@@ -166,6 +166,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
   if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
+  if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
   if (pathname.startsWith('/admin/settings')) return 'System Settings';
@@ -197,8 +198,12 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     agents: isAgentsActive,
     workflows: false,
     users: false,
-    settings: pathname.startsWith('/admin/settings') && !pathname.startsWith('/admin/settings/scripts'),
-    maintenance: pathname.startsWith('/admin/settings/scripts') || pathname.startsWith('/admin/auth-diagnostics'),
+    settings: pathname.startsWith('/admin/settings') &&
+      !pathname.startsWith('/admin/settings/scripts') &&
+      !pathname.startsWith('/admin/settings/system-health'),
+    maintenance: pathname.startsWith('/admin/settings/scripts') ||
+      pathname.startsWith('/admin/settings/system-health') ||
+      pathname.startsWith('/admin/auth-diagnostics'),
     reports: false,
     organization: false,
     arcade: false,
@@ -375,7 +380,11 @@ export default function SidebarNavigation() {
                         <NavItem
                           icon={Settings}
                           label={t('settings')}
-                          isActive={(pathname.startsWith('/admin/settings') && !pathname.startsWith('/admin/settings/scripts')) || activeItem === 'System Settings' || activeItem === 'Analytics'}
+                          isActive={(pathname.startsWith('/admin/settings') &&
+                            !pathname.startsWith('/admin/settings/scripts') &&
+                            !pathname.startsWith('/admin/settings/system-health')) ||
+                            activeItem === 'System Settings' ||
+                            activeItem === 'Analytics'}
                           onClick={() => setActiveItem('System Settings')}
                           hasChildren
                           isOpen={openSections.settings}
@@ -389,12 +398,19 @@ export default function SidebarNavigation() {
                         <NavItem
                           icon={Wrench}
                           label={t('maintenance')}
-                          isActive={activeItem === 'Maintenance' || activeItem === 'Scripts' || activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/settings/scripts') || pathname.startsWith('/admin/auth-diagnostics')}
+                          isActive={activeItem === 'Maintenance' ||
+                            activeItem === 'Scripts' ||
+                            activeItem === 'System Health' ||
+                            activeItem === 'Auth Diagnostics' ||
+                            pathname.startsWith('/admin/settings/scripts') ||
+                            pathname.startsWith('/admin/settings/system-health') ||
+                            pathname.startsWith('/admin/auth-diagnostics')}
                           onClick={() => setActiveItem('Maintenance')}
                           hasChildren
                           isOpen={openSections.maintenance}
                           onToggle={() => toggleSection('maintenance')}
                         >
+                          <SubNavItem label={t('systemHealth')} href="/admin/settings/system-health" isActive={activeItem === 'System Health' || pathname.startsWith('/admin/settings/system-health')} onClick={() => setActiveItem('System Health')} />
                           <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
                           <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>

@@ -130,6 +130,7 @@
         "systemSettings": "System Settings",
         "analytics": "Analytics",
         "maintenance": "Maintenance",
+        "systemHealth": "System Health",
         "scripts": "Scripts",
         "authDiagnostics": "Auth Diagnostics",
         "workspace": "Workspace",

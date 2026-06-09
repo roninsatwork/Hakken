@@ -475,6 +475,114 @@ describe("analytics cron snapshots", () => {
     expect(health.messageDimensions.examples).toContain(setup.mismatchedMessageId);
   });
 
+  test("system health reports agent failures and schedule failures", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const setup = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Ops Health", createdAt: now });
+      const userId = await ctx.db.insert("users", {
+        email: "ops@example.com",
+        role: "SUPER_ADMIN",
+        companyId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Ops Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Ops Workflow",
+        isActive: true,
+        triggerType: "SCHEDULE",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: userId,
+      });
+
+      await ctx.db.insert("agentLogs", {
+        agentId,
+        interactionType: "ERROR",
+        promptContent: "N/A",
+        responseContent: "Provider unavailable",
+        companyId,
+        createdAt: now - 60_000,
+      });
+      await ctx.db.insert("agentTransactions", {
+        agentId,
+        userId,
+        companyId,
+        actionContext: "Report generation",
+        inputTokens: 1,
+        outputTokens: 1,
+        modelUsed: "model-test",
+        costGBP: 0,
+        status: "FAILED",
+        createdAt: now - 120_000,
+      });
+      await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "SCHEDULE",
+        status: "FAILED",
+        startedAt: now - 180_000,
+        completedAt: now - 150_000,
+        startedBy: userId,
+        state: "Node failed",
+      });
+      await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        triggerType: "SCHEDULE",
+        status: "RUNNING",
+        startedAt: now - 2 * 60 * 60 * 1000,
+        startedBy: userId,
+      });
+      const overdueScheduleId = await ctx.db.insert("schedules", {
+        name: "Overdue schedule",
+        workflowId,
+        intervalStr: "daily",
+        isActive: true,
+        lastRunTs: now - 2 * 24 * 60 * 60 * 1000,
+        nextRunAt: now - 60 * 60 * 1000,
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
+        createdBy: userId,
+      });
+      const missingNextRunScheduleId = await ctx.db.insert("schedules", {
+        name: "Missing next run",
+        agentId,
+        intervalStr: "daily",
+        isActive: true,
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
+        createdBy: userId,
+      });
+
+      return { missingNextRunScheduleId, overdueScheduleId };
+    });
+
+    const health = await t.query(internal.analyticsCron.getSystemHealth, { daysBack: 7 });
+
+    expect(health.operations.agentFailures).toMatchObject({ count: 1 });
+    expect(health.operations.agentFailures.examples[0]).toMatchObject({
+      summary: "Provider unavailable",
+      targetName: "Ops Agent",
+      targetType: "agent",
+    });
+    expect(health.operations.failedAgentTransactions).toMatchObject({ count: 1 });
+    expect(health.operations.failedScheduledExecutions).toMatchObject({ count: 1 });
+    expect(health.operations.failedScheduledExecutions.examples[0]).toMatchObject({
+      summary: "Node failed",
+      targetName: "Ops Workflow",
+      targetType: "workflow",
+    });
+    expect(health.operations.staleRunningScheduledExecutions).toMatchObject({ count: 1 });
+    expect(health.operations.overdueSchedules).toMatchObject({ count: 1 });
+    expect(health.operations.overdueSchedules.examples[0].id).toBe(setup.overdueScheduleId);
+    expect(health.operations.schedulesMissingNextRun).toMatchObject({ count: 1 });
+    expect(health.operations.schedulesMissingNextRun.examples[0].id).toBe(setup.missingNextRunScheduleId);
+  });
+
   test("analytics data health public query is super-admin only", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -498,6 +606,14 @@ describe("analytics cron snapshots", () => {
 
     await expect(
       t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
+    ).resolves.toMatchObject({ daysBack: 7 });
+
+    await expect(
+      t.withIdentity({ subject: adminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
+    ).rejects.toThrow("Unauthorized");
+
+    await expect(
+      t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
     ).resolves.toMatchObject({ daysBack: 7 });
   });
 });

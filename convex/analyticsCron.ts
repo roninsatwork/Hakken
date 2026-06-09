@@ -3,10 +3,13 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import {
-  buildAnalyticsHealthPlatformAlertDecision,
-  buildPlatformAlertEmailHtml,
+  buildSystemHealthPlatformAlertDecision,
+  buildSystemHealthPlatformAlertEmailHtml,
   parsePlatformAlertRecipients,
   type AnalyticsHealthReport,
+  type OperationalFailureExample,
+  type OperationalHealthReport,
+  type SystemHealthReport,
 } from "./platformAlertService";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -57,6 +60,10 @@ type AnalyticsDataHealthArgs = {
 
 const SYSTEM_AGENT_ID: SystemAgentId = "system_assistant";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HEALTH_COLLECTION_LIMIT = 10000;
+const HEALTH_EXAMPLE_LIMIT = 10;
+const OVERDUE_SCHEDULE_THRESHOLD_MINUTES = 15;
+const STALE_RUNNING_THRESHOLD_MINUTES = 60;
 
 function formatUtcDate(timestamp: number) {
   return new Date(timestamp).toISOString().slice(0, 10);
@@ -70,6 +77,23 @@ function getUtcDayStart(timestamp: number) {
 function getHealthLookbackDays(daysBack?: number) {
   if (!Number.isFinite(daysBack)) return 7;
   return Math.min(Math.max(Math.floor(daysBack ?? 7), 1), 90);
+}
+
+function truncateHealthSummary(value: string | undefined) {
+  const normalized = (value || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return undefined;
+  return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized;
+}
+
+function formatHealthWindowStart(timestamp: number) {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function buildOperationalBucket(examples: OperationalFailureExample[], count = examples.length) {
+  return {
+    count,
+    examples: examples.slice(0, HEALTH_EXAMPLE_LIMIT),
+  };
 }
 
 function getMissingMessageAnalyticsPatch(message: Doc<"messages">, thread: Doc<"threads">): MessageAnalyticsPatch {
@@ -223,6 +247,177 @@ async function getAnalyticsDataHealthReport(ctx: QueryCtx, args: AnalyticsDataHe
   };
 }
 
+async function getTargetName(
+  ctx: QueryCtx,
+  args: { agentId?: Id<"agents">; workflowId?: Id<"workflows"> }
+) {
+  if (args.workflowId) {
+    const workflow = await ctx.db.get(args.workflowId);
+    return workflow?.name || "Deleted Workflow";
+  }
+
+  if (args.agentId) {
+    const agent = await ctx.db.get(args.agentId);
+    return agent?.name || "Deleted Agent";
+  }
+
+  return "Unknown target";
+}
+
+async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: number }): Promise<OperationalHealthReport> {
+  const daysBack = getHealthLookbackDays(args.daysBack);
+  const now = Date.now();
+  const windowStartTs = now - daysBack * DAY_MS;
+  const staleRunningCutoffTs = now - STALE_RUNNING_THRESHOLD_MINUTES * 60 * 1000;
+  const overdueScheduleCutoffTs = now - OVERDUE_SCHEDULE_THRESHOLD_MINUTES * 60 * 1000;
+
+  const recentAgentLogs = await ctx.db
+    .query("agentLogs")
+    .withIndex("by_createdAt", (q) => q.gte("createdAt", windowStartTs))
+    .order("desc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const agentFailureLogs = recentAgentLogs.filter((log) => log.interactionType === "ERROR");
+  const agentFailures = await Promise.all(
+    agentFailureLogs.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (log): Promise<OperationalFailureExample> => {
+      const agent = await ctx.db.get(log.agentId);
+      return {
+        id: log._id,
+        label: log.interactionType,
+        occurredAt: log.createdAt,
+        summary: truncateHealthSummary(log.responseContent),
+        targetName: agent?.name || "Deleted Agent",
+        targetType: "agent",
+      };
+    })
+  );
+
+  const recentAgentTransactions = await ctx.db
+    .query("agentTransactions")
+    .withIndex("by_createdAt", (q) => q.gte("createdAt", windowStartTs))
+    .order("desc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const failedTransactions = recentAgentTransactions.filter((transaction) => transaction.status === "FAILED");
+  const failedAgentTransactions = await Promise.all(
+    failedTransactions.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (transaction): Promise<OperationalFailureExample> => {
+      const agent = await ctx.db.get(transaction.agentId);
+      return {
+        id: transaction._id,
+        label: transaction.actionContext,
+        occurredAt: transaction.createdAt,
+        summary: truncateHealthSummary([
+          transaction.providerKey,
+          transaction.providerModelId || transaction.modelUsed,
+        ].filter(Boolean).join(" / ")),
+        targetName: agent?.name || "Deleted Agent",
+        targetType: "agent",
+      };
+    })
+  );
+
+  const recentScheduledExecutions = await ctx.db
+    .query("workflowExecutions")
+    .withIndex("by_startedAt", (q) => q.gte("startedAt", windowStartTs))
+    .order("desc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const failedScheduleRuns = recentScheduledExecutions.filter((execution) =>
+    execution.triggerType === "SCHEDULE" && execution.status === "FAILED"
+  );
+  const failedScheduledExecutions = await Promise.all(
+    failedScheduleRuns.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (execution): Promise<OperationalFailureExample> => ({
+      id: execution._id,
+      label: execution.triggerType,
+      occurredAt: execution.completedAt ?? execution.startedAt,
+      summary: truncateHealthSummary(execution.state),
+      targetName: await getTargetName(ctx, { agentId: execution.agentId, workflowId: execution.workflowId }),
+      targetType: execution.workflowId ? "workflow" : "agent",
+    }))
+  );
+
+  const latestExecutions = await ctx.db
+    .query("workflowExecutions")
+    .withIndex("by_startedAt")
+    .order("desc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const staleScheduleRuns = latestExecutions.filter((execution) =>
+    execution.triggerType === "SCHEDULE" &&
+    execution.status === "RUNNING" &&
+    execution.startedAt <= staleRunningCutoffTs
+  );
+  const staleRunningScheduledExecutions = await Promise.all(
+    staleScheduleRuns.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (execution): Promise<OperationalFailureExample> => ({
+      id: execution._id,
+      label: execution.triggerType,
+      occurredAt: execution.startedAt,
+      summary: `${Math.max(1, Math.floor((now - execution.startedAt) / 60000))} minutes old`,
+      targetName: await getTargetName(ctx, { agentId: execution.agentId, workflowId: execution.workflowId }),
+      targetType: execution.workflowId ? "workflow" : "agent",
+    }))
+  );
+
+  const overdueScheduleCandidates = await ctx.db
+    .query("schedules")
+    .withIndex("by_active_next_run", (q) => q.eq("isActive", true).lte("nextRunAt", overdueScheduleCutoffTs))
+    .order("asc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const overdueScheduleRows = overdueScheduleCandidates.filter((schedule) => schedule.nextRunAt !== undefined);
+  const overdueSchedules = await Promise.all(
+    overdueScheduleRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (schedule): Promise<OperationalFailureExample> => ({
+      id: schedule._id,
+      label: schedule.name,
+      occurredAt: schedule.nextRunAt,
+      summary: schedule.lastRunTs ? `Last run ${new Date(schedule.lastRunTs).toISOString()}` : "Never run",
+      targetName: await getTargetName(ctx, { agentId: schedule.agentId, workflowId: schedule.workflowId }),
+      targetType: "schedule",
+    }))
+  );
+
+  const activeScheduleRows = await ctx.db
+    .query("schedules")
+    .withIndex("by_createdAt")
+    .order("desc")
+    .take(HEALTH_COLLECTION_LIMIT);
+  const missingNextRunRows = activeScheduleRows.filter((schedule) => schedule.isActive && schedule.nextRunAt === undefined);
+  const schedulesMissingNextRun = await Promise.all(
+    missingNextRunRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (schedule): Promise<OperationalFailureExample> => ({
+      id: schedule._id,
+      label: schedule.name,
+      occurredAt: schedule.createdAt,
+      summary: schedule.intervalStr,
+      targetName: await getTargetName(ctx, { agentId: schedule.agentId, workflowId: schedule.workflowId }),
+      targetType: "schedule",
+    }))
+  );
+
+  return {
+    agentFailures: buildOperationalBucket(agentFailures, agentFailureLogs.length),
+    failedAgentTransactions: buildOperationalBucket(failedAgentTransactions, failedTransactions.length),
+    failedScheduledExecutions: buildOperationalBucket(failedScheduledExecutions, failedScheduleRuns.length),
+    overdueSchedules: buildOperationalBucket(overdueSchedules, overdueScheduleRows.length),
+    schedulesMissingNextRun: buildOperationalBucket(schedulesMissingNextRun, missingNextRunRows.length),
+    staleRunningScheduledExecutions: buildOperationalBucket(staleRunningScheduledExecutions, staleScheduleRuns.length),
+  };
+}
+
+async function getSystemHealthReport(ctx: QueryCtx, args: AnalyticsDataHealthArgs): Promise<SystemHealthReport> {
+  const daysBack = getHealthLookbackDays(args.daysBack);
+  const checkedAt = Date.now();
+  const windowStartTs = checkedAt - daysBack * DAY_MS;
+  const analytics = await getAnalyticsDataHealthReport(ctx, { daysBack });
+  const operations = await getOperationalHealthReport(ctx, { daysBack });
+
+  return {
+    analytics,
+    checkedAt,
+    checkedDate: formatHealthWindowStart(checkedAt),
+    daysBack,
+    operations,
+    overdueScheduleThresholdMinutes: OVERDUE_SCHEDULE_THRESHOLD_MINUTES,
+    staleRunningThresholdMinutes: STALE_RUNNING_THRESHOLD_MINUTES,
+    windowStartDate: formatHealthWindowStart(windowStartTs),
+    windowStartTs,
+  };
+}
+
 export const backfillMessageAnalyticsDimensions = internalMutation({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -335,6 +530,15 @@ export const getAnalyticsDataHealth = internalQuery({
   },
 });
 
+export const getSystemHealth = internalQuery({
+  args: {
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await getSystemHealthReport(ctx, args);
+  },
+});
+
 export const getAnalyticsDataHealthForAdmin = query({
   args: {
     daysBack: v.optional(v.number()),
@@ -342,6 +546,16 @@ export const getAnalyticsDataHealthForAdmin = query({
   handler: async (ctx, args) => {
     await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
     return await getAnalyticsDataHealthReport(ctx, args);
+  },
+});
+
+export const getSystemHealthForAdmin = query({
+  args: {
+    daysBack: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+    return await getSystemHealthReport(ctx, args);
   },
 });
 
@@ -708,8 +922,8 @@ export const dispatchPlatformAlerts = internalAction({
     daysBack: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const report = await ctx.runQuery(internal.analyticsCron.getAnalyticsDataHealth, { daysBack: args.daysBack ?? 7 });
-    const decision = buildAnalyticsHealthPlatformAlertDecision(report);
+    const report = await ctx.runQuery(internal.analyticsCron.getSystemHealth, { daysBack: args.daysBack ?? 7 });
+    const decision = buildSystemHealthPlatformAlertDecision(report);
 
     if (!decision.shouldAlert) {
       return {
@@ -739,7 +953,7 @@ export const dispatchPlatformAlerts = internalAction({
       };
     }
 
-    const html = buildPlatformAlertEmailHtml(report, decision);
+    const html = buildSystemHealthPlatformAlertEmailHtml(report, decision);
 
     if (!process.env.RESEND_API_KEY) {
       console.warn("RESEND_API_KEY not found. Simulating platform alert dispatch.", {
@@ -759,8 +973,8 @@ export const dispatchPlatformAlerts = internalAction({
     const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Operations <noreply@ronins.co.uk>";
     const data = await sendResendEmail({
       apiKey: process.env.RESEND_API_KEY,
-      operation: "platformAnalyticsAlert",
-      idempotencyKey: `platform-alert:${decision.alertType}:${report.checkedDates[0] ?? "none"}:${report.liveToday.date}`,
+      operation: "platformSystemHealthAlert",
+      idempotencyKey: `platform-alert:${decision.alertType}:${report.windowStartDate}:${report.checkedDate}`,
       payload: {
         from: fromAddress,
         to: recipients,
