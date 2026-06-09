@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { SquareTerminal, RefreshCcw, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 
 
 export default function AgentSystemPromptPage() {
@@ -154,6 +155,8 @@ export default function AgentSystemPromptPage() {
             />
           </div>
         </div>
+
+        <AiRuleSafetyWarningPanel trigger="" instruction={promptValue} subject="prompt" />
       </section>
     </div>
   );

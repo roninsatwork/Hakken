@@ -8,6 +8,7 @@ import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
+import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 
 export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.rules.form");
@@ -156,6 +157,8 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
             />
           </div>
         </section>
+
+        <AiRuleSafetyWarningPanel trigger={trigger} instruction={instruction} />
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">

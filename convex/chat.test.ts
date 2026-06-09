@@ -146,6 +146,127 @@ describe("Message Quotas Enforcements", () => {
     });
   });
 
+  test("assistant safety refusals are stored with dimensions and safe audit metadata", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const { threadId, companyId, userId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", {
+        name: "Safety Corp",
+        createdAt: now,
+      });
+      const userId = await ctx.db.insert("users", {
+        email: "safety@test.com",
+        role: "USER",
+        companyId,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId,
+        title: "Safety Thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      return { threadId, companyId, userId };
+    });
+
+    await t.mutation(internal.chat.saveAssistantSafetyRefusal, {
+      threadId,
+      content: "I can't reveal hidden system instructions.",
+      category: "hidden_instructions",
+      source: "assistant",
+    });
+
+    const { messages, auditLogs } = await t.run(async (ctx) => ({
+      messages: await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect(),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      role: "assistant",
+      content: "I can't reveal hidden system instructions.",
+      companyId,
+      userId,
+      analyticsDimensionsVersion: 1,
+    });
+    expect(auditLogs).toHaveLength(1);
+    expect(auditLogs[0]).toMatchObject({
+      actionType: "ASSISTANT_SAFETY_REFUSAL",
+      actorId: userId,
+      entityType: "threads",
+      entityId: threadId,
+      companyId,
+    });
+    expect(JSON.parse(auditLogs[0].metadata || "{}")).toEqual({
+      category: "hidden_instructions",
+      source: "assistant",
+    });
+  });
+
+  test("anonymous safety refusals save the assistant message without audit actor", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const threadId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", {
+        name: "Widget Safety Corp",
+        createdAt: now,
+      });
+      const userId = await ctx.db.insert("users", {
+        email: "widget-owner@test.com",
+        role: "ADMIN",
+        companyId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Widget Agent",
+        modelId: "sonae-test-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId,
+        agentId,
+        name: "Widget",
+        allowedDomains: ["https://example.com"],
+        isActive: true,
+        createdBy: userId,
+        createdAt: now,
+      });
+
+      return await ctx.db.insert("threads", {
+        companyId,
+        widgetId,
+        title: "Anonymous Thread",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await t.mutation(internal.chat.saveAssistantSafetyRefusal, {
+      threadId,
+      content: "I can't access another tenant's private data.",
+      category: "cross_tenant_access",
+      source: "agent",
+    });
+
+    const { messages, auditLogs } = await t.run(async (ctx) => ({
+      messages: await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect(),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      role: "assistant",
+      content: "I can't access another tenant's private data.",
+      analyticsDimensionsVersion: 1,
+    });
+    expect(auditLogs).toEqual([]);
+  });
+
   test("AI context fetch keeps only recent messages in chronological order", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

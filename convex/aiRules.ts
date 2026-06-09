@@ -8,6 +8,7 @@ import {
   requireCurrentUser,
 } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();
@@ -16,6 +17,19 @@ function uniqueRulesById(rules: Doc<"aiRules">[]) {
     if (seen.has(rule._id)) return false;
     seen.add(rule._id);
     return true;
+  });
+}
+
+function getRuleSafetyWarningCategories(args: { trigger: string; instruction: string }) {
+  const warnings = getAssistantSafetyWarnings(`${args.trigger}\n${args.instruction}`);
+  return [...new Set(warnings.map((warning) => warning.category))];
+}
+
+function buildRuleAuditMetadata(metadata: Record<string, unknown>, args: { trigger: string; instruction: string }) {
+  const safetyWarnings = getRuleSafetyWarningCategories(args);
+  return JSON.stringify({
+    ...metadata,
+    ...(safetyWarnings.length > 0 ? { safetyWarnings } : {}),
   });
 }
 
@@ -259,7 +273,10 @@ export const createRule = mutation({
       entityType: "aiRules",
       entityId: newRuleId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ trigger: args.trigger, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" })
+      metadata: buildRuleAuditMetadata(
+        { trigger: args.trigger, scope: args.companyId ? "company" : args.agentId ? "agent" : "global" },
+        { trigger: args.trigger, instruction: args.instruction }
+      )
     });
 
     return newRuleId;
@@ -296,7 +313,10 @@ export const updateRule = mutation({
       entityType: "aiRules",
       entityId: args.id,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ updatedTrigger: args.trigger, updatedPriority: args.priority })
+      metadata: buildRuleAuditMetadata(
+        { updatedTrigger: args.trigger, updatedPriority: args.priority },
+        { trigger: args.trigger, instruction: args.instruction }
+      )
     });
     
     return args.id;

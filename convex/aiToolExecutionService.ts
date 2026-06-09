@@ -2,6 +2,7 @@ type JsonSchema = Record<string, unknown>;
 
 export type ToolAccessRole = "ADMIN" | "SUPER_ADMIN";
 export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
 export type ToolDefinitionInput = {
   name: string;
@@ -25,6 +26,18 @@ export type ToolCallPayload = {
 export type ToolAccessDecision = {
   allowed: boolean;
   reason?: string;
+};
+
+export type ToolExecutionPolicyInput = {
+  requiredRole: ToolAccessRole;
+  sideEffectLevel?: ToolSideEffectLevel;
+  confirmationRequired?: boolean;
+};
+
+export type NormalizedToolExecutionPolicy = {
+  requiredRole: ToolAccessRole;
+  sideEffectLevel: ToolSideEffectLevel;
+  confirmationRequired: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -99,12 +112,33 @@ export function buildToolFailureResult(error: unknown) {
   });
 }
 
+export function normalizeToolExecutionPolicy(tool: ToolExecutionPolicyInput): NormalizedToolExecutionPolicy {
+  const sideEffectLevel = tool.sideEffectLevel ?? "READ";
+  const confirmationRequired =
+    tool.confirmationRequired ?? (sideEffectLevel === "DESTRUCTIVE" || sideEffectLevel === "EXTERNAL");
+
+  return {
+    requiredRole: tool.requiredRole,
+    sideEffectLevel,
+    confirmationRequired,
+  };
+}
+
 export function canExecuteTool(args: {
   requiredRole: ToolAccessRole;
   userRole?: ToolExecutorRole;
   userCompanyId?: string;
   targetCompanyId?: string;
+  sideEffectLevel?: ToolSideEffectLevel;
+  confirmationRequired?: boolean;
+  confirmationGranted?: boolean;
 }): ToolAccessDecision {
+  const policy = normalizeToolExecutionPolicy({
+    requiredRole: args.requiredRole,
+    sideEffectLevel: args.sideEffectLevel,
+    confirmationRequired: args.confirmationRequired,
+  });
+
   if (!args.userRole) {
     return { allowed: false, reason: "Tool execution requires an authenticated user." };
   }
@@ -113,8 +147,12 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution requires administrator privileges." };
   }
 
-  if (args.requiredRole === "SUPER_ADMIN" && args.userRole !== "SUPER_ADMIN") {
+  if (policy.requiredRole === "SUPER_ADMIN" && args.userRole !== "SUPER_ADMIN") {
     return { allowed: false, reason: "Tool execution requires super-admin privileges." };
+  }
+
+  if (policy.confirmationRequired && !args.confirmationGranted) {
+    return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
   }
 
   if (args.userRole === "SUPER_ADMIN") {

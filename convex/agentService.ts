@@ -1,4 +1,5 @@
 import type { Doc, Id } from "./_generated/dataModel";
+import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
 export function isGlobalAgent(agent: Doc<"agents">) {
   return agent.isGlobal !== false;
@@ -70,8 +71,18 @@ export function buildCreateAgentAuditMetadata(name: string) {
   return JSON.stringify({ name, scope: "global" });
 }
 
-export function buildUpdateAgentAuditMetadata(updatedFields: string[]) {
-  return JSON.stringify({ updatedFields });
+export function buildUpdateAgentAuditMetadata(args: { updatedFields: string[]; systemPrompt?: string } | string[]) {
+  const updatedFields = Array.isArray(args) ? args : args.updatedFields;
+  const systemPrompt = Array.isArray(args) ? undefined : args.systemPrompt;
+  const safetyWarnings =
+    typeof systemPrompt === "string"
+      ? getAssistantSafetyWarnings(systemPrompt).map((warning) => warning.category)
+      : [];
+
+  return JSON.stringify({
+    updatedFields,
+    ...(safetyWarnings.length > 0 ? { safetyWarnings } : {}),
+  });
 }
 
 export function buildDeleteAgentAuditMetadata(name?: string) {

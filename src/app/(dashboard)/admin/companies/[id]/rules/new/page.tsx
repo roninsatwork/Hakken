@@ -7,6 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useRouter, useParams } from "next/navigation";
 import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 
 export default function NewCompanyRulePage() {
   const router = useRouter();
@@ -156,6 +157,8 @@ export default function NewCompanyRulePage() {
              />
            </div>
         </section>
+
+        <AiRuleSafetyWarningPanel trigger={trigger} instruction={instruction} />
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-4 border-t border-border-dim mt-2">

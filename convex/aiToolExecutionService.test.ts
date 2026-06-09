@@ -6,6 +6,7 @@ import {
   buildToolResultPayload,
   canExecuteTool,
   normalizeToolFunctionName,
+  normalizeToolExecutionPolicy,
   normalizeAiRuntimeError,
   parseToolCallPayload,
   parseToolInputSchema,
@@ -104,6 +105,52 @@ describe("ai tool execution service", () => {
     expect(() => assertCanExecuteTool({ requiredRole: "ADMIN", userRole: "USER" })).toThrow(
       "Tool execution requires administrator privileges."
     );
+  });
+
+  test("normalizes tool side-effect policy and requires confirmation for risky tools", () => {
+    expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN" })).toEqual({
+      requiredRole: "ADMIN",
+      sideEffectLevel: "READ",
+      confirmationRequired: false,
+    });
+    expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "WRITE" })).toEqual({
+      requiredRole: "ADMIN",
+      sideEffectLevel: "WRITE",
+      confirmationRequired: false,
+    });
+    expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "DESTRUCTIVE" })).toEqual({
+      requiredRole: "ADMIN",
+      sideEffectLevel: "DESTRUCTIVE",
+      confirmationRequired: true,
+    });
+    expect(normalizeToolExecutionPolicy({ requiredRole: "SUPER_ADMIN", sideEffectLevel: "EXTERNAL" })).toEqual({
+      requiredRole: "SUPER_ADMIN",
+      sideEffectLevel: "EXTERNAL",
+      confirmationRequired: true,
+    });
+
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
+        targetCompanyId: "a",
+        sideEffectLevel: "DESTRUCTIVE",
+      })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution requires explicit user confirmation.",
+    });
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
+        targetCompanyId: "a",
+        sideEffectLevel: "DESTRUCTIVE",
+        confirmationGranted: true,
+      })
+    ).toEqual({ allowed: true });
   });
 
   test("normalizes AI runtime errors into stable UI-safe shapes", () => {

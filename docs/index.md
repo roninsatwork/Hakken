@@ -54,6 +54,10 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Plan for upgrading the admin schedule builder with recurring cadence, targeted times, timezone previews, structured configs, and agent dispatch support.
 25. **[System Health Alerts Expansion Plan](./system-health-alerts-plan.md)**
     Plan for adding agent failures, schedule failures, stale runs, and overdue schedules to the daily platform alert path.
+26. **[Local Real Auth E2E Plan](./local-real-auth-e2e-plan.md)**
+    Plan for adding a local-only real Convex Auth browser testing lane alongside the existing mocked Playwright suite.
+27. **[Ask Sonae Safety Hardening Plan](./ask-sonae-safety-hardening-plan.md)**
+    Locked phased plan for jailbreak, prompt-injection, RAG, tool execution, and admin prompt guardrails across the Ask Sonae assistant.
 
 ---
 

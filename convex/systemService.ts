@@ -1,4 +1,5 @@
 import type { Id } from "./_generated/dataModel";
+import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import type { PiiConfig } from "./utils/pii";
 
 export const SYSTEM_PROMPT_CONFIG_KEY = "SYSTEM_PROMPT";
@@ -49,7 +50,12 @@ export function buildSystemConfigPatch(args: {
 }
 
 export function buildSystemPromptAuditMetadata(prompt: string) {
-  return JSON.stringify({ promptLength: prompt.length });
+  const safetyWarnings = getAssistantSafetyWarnings(prompt).map((warning) => warning.category);
+
+  return JSON.stringify({
+    promptLength: prompt.length,
+    ...(safetyWarnings.length > 0 ? { safetyWarnings } : {}),
+  });
 }
 
 export function buildAnalyticsIdAuditMetadata(trackingId: string) {

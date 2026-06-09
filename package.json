@@ -15,7 +15,10 @@
     "coverage:check": "node scripts/check-coverage-thresholds.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run test:run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:real-auth": "playwright test -c playwright.real-auth.config.ts",
+    "auth:local:seed": "node scripts/local-test-auth.mjs seed",
+    "auth:local:state": "node scripts/local-test-auth.mjs state"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

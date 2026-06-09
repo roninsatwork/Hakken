@@ -235,7 +235,10 @@ export const updateAgent = mutation({
       entityType: "agents",
       entityId: id,
       timestamp: now,
-      metadata: buildUpdateAgentAuditMetadata(Object.keys(updates))
+      metadata: buildUpdateAgentAuditMetadata({
+        updatedFields: Object.keys(updates),
+        systemPrompt: updates.systemPrompt,
+      })
     });
 
     return id;

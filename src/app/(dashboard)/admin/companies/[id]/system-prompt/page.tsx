@@ -12,6 +12,7 @@ import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 
 
 export default function CompanySystemPromptPage() {
@@ -159,6 +160,8 @@ export default function CompanySystemPromptPage() {
             />
           </div>
         </div>
+
+        <AiRuleSafetyWarningPanel trigger="" instruction={promptValue} subject="prompt" />
       </section>
     </div>
   );

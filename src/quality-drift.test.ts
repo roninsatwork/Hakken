@@ -346,6 +346,84 @@ describe('Quality Drift Guardrails', () => {
     expect(offenders, `Rules pages drifted away from shared table/delete-confirmation patterns:\n${offenders.join('\n')}`).toEqual([]);
   });
 
+  test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
+    const assistantBody = extractExportBody('convex/ai.ts', 'generateSonaeResponse');
+    const agentBody = extractExportBody('convex/agentRuntime.ts', 'generateAgentResponse');
+
+    const assistantRequirements = [
+      'evaluateAssistantSafety',
+      'saveAssistantSafetyRefusal',
+      'buildAssistantSystemInstruction',
+      'buildUntrustedConversationHistory',
+      'buildUntrustedKnowledgeContext',
+    ];
+    const agentRequirements = [
+      'evaluateAssistantSafety',
+      'saveAssistantSafetyRefusal',
+      'buildAgentSystemInstruction',
+      'buildUntrustedKnowledgeContext',
+      'canExecuteTool',
+    ];
+    const assistantMissing = assistantRequirements.filter((needle) => !assistantBody.includes(needle));
+    const agentMissing = agentRequirements.filter((needle) => !agentBody.includes(needle));
+
+    expect(
+      assistantMissing,
+      `generateSonaeResponse must keep preflight refusal, prompt hierarchy, untrusted history, and untrusted RAG helpers:\n${assistantMissing.join('\n')}`
+    ).toEqual([]);
+    expect(
+      agentMissing,
+      `generateAgentResponse must keep preflight refusal, agent prompt hierarchy, untrusted RAG, and tool authorization helpers:\n${agentMissing.join('\n')}`
+    ).toEqual([]);
+    expect(assistantBody).not.toContain('Previous Conversation History:');
+    expect(assistantBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
+    expect(agentBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
+    expect(agentBody).not.toContain('You MUST refer to these when answering');
+  });
+
+  test('admin AI rule forms keep prompt-injection warning panels', () => {
+    const pages = [
+      'src/app/(dashboard)/admin/ai/rules/new/page.tsx',
+      'src/app/(dashboard)/admin/ai/rules/[id]/page.tsx',
+      'src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx',
+      'src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/rules/new/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/rules/[ruleId]/page.tsx',
+    ];
+    const offenders = pages.filter((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return !contents.includes('AiRuleSafetyWarningPanel') ||
+        !contents.includes('trigger=') ||
+        !contents.includes('instruction=');
+    });
+
+    expect(
+      offenders,
+      `AI rule forms must keep visible prompt-injection safety warnings before save:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  test('admin AI prompt editors keep prompt-injection warning panels', () => {
+    const pages = [
+      'src/app/(dashboard)/admin/ai/system-prompt/page.tsx',
+      'src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/system-prompt/page.tsx',
+    ];
+    const offenders = pages.filter((filePath) => {
+      const contents = readRepoFile(filePath);
+
+      return !contents.includes('AiRuleSafetyWarningPanel') ||
+        !contents.includes('instruction={promptValue}') ||
+        !contents.includes('subject="prompt"');
+    });
+
+    expect(
+      offenders,
+      `AI prompt editors must keep visible prompt-injection safety warnings before save:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
   test('knowledge document deletes remain confirmation-gated', () => {
     const pages = [
       'src/app/(dashboard)/admin/ai/global-knowledge/page.tsx',

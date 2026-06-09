@@ -21,6 +21,14 @@ const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
 const THREAD_DELETE_MESSAGE_BATCH_SIZE = 100;
 
+const safetyRefusalCategoryValidator = v.union(
+  v.literal("hidden_instructions"),
+  v.literal("permission_bypass"),
+  v.literal("cross_tenant_access")
+);
+
+const safetyRefusalSourceValidator = v.union(v.literal("assistant"), v.literal("agent"));
+
 function getThreadMessageDimensions(thread: Doc<"threads"> | null) {
   return {
     companyId: thread?.companyId,
@@ -266,6 +274,42 @@ export const saveAssistantMessage = internalMutation({
       providerModelId: args.providerModelId,
       ...getThreadMessageDimensions(thread),
     });
+  },
+});
+
+export const saveAssistantSafetyRefusal = internalMutation({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+    category: safetyRefusalCategoryValidator,
+    source: safetyRefusalSourceValidator,
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    const now = Date.now();
+
+    await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      role: "assistant",
+      content: args.content,
+      createdAt: now,
+      ...getThreadMessageDimensions(thread),
+    });
+
+    if (thread?.userId) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "ASSISTANT_SAFETY_REFUSAL",
+        actorId: thread.userId,
+        entityType: "threads",
+        entityId: args.threadId,
+        companyId: thread.companyId,
+        timestamp: now,
+        metadata: JSON.stringify({
+          category: args.category,
+          source: args.source,
+        }),
+      });
+    }
   },
 });
 

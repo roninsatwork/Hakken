@@ -7,6 +7,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { BrainCircuit, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -205,6 +206,8 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
              />
            </div>
         </section>
+
+        <AiRuleSafetyWarningPanel trigger={form.trigger} instruction={form.instruction} />
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-4 border-t border-border-dim mt-2">

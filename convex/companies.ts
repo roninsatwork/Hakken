@@ -6,6 +6,7 @@ import { requireSuperAdmin } from "./authz";
 import {
   buildCompanyProfilePatch,
   buildCompanyRecord,
+  buildCompanyPromptAuditMetadata,
   buildCreateCompanyAuditMetadata,
   buildDeleteCompanyAuditMetadata,
   buildUpdateCompanyAuditMetadata,
@@ -217,13 +218,24 @@ export const deleteCompany = mutation({
 export const updateCompanyPrompt = mutation({
   args: { id: v.id("companies"), systemPrompt: v.string() },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
+    const { userId } = await requireSuperAdmin(
       ctx,
       "Unauthorized: System level clearance required.",
       "Unauthenticated Admin Request"
     );
 
+    const now = Date.now();
     await ctx.db.patch(args.id, { systemPrompt: args.systemPrompt });
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "UPDATE_COMPANY_PROMPT",
+      companyId: args.id,
+      entityId: args.id,
+      entityType: "companies",
+      metadata: buildCompanyPromptAuditMetadata(args.systemPrompt),
+      timestamp: now,
+    });
+
     return args.id;
   },
 });

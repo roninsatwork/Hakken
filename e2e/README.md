@@ -55,3 +55,35 @@ Authenticated coverage:
 - Movement library, capture shell, detail viewer, and play avatar lobby with deterministic movement fixture data.
 
 The browser suite is expected to run with no expected skips.
+
+## Local Real Auth Lane
+
+Sonae also has a local-only real Convex Auth lane for targeted authentication and authorization smoke tests. This lane does not use the `sonae_e2e_auth` role cookie and does not alias `convex/react` to the deterministic mock.
+
+Before running it, configure the local app shell and Convex backend with:
+
+```bash
+LOCAL_TEST_AUTH_ENABLED=1
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth
+```
+
+Then seed deterministic users:
+
+```bash
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run auth:local:seed
+```
+
+Run the focused real-auth suite with:
+
+```bash
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth
+```
+
+The focused smoke tests sign in dynamically through `/local-test-auth` at test start. For tests that need a reusable Playwright storage state, start the app locally and run:
+
+```bash
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run dev -- -p 3100
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3100 npm run auth:local:state
+```
+
+Generated storage states are written to `e2e/.auth/` and ignored by git.
