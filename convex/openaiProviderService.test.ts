@@ -58,6 +58,61 @@ describe("openai provider service", () => {
     });
   });
 
+  test("retries transient Responses API failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn<(_: RequestInfo | URL, __?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          error: { message: "rate limited" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": "1" },
+        }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          output_text: "Reply after retry",
+          usage: { input_tokens: 8, output_tokens: 3 },
+        }), { status: 200 }));
+
+      const adapter = createOpenAIProviderAdapter({
+        env: { OPENAI_API_KEY: "key" },
+        fetchImpl,
+      });
+
+      const resultPromise = adapter.generateText({
+        model: { modelId: "openai:gpt-test", providerKey: "openai", providerModelId: "gpt-test" },
+        contents: [{ type: "text", text: "Prompt" }],
+      });
+
+      await vi.runAllTimersAsync();
+      await expect(resultPromise).resolves.toEqual({
+        text: "Reply after retry",
+        inputTokens: 8,
+        outputTokens: 3,
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("does not retry non-retryable Responses API failures", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      error: { message: "unauthorized" },
+    }), { status: 401 }));
+
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "key" },
+      fetchImpl,
+    });
+
+    await expect(adapter.generateText({
+      model: { modelId: "openai:gpt-test", providerKey: "openai", providerModelId: "gpt-test" },
+      contents: [{ type: "text", text: "Prompt" }],
+    })).rejects.toThrow("unauthorized");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   test("lists model IDs from the account model endpoint", async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
       data: [{ id: "gpt-test" }, { id: "" }, { id: "text-embedding-3-small" }],
@@ -67,5 +122,30 @@ describe("openai provider service", () => {
       env: { OPENAI_API_KEY: "key" },
       fetchImpl,
     })).resolves.toEqual(["gpt-test", "text-embedding-3-small"]);
+  });
+
+  test("retries transient model list failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn<(_: RequestInfo | URL, __?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          error: { message: "temporary overload" },
+        }), { status: 503 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          data: [{ id: "gpt-test" }],
+        }), { status: 200 }));
+
+      const resultPromise = listOpenAIModels({
+        env: { OPENAI_API_KEY: "key" },
+        fetchImpl,
+      });
+
+      await vi.runAllTimersAsync();
+      await expect(resultPromise).resolves.toEqual(["gpt-test"]);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

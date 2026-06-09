@@ -233,7 +233,7 @@ describe("Scheduler Authorization", () => {
   test("dispatcher reads due active schedules and advances nextRunAt", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { dueScheduleId, futureScheduleId } = await t.run(async (ctx) => {
+    const { dueScheduleId, futureScheduleId, dueAgentScheduleId } = await t.run(async (ctx) => {
       const superAdminId = await ctx.db.insert("users", {
         name: "Super Admin",
         email: "super@example.com",
@@ -258,6 +258,14 @@ describe("Scheduler Authorization", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      const dueAgentId = await ctx.db.insert("agents", {
+        name: "Due Agent",
+        modelId: "safe-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
       const dueScheduleId = await ctx.db.insert("schedules", {
         name: "Due",
@@ -277,21 +285,34 @@ describe("Scheduler Authorization", () => {
         createdAt: 2,
         createdBy: superAdminId,
       });
+      const dueAgentScheduleId = await ctx.db.insert("schedules", {
+        name: "Due Agent",
+        agentId: dueAgentId,
+        intervalStr: "hourly",
+        isActive: true,
+        nextRunAt: Date.now() - 1_000,
+        createdAt: 3,
+        createdBy: superAdminId,
+      });
 
-      return { dueScheduleId, futureScheduleId };
+      return { dueScheduleId, futureScheduleId, dueAgentScheduleId };
     });
 
     await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
 
-    const { dueSchedule, futureSchedule, executions } = await t.run(async (ctx) => ({
+    const { dueSchedule, futureSchedule, dueAgentSchedule, executions } = await t.run(async (ctx) => ({
       dueSchedule: await ctx.db.get(dueScheduleId),
       futureSchedule: await ctx.db.get(futureScheduleId),
+      dueAgentSchedule: await ctx.db.get(dueAgentScheduleId),
       executions: await ctx.db.query("workflowExecutions").collect(),
     }));
 
-    expect(executions).toHaveLength(1);
+    expect(executions).toHaveLength(2);
+    expect(executions.some((execution) => execution.agentId)).toBe(true);
     expect(dueSchedule?.lastRunTs).toEqual(expect.any(Number));
     expect(dueSchedule?.nextRunAt).toBeGreaterThan(Date.now());
+    expect(dueAgentSchedule?.lastRunTs).toEqual(expect.any(Number));
+    expect(dueAgentSchedule?.nextRunAt).toBeGreaterThan(Date.now());
     expect(futureSchedule?.lastRunTs).toBeUndefined();
   });
 });

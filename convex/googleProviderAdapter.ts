@@ -4,7 +4,7 @@ import { ThinkingLevel } from "@google/genai";
 import type { GenerateContentConfig, Part } from "@google/genai";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
 
 function toGoogleParts(contents: AiGenerationRequest["contents"]): Part[] {
   return contents.map((part) => {
@@ -51,10 +51,12 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
         if (thinkingLevel) config.thinkingConfig = { thinkingLevel };
       }
 
-      const response = await ai.models.generateContent({
+      const response = await generateVertexContentWithRetry(ai, {
         model: request.model.providerModelId,
         contents: toGoogleParts(request.contents),
         config,
+      }, {
+        operation: "generateText",
       });
 
       return {

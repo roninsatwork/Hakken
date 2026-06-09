@@ -6,7 +6,7 @@ import { v } from "convex/values";
 import { Type, Schema } from "@google/genai";
 import { Doc } from "./_generated/dataModel";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error during AI Generation";
 
@@ -217,7 +217,7 @@ Total length: 600-900 words. Never pad.
     });
 
     try {
-        const modelResponse = await ai.models.generateContent({
+        const modelResponse = await generateVertexContentWithRetry(ai, {
             model: targetModel,
             contents: prompt,
             config: {
@@ -225,6 +225,11 @@ Total length: 600-900 words. Never pad.
                 responseSchema: responseSchema,
                 temperature: 0.2 // Low temp for analytical accuracy
             }
+        }, {
+            operation: "salesReportGenerate",
+            retryPolicy: {
+                maxAttempts: 5,
+            },
         });
 
         const jsonText = modelResponse.text;

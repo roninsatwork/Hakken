@@ -5,7 +5,11 @@ import { v } from "convex/values";
 import { Type } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import {
+  createVertexGenAIClient,
+  embedVertexContentWithRetry,
+  generateVertexContentWithRetry,
+} from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
@@ -86,9 +90,11 @@ export const generateSonaeResponse = internalAction({
                 companyId: thread?.companyId,
             });
             const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "assistant RAG search");
-            const userEmbeddingResp = await ai.models.embedContent({
+            const userEmbeddingResp = await embedVertexContentWithRetry(ai, {
                 model: embeddingProviderModelId,
                 contents: args.content
+            }, {
+                operation: "assistantRagEmbedding",
             });
             
             const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
@@ -214,11 +220,11 @@ User Prompt: ${args.content}`;
         });
 
     } catch (error) {
-        console.error("Vertex AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
+        console.error("AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
         
         await ctx.runMutation(internal.chat.saveAssistantMessage, {
             threadId: args.threadId,
-            content: "Sonae Core Offline: An error occurred communicating with the Google Cloud intelligence cluster. Check Vertex AI status."
+            content: "Sonae Core Offline: An error occurred communicating with the selected AI provider. Please try again shortly."
         });
     }
   },
@@ -240,17 +246,19 @@ export const transcribeAudio = action({
         });
         const providerModelId = getGoogleVertexProviderModelId(modelConfig, "audio transcription");
         
-        const response = await ai.models.generateContent({
+        const response = await generateVertexContentWithRetry(ai, {
             model: providerModelId,
             contents: [
                 { text: "Transcribe the following audio exactly. Output ONLY the raw transcription text without any prefix, markdown, or commentary." },
                 { inlineData: { mimeType: args.mimeType, data: args.audioBase64 } }
             ]
+        }, {
+            operation: "transcribeAudio",
         });
 
         return response.text ? response.text.trim() : "";
     } catch (error) {
-        console.error("Vertex AI Transcription Error:", normalizeAiRuntimeError(error, "Audio transcription failed."));
+        console.error("AI Transcription Error:", normalizeAiRuntimeError(error, "Audio transcription failed."));
         throw new Error("Failed to transcribe audio stream properly.");
     }
   }
@@ -312,7 +320,7 @@ export const generateNodeConfig = action({
       
       const nodesContext = args.availableNodes.map(n => `- ID: ${n.id} (Type: ${n.type}, Label: ${n.label || 'Unnamed'})`).join("\n");
       
-      const response = await ai.models.generateContent({
+      const response = await generateVertexContentWithRetry(ai, {
         model: providerModelId,
         contents: `User Prompt: "${args.prompt}"`,
         config: {
@@ -348,6 +356,8 @@ Your job is to translate the user's plain-English intent into exact system paylo
             required: ["mapping", "template"]
           }
         }
+      }, {
+        operation: "generateNodeConfig",
       });
 
       if (!response.text) {
@@ -359,7 +369,7 @@ Your job is to translate the user's plain-English intent into exact system paylo
       return parsed as { mapping: string, template: string, agentName?: string, agentSystemPrompt?: string, agentInputFields?: string, agentOutputFields?: string, agentAllowInternet?: boolean };
       
     } catch (error) {
-      console.error("Failed to generate node configuration via Vertex AI:", normalizeAiRuntimeError(error, "Node configuration generation failed."));
+      console.error("Failed to generate node configuration via AI provider:", normalizeAiRuntimeError(error, "Node configuration generation failed."));
       throw new Error("Generative Payload creation failed.");
     }
   }

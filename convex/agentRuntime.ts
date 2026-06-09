@@ -16,7 +16,11 @@ import {
   parseToolCallPayload,
   type ToolAccessRole,
 } from "./aiToolExecutionService";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import {
+  createVertexGenAIClient,
+  embedVertexContentWithRetry,
+  generateVertexContentWithRetry,
+} from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 
 function getErrorMessage(error: unknown): string {
@@ -120,9 +124,11 @@ export const generateAgentResponse = internalAction({
                 companyId: thread.companyId,
             });
             const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "agent RAG search");
-            const userEmbeddingResp = await ai.models.embedContent({
+            const userEmbeddingResp = await embedVertexContentWithRetry(ai, {
                 model: embeddingProviderModelId,
                 contents: args.content
+            }, {
+                operation: "agentRagEmbedding",
             });
             
             const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
@@ -181,10 +187,12 @@ export const generateAgentResponse = internalAction({
         // --- MULTI-PASS GENERATION LOOP ---
         
         // Pass 1: Initial call to Model
-        let response = await ai.models.generateContent({
+        let response = await generateVertexContentWithRetry(ai, {
              model: targetModel,
              contents: conversationHistory,
              config: genConfig
+        }, {
+             operation: "agentGeneratePassOne",
         });
 
         // Did the model request a tool?
@@ -251,10 +259,12 @@ export const generateAgentResponse = internalAction({
             });
 
             // Pass 2: Let the model synthesize the backend data into English
-            response = await ai.models.generateContent({
+            response = await generateVertexContentWithRetry(ai, {
                 model: targetModel,
                 contents: conversationHistory,
                 config: genConfig
+            }, {
+                operation: "agentGenerateToolSynthesis",
             });
         }
 
@@ -384,10 +394,12 @@ export const executeAgentNode = internalAction({
         safeInput = safeInput.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
     }
 
-    const response = await ai.models.generateContent({
+    const response = await generateVertexContentWithRetry(ai, {
         model: targetModel,
         contents: `Input Data:\n${safeInput}`,
         config: config
+    }, {
+        operation: "workflowAgentNodeGenerate",
     });
 
     const output = response.text || "{}";

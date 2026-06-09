@@ -838,6 +838,40 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
   });
 
+  test('raw provider model calls stay behind retry wrappers', () => {
+    const allowedRawProviderCallFiles = new Set([
+      'convex/vertexProviderService.ts',
+      'src/quality-drift.test.ts',
+    ]);
+
+    const files = [
+      ...walkFiles(path.join(repoRoot, 'convex'), new Set(['.ts'])),
+      ...walkFiles(path.join(repoRoot, 'src'), new Set(['.ts', '.tsx'])),
+    ].filter((filePath) => !relativePath(filePath).replaceAll(path.sep, '/').includes('/_generated/'));
+    const rawProviderCall = /\b(?:ai|client)\.models\.(?:generateContent|embedContent)\s*\(/;
+    const offenders = files.flatMap((filePath) => {
+      const normalizedPath = relativePath(filePath).replaceAll(path.sep, '/');
+
+      if (allowedRawProviderCallFiles.has(normalizedPath)) {
+        return [];
+      }
+
+      return fs
+        .readFileSync(filePath, 'utf8')
+        .split('\n')
+        .flatMap((line, index) =>
+          rawProviderCall.test(line)
+            ? [`${normalizedPath}:${index + 1}: ${line.trim()}`]
+            : []
+        );
+    });
+
+    expect(
+      offenders,
+      `Raw provider model calls must go through retry wrappers before they reach provider SDKs:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
   test('provider model ID literals remain classified', () => {
     const allowedProviderModelLiteralFiles = new Set([
       'convex/aiModelService.ts',

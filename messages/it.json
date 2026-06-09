@@ -572,6 +572,14 @@
                     "forceRun": "Forza Esecuzione",
                     "delete": "Elimina Programmazione"
                 },
+                "scheduleSummary": {
+                    "hourly": "Ogni {hours} ore dalle {time} locali ({utcTime} UTC)",
+                    "daily": "Ogni giorno alle {time} locali ({utcTime} UTC)",
+                    "weekly": "Ogni settimana il {day} alle {time} locali ({utcTime} UTC)",
+                    "monthly": "Ogni mese il giorno {day} alle {time} locali ({utcTime} UTC)",
+                    "targeted": "Orari mirati: {times} locali",
+                    "targetedEmpty": "Nessun orario mirato configurato"
+                },
                 "modals": {
                     "delete": {
                         "title": "Rimuovi Programmazione",
@@ -595,6 +603,16 @@
                     "createTitle": "Crea Programmazione",
                     "editTitle": "Modifica Programmazione",
                     "description": "Configura un'automazione periodica per un workflow o un agent.",
+                    "scheduleMode": {
+                        "recurring": {
+                            "title": "Cadenza Ricorrente",
+                            "description": "Esegui su un ciclo prevedibile e continuo (ad es. giornaliero, settimanale)."
+                        },
+                        "targeted": {
+                            "title": "Orari Mirati",
+                            "description": "Esegui solo a orari esatti e specifici della giornata."
+                        }
+                    },
                     "status": {
                         "armed": "Attivo",
                         "paused": "In pausa",
@@ -629,14 +647,21 @@
                         },
                         "interval": {
                             "label": "Frequenza",
+                            "executionInterval": "Intervallo di Esecuzione",
                             "hourly": "Oraria",
                             "daily": "Giornaliero",
                             "weekly": "Settimanale",
                             "monthly": "Mensile",
                             "everyXHours": "Ogni [X] ore",
+                            "everyHoursOption": "Ogni {hours} ore",
+                            "initialStartTime": "Orario Iniziale",
                             "dayOfWeek": "Giorno della settimana",
                             "dayOfMonth": "Data",
-                            "timeLabel": "Orario",
+                            "timeLabel": "Orario del Giorno",
+                            "addTime": "Aggiungi Orario",
+                            "configuredTimes": "Orari Configurati",
+                            "removeTime": "Rimuovi",
+                            "noConfiguredTimes": "Nessun orario mirato configurato.",
                             "days": {
                                 "monday": "Lunedì",
                                 "tuesday": "Martedì",
@@ -655,6 +680,18 @@
                         "weekly": "Ogni {day} alle {time}",
                         "monthly": "Il giorno {day} del mese alle {time}"
                     },
+                    "summary": {
+                        "targets": {
+                            "agent": "agent",
+                            "workflow": "workflow"
+                        },
+                        "hourly": "Programmazione attiva: questo {target} verrà eseguito ogni {hours} ore a partire dalle {localTime} locali ({utcTime} UTC).",
+                        "daily": "Programmazione attiva: questo {target} verrà eseguito ogni giorno alle {localTime} locali ({utcTime} UTC).",
+                        "weekly": "Programmazione attiva: questo {target} verrà eseguito ogni settimana il {day} alle {localTime} locali ({utcTime} UTC).",
+                        "monthly": "Programmazione attiva: questo {target} verrà eseguito ogni mese il giorno {day} alle {localTime} locali ({utcTime} UTC).",
+                        "targeted": "Programmazione attiva: questo {target} verrà eseguito alle {times} locali ({utcTimes} UTC).",
+                        "targetedEmpty": "Programmazione attiva: aggiungi almeno un orario mirato per questo {target}."
+                    },
                     "actions": {
                         "cancel": "Annulla",
                         "deploy": "Attiva Programmazione",
@@ -664,6 +701,7 @@
                     },
                     "errors": {
                         "noWorkflow": "Seleziona un workflow o agent da eseguire.",
+                        "missingTargetedTime": "Aggiungi almeno un orario mirato prima di salvare questa programmazione.",
                         "configError": "Errore di Configurazione"
                     }
                 }

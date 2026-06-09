@@ -48,6 +48,10 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Repeatable signed-in browser checklist for camera, MediaPipe model loading, capture, save, detail playback, and match-play smoke before demos or pushes.
 22. **[Movement Demo Whole-Body Tracking Accuracy Plan](./movement-demo-whole-body-tracking-plan.md)**
     Phased plan for calibration, debug overlays, head accuracy, arm/hand chains, lower-body constraints, avatar profiles, and whole-body tracking regression checks.
+23. **[AI Runtime Retry Hardening Plan](./ai-runtime-retry-hardening-plan.md)**
+    Audited plan for making AI provider calls pause, retry, and continue safely after throttling, transient provider errors, and SDK/network failures.
+24. **[Agent Scheduler Upgrade Plan](./agent-scheduler-upgrade-plan.md)**
+    Plan for upgrading the admin schedule builder with recurring cadence, targeted times, timezone previews, structured configs, and agent dispatch support.
 
 ---
 

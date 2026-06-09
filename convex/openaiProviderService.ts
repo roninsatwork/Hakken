@@ -2,7 +2,7 @@
 
 import { OPENAI_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { assertTextOnlyContents, parseProviderJsonResponse, type ProviderFetch } from "./providerHttpService";
+import { assertTextOnlyContents, requestProviderJson, type ProviderFetch } from "./providerHttpService";
 
 type OpenAIResponsesPayload = {
   output_text?: string;
@@ -82,26 +82,31 @@ export function createOpenAIProviderAdapter(args: {
         .map((part) => part.text)
         .join("\n\n");
 
-      const response = await fetchImpl(config.baseUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
+      const payload = await requestProviderJson({
+        providerKey: OPENAI_PROVIDER_KEY,
+        providerName: "OpenAI",
+        operation: "generateText",
+        fetchImpl,
+        url: config.baseUrl,
+        init: {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: request.model.providerModelId,
+            input: request.systemInstruction
+              ? [
+                  { role: "system", content: request.systemInstruction },
+                  { role: "user", content: input },
+                ]
+              : input,
+            temperature: request.temperature,
+            max_output_tokens: request.maxOutputTokens,
+          }),
         },
-        body: JSON.stringify({
-          model: request.model.providerModelId,
-          input: request.systemInstruction
-            ? [
-                { role: "system", content: request.systemInstruction },
-                { role: "user", content: input },
-              ]
-            : input,
-          temperature: request.temperature,
-          max_output_tokens: request.maxOutputTokens,
-        }),
-      });
-
-      const payload = await parseProviderJsonResponse(response, "OpenAI") as OpenAIResponsesPayload;
+      }) as OpenAIResponsesPayload;
       return {
         text: extractOpenAIResponseText(payload),
         inputTokens: payload.usage?.input_tokens,
@@ -119,13 +124,22 @@ export async function listOpenAIModels(args: {
   const config = buildOpenAIProviderConfig({ env });
   const fetchImpl = args.fetchImpl ?? fetch;
 
-  const response = await fetchImpl("https://api.openai.com/v1/models", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
+  const payload = await requestProviderJson({
+    providerKey: OPENAI_PROVIDER_KEY,
+    providerName: "OpenAI",
+    operation: "listModels",
+    fetchImpl,
+    url: "https://api.openai.com/v1/models",
+    init: {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+      },
     },
-  });
-  const payload = await parseProviderJsonResponse(response, "OpenAI") as OpenAIModelListPayload;
+    retryPolicy: {
+      maxAttempts: 3,
+    },
+  }) as OpenAIModelListPayload;
 
   return (payload.data ?? [])
     .map((model) => model.id)

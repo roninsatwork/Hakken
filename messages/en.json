@@ -553,6 +553,14 @@
                     "forceRun": "Force Dispatch",
                     "delete": "Remove Schedule"
                 },
+                "scheduleSummary": {
+                    "hourly": "Every {hours} hours from {time} Local ({utcTime} UTC)",
+                    "daily": "Daily at {time} Local ({utcTime} UTC)",
+                    "weekly": "Weekly on {day} at {time} Local ({utcTime} UTC)",
+                    "monthly": "Monthly on day {day} at {time} Local ({utcTime} UTC)",
+                    "targeted": "Targeted times: {times} Local",
+                    "targetedEmpty": "No targeted times configured"
+                },
                 "modals": {
                     "delete": {
                         "title": "Remove Schedule",
@@ -576,6 +584,16 @@
                     "createTitle": "Create Schedule",
                     "editTitle": "Edit Schedule",
                     "description": "Configure an automated schedule for a workflow or agent.",
+                    "scheduleMode": {
+                        "recurring": {
+                            "title": "Recurring Cadence",
+                            "description": "Run on a predictable, continuous cycle (e.g., Daily, Weekly)."
+                        },
+                        "targeted": {
+                            "title": "Targeted Times",
+                            "description": "Execute only at exact, specific times of the day."
+                        }
+                    },
                     "status": {
                         "armed": "Active",
                         "paused": "Paused",
@@ -610,14 +628,21 @@
                         },
                         "interval": {
                             "label": "Frequency",
+                            "executionInterval": "Execution Interval",
                             "hourly": "Hourly",
                             "daily": "Daily",
                             "weekly": "Weekly",
                             "monthly": "Monthly",
                             "everyXHours": "Every [X] hours",
+                            "everyHoursOption": "Every {hours} hours",
+                            "initialStartTime": "Initial Start Time",
                             "dayOfWeek": "Day of Week",
                             "dayOfMonth": "Date",
-                            "timeLabel": "Time",
+                            "timeLabel": "Time of Day",
+                            "addTime": "Add Time",
+                            "configuredTimes": "Configured Times",
+                            "removeTime": "Remove",
+                            "noConfiguredTimes": "No targeted times configured yet.",
                             "days": {
                                 "monday": "Monday",
                                 "tuesday": "Tuesday",
@@ -636,6 +661,18 @@
                         "weekly": "Every {day} at {time}",
                         "monthly": "On day {day} of the month at {time}"
                     },
+                    "summary": {
+                        "targets": {
+                            "agent": "agent",
+                            "workflow": "workflow"
+                        },
+                        "hourly": "Active Schedule: This {target} will execute every {hours} hours starting at {localTime} Local ({utcTime} UTC).",
+                        "daily": "Active Schedule: This {target} will execute Daily at {localTime} Local ({utcTime} UTC).",
+                        "weekly": "Active Schedule: This {target} will execute Weekly on {day} at {localTime} Local ({utcTime} UTC).",
+                        "monthly": "Active Schedule: This {target} will execute Monthly on day {day} at {localTime} Local ({utcTime} UTC).",
+                        "targeted": "Active Schedule: This {target} will execute at {times} Local ({utcTimes} UTC).",
+                        "targetedEmpty": "Active Schedule: Add at least one targeted time for this {target}."
+                    },
                     "actions": {
                         "cancel": "Cancel",
                         "deploy": "Deploy Schedule",
@@ -645,6 +682,7 @@
                     },
                     "errors": {
                         "noWorkflow": "Please select a target payload (Workflow or Agent).",
+                        "missingTargetedTime": "Add at least one targeted time before saving this schedule.",
                         "configError": "Configuration Error"
                     }
                 }

@@ -11,7 +11,7 @@ import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { requireActionAdmin } from "./actionAuth";
 import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import { createVertexGenAIClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 
 export const ingestDocument = internalAction({
@@ -150,11 +150,17 @@ async function embedAndStoreDoc(
       const providerModelId = getGoogleVertexProviderModelId(embeddingModel, "knowledge embedding generation");
 
       const embeddedChunks = [];
+      let failedChunkCount = 0;
       for (const textChunk of chunks) {
          try {
-             const embedResponse = await ai.models.embedContent({
+             const embedResponse = await embedVertexContentWithRetry(ai, {
                  model: providerModelId,
                  contents: textChunk,
+             }, {
+                 operation: "knowledgeChunkEmbedding",
+                 retryPolicy: {
+                    maxAttempts: 5,
+                 },
              });
              
              if (embedResponse.embeddings && embedResponse.embeddings.length > 0) {
@@ -167,8 +173,17 @@ async function embedAndStoreDoc(
                 }
              }
          } catch (e) {
+            failedChunkCount++;
             console.error("Vector Embed Failure on chunk", e);
          }
+      }
+
+      if (failedChunkCount > 0) {
+          throw new Error(`Knowledge embedding failed for ${failedChunkCount} of ${chunks.length} chunks after retries.`);
+      }
+
+      if (embeddedChunks.length === 0) {
+          throw new Error("Knowledge embedding produced no searchable chunks.");
       }
 
       // Stagger insertions to avoid 16MB limit

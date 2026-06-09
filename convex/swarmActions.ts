@@ -5,7 +5,11 @@ import { v } from "convex/values";
 import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import {
+  createVertexGenAIClient,
+  embedVertexContentWithRetry,
+  generateVertexContentWithRetry,
+} from "./vertexProviderService";
 
 export const executeSwarmObjective = internalAction({
   args: {
@@ -88,9 +92,11 @@ export const executeSwarmObjective = internalAction({
                  companyId: tenantContext.companyId ?? undefined,
                });
                const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "swarm RAG search");
-               const { embeddings } = await ai.models.embedContent({
+               const { embeddings } = await embedVertexContentWithRetry(ai, {
                  model: embeddingProviderModelId,
                  contents: args.content,
+               }, {
+                 operation: "swarmRagEmbedding",
                });
                
                if (embeddings && embeddings.length > 0 && embeddings[0].values?.length === embeddingModel.embeddingDimensions) {
@@ -126,10 +132,12 @@ export const executeSwarmObjective = internalAction({
                safePayload = safePayload.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
            }
 
-           const response = await ai.models.generateContent({
+           const response = await generateVertexContentWithRetry(ai, {
               model: targetModel,
               contents: safePayload,
               config
+           }, {
+              operation: "swarmMicroAgentGenerate",
            });
 
            const output = response.text || "No actionable data recovered.";

@@ -2,7 +2,7 @@
 
 import { ANTHROPIC_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { assertTextOnlyContents, parseProviderJsonResponse, type ProviderFetch } from "./providerHttpService";
+import { assertTextOnlyContents, requestProviderJson, type ProviderFetch } from "./providerHttpService";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
 const DEFAULT_MAX_TOKENS = 1024;
@@ -66,23 +66,28 @@ export function createAnthropicProviderAdapter(args: {
         .map((part) => part.text)
         .join("\n\n");
 
-      const response = await fetchImpl(config.baseUrl, {
-        method: "POST",
-        headers: {
-          "x-api-key": config.apiKey,
-          "anthropic-version": config.apiVersion,
-          "Content-Type": "application/json",
+      const payload = await requestProviderJson({
+        providerKey: ANTHROPIC_PROVIDER_KEY,
+        providerName: "Anthropic",
+        operation: "generateText",
+        fetchImpl,
+        url: config.baseUrl,
+        init: {
+          method: "POST",
+          headers: {
+            "x-api-key": config.apiKey,
+            "anthropic-version": config.apiVersion,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: request.model.providerModelId,
+            max_tokens: request.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+            system: request.systemInstruction,
+            temperature: request.temperature,
+            messages: [{ role: "user", content: input }],
+          }),
         },
-        body: JSON.stringify({
-          model: request.model.providerModelId,
-          max_tokens: request.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-          system: request.systemInstruction,
-          temperature: request.temperature,
-          messages: [{ role: "user", content: input }],
-        }),
-      });
-
-      const payload = await parseProviderJsonResponse(response, "Anthropic") as AnthropicMessagesPayload;
+      }) as AnthropicMessagesPayload;
       return {
         text: extractAnthropicResponseText(payload),
         inputTokens: payload.usage?.input_tokens,
@@ -100,14 +105,23 @@ export async function listAnthropicModels(args: {
   const config = buildAnthropicProviderConfig({ env });
   const fetchImpl = args.fetchImpl ?? fetch;
 
-  const response = await fetchImpl(`${config.baseUrl.replace("/messages", "/models")}?limit=1000`, {
-    method: "GET",
-    headers: {
-      "x-api-key": config.apiKey,
-      "anthropic-version": config.apiVersion,
+  const payload = await requestProviderJson({
+    providerKey: ANTHROPIC_PROVIDER_KEY,
+    providerName: "Anthropic",
+    operation: "listModels",
+    fetchImpl,
+    url: `${config.baseUrl.replace("/messages", "/models")}?limit=1000`,
+    init: {
+      method: "GET",
+      headers: {
+        "x-api-key": config.apiKey,
+        "anthropic-version": config.apiVersion,
+      },
     },
-  });
-  const payload = await parseProviderJsonResponse(response, "Anthropic") as AnthropicModelListPayload;
+    retryPolicy: {
+      maxAttempts: 3,
+    },
+  }) as AnthropicModelListPayload;
 
   const models: Array<{ id: string; displayName?: string }> = [];
   for (const model of payload.data ?? []) {

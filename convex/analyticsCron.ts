@@ -12,6 +12,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
+import { sendResendEmail } from "./resendEmailService";
 
 type SystemAgentId = "system_assistant";
 type SnapshotInteraction = {
@@ -756,26 +757,17 @@ export const dispatchPlatformAlerts = internalAction({
     }
 
     const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Operations <noreply@ronins.co.uk>";
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const data = await sendResendEmail({
+      apiKey: process.env.RESEND_API_KEY,
+      operation: "platformAnalyticsAlert",
+      idempotencyKey: `platform-alert:${decision.alertType}:${report.checkedDates[0] ?? "none"}:${report.liveToday.date}`,
+      payload: {
         from: fromAddress,
         to: recipients,
         subject: decision.subject,
         html,
-      }),
+      },
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Platform alert dispatch failed: ${errorText}`);
-    }
-
-    const data = await response.json();
 
     return {
       alerted: true,

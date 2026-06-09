@@ -3,16 +3,40 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
+const { embedContentMock } = vi.hoisted(() => ({
+  embedContentMock: vi.fn(),
+}));
+
+vi.mock("@google/genai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@google/genai")>();
+  return {
+    ...actual,
+    GoogleGenAI: vi.fn(() => ({
+      models: {
+        embedContent: embedContentMock,
+      },
+    })),
+  };
+});
+
 const originalFirecrawlKey = process.env.FIRECRAWL_API_KEY;
+const originalGoogleClientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+const originalGooglePrivateKey = process.env.GOOGLE_PRIVATE_KEY;
 
 afterEach(() => {
   process.env.FIRECRAWL_API_KEY = originalFirecrawlKey;
+  process.env.GOOGLE_CLIENT_EMAIL = originalGoogleClientEmail;
+  process.env.GOOGLE_PRIVATE_KEY = originalGooglePrivateKey;
+  embedContentMock.mockReset();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("knowledge actions", () => {
   test("website mapping enforces admin auth, configuration, and SSRF boundaries", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    delete process.env.FIRECRAWL_API_KEY;
 
     const { userId, adminId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
@@ -51,6 +75,7 @@ describe("knowledge actions", () => {
 
   test("website queue no-ops when empty and marks pending documents failed without Firecrawl credentials", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    delete process.env.FIRECRAWL_API_KEY;
 
     await expect(t.action(internal.knowledgeActions.processWebsiteQueue, {})).resolves.toBeNull();
 
@@ -103,6 +128,50 @@ describe("knowledge actions", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(t.action(internal.knowledgeActions.ingestDocument, { documentId })).resolves.toBeNull();
     expect(await t.run(async (ctx) => ctx.db.get(documentId))).toMatchObject({ status: "failed" });
+    expect(consoleError).toHaveBeenCalledWith("Critical Failure in Knowledge Ingestion:", expect.any(Error));
+  });
+
+  test("document ingestion marks documents failed when chunk embedding fails permanently", async () => {
+    process.env.GOOGLE_CLIENT_EMAIL = "svc@example.com";
+    process.env.GOOGLE_PRIVATE_KEY = "private-key";
+    embedContentMock.mockRejectedValue(Object.assign(new Error("Invalid embedding request"), {
+      status: 400,
+    }));
+
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const documentId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      return await ctx.db.insert("knowledgeDocuments", {
+        title: "Retry Exhaustion Doc",
+        textContent: "This content should not become ready when embeddings fail.",
+        companyId,
+        status: "processing",
+        format: "text/plain",
+        createdBy: adminId,
+        createdAt: Date.now(),
+      });
+    });
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(t.action(internal.knowledgeActions.ingestDocument, { documentId })).resolves.toBeNull();
+
+    const result = await t.run(async (ctx) => ({
+      document: await ctx.db.get(documentId),
+      chunks: await ctx.db
+        .query("knowledgeChunks")
+        .withIndex("by_document", (q) => q.eq("documentId", documentId))
+        .collect(),
+    }));
+
+    expect(result.document).toMatchObject({ status: "failed" });
+    expect(result.chunks).toEqual([]);
+    expect(embedContentMock).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledWith("Critical Failure in Knowledge Ingestion:", expect.any(Error));
   });
 });

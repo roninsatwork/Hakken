@@ -17,6 +17,8 @@ describe("workflow schedule service", () => {
     expect(parseScheduleConfig(JSON.stringify({ mode: "fortnightly" }))).toBeNull();
     expect(parseScheduleConfig(JSON.stringify({ mode: "interval", intervalVal: "15" }))).toBeNull();
     expect(parseScheduleConfig(JSON.stringify(["interval"]))).toBeNull();
+    expect(parseScheduleConfig(JSON.stringify({ version: 2, kind: "targetedTimes", timezone: "Europe/London", timesLocal: [] }))).toBeNull();
+    expect(parseScheduleConfig(JSON.stringify({ version: 2, kind: "recurring", cadence: "hourly", everyHours: 25, startTimeLocal: "09:00", timezone: "Europe/London" }))).toBeNull();
   });
 
   test("runs interval schedules after the configured delay", () => {
@@ -70,5 +72,96 @@ describe("workflow schedule service", () => {
         now,
       })
     ).toBe(new Date("2026-06-01T10:00:00.000Z").getTime());
+  });
+
+  test("computes timezone-aware recurring v2 schedule runs", () => {
+    const beforeDaily = new Date("2026-06-09T07:30:00.000Z");
+    const afterDaily = new Date("2026-06-09T08:30:00.000Z");
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({
+          version: 2,
+          kind: "recurring",
+          cadence: "daily",
+          timeLocal: "09:00",
+          timezone: "Europe/London",
+        }),
+        now: beforeDaily,
+      })
+    ).toBe(new Date("2026-06-09T08:00:00.000Z").getTime());
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({
+          version: 2,
+          kind: "recurring",
+          cadence: "daily",
+          timeLocal: "09:00",
+          timezone: "Europe/London",
+        }),
+        now: afterDaily,
+      })
+    ).toBe(new Date("2026-06-10T08:00:00.000Z").getTime());
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({
+          version: 2,
+          kind: "recurring",
+          cadence: "weekly",
+          dayOfWeek: 1,
+          timeLocal: "09:00",
+          timezone: "Europe/London",
+        }),
+        now: afterDaily,
+      })
+    ).toBe(new Date("2026-06-15T08:00:00.000Z").getTime());
+
+    expect(
+      getNextWorkflowScheduleRunAt({
+        intervalStr: JSON.stringify({
+          version: 2,
+          kind: "recurring",
+          cadence: "monthly",
+          dayOfMonth: 1,
+          timeLocal: "09:00",
+          timezone: "Europe/London",
+        }),
+        now: afterDaily,
+      })
+    ).toBe(new Date("2026-07-01T08:00:00.000Z").getTime());
+  });
+
+  test("supports hourly and targeted-times v2 schedules", () => {
+    const now = new Date("2026-06-09T08:31:00.000Z");
+    const hourlyConfig = JSON.stringify({
+      version: 2,
+      kind: "recurring",
+      cadence: "hourly",
+      everyHours: 4,
+      startTimeLocal: "09:00",
+      timezone: "Europe/London",
+    });
+    const targetedConfig = JSON.stringify({
+      version: 2,
+      kind: "targetedTimes",
+      timesLocal: ["23:30", "04:30", "09:30"],
+      timezone: "Europe/London",
+    });
+
+    expect(getNextWorkflowScheduleRunAt({ intervalStr: hourlyConfig, now })).toBe(new Date("2026-06-09T12:00:00.000Z").getTime());
+    expect(getNextWorkflowScheduleRunAt({ intervalStr: targetedConfig, now: new Date("2026-06-09T07:00:00.000Z") })).toBe(new Date("2026-06-09T08:30:00.000Z").getTime());
+
+    expect(shouldRunWorkflowSchedule({
+      intervalStr: targetedConfig,
+      lastRunTs: new Date("2026-06-09T08:29:00.000Z").getTime(),
+      now,
+    })).toBe(true);
+    expect(shouldRunWorkflowSchedule({
+      intervalStr: targetedConfig,
+      lastRunTs: new Date("2026-06-09T08:30:00.000Z").getTime(),
+      now,
+    })).toBe(false);
   });
 });

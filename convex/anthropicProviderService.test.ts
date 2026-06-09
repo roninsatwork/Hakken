@@ -54,6 +54,58 @@ describe("anthropic provider service", () => {
     });
   });
 
+  test("retries transient Messages API failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn<(_: RequestInfo | URL, __?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          error: { message: "temporarily unavailable" },
+        }), { status: 503 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          content: [{ type: "text", text: "Reply after retry" }],
+          usage: { input_tokens: 10, output_tokens: 5 },
+        }), { status: 200 }));
+
+      const adapter = createAnthropicProviderAdapter({
+        env: { ANTHROPIC_API_KEY: "key" },
+        fetchImpl,
+      });
+
+      const resultPromise = adapter.generateText({
+        model: { modelId: "anthropic:claude-test", providerKey: "anthropic", providerModelId: "claude-test" },
+        contents: [{ type: "text", text: "Prompt" }],
+      });
+
+      await vi.runAllTimersAsync();
+      await expect(resultPromise).resolves.toEqual({
+        text: "Reply after retry",
+        inputTokens: 10,
+        outputTokens: 5,
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("does not retry non-retryable Messages API failures", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      error: { message: "unauthorized" },
+    }), { status: 401 }));
+
+    const adapter = createAnthropicProviderAdapter({
+      env: { ANTHROPIC_API_KEY: "key" },
+      fetchImpl,
+    });
+
+    await expect(adapter.generateText({
+      model: { modelId: "anthropic:claude-test", providerKey: "anthropic", providerModelId: "claude-test" },
+      contents: [{ type: "text", text: "Prompt" }],
+    })).rejects.toThrow("unauthorized");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   test("lists model IDs and display names from the account model endpoint", async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
       data: [
@@ -66,5 +118,30 @@ describe("anthropic provider service", () => {
       env: { ANTHROPIC_API_KEY: "key" },
       fetchImpl,
     })).resolves.toEqual([{ id: "claude-test", displayName: "Claude Test" }]);
+  });
+
+  test("retries transient model list failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn<(_: RequestInfo | URL, __?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          error: { message: "temporary overload" },
+        }), { status: 503 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          data: [{ id: "claude-test", display_name: "Claude Test" }],
+        }), { status: 200 }));
+
+      const resultPromise = listAnthropicModels({
+        env: { ANTHROPIC_API_KEY: "key" },
+        fetchImpl,
+      });
+
+      await vi.runAllTimersAsync();
+      await expect(resultPromise).resolves.toEqual([{ id: "claude-test", displayName: "Claude Test" }]);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

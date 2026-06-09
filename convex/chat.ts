@@ -206,7 +206,7 @@ export const sendMessage = mutation({
         await ctx.db.patch(args.threadId, { agentId: targetAgentId });
     }
 
-    // 3. Trigger the asynchronous Vertex AI Orchestrator Action to respond to this message
+    // 3. Trigger the asynchronous AI orchestrator action to respond to this message
     if (targetAgentId) {
        await ctx.scheduler.runAfter(0, internal.agentRuntime.generateAgentResponse, {
          threadId: args.threadId,

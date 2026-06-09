@@ -731,11 +731,9 @@ export const scheduleDispatcher = internalMutation({
       .query("schedules")
       .withIndex("by_active_next_run", (q) => q.eq("isActive", true).lte("nextRunAt", now))
       .take(ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT);
-    const activeWorkflowSchedules = activeSchedules.filter(s => s.workflowId);
+    for (const schedule of activeSchedules) {
+        if (!schedule.workflowId && !schedule.agentId) continue;
 
-    for (const schedule of activeWorkflowSchedules) {
-        if (!schedule.workflowId) continue;
-        
         const shouldRun = shouldRunWorkflowSchedule({
             intervalStr: schedule.intervalStr,
             lastRunTs: schedule.lastRunTs,
@@ -743,6 +741,40 @@ export const scheduleDispatcher = internalMutation({
         });
         
         if (shouldRun) {
+             if (schedule.agentId) {
+                const agent = await ctx.db.get(schedule.agentId);
+                if (!agent || agent.isActive === false) continue;
+
+                const executionId = await ctx.db.insert("workflowExecutions", {
+                  agentId: schedule.agentId,
+                  triggerType: "SCHEDULE",
+                  status: "RUNNING",
+                  startedAt: now,
+                  startedBy: schedule.createdBy,
+                });
+
+                await ctx.scheduler.runAfter(0, internal.salesReportActions.generateReport, {
+                  agentId: schedule.agentId,
+                  companyId: undefined,
+                });
+
+                await ctx.scheduler.runAfter(2000, internal.scheduler.completeSimulation, {
+                  executionId,
+                  success: true,
+                });
+
+                await ctx.db.patch(schedule._id, {
+                  lastRunTs: now,
+                  nextRunAt: getNextWorkflowScheduleRunAt({
+                    intervalStr: schedule.intervalStr,
+                    lastRunTs: now,
+                    now: nowObj,
+                  }),
+                });
+                continue;
+             }
+
+             if (!schedule.workflowId) continue;
              const workflow = await ctx.db.get(schedule.workflowId);
              if (!workflow || !workflow.isActive || workflow.triggerType !== "SCHEDULE") continue;
 

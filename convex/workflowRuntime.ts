@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
+import { sendResendEmail } from "./resendEmailService";
 import {
   buildActionRequest,
   buildActionResponseOutput,
@@ -84,6 +85,8 @@ async function executeMergeRuntimeNode(ctx: ActionCtx, args: {
 }
 
 async function executeEmailRuntimeNode(args: {
+  executionId: Id<"workflowExecutions">;
+  nodeId: string;
   currentNodeData: Record<string, unknown>;
   globalStatePayload: Record<string, unknown>;
 }) {
@@ -98,26 +101,18 @@ async function executeEmailRuntimeNode(args: {
     return buildEmailSimulationOutput({ toAddresses, subject, body });
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const data = await sendResendEmail({
+    apiKey: process.env.RESEND_API_KEY,
+    operation: "workflowEmailNode",
+    idempotencyKey: `workflow-email:${args.executionId}:${args.nodeId}`,
+    payload: {
       from: fromAddress,
       to: toAddresses,
       subject,
       html: body,
-    }),
+    },
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Resend API Rejection: ${errText}`);
-  }
-
-  const data = await response.json();
   return buildEmailDeliveryOutput({ dispatchId: data, toAddresses, subject });
 }
 
@@ -285,6 +280,8 @@ export const executeNode = internalAction({
       else if (node.type === "emailNode") {
         try {
           outputPayload = await executeEmailRuntimeNode({
+            executionId: args.executionId,
+            nodeId: args.nodeId,
             currentNodeData,
             globalStatePayload,
           });

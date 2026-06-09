@@ -23,6 +23,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import {
+  formatUtcPreview,
+  getPrimaryScheduleTime,
+  hydrateScheduleDraft,
+  normalizeTimes,
+} from "./_lib/scheduleConfig";
 
 type ScheduleRow = Doc<"schedules"> & {
   workflowName?: string;
@@ -52,7 +58,9 @@ export default function SchedulesPage() {
 
   const filteredSchedules = schedules.filter((s) =>
     (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase())
+    (s.workflowName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.agentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.targetName || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalItems = filteredSchedules.length;
@@ -102,6 +110,43 @@ export default function SchedulesPage() {
     } catch (e: unknown) {
       setMessageModal({ title: t('modals.error.statusFailed'), body: getErrorMessage(e, tCommon('errors.default')) });
     }
+  };
+
+  const formatScheduleInterval = (intervalStr: string) => {
+    const draft = hydrateScheduleDraft(intervalStr);
+    if (draft.mode === "targetedTimes") {
+      const times = normalizeTimes(draft.timesLocal);
+      return times.length > 0
+        ? t("scheduleSummary.targeted", { times: times.join(", ") })
+        : t("scheduleSummary.targetedEmpty");
+    }
+
+    const utcTime = formatUtcPreview(getPrimaryScheduleTime(draft));
+    if (draft.cadence === "hourly") {
+      return t("scheduleSummary.hourly", {
+        hours: String(draft.everyHours),
+        time: draft.startTimeLocal,
+        utcTime,
+      });
+    }
+    if (draft.cadence === "weekly") {
+      return t("scheduleSummary.weekly", {
+        day: t(`editor.fields.interval.days.${["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][draft.dayOfWeek] ?? "monday"}`),
+        time: draft.timeLocal,
+        utcTime,
+      });
+    }
+    if (draft.cadence === "monthly") {
+      return t("scheduleSummary.monthly", {
+        day: String(draft.dayOfMonth),
+        time: draft.timeLocal,
+        utcTime,
+      });
+    }
+    return t("scheduleSummary.daily", {
+      time: draft.timeLocal,
+      utcTime,
+    });
   };
 
   return (
@@ -192,7 +237,7 @@ export default function SchedulesPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {schedule.intervalStr}
+                              {formatScheduleInterval(schedule.intervalStr)}
                             </span>
                           </div>
                         </td>

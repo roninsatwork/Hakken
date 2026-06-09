@@ -9,6 +9,7 @@ import {
   requireSuperAdmin,
 } from "./authz";
 import { requireActionUser } from "./actionAuth";
+import { sendResendEmail } from "./resendEmailService";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
@@ -272,27 +273,17 @@ export const dispatchInviteEmail = action({
     try {
       const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Team <noreply@ronins.co.uk>";
 
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
+      const data = await sendResendEmail({
+        apiKey: process.env.RESEND_API_KEY,
+        operation: "dispatchInviteEmail",
+        idempotencyKey: `invite:${token}`,
+        payload: {
           from: fromAddress,
           to: args.email,
           subject: args.template.subject,
           html: emailHtml
-        })
+        },
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Resend API Rejection:", errorText);
-        throw new Error("Failed to dispatch raw email.");
-      }
-
-      const data = await response.json();
 
       // 4. Record DB mapping on successful dispatch
       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });

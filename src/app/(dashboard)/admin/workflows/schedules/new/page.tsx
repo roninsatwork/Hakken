@@ -16,9 +16,14 @@ import {
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+import ScheduleBuilder from "../_components/ScheduleBuilder";
+import {
+  createDefaultScheduleDraft,
+  serializeScheduleDraft,
+  validateScheduleDraft,
+} from "../_lib/scheduleConfig";
 
 type PayloadType = "workflow" | "agent";
-type Frequency = "hourly" | "daily" | "weekly" | "monthly";
 type WorkflowRow = Doc<"workflows">;
 type AgentRow = Doc<"agents">;
 
@@ -27,14 +32,6 @@ type ScheduleFormData = {
   workflowId: Id<"workflows"> | "";
   agentId: Id<"agents"> | "";
 };
-
-const frequencyOptions: { id: Frequency; labelKey: string }[] = [
-  { id: "hourly", labelKey: "fields.interval.hourly" },
-  { id: "daily", labelKey: "fields.interval.daily" },
-  { id: "weekly", labelKey: "fields.interval.weekly" },
-  { id: "monthly", labelKey: "fields.interval.monthly" },
-];
-
 
 export default function NewSchedulePage() {
   const router = useRouter();
@@ -53,12 +50,7 @@ export default function NewSchedulePage() {
     agentId: "",
   });
 
-  // Scheduling State
-  const [frequency, setFrequency] = useState<Frequency>("hourly"); // hourly, daily, weekly, monthly
-  const [hourlyInterval, setHourlyInterval] = useState("1"); // every X hours
-  const [timeOfDay, setTimeOfDay] = useState("09:00");
-  const [dayOfWeek, setDayOfWeek] = useState("Monday");
-  const [dayOfMonth, setDayOfMonth] = useState("1");
+  const [scheduleDraft, setScheduleDraft] = useState(() => createDefaultScheduleDraft());
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,21 +78,20 @@ export default function NewSchedulePage() {
       return;
     }
 
-    setIsSubmitting(true);
+    const scheduleError = validateScheduleDraft(scheduleDraft);
+    if (scheduleError) {
+      setErrorModal(t(`errors.${scheduleError}`));
+      return;
+    }
 
-    // Construct human-readable interval string
-    let constructedInterval = t('intervals.hourly', { hours: hourlyInterval });
-    if (frequency === "hourly" && hourlyInterval === "1") constructedInterval = t('intervals.hourlySingle');
-    if (frequency === "daily") constructedInterval = t('intervals.daily', { time: timeOfDay });
-    if (frequency === "weekly") constructedInterval = t('intervals.weekly', { day: dayOfWeek, time: timeOfDay });
-    if (frequency === "monthly") constructedInterval = t('intervals.monthly', { day: dayOfMonth, time: timeOfDay });
+    setIsSubmitting(true);
 
     try {
       await createSchedule({
         name: formData.name,
         workflowId: formData.workflowId || undefined,
         agentId: formData.agentId || undefined,
-        intervalStr: constructedInterval,
+        intervalStr: serializeScheduleDraft(scheduleDraft),
         isActive
       });
       router.push("/admin/workflows/schedules");
@@ -309,89 +300,12 @@ export default function NewSchedulePage() {
 
         <div className="w-full h-[1px] bg-border-dim/50 my-1" />
 
-        <section className="flex flex-col gap-6">
-          <div className="flex flex-col gap-6 ml-1">
-
-            {/* Dynamic Inputs Based on Frequency */}
-            <div className="flex items-end gap-4 flex-wrap">
-
-              {/* Frequency Selector */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.label')}</label>
-                <div className="flex bg-transparent rounded-[12px] p-1 border border-border-dim w-fit">
-                  {frequencyOptions.map(f => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFrequency(f.id)}
-                      className={`px-6 py-2 rounded-[8px] text-[12px] font-bold tracking-wide transition-all ${frequency === f.id ? 'bg-foreground/10 text-foreground' : 'text-muted hover:bg-foreground/5'}`}
-                    >
-                      {t(f.labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {frequency === "hourly" && (
-                <div className="flex flex-col gap-2 w-[200px]">
-                  <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase flex items-center justify-between">
-                    {t('fields.interval.everyXHours')}
-                  </label>
-                  <select
-                    value={hourlyInterval} onChange={e => setHourlyInterval(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono appearance-none"
-                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
-                      <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {frequency === "weekly" && (
-                <div className="flex flex-col gap-2 w-[200px]">
-                  <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfWeek')}</label>
-                  <select
-                    value={dayOfWeek} onChange={e => setDayOfWeek(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 appearance-none"
-                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                  >
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {frequency === "monthly" && (
-                <div className="flex flex-col gap-2 w-[200px]">
-                  <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.dayOfMonth')}</label>
-                  <select
-                    value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 flex-shrink-0 appearance-none"
-                    style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {frequency !== "hourly" && (
-                <div className="flex flex-col gap-2 w-[200px]">
-                  <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.interval.timeLabel')}</label>
-                  <input
-                    type="time"
-                    value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)}
-                    className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-mono"
-                  />
-                </div>
-              )}
-
-            </div>
-          </div>
+        <section className="ml-1">
+          <ScheduleBuilder
+            draft={scheduleDraft}
+            onChange={setScheduleDraft}
+            targetKind={payloadType}
+          />
         </section>
 
         {/* Action Belt */}

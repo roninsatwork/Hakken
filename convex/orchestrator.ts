@@ -7,7 +7,7 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { requireActionUser } from "./actionAuth";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { createVertexGenAIClient } from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
 
 export const routeAgentIntent = action({
   args: {
@@ -71,7 +71,7 @@ Output your intent alignment as JSON.
         });
         const defaultModel = getGoogleVertexProviderModelId(modelConfig, "intent routing");
         
-        const response = await ai.models.generateContent({
+        const response = await generateVertexContentWithRetry(ai, {
              model: defaultModel,
              contents: routingPrompt,
              config: {
@@ -79,6 +79,12 @@ Output your intent alignment as JSON.
                  responseSchema: responseSchema,
                  temperature: 0.1, // Near deterministic
              }
+        }, {
+             operation: "routeAgentIntent",
+             retryPolicy: {
+                 maxAttempts: 3,
+                 maxDelayMs: 10000,
+             },
         });
 
         const jsonStr = response.text;
