@@ -2,7 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Building2,
+  CheckCircle2,
+  FileSearch,
+  Gauge,
+  Globe2,
+  LineChart,
+  LockKeyhole,
+  MessageSquareText,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  WalletCards,
+  Workflow,
+} from "lucide-react";
 
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Header from "@/src/ui/components/layout/Header";
@@ -11,6 +27,58 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+
+const highlights = [
+  { key: "answers", icon: MessageSquareText },
+  { key: "knowledge", icon: FileSearch },
+  { key: "control", icon: ShieldCheck },
+  { key: "growth", icon: Gauge },
+] as const;
+
+const features = [
+  { key: "assistant", icon: Bot },
+  { key: "knowledge", icon: FileSearch },
+  { key: "workflows", icon: Workflow },
+  { key: "widget", icon: Globe2 },
+  { key: "reports", icon: LineChart },
+  { key: "admin", icon: Building2 },
+] as const;
+
+const benefits = [
+  { key: "faster", icon: Sparkles },
+  { key: "safer", icon: LockKeyhole },
+  { key: "clearer", icon: WalletCards },
+  { key: "together", icon: Users },
+] as const;
+
+const platformDepth = [
+  "models",
+  "safety",
+  "privacy",
+  "testing",
+  "observability",
+  "costs",
+  "workflows",
+  "widgets",
+] as const;
+
+const assurance = [
+  "unit",
+  "security",
+  "ui",
+  "regression",
+  "backend",
+  "drift",
+] as const;
+
+const governance = [
+  "tenancy",
+  "roles",
+  "pii",
+  "tools",
+  "audit",
+  "health",
+] as const;
 
 export default function Home() {
   const t = useTranslations('dashboard');
@@ -39,94 +107,310 @@ export default function Home() {
   const firstName = user?.name ? user.name.split(" ")[0] : "";
 
   return (
-    <div className="flex flex-col">
-
-      {/* Top Breadcrumb & Profile Bar Container */}
+    <div className="flex flex-col pb-12">
       <Header onOpenModal={() => setIsModalOpen(true)} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-col gap-6">
-        {/* Hero Header */}
-        <header className="flex flex-col gap-3">
+      <div className="flex flex-col gap-8">
+        <header className="flex flex-col gap-3 max-w-5xl">
           <h1 className="text-3xl font-light text-foreground tracking-[0.08em] font-sans">
             {tCommon(greeting)}{firstName ? `, ${firstName}` : ""}
           </h1>
+          <p className="text-secondary text-[15px] leading-relaxed max-w-3xl">
+            {t("intro")}
+          </p>
         </header>
 
-        {/* User Interaction Guide -> Redesigned into high fidelity Welcome Blueprint Card */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
-          animate={{ 
-            opacity: 1, 
-            y: 0,
-            boxShadow: [
-              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-              "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 12px 24px -8px rgba(0, 0, 0, 0.15)",
-              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-            ]
-          }}
-          transition={{ 
-            opacity: { duration: 0.8 },
-            y: { duration: 0.8 },
-            boxShadow: {
-              repeat: Infinity,
-              duration: 8,
-              ease: "easeInOut"
-            }
-          }}
-          className="bg-sidebar/40 backdrop-blur-3xl border border-border-dim rounded-[32px] p-8 md:p-10 flex flex-col gap-6 relative overflow-hidden group"
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          className="bg-sidebar/40 backdrop-blur-3xl border border-border-dim rounded-[32px] p-8 md:p-10 lg:p-12 flex flex-col gap-8 relative overflow-hidden shadow-2xl"
         >
-          {/* Ambient Lighting Accents */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.03),transparent_45%)] pointer-events-none" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0)_60%)] pointer-events-none" />
 
-          <div className="flex flex-col gap-2 z-10 relative">
-            <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
-              {t('blueprintLabel')}
-            </span>
-            <h2 className="text-2xl font-light tracking-[0.08em] text-foreground font-sans mt-1">
-              {t('blueprintTitle')}
-            </h2>
-          </div>
+          <div className="relative z-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+                  {t("hero.eyebrow")}
+                </span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-[0.04em] text-foreground font-sans leading-tight">
+                  {t("hero.title")}
+                </h2>
+              </div>
+              <p className="text-secondary text-[16px] md:text-[17px] font-light leading-relaxed max-w-3xl">
+                {t("hero.body")}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => router.push("/app/assistant")}
+                  className="inline-flex items-center gap-2.5 justify-center bg-foreground text-background hover:opacity-90 text-[13px] font-bold tracking-[0.1em] px-6 py-3.5 rounded-full transition-all duration-300 hover:scale-[1.02] shadow-lg"
+                >
+                  <span>{t("hero.primaryAction")}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="inline-flex items-center gap-2.5 justify-center bg-foreground/[0.04] hover:bg-foreground/[0.08] text-foreground border border-border-dim/85 text-[13px] font-medium tracking-[0.1em] px-6 py-3.5 rounded-full backdrop-blur-md transition-all duration-300"
+                >
+                  <span>{t("hero.secondaryAction")}</span>
+                </button>
+              </div>
+            </div>
 
-          <div className="z-10 relative flex flex-col gap-6">
-            <p className="text-secondary text-[15px] font-light leading-relaxed">
-              {t('blueprintBody')}
-            </p>
-
-            <div className="pt-2">
-              <button
-                onClick={() => router.push("/app/assistant")}
-                className="inline-flex items-center gap-2.5 justify-center bg-foreground/[0.03] hover:bg-foreground/[0.08] text-foreground border border-border-dim/85 text-[14px] font-medium tracking-[0.1em] px-8 py-3.5 rounded-full backdrop-blur-md transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md group/btn"
-              >
-                <span>{t('exploreButton')}</span>
-                <ArrowRight className="w-4 h-4 text-secondary group-hover/btn:translate-x-1 group-hover/btn:text-foreground transition-all duration-300" />
-              </button>
+            <div className="grid grid-cols-2 gap-3">
+              {highlights.map(({ key, icon: Icon }, index) => (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 + index * 0.06 }}
+                  className="min-h-[138px] rounded-[22px] border border-border-dim bg-foreground/[0.035] p-5 flex flex-col justify-between"
+                >
+                  <Icon className="w-5 h-5 text-brand" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-2xl font-light text-foreground tracking-[0.04em]">
+                      {t(`hero.highlights.${key}.value`)}
+                    </span>
+                    <span className="text-[12px] leading-relaxed text-secondary">
+                      {t(`hero.highlights.${key}.label`)}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </motion.section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {features.map(({ key, icon: Icon }, index) => (
+            <motion.article
+              key={key}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 * index }}
+              className="min-h-[210px] rounded-[24px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-6 flex flex-col gap-5 shadow-sm"
+            >
+              <div className="w-11 h-11 rounded-[16px] border border-border-dim bg-foreground/[0.04] flex items-center justify-center">
+                <Icon className="w-5 h-5 text-brand" />
+              </div>
+              <div className="flex flex-col gap-3">
+                <h3 className="text-[18px] font-medium tracking-[0.04em] text-foreground">
+                  {t(`features.${key}.title`)}
+                </h3>
+                <p className="text-[14px] leading-relaxed text-secondary">
+                  {t(`features.${key}.body`)}
+                </p>
+              </div>
+            </motion.article>
+          ))}
+        </section>
+
+        <section className="rounded-[28px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-7 md:p-8 flex flex-col gap-6">
+          <div className="flex flex-col gap-3 max-w-4xl">
+            <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+              {t("platformDepth.eyebrow")}
+            </span>
+            <h2 className="text-2xl md:text-3xl font-light tracking-[0.05em] text-foreground">
+              {t("platformDepth.title")}
+            </h2>
+            <p className="text-[14px] leading-relaxed text-secondary">
+              {t("platformDepth.body")}
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {platformDepth.map((key) => (
+              <div key={key} className="rounded-[18px] border border-border-dim bg-foreground/[0.025] p-5 flex gap-4 items-start">
+                <CheckCircle2 className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[14px] font-medium tracking-[0.04em] text-foreground">
+                    {t(`platformDepth.items.${key}.title`)}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed text-secondary">
+                    {t(`platformDepth.items.${key}.body`)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-7 md:p-8 flex flex-col gap-6">
+          <div className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr] xl:items-start">
+            <div className="flex flex-col gap-4">
+              <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+                {t("assurance.eyebrow")}
+              </span>
+              <h2 className="text-2xl md:text-3xl font-light tracking-[0.05em] text-foreground">
+                {t("assurance.title")}
+              </h2>
+              <p className="text-[14px] leading-relaxed text-secondary">
+                {t("assurance.body")}
+              </p>
+              <div className="rounded-[20px] border border-border-dim bg-foreground/[0.03] p-5 flex flex-col gap-2">
+                <span className="text-[12px] font-mono tracking-[0.16em] uppercase text-brand">
+                  {t("assurance.proofLabel")}
+                </span>
+                <p className="text-[13px] leading-relaxed text-secondary">
+                  {t("assurance.proofBody")}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {assurance.map((key) => (
+                <div key={key} className="rounded-[18px] border border-border-dim bg-foreground/[0.025] p-5 flex flex-col gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-brand" />
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-[14px] font-medium tracking-[0.04em] text-foreground">
+                      {t(`assurance.items.${key}.title`)}
+                    </h3>
+                    <p className="text-[13px] leading-relaxed text-secondary">
+                      {t(`assurance.items.${key}.body`)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+          <div className="rounded-[28px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-7 md:p-8 flex flex-col gap-5">
+            <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+              {t("benefits.eyebrow")}
+            </span>
+            <div className="flex flex-col gap-3">
+              <h2 className="text-2xl md:text-3xl font-light tracking-[0.05em] text-foreground">
+                {t("benefits.title")}
+              </h2>
+              <p className="text-[14px] leading-relaxed text-secondary">
+                {t("benefits.body")}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push(user?.role === "SUPER_ADMIN" ? "/admin/ai/costs" : "/app/reports")}
+              className="mt-auto inline-flex items-center gap-2.5 justify-center w-fit bg-foreground/[0.04] hover:bg-foreground/[0.08] text-foreground border border-border-dim/85 text-[13px] font-medium tracking-[0.1em] px-5 py-3 rounded-full transition-all duration-300"
+            >
+              <span>{t("benefits.action")}</span>
+              <ArrowRight className="w-4 h-4 text-secondary" />
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {benefits.map(({ key, icon: Icon }, index) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 * index }}
+                className="rounded-[22px] border border-border-dim bg-foreground/[0.025] p-5 flex gap-4 items-start"
+              >
+                <div className="w-10 h-10 rounded-[14px] border border-border-dim bg-sidebar/45 flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-brand" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[15px] font-medium tracking-[0.04em] text-foreground">
+                    {t(`benefits.items.${key}.title`)}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed text-secondary">
+                    {t(`benefits.items.${key}.body`)}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-7 md:p-8 flex flex-col gap-6">
+          <div className="flex flex-col gap-3 max-w-4xl">
+            <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+              {t("governance.eyebrow")}
+            </span>
+            <h2 className="text-2xl md:text-3xl font-light tracking-[0.05em] text-foreground">
+              {t("governance.title")}
+            </h2>
+            <p className="text-[14px] leading-relaxed text-secondary">
+              {t("governance.body")}
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            {governance.map((key) => (
+              <div key={key} className="rounded-[20px] border border-border-dim bg-foreground/[0.025] p-5 flex flex-col gap-4">
+                <div className="w-9 h-9 rounded-[12px] border border-border-dim bg-sidebar/45 flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4 text-brand" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[14px] font-medium tracking-[0.04em] text-foreground">
+                    {t(`governance.items.${key}.title`)}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed text-secondary">
+                    {t(`governance.items.${key}.body`)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-border-dim bg-sidebar/35 backdrop-blur-2xl p-7 md:p-8 flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
+            <div className="flex flex-col gap-3 max-w-3xl">
+              <span className="text-brand font-mono text-[11px] tracking-[0.2em] uppercase font-medium">
+                {t("useCases.eyebrow")}
+              </span>
+              <h2 className="text-2xl md:text-3xl font-light tracking-[0.05em] text-foreground">
+                {t("useCases.title")}
+              </h2>
+            </div>
+            <button
+              onClick={() => router.push("/app/assistant")}
+              className="inline-flex items-center gap-2.5 justify-center w-fit bg-foreground/[0.04] hover:bg-foreground/[0.08] text-foreground border border-border-dim/85 text-[13px] font-medium tracking-[0.1em] px-5 py-3 rounded-full transition-all duration-300"
+            >
+              <span>{t("useCases.action")}</span>
+              <ArrowRight className="w-4 h-4 text-secondary" />
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {["sales", "customers", "teams"].map((key) => (
+              <div key={key} className="rounded-[20px] border border-border-dim bg-foreground/[0.025] p-5 flex flex-col gap-4">
+                <CheckCircle2 className="w-5 h-5 text-brand" />
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[15px] font-medium tracking-[0.04em] text-foreground">
+                    {t(`useCases.items.${key}.title`)}
+                  </h3>
+                  <p className="text-[13px] leading-relaxed text-secondary">
+                    {t(`useCases.items.${key}.body`)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
-      {/* Sonae Modal Implementation */}
       <SonaeModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Project Intelligence"
+        title={t("modal.title")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-secondary text-[14px] leading-relaxed">
-            {t.rich('intelLayer', { sonae: () => <span className="text-foreground font-medium">Sonae Intelligence</span> })}
+            {t("modal.body")}
           </p>
           <div className="p-4 rounded-xl bg-foreground/[0.03] border border-border-dim/50 flex flex-col gap-2">
-            <span className="text-[11px] font-mono tracking-widest text-brand uppercase">{t('securityProtocol')}</span>
-            <p className="text-[13px] text-secondary">{t('securityProtocolDesc')}</p>
+            <span className="text-[11px] font-mono tracking-widest text-brand uppercase">{t("modal.pointTitle")}</span>
+            <p className="text-[13px] text-secondary">{t("modal.pointBody")}</p>
           </div>
           <div className="mt-4 flex justify-end">
             <button
               onClick={() => setIsModalOpen(false)}
               className="bg-foreground text-background text-[13px] font-bold px-6 py-2.5 rounded-full hover:opacity-90 transition-opacity"
             >
-              Confirm Access
+              {t("modal.close")}
             </button>
           </div>
         </div>

@@ -846,6 +846,8 @@ describe('Quality Drift Guardrails', () => {
       'docs/future-agent-maintenance-plan.md',
       'docs/index.md',
       'docs/model-provider-agnostic-plan.md',
+      'messages/en.json',
+      'messages/it.json',
       'src/quality-drift.test.ts',
     ]);
 
