@@ -73,207 +73,226 @@
         "copyright": "© {year} Sonae. All rights reserved."
     },
     "dashboard": {
-        "intro": "Sonae is a complete enterprise AI product foundation. It is built for teams who need more than a demo chatbot: model choice, safety controls, PII-aware knowledge, agent workflow building, deep observability, regression coverage, cost governance, and customer-ready AI experiences.",
+        "intro": "Sonae is a complete foundation for building serious AI products. It already includes the things customers ask for after the first demo: model choice, private knowledge, safer AI behaviour, AI process building, cost control, usage visibility, customer widgets, and a large safety net of automated checks.",
         "hero": {
             "eyebrow": "Build on Sonae",
-            "title": "The enterprise AI platform layer is already built.",
-            "body": "Most AI products begin with a chat interface and then spend months adding the things buyers actually ask for: approved model controls, prompt-injection protection, PII handling, audit trails, agent logs, flow builders, regression tests, usage limits, and cost visibility. Sonae brings those foundations together from day one, so your product can start at the serious stage.",
+            "title": "Start with the platform depth serious AI buyers expect.",
+            "body": "Most AI products begin with a chat box, then spend months adding the essentials: trusted model choices, protection from prompt attacks, private company knowledge, clear user permissions, a record of what AI has done, AI flow builders, usage limits, and cost reporting. Sonae brings those foundations together from day one, so you can build the unique product on top.",
             "primaryAction": "Try the assistant",
-            "secondaryAction": "View platform depth",
+            "secondaryAction": "See what is included",
             "highlights": {
                 "answers": {
-                    "value": "Models",
-                    "label": "Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku, Claude Sonnet, and approved model routing"
+                    "value": "AI Models",
+                    "label": "Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku, Claude Sonnet, and room for approved model choices"
                 },
                 "knowledge": {
-                    "value": "Data",
-                    "label": "tenant-aware knowledge, file uploads, PII safeguards, and controlled access to sensitive information"
+                    "value": "Private Data",
+                "label": "company knowledge, file uploads, sensitive information handling, and clear access rules"
                 },
                 "control": {
                     "value": "AI Safety",
-                    "label": "prompt-injection, jailbreak, unsafe-tool-call, data-leakage, and cross-tenant boundary safeguards"
+                    "label": "protection against prompt attacks, jailbreak attempts, unsafe actions, data leaks, and cross-company access"
                 },
                 "growth": {
-                    "value": "Costs",
-                    "label": "token usage, running costs, provider spend, company usage, user usage, and model-level visibility"
+                    "value": "Cost Control",
+                "label": "visibility by model, customer, user, message volume, usage limits, and running spend"
                 }
             }
         },
         "features": {
             "assistant": {
-                "title": "Enterprise model control",
-                "body": "Sonae lets teams select and govern approved models including Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku, and Claude Sonnet. Model choice becomes a managed product feature, not a hardcoded engineering decision."
+                "title": "Choice of leading AI models",
+                "body": "Sonae lets you offer the right model for the right job, including Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku, and Claude Sonnet, all from one managed product experience."
             },
             "knowledge": {
-                "title": "Knowledge with privacy boundaries",
-                "body": "Documents, uploaded files, company knowledge, and agent knowledge are handled with tenant boundaries and access controls, giving customers a safer way to use private business context without mixing company data."
+                "title": "Private knowledge for each customer",
+                "body": "Documents, uploaded files, company guidance, and AI knowledge can be kept inside the right customer workspace, so teams can use business context without mixing data between companies."
             },
             "workflows": {
-                "title": "Visual AI agent flow builder",
-                "body": "Build multi-step agent processes, schedules, workflow runs, and repeatable automation paths. Sonae provides the orchestration layer so products can deliver real AI workflows instead of isolated prompts."
+                "title": "Visual AI flow builder",
+                "body": "Create multi-step AI journeys, scheduled work, approvals, follow-ups, and repeatable flows. This lets products move beyond simple chat into AI that can actually help work get done."
             },
             "widget": {
-                "title": "Safety against AI abuse",
-                "body": "Sonae includes safeguards for prompt injection, jailbreak attempts, unsafe tool calls, sensitive data exposure, and attempts to make the AI ignore rules or cross company boundaries."
+                "title": "Protection from AI misuse",
+                "body": "Sonae is built with safeguards for prompt manipulation, jailbreak attempts, unsafe actions, sensitive data exposure, and attempts to make the AI ignore rules or access the wrong company."
             },
             "reports": {
-                "title": "Agent observability and logs",
-                "body": "Admins can inspect agent activity, tool calls, prompt and response behaviour, workflow executions, failures, chat logs, system health, and operational history before issues become customer problems."
+                "title": "Clear view of what AI is doing",
+                "body": "Teams can review conversations, actions taken, completed flows, failed steps, customer chats, and health signals, so the business is not guessing what happened."
             },
             "admin": {
-                "title": "Full cost and usage governance",
-                "body": "Sonae tracks AI usage across models, providers, tokens, companies, users, messages, and running costs, giving teams the visibility needed to price, govern, and scale AI responsibly."
+                "title": "Cost and usage control",
+                "body": "Sonae shows usage across models, customers, users, messages, and running costs, giving teams the visibility needed to price, manage, and scale AI responsibly."
             }
         },
         "platformDepth": {
             "eyebrow": "What is already inside",
-            "title": "The platform depth buyers expect, not a wishlist for later.",
-            "body": "Sonae is designed as the base layer for new AI products. The value is not only the visible assistant; it is the complete control plane behind it.",
+            "title": "The hard platform pieces are already there.",
+            "body": "The value is not only the assistant people can see. The real advantage is the control, safety, visibility, and management layer behind it.",
             "items": {
                 "models": {
-                    "title": "Approved model catalogue and runtime selection",
-                    "body": "Use multiple AI providers and model families while keeping choices configurable, reviewable, and aligned to cost and quality needs."
+                    "title": "Approved model catalogue",
+                    "body": "Offer multiple model families while keeping choices clear, controlled, and aligned to cost, quality, and customer needs."
                 },
                 "safety": {
-                    "title": "Prompt-injection, jailbreak, and unsafe-tool defences",
-                    "body": "Safety checks and guardrails help protect against hostile prompts, rule bypasses, unsafe tool execution, and attempts to extract restricted data."
+                    "title": "Defence against AI attacks",
+                    "body": "Built-in protections help defend against hostile prompts, rule bypasses, unsafe AI actions, and attempts to extract restricted information."
                 },
                 "privacy": {
-                    "title": "PII-aware and tenant-aware data handling",
-                    "body": "Knowledge, documents, users, chats, and company data are shaped around separation and controlled access so enterprise customers can trust the boundaries."
+                    "title": "Sensitive data handled with care",
+                    "body": "Knowledge, documents, users, chats, and company data are organised around clear separation, so each customer only reaches what they should."
                 },
                 "testing": {
-                    "title": "Large regression test surface",
-                    "body": "Automated coverage spans auth, users, companies, agents, workflows, model selection, safety policy, knowledge, analytics, widgets, and admin behaviour."
+                    "title": "700+ automated checks",
+                    "body": "The product is protected by a large set of automated checks across sign-in, users, customers, AI agents, flows, model choice, safety, knowledge, reporting, widgets, and management screens."
                 },
                 "observability": {
-                    "title": "Agent and workflow observability",
-                    "body": "Review agent logs, workflow runs, tool activity, chat history, failures, system health, and audit trails from the admin surfaces."
+                    "title": "AI activity visibility",
+                    "body": "Review what AI did, which flows ran, what actions were taken, where failures happened, and what customers experienced."
                 },
                 "costs": {
-                    "title": "AI spend visibility and quota control",
-                    "body": "Track token usage, messages, provider costs, model costs, tenant activity, top users, plans, and monthly limits before spend gets out of hand."
+                    "title": "Spend visibility and limits",
+                    "body": "Track usage, messages, model costs, company activity, top users, plans, and monthly limits before spend gets out of hand."
                 },
                 "workflows": {
-                    "title": "Agent workflow builder and scheduler",
-                    "body": "Create repeatable AI processes, schedule runs, inspect executions, and turn product-specific logic into reusable workflows."
+                    "title": "AI flow builder",
+                    "body": "Create repeatable AI processes, schedule work, review results, and turn product-specific know-how into reusable flows."
                 },
                 "widgets": {
-                    "title": "Embeddable customer AI experiences",
-                    "body": "Deploy branded AI widgets and sandbox them before release, giving products a route from internal assistant to customer-facing AI."
+                    "title": "Customer-facing AI widgets",
+                    "body": "Deploy branded AI assistants into websites or portals and test them safely before customers use them."
+                }
+            }
+        },
+        "hosting": {
+            "eyebrow": "Hosting options",
+            "title": "Deploy Sonae where your customers need it.",
+            "body": "Sonae can be shaped around the hosting choice that best fits the customer, procurement process, security expectations, and existing cloud relationship.",
+            "items": {
+                "googleCloud": {
+                    "title": "Google Cloud",
+                    "body": "Run Sonae on Google Cloud for customers already invested in Google's AI, data, and enterprise cloud services."
+                },
+                "aws": {
+                    "title": "AWS",
+                    "body": "Deploy on AWS for organisations that want Sonae inside their established Amazon cloud environment, account structure, and operating model."
+                },
+                "azure": {
+                    "title": "Azure",
+                    "body": "Support Microsoft-first customers with an Azure deployment path that fits existing enterprise cloud, identity, and management expectations."
                 }
             }
         },
         "assurance": {
-            "eyebrow": "Tested foundations",
-            "title": "A serious AI platform needs more than feature demos. It needs proof it will keep working.",
-            "body": "Sonae has a broad automated test surface across the product, backend, AI safety layer, workflows, admin controls, widgets, model handling, analytics, and regression guardrails. This matters because enterprise AI breaks in subtle ways: permissions drift, tools overreach, models change, costs spike, prompts get attacked, and UI flows regress.",
-            "proofLabel": "Current verification strength",
-            "proofBody": "The local quality gate runs linting, TypeScript checks, and a large Vitest suite covering UI, backend services, security boundaries, provider retries, workflow execution, knowledge handling, model governance, widgets, and platform drift rules.",
+            "eyebrow": "Confidence built in",
+            "title": "A serious AI platform needs proof it will keep working.",
+            "body": "Sonae is backed by more than 700 automated checks across product behaviour, security scenarios, user screens, AI safety, flows, model handling, reporting, widgets, and protection against old problems returning. That matters because AI products can fail quietly: permissions can change, actions can reach too far, prompts can be attacked, costs can rise, and customer journeys can break.",
+            "proofLabel": "What the checks protect",
+            "proofBody": "The checks cover the customer experience, management screens, company separation, AI model behaviour, knowledge handling, AI flows, cost reporting, widgets, and the rules that stop old problems from returning.",
             "items": {
                 "unit": {
-                    "title": "Unit coverage for product logic",
-                    "body": "Core helpers, formatting, upload policy, workflow parsing, chat telemetry, dates, settings, pagination, and movement utilities are covered so small changes do not quietly break shared behaviour."
+                    "title": "Everyday product rules",
+                    "body": "Small but important product rules are checked automatically, so everyday changes are less likely to break shared behaviour."
                 },
                 "security": {
-                    "title": "Security and access-control tests",
-                    "body": "Tests cover tenant boundaries, broken-object access risks, invite scope, auth provisioning, role enforcement, SSRF-style workflow protection, upload restrictions, and AI safety policy behaviour."
+                    "title": "Security and access checks",
+                    "body": "Automated checks cover company boundaries, role permissions, invite access, file uploads, unsafe AI flow behaviour, and AI safety rules."
                 },
                 "ui": {
-                    "title": "UI and admin surface tests",
-                    "body": "Dashboard pieces, admin tables, modals, model pages, settings, users, companies, workflows, schedules, costs, widgets, assistant controls, and shared components are tested as user-facing product surfaces."
+                    "title": "Screen and journey checks",
+                    "body": "Important screens such as dashboards, management tables, modals, settings, users, companies, AI flows, costs, widgets, and assistant controls are checked as real product experiences."
                 },
                 "regression": {
-                    "title": "Regression guardrails",
-                    "body": "Quality-drift tests stop banned patterns from creeping back in, including native browser dialogs, pagination drift, unclassified provider language, unsafe broad reads, and movement-demo scope creep."
+                    "title": "Old-problem protection",
+                    "body": "Automated rules help stop old mistakes from returning, including broken page patterns, unsafe shortcuts, inconsistent lists, and accidental changes to protected demo areas."
                 },
                 "backend": {
-                    "title": "Backend and AI runtime tests",
-                    "body": "Convex tests exercise agents, agent logs, transactions, analytics, chat, companies, knowledge, workflows, schedulers, purges, provider retries, AI models, tool execution, and system health services."
+                    "title": "AI and data checks",
+                    "body": "AI agents, activity history, reporting, chat, companies, knowledge, flows, schedules, model choices, approved actions, and health signals are checked behind the scenes."
                 },
                 "drift": {
-                    "title": "Scale and maintenance checks",
-                    "body": "The suite protects indexed analytics paths, paginated admin inventory, bounded chat logs, widget query contracts, provider adapter boundaries, and other patterns that keep the platform scalable."
+                    "title": "Growth and maintenance checks",
+                    "body": "Checks protect the patterns that keep the platform manageable as more companies, users, chats, models, AI flows, and widgets are added."
                 }
             }
         },
         "benefits": {
             "eyebrow": "Why build on it",
             "title": "Start beyond the prototype stage.",
-            "body": "When a customer asks about safety, privacy, model governance, observability, costs, admin controls, testing, or scale, Sonae already has a credible answer. That is why it is a foundation for building AI products, not just another interface.",
+            "body": "When a customer asks about safety, privacy, model choice, visibility, costs, team permissions, reliability, or scale, Sonae already has a credible answer. That is why it is a foundation for building AI products, not just another interface.",
             "action": "View cost controls",
             "items": {
                 "faster": {
                     "title": "Months of foundation work already done",
-                    "body": "Authentication, roles, tenants, admin pages, model records, chat, files, knowledge, tools, widgets, workflows, analytics, and settings already exist as product surfaces."
+                    "body": "Sign-in, roles, customer workspaces, management pages, model choices, chat, files, knowledge, approved actions, widgets, AI flows, reporting, and settings already exist as product surfaces."
                 },
                 "safer": {
                     "title": "Built for enterprise questions",
-                    "body": "The platform can talk directly about PII, AI attacks, tenant isolation, admin oversight, audit logs, role boundaries, and controlled model use."
+                    "body": "The platform can answer buyer questions about sensitive information, AI misuse, company separation, manager oversight, activity history, role boundaries, and controlled model use."
                 },
                 "clearer": {
-                    "title": "Prove reliability with tests",
-                    "body": "A broad regression suite helps protect the core product: AI safety, provider retries, workflows, auth, knowledge, analytics, admin flows, and widgets."
+                    "title": "Prove reliability with checks",
+                    "body": "A broad set of automated checks protects the core product: AI safety, AI flows, sign-in, knowledge, reporting, management journeys, and widgets."
                 },
                 "together": {
                     "title": "Sell a complete platform story",
-                    "body": "Sonae lets you show buyers the full picture: polished UX, governed AI, operational visibility, cost control, extensibility, and a real product base."
+                    "body": "Sonae lets you show buyers the full picture: polished user experience, controlled AI, clear oversight, cost control, room to extend, and a real product base."
                 }
             }
         },
         "governance": {
-            "eyebrow": "Governed operations",
-            "title": "The admin layer is built for running AI in the real world.",
-            "body": "Sonae gives operators the controls needed after the first demo succeeds: who can access what, which models can run, what agents did, which tools were called, how much each tenant costs, and whether the platform is healthy.",
+            "eyebrow": "Operational control",
+            "title": "The management layer is built for running AI in the real world.",
+            "body": "Sonae gives teams the controls needed after the first demo succeeds: who can access what, which models can run, what AI did, which actions were taken, how much each customer costs, and whether the platform is healthy.",
             "items": {
                 "tenancy": {
-                    "title": "Company and tenant separation",
-                    "body": "Companies, users, knowledge, widgets, chat logs, model settings, rules, and admin permissions are shaped around tenant boundaries rather than a single shared workspace."
+                    "title": "Customer workspace separation",
+                    "body": "Companies, users, knowledge, widgets, chat history, model settings, rules, and permissions are shaped around separate customer workspaces rather than one shared space."
                 },
                 "roles": {
-                    "title": "Role-aware administration",
-                    "body": "Super admins, company admins, and users have different surfaces and permissions, making it possible to sell Sonae-backed products into multi-company environments."
+                    "title": "Clear roles and permissions",
+                    "body": "Platform owners, company managers, and everyday users can have different screens and permissions, making it possible to sell Sonae-backed products into multi-company environments."
                 },
                 "pii": {
-                    "title": "Sensitive-data posture",
-                    "body": "PII-aware language, upload policies, access controls, and knowledge isolation give the product a stronger story when buyers ask how sensitive information is handled."
+                    "title": "Sensitive information handling",
+                    "body": "Careful language, file rules, access controls, and private knowledge areas give the product a stronger answer when buyers ask how sensitive information is handled."
                 },
                 "tools": {
-                    "title": "Controlled AI tool execution",
-                    "body": "AI tools are not just handed to a model. They are declared, configured, permissioned, validated, logged, and routed through controlled execution paths."
+                    "title": "Controlled AI actions",
+                    "body": "AI actions are not left open-ended. They are configured, permissioned, checked, recorded, and only run through approved paths."
                 },
                 "audit": {
-                    "title": "Audit and activity history",
-                    "body": "Admins can inspect configuration changes, chat history, agent logs, workflow runs, failed actions, and operational events instead of guessing what happened."
+                    "title": "Clear activity history",
+                    "body": "Teams can inspect setting changes, chat history, AI activity, completed flows, failed actions, and operational events instead of guessing what happened."
                 },
                 "health": {
-                    "title": "System health and maintenance",
-                    "body": "Maintenance scripts, health surfaces, alert planning, purge schedules, analytics snapshots, and diagnostics support ongoing operation after launch."
+                    "title": "Platform health and maintenance",
+                    "body": "Health checks, maintenance tools, alerts, cleanup routines, reporting snapshots, and diagnostics help support the platform after launch."
                 }
             }
         },
         "useCases": {
             "eyebrow": "Platform proof",
-            "title": "This is the infrastructure underneath an AI business.",
+            "title": "This is the foundation underneath an AI business.",
             "action": "Open assistant",
             "items": {
                 "sales": {
                     "title": "For SaaS and customer portals",
-                    "body": "Build customer-facing AI with branded widgets, approved knowledge, safe model access, support workflows, and admin visibility from the same base."
+                    "body": "Build customer-facing AI with branded widgets, approved knowledge, safe model access, support flows, and management visibility from the same base."
                 },
                 "customers": {
                     "title": "For internal AI workspaces",
-                    "body": "Give teams a governed assistant with files, knowledge, model choice, reports, team access, chat history, and organization-level controls."
+                    "body": "Give teams a controlled assistant with files, knowledge, model choice, reports, team access, chat history, and organisation-level controls."
                 },
                 "teams": {
-                    "title": "For agentic workflow products",
-                    "body": "Use Sonae's agent builder, schedules, logs, tools, executions, safety layer, and observability to build products that do work, not just answer questions."
+                    "title": "For AI work automation products",
+                    "body": "Use Sonae's AI flow builder, schedules, activity history, approved actions, safety layer, and visibility to build products that do work, not just answer questions."
                 }
             }
         },
         "modal": {
             "title": "Why Sonae is a stronger starting point",
-            "body": "Sonae already brings together the hard enterprise pieces: model selection across leading model families, PII-aware knowledge, prompt-injection and jailbreak defences, agent workflow building, observability, regression tests, AI cost control, tenant management, widgets, and admin governance.",
+            "body": "Sonae already brings together the hard enterprise pieces: model choice across leading AI families, safer private knowledge, protection from prompt attacks, AI flow building, clear activity history, automated checks, cost control, customer workspaces, widgets, and management controls.",
             "pointTitle": "The advantage",
             "pointBody": "Build the unique product layer on top of Sonae instead of spending months recreating the foundation every serious AI buyer will expect you to have.",
             "close": "Got it"
