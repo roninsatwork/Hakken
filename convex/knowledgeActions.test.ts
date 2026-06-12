@@ -13,9 +13,9 @@ vi.mock("@google/genai", async (importOriginal) => {
     ...actual,
     GoogleGenAI: vi.fn(function GoogleGenAI() {
       return {
-      models: {
-        embedContent: embedContentMock,
-      },
+        models: {
+          embedContent: embedContentMock,
+        },
       };
     }),
   };
