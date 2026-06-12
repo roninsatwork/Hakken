@@ -14,6 +14,17 @@ const reactPlugin = react() as unknown as VitestPlugin
 const coverageThresholds = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
 ).current
+
+type SonaeCoverageConfig = {
+  provider: 'v8'
+  reportsDirectory: string
+  reporter: Array<'text' | 'html' | 'json-summary'>
+  all: true
+  include: string[]
+  exclude: string[]
+  thresholds: typeof coverageThresholds
+}
+
 const coverageConfig = {
   provider: 'v8' as const,
   reportsDirectory: './coverage',
@@ -37,7 +48,7 @@ const coverageConfig = {
     'vitest.setup.ts',
   ],
   thresholds: coverageThresholds,
-}
+} satisfies SonaeCoverageConfig
 
 export default defineConfig({
   plugins: [reactPlugin],
