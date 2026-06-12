@@ -199,7 +199,7 @@ export default function CompanyUsersPage() {
             </button>
           )}
           <Link 
-            href={`/admin/companies/${companyId}/invites`}
+            href={`/admin/companies/${companyId}/directory/invites`}
             className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
           >
             <Plus className="w-4 h-4" />

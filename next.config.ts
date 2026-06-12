@@ -66,6 +66,60 @@ const nextConfig: NextConfig = {
       { source: "/embed.js", headers: embedHeaders },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/admin/companies/:id/users",
+        destination: "/admin/companies/:id/directory/users",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/invites",
+        destination: "/admin/companies/:id/directory/invites",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/knowledge",
+        destination: "/admin/companies/:id/ai/knowledge",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/prompt",
+        destination: "/admin/companies/:id/ai/prompt",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/system-prompt",
+        destination: "/admin/companies/:id/ai/prompt",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/rules/new",
+        destination: "/admin/companies/:id/ai/rules/new",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/rules/:ruleId",
+        destination: "/admin/companies/:id/ai/rules/:ruleId",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/rules",
+        destination: "/admin/companies/:id/ai/rules",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/models",
+        destination: "/admin/companies/:id/ai/models",
+        permanent: false,
+      },
+      {
+        source: "/admin/companies/:id/chat-logs",
+        destination: "/admin/companies/:id/ai/chat-logs",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 const withNextIntl = createNextIntlPlugin();

@@ -53,4 +53,31 @@ test.describe("Admin route coverage", () => {
 
     await expect(page.getByText(/Tool|Connector|Connett/i).first()).toBeVisible();
   });
+
+  test("company workspace AI navigation renders grouped AI sections", async ({ page }) => {
+    await gotoWithoutServerCrash(page, "/admin/companies/company_e2e/ai/models");
+    await skipWhenRedirectedToLogin(page, "Company AI navigation coverage requires an authenticated admin storage state.");
+
+    const aiSubmenu = page.getByLabel("AI workspace sections");
+
+    await expect(page.getByRole("link", { name: "AI", exact: true })).toBeVisible();
+    await expect(aiSubmenu.getByRole("link", { name: "Knowledge", exact: true })).toBeVisible();
+    await expect(aiSubmenu.getByRole("link", { name: "Prompt", exact: true })).toBeVisible();
+    await expect(aiSubmenu.getByRole("link", { name: "AI Rules", exact: true })).toBeVisible();
+    await expect(aiSubmenu.getByRole("link", { name: "AI Models", exact: true })).toBeVisible();
+    await expect(aiSubmenu.getByRole("link", { name: "Chat Logs", exact: true })).toBeVisible();
+    await expect(page.getByText("Company AI Model Defaults")).toBeVisible();
+  });
+
+  test("company workspace directory navigation renders grouped directory sections", async ({ page }) => {
+    await gotoWithoutServerCrash(page, "/admin/companies/company_e2e/directory/invites");
+    await skipWhenRedirectedToLogin(page, "Company directory navigation coverage requires an authenticated admin storage state.");
+
+    const directorySubmenu = page.getByLabel("Directory workspace sections");
+
+    await expect(page.getByRole("link", { name: "Directory", exact: true })).toBeVisible();
+    await expect(directorySubmenu.getByRole("link", { name: "Directory", exact: true })).toBeVisible();
+    await expect(directorySubmenu.getByRole("link", { name: "Invites", exact: true })).toBeVisible();
+    await expect(page.getByText("Workspace Invitations")).toBeVisible();
+  });
 });

@@ -20,6 +20,16 @@ const settings = {
   borderRadius: "12px",
 };
 
+const companyFixture = {
+  _id: companyId,
+  _creationTime: now,
+  name: "E2E Company",
+  description: "Deterministic company workspace for e2e coverage.",
+  systemPrompt: "Keep responses tenant-safe for E2E Company.",
+  createdAt: now,
+  updatedAt: now,
+};
+
 const models = Array.from({ length: 18 }, (_, index) => ({
   _id: `model_e2e_${index + 1}`,
   _creationTime: now + index,
@@ -41,6 +51,31 @@ const modelProviders = [
     displayName: "Google Vertex AI",
     isEnabled: true,
   },
+];
+
+const inviteTemplateFixture = {
+  _id: "invite_template_e2e",
+  _creationTime: now,
+  subject: "Join E2E Company on Sonae",
+  headline: "Your workspace is ready",
+  body: "Use this invitation to join the deterministic E2E workspace.",
+  ctaText: "Join Workspace",
+  isActive: true,
+  createdAt: now,
+  updatedAt: now,
+};
+
+const modelDefaultUseCases = [
+  "chat",
+  "fast-chat",
+  "reasoning",
+  "agent",
+  "workflow",
+  "report",
+  "router",
+  "title",
+  "transcription",
+  "embedding",
 ];
 
 const workflowId = "workflow_e2e";
@@ -310,6 +345,8 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     const filtered = searchTerm ? rules.filter((rule) => rule.name.toLowerCase().includes(searchTerm)) : rules;
     return pageData(filtered, Number(queryArgs.page || 1), Number(queryArgs.pageSize || 15));
   }
+  if (path === "invites:getActiveTemplate") return inviteTemplateFixture;
+  if (path === "invites:getInvitesByCompany") return [];
   if (path === "aiTools:getTools") {
     return [
       {
@@ -324,10 +361,39 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     ];
   }
   if (path === "companies:getCompanies") {
-    return [{ _id: companyId, _creationTime: now, name: "E2E Company", createdAt: now, userCount: 2 }];
+    return [{ ...companyFixture, userCount: 2 }];
+  }
+  if (path === "companies:getCompanyById") {
+    return queryArgs.id === companyId ? companyFixture : null;
   }
   if (path === "companies:getCompanyOptions") {
-    return [{ _id: companyId, name: "E2E Company" }];
+    return [{ _id: companyId, name: companyFixture.name }];
+  }
+  if (path === "aiModels:getCompanyModelDefaults") {
+    const primaryModel = models[0];
+
+    return {
+      companyId,
+      useCases: modelDefaultUseCases,
+      defaults: modelDefaultUseCases.map((useCase) => ({
+        useCase,
+        companyDefault: null,
+        globalDefault: {
+          _id: `default_${useCase}`,
+          modelId: primaryModel.modelId,
+          providerKey: primaryModel.providerKey,
+          fallbackModelId: undefined,
+          updatedAt: now,
+          model: {
+            modelId: primaryModel.modelId,
+            providerKey: primaryModel.providerKey,
+            providerModelId: primaryModel.providerModelId,
+            displayName: primaryModel.displayName,
+            isEnabled: primaryModel.isEnabled,
+          },
+        },
+      })),
+    };
   }
   if (path === "widgets:getWidgetsByCompany") {
     return [
@@ -491,7 +557,7 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   }
   if (path === "companies:getPaginatedCompanies") {
     return {
-      results: [{ _id: companyId, _creationTime: now, name: "E2E Company", createdAt: now, userCount: 2 }],
+      results: [{ ...companyFixture, userCount: 2 }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,

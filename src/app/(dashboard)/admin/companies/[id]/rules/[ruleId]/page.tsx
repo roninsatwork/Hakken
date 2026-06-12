@@ -62,7 +62,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         priority: form.priority,
         isActive: form.isActive,
       });
-      router.push(`/admin/companies/${companyId}/rules`);
+      router.push(`/admin/companies/${companyId}/ai/rules`);
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);
@@ -101,7 +101,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
     <div className="flex flex-col gap-4 w-full pb-8">
       <header className="flex flex-col gap-1">
         <Link 
-          href={`/admin/companies/${companyId}/rules`}
+          href={`/admin/companies/${companyId}/ai/rules`}
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

@@ -58,6 +58,8 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Plan for adding a local-only real Convex Auth browser testing lane alongside the existing mocked Playwright suite.
 27. **[Ask Sonae Safety Hardening Plan](./ask-sonae-safety-hardening-plan.md)**
     Locked phased plan for jailbreak, prompt-injection, RAG, tool execution, and admin prompt guardrails across the Ask Sonae assistant.
+28. **[Company Workspace AI Navigation Consolidation Plan](./company-workspace-ai-navigation-plan.md)**
+    Planning document for moving company Knowledge, Prompt, AI Rules, AI Models, and Chat Logs under a single AI workspace tab with a third-level submenu.
 
 ---
 
