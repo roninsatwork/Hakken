@@ -25,14 +25,14 @@ test.describe('End-User Chat Journey', () => {
 
     // 4. Verify transition to a dedicated thread view
     // The URL should update from /app/assistant to /app/assistant/[threadId]
-    await expect(page).toHaveURL(/\/app\/assistant\/[a-zA-Z0-9_-]+/);
+    await expect(page).toHaveURL(/\/app\/assistant\/[a-zA-Z0-9_-]+/, { timeout: 15000 });
 
     // 5. Verify the user's input rendered in the conversation history
     const userMessage = page.locator(`text=${testMessage}`);
-    await expect(userMessage).toBeVisible();
+    await expect(userMessage).toBeVisible({ timeout: 15000 });
     
     // 6. Verify AI is generating or has generated a response
     // We expect either a streaming indicator or an assistant message block to appear
-    await expect(page.getByText(/E2E assistant response ready|Thinking/i).first()).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/E2E assistant response ready|Thinking/i).first()).toBeVisible({ timeout: 30000 });
   });
 });

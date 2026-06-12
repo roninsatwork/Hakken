@@ -46,7 +46,7 @@ test.describe("Admin widget and workflow journeys", () => {
     await gotoWithoutServerCrash(page, "/admin/workflows/schedules");
     await expect(page.getByRole("heading", { name: /^Schedules$/i })).toBeVisible();
     await expect(page.getByText("E2E Morning Schedule")).toBeVisible();
-    await expect(page.getByText("Every day at 09:00")).toBeVisible();
+    await expect(page.getByText(/Daily at 09:00 Local \(\d{2}:00 UTC\)/)).toBeVisible();
     await page.getByTitle(/Force Dispatch/i).click();
     await expect(page.getByText(/Manual Dispatch Initiated/i)).toBeVisible();
     await page.getByRole("button", { name: /Got it/i }).click();
