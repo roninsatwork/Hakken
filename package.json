@@ -4,19 +4,28 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run verify:env",
     "build": "next build",
+    "prebuild": "npm run verify:env",
     "start": "next start",
     "lint": "eslint --quiet",
     "lint:all": "eslint",
     "convex:dev": "convex dev",
+    "preconvex:dev": "npm run verify:env",
     "test": "vitest",
+    "pretest": "npm run verify:env",
     "test:run": "vitest run",
+    "pretest:run": "npm run verify:env",
     "test:coverage": "vitest run --coverage",
+    "pretest:coverage": "npm run verify:env",
     "coverage:check": "node scripts/check-coverage-thresholds.mjs",
+    "verify:env": "node scripts/verify-local-environment.mjs",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run test:run",
+    "check": "npm run verify:env && npm run lint && npm run typecheck && npm run test:run",
     "test:e2e": "playwright test",
+    "pretest:e2e": "npm run verify:env",
     "test:e2e:real-auth": "playwright test -c playwright.real-auth.config.ts",
+    "pretest:e2e:real-auth": "npm run verify:env",
     "auth:local:seed": "node scripts/local-test-auth.mjs seed",
     "auth:local:state": "node scripts/local-test-auth.mjs state"
   },
@@ -78,5 +87,9 @@
     "tmp": "^0.2.6",
     "uuid": "^11.1.1",
     "ws": "^8.20.1"
+  },
+  "engines": {
+    "node": ">=20.19.0 <21",
+    "npm": ">=10 <11"
   }
 }
