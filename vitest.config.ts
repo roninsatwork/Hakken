@@ -9,14 +9,13 @@ const rootAlias = {
 }
 
 type VitestPlugin = NonNullable<ViteUserConfig['plugins']>[number]
-type VitestCoverageConfig = NonNullable<NonNullable<ViteUserConfig['test']>['coverage']>
 
 const reactPlugin = react() as unknown as VitestPlugin
 const coverageThresholds = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
 ).current
-const coverageConfig: VitestCoverageConfig = {
-  provider: 'v8',
+const coverageConfig = {
+  provider: 'v8' as const,
   reportsDirectory: './coverage',
   reporter: ['text', 'html', 'json-summary'],
   all: true,
