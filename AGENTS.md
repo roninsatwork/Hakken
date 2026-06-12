@@ -12,7 +12,7 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 
 ## Verification Gates
 
-Use Node `20.19.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
+Use Node `22.13.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
 
 Run these before asking the user to merge or push:
 

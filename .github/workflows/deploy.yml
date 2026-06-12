@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
+          node-version: '22.13.0'
           cache: 'npm'
 
       - name: Install dependencies
@@ -67,7 +67,7 @@ jobs:
       - name: Setup Node for Convex Backend Sync
         uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
+          node-version: '22.13.0'
           
       - name: Sync Backend Schema to Convex Production
         run: npm ci && npx convex deploy
