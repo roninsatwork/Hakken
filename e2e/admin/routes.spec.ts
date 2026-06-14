@@ -75,7 +75,7 @@ test.describe("Admin route coverage", () => {
 
     const directorySubmenu = page.getByLabel("Directory workspace sections");
 
-    await expect(page.getByRole("link", { name: "Directory", exact: true })).toBeVisible();
+    await expect(page.locator('a[href="/admin/companies/company_e2e/directory"]')).toBeVisible();
     await expect(directorySubmenu.getByRole("link", { name: "Directory", exact: true })).toBeVisible();
     await expect(directorySubmenu.getByRole("link", { name: "Invites", exact: true })).toBeVisible();
     await expect(page.getByText("Workspace Invitations")).toBeVisible();
