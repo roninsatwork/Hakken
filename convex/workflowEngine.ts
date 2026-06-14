@@ -608,6 +608,18 @@ export const failNodeStep = internalMutation({
   },
 });
 
+export const linkAgentRunToStep = internalMutation({
+  args: {
+    stepId: v.id("workflowExecutionSteps"),
+    agentRunId: v.id("agentRuns"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.stepId, {
+      agentRunId: args.agentRunId,
+    });
+  },
+});
+
 export const executeDatabaseOperation = internalMutation({
   args: {
     tableName: v.string(),
@@ -744,23 +756,37 @@ export const scheduleDispatcher = internalMutation({
              if (schedule.agentId) {
                 const agent = await ctx.db.get(schedule.agentId);
                 if (!agent || agent.isActive === false) continue;
+                const creator = await ctx.db.get(schedule.createdBy);
+                const agentRunId = await ctx.db.insert("agentRuns", {
+                  agentId: schedule.agentId,
+                  scheduleId: schedule._id,
+                  triggerType: "SCHEDULE",
+                  objective: `Scheduled run: ${schedule.name}`,
+                  status: "QUEUED",
+                  companyId: creator?.companyId,
+                  userId: schedule.createdBy,
+                  startedAt: now,
+                  updatedAt: now,
+                });
 
                 const executionId = await ctx.db.insert("workflowExecutions", {
                   agentId: schedule.agentId,
+                  agentRunId,
                   triggerType: "SCHEDULE",
                   status: "RUNNING",
                   startedAt: now,
                   startedBy: schedule.createdBy,
                 });
 
-                await ctx.scheduler.runAfter(0, internal.salesReportActions.generateReport, {
+                await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
                   agentId: schedule.agentId,
-                  companyId: undefined,
-                });
-
-                await ctx.scheduler.runAfter(2000, internal.scheduler.completeSimulation, {
-                  executionId,
-                  success: true,
+                  objective: `Scheduled run: ${schedule.name}`,
+                  triggerType: "SCHEDULE",
+                  runId: agentRunId,
+                  scheduleId: schedule._id,
+                  workflowExecutionId: executionId,
+                  companyId: creator?.companyId,
+                  userId: schedule.createdBy,
                 });
 
                 await ctx.db.patch(schedule._id, {

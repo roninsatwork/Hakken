@@ -333,6 +333,7 @@
         "globalKnowledge": "Conoscenza Globale",
         "models": "Modelli",
         "agents": "Agenti",
+        "agentApprovals": "Approvazioni Agenti",
         "manageAgents": "Gestisci Agenti",
         "connectors": "Connettori",
         "workflows": "Workflow",
@@ -1001,8 +1002,10 @@
                 "backButton": "Torna agli Agent",
                 "tabs": {
                     "dashboard": "Dashboard",
+                    "runs": "Esecuzioni",
                     "settings": "Impostazioni",
                     "knowledge": "Conoscenza",
+                    "memory": "Memoria",
                     "prompt": "Prompt di Sistema",
                     "rules": "Regole AI",
                     "integrations": "Integrazioni",

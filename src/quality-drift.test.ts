@@ -348,7 +348,7 @@ describe('Quality Drift Guardrails', () => {
 
   test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
     const assistantBody = extractExportBody('convex/ai.ts', 'generateSonaeResponse');
-    const agentBody = extractExportBody('convex/agentRuntime.ts', 'generateAgentResponse');
+    const agentBody = extractExportBody('convex/agentRuntime.ts', 'runAgentObjective');
 
     const assistantRequirements = [
       'evaluateAssistantSafety',
@@ -373,7 +373,7 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
     expect(
       agentMissing,
-      `generateAgentResponse must keep preflight refusal, agent prompt hierarchy, untrusted RAG, and tool authorization helpers:\n${agentMissing.join('\n')}`
+      `runAgentObjective must keep preflight refusal, agent prompt hierarchy, untrusted RAG, and tool authorization helpers:\n${agentMissing.join('\n')}`
     ).toEqual([]);
     expect(assistantBody).not.toContain('Previous Conversation History:');
     expect(assistantBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');

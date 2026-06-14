@@ -3,6 +3,10 @@ type JsonSchema = Record<string, unknown>;
 export type ToolAccessRole = "ADMIN" | "SUPER_ADMIN";
 export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
+export type ToolHandlerExecutionInput = {
+  handlerMapping: string;
+  args: Record<string, unknown>;
+};
 
 export type ToolDefinitionInput = {
   name: string;
@@ -40,12 +44,23 @@ export type NormalizedToolExecutionPolicy = {
   confirmationRequired: boolean;
 };
 
+export type ToolArgumentValidationResult = {
+  ok: boolean;
+  errors: string[];
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : "Unknown tool execution error.";
+}
+
+function getJsonSchemaType(value: unknown) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
 }
 
 export function normalizeToolFunctionName(value: string) {
@@ -62,6 +77,66 @@ export function parseToolInputSchema(value: unknown): JsonSchema | undefined {
   }
 
   return parsed;
+}
+
+export function validateToolJsonSchemaString(value: unknown, label = "Tool schema") {
+  const parsed = parseToolInputSchema(value);
+  if (!parsed) return undefined;
+
+  if (parsed.type !== undefined && parsed.type !== "object") {
+    throw new Error(`${label} must use root type "object".`);
+  }
+
+  if (parsed.properties !== undefined && !isRecord(parsed.properties)) {
+    throw new Error(`${label} properties must be a JSON object.`);
+  }
+
+  if (parsed.required !== undefined) {
+    if (!Array.isArray(parsed.required) || !parsed.required.every((entry) => typeof entry === "string")) {
+      throw new Error(`${label} required must be an array of strings.`);
+    }
+  }
+
+  return parsed;
+}
+
+export function validateToolCallArgsAgainstSchema(args: {
+  schema?: unknown;
+  callArgs: Record<string, unknown>;
+}): ToolArgumentValidationResult {
+  const schema = parseToolInputSchema(args.schema);
+  if (!schema) return { ok: true, errors: [] };
+
+  const errors: string[] = [];
+  const required = Array.isArray(schema.required) ? schema.required.filter((entry) => typeof entry === "string") : [];
+
+  for (const field of required) {
+    if (!(field in args.callArgs)) {
+      errors.push(`Missing required tool argument '${field}'.`);
+    }
+  }
+
+  const properties = isRecord(schema.properties) ? schema.properties : {};
+  for (const [field, propertySchema] of Object.entries(properties)) {
+    if (!(field in args.callArgs) || !isRecord(propertySchema)) continue;
+
+    const expectedType = propertySchema.type;
+    if (typeof expectedType !== "string") continue;
+
+    const actualType = getJsonSchemaType(args.callArgs[field]);
+    if (expectedType === "integer") {
+      if (actualType !== "number" || !Number.isInteger(args.callArgs[field])) {
+        errors.push(`Tool argument '${field}' must be an integer.`);
+      }
+      continue;
+    }
+
+    if (actualType !== expectedType) {
+      errors.push(`Tool argument '${field}' must be a ${expectedType}.`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
 }
 
 export function buildProviderToolDeclaration(tool: ToolDefinitionInput): ProviderToolDeclaration {
@@ -114,8 +189,9 @@ export function buildToolFailureResult(error: unknown) {
 
 export function normalizeToolExecutionPolicy(tool: ToolExecutionPolicyInput): NormalizedToolExecutionPolicy {
   const sideEffectLevel = tool.sideEffectLevel ?? "READ";
-  const confirmationRequired =
-    tool.confirmationRequired ?? (sideEffectLevel === "DESTRUCTIVE" || sideEffectLevel === "EXTERNAL");
+  const confirmationRequired = sideEffectLevel === "READ"
+    ? (tool.confirmationRequired ?? false)
+    : true;
 
   return {
     requiredRole: tool.requiredRole,
@@ -151,16 +227,20 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution requires super-admin privileges." };
   }
 
-  if (policy.confirmationRequired && !args.confirmationGranted) {
-    return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
-  }
-
   if (args.userRole === "SUPER_ADMIN") {
+    if (policy.confirmationRequired && !args.confirmationGranted) {
+      return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
+    }
+
     return { allowed: true };
   }
 
   if (args.targetCompanyId && (!args.userCompanyId || args.userCompanyId !== args.targetCompanyId)) {
     return { allowed: false, reason: "Tool execution is not allowed across tenant boundaries." };
+  }
+
+  if (policy.confirmationRequired && !args.confirmationGranted) {
+    return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
   }
 
   return { allowed: true };
@@ -171,6 +251,11 @@ export function assertCanExecuteTool(args: Parameters<typeof canExecuteTool>[0])
   if (!decision.allowed) {
     throw new Error(decision.reason || "Tool execution denied.");
   }
+}
+
+export function executeRegisteredTool(args: ToolHandlerExecutionInput) {
+  void args;
+  throw new Error("Unknown or unimplemented tool handler mapping.");
 }
 
 export function normalizeAiRuntimeError(error: unknown, fallback = "AI runtime request failed.") {

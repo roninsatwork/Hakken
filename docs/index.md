@@ -60,6 +60,10 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Locked phased plan for jailbreak, prompt-injection, RAG, tool execution, and admin prompt guardrails across the Ask Sonae assistant.
 28. **[Company Workspace AI Navigation Consolidation Plan](./company-workspace-ai-navigation-plan.md)**
     Planning document for moving company Knowledge, Prompt, AI Rules, AI Models, and Chat Logs under a single AI workspace tab with a third-level submenu.
+29. **[True Agentic Platform Plan](./true-agentic-platform-plan.md)**
+    Locked phased plan for turning configurable agents and AI workflows into a durable, tool-executing, approval-aware agentic automation platform.
+30. **[Agent Learning And Improvement Plan](./agent-learning-improvement-plan.md)**
+    Follow-on plan for making agents improve over time through governed memory, run feedback, replayed failures, evaluation fixtures, and approved behavior updates.
 
 ---
 

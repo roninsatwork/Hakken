@@ -276,6 +276,431 @@ export default defineSchema({
       filterFields: ["agentId"]
     }),
 
+  // Durable Agentic Runtime Records
+  agentRuns: defineTable({
+    agentId: v.id("agents"),
+    agentVersionId: v.optional(v.id("agentVersions")),
+    threadId: v.optional(v.id("threads")),
+    workflowId: v.optional(v.id("workflows")),
+    scheduleId: v.optional(v.id("schedules")),
+    triggerType: v.union(
+      v.literal("CHAT"),
+      v.literal("MANUAL"),
+      v.literal("SCHEDULE"),
+      v.literal("WEBHOOK"),
+      v.literal("WORKFLOW"),
+      v.literal("EVENT")
+    ),
+    objective: v.string(),
+    status: v.union(
+      v.literal("QUEUED"),
+      v.literal("RUNNING"),
+      v.literal("PENDING_APPROVAL"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("CANCELLED")
+    ),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    modelId: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
+    maxSteps: v.optional(v.number()),
+    maxCostGBP: v.optional(v.number()),
+    maxRuntimeMs: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    costGBP: v.optional(v.number()),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+    updatedAt: v.number(),
+    error: v.optional(v.string()),
+    finalOutput: v.optional(v.string()),
+  })
+    .index("by_agent_started", ["agentId", "startedAt"])
+    .index("by_agent_version_started", ["agentVersionId", "startedAt"])
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_company_status_started", ["companyId", "status", "startedAt"])
+    .index("by_status_started", ["status", "startedAt"])
+    .index("by_thread_started", ["threadId", "startedAt"])
+    .index("by_workflow_started", ["workflowId", "startedAt"])
+    .index("by_schedule_started", ["scheduleId", "startedAt"]),
+
+  agentRunSteps: defineTable({
+    runId: v.id("agentRuns"),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    stepIndex: v.number(),
+    kind: v.union(
+      v.literal("OBSERVE"),
+      v.literal("PLAN"),
+      v.literal("MODEL"),
+      v.literal("TOOL_CALL"),
+      v.literal("TOOL_RESULT"),
+      v.literal("APPROVAL_REQUEST"),
+      v.literal("REPLAN"),
+      v.literal("FINAL")
+    ),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("RUNNING"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("SKIPPED")
+    ),
+    input: v.optional(v.string()),
+    output: v.optional(v.string()),
+    modelId: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    costGBP: v.optional(v.number()),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_run_step", ["runId", "stepIndex"])
+    .index("by_run_status_step", ["runId", "status", "stepIndex"])
+    .index("by_agent_started", ["agentId", "startedAt"])
+    .index("by_company_started", ["companyId", "startedAt"]),
+
+  agentToolCalls: defineTable({
+    runId: v.id("agentRuns"),
+    stepId: v.optional(v.id("agentRunSteps")),
+    agentId: v.id("agents"),
+    toolId: v.optional(v.id("aiTools")),
+    normalizedToolName: v.string(),
+    handlerMapping: v.string(),
+    argumentsJson: v.string(),
+    redactedArgumentsJson: v.optional(v.string()),
+    resultJson: v.optional(v.string()),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("APPROVAL_REQUIRED"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("DENIED"),
+      v.literal("CANCELLED")
+    ),
+    requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    sideEffectLevel: v.union(
+      v.literal("READ"),
+      v.literal("WRITE"),
+      v.literal("DESTRUCTIVE"),
+      v.literal("EXTERNAL")
+    ),
+    confirmationRequired: v.boolean(),
+    confirmationGrantedAt: v.optional(v.number()),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_run_started", ["runId", "startedAt"])
+    .index("by_agent_started", ["agentId", "startedAt"])
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_status_started", ["status", "startedAt"]),
+
+  agentRunApprovals: defineTable({
+    runId: v.id("agentRuns"),
+    stepId: v.optional(v.id("agentRunSteps")),
+    toolCallId: v.optional(v.id("agentToolCalls")),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    requestedBy: v.optional(v.id("users")),
+    reviewedBy: v.optional(v.id("users")),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("APPROVED"),
+      v.literal("REJECTED"),
+      v.literal("CANCELLED")
+    ),
+    message: v.optional(v.string()),
+    previewJson: v.optional(v.string()),
+    requestedAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    decisionReason: v.optional(v.string()),
+  })
+    .index("by_run_requested", ["runId", "requestedAt"])
+    .index("by_company_status_requested", ["companyId", "status", "requestedAt"])
+    .index("by_status_requested", ["status", "requestedAt"])
+    .index("by_agent_requested", ["agentId", "requestedAt"]),
+
+  agentRunFeedback: defineTable({
+    runId: v.id("agentRuns"),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    userId: v.id("users"),
+    rating: v.union(
+      v.literal("POSITIVE"),
+      v.literal("NEGATIVE"),
+      v.literal("NEUTRAL")
+    ),
+    labels: v.array(v.union(
+      v.literal("GOOD_ANSWER"),
+      v.literal("INCORRECT"),
+      v.literal("MISSED_CONTEXT"),
+      v.literal("WRONG_TOOL"),
+      v.literal("BAD_TOOL_ARGS"),
+      v.literal("UNSAFE_SUGGESTION"),
+      v.literal("TOO_EXPENSIVE"),
+      v.literal("TOO_SLOW"),
+      v.literal("NEEDS_APPROVAL_POLICY_CHANGE"),
+      v.literal("SHOULD_BECOME_EVAL")
+    )),
+    comment: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_created", ["runId", "createdAt"])
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_user_agent_updated", ["userId", "agentId", "updatedAt"]),
+
+  agentRunReflections: defineTable({
+    runId: v.id("agentRuns"),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    createdBy: v.id("users"),
+    category: v.union(
+      v.literal("MISSING_CONTEXT"),
+      v.literal("BAD_TOOL_PLAN"),
+      v.literal("BAD_TOOL_ARGUMENTS"),
+      v.literal("TOOL_FAILURE"),
+      v.literal("PROVIDER_FAILURE"),
+      v.literal("POLICY_BLOCKED"),
+      v.literal("APPROVAL_REJECTED"),
+      v.literal("TENANT_SCOPE_BLOCKED"),
+      v.literal("PROMPT_INJECTION_BLOCKED"),
+      v.literal("USER_CANCELLED"),
+      v.literal("UNKNOWN")
+    ),
+    sourceStatus: v.union(v.literal("FAILED"), v.literal("CANCELLED")),
+    objectiveSummary: v.string(),
+    failureStepIndex: v.optional(v.number()),
+    failureStepKind: v.optional(v.string()),
+    toolCallId: v.optional(v.id("agentToolCalls")),
+    approvalId: v.optional(v.id("agentRunApprovals")),
+    rootCause: v.string(),
+    missingContext: v.optional(v.string()),
+    proposedMemory: v.optional(v.string()),
+    proposedPromptChange: v.optional(v.string()),
+    proposedToolChange: v.optional(v.string()),
+    proposedEvalFixture: v.optional(v.string()),
+    confidence: v.number(),
+    evidenceJson: v.string(),
+    status: v.union(
+      v.literal("GENERATED"),
+      v.literal("DISMISSED"),
+      v.literal("CONVERTED")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_created", ["runId", "createdAt"])
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"]),
+
+  agentMemoryCandidates: defineTable({
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    sourceRunId: v.id("agentRuns"),
+    sourceReflectionId: v.optional(v.id("agentRunReflections")),
+    proposedBy: v.union(
+      v.literal("AGENT"),
+      v.literal("USER"),
+      v.literal("ADMIN"),
+      v.literal("SYSTEM_REFLECTION")
+    ),
+    kind: v.union(
+      v.literal("FACT"),
+      v.literal("PREFERENCE"),
+      v.literal("SUMMARY"),
+      v.literal("INSTRUCTION")
+    ),
+    content: v.string(),
+    normalizedContent: v.string(),
+    confidence: v.number(),
+    riskLevel: v.union(
+      v.literal("LOW"),
+      v.literal("MEDIUM"),
+      v.literal("HIGH")
+    ),
+    status: v.union(
+      v.literal("PROPOSED"),
+      v.literal("APPROVED"),
+      v.literal("REJECTED"),
+      v.literal("APPLIED")
+    ),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
+    appliedMemoryId: v.optional(v.id("agentMemories")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_created", ["sourceRunId", "createdAt"])
+    .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
+    .index("by_agent_status_created", ["agentId", "status", "createdAt"])
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"]),
+
+  agentEvalFixtures: defineTable({
+    agentId: v.id("agents"),
+    agentVersionId: v.optional(v.id("agentVersions")),
+    companyId: v.optional(v.id("companies")),
+    sourceRunId: v.id("agentRuns"),
+    sourceReflectionId: v.optional(v.id("agentRunReflections")),
+    sourceFeedbackId: v.optional(v.id("agentRunFeedback")),
+    sourceMemoryCandidateId: v.optional(v.id("agentMemoryCandidates")),
+    createdBy: v.id("users"),
+    type: v.union(
+      v.literal("HAPPY_PATH"),
+      v.literal("APPROVAL_PAUSE"),
+      v.literal("REJECTED_ACTION"),
+      v.literal("PROMPT_INJECTION"),
+      v.literal("TENANT_BOUNDARY"),
+      v.literal("BAD_TOOL_ARGS"),
+      v.literal("CANCELLATION"),
+      v.literal("REPLAYED_FAILURE"),
+      v.literal("TOOL_PLAN"),
+      v.literal("COST_LATENCY_BUDGET")
+    ),
+    objective: v.string(),
+    expectedToolPlanJson: v.optional(v.string()),
+    expectedBlockedActionsJson: v.optional(v.string()),
+    expectedFinalOutputRubric: v.string(),
+    expectedMemoryUsageJson: v.optional(v.string()),
+    sourceEvidenceJson: v.string(),
+    tags: v.array(v.string()),
+    status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_created", ["sourceRunId", "createdAt"])
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_agent_version_created", ["agentVersionId", "createdAt"])
+    .index("by_agent_status_created", ["agentId", "status", "createdAt"])
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"]),
+
+  agentImprovementSuggestions: defineTable({
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    sourceRunId: v.optional(v.id("agentRuns")),
+    sourceReflectionId: v.optional(v.id("agentRunReflections")),
+    sourceEvalFixtureId: v.optional(v.id("agentEvalFixtures")),
+    createdBy: v.id("users"),
+    type: v.union(
+      v.literal("PROMPT_CHANGE"),
+      v.literal("RULE_CHANGE"),
+      v.literal("TOOL_SCHEMA_CHANGE"),
+      v.literal("ROUTING_CHANGE"),
+      v.literal("APPROVAL_POLICY_CHANGE")
+    ),
+    title: v.string(),
+    description: v.string(),
+    proposedPatchJson: v.string(),
+    riskLevel: v.union(
+      v.literal("LOW"),
+      v.literal("MEDIUM"),
+      v.literal("HIGH")
+    ),
+    status: v.union(
+      v.literal("PROPOSED"),
+      v.literal("APPROVED"),
+      v.literal("REJECTED"),
+      v.literal("APPLIED")
+    ),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
+    appliedAgentVersionId: v.optional(v.id("agentVersions")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run_created", ["sourceRunId", "createdAt"])
+    .index("by_agent_status_created", ["agentId", "status", "createdAt"])
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_eval_fixture_created", ["sourceEvalFixtureId", "createdAt"])
+    .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"]),
+
+  agentVersions: defineTable({
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    versionNumber: v.number(),
+    snapshotHash: v.string(),
+    snapshotJson: v.string(),
+    promptHash: v.string(),
+    toolSetHash: v.string(),
+    memoryRevisionHash: v.string(),
+    ruleSetHash: v.string(),
+    modelConfigHash: v.string(),
+    policyHash: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_agent_hash", ["agentId", "snapshotHash"])
+    .index("by_agent_company_created", ["agentId", "companyId", "createdAt"]),
+
+  agentMemories: defineTable({
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    userId: v.optional(v.id("users")),
+    sourceRunId: v.optional(v.id("agentRuns")),
+    sourceThreadId: v.optional(v.id("threads")),
+    kind: v.union(
+      v.literal("FACT"),
+      v.literal("PREFERENCE"),
+      v.literal("SUMMARY"),
+      v.literal("INSTRUCTION")
+    ),
+    content: v.string(),
+    normalizedContent: v.string(),
+    importance: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.id("users")),
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.id("users")),
+  })
+    .index("by_agent_active_updated", ["agentId", "isActive", "updatedAt"])
+    .index("by_company_active_updated", ["companyId", "isActive", "updatedAt"])
+    .index("by_agent_company_active_updated", ["agentId", "companyId", "isActive", "updatedAt"])
+    .index("by_source_run", ["sourceRunId"])
+    .searchIndex("search_content", {
+      searchField: "normalizedContent",
+      filterFields: ["agentId", "companyId", "isActive"],
+    }),
+
+  agentMemoryUsage: defineTable({
+    memoryId: v.id("agentMemories"),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    runId: v.id("agentRuns"),
+    score: v.number(),
+    queryText: v.string(),
+    outcome: v.union(
+      v.literal("OBSERVED"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("CANCELLED")
+    ),
+    usedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_memory_used", ["memoryId", "usedAt"])
+    .index("by_run", ["runId"])
+    .index("by_agent_used", ["agentId", "usedAt"])
+    .index("by_company_used", ["companyId", "usedAt"]),
+
   // AI Rule Engine (Triggers & Logic Processing)
   aiRules: defineTable({
     companyId: v.optional(v.id("companies")),
@@ -425,6 +850,18 @@ export default defineSchema({
     description: v.string(), // Provide clear instructions on what the tool does
     handlerMapping: v.string(), // Points to internal mutation/action route (e.g., "internalActions.executeDatabaseQuery")
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    inputSchema: v.optional(v.string()),
+    outputSchema: v.optional(v.string()),
+    sideEffectLevel: v.optional(v.union(
+      v.literal("READ"),
+      v.literal("WRITE"),
+      v.literal("DESTRUCTIVE"),
+      v.literal("EXTERNAL")
+    )),
+    confirmationRequired: v.optional(v.boolean()),
+    isActive: v.optional(v.boolean()),
+    version: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
     createdAt: v.number(),
     createdBy: v.id("users"),
   })
@@ -461,6 +898,7 @@ export default defineSchema({
   workflowExecutions: defineTable({
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
+    agentRunId: v.optional(v.id("agentRuns")),
     status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
     triggerType: v.string(),
     startedAt: v.number(),
@@ -536,6 +974,7 @@ export default defineSchema({
     executionId: v.id("workflowExecutions"),
     nodeId: v.string(),
     agentId: v.optional(v.id("agents")),
+    agentRunId: v.optional(v.id("agentRuns")),
     input: v.string(), // JSON stringified
     output: v.optional(v.string()), // JSON stringified
     status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING_APPROVAL")),

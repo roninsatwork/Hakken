@@ -145,27 +145,101 @@ describe("Scheduler Authorization", () => {
       "Cannot run: no target specified."
     );
     const executionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { workflowId });
+    const agentExecutionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId });
     await t.mutation(internal.scheduler.completeSimulation, { executionId, success: false });
 
     const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {});
     const execution = await superAdminClient.query(api.scheduler.getWorkflowExecution, { executionId });
-
-    expect(executions[0]).toMatchObject({
-      _id: executionId,
-      workflowName: "Scheduled Workflow",
-      startedByName: "Super Admin",
+    const agentExecution = await superAdminClient.query(api.scheduler.getWorkflowExecution, { executionId: agentExecutionId });
+    const agentRun = await t.run(async (ctx) => {
+      if (!agentExecution?.agentRunId) return null;
+      return await ctx.db.get(agentExecution.agentRunId);
     });
+
+    expect(executions.some((entry) => entry._id === executionId)).toBe(true);
+    expect(executions.some((entry) => entry._id === agentExecutionId)).toBe(true);
     expect(execution).toMatchObject({
       _id: executionId,
       status: "FAILED",
       workflowName: "Scheduled Workflow",
       startedByName: "Super Admin",
-      state: JSON.stringify({ note: "Autonomous backend heartbeat succeeded." }),
-      steps: [],
     });
+    expect(agentExecution).toMatchObject({
+      _id: agentExecutionId,
+      agentId,
+      agentRunId: expect.any(String),
+      status: "RUNNING",
+      startedByName: "Super Admin",
+    });
+    expect(agentRun).toMatchObject({
+      agentId,
+      triggerType: "MANUAL",
+      status: "QUEUED",
+      userId: superAdminId,
+      objective: "Manual run: Scheduled Agent",
+    });
+    expect(execution?.state).toBe(JSON.stringify({ note: "Autonomous backend heartbeat succeeded." }));
+    expect(execution?.steps).toEqual([]);
 
     await expect(superAdminClient.mutation(api.scheduler.deleteSchedule, { scheduleId: agentScheduleId })).resolves.toBe(true);
     expect(await superAdminClient.query(api.scheduler.getSchedule, { scheduleId: agentScheduleId })).toBeNull();
+  });
+
+  test("due agent schedules create linked durable agent runs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { scheduleId, agentId, superAdminId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Super Admin",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Scheduled Agent",
+        modelId: "safe-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const scheduleId = await ctx.db.insert("schedules", {
+        name: "Daily Agent",
+        agentId,
+        intervalStr: "daily",
+        isActive: true,
+        nextRunAt: Date.now() - 1000,
+        createdAt: Date.now() - 2000,
+        createdBy: superAdminId,
+      });
+
+      return { scheduleId, agentId, superAdminId };
+    });
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const state = await t.run(async (ctx) => {
+      const schedule = await ctx.db.get(scheduleId);
+      const runs = await ctx.db.query("agentRuns").withIndex("by_schedule_started", (q) => q.eq("scheduleId", scheduleId)).collect();
+      const executions = await ctx.db.query("workflowExecutions").withIndex("by_startedAt").collect();
+
+      return { schedule, runs, executions };
+    });
+
+    expect(state.schedule).toMatchObject({
+      lastRunTs: expect.any(Number),
+      nextRunAt: expect.any(Number),
+    });
+    expect(state.runs).toHaveLength(1);
+    expect(state.runs[0]).toMatchObject({
+      agentId,
+      scheduleId,
+      triggerType: "SCHEDULE",
+      status: "QUEUED",
+      userId: superAdminId,
+      objective: "Scheduled run: Daily Agent",
+    });
+    expect(state.executions.some((execution) => execution.agentRunId === state.runs[0]._id)).toBe(true);
   });
 
   test("schedule and execution admin lists stay bounded and newest first", async () => {

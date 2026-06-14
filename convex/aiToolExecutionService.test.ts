@@ -5,11 +5,14 @@ import {
   buildToolFailureResult,
   buildToolResultPayload,
   canExecuteTool,
+  executeRegisteredTool,
   normalizeToolFunctionName,
   normalizeToolExecutionPolicy,
   normalizeAiRuntimeError,
   parseToolCallPayload,
   parseToolInputSchema,
+  validateToolCallArgsAgainstSchema,
+  validateToolJsonSchemaString,
 } from "./aiToolExecutionService";
 
 describe("ai tool execution service", () => {
@@ -29,6 +32,60 @@ describe("ai tool execution service", () => {
 
     expect(() => parseToolInputSchema("[]")).toThrow("Tool input schema must be a JSON object.");
     expect(() => parseToolInputSchema("not json")).toThrow();
+  });
+
+  test("validates tool schema contracts before saving", () => {
+    expect(validateToolJsonSchemaString('{"type":"object","properties":{"id":{"type":"string"}}}')).toEqual({
+      type: "object",
+      properties: { id: { type: "string" } },
+    });
+    expect(validateToolJsonSchemaString(undefined)).toBeUndefined();
+
+    expect(() => validateToolJsonSchemaString('{"type":"array"}')).toThrow('root type "object"');
+    expect(() => validateToolJsonSchemaString('{"type":"object","properties":[]}')).toThrow("properties must be a JSON object");
+    expect(() => validateToolJsonSchemaString('{"type":"object","required":[1]}')).toThrow("required must be an array of strings");
+  });
+
+  test("validates model tool arguments against the saved schema subset", () => {
+    const schema = {
+      type: "object",
+      required: ["accountId", "limit"],
+      properties: {
+        accountId: { type: "string" },
+        limit: { type: "integer" },
+        includeClosed: { type: "boolean" },
+      },
+    };
+
+    expect(
+      validateToolCallArgsAgainstSchema({
+        schema,
+        callArgs: { accountId: "acc_1", limit: 10, includeClosed: false },
+      })
+    ).toEqual({ ok: true, errors: [] });
+
+    expect(
+      validateToolCallArgsAgainstSchema({
+        schema,
+        callArgs: { accountId: 123, limit: 1.5 },
+      })
+    ).toEqual({
+      ok: false,
+      errors: [
+        "Tool argument 'accountId' must be a string.",
+        "Tool argument 'limit' must be an integer.",
+      ],
+    });
+
+    expect(
+      validateToolCallArgsAgainstSchema({
+        schema,
+        callArgs: { accountId: "acc_1" },
+      })
+    ).toEqual({
+      ok: false,
+      errors: ["Missing required tool argument 'limit'."],
+    });
   });
 
   test("builds provider-neutral tool declarations", () => {
@@ -116,7 +173,12 @@ describe("ai tool execution service", () => {
     expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "WRITE" })).toEqual({
       requiredRole: "ADMIN",
       sideEffectLevel: "WRITE",
-      confirmationRequired: false,
+      confirmationRequired: true,
+    });
+    expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "WRITE", confirmationRequired: false })).toEqual({
+      requiredRole: "ADMIN",
+      sideEffectLevel: "WRITE",
+      confirmationRequired: true,
     });
     expect(normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "DESTRUCTIVE" })).toEqual({
       requiredRole: "ADMIN",
@@ -146,6 +208,18 @@ describe("ai tool execution service", () => {
         requiredRole: "ADMIN",
         userRole: "ADMIN",
         userCompanyId: "a",
+        targetCompanyId: "b",
+        sideEffectLevel: "DESTRUCTIVE",
+      })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution is not allowed across tenant boundaries.",
+    });
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
         targetCompanyId: "a",
         sideEffectLevel: "DESTRUCTIVE",
         confirmationGranted: true,
@@ -168,5 +242,11 @@ describe("ai tool execution service", () => {
       ok: false,
       error: "Provider call failed.",
     });
+  });
+
+  test("fails closed for unimplemented tool handlers", () => {
+    expect(() => executeRegisteredTool({ handlerMapping: "crm.lookup", args: {} })).toThrow(
+      "Unknown or unimplemented tool handler mapping."
+    );
   });
 });

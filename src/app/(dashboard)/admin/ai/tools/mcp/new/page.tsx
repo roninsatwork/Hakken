@@ -34,6 +34,10 @@ export default function AddMcpServerPage() {
         description: `MCP Server Endpoint: ${mcpUrl.trim()}`,
         handlerMapping: `mcp.proxy.${name.trim()}`,
         requiredRole: "SUPER_ADMIN", // MCP servers default to super admin
+        sideEffectLevel: "EXTERNAL",
+        confirmationRequired: true,
+        isActive: true,
+        inputSchema: '{"type":"object","properties":{}}',
       });
       router.push("/admin/ai/tools");
     } catch (err) {

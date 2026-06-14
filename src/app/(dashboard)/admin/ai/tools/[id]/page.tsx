@@ -9,12 +9,18 @@ import { Wrench, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 
 type ToolRole = "ADMIN" | "SUPER_ADMIN";
+type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
 type ToolDraft = {
   name: string;
   description: string;
   handlerMapping: string;
   requiredRole: ToolRole;
+  inputSchema: string;
+  outputSchema: string;
+  sideEffectLevel: ToolSideEffectLevel;
+  confirmationRequired: boolean;
+  isActive: boolean;
 };
 
 function createToolDraft(tool: Doc<"aiTools">): ToolDraft {
@@ -23,6 +29,11 @@ function createToolDraft(tool: Doc<"aiTools">): ToolDraft {
     description: tool.description,
     handlerMapping: tool.handlerMapping,
     requiredRole: tool.requiredRole,
+    inputSchema: tool.inputSchema || "",
+    outputSchema: tool.outputSchema || "",
+    sideEffectLevel: tool.sideEffectLevel || "READ",
+    confirmationRequired: tool.confirmationRequired ?? false,
+    isActive: tool.isActive ?? true,
   };
 }
 
@@ -56,6 +67,11 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
         description: form.description.trim(),
         handlerMapping: form.handlerMapping.trim(),
         requiredRole: form.requiredRole,
+        inputSchema: form.inputSchema.trim() || undefined,
+        outputSchema: form.outputSchema.trim() || undefined,
+        sideEffectLevel: form.sideEffectLevel,
+        confirmationRequired: form.confirmationRequired,
+        isActive: form.isActive,
       });
       router.push(`/admin/ai/tools`);
     } catch (err) {
@@ -188,6 +204,79 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
                   <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{p}</span>
                 </button>
               ))}
+           </div>
+        </section>
+
+        <section className="flex flex-col gap-4">
+           <div className="flex items-center gap-3">
+             <div className="w-5 h-5 rounded-full bg-cyan-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-cyan-500/20">5</div>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">Runtime Contract</span>
+           </div>
+
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-1">
+             <div className="flex flex-col gap-2">
+               <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Side Effect</label>
+               <select
+                 value={form.sideEffectLevel}
+                 onChange={(e) => updateDraft({ sideEffectLevel: e.target.value as ToolSideEffectLevel })}
+                 className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground outline-none focus:border-cyan-500/40 shadow-sm dark:bg-[#111111]/30"
+               >
+                 <option value="READ">Read</option>
+                 <option value="WRITE">Write</option>
+                 <option value="DESTRUCTIVE">Destructive</option>
+                 <option value="EXTERNAL">External</option>
+               </select>
+             </div>
+
+             <div className="flex flex-col gap-3">
+               <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Policy</label>
+               <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
+                 <input
+                   type="checkbox"
+                   checked={form.confirmationRequired}
+                   onChange={(e) => updateDraft({ confirmationRequired: e.target.checked })}
+                 />
+                 Require approval
+               </label>
+               <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
+                 <input
+                   type="checkbox"
+                   checked={form.isActive}
+                   onChange={(e) => updateDraft({ isActive: e.target.checked })}
+                 />
+                 Active
+               </label>
+             </div>
+           </div>
+        </section>
+
+        <section className="flex flex-col gap-4">
+           <div className="flex items-center gap-3">
+             <div className="w-5 h-5 rounded-full bg-sky-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-sky-500/20">6</div>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">JSON Schemas</span>
+           </div>
+
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-1">
+             <div className="flex flex-col gap-2">
+               <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Input JSON Schema</label>
+               <textarea
+                 value={form.inputSchema}
+                 onChange={(e) => updateDraft({ inputSchema: e.target.value })}
+                 placeholder='{"type":"object","properties":{}}'
+                 className="w-full min-h-[180px] resize-y bg-transparent border border-border-dim rounded-[10px] p-4 text-[12px] text-foreground/90 placeholder:text-muted/40 outline-none focus:border-sky-500/40 shadow-sm dark:bg-[#111111]/30 font-mono leading-relaxed custom-scrollbar"
+                 spellCheck={false}
+               />
+             </div>
+             <div className="flex flex-col gap-2">
+               <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Output JSON Schema</label>
+               <textarea
+                 value={form.outputSchema}
+                 onChange={(e) => updateDraft({ outputSchema: e.target.value })}
+                 placeholder='Optional: {"type":"object","properties":{}}'
+                 className="w-full min-h-[180px] resize-y bg-transparent border border-border-dim rounded-[10px] p-4 text-[12px] text-foreground/90 placeholder:text-muted/40 outline-none focus:border-sky-500/40 shadow-sm dark:bg-[#111111]/30 font-mono leading-relaxed custom-scrollbar"
+                 spellCheck={false}
+               />
+             </div>
            </div>
         </section>
 

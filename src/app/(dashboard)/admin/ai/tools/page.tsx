@@ -55,6 +55,13 @@ export default function ConnectorsDashboard() {
     return "text-secondary bg-foreground/5 border-border-dim";
   };
 
+  const getSideEffectColor = (sideEffectLevel?: string) => {
+    if (sideEffectLevel === "EXTERNAL") return "text-indigo-500 bg-indigo-500/10 border-indigo-500/20";
+    if (sideEffectLevel === "DESTRUCTIVE") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+    if (sideEffectLevel === "WRITE") return "text-amber-500 bg-amber-500/10 border-amber-500/20";
+    return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
       {/* Header Area */}
@@ -129,6 +136,14 @@ export default function ConnectorsDashboard() {
                    <div className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${getRoleColor(tool.requiredRole)}`}>
                      {tool.requiredRole}
                    </div>
+                   <div className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${getSideEffectColor(tool.sideEffectLevel)}`}>
+                     {tool.sideEffectLevel || "READ"}
+                   </div>
+                   {tool.isActive === false && (
+                     <div className="px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border text-muted bg-foreground/5 border-border-dim">
+                       Inactive
+                     </div>
+                   )}
                    <h3 className="text-[15px] font-semibold text-foreground truncate group-hover:text-brand transition-colors">
                      {tool.name}
                    </h3>

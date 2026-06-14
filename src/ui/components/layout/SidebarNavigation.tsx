@@ -160,6 +160,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
   if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
   if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
+  if (pathname.startsWith('/admin/agents/approvals')) return 'Agent Approvals';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
@@ -354,6 +355,7 @@ export default function SidebarNavigation() {
                         label={t('agents')}
                         isActive={
                           activeItem === 'Agents' || 
+                          activeItem === 'Agent Approvals' ||
                           activeItem === 'Manage Agents' || 
                           activeItem === 'Connectors' || 
                           activeItem === 'Workflows' || 
@@ -366,7 +368,8 @@ export default function SidebarNavigation() {
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
+                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
+                        <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         <SubNavItem label={t('connectors')} href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
                         
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />

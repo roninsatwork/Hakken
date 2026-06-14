@@ -8,6 +8,10 @@ const toolInput = {
   description: "Look up CRM data for an agent.",
   handlerMapping: "crm.lookup",
   requiredRole: "ADMIN" as const,
+  inputSchema: '{"type":"object","required":["accountId"],"properties":{"accountId":{"type":"string"}}}',
+  sideEffectLevel: "READ" as const,
+  confirmationRequired: false,
+  isActive: true,
 };
 
 describe("AI Tools Authorization", () => {
@@ -39,6 +43,39 @@ describe("AI Tools Authorization", () => {
 
     expect(tool?.name).toBe(toolInput.name);
     expect(tool?.createdBy).toBe(superAdminId);
+    expect(tool).toMatchObject({
+      inputSchema: toolInput.inputSchema,
+      sideEffectLevel: "READ",
+      confirmationRequired: false,
+      isActive: true,
+      version: 1,
+    });
+  });
+
+  test("super admins cannot save invalid tool schemas", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+    });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    await expect(
+      superAdminClient.mutation(api.aiTools.createTool, {
+        ...toolInput,
+        inputSchema: '{"type":"array"}',
+      })
+    ).rejects.toThrow('Tool input schema must use root type "object".');
+
+    await expect(
+      superAdminClient.mutation(api.aiTools.createTool, {
+        ...toolInput,
+        inputSchema: '{"type":"object","properties":[]}',
+      })
+    ).rejects.toThrow("Tool input schema properties must be a JSON object.");
   });
 
   test("authenticated users can read tools while anonymous clients receive an empty catalog", async () => {
@@ -149,6 +186,11 @@ describe("AI Tools Authorization", () => {
         description: "Updated description.",
         handlerMapping: "crm.updatedLookup",
         requiredRole: "SUPER_ADMIN",
+        inputSchema: '{"type":"object","properties":{"id":{"type":"string"}}}',
+        outputSchema: '{"type":"object","properties":{"ok":{"type":"boolean"}}}',
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        isActive: false,
       })
     ).resolves.toBe(toolId);
 
@@ -159,6 +201,12 @@ describe("AI Tools Authorization", () => {
       description: "Updated description.",
       handlerMapping: "crm.updatedLookup",
       requiredRole: "SUPER_ADMIN",
+      inputSchema: '{"type":"object","properties":{"id":{"type":"string"}}}',
+      outputSchema: '{"type":"object","properties":{"ok":{"type":"boolean"}}}',
+      sideEffectLevel: "WRITE",
+      confirmationRequired: true,
+      isActive: false,
+      version: 2,
     });
   });
 

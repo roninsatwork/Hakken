@@ -216,7 +216,7 @@ export const sendMessage = mutation({
 
     // 3. Trigger the asynchronous AI orchestrator action to respond to this message
     if (targetAgentId) {
-       await ctx.scheduler.runAfter(0, internal.agentRuntime.generateAgentResponse, {
+       await ctx.scheduler.runAfter(0, internal.agentRuntime.runAgentObjective, {
          threadId: args.threadId,
          agentId: targetAgentId,
          content: safeContent,

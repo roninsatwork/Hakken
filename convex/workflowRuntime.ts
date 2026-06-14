@@ -27,12 +27,26 @@ import {
   getRuntimeErrorMessage,
 } from "./workflowRuntimeService";
 
-async function executeAgentRuntimeNode(ctx: ActionCtx, args: { agentId: Id<"agents">; resolvedInput: string }) {
-  const result: { output: string } = await ctx.runAction(internal.agentRuntime.executeAgentNode, {
+async function executeAgentRuntimeNode(ctx: ActionCtx, args: {
+  agentId: Id<"agents">;
+  resolvedInput: string;
+  workflowId: Id<"workflows">;
+  executionId: Id<"workflowExecutions">;
+}) {
+  const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, { id: args.executionId });
+  const workflow = await ctx.runQuery(internal.workflows.internalGet, { id: args.workflowId });
+  const creator = workflow?.createdBy
+    ? await ctx.runQuery(internal.users.getUserInternal, { userId: workflow.createdBy })
+    : null;
+  const result: { output: string; runId: Id<"agentRuns"> } = await ctx.runAction(internal.agentRuntime.runTriggeredAgentObjective, {
     agentId: args.agentId,
-    input: args.resolvedInput,
+    objective: args.resolvedInput,
+    triggerType: "WORKFLOW",
+    workflowId: args.workflowId,
+    companyId: creator?.companyId,
+    userId: execution?.startedBy || workflow?.createdBy,
   });
-  return result.output;
+  return result;
 }
 
 async function executeApiActionRuntimeNode(args: {
@@ -203,9 +217,16 @@ export const executeNode = internalAction({
       });
 
       if (node.type === "agentNode" && currentNodeData._agentId) {
-        outputPayload = await executeAgentRuntimeNode(ctx, {
+        const agentResult = await executeAgentRuntimeNode(ctx, {
           agentId: currentNodeData._agentId,
           resolvedInput,
+          workflowId: args.workflowId,
+          executionId: args.executionId,
+        });
+        outputPayload = agentResult.output;
+        await ctx.runMutation(internal.workflowEngine.linkAgentRunToStep, {
+          stepId: lockedStepId,
+          agentRunId: agentResult.runId,
         });
       } 
       else if (node.type === "actionNode") {

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { requireSuperAdmin } from "./authz";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
@@ -161,13 +162,34 @@ export const manualRunSchedule = mutation({
       throw new Error("Cannot run: no target specified.");
     }
 
+    const now = Date.now();
+    const user = await ctx.db.get(userId);
+    let agentRunId: Id<"agentRuns"> | undefined;
+
+    if (args.agentId) {
+      const agent = await ctx.db.get(args.agentId);
+      if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
+
+      agentRunId = await ctx.db.insert("agentRuns", {
+        agentId: args.agentId,
+        triggerType: "MANUAL",
+        objective: `Manual run: ${agent.name}`,
+        status: "QUEUED",
+        companyId: user?.companyId,
+        userId,
+        startedAt: now,
+        updatedAt: now,
+      });
+    }
+
     // Create execution log entry
     const executionId = await ctx.db.insert("workflowExecutions", {
       workflowId: args.workflowId,
       agentId: args.agentId,
+      agentRunId,
       status: "RUNNING",
       triggerType: "MANUAL",
-      startedAt: Date.now(),
+      startedAt: now,
       startedBy: userId,
     });
 
@@ -175,11 +197,16 @@ export const manualRunSchedule = mutation({
     // await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNodeGraph, { workflowId: args.workflowId, executionId });
 
     if (args.agentId) {
-       // Run the Sales Report Agent action specifically
-       await ctx.scheduler.runAfter(0, internal.salesReportActions.generateReport, {
+       await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
            agentId: args.agentId,
-           companyId: undefined // Would resolve from auth in a real tenant setting
+           objective: `Manual run for scheduled agent ${args.agentId}`,
+           triggerType: "MANUAL",
+           runId: agentRunId,
+           workflowExecutionId: executionId,
+           companyId: user?.companyId,
+           userId,
        });
+       return executionId;
     }
 
     // For now, since the actual workflow execution engine is deeply tied to the visual nodes,
@@ -190,6 +217,26 @@ export const manualRunSchedule = mutation({
     });
 
     return executionId;
+  },
+});
+
+export const completeAgentExecution = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    agentRunId: v.id("agentRuns"),
+    success: v.boolean(),
+    output: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.executionId, {
+      agentRunId: args.agentRunId,
+      status: args.success ? "SUCCESS" : "FAILED",
+      completedAt: Date.now(),
+      state: JSON.stringify({
+        agentRunId: args.agentRunId,
+        output: args.output,
+      }),
+    });
   },
 });
 

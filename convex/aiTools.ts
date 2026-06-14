@@ -2,9 +2,50 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { normalizeToolExecutionPolicy, validateToolJsonSchemaString } from "./aiToolExecutionService";
 
 const TOOL_CATALOG_LIMIT = 250;
 const AGENT_TOOL_BINDING_LIMIT = 250;
+
+const toolSideEffectLevelValidator = v.union(
+  v.literal("READ"),
+  v.literal("WRITE"),
+  v.literal("DESTRUCTIVE"),
+  v.literal("EXTERNAL")
+);
+
+type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
+
+function getOptionalTrimmedString(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
+function buildToolContractPatch(args: {
+  requiredRole: "ADMIN" | "SUPER_ADMIN";
+  inputSchema?: string;
+  outputSchema?: string;
+  sideEffectLevel?: ToolSideEffectLevel;
+  confirmationRequired?: boolean;
+}) {
+  const inputSchema = getOptionalTrimmedString(args.inputSchema);
+  const outputSchema = getOptionalTrimmedString(args.outputSchema);
+  validateToolJsonSchemaString(inputSchema, "Tool input schema");
+  validateToolJsonSchemaString(outputSchema, "Tool output schema");
+
+  const policy = normalizeToolExecutionPolicy({
+    requiredRole: args.requiredRole,
+    sideEffectLevel: args.sideEffectLevel,
+    confirmationRequired: args.confirmationRequired,
+  });
+
+  return {
+    inputSchema,
+    outputSchema,
+    sideEffectLevel: policy.sideEffectLevel,
+    confirmationRequired: policy.confirmationRequired,
+  };
+}
 
 // Fetch all registered AI system tools
 export const getTools = query({
@@ -56,6 +97,11 @@ export const createTool = mutation({
     description: v.string(),
     handlerMapping: v.string(),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    inputSchema: v.optional(v.string()),
+    outputSchema: v.optional(v.string()),
+    sideEffectLevel: v.optional(toolSideEffectLevelValidator),
+    confirmationRequired: v.optional(v.boolean()),
+    isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(
@@ -64,12 +110,19 @@ export const createTool = mutation({
       "Unauthenticated request"
     );
 
+    const now = Date.now();
+    const contract = buildToolContractPatch(args);
+
     return await ctx.db.insert("aiTools", {
       name: args.name,
       description: args.description,
       handlerMapping: args.handlerMapping,
       requiredRole: args.requiredRole,
-      createdAt: Date.now(),
+      ...contract,
+      isActive: args.isActive ?? true,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
       createdBy: userId,
     });
   },
@@ -82,6 +135,11 @@ export const updateTool = mutation({
     description: v.string(),
     handlerMapping: v.string(),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    inputSchema: v.optional(v.string()),
+    outputSchema: v.optional(v.string()),
+    sideEffectLevel: v.optional(toolSideEffectLevelValidator),
+    confirmationRequired: v.optional(v.boolean()),
+    isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await requireSuperAdmin(
@@ -90,11 +148,19 @@ export const updateTool = mutation({
       "Unauthenticated request"
     );
 
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new Error("Tool not found.");
+    const contract = buildToolContractPatch(args);
+
     await ctx.db.patch(args.id, {
       name: args.name,
       description: args.description,
       handlerMapping: args.handlerMapping,
       requiredRole: args.requiredRole,
+      ...contract,
+      isActive: args.isActive ?? existing.isActive ?? true,
+      version: (existing.version ?? 1) + 1,
+      updatedAt: Date.now(),
     });
     
     return args.id;

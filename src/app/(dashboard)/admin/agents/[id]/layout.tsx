@@ -8,7 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2 } from "lucide-react";
+import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, Timer } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -52,8 +52,10 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
 
   const tabs = [
     { label: t('tabs.dashboard'), href: `/admin/agents/${agentId}`, icon: LayoutDashboard },
+    { label: t('tabs.runs'), href: `/admin/agents/${agentId}/runs`, icon: Timer },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
     { label: t('tabs.knowledge'), href: `/admin/agents/${agentId}/knowledge`, icon: Library },
+    { label: t('tabs.memory'), href: `/admin/agents/${agentId}/memory`, icon: Brain },
     { label: t('tabs.prompt'), href: `/admin/agents/${agentId}/system-prompt`, icon: Terminal },
     { label: t('tabs.rules'), href: `/admin/agents/${agentId}/rules`, icon: Scale },
     { label: t('tabs.integrations'), href: `/admin/agents/${agentId}/integrations`, icon: Cpu },
