@@ -72,7 +72,9 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Locked phased plan for turning configurable agents and AI workflows into a durable, tool-executing, approval-aware agentic automation platform.
 34. **[Agent Learning And Improvement Plan](./agent-learning-improvement-plan.md)**
     Follow-on plan for making agents improve over time through governed memory, run feedback, replayed failures, evaluation fixtures, and approved behavior updates.
-35. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
+35. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
+    Reference plan for turning Sonae into a reusable starter framework for governed agentic apps with templates, connectors, evals, replay, public APIs, and packaging.
+36. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
     Required direction for future movement-demo body-motion work: source skeleton proof, neutral calibration, vector retargeting, foot locking, and what not to patch.
 
 ---
