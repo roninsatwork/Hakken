@@ -11,6 +11,8 @@ type MovementTrackingDebugOverlayProps = {
   calibration: MovementCalibration | null;
   debugRef: MutableRefObject<MovementTrackingDebugState | null>;
   isEnabled: boolean;
+  placement?: "left" | "right";
+  title?: string;
 };
 
 function formatAngle(value?: number) {
@@ -37,6 +39,8 @@ export default function MovementTrackingDebugOverlay({
   calibration,
   debugRef,
   isEnabled,
+  placement = "left",
+  title = "Posture Diagnostics",
 }: MovementTrackingDebugOverlayProps) {
   const [debugState, setDebugState] = useState<MovementTrackingDebugState | null>(null);
   const [debugNow, setDebugNow] = useState(0);
@@ -55,6 +59,7 @@ export default function MovementTrackingDebugOverlay({
   if (!isEnabled) return null;
 
   const confidence = debugState?.bodyConfidence;
+  const retarget = debugState?.retarget;
   const healthSummary = getMovementTrackingHealthSummary(debugState, { now: debugNow });
   const healthToneClass = getHealthToneClass(healthSummary.level);
   const confidenceRows = [
@@ -64,11 +69,12 @@ export default function MovementTrackingDebugOverlay({
     ["L foot", confidence?.leftFoot],
     ["R foot", confidence?.rightFoot],
   ] as const;
+  const placementClass = placement === "right" ? "right-6" : "left-6";
 
   return (
-    <aside className="pointer-events-none absolute left-6 top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-hidden rounded-2xl border border-cyan-300/20 bg-black/75 p-4 text-xs text-cyan-50 shadow-2xl backdrop-blur-2xl">
+    <aside className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-hidden rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}>
       <div className="flex items-center justify-between gap-3">
-        <div className="font-black uppercase tracking-[0.18em] text-cyan-300">Tracking Debug</div>
+        <div className="font-black uppercase tracking-[0.18em] text-[#a8d5ba]">{title}</div>
         <div className={`rounded-full border px-2 py-1 font-mono text-[10px] ${healthToneClass}`}>
           {healthSummary.label}
         </div>
@@ -131,6 +137,8 @@ export default function MovementTrackingDebugOverlay({
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-2 font-mono text-[11px] text-white/60">
         <span>Head</span>
         <span>{debugState?.fallbacks.head ?? "waiting"}</span>
+        <span>Head motion</span>
+        <span>{debugState?.fallbacks.headMotion ?? "waiting"}</span>
         <span>Arms</span>
         <span>
           {debugState?.fallbacks.leftArm ?? "waiting"} / {debugState?.fallbacks.rightArm ?? "waiting"}
@@ -143,12 +151,38 @@ export default function MovementTrackingDebugOverlay({
         <span>
           {debugState?.fallbacks.leftFoot ?? "waiting"} / {debugState?.fallbacks.rightFoot ?? "waiting"}
         </span>
+        <span>Lower body</span>
+        <span>{debugState?.fallbacks.lowerBody ?? "waiting"}</span>
         <span>Floor</span>
         <span>{debugState?.fallbacks.floor ?? "waiting"}</span>
+        <span>Retarget</span>
+        <span>{debugState?.fallbacks.retarget ?? "waiting"}</span>
       </div>
 
-      <div className="mt-3 rounded-lg border border-[#CCFF00]/15 bg-[#CCFF00]/10 p-2 text-[11px] text-[#E8FF99]">
-        <div className="mb-1 font-black uppercase tracking-[0.16em] text-[#CCFF00]">
+      {retarget ? (
+        <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 font-mono text-[11px] text-white/70">
+          <div className="mb-2 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
+            Retarget Metrics
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <span>Squat / hip</span>
+            <span>{retarget.squatDepth.toFixed(2)} / {retarget.hipDrop.toFixed(2)}</span>
+            <span>Knee lift L/R</span>
+            <span>{retarget.leftKneeLift.toFixed(2)} / {retarget.rightKneeLift.toFixed(2)}</span>
+            <span>Feet contact</span>
+            <span>{retarget.leftFootContact ? "L" : "-"}{retarget.rightFootContact ? "R" : "-"}</span>
+            <span>Applied bones</span>
+            <span>{retarget.appliedLowerBody}/{retarget.totalLowerBody}</span>
+            <span>Root / IK</span>
+            <span>{retarget.visualRootDrop.toFixed(2)} / {retarget.plantedSquatIkDepth.toFixed(2)}</span>
+            <span>Foot lock</span>
+            <span>{retarget.footLockStrength.toFixed(2)} c{retarget.footLockCorrection.toFixed(2)} d{retarget.footLockDrift.toFixed(2)}</span>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 text-[11px] text-[#edf7f0]">
+        <div className="mb-1 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
           Health
         </div>
         {healthSummary.warnings.map((warning) => (

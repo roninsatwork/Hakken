@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import AvatarSelectorLobby from "./AvatarSelectorLobby";
 import MovementCalibrationOverlay from "./MovementCalibrationOverlay";
 import MovementCompletionDialog from "./MovementCompletionDialog";
+import MovementDebugFrameScrubber from "./MovementDebugFrameScrubber";
 import MovementFeedbackOverlay from "./MovementFeedbackOverlay";
 import MovementHud from "./MovementHud";
 import MovementTrackingDebugOverlay from "./MovementTrackingDebugOverlay";
@@ -44,15 +45,15 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByText("Movement Practice")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Choose Avatars" })).toBeInTheDocument();
+    expect(screen.getByText("Private posture studio")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Select Coach & Student" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Begin Session/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Begin Practice/i }));
 
     expect(onStart).toHaveBeenCalledTimes(1);
 
-    const playerSection = screen.getByRole("heading", { name: "Player" }).closest("section");
-    const instructorSection = screen.getByRole("heading", { name: "Instructor" }).closest("section");
+    const playerSection = screen.getByRole("heading", { name: "Student" }).closest("section");
+    const instructorSection = screen.getByRole("heading", { name: "Coach" }).closest("section");
 
     expect(playerSection).not.toBeNull();
     expect(instructorSection).not.toBeNull();
@@ -84,7 +85,7 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.queryByText("SESSION COMPLETE")).not.toBeInTheDocument();
+    expect(screen.queryByText("Practice Complete")).not.toBeInTheDocument();
 
     rerender(
       <MovementCompletionDialog
@@ -95,11 +96,26 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByText("SESSION COMPLETE")).toBeInTheDocument();
+    expect(screen.getByText("Practice Complete")).toBeInTheDocument();
     expect(screen.getByText("420")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "EXIT MATCH" }));
-    fireEvent.click(screen.getByRole("button", { name: "REMATCH" }));
+    rerender(
+      <MovementCompletionDialog
+        isOpen
+        finalScore={0}
+        isPreviewMode
+        onExitMatch={onExitMatch}
+        onRematch={onRematch}
+      />,
+    );
+
+    expect(screen.getByText("Guided Preview")).toBeInTheDocument();
+    expect(screen.getByText("Studio Ready")).toBeInTheDocument();
+    expect(screen.getByText("The coach and student flow is ready for a live posture check.")).toBeInTheDocument();
+    expect(screen.queryByText("Alignment Result")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Leave Studio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Practice Again" }));
 
     expect(onExitMatch).toHaveBeenCalledTimes(1);
     expect(onRematch).toHaveBeenCalledTimes(1);
@@ -133,11 +149,11 @@ describe("movement play components", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Calibrate" }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue without calibration" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Check-In" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Guided Preview" }));
 
-    expect(screen.getByText("Body Calibration")).toBeInTheDocument();
-    expect(screen.getByText("0 tracking samples")).toBeInTheDocument();
+    expect(screen.getByText("Posture Check-In")).toBeInTheDocument();
+    expect(screen.getByText("0 posture moments")).toBeInTheDocument();
     expect(onCalibrate).toHaveBeenCalledTimes(1);
     expect(onSkipCalibration).toHaveBeenCalledTimes(1);
 
@@ -155,7 +171,7 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.queryByText("Body Calibration")).not.toBeInTheDocument();
+    expect(screen.queryByText("Posture Check-In")).not.toBeInTheDocument();
   });
 
   it("explains weak calibration and allows continuing for manual tuning", () => {
@@ -176,9 +192,9 @@ describe("movement play components", () => {
     );
 
     expect(screen.getByText("Needs stronger tracking")).toBeInTheDocument();
-    expect(screen.getByText(/continue for tuning/i)).toBeInTheDocument();
+    expect(screen.getByText(/Start a guided preview now/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue without calibration" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Guided Preview" }));
 
     expect(onSkipCalibration).toHaveBeenCalledTimes(1);
   });
@@ -198,9 +214,9 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByText("MOVE INTO POSITION: 3")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Calibrating" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Continue without calibration" })).toBeDisabled();
+    expect(screen.getByText("SET YOUR POSTURE: 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Checking Posture" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start Guided Preview" })).toBeDisabled();
   });
 
   it("disables playback until vision is ready and exposes retry on errors", () => {
@@ -231,7 +247,7 @@ describe("movement play components", () => {
     expect(screen.getByText("Roll Down")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("84%")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start match" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
 
     fireEvent.click(screen.getByText("Retry Vision"));
 
@@ -262,7 +278,7 @@ describe("movement play components", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Start match" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start practice" }));
 
     expect(onTogglePlaying).toHaveBeenCalledTimes(1);
   });
@@ -290,11 +306,169 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Start match" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
 
-    fireEvent.click(screen.getByText("Recalibrate"));
+    fireEvent.click(screen.getByText("Posture check"));
 
     expect(onCalibrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces camera stream issues when vision is ready but no stream arrives", () => {
+    vi.useFakeTimers();
+
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying={false}
+        isVisionReady
+        isTrackingCalibrated={false}
+        isCalibrating={false}
+        visionStatus="ready"
+        visionError={null}
+        isCameraReady={false}
+        calibrationStatus="Calibration needed"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={vi.fn()}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Camera check needed")).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(3500);
+    });
+
+    expect(screen.getByText("Camera check needed")).toBeInTheDocument();
+    expect(screen.getByText("Allow camera access")).toBeInTheDocument();
+  });
+
+  it("labels skipped calibration as preview mode even when camera permission is blocked", () => {
+    vi.useFakeTimers();
+
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying
+        isVisionReady
+        isTrackingCalibrated
+        isPreviewMode
+        isCalibrating={false}
+        visionStatus="ready"
+        visionError={null}
+        isCameraReady={false}
+        cameraError="Camera permission is blocked"
+        calibrationStatus="Skipped calibration"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={vi.fn()}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(3500);
+    });
+
+    expect(screen.getByText("Preview mode")).toBeInTheDocument();
+    expect(screen.queryByText("Camera check needed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Camera permission is blocked")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mock-webcam")).toBeInTheDocument();
+    expect(screen.getByTestId("movement-camera-preview")).toHaveClass("left-1/2");
+    expect(screen.getByTestId("movement-camera-preview")).toHaveClass("w-[min(72vw,420px)]");
+  });
+
+  it("allows preview playback even when live vision is not ready", () => {
+    const onTogglePlaying = vi.fn();
+
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying={false}
+        isVisionReady={false}
+        isTrackingCalibrated
+        isPreviewMode
+        isCalibrating={false}
+        visionStatus="loading"
+        visionError={null}
+        calibrationStatus="Skipped calibration"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={onTogglePlaying}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+      />,
+    );
+
+    const playButton = screen.getByRole("button", { name: "Start practice" });
+    expect(playButton).toBeEnabled();
+
+    fireEvent.click(playButton);
+
+    expect(onTogglePlaying).toHaveBeenCalledTimes(1);
+  });
+
+  it("scrubs recorded movement frames in debug mode", () => {
+    vi.useFakeTimers();
+
+    const frameIndexRef: React.MutableRefObject<number> = { current: 4 };
+    const onFrameChange = vi.fn((frameIndex: number) => {
+      frameIndexRef.current = frameIndex;
+    });
+    const onPlayingChange = vi.fn();
+
+    render(
+      <MovementDebugFrameScrubber
+        frameCount={12}
+        frameIndexRef={frameIndexRef}
+        isEnabled
+        isPlaying
+        onFrameChange={onFrameChange}
+        onPlayingChange={onPlayingChange}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(screen.getByText("Debug Scrub")).toBeInTheDocument();
+    expect(screen.getByText("Frame")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("5")).toBeInTheDocument();
+    expect(screen.getByText("/ 12")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+
+    expect(onPlayingChange).toHaveBeenCalledWith(false);
+    expect(onFrameChange).toHaveBeenCalledWith(5);
+    expect(screen.getByDisplayValue("6")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("slider", { name: "Movement debug frame" }), {
+      target: { value: "9" },
+    });
+
+    expect(onFrameChange).toHaveBeenCalledWith(9);
+    expect(screen.getByDisplayValue("10")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Debug frame number" }), {
+      target: { value: "4" },
+    });
+
+    expect(onFrameChange).toHaveBeenCalledWith(3);
+    expect(screen.getByDisplayValue("4")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause debug playback" }));
+
+    expect(onPlayingChange).toHaveBeenCalledWith(false);
   });
 
   it("renders compact tracking diagnostics and stale warnings", () => {
@@ -335,6 +509,24 @@ describe("movement play components", () => {
           rightFoot: "pose",
           floor: "calibrated-floor",
         },
+        retarget: {
+          appliedLowerBody: 6,
+          footLockCorrection: 0.02,
+          footLockDrift: 0.04,
+          footLockStrength: 0.85,
+          hipDrop: 0.51,
+          leftFootContact: true,
+          leftKneeLift: 0.34,
+          plantedSquatIkDepth: 0.62,
+          rightFootContact: true,
+          rightKneeLift: 0.33,
+          solvedSegments: 11,
+          sourceQuality: 0.88,
+          squatDepth: 0.66,
+          totalLowerBody: 6,
+          totalSegments: 11,
+          visualRootDrop: 0.71,
+        },
         profileName: "VIPE_Hero__1793.vrm",
         calibrationQuality: 0.92,
       },
@@ -352,7 +544,7 @@ describe("movement play components", () => {
       vi.advanceTimersByTime(1500);
     });
 
-    expect(screen.getByText("Tracking Debug")).toBeInTheDocument();
+    expect(screen.getByText("Posture Diagnostics")).toBeInTheDocument();
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(screen.getByText("Age 1.5s")).toBeInTheDocument();
@@ -360,5 +552,9 @@ describe("movement play components", () => {
     expect(screen.getByText("VIPE_Hero__1793.vrm")).toBeInTheDocument();
     expect(screen.getByText("Tracking data is stale")).toBeInTheDocument();
     expect(screen.getByText("pose / hand")).toBeInTheDocument();
+    expect(screen.getByText("Retarget Metrics")).toBeInTheDocument();
+    expect(screen.getByText("0.66 / 0.51")).toBeInTheDocument();
+    expect(screen.getByText("0.34 / 0.33")).toBeInTheDocument();
+    expect(screen.getByText("0.85 c0.02 d0.04")).toBeInTheDocument();
   });
 });

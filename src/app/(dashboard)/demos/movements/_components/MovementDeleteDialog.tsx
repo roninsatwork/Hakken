@@ -3,6 +3,7 @@
 import { Trash2 } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { getStudioRoutineTitle } from "../_lib/movementPresentation";
 
 type MovementDeleteDialogProps = {
   isOpen: boolean;
@@ -17,12 +18,14 @@ export default function MovementDeleteDialog({
   onClose,
   onConfirm,
 }: MovementDeleteDialogProps) {
+  const routineTitle = getStudioRoutineTitle(movement?.title);
+
   return (
     <SonaeModal isOpen={isOpen} onClose={onClose} title="Delete Routine">
       <div className="flex flex-col gap-6">
         <p className="text-secondary text-sm">
           Are you sure you want to delete{" "}
-          <strong className="text-foreground">{movement?.title}</strong>? This action cannot be
+          <strong className="text-foreground">{routineTitle}</strong>? This action cannot be
           undone.
         </p>
         <div className="flex items-center gap-3 w-full mt-2">

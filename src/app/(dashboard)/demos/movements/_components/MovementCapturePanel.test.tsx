@@ -35,7 +35,7 @@ describe("MovementCapturePanel", () => {
   it("shows camera permission guidance", () => {
     render(<MovementCapturePanel {...baseProps} cameraError />);
 
-    expect(screen.getByText("Camera Access Denied")).toBeInTheDocument();
+    expect(screen.getByText("Camera Check Needed")).toBeInTheDocument();
     expect(screen.getByText(/allow camera access/i)).toBeInTheDocument();
   });
 
@@ -48,10 +48,10 @@ describe("MovementCapturePanel", () => {
       />,
     );
 
-    expect(screen.getByText("Initializing Model...")).toBeInTheDocument();
-    expect(screen.getByText("Frames 4")).toBeInTheDocument();
-    expect(screen.getByText("Tracking 72%")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start movement capture" })).toBeDisabled();
+    expect(screen.getByText("Preparing posture model...")).toBeInTheDocument();
+    expect(screen.getByText("Moments 4")).toBeInTheDocument();
+    expect(screen.getByText("Alignment 72%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start posture capture" })).toBeDisabled();
   });
 
   it("forwards retry and recording actions", () => {
@@ -69,11 +69,11 @@ describe("MovementCapturePanel", () => {
       />,
     );
 
-    expect(screen.getByText("AI Vision: Failed")).toBeInTheDocument();
+    expect(screen.getByText("Posture Tracking: Check needed")).toBeInTheDocument();
     expect(screen.getByText("Model failed")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry Models" }));
-    fireEvent.click(screen.getByRole("button", { name: "Start movement capture" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry tracking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start posture capture" }));
 
     expect(onRetryVision).toHaveBeenCalledTimes(1);
     expect(onToggleRecording).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe("MovementCapturePanel", () => {
       />,
     );
 
-    expect(screen.getByText("AI Vision: Active")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stop capture and export data" })).toBeEnabled();
+    expect(screen.getByText("Posture Tracking: Ready")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop posture capture" })).toBeEnabled();
   });
 });

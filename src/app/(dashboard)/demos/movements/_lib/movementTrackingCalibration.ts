@@ -18,7 +18,10 @@ export type MovementHeadAngles = {
 export type MovementCalibration = {
   calibratedAt: number;
   headNeutral: MovementHeadAngles;
+  headCenter?: { x: number; y: number; z: number };
+  headScale?: number;
   hipCenter: { x: number; y: number; z: number };
+  shoulderCenter?: { x: number; y: number; z: number };
   shoulderWidth: number;
   torsoHeight: number;
   floorY: number;
@@ -49,6 +52,11 @@ export type MovementAvatarTrackingProfile = {
   footVisibility: number;
   floorCorrectionScale: number;
   floorCorrectionLimit: number;
+  squatHipDropScale?: number;
+  squatHipDropLimit?: number;
+  squatLegBendBoost?: number;
+  kneeRaiseUpperLegBoost?: number;
+  kneeRaiseLowerLegBoost?: number;
 };
 
 export type MovementTrackingDebugState = {
@@ -57,6 +65,24 @@ export type MovementTrackingDebugState = {
   headApplied: MovementHeadAngles;
   bodyConfidence: Record<string, number>;
   fallbacks: Record<string, string>;
+  retarget?: {
+    sourceQuality: number;
+    squatDepth: number;
+    hipDrop: number;
+    leftKneeLift: number;
+    rightKneeLift: number;
+    leftFootContact: boolean;
+    rightFootContact: boolean;
+    solvedSegments: number;
+    totalSegments: number;
+    appliedLowerBody: number;
+    totalLowerBody: number;
+    visualRootDrop: number;
+    plantedSquatIkDepth: number;
+    footLockStrength: number;
+    footLockCorrection: number;
+    footLockDrift: number;
+  };
   profileName?: string;
   calibrationQuality?: number;
 };
@@ -84,9 +110,38 @@ export type MovementTrackingEndpointSelection = {
   confidence: number;
 };
 
+export type MovementLowerBodyIntent = {
+  squatDepth: number;
+  leftKneeRaise: number;
+  rightKneeRaise: number;
+  squatSignals: {
+    hipDrop: number;
+    kneeBend: number;
+    torsoDrop: number;
+    headDrop: number;
+  };
+  confidence: number;
+  label: "neutral" | "squat" | "left-knee-raise" | "right-knee-raise" | "mixed-lower-body";
+};
+
+export type MovementHeadMotionIntent = {
+  lateral: number;
+  vertical: number;
+  depth: number;
+  confidence: number;
+  label: "neutral" | "side-left" | "side-right" | "forward" | "back" | "mixed-head";
+};
+
 export type MovementHandsForConfidence = Partial<
   Record<MovementHandSide, { landmarks?: TrackingLandmark[] } | null>
 >;
+
+const EMPTY_SQUAT_SIGNALS: MovementLowerBodyIntent["squatSignals"] = {
+  hipDrop: 0,
+  kneeBend: 0,
+  torsoDrop: 0,
+  headDrop: 0,
+};
 
 export const DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE: MovementAvatarTrackingProfile = {
   headPitchOffset: 0,
@@ -112,6 +167,11 @@ export const DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE: MovementAvatarTrackingPro
   footVisibility: 0.18,
   floorCorrectionScale: 1.6,
   floorCorrectionLimit: 0.35,
+  squatHipDropScale: 0.38,
+  squatHipDropLimit: 0.42,
+  squatLegBendBoost: 0.32,
+  kneeRaiseUpperLegBoost: 0.18,
+  kneeRaiseLowerLegBoost: 0.08,
 };
 
 const MIN_CALIBRATION_QUALITY = 0.45;
@@ -139,6 +199,37 @@ function midpoint(a: TrackingLandmark, b: TrackingLandmark) {
 
 function distance2D(a: TrackingLandmark, b: TrackingLandmark) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function estimatePoseHeadCenter(poseLandmarks: TrackingLandmark[]) {
+  const nose = poseLandmarks[0];
+  const leftEar = poseLandmarks[7];
+  const rightEar = poseLandmarks[8];
+  if (!nose || !leftEar || !rightEar) return null;
+
+  return {
+    x: average([nose.x, leftEar.x, rightEar.x]),
+    y: average([nose.y, leftEar.y, rightEar.y]),
+    z: average([nose.z ?? 0, leftEar.z ?? 0, rightEar.z ?? 0]),
+    visibility: average([visibility(nose), visibility(leftEar), visibility(rightEar)]),
+  };
+}
+
+function estimateHeadScale({
+  poseLandmarks,
+  faceLandmarks,
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+}) {
+  const faceLeftEye = faceLandmarks?.[33];
+  const faceRightEye = faceLandmarks?.[263];
+  if (faceLeftEye && faceRightEye) return distance2D(faceLeftEye, faceRightEye);
+
+  const leftEar = poseLandmarks[7];
+  const rightEar = poseLandmarks[8];
+  if (!leftEar || !rightEar) return 0;
+  return distance2D(leftEar, rightEar);
 }
 
 function estimateHeadAnglesFromFace(faceLandmarks?: TrackingLandmark[] | null): MovementHeadAngles | null {
@@ -267,11 +358,18 @@ export function buildMovementCalibration({
 
   const shoulders = midpoint(leftShoulder, rightShoulder);
   const hips = midpoint(leftHip, rightHip);
+  const headCenter = estimatePoseHeadCenter(poseLandmarks);
+  const headScale = estimateHeadScale({ poseLandmarks, faceLandmarks });
 
   return {
     calibratedAt: now,
     headNeutral: estimateMovementHeadAngles({ poseLandmarks, faceLandmarks }),
+    headCenter: headCenter
+      ? { x: headCenter.x, y: headCenter.y, z: headCenter.z }
+      : undefined,
+    headScale,
     hipCenter: hips,
+    shoulderCenter: shoulders,
     shoulderWidth: distance2D(leftShoulder, rightShoulder),
     torsoHeight: distance2D(shoulders, hips),
     floorY: Math.max(
@@ -282,6 +380,35 @@ export function buildMovementCalibration({
     ),
     quality: clamp(coreQuality, 0, 1),
   };
+}
+
+export function buildUprightMovementAutoCalibration({
+  poseLandmarks,
+  faceLandmarks,
+  now = Date.now(),
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+  now?: number;
+}): MovementCalibration | null {
+  const calibration = buildMovementCalibration({ poseLandmarks, faceLandmarks, now });
+  if (!calibration) return null;
+
+  const bodyConfidence = getMovementBodyConfidence(poseLandmarks);
+  const lowerBodyConfidence = average([
+    bodyConfidence.hips,
+    bodyConfidence.leftKnee,
+    bodyConfidence.rightKnee,
+    bodyConfidence.leftFoot,
+    bodyConfidence.rightFoot,
+  ]);
+  const hipToFloor = calibration.floorY - calibration.hipCenter.y;
+  const uprightRatio = hipToFloor / Math.max(calibration.torsoHeight, 0.12);
+
+  if (lowerBodyConfidence < 0.55) return null;
+  if (uprightRatio < 0.78) return null;
+
+  return calibration;
 }
 
 export function averageMovementCalibrations(
@@ -298,11 +425,26 @@ export function averageMovementCalibrations(
       confidence: average(samples.map((sample) => sample.headNeutral.confidence)),
       source: samples.some((sample) => sample.headNeutral.source === "face") ? "face" : "pose",
     },
+    headCenter: samples.some((sample) => sample.headCenter)
+      ? {
+          x: average(samples.map((sample) => sample.headCenter?.x ?? 0)),
+          y: average(samples.map((sample) => sample.headCenter?.y ?? 0)),
+          z: average(samples.map((sample) => sample.headCenter?.z ?? 0)),
+        }
+      : undefined,
+    headScale: average(samples.map((sample) => sample.headScale ?? 0)),
     hipCenter: {
       x: average(samples.map((sample) => sample.hipCenter.x)),
       y: average(samples.map((sample) => sample.hipCenter.y)),
       z: average(samples.map((sample) => sample.hipCenter.z)),
     },
+    shoulderCenter: samples.some((sample) => sample.shoulderCenter)
+      ? {
+          x: average(samples.map((sample) => sample.shoulderCenter?.x ?? 0)),
+          y: average(samples.map((sample) => sample.shoulderCenter?.y ?? 0)),
+          z: average(samples.map((sample) => sample.shoulderCenter?.z ?? 0)),
+        }
+      : undefined,
     shoulderWidth: average(samples.map((sample) => sample.shoulderWidth)),
     torsoHeight: average(samples.map((sample) => sample.torsoHeight)),
     floorY: average(samples.map((sample) => sample.floorY)),
@@ -426,6 +568,196 @@ export function getCalibratedFloorCorrection({
     -profile.floorCorrectionLimit,
     profile.floorCorrectionLimit,
   );
+}
+
+export function getMovementLowerBodyIntent({
+  poseLandmarks,
+  calibration,
+}: {
+  poseLandmarks: TrackingLandmark[];
+  calibration?: MovementCalibration | null;
+}): MovementLowerBodyIntent {
+  const leftHip = poseLandmarks[23];
+  const rightHip = poseLandmarks[24];
+  const leftShoulder = poseLandmarks[11];
+  const rightShoulder = poseLandmarks[12];
+  const leftKnee = poseLandmarks[25];
+  const rightKnee = poseLandmarks[26];
+  const leftAnkle = poseLandmarks[27];
+  const rightAnkle = poseLandmarks[28];
+
+  if (!calibration || !leftHip || !rightHip || !leftKnee || !rightKnee) {
+    return {
+      squatDepth: 0,
+      leftKneeRaise: 0,
+      rightKneeRaise: 0,
+      squatSignals: EMPTY_SQUAT_SIGNALS,
+      confidence: 0,
+      label: "neutral",
+    };
+  }
+
+  const hips = midpoint(leftHip, rightHip);
+  const torsoScale = Math.max(calibration.torsoHeight, 0.12);
+  const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
+  const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
+  const ankleConfidence = average([visibility(leftAnkle), visibility(rightAnkle)]);
+  const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
+
+  if (confidence < 0.35 || calibration.quality < 0.45) {
+    return {
+      squatDepth: 0,
+      leftKneeRaise: 0,
+      rightKneeRaise: 0,
+      squatSignals: EMPTY_SQUAT_SIGNALS,
+      confidence,
+      label: "neutral",
+    };
+  }
+
+  const hipDrop = hips.y - calibration.hipCenter.y;
+  const rawSquatDepth = clamp(hipDrop / (torsoScale * 0.62), 0, 1);
+  const shoulders = leftShoulder && rightShoulder ? midpoint(leftShoulder, rightShoulder) : null;
+  const shoulderDrop = shoulders && calibration.shoulderCenter
+    ? shoulders.y - calibration.shoulderCenter.y
+    : 0;
+  const headCenter = estimatePoseHeadCenter(poseLandmarks);
+  const headDrop = headCenter && calibration.headCenter
+    ? headCenter.y - calibration.headCenter.y
+    : 0;
+  const torsoDropDepth = clamp(shoulderDrop / (torsoScale * 0.55), 0, 1);
+  const headDropDepth = clamp(headDrop / (torsoScale * 0.8), 0, 1);
+  const kneeRaiseThreshold = calibration.hipCenter.y + torsoScale * 0.34;
+  const kneeRaiseWindow = torsoScale * 0.72;
+  const leftKneeRaise = visibility(leftKnee) >= 0.3
+    ? clamp((kneeRaiseThreshold - leftKnee.y) / kneeRaiseWindow, 0, 1)
+    : 0;
+  const rightKneeRaise = visibility(rightKnee) >= 0.3
+    ? clamp((kneeRaiseThreshold - rightKnee.y) / kneeRaiseWindow, 0, 1)
+    : 0;
+  const strongestKneeRaise = Math.max(leftKneeRaise, rightKneeRaise);
+  const weakestKneeRaise = Math.min(leftKneeRaise, rightKneeRaise);
+  const kneeRaiseDifference = Math.abs(leftKneeRaise - rightKneeRaise);
+  const bothKneesRaisedTogether = weakestKneeRaise > 0.22;
+  const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
+  const symmetricKneeBend = kneeRaiseDifference < 0.16 && weakestKneeRaise > 0.32
+    ? weakestKneeRaise
+    : 0;
+  const kneeBendDepth = clamp((symmetricKneeBend - 0.24) / 0.28, 0, 1);
+  const squatSignals = {
+    hipDrop: rawSquatDepth,
+    kneeBend: kneeBendDepth,
+    torsoDrop: torsoDropDepth,
+    headDrop: headDropDepth,
+  };
+  const lowerBodySquatEvidence = Math.max(rawSquatDepth, kneeBendDepth);
+  const postureDropDepth = Math.max(torsoDropDepth, headDropDepth);
+  const hasSquatLegEvidence =
+    rawSquatDepth > 0.12 ||
+    kneeBendDepth > 0.18;
+  const compositeSquatDepth = clamp(
+    lowerBodySquatEvidence * 0.78 +
+      (hasSquatLegEvidence ? postureDropDepth * 0.42 : 0),
+    0,
+    1,
+  );
+  const squatDepth = hasSquatLegEvidence
+    ? Math.max(
+        rawSquatDepth,
+        kneeBendDepth,
+        compositeSquatDepth,
+      )
+    : 0;
+  const label =
+    squatDepth > 0.22 && (strongestKneeRaise < 0.42 || bothKneesRaisedTogether || !clearSingleKneeRaise)
+      ? "squat"
+      : clearSingleKneeRaise
+        ? leftKneeRaise > rightKneeRaise
+          ? "left-knee-raise"
+          : "right-knee-raise"
+      : leftKneeRaise > 0.32 && rightKneeRaise > 0.32
+        ? "mixed-lower-body"
+        : leftKneeRaise > 0.32
+          ? "left-knee-raise"
+          : rightKneeRaise > 0.32
+            ? "right-knee-raise"
+            : squatDepth > 0.16
+              ? "squat"
+              : "neutral";
+
+  return {
+    squatDepth,
+    leftKneeRaise,
+    rightKneeRaise,
+    squatSignals,
+    confidence,
+    label,
+  };
+}
+
+export function getMovementHeadMotionIntent({
+  poseLandmarks,
+  faceLandmarks,
+  calibration,
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+  calibration?: MovementCalibration | null;
+}): MovementHeadMotionIntent {
+  const headCenter = estimatePoseHeadCenter(poseLandmarks);
+  const neutralHeadCenter = calibration?.headCenter;
+
+  if (!calibration || !headCenter || !neutralHeadCenter) {
+    return {
+      lateral: 0,
+      vertical: 0,
+      depth: 0,
+      confidence: 0,
+      label: "neutral",
+    };
+  }
+
+  const shoulderScale = Math.max(calibration.shoulderWidth, 0.16);
+  const currentHeadScale = estimateHeadScale({ poseLandmarks, faceLandmarks });
+  const neutralHeadScale = Math.max(calibration.headScale ?? 0, 0.04);
+  const confidence = clamp(headCenter.visibility, 0, 1);
+
+  if (confidence < 0.35 || calibration.quality < 0.45) {
+    return {
+      lateral: 0,
+      vertical: 0,
+      depth: 0,
+      confidence,
+      label: "neutral",
+    };
+  }
+
+  const lateral = clamp((headCenter.x - neutralHeadCenter.x) / (shoulderScale * 0.65), -1, 1);
+  const vertical = clamp((headCenter.y - neutralHeadCenter.y) / (shoulderScale * 0.75), -1, 1);
+  const depth = clamp(((currentHeadScale / neutralHeadScale) - 1) * 2.4, -1, 1);
+  const strongestPlanar = Math.max(Math.abs(lateral), Math.abs(depth));
+  const label =
+    Math.abs(lateral) > 0.28 && Math.abs(depth) > 0.28
+      ? "mixed-head"
+      : lateral > 0.25
+        ? "side-right"
+        : lateral < -0.25
+          ? "side-left"
+          : depth > 0.22
+            ? "forward"
+            : depth < -0.22
+              ? "back"
+              : strongestPlanar > 0.18
+                ? "mixed-head"
+                : "neutral";
+
+  return {
+    lateral,
+    vertical,
+    depth,
+    confidence,
+    label,
+  };
 }
 
 export function selectMovementKneeTarget({

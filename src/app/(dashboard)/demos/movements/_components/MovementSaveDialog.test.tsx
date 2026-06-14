@@ -19,7 +19,7 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    expect(screen.queryByText("Routine Name")).not.toBeInTheDocument();
+    expect(screen.queryByText("Practice Name")).not.toBeInTheDocument();
   });
 
   it("shows frame guidance and blocks saving until title and enough frames exist", () => {
@@ -41,10 +41,10 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Capture at least 5 valid frames before saving. Current valid frames: 3.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save to Library" })).toBeDisabled();
+    expect(screen.getByText("Capture at least 5 posture moments before saving. Current moments: 3.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Practice" })).toBeDisabled();
 
-    fireEvent.change(screen.getByPlaceholderText("e.g., Morning Squats"), {
+    fireEvent.change(screen.getByPlaceholderText("e.g., Tall Spine Flow"), {
       target: { value: "Roll Down" },
     });
 
@@ -65,7 +65,7 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    const saveButton = screen.getByRole("button", { name: "Save to Library" });
+    const saveButton = screen.getByRole("button", { name: "Save Practice" });
     expect(saveButton).toBeEnabled();
 
     fireEvent.click(saveButton);
@@ -91,7 +91,7 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    expect(screen.getByText("9 valid frames ready to save.")).toBeInTheDocument();
+    expect(screen.getByText("9 posture moments ready to save.")).toBeInTheDocument();
     expect(screen.getByText("Upload failed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
 

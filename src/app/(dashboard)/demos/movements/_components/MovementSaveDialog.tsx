@@ -33,18 +33,18 @@ export default function MovementSaveDialog({
   const canSave = title.trim().length > 0 && !isSaving && frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES;
 
   return (
-    <SonaeModal isOpen={isOpen} onClose={onClose} title="Save Movement">
+    <SonaeModal isOpen={isOpen} onClose={onClose} title="Save Practice">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-foreground tracking-wide uppercase">
-            Routine Name
+            Practice Name
           </label>
           <input
             type="text"
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
-            placeholder="e.g., Morning Squats"
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+            placeholder="e.g., Tall Spine Flow"
+            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f6ccbe]/50 focus:ring-1 focus:ring-[#f6ccbe]/50 transition-all"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -54,7 +54,7 @@ export default function MovementSaveDialog({
           <select
             value={difficulty}
             onChange={(event) => onDifficultyChange(event.target.value as MovementDifficulty)}
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/50 transition-all appearance-none"
+            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f6ccbe]/50 transition-all appearance-none"
           >
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
@@ -63,8 +63,8 @@ export default function MovementSaveDialog({
         </div>
         <Typography className="text-sm text-secondary">
           {frameCount < MIN_MOVEMENT_CAPTURE_FRAMES
-            ? `Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} valid frames before saving. Current valid frames: ${frameCount}.`
-            : `${frameCount} valid frames ready to save.`}
+            ? `Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} posture moments before saving. Current moments: ${frameCount}.`
+            : `${frameCount} posture moments ready to save.`}
         </Typography>
         {saveError && (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
@@ -74,9 +74,9 @@ export default function MovementSaveDialog({
         <button
           onClick={onSave}
           disabled={!canSave}
-          className="w-full mt-4 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-xl shadow-[0_0_20px_#06b6d4] transition-all disabled:opacity-50 disabled:shadow-none"
+          className="w-full mt-4 bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] font-bold py-3 px-4 rounded-xl shadow-[0_0_20px_rgba(246,204,190,0.34)] transition-all disabled:opacity-50 disabled:shadow-none"
         >
-          {isSaving ? "Saving..." : "Save to Library"}
+          {isSaving ? "Saving..." : "Save Practice"}
         </button>
       </div>
     </SonaeModal>

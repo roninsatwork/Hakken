@@ -59,9 +59,11 @@ export default function MovementsLibraryPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Activity className="w-6 h-6 text-brand" />
-            Movement Library
+            Posture Studio Library
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage your captured motion data for the Pilates Demo.</p>
+          <p className="text-[13px] text-secondary mt-1">
+            Prepare guided posture routines for student and coach demos.
+          </p>
         </div>
 
         <Link
@@ -69,7 +71,7 @@ export default function MovementsLibraryPage() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
-          <span>New Capture</span>
+          <span>New Routine</span>
         </Link>
       </div>
 
@@ -81,7 +83,7 @@ export default function MovementsLibraryPage() {
           <Search className="w-[18px] h-[18px]" />
           <input
             type="text"
-            placeholder="Search movements..."
+            placeholder="Search routines..."
             value={searchTerm}
             onChange={e => handleSearch(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
@@ -97,6 +99,9 @@ export default function MovementsLibraryPage() {
         searchTerm={searchTerm}
         itemsPerPage={itemsPerPage}
         onLoadMore={loadMore}
+        onGuidedPreview={(movement) =>
+          router.push(`/demos/movements/${movement._id}/play?guidedPreview=1`)
+        }
         onPlay={(movement) => router.push(`/demos/movements/${movement._id}/play`)}
         onView={(movement) => router.push(`/demos/movements/${movement._id}`)}
         onDelete={confirmDelete}

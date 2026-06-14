@@ -21,7 +21,7 @@ function Model() {
   useEffect(() => {
     if (gltf) {
       const vrm = gltf.userData.vrm;
-      VRMUtils.removeUnnecessaryJoints(gltf.scene);
+      VRMUtils.combineSkeletons(gltf.scene);
       
       // Fix VRM Materials (disable frustum culling and ensure transparent materials render back faces)
       gltf.scene.traverse((obj: THREE.Object3D) => {

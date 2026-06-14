@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Webcam from "react-webcam";
-import { ArrowLeft, Crosshair, Flame, Pause, Play, RefreshCw } from "lucide-react";
+import { ArrowLeft, Crosshair, Pause, Play, RefreshCw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 
@@ -15,14 +15,19 @@ type MovementHudProps = {
   isPlaying: boolean;
   isVisionReady: boolean;
   isTrackingCalibrated: boolean;
+  isPreviewMode?: boolean;
   isCalibrating: boolean;
   visionStatus: MediaPipeVisionStatus;
   visionError: string | null;
+  isCameraReady?: boolean;
+  cameraError?: string | null;
   calibrationStatus: string;
   webcamRef: React.RefObject<Webcam | null>;
   onTogglePlaying: () => void;
   onRetryVision: () => void;
   onCalibrate: () => void;
+  onCameraReady?: () => void;
+  onCameraError?: (error: string) => void;
 };
 
 export default function MovementHud({
@@ -33,69 +38,94 @@ export default function MovementHud({
   isPlaying,
   isVisionReady,
   isTrackingCalibrated,
+  isPreviewMode = false,
   isCalibrating,
   visionStatus,
   visionError,
+  isCameraReady = false,
+  cameraError = null,
   calibrationStatus,
   webcamRef,
   onTogglePlaying,
   onRetryVision,
   onCalibrate,
+  onCameraReady,
+  onCameraError,
 }: MovementHudProps) {
+  const [hasCameraWaitElapsed, setHasCameraWaitElapsed] = useState(false);
+
+  useEffect(() => {
+    if (visionStatus !== "ready" || isCameraReady) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setHasCameraWaitElapsed(true), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [isCameraReady, visionStatus]);
+
+  const cameraNeedsAttention =
+    Boolean(cameraError) || (visionStatus === "ready" && !isCameraReady && hasCameraWaitElapsed);
   const readinessLabel = visionStatus === "failed"
     ? "Vision Failed"
+    : isPreviewMode
+      ? "Preview mode"
+    : cameraNeedsAttention
+      ? "Camera check needed"
     : visionStatus === "ready"
       ? (isTrackingCalibrated ? (isPlaying ? calibrationStatus : "Ready") : calibrationStatus)
       : "Loading Vision";
-  const isPlaybackDisabled = !isVisionReady || !isTrackingCalibrated || isCalibrating;
+  const isPlaybackDisabled = isPreviewMode
+    ? isCalibrating
+    : !isVisionReady || !isTrackingCalibrated || isCalibrating;
+  const practiceLabel = isPlaying ? "Guided Practice" : "Studio Ready";
 
   return (
-    <div className="relative z-10 p-8 flex flex-col h-full pointer-events-none" style={{ isolation: "isolate" }}>
-      <div className="flex justify-between items-center bg-white/5 backdrop-blur-3xl border border-white/10 p-3 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
-        <Link href="/demos/movements" className="flex items-center justify-center gap-2 text-[12px] font-bold text-white/70 hover:text-white transition-colors bg-black/40 px-5 py-3 rounded-2xl border border-white/5">
-          <ArrowLeft className="w-4 h-4" /> EXIT MATCH
+    <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>
+      <div className="flex items-center justify-between rounded-[28px] border border-white/10 bg-[#111018]/[0.72] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl pointer-events-auto">
+        <Link href="/demos/movements" className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-white/[0.68] transition-colors hover:border-white/20 hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> Leave Studio
         </Link>
 
         <div className="flex items-center gap-6 px-8">
           <div className="flex flex-col items-end">
-            <Typography className="text-[10px] font-bold tracking-widest text-cyan-400 uppercase">
-              Instructor Routine
+            <Typography className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#a8d5ba]">
+              Guided Sequence
             </Typography>
-            <Typography className="text-xl font-black text-white uppercase tracking-tight leading-none mt-1">
+            <Typography className="mt-1 text-xl font-black uppercase leading-none tracking-tight text-white">
               {movementTitle}
             </Typography>
           </div>
           <div className="h-8 w-px bg-white/20" />
-          <span className="px-3 py-1.5 bg-white/10 rounded-md text-[10px] font-bold text-white/90 uppercase tracking-widest">
+          <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/[0.85]">
             {difficulty}
           </span>
         </div>
 
-        <div className="flex items-center gap-4 bg-black/40 px-6 py-2 rounded-2xl border border-white/5">
-          <Flame className="w-6 h-6 text-[#FF3300] drop-shadow-[0_0_15px_rgba(255,51,0,0.8)]" />
+        <div className="flex items-center gap-4 rounded-2xl border border-[#f6ccbe]/[0.16] bg-[#f6ccbe]/[0.08] px-6 py-2">
+          <Sparkles className="h-6 w-6 text-[#f6ccbe]" />
           <div className="flex flex-col">
-            <Typography className="text-[10px] font-bold tracking-widest text-[#FF3300] uppercase">Total Score</Typography>
-            <Typography className="text-3xl font-black text-white leading-none mt-1">{hudScore}</Typography>
+            <Typography className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f6ccbe]">Alignment</Typography>
+            <Typography className="mt-1 text-3xl font-black leading-none text-white">{hudScore}</Typography>
           </div>
         </div>
       </div>
 
-      <div className="mt-auto flex justify-between items-end pointer-events-auto">
-        <div className="bg-white/5 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/10 p-2 pr-8 rounded-full flex items-center gap-4">
+      <div className="mt-auto flex items-end justify-between pointer-events-auto">
+        <div className="flex items-center gap-4 rounded-full border border-white/10 bg-[#111018]/[0.72] p-2 pr-8 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
           <div className="flex items-center gap-4">
             <button
               onClick={onTogglePlaying}
               disabled={isPlaybackDisabled}
-              aria-label={isPlaying ? "Pause match" : "Start match"}
-              className="w-16 h-16 bg-[#CCFF00] hover:bg-white rounded-full flex items-center justify-center text-black transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              aria-label={isPlaying ? "Pause practice" : "Start practice"}
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f7efe7] text-[#17131d] transition-all hover:scale-105 hover:bg-[#f6ccbe] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
-              {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current" />}
+              {isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current" />}
             </button>
             <div className="flex flex-col">
-              <span className="text-white font-bold tracking-wide text-lg">
-                {isPlaying ? "Match Sequence" : "System Ready"}
+              <span className="text-lg font-bold tracking-wide text-white">
+                {practiceLabel}
               </span>
-              <span className={`text-xs font-black tracking-[0.2em] uppercase ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-green-400" : "text-[#CCFF00]"}`}>
+              <span className={`text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
                 {readinessLabel}
               </span>
               {visionError && (
@@ -107,38 +137,54 @@ export default function MovementHud({
                   Retry Vision
                 </button>
               )}
+              {cameraNeedsAttention && !isPreviewMode && (
+                <span className="mt-1 max-w-[220px] text-[10px] font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
+                  {cameraError ?? "Allow camera access"}
+                </span>
+              )}
               {isVisionReady && (
                 <button
                   type="button"
                   onClick={onCalibrate}
                   disabled={isCalibrating}
-                  className="mt-1 inline-flex w-fit items-center gap-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition-colors hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-1 inline-flex w-fit items-center gap-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#d7eef4] underline decoration-[#d7eef4]/[0.35] underline-offset-4 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RefreshCw className={`h-3 w-3 ${isCalibrating ? "animate-spin" : ""}`} />
-                  Recalibrate
+                  Posture check
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-5 bg-white/5 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/10 rounded-full pr-10 pl-5 py-4">
-          <div className="w-12 h-12 rounded-full bg-[#CCFF00]/20 flex items-center justify-center border border-[#CCFF00]/50">
-            <Crosshair className="w-6 h-6 text-[#CCFF00]" />
+        <div className="flex items-center gap-5 rounded-full border border-white/10 bg-[#111018]/[0.72] py-4 pl-5 pr-10 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#a8d5ba]/[0.45] bg-[#a8d5ba]/[0.18]">
+            <Crosshair className="h-6 w-6 text-[#a8d5ba]" />
           </div>
           <div className="flex flex-col">
-            <Typography className="text-[11px] font-bold tracking-widest text-[#CCFF00] uppercase">Sync Rate</Typography>
+            <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#a8d5ba]">Posture Sync</Typography>
             <Typography className="text-4xl font-black text-white">{hudSync}%</Typography>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-6 right-6 w-40 h-24 bg-black/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md pointer-events-auto">
+      <div
+        data-testid="movement-camera-preview"
+        className="absolute bottom-8 left-1/2 aspect-video w-[min(72vw,420px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/50 shadow-2xl backdrop-blur-md pointer-events-auto sm:w-[min(38vw,420px)]"
+      >
         <Webcam
           ref={webcamRef}
           audio={false}
           mirrored={true}
           videoConstraints={{ facingMode: "user" }}
+          onUserMedia={onCameraReady}
+          onUserMediaError={(error) => {
+            const rawMessage = error instanceof Error ? error.message : String(error);
+            const message = rawMessage.toLowerCase().includes("permission")
+              ? "Camera permission is blocked"
+              : "Camera access unavailable";
+            onCameraError?.(message);
+          }}
           className="w-full h-full object-cover"
         />
       </div>

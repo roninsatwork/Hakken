@@ -44,20 +44,34 @@ export type VrmMotionFrame = VrmMotionPayload | VrmPoseLandmark[];
 
 export type VrmMotionRef = VrmMotionFrame | null;
 
-export type VrmRigRotation = {
+export type VrmRigVector = {
   x: number;
   y: number;
   z: number;
+};
+
+export type VrmRigRotation = VrmRigVector & {
   rotationOrder?: string;
 };
 
 export type VrmRiggedPose = {
   Neck?: VrmRigRotation;
   Head?: VrmRigRotation;
+  RightUpperArm?: VrmRigRotation;
+  RightLowerArm?: VrmRigRotation;
+  LeftUpperArm?: VrmRigRotation;
+  LeftLowerArm?: VrmRigRotation;
   RightHand?: VrmRigRotation;
   LeftHand?: VrmRigRotation;
+  RightUpperLeg?: VrmRigRotation;
+  RightLowerLeg?: VrmRigRotation;
+  LeftUpperLeg?: VrmRigRotation;
+  LeftLowerLeg?: VrmRigRotation;
+  Spine?: VrmRigRotation;
   Hips?: {
-    position?: unknown;
+    position?: VrmRigVector;
+    rotation?: VrmRigRotation;
+    worldPosition?: VrmRigVector;
   };
 };
 

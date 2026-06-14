@@ -12,26 +12,27 @@ export default function MovementMatchScene({ children }: MovementMatchSceneProps
   return (
     <div className="absolute inset-0 z-0">
       <Canvas camera={{ position: [0, 2, 25], fov: 45 }}>
-        <color attach="background" args={["#050510"]} />
-        <fog attach="fog" args={["#050510", 35, 65]} />
+        <color attach="background" args={["#07070b"]} />
+        <fog attach="fog" args={["#07070b", 35, 66]} />
 
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[10, 10, 5]} intensity={1} color="#ffffff" castShadow />
-        <pointLight position={[-10, 5, 10]} intensity={2} color="#00f2ff" />
-        <Environment preset="city" />
+        <ambientLight intensity={0.72} />
+        <directionalLight position={[8, 12, 8]} intensity={1.15} color="#fff4ec" castShadow />
+        <pointLight position={[-10, 5, 10]} intensity={1.35} color="#bfe7d0" />
+        <pointLight position={[10, 4, 8]} intensity={0.9} color="#f6ccbe" />
+        <Environment preset="apartment" />
 
         <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 2} />
 
         <Grid
           position={[0, -2.8, 0]}
           args={[50, 50]}
-          cellColor="#ffffff"
-          cellThickness={0.5}
-          sectionColor="#ffffff"
-          sectionThickness={1}
+          cellColor="#d7eef4"
+          cellThickness={0.32}
+          sectionColor="#f6ccbe"
+          sectionThickness={0.7}
           sectionSize={3}
           fadeDistance={30}
-          fadeStrength={1}
+          fadeStrength={1.25}
           infiniteGrid
         />
 

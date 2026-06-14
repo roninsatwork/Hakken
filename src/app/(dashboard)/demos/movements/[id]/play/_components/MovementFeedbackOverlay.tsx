@@ -17,7 +17,7 @@ export default function MovementFeedbackOverlay({ feedbackMsg }: MovementFeedbac
             animate={{ scale: 1.5, rotate: 0, opacity: 1 }}
             exit={{ scale: 2, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            className="text-white font-black italic text-7xl drop-shadow-[0_0_30px_rgba(255,184,0,0.8)]"
+            className="text-6xl font-black italic text-white drop-shadow-[0_0_30px_rgba(246,204,190,0.62)]"
             style={{ WebkitBackfaceVisibility: "hidden" }}
           >
             {feedbackMsg.text}

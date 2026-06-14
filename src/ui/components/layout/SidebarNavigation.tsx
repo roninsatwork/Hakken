@@ -479,14 +479,14 @@ export default function SidebarNavigation() {
 
                     <NavItem
                       icon={Globe}
-                      label="Movement Demo"
+                      label="Posture Studio"
                       isActive={activeItem === 'Demos' || pathname.startsWith('/demos')}
                       onClick={() => setActiveItem('Demos')}
                       hasChildren
                       isOpen={openSections.demos}
                       onToggle={() => toggleSection('demos')}
                     >
-                      <SubNavItem label="Movement Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label="Studio Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
 
                     </NavItem>
 

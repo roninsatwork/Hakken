@@ -24,6 +24,7 @@ describe("movement library components", () => {
       searchTerm: "",
       itemsPerPage: 15,
       onLoadMore: vi.fn(),
+      onGuidedPreview: vi.fn(),
       onPlay: vi.fn(),
       onView: vi.fn(),
       onDelete: vi.fn(),
@@ -31,17 +32,18 @@ describe("movement library components", () => {
 
     const { rerender } = render(<MovementLibraryTable {...baseProps} isLoading />);
 
-    expect(screen.getByText("Loading movement library...")).toBeInTheDocument();
+    expect(screen.getByText("Loading posture studio...")).toBeInTheDocument();
 
     rerender(<MovementLibraryTable {...baseProps} isLoading={false} searchTerm="spine" />);
 
-    expect(screen.getByText("No Movements Recorded")).toBeInTheDocument();
-    expect(screen.getByText("No recordings match your search.")).toBeInTheDocument();
+    expect(screen.getByText("No Routines Recorded")).toBeInTheDocument();
+    expect(screen.getByText("No routines match your search.")).toBeInTheDocument();
   });
 
   it("wires movement row actions and pagination", () => {
     const movement = makeMovement();
     const onLoadMore = vi.fn();
+    const onGuidedPreview = vi.fn();
     const onPlay = vi.fn();
     const onView = vi.fn();
     const onDelete = vi.fn();
@@ -55,6 +57,7 @@ describe("movement library components", () => {
         searchTerm=""
         itemsPerPage={15}
         onLoadMore={onLoadMore}
+        onGuidedPreview={onGuidedPreview}
         onPlay={onPlay}
         onView={onView}
         onDelete={onDelete}
@@ -65,11 +68,13 @@ describe("movement library components", () => {
     expect(screen.getByText("Beginner")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Guided preview Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Play Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "View Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
 
+    expect(onGuidedPreview).toHaveBeenCalledWith(movement);
     expect(onPlay).toHaveBeenCalledWith(movement);
     expect(onView).toHaveBeenCalledWith(movement);
     expect(onDelete).toHaveBeenCalledWith(movement);

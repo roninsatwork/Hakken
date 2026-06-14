@@ -53,6 +53,8 @@ Frozen areas:
 
 The user considers this demo temporary and expects to delete it after the client has seen it. Focus maintainability work elsewhere.
 
+If the user explicitly reopens avatar body motion, read `docs/movement-demo-retargeting-approach.md` before changing `VrmAvatar` or lower-body tracking. The documented direction is source-skeleton proof, neutral calibration, vector retargeting, and foot locking; do not drive body animation primarily from labels such as `squat` or from canned poses.
+
 ## Project Guardrails
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.

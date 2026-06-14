@@ -38,27 +38,27 @@ export default function MovementCapturePanel({
 }: MovementCapturePanelProps) {
   const visionLabel =
     visionStatus === "ready"
-      ? "AI Vision: Active"
+      ? "Posture Tracking: Ready"
       : visionStatus === "failed"
-        ? "AI Vision: Failed"
-        : "Initializing Model...";
+        ? "Posture Tracking: Check needed"
+        : "Preparing posture model...";
 
   if (cameraError) {
     return (
       <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8 w-full text-center backdrop-blur-3xl shadow-2xl">
         <Typography className="text-white text-xl font-light tracking-wide mb-4">
-          Camera Access Denied
+          Camera Check Needed
         </Typography>
         <Typography className="text-gray-400">
-          We need access to your camera to demonstrate the movement capture. Please allow camera
-          access in your browser settings and refresh the page.
+          Allow camera access to run the posture studio. You can update the browser camera setting
+          and refresh this page when you are ready.
         </Typography>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-gray-900 border border-gray-800 shadow-[0_0_50px_rgba(0,255,255,0.1)]">
+    <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-[#07070b] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]">
       <Webcam
         ref={webcamRef}
         onUserMediaError={onCameraError}
@@ -77,7 +77,7 @@ export default function MovementCapturePanel({
         <div className="px-4 py-2 bg-black/50 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-3">
           <div
             className={`w-3 h-3 rounded-full ${
-              isPoseReady ? "bg-cyan-400 shadow-[0_0_10px_#0ff]" : "bg-red-500 animate-pulse"
+              isPoseReady ? "bg-[#a8d5ba] shadow-[0_0_12px_rgba(168,213,186,0.75)]" : "bg-[#f6ccbe] animate-pulse"
             }`}
           />
           <Typography className="text-white text-sm font-medium">{visionLabel}</Typography>
@@ -87,12 +87,12 @@ export default function MovementCapturePanel({
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         <div className="rounded-full border border-white/10 bg-black/50 px-4 py-2 backdrop-blur-md">
           <Typography className="text-xs font-bold uppercase tracking-wide text-white/80">
-            Frames {frameCount}
+            Moments {frameCount}
           </Typography>
         </div>
         <div className="rounded-full border border-white/10 bg-black/50 px-4 py-2 backdrop-blur-md">
           <Typography className="text-xs font-bold uppercase tracking-wide text-white/80">
-            Tracking {trackingQuality}%
+            Alignment {trackingQuality}%
           </Typography>
         </div>
       </div>
@@ -105,7 +105,7 @@ export default function MovementCapturePanel({
             onClick={onRetryVision}
             className="mt-2 rounded-full border border-red-300/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-100 transition-colors hover:bg-red-500/20"
           >
-            Retry Models
+            Retry tracking
           </button>
         </div>
       )}
@@ -114,14 +114,14 @@ export default function MovementCapturePanel({
         <button
           onClick={onToggleRecording}
           disabled={!isVisionReady}
-          aria-label={isRecording ? "Stop capture and export data" : "Start movement capture"}
+          aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
           className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
             isRecording
               ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_#ef4444]"
-              : "bg-cyan-500 hover:bg-cyan-600 shadow-[0_0_20px_#06b6d4]"
+              : "bg-[#f6ccbe] text-[#17131d] hover:bg-[#f7efe7] shadow-[0_0_20px_rgba(246,204,190,0.34)]"
           }`}
         >
-          {isRecording ? "Stop & Export Data" : "Start Capture"}
+          {isRecording ? "Finish Capture" : "Start Posture Capture"}
         </button>
       </div>
     </div>

@@ -48,22 +48,32 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Repeatable signed-in browser checklist for camera, MediaPipe model loading, capture, save, detail playback, and match-play smoke before demos or pushes.
 22. **[Movement Demo Whole-Body Tracking Accuracy Plan](./movement-demo-whole-body-tracking-plan.md)**
     Phased plan for calibration, debug overlays, head accuracy, arm/hand chains, lower-body constraints, avatar profiles, and whole-body tracking regression checks.
-23. **[AI Runtime Retry Hardening Plan](./ai-runtime-retry-hardening-plan.md)**
+23. **[Movement Demo Client Pitch Excellence Plan](./movement-demo-client-pitch-excellence-plan.md)**
+    Sales-critical plan for rewriting the avatar body-motion layer, tuning a primary pitch avatar, adding demo-safe fallbacks, and rehearsing a client-ready movement script.
+24. **[Movement Demo Pitch Runbook](./movement-demo-pitch-runbook.md)**
+    Presenter-facing runbook for positioning, setup, safe movements, fallback wording, and readiness checks before the premium posture client demo.
+25. **[Movement Demo Live Rehearsal Notes Template](./movement-demo-live-rehearsal-notes-template.md)**
+    Fill-in template for recording camera setup, debug overlay labels, movement issues, and live-vs-preview demo decisions.
+26. **[Movement Demo Presenter Card](./movement-demo-presenter-card.md)**
+    Short pre-call card for opening the guided preview, using premium posture language, and falling back cleanly.
+27. **[AI Runtime Retry Hardening Plan](./ai-runtime-retry-hardening-plan.md)**
     Audited plan for making AI provider calls pause, retry, and continue safely after throttling, transient provider errors, and SDK/network failures.
-24. **[Agent Scheduler Upgrade Plan](./agent-scheduler-upgrade-plan.md)**
+28. **[Agent Scheduler Upgrade Plan](./agent-scheduler-upgrade-plan.md)**
     Plan for upgrading the admin schedule builder with recurring cadence, targeted times, timezone previews, structured configs, and agent dispatch support.
-25. **[System Health Alerts Expansion Plan](./system-health-alerts-plan.md)**
+29. **[System Health Alerts Expansion Plan](./system-health-alerts-plan.md)**
     Plan for adding agent failures, schedule failures, stale runs, and overdue schedules to the daily platform alert path.
-26. **[Local Real Auth E2E Plan](./local-real-auth-e2e-plan.md)**
+30. **[Local Real Auth E2E Plan](./local-real-auth-e2e-plan.md)**
     Plan for adding a local-only real Convex Auth browser testing lane alongside the existing mocked Playwright suite.
-27. **[Ask Sonae Safety Hardening Plan](./ask-sonae-safety-hardening-plan.md)**
+31. **[Ask Sonae Safety Hardening Plan](./ask-sonae-safety-hardening-plan.md)**
     Locked phased plan for jailbreak, prompt-injection, RAG, tool execution, and admin prompt guardrails across the Ask Sonae assistant.
-28. **[Company Workspace AI Navigation Consolidation Plan](./company-workspace-ai-navigation-plan.md)**
+32. **[Company Workspace AI Navigation Consolidation Plan](./company-workspace-ai-navigation-plan.md)**
     Planning document for moving company Knowledge, Prompt, AI Rules, AI Models, and Chat Logs under a single AI workspace tab with a third-level submenu.
-29. **[True Agentic Platform Plan](./true-agentic-platform-plan.md)**
+33. **[True Agentic Platform Plan](./true-agentic-platform-plan.md)**
     Locked phased plan for turning configurable agents and AI workflows into a durable, tool-executing, approval-aware agentic automation platform.
-30. **[Agent Learning And Improvement Plan](./agent-learning-improvement-plan.md)**
+34. **[Agent Learning And Improvement Plan](./agent-learning-improvement-plan.md)**
     Follow-on plan for making agents improve over time through governed memory, run feedback, replayed failures, evaluation fixtures, and approved behavior updates.
+35. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
+    Required direction for future movement-demo body-motion work: source skeleton proof, neutral calibration, vector retargeting, foot locking, and what not to patch.
 
 ---
 

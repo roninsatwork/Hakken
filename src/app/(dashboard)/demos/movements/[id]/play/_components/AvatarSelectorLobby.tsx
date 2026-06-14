@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import { AVATAR_ROSTER } from "@/src/lib/constants/avatars";
-import { ArrowRight, GraduationCap, UserRound } from "lucide-react";
+import { ArrowRight, GraduationCap, Sparkles, UserRound } from "lucide-react";
 
 interface Props {
   playerAvatarUrl: string;
@@ -31,9 +32,9 @@ function AvatarColumn({
 }: AvatarColumnProps) {
   return (
     <section className="flex min-w-0 flex-col">
-      <div className={`mb-4 flex items-center gap-3 px-5 py-4 text-black ${accentClassName}`}>
+      <div className={`mb-4 flex items-center gap-3 rounded-2xl px-5 py-4 text-[#17131d] ${accentClassName}`}>
         {icon}
-        <h3 className="text-lg font-black uppercase sm:text-xl">{label}</h3>
+        <h3 className="text-base font-black uppercase tracking-[0.16em] sm:text-lg">{label}</h3>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -46,16 +47,16 @@ function AvatarColumn({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(avatar.path)}
-              className={`flex min-h-14 items-center justify-between border border-white/10 px-5 py-3 text-left transition-colors ${
+              className={`flex min-h-14 items-center justify-between rounded-2xl border px-5 py-3 text-left transition-colors ${
                 isSelected
-                  ? `bg-white/10 text-white ${selectedIndicatorClassName}`
-                  : "bg-transparent text-white/60 hover:bg-white/5 hover:text-white"
+                  ? `border-white/25 bg-white/[0.12] text-white ${selectedIndicatorClassName}`
+                  : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
               }`}
             >
-              <span className="min-w-0 truncate text-base font-bold uppercase sm:text-lg">
+              <span className="min-w-0 truncate text-sm font-bold uppercase tracking-[0.12em] sm:text-base">
                 {avatar.name}
               </span>
-              {isSelected && <span className="ml-4 h-3 w-3 shrink-0 bg-current" />}
+              {isSelected && <span className="ml-4 h-2.5 w-2.5 shrink-0 rounded-full bg-current" />}
             </button>
           );
         })}
@@ -71,55 +72,58 @@ export default function AvatarSelectorLobby({
   setInstructorAvatarUrl,
   onStart,
 }: Props) {
-  return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#050510] px-4 py-8">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
-        <p className="whitespace-nowrap text-[18vw] font-black leading-none text-white">
-          PRACTICE
-        </p>
-      </div>
+  const lobby = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#07070b] px-4 py-8">
+      <style>{`nextjs-portal { display: none !important; }`}</style>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(246,204,190,0.18),transparent_34%),radial-gradient(circle_at_76%_10%,rgba(168,213,186,0.13),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_45%)]" />
 
       <div className="relative z-10 flex w-full max-w-7xl flex-col gap-8">
-        <div className="flex flex-col gap-5 border-b-2 border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col">
-            <span className="mb-2 text-sm font-bold uppercase text-[#CCFF00]">
-              Movement Practice
+        <div className="flex flex-col gap-5 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex max-w-3xl flex-col">
+            <span className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-[#f6ccbe]/[0.25] bg-[#f6ccbe]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#f6ccbe]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Private posture studio
             </span>
-            <h2 className="text-4xl font-black uppercase text-white sm:text-5xl">
-              Choose Avatars
+            <h2 className="text-4xl font-black uppercase tracking-[0.04em] text-white sm:text-5xl">
+              Select Coach & Student
             </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/[0.58]">
+              A calm guided practice for posture, balance, and confident movement.
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onStart}
-            className="group flex w-full items-center justify-center gap-4 bg-white px-8 py-4 font-black uppercase text-black transition-colors hover:bg-[#CCFF00] sm:w-auto"
+            className="group flex w-full items-center justify-center gap-4 rounded-2xl bg-[#f7efe7] px-8 py-4 text-sm font-black uppercase tracking-[0.16em] text-[#17131d] shadow-[0_20px_60px_rgba(246,204,190,0.14)] transition-colors hover:bg-[#f6ccbe] sm:w-auto"
           >
-            Begin Session
+            Begin Practice
             <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-2" />
           </button>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           <AvatarColumn
-            accentClassName="bg-[#CCFF00]"
+            accentClassName="bg-[#f6ccbe]"
             icon={<UserRound className="h-6 w-6" />}
-            label="Player"
+            label="Student"
             selectedUrl={playerAvatarUrl}
-            selectedIndicatorClassName="border-[#CCFF00] text-[#CCFF00]"
+            selectedIndicatorClassName="text-[#f6ccbe]"
             onSelect={setPlayerAvatarUrl}
           />
 
           <AvatarColumn
-            accentClassName="bg-[#FF6B35]"
+            accentClassName="bg-[#a8d5ba]"
             icon={<GraduationCap className="h-6 w-6" />}
-            label="Instructor"
+            label="Coach"
             selectedUrl={instructorAvatarUrl}
-            selectedIndicatorClassName="border-[#FF6B35] text-[#FF6B35]"
+            selectedIndicatorClassName="text-[#a8d5ba]"
             onSelect={setInstructorAvatarUrl}
           />
         </div>
       </div>
     </div>
   );
+
+  return typeof document === "undefined" ? lobby : createPortal(lobby, document.body);
 }

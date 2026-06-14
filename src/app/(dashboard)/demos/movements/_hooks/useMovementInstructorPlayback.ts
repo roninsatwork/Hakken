@@ -1,8 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Classifications } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
+import {
+  buildMovementRetargetSourceModel,
+  solveMovementRetargetFrame,
+  type MovementRetargetSourceModel,
+} from "../_lib/movementRetargeting";
 import type { MovementHandSide } from "../_lib/movementTypes";
 
 type InstructorPoseLandmark = {
@@ -44,7 +49,35 @@ type InstructorPlaybackAdvance = {
   lagFrame?: MovementInstructorMotionFrame;
 };
 
+export type MovementInstructorRetargetFrameAnalysis = {
+  frameIndex: number;
+  hipDrop: number;
+  leftFootContact: boolean;
+  leftKneeLift: number;
+  rightFootContact: boolean;
+  rightKneeLift: number;
+  sourceQuality: number;
+  squatDepth: number;
+};
+
+export type MovementInstructorRetargetAnalysis = {
+  frameCount: number;
+  peakLeftKneeLift: MovementInstructorRetargetFrameAnalysis | null;
+  peakRightKneeLift: MovementInstructorRetargetFrameAnalysis | null;
+  peakSingleKneeLift: MovementInstructorRetargetFrameAnalysis | null;
+  peakSquat: MovementInstructorRetargetFrameAnalysis | null;
+};
+
 const INSTRUCTOR_LAG_COMPENSATION_FRAMES = 6;
+const RETARGET_ANALYSIS_MIN_SOURCE_QUALITY = 0.7;
+
+function createInstructorPoseFilter() {
+  return new PoseFilterWrapper(33, 30, 0.05, 0.1);
+}
+
+function createInstructorHandFilter() {
+  return new PoseFilterWrapper(21, 30, 0.01, 0.0);
+}
 
 const withDepth = (landmarks: InstructorPoseLandmark[]) =>
   landmarks.map((landmark) => ({
@@ -60,6 +93,108 @@ const getInstructorMotionLandmarks = (
   return value.pose ?? value.landmarks ?? [];
 };
 
+function getRetargetNeutralScore(model: MovementRetargetSourceModel) {
+  const neutralKneeLift = (model.neutralKneeLift.left + model.neutralKneeLift.right) / 2;
+  return neutralKneeLift + (1 - model.quality) * 0.08;
+}
+
+export function buildInstructorRetargetSourceModel(
+  frames: MovementInstructorMotionFrame[],
+): MovementRetargetSourceModel | null {
+  let bestModel: MovementRetargetSourceModel | null = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  frames.forEach((frame, index) => {
+    const poseLandmarks = getInstructorMotionLandmarks(frame);
+    if (poseLandmarks.length < 33) return;
+
+    const model = buildMovementRetargetSourceModel({
+      now: index,
+      poseLandmarks,
+    });
+    if (!model) return;
+
+    const score = getRetargetNeutralScore(model);
+    if (score < bestScore) {
+      bestModel = model;
+      bestScore = score;
+    }
+  });
+
+  return bestModel;
+}
+
+function toRetargetFrameAnalysis(
+  frameIndex: number,
+  frame: MovementInstructorMotionFrame,
+  retargetSourceModel: MovementRetargetSourceModel,
+): MovementInstructorRetargetFrameAnalysis | null {
+  const poseLandmarks = getInstructorMotionLandmarks(frame);
+  if (poseLandmarks.length < 33) return null;
+
+  const retargetFrame = solveMovementRetargetFrame({
+    calibration: retargetSourceModel,
+    poseLandmarks,
+  });
+
+  return {
+    frameIndex,
+    hipDrop: retargetFrame.hipDrop,
+    leftFootContact: retargetFrame.contacts.leftFoot,
+    leftKneeLift: retargetFrame.kneeLift.left,
+    rightFootContact: retargetFrame.contacts.rightFoot,
+    rightKneeLift: retargetFrame.kneeLift.right,
+    sourceQuality: retargetFrame.debug.sourceQuality,
+    squatDepth: retargetFrame.squatDepth,
+  };
+}
+
+function maxBy(
+  frames: MovementInstructorRetargetFrameAnalysis[],
+  score: (frame: MovementInstructorRetargetFrameAnalysis) => number,
+) {
+  return frames.reduce<MovementInstructorRetargetFrameAnalysis | null>((best, frame) => {
+    if (!best || score(frame) > score(best)) return frame;
+    return best;
+  }, null);
+}
+
+export function buildInstructorRetargetAnalysis(
+  frames: MovementInstructorMotionFrame[],
+  retargetSourceModel: MovementRetargetSourceModel | null,
+): MovementInstructorRetargetAnalysis {
+  if (!retargetSourceModel) {
+    return {
+      frameCount: frames.length,
+      peakLeftKneeLift: null,
+      peakRightKneeLift: null,
+      peakSingleKneeLift: null,
+      peakSquat: null,
+    };
+  }
+
+  const analyzedFrames = frames
+    .map((frame, index) => toRetargetFrameAnalysis(index, frame, retargetSourceModel))
+    .filter((frame): frame is MovementInstructorRetargetFrameAnalysis => Boolean(frame));
+  const goodFrames = analyzedFrames.filter(
+    (frame) => frame.sourceQuality >= RETARGET_ANALYSIS_MIN_SOURCE_QUALITY,
+  );
+  const plantedSquatFrames = goodFrames.filter(
+    (frame) => frame.leftFootContact && frame.rightFootContact,
+  );
+
+  return {
+    frameCount: frames.length,
+    peakLeftKneeLift: maxBy(goodFrames, (frame) => frame.leftKneeLift),
+    peakRightKneeLift: maxBy(goodFrames, (frame) => frame.rightKneeLift),
+    peakSingleKneeLift: maxBy(
+      goodFrames,
+      (frame) => Math.abs(frame.leftKneeLift - frame.rightKneeLift),
+    ),
+    peakSquat: maxBy(plantedSquatFrames, (frame) => frame.squatDepth),
+  };
+}
+
 const cloneHandsPayload = (
   hands: InstructorHandsPayload | undefined,
 ): InstructorHandsPayload | undefined => {
@@ -71,15 +206,46 @@ const cloneHandsPayload = (
   };
 };
 
+const cloneFramePayload = (
+  frameData: MovementInstructorMotionFrame,
+): MovementInstructorMotionPayload => {
+  const framePayload = !Array.isArray(frameData) ? frameData : null;
+  const landmarks = withDepth(getInstructorMotionLandmarks(frameData));
+  const worldLandmarks = framePayload?.worldLandmarks
+    ? withDepth(framePayload.worldLandmarks)
+    : framePayload?.worldLandmarks;
+  const hands = cloneHandsPayload(framePayload?.hands);
+
+  if (hands?.left?.landmarks) hands.left.landmarks = withDepth(hands.left.landmarks);
+  if (hands?.left?.worldLandmarks) hands.left.worldLandmarks = withDepth(hands.left.worldLandmarks);
+  if (hands?.right?.landmarks) hands.right.landmarks = withDepth(hands.right.landmarks);
+  if (hands?.right?.worldLandmarks) hands.right.worldLandmarks = withDepth(hands.right.worldLandmarks);
+
+  return {
+    ...(framePayload ?? {}),
+    landmarks,
+    worldLandmarks,
+    hands,
+  };
+};
+
 export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMotionFrame[]) {
   const instructorFramesRef = useRef<MovementInstructorMotionFrame[]>([]);
   const instructorCurrentLmRef = useRef<MovementInstructorMotionRef>([]);
   const frameIndexRef = useRef(0);
+  const retargetSourceModel = useMemo(
+    () => buildInstructorRetargetSourceModel(loadedFrames),
+    [loadedFrames],
+  );
+  const retargetAnalysis = useMemo(
+    () => buildInstructorRetargetAnalysis(loadedFrames, retargetSourceModel),
+    [loadedFrames, retargetSourceModel],
+  );
 
-  const instructorFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
-  const instructorWorldFilterRef = useRef(new PoseFilterWrapper(33, 30, 0.05, 0.1));
-  const instructorLeftHandFilterRef = useRef(new PoseFilterWrapper(21, 30, 0.01, 0.0));
-  const instructorRightHandFilterRef = useRef(new PoseFilterWrapper(21, 30, 0.01, 0.0));
+  const instructorFilterRef = useRef(createInstructorPoseFilter());
+  const instructorWorldFilterRef = useRef(createInstructorPoseFilter());
+  const instructorLeftHandFilterRef = useRef(createInstructorHandFilter());
+  const instructorRightHandFilterRef = useRef(createInstructorHandFilter());
 
   useEffect(() => {
     if (loadedFrames.length === 0) return;
@@ -89,25 +255,14 @@ export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMo
     instructorCurrentLmRef.current = loadedFrames[0] ?? [];
   }, [loadedFrames]);
 
-  const resetInstructorPlayback = useCallback(() => {
-    frameIndexRef.current = 0;
-    instructorCurrentLmRef.current = instructorFramesRef.current[0] ?? [];
+  const resetInstructorFilters = useCallback(() => {
+    instructorFilterRef.current = createInstructorPoseFilter();
+    instructorWorldFilterRef.current = createInstructorPoseFilter();
+    instructorLeftHandFilterRef.current = createInstructorHandFilter();
+    instructorRightHandFilterRef.current = createInstructorHandFilter();
   }, []);
 
-  const advanceInstructorFrame = useCallback((): InstructorPlaybackAdvance => {
-    const frames = instructorFramesRef.current;
-    const totalFrames = frames.length;
-
-    if (totalFrames === 0) {
-      return { status: "empty", frames, frameIndex: frameIndexRef.current };
-    }
-
-    if (frameIndexRef.current + 1 >= totalFrames) {
-      return { status: "complete", frames, frameIndex: frameIndexRef.current };
-    }
-
-    frameIndexRef.current += 1;
-    const frameData = frames[frameIndexRef.current];
+  const buildFilteredFrame = useCallback((frameData: MovementInstructorMotionFrame) => {
     const framePayload = !Array.isArray(frameData) ? frameData : null;
     const now = performance.now();
 
@@ -138,13 +293,59 @@ export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMo
       );
     }
 
-    instructorCurrentLmRef.current = {
+    return {
       ...(framePayload ?? {}),
       landmarks: filteredLandmarks,
       worldLandmarks:
         filteredWorldLandmarks.length > 0 ? filteredWorldLandmarks : framePayload?.worldLandmarks,
       hands: filteredHands,
     };
+  }, []);
+
+  const setInstructorFrame = useCallback(
+    (frameIndex: number): InstructorPlaybackAdvance => {
+      const frames = instructorFramesRef.current;
+      const totalFrames = frames.length;
+
+      if (totalFrames === 0) {
+        instructorCurrentLmRef.current = [];
+        frameIndexRef.current = 0;
+        return { status: "empty", frames, frameIndex: 0 };
+      }
+
+      const clampedFrameIndex = Math.max(0, Math.min(totalFrames - 1, frameIndex));
+      frameIndexRef.current = clampedFrameIndex;
+      resetInstructorFilters();
+      instructorCurrentLmRef.current = cloneFramePayload(frames[clampedFrameIndex]!);
+
+      return {
+        status: clampedFrameIndex + 1 >= totalFrames ? "complete" : "advanced",
+        frames,
+        frameIndex: clampedFrameIndex,
+        lagFrame: frames[Math.max(0, clampedFrameIndex - INSTRUCTOR_LAG_COMPENSATION_FRAMES)],
+      };
+    },
+    [resetInstructorFilters],
+  );
+
+  const resetInstructorPlayback = useCallback(() => {
+    setInstructorFrame(0);
+  }, [setInstructorFrame]);
+
+  const advanceInstructorFrame = useCallback((): InstructorPlaybackAdvance => {
+    const frames = instructorFramesRef.current;
+    const totalFrames = frames.length;
+
+    if (totalFrames === 0) {
+      return { status: "empty", frames, frameIndex: frameIndexRef.current };
+    }
+
+    if (frameIndexRef.current + 1 >= totalFrames) {
+      return { status: "complete", frames, frameIndex: frameIndexRef.current };
+    }
+
+    frameIndexRef.current += 1;
+    instructorCurrentLmRef.current = buildFilteredFrame(frames[frameIndexRef.current]!);
 
     const lagCompIndex = Math.max(
       0,
@@ -157,13 +358,17 @@ export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMo
       frameIndex: frameIndexRef.current,
       lagFrame: frames[lagCompIndex],
     };
-  }, []);
+  }, [buildFilteredFrame]);
 
   return {
+    frameCount: loadedFrames.length,
     instructorFramesRef,
     instructorCurrentLmRef,
     frameIndexRef,
+    retargetAnalysis,
+    retargetSourceModel,
     advanceInstructorFrame,
     resetInstructorPlayback,
+    setInstructorFrame,
   };
 }

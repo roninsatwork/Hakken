@@ -38,20 +38,28 @@ type UseMovementCaptureInput = {
   isVisionReady: boolean;
 };
 
-const CORE_VISIBILITY_THRESHOLD = 0.6;
+const FULL_BODY_VISIBILITY_THRESHOLD = 0.55;
 
-function getCoreVisibility(landmarks: NormalizedLandmark[]) {
+function getFullBodyVisibility(landmarks: NormalizedLandmark[]) {
   const leftShoulder = landmarks[11];
   const rightShoulder = landmarks[12];
   const leftHip = landmarks[23];
   const rightHip = landmarks[24];
+  const leftKnee = landmarks[25];
+  const rightKnee = landmarks[26];
+  const leftFoot = landmarks[31] ?? landmarks[27];
+  const rightFoot = landmarks[32] ?? landmarks[28];
 
   return (
     ((leftShoulder?.visibility ?? 0) +
       (rightShoulder?.visibility ?? 0) +
       (leftHip?.visibility ?? 0) +
-      (rightHip?.visibility ?? 0)) /
-    4
+      (rightHip?.visibility ?? 0) +
+      (leftKnee?.visibility ?? 0) +
+      (rightKnee?.visibility ?? 0) +
+      (leftFoot?.visibility ?? 0) +
+      (rightFoot?.visibility ?? 0)) /
+    8
   );
 }
 
@@ -110,10 +118,10 @@ export function useMovementCapture({
             const smoothedLandmarks = poseFilterRef.current.filter(poseResults.landmarks[0], startTimeMs);
             const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
             const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
-            const coreVisibility = getCoreVisibility(smoothedLandmarks);
-            setTrackingQuality(Math.round(coreVisibility * 100));
+            const fullBodyVisibility = getFullBodyVisibility(smoothedLandmarks);
+            setTrackingQuality(Math.round(fullBodyVisibility * 100));
 
-            if (coreVisibility >= CORE_VISIBILITY_THRESHOLD) {
+            if (fullBodyVisibility >= FULL_BODY_VISIBILITY_THRESHOLD) {
               const currentData: MovementCaptureFrame = {
                 timestamp: startTimeMs,
                 landmarks: smoothedLandmarks,

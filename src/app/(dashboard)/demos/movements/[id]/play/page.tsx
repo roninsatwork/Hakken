@@ -1,21 +1,23 @@
 "use client";
 /**
- * Sonae Movement Demo - Gamified Pilates Interface
- * Last Updated: 2026-05-08 - v1.2.0 (Stability & Magnetism)
+ * Sonae Movement Demo - Premium Posture Studio Interface
+ * Last Updated: 2026-06-14 - pitch polish pass
  */
 
-import React, { useRef, use } from "react";
+import React, { useEffect, useRef, use, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
-import Header from "@/src/ui/components/layout/Header";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import AvatarSelectorLobby from "./_components/AvatarSelectorLobby";
+import MovementDebugFrameScrubber from "./_components/MovementDebugFrameScrubber";
 import MovementCalibrationOverlay from "./_components/MovementCalibrationOverlay";
 import MovementCompletionDialog from "./_components/MovementCompletionDialog";
 import MovementFeedbackOverlay from "./_components/MovementFeedbackOverlay";
 import MovementHud from "./_components/MovementHud";
 import MovementMatchScene from "./_components/MovementMatchScene";
+import MovementSourceSkeleton from "./_components/MovementSourceSkeleton";
 import MovementSparkles from "./_components/MovementSparkles";
 import MovementTrackingDebugOverlay from "./_components/MovementTrackingDebugOverlay";
 import VrmAvatar from "./_components/VrmAvatar";
@@ -27,6 +29,7 @@ import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
 import { useMovementPlayerTracking } from "../../_hooks/useMovementPlayerTracking";
 import { useMovementTrackingCalibration } from "../../_hooks/useMovementTrackingCalibration";
+import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
 import type { VrmMotionFrame } from "../../_lib/vrmRigging";
 
@@ -37,6 +40,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const searchParams = useSearchParams();
   const movementId = unwrappedParams.id as Id<"movements">;
   const isDebugTracking = searchParams.get("debugTracking") === "1";
+  const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
+  const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   const movement = useQuery(api.movements.get, { id: movementId });
   const { frames: loadedFrames, isLoading: isFramesLoading } = useMovementFrames(movement);
@@ -52,6 +58,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retry: retryVision,
     isReady: isVisionReady,
   } = useMediaPipeVision();
+  const instructorTrackingDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const {
     isLobby,
     playerAvatarUrl,
@@ -98,9 +105,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       : trackingCalibrationStatus;
 
   const {
+    frameCount: instructorFrameCount,
     instructorCurrentLmRef,
+    frameIndexRef: instructorFrameIndexRef,
+    retargetAnalysis: instructorRetargetAnalysis,
+    retargetSourceModel: instructorRetargetSourceModel,
     advanceInstructorFrame,
     resetInstructorPlayback,
+    setInstructorFrame,
   } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
   const {
     finalScore,
@@ -116,16 +128,55 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     playerLiveLmRef,
     advanceInstructorFrame,
   });
+  const hasStartedGuidedPreviewRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      !isGuidedPreviewRoute ||
+      hasStartedGuidedPreviewRef.current ||
+      isLobby ||
+      !movement ||
+      isFramesLoading ||
+      loadedFrames.length === 0
+    ) {
+      return;
+    }
+
+    hasStartedGuidedPreviewRef.current = true;
+    skipCalibration();
+    resetInstructorPlayback();
+    resetScoring();
+    setIsPlaying(true);
+  }, [
+    isFramesLoading,
+    isGuidedPreviewRoute,
+    isLobby,
+    loadedFrames.length,
+    movement,
+    resetInstructorPlayback,
+    resetScoring,
+    setIsPlaying,
+    skipCalibration,
+  ]);
+
+  useEffect(() => {
+    if (!isDebugTracking || typeof window === "undefined") return;
+
+    const debugWindow = window as Window & {
+      __sonaeMovementRecordingRetargetAnalysis?: typeof instructorRetargetAnalysis;
+    };
+    debugWindow.__sonaeMovementRecordingRetargetAnalysis = instructorRetargetAnalysis;
+  }, [instructorRetargetAnalysis, isDebugTracking]);
 
   if (!movement || isFramesLoading) {
-    return (
-      <>
-        <Header />
-        <div className="flex items-center justify-center py-24 text-cyan-500 animate-pulse font-medium">
-          Loading 3D Engine & Holograms...
-        </div>
-      </>
+    const loadingStudio = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] text-[#f6ccbe] animate-pulse font-medium">
+        <style>{`nextjs-portal { display: none !important; }`}</style>
+        Preparing posture studio...
+      </div>
     );
+
+    return typeof document === "undefined" ? loadingStudio : createPortal(loadingStudio, document.body);
   }
 
   if (isLobby) {
@@ -140,16 +191,31 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     );
   }
 
-  return (
-    <div className="h-screen w-full bg-black overflow-hidden flex flex-col relative">
+  const routineTitle = getStudioRoutineTitle(movement.title);
+
+  const studio = (
+    <div className="fixed inset-0 z-[9999] flex h-screen w-screen flex-col overflow-hidden bg-[#07070b]">
+      <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
           landmarksRef={instructorCurrentLmRef}
           positionOffset={[-5, 0, 0]}
           isPlaying={isPlaying}
+          showPausedPose={isDebugTracking}
+          trackingDebugRef={instructorTrackingDebugRef}
+          retargetSourceModel={instructorRetargetSourceModel}
           vrmUrl={instructorAvatarUrl}
           name={instructorAvatarName}
         />
+
+        {isDebugTracking ? (
+          <MovementSourceSkeleton
+            color="#f6ccbe"
+            landmarksRef={instructorCurrentLmRef}
+            mirrorX
+            positionOffset={[-5, 0, 0]}
+          />
+        ) : null}
 
         <VrmAvatar
           landmarksRef={playerLiveLmRef}
@@ -162,25 +228,57 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           name={playerAvatarName}
         />
 
+        {isDebugTracking ? (
+          <MovementSourceSkeleton
+            color="#bfe7d0"
+            landmarksRef={playerLiveLmRef}
+            positionOffset={[5, 0, 0]}
+          />
+        ) : null}
+
         <MovementSparkles landmarksRef={playerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
       </MovementMatchScene>
 
       <MovementHud
-        movementTitle={movement.title || "Unknown"}
+        movementTitle={routineTitle}
         difficulty={movement.difficulty || "Beginner"}
         hudScore={hudScore}
         hudSync={hudSync}
         isPlaying={isPlaying}
         isVisionReady={isVisionReady}
         isTrackingCalibrated={isTrackingReady}
+        isPreviewMode={isCalibrationSkipped}
         isCalibrating={isCalibrating}
         visionStatus={visionStatus}
         visionError={visionError}
+        isCameraReady={cameraStatus === "ready"}
+        cameraError={cameraError}
         calibrationStatus={displayedCalibrationStatus}
         webcamRef={webcamRef}
         onTogglePlaying={togglePlaying}
         onRetryVision={retryVision}
         onCalibrate={startCalibration}
+        onCameraReady={() => {
+          setCameraStatus("ready");
+          setCameraError(null);
+        }}
+        onCameraError={(error) => {
+          setCameraStatus("error");
+          setCameraError(error);
+        }}
+      />
+
+      <MovementDebugFrameScrubber
+        frameCount={instructorFrameCount}
+        frameIndexRef={instructorFrameIndexRef}
+        isEnabled={isDebugTracking}
+        isPlaying={isPlaying}
+        onFrameChange={(frameIndex) => {
+          resetScoring();
+          setInstructorFrame(frameIndex);
+        }}
+        onPlayingChange={setIsPlaying}
+        recordingAnalysis={instructorRetargetAnalysis}
       />
 
       <MovementCalibrationOverlay
@@ -199,6 +297,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         calibration={calibration}
         debugRef={trackingDebugRef}
         isEnabled={isDebugTracking}
+        title="Student Diagnostics"
+      />
+
+      <MovementTrackingDebugOverlay
+        calibration={null}
+        debugRef={instructorTrackingDebugRef}
+        isEnabled={isDebugTracking}
+        placement="right"
+        title="Coach Diagnostics"
       />
 
       <MovementFeedbackOverlay feedbackMsg={feedbackMsg} />
@@ -206,6 +313,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementCompletionDialog
         isOpen={isComplete}
         finalScore={finalScore}
+        isPreviewMode={isCalibrationSkipped}
         onExitMatch={() =>
           resetMatch({ returnToLobby: true, resetInstructorPlayback, resetScoring })
         }
@@ -215,4 +323,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       />
     </div>
   );
+
+  return typeof document === "undefined" ? studio : createPortal(studio, document.body);
 }

@@ -3,9 +3,12 @@ import {
   applyHeadCalibration,
   averageMovementCalibrations,
   buildMovementCalibration,
+  buildUprightMovementAutoCalibration,
   estimateMovementHeadAngles,
   getCalibratedFloorCorrection,
   getMovementBodyConfidence,
+  getMovementHeadMotionIntent,
+  getMovementLowerBodyIntent,
   getMovementTrackingHealthWarnings,
   getMovementTrackingHealthSummary,
   getNeutralMovementHeadAngles,
@@ -59,6 +62,8 @@ describe("movementTrackingCalibration", () => {
     expect(calibration).toMatchObject({
       calibratedAt: 1234,
       quality: expect.any(Number),
+      headCenter: expect.any(Object),
+      headScale: expect.any(Number),
       shoulderWidth: expect.any(Number),
       torsoHeight: expect.any(Number),
       floorY: 0.97,
@@ -70,6 +75,25 @@ describe("movementTrackingCalibration", () => {
     const pose = withCorePose().map((landmark) => ({ ...landmark, visibility: 0.1 }));
 
     expect(buildMovementCalibration({ poseLandmarks: pose })).toBeNull();
+  });
+
+  it("builds an automatic baseline from an upright full-body frame", () => {
+    const calibration = buildUprightMovementAutoCalibration({ poseLandmarks: withCorePose() });
+
+    expect(calibration).toMatchObject({
+      hipCenter: { y: 0.68 },
+      floorY: 0.97,
+    });
+  });
+
+  it("does not auto-baseline from a deep squat frame", () => {
+    const pose = withCorePose();
+    pose[23] = { ...pose[23]!, y: 0.88 };
+    pose[24] = { ...pose[24]!, y: 0.88 };
+    pose[25] = { ...pose[25]!, y: 0.94 };
+    pose[26] = { ...pose[26]!, y: 0.94 };
+
+    expect(buildUprightMovementAutoCalibration({ poseLandmarks: pose })).toBeNull();
   });
 
   it("averages calibration samples and neutralizes head pitch", () => {
@@ -230,6 +254,183 @@ describe("movementTrackingCalibration", () => {
         floorCorrectionLimit: 0.2,
       },
     })).toBe(0.2);
+  });
+
+  it("reads a squat from calibrated hip drop", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, y: 0.78 };
+    squatPose[24] = { ...squatPose[24]!, y: 0.78 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.9 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.9 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: squatPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("squat");
+    expect(intent.squatDepth).toBeGreaterThan(0.5);
+    expect(intent.leftKneeRaise).toBe(0);
+    expect(intent.rightKneeRaise).toBe(0);
+  });
+
+  it("reads a squat from a symmetric knee bend when hip drop is not available", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const squatPose = withCorePose();
+    squatPose[25] = { ...squatPose[25]!, y: 0.69 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.69 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: squatPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("squat");
+    expect(intent.squatDepth).toBeGreaterThan(0.6);
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.35);
+    expect(intent.rightKneeRaise).toBeGreaterThan(0.35);
+  });
+
+  it("boosts squat depth from torso and head lowering when knees also bend", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const squatPose = withCorePose();
+    squatPose[0] = { ...squatPose[0]!, y: 0.42 };
+    squatPose[7] = { ...squatPose[7]!, y: 0.44 };
+    squatPose[8] = { ...squatPose[8]!, y: 0.44 };
+    squatPose[11] = { ...squatPose[11]!, y: 0.58 };
+    squatPose[12] = { ...squatPose[12]!, y: 0.58 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.67 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.67 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: squatPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("squat");
+    expect(intent.squatSignals.hipDrop).toBe(0);
+    expect(intent.squatSignals.torsoDrop).toBeGreaterThan(0.8);
+    expect(intent.squatSignals.headDrop).toBeGreaterThan(0.3);
+    expect(intent.squatDepth).toBeGreaterThan(0.8);
+  });
+
+  it("does not hold a squat from torso and head lowering without leg evidence", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const leaningPose = withCorePose();
+    leaningPose[0] = { ...leaningPose[0]!, y: 0.36 };
+    leaningPose[7] = { ...leaningPose[7]!, y: 0.38 };
+    leaningPose[8] = { ...leaningPose[8]!, y: 0.38 };
+    leaningPose[11] = { ...leaningPose[11]!, y: 0.52 };
+    leaningPose[12] = { ...leaningPose[12]!, y: 0.52 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: leaningPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("neutral");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.squatSignals.torsoDrop).toBeGreaterThan(0.5);
+  });
+
+  it("reads a single raised knee without confusing it for a squat", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const kneeRaisePose = withCorePose();
+    kneeRaisePose[25] = { ...kneeRaisePose[25]!, y: 0.53 };
+    kneeRaisePose[27] = { ...kneeRaisePose[27]!, y: 0.68 };
+    kneeRaisePose[31] = { ...kneeRaisePose[31]!, y: 0.7 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: kneeRaisePose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("left-knee-raise");
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.6);
+    expect(intent.rightKneeRaise).toBe(0);
+    expect(intent.squatDepth).toBe(0);
+  });
+
+  it("prioritizes a strongly asymmetric knee lift over mixed lower-body movement", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const kneeRaisePose = withCorePose();
+    kneeRaisePose[25] = { ...kneeRaisePose[25]!, y: 0.58 };
+    kneeRaisePose[26] = { ...kneeRaisePose[26]!, y: 0.69 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: kneeRaisePose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("left-knee-raise");
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.8);
+    expect(intent.rightKneeRaise).toBeGreaterThan(0.35);
+    expect(intent.squatDepth).toBe(0);
+  });
+
+  it("reads side head movement from the calibrated head center", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const shiftedPose = withCorePose();
+    shiftedPose[0] = { ...shiftedPose[0]!, x: 0.62 };
+    shiftedPose[7] = { ...shiftedPose[7]!, x: 0.54 };
+    shiftedPose[8] = { ...shiftedPose[8]!, x: 0.7 };
+
+    const intent = getMovementHeadMotionIntent({
+      poseLandmarks: shiftedPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("side-right");
+    expect(intent.lateral).toBeGreaterThan(0.4);
+    expect(intent.depth).toBeCloseTo(0);
+  });
+
+  it("reads forward head movement from increased face scale", () => {
+    const neutralFace = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: 0.9 }));
+    neutralFace[33] = { x: 0.45, y: 0.45, z: 0, visibility: 0.9 };
+    neutralFace[263] = { x: 0.55, y: 0.45, z: 0, visibility: 0.9 };
+    const forwardFace = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: 0.9 }));
+    forwardFace[33] = { x: 0.42, y: 0.45, z: 0, visibility: 0.9 };
+    forwardFace[263] = { x: 0.58, y: 0.45, z: 0, visibility: 0.9 };
+    const calibration = buildMovementCalibration({
+      poseLandmarks: withCorePose(),
+      faceLandmarks: neutralFace,
+    });
+
+    const intent = getMovementHeadMotionIntent({
+      poseLandmarks: withCorePose(),
+      faceLandmarks: forwardFace,
+      calibration,
+    });
+
+    expect(intent.label).toBe("forward");
+    expect(intent.depth).toBeGreaterThan(0.9);
+    expect(intent.lateral).toBe(0);
+  });
+
+  it("ignores lower-body intent when calibration or landmark confidence is weak", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const pose = withCorePose().map((landmark) => ({ ...landmark, visibility: 0.2 }));
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: pose,
+      calibration,
+    });
+
+    expect(intent).toMatchObject({
+      label: "neutral",
+      squatDepth: 0,
+      leftKneeRaise: 0,
+      rightKneeRaise: 0,
+    });
   });
 
   it("uses a strong live knee target when the knee bends plausibly", () => {

@@ -81,10 +81,10 @@ export default function MovementFrameViewer({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative w-full aspect-video bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,255,255,0.05)]">
+      <div className="relative w-full aspect-video bg-[#07070b] border border-white/10 rounded-3xl overflow-hidden shadow-[0_30px_90px_rgba(246,204,190,0.08)]">
         {isLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-cyan-500 animate-pulse font-medium tracking-wide">
-            Downloading 3D Pose Data...
+          <div className="absolute inset-0 flex items-center justify-center text-[#f6ccbe] animate-pulse font-medium tracking-wide">
+            Preparing posture sequence...
           </div>
         ) : error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-red-400 font-medium px-6 text-center">
@@ -100,7 +100,7 @@ export default function MovementFrameViewer({
           </div>
         ) : !hasFrames ? (
           <div className="absolute inset-0 flex items-center justify-center text-red-400 font-medium">
-            Corrupted or Empty Data
+            Routine preview unavailable
           </div>
         ) : (
           <canvas
@@ -116,8 +116,8 @@ export default function MovementFrameViewer({
         <div className="flex items-center gap-4 bg-sidebar/50 border border-border-dim rounded-2xl p-4 backdrop-blur-md">
           <button
             onClick={() => setIsPlaying((playing) => !playing)}
-            aria-label={isPlaying ? "Pause movement preview" : "Play movement preview"}
-            className="p-3 rounded-full bg-cyan-500 hover:bg-cyan-600 text-white transition-colors shadow-[0_0_15px_rgba(6,182,212,0.5)] flex-shrink-0"
+            aria-label={isPlaying ? "Pause routine preview" : "Play routine preview"}
+            className="p-3 rounded-full bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] transition-colors shadow-[0_0_15px_rgba(246,204,190,0.35)] flex-shrink-0"
           >
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
           </button>
@@ -131,7 +131,7 @@ export default function MovementFrameViewer({
               setIsPlaying(false);
               setCurrentFrameIndex(Number.parseInt(event.target.value, 10));
             }}
-            className="w-full accent-cyan-500"
+            className="w-full accent-[#f6ccbe]"
           />
           <span className="text-xs text-muted-foreground font-mono min-w-[72px] text-right">
             {safeFrameIndex} / {frames.length}
@@ -143,7 +143,7 @@ export default function MovementFrameViewer({
         <button
           onClick={() => setIsPlaying((playing) => !playing)}
           disabled={isLoading || !hasFrames}
-          className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-xl shadow-[0_0_15px_#06b6d4] transition-all disabled:opacity-50"
+          className="w-full bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(246,204,190,0.35)] transition-all disabled:opacity-50"
         >
           {toggleLabel}
         </button>

@@ -28,11 +28,11 @@ describe("MovementFrameViewer", () => {
       <MovementFrameViewer frames={[]} isLoading error={null} onRetry={onRetry} />,
     );
 
-    expect(screen.getByText("Downloading 3D Pose Data...")).toBeInTheDocument();
+    expect(screen.getByText("Preparing posture sequence...")).toBeInTheDocument();
 
     rerender(<MovementFrameViewer frames={[]} isLoading={false} error={null} onRetry={onRetry} />);
 
-    expect(screen.getByText("Corrupted or Empty Data")).toBeInTheDocument();
+    expect(screen.getByText("Routine preview unavailable")).toBeInTheDocument();
 
     rerender(
       <MovementFrameViewer frames={[]} isLoading={false} error="Could not parse" onRetry={onRetry} />,

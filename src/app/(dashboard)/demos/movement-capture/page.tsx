@@ -102,7 +102,7 @@ export default function MovementCapturePage() {
         <div className="w-full flex justify-start">
           <Link href="/demos/movements" className="flex items-center gap-2 text-[13px] font-medium text-secondary hover:text-foreground transition-colors px-4 py-2 bg-sidebar/50 rounded-[10px] border border-border-dim w-fit shadow-sm">
             <ArrowLeft className="w-4 h-4" />
-            Back to Library
+            Back to Studio Library
           </Link>
         </div>
         
