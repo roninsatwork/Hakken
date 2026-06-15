@@ -40,16 +40,18 @@ These are real foundations in the codebase and should be extended rather than re
 - Tenant-scoped knowledge and chat document upload paths.
 - Model provider configuration and provider-specific adapter boundaries.
 - Localization parity tests, no-native-dialog checks, admin pagination standards, and broad backend test coverage.
+- Allowlisted tool dispatcher path for registered runtime handlers, currently covering `knowledge.search` and `company.overview.update`.
+- Agent template catalogue, admin template picker, draft template instantiation, seeded eval fixtures, and recommended tool auto-binding for installed tools.
 
 ### Partial Or Product-Incomplete
 
 These areas exist structurally but are not yet complete enough to feel like a polished framework.
 
 - Connector SDK: tools exist, but there is not yet a finished connector marketplace with OAuth, secrets, scopes, connection tests, install flows, and reusable handler packages.
-- Tool dispatcher: tool schemas and policy exist, but runtime execution still contains special-cased handler branches. The generic dispatcher placeholder should become an allowlisted handler registry.
+- Tool dispatcher: the allowlisted handler registry exists for the first internal handlers, but the remaining framework-grade work is idempotency, richer audit metadata for write/external handlers, and broader denial/failure tests.
 - Agent builder: agents can be created/configured, but there is no guided purpose-first setup flow that produces a tested, ready-to-run agent.
-- App templates: the platform has many primitives, but no one-click templates for common agentic app shapes.
-- Eval runner: eval fixture tables exist, but there is not yet a full admin flow for running suites before publishing agent changes.
+- App templates: draft agent templates exist, but full app setup templates should still create or recommend knowledge scopes, workflows, schedules, widgets, and connector bundles.
+- Eval runner: eval fixture tables, suite execution, grouped suite selection, saved suite presets with edit/archive lifecycle, manual fixture authoring/edit/archive, explicit blocked-action policy assertions, configurable critical release-gate checks, release-candidate comparison views, and model-graded rollout controls exist. Remaining product work is optional release-candidate snapshots and deeper historical diffing.
 - Run replay/debugging: durable run data exists, but the UI should become a richer execution timeline with replay and comparison tools.
 - Memory review: memory candidates/reflections exist, but the review workflow should become a first-class inbox.
 - Knowledge QA: ingestion and retrieval exist, but chunk inspection, retrieval tests, stale detection, and re-embedding controls are not complete product surfaces.
@@ -60,7 +62,7 @@ These areas exist structurally but are not yet complete enough to feel like a po
 
 These are new product/framework layers to add on top of the existing foundation.
 
-- Template gallery for starter agentic apps.
+- Full app template gallery for starter agentic apps beyond draft agent creation.
 - Guided agent/app builder.
 - Connector marketplace with install/test/configure flows.
 - Generic allowlisted tool dispatcher and handler registry.
@@ -83,6 +85,21 @@ These are new product/framework layers to add on top of the existing foundation.
 - Admin tables and feeds should default to 15 rows per page.
 - Use existing admin UI primitives and Sonae modal patterns. Do not use native browser dialogs.
 
+## Implementation Progress
+
+Last updated: 2026-06-15.
+
+| Roadmap item | Status | Notes |
+| --- | --- | --- |
+| Phase 1: Framework Orientation And Starter Kit | Complete foundation | Start-here framework overview, new app/customer setup checklist, vertical starter app template checklist, and local demo seed path are implemented and linked from README/docs index. The demo seed creates a local tenant, demo users, model defaults, starter knowledge, knowledge tool, draft template agent, and starter eval fixtures without production credentials. |
+| Phase 2: Agent App Templates | Complete for draft agent templates | Five templates, admin picker, draft creation, model-default usage, locale keys, seeded eval fixtures, and recommended tool binding are implemented. |
+| Phase 3: Tool Dispatcher And Handler Registry | First pass complete | Runtime tool execution now uses an allowlisted dispatcher for the first internal read/write handlers. Remaining work: idempotency, expanded write/external audit metadata, and broader access-denial tests. |
+| Phase 4: Connector Marketplace | Foundation complete | Connector install state, built-in definitions, install/test/update APIs, safe secret-reference handling, secret-reference registry records, OAuth connection lifecycle scaffolding, generated connector tools, safe external handler stubs, tenant scope controls, a marketplace panel, installed connector configuration page, structured connection diagnostics, admin diagnostics UI, and connection-test logs are implemented. Later production work: real secret-provider vault integration, live external connector execution, and OAuth callback routes. |
+| Phase 5: Guided Agent Builder | Complete foundation | The admin new-agent flow is now a draft-only guided builder that captures template, objective, audience, approval policy, model behavior, knowledge/tool intent, and readiness acknowledgement. Builder intent is persisted in creation audit metadata. Agent settings now include a backend-backed activation readiness checklist for draft status, model defaults/overrides, tools, knowledge, eval fixtures, smoke eval coverage, and fixture-type coverage. A governed smoke-eval runner validates active fixture contracts against bound tools, can optionally queue provider-backed model/rubric grading, persists fixture and grading metadata into durable run steps, surfaces the latest smoke result including queued/failed states, blocks draft activation until a successful smoke eval exists, exposes recent smoke-eval history on the agent runs dashboard, and lets admins inspect durable run details from eval cards or run rows. |
+| Phase 6: Eval Runner And Release Gate | Complete foundation | Admins can run all active eval fixtures for an agent as a contract-only or model-graded suite from a dedicated Evals tab, create and edit manual eval fixtures with scoped source runs and audit logs, archive fixtures out of active suite runs, run tag-filtered suite groups, save/edit/archive suite presets, mark presets as requiring model grading, run presets, set or clear a preset as the release gate, see release-gate fixture counts, compare current release-candidate fixture results against previous eval checkpoints, persist suite results as durable eval runs, enforce tenant scoping, prove suite execution does not create real tool calls, validate expected blocked-action contracts, support explicit blocked-action policy assertions for approval-required, deny-tool, do-not-call, and tenant-boundary expectations, and block draft activation until the configured release gate passes with model grading when required. Next: Phase 7 run replay/debugging or optional release-candidate snapshots. |
+| Phase 7: Run Timeline, Replay, And Debugging | Complete foundation | First run-detail timeline slice is implemented: the backend derives readable timeline entries from durable run steps, attaches linked tool calls and approval requests, summarizes inputs/outputs/errors with bounded previews, calculates step latency, and exposes model/token/cost metadata. Replay lineage now persists source run and replay mode, run detail exposes source/replay summaries plus comparison deltas, and the admin modal shows replay context for both original runs and replay runs. Replay details now include a timeline-level diff aligned by step index so admins can see added, removed, changed, and unchanged steps with source/replay summaries. Tool arguments now default to sanitized previews from the run-detail query itself: admins receive redacted arguments, super-admins receive raw previews, and raw persisted argument fields are not exposed directly to the frontend. Run detail now exposes eval fixture coverage and a learning-action panel so terminal runs can become or update eval fixtures from the same evidence view. Replay controls now support current-active replay and same-version replay that pins the replay run to the source agent version snapshot. Triggered same-version replays now hydrate prompt, model choice, temperature, historical rules, bounded historical memory contents, and historical tool declarations from `agentVersions.snapshotJson`, start after queued seed steps, and record version-hydration plus historical tool dry-run policy trace steps. Future snapshots now include bounded memory items and tool schemas/descriptions for replay fidelity. Write/destructive/external historical tool execution remains blocked unless a future sandbox executor is explicitly added. Next: Phase 8 operational hardening or optional historical tool sandbox execution. |
+| Phase 8: Memory And Improvement Review Inbox | 20% complete | First unified review inbox slice is implemented on the agent Memory tab. Backend `getReviewInboxForAgent` returns tenant-scoped memory candidates, improvement suggestions, unresolved reflections, source run summaries, risk counts, and open totals. The Memory UI now shows a learning review inbox with approve/reject memory actions, apply/dismiss improvement suggestions, reflection evidence, risk labels, and source evidence summaries. Next: reflection-to-eval shortcuts, richer suggestion patch previews, and dedicated filters/history for reviewed items. |
+
 ## Recommended Build Order
 
 ### Phase 1: Framework Orientation And Starter Kit
@@ -91,10 +108,10 @@ Give future builders a clear "start here" path.
 
 Build:
 
-- Create a starter framework overview page in docs that links architecture, setup, agent runtime, tools, workflows, templates, and deployment.
-- Add a "new app/customer setup" checklist covering tenant creation, first super-admin, model defaults, provider setup, sample tools, sample agents, and seed knowledge.
-- Add a seeded demo dataset or sample tenant that does not depend on production credentials.
-- Add a `docs/starter-app-template-checklist.md` or equivalent template spec for future vertical apps.
+- Create a starter framework overview page in docs that links architecture, setup, agent runtime, tools, workflows, templates, and deployment. Implemented in `docs/agentic-starter-framework-overview.md`.
+- Add a "new app/customer setup" checklist covering tenant creation, first super-admin, model defaults, provider setup, sample tools, sample agents, and seed knowledge. Implemented in `docs/new-agentic-app-setup-checklist.md`.
+- Add a seeded demo dataset or sample tenant that does not depend on production credentials. Implemented with `npm run demo:local:seed` and `convex/localDemoSeed.ts`.
+- Add a `docs/starter-app-template-checklist.md` or equivalent template spec for future vertical apps. Implemented in `docs/starter-app-template-checklist.md`.
 
 Acceptance:
 
@@ -251,8 +268,12 @@ Build:
   - generate/edit system prompt
   - run smoke eval
   - save as draft or activate
-- Add "readiness checklist" state to agent settings.
-- Add warnings for missing model defaults, no knowledge, no tools, or untested active agents.
+- Add "readiness checklist" state to agent settings. Foundation added for draft status, tool bindings, linked knowledge, active eval fixtures, smoke eval runs, and latest smoke eval history.
+- Add warnings for missing model defaults, no knowledge, no tools, or untested active agents. Current warnings cover missing agent-capable model defaults/overrides, missing tools, missing linked knowledge, missing eval fixtures, and missing successful smoke evals. Draft activation is blocked until a successful smoke eval exists.
+- Add controlled smoke-eval contract execution. Current runner validates expected tool mappings and rubric presence without live model credentials; optional model-backed grading is queued through a provider action and records pass/fail output against the stored rubric when credentials are available.
+- Add a compact eval-results surface. Current runs dashboard now shows recent smoke eval totals, pass/fail/active state, grading mode, fixture context, model/version metadata, and missing tool mappings.
+- Add run detail drilldown from eval and run history. Current runs dashboard opens a durable run detail modal with status, objective, output/error, timeline steps, tool calls, and approval records.
+- Add fixture coverage visibility. Current settings readiness shows active coverage and smoke-passed coverage across all core eval fixture categories.
 
 Acceptance:
 
@@ -278,8 +299,8 @@ Make agent changes testable before they reach users.
 
 Build:
 
-- Add an eval suite page per agent.
-- Let admins create eval fixtures from scratch or from failed runs/reflections.
+- Add an eval suite page per agent. Implemented as a dedicated agent Evals tab with active fixture library, full-suite run action, single-fixture run actions, release-gate status, and recent eval history.
+- Let admins create eval fixtures from scratch or from failed runs/reflections. First slice implemented: the Evals tab can create manual fixtures with type, objective, rubric, expected tool mappings, expected blocked-action JSON, tags, scoped source run, and audit log.
 - Support fixture types:
   - happy path
   - approval pause
@@ -291,14 +312,14 @@ Build:
   - replayed failure
   - tool plan
   - cost/latency budget
-- Add an eval run table with status, model, agent version, cost, latency, and result summary.
-- Add a release gate that warns before activating an agent version with failing critical evals.
+- Add an eval run table with status, model, agent version, cost, latency, and result summary. Recent suite/smoke eval runs are currently visible in the Eval health panel and durable run detail modal.
+- Add a release gate that warns before activating an agent version with failing critical evals. First slices implemented: readiness now includes a release gate check, settings shows a release-blocked warning, activation is blocked when the latest eval checkpoint is not passing, and active fixtures selected by configured tags or by a configured suite preset must each have a current passing eval before activation.
 
 Acceptance:
 
 - Admins can run at least one fixture against an agent version.
 - Evals do not execute real destructive/external side effects.
-- Evals can assert expected blocked actions and expected tool plans.
+- Evals can assert expected blocked actions and expected tool plans. Tool-plan mappings and blocked-action evidence are validated in the contract runner; malformed or empty blocked-action expectations fail the eval without executing tools.
 - Results are stored and visible by agent/version.
 - Tests cover fixture creation, tenant scoping, and safe tool mocking.
 
@@ -330,20 +351,30 @@ Build:
   - cost
   - latency
   - failure category
+  - Implemented first slice with derived step summaries, bounded input/output/error previews, linked tool/approval chips, token/cost metadata, and per-step duration.
 - Add replay controls:
   - rerun objective
   - rerun with same agent version
   - rerun with current draft
   - convert to eval fixture
   - generate reflection
+  - Implemented current-active replay lineage with source run links, recent replay history, and status/latency/cost/token/step/output comparison summaries.
+  - Implemented explicit current-active and same-version replay controls; same-version replay requires a source agent version snapshot and pins the replay run to that version id.
+  - Implemented triggered same-version replay hydration for snapshot prompt, model id, and temperature, plus trace metadata for snapshot hashes and non-hydrated tool/rule/memory areas.
+  - Implemented historical rule and bounded memory hydration for triggered same-version replays; future version snapshots now store bounded memory contents.
+  - Implemented historical tool declaration hydration for triggered same-version replays; future snapshots store descriptions and input schemas, read-only tools are flagged replay-informational, and write/external execution remains blocked until an explicit test-mode executor exists.
+  - Implemented historical tool dry-run policy tracing: same-version replays record skipped tool replay steps with read-only test-mode candidates and blocked write/destructive/external tools instead of making live calls.
 - Add diff view between original run and replay.
+  - Implemented first pass with step-index aligned timeline diff rows, aggregate change flags, duration deltas, and source/replay summaries.
 
 Acceptance:
 
 - Run details can be understood without reading raw JSON.
 - Replays preserve tenant scope and do not replay write/external actions without explicit test mode or approval.
 - Redacted args are shown by default; raw args require the correct role and should remain sensitive.
+  - Implemented for tool-call argument display: `getRunDetail` returns role-aware previews and never returns persisted raw argument fields directly.
 - Failed runs can become eval fixtures from the UI.
+  - Implemented in run detail: terminal runs show create/update eval actions and existing fixture coverage.
 
 Primary files:
 
@@ -367,12 +398,14 @@ Build:
   - tool schema suggestions
   - eval fixture suggestions
   - approval policy suggestions
+  - Implemented first slice with tenant-scoped memory candidates, improvement suggestions, unresolved reflections, source run summaries, risk totals, and actionable cards on the Memory tab.
 - Add actions:
   - approve memory
   - reject memory
   - convert reflection to eval
   - convert suggestion to draft prompt version
   - dismiss suggestion
+  - Implemented approve/reject memory and apply/dismiss improvement suggestions from the unified inbox.
 - Add risk classification and source evidence display.
 
 Acceptance:

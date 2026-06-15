@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import ConnectorsDashboard from "./page";
 
 vi.mock("next/link", () => ({
@@ -10,6 +10,24 @@ vi.mock("next/link", () => ({
       {children}
     </a>
   ),
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+    const labels: Record<string, string> = {
+      count: `${values?.count ?? 0} starter connectors`,
+      install: "Install",
+      installing: "Installing...",
+      manage: "Manage",
+      sync: "Sync",
+      test: "Test",
+      testing: "Testing...",
+      title: "Connector Marketplace",
+      subtitle: "Install governed connector definitions.",
+      untested: "UNTESTED",
+    };
+    return labels[key] ?? key;
+  },
 }));
 
 vi.mock("framer-motion", () => ({
@@ -54,6 +72,24 @@ const tools = [
   },
 ];
 
+const marketplace = [
+  {
+    key: "sonae-knowledge",
+    name: "Sonae Knowledge",
+    description: "Search approved tenant knowledge.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    requiredScopes: ["knowledge:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [],
+    installation: {
+      _id: "connector_1",
+      installStatus: "INSTALLED",
+      testStatus: "SUCCESS",
+    },
+  },
+];
+
 describe("ConnectorsDashboard", () => {
   const deleteTool = vi.fn();
 
@@ -68,12 +104,16 @@ describe("ConnectorsDashboard", () => {
         loadMore: vi.fn(),
       } as unknown as ReturnType<typeof usePaginatedQuery>;
     });
+    vi.mocked(useQuery).mockReturnValue(marketplace as unknown as ReturnType<typeof useQuery>);
     vi.mocked(useMutation).mockReturnValue(deleteTool as unknown as ReturnType<typeof useMutation>);
   });
 
   it("renders connector links and filters by connector metadata", () => {
     render(<ConnectorsDashboard />);
 
+    expect(screen.getByText("Connector Marketplace")).toBeInTheDocument();
+    expect(screen.getByText("Sonae Knowledge")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Manage/i })).toHaveAttribute("href", "/admin/ai/tools/connectors/connector_1");
     expect(screen.getByRole("link", { name: /Add custom connector/i })).toHaveAttribute("href", "/admin/ai/tools/mcp/new");
     expect(screen.getByRole("link", { name: /Add Sonae Action/i })).toHaveAttribute("href", "/admin/ai/tools/new");
     expect(screen.getByRole("link", { name: /Calendar Connector/i })).toHaveAttribute("href", "/admin/ai/tools/tool_1");

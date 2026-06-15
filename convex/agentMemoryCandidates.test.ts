@@ -128,6 +128,58 @@ describe("Agent Memory Candidates", () => {
     });
     expect(duplicateResult.createdIds).toHaveLength(0);
 
+    const suggestionId = await t.run(async (ctx) => {
+      return await ctx.db.insert("agentImprovementSuggestions", {
+        agentId,
+        companyId: (await ctx.db.get(failedRunId))?.companyId,
+        sourceRunId: failedRunId,
+        createdBy: adminAId,
+        type: "PROMPT_CHANGE",
+        title: "Add escalation summary guidance",
+        description: "Teach the agent to include owner, blocker, and next action in escalation summaries.",
+        proposedPatchJson: JSON.stringify({ appendSystemPrompt: "Escalation summaries require owner, blocker, and next action." }),
+        riskLevel: "HIGH",
+        status: "PROPOSED",
+        createdAt: 260,
+        updatedAt: 260,
+      });
+    });
+
+    const reviewInbox = await adminAClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId });
+    expect(reviewInbox.totals).toMatchObject({
+      open: 4,
+      memoryCandidates: 2,
+      improvementSuggestions: 1,
+      reflections: 1,
+      highRisk: 1,
+    });
+    expect(reviewInbox.memoryCandidates.map((candidate) => candidate.candidateId).sort()).toEqual(
+      failedResult.createdIds.map((id) => id).sort()
+    );
+    expect(reviewInbox.memoryCandidates[0]?.sourceRun).toMatchObject({
+      runId: failedRunId,
+      status: "FAILED",
+      objective: "Prepare escalation summary",
+    });
+    expect(reviewInbox.improvementSuggestions).toEqual([
+      expect.objectContaining({
+        suggestionId,
+        type: "PROMPT_CHANGE",
+        riskLevel: "HIGH",
+        sourceRun: expect.objectContaining({ runId: failedRunId }),
+      }),
+    ]);
+    expect(reviewInbox.reflections).toEqual([
+      expect.objectContaining({
+        category: "MISSING_CONTEXT",
+        riskLevel: "LOW",
+        proposedEvalFixture: "Create an eval for escalation summaries.",
+      }),
+    ]);
+
+    const otherTenantInbox = await adminBClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId });
+    expect(otherTenantInbox.totals.open).toBe(0);
+
     const failedCandidates = await adminAClient.query(api.agentMemoryCandidates.getForRun, {
       runId: failedRunId,
       paginationOpts,
@@ -190,4 +242,3 @@ describe("Agent Memory Candidates", () => {
     ]);
   });
 });
-

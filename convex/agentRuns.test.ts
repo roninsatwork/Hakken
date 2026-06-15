@@ -255,9 +255,11 @@ describe("Agent Runs", () => {
         userId: adminAId,
         triggerType: "CHAT",
         objective: "Detail objective",
-        status: "PENDING_APPROVAL",
+        status: "FAILED",
+        error: "Tool approval did not complete",
         startedAt: 100,
-        updatedAt: 100,
+        completedAt: 130,
+        updatedAt: 130,
       });
       const stepId = await ctx.db.insert("agentRunSteps", {
         runId,
@@ -277,7 +279,8 @@ describe("Agent Runs", () => {
         agentId,
         normalizedToolName: "crm_lookup",
         handlerMapping: "crm.lookup",
-        argumentsJson: "{}",
+        argumentsJson: "{\"customerEmail\":\"private@example.com\",\"query\":\"renewal\"}",
+        redactedArgumentsJson: "{\"customerEmail\":\"[redacted]\",\"query\":\"renewal\"}",
         status: "APPROVAL_REQUIRED",
         requiredRole: "ADMIN",
         sideEffectLevel: "READ",
@@ -296,6 +299,20 @@ describe("Agent Runs", () => {
         status: "PENDING",
         requestedAt: 116,
       });
+      await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        companyId: companyAId,
+        sourceRunId: runId,
+        createdBy: adminAId,
+        type: "BAD_TOOL_ARGS",
+        objective: "Detail objective",
+        expectedFinalOutputRubric: "The agent should recover from invalid tool arguments.",
+        sourceEvidenceJson: "{}",
+        tags: ["bad_tool_args"],
+        status: "ACTIVE",
+        createdAt: 125,
+        updatedAt: 126,
+      });
 
       return { adminAId, adminBId, superAdminId, runId };
     });
@@ -308,10 +325,54 @@ describe("Agent Runs", () => {
     expect(adminDetail?.run._id).toBe(runId);
     expect(adminDetail?.steps).toHaveLength(1);
     expect(adminDetail?.toolCalls).toHaveLength(1);
+    expect(adminDetail?.toolCalls[0]).toMatchObject({
+      argumentsPreview: "{\n  \"customerEmail\": \"[redacted]\",\n  \"query\": \"renewal\"\n}",
+      redactedArgumentsPreview: "{\n  \"customerEmail\": \"[redacted]\",\n  \"query\": \"renewal\"\n}",
+      argumentViewMode: "REDACTED",
+      rawArgumentsAvailable: true,
+    });
+    expect(adminDetail?.toolCalls[0]).not.toHaveProperty("argumentsJson");
+    expect(adminDetail?.toolCalls[0]).not.toHaveProperty("redactedArgumentsJson");
     expect(adminDetail?.approvals).toHaveLength(1);
+    expect(adminDetail?.evalFixtureContext).toMatchObject({
+      canCreateFromRun: true,
+      activeCount: 1,
+      archivedCount: 0,
+      fixtures: [
+        expect.objectContaining({
+          type: "BAD_TOOL_ARGS",
+          status: "ACTIVE",
+          tags: ["bad_tool_args"],
+        }),
+      ],
+    });
+    expect(adminDetail?.timeline).toEqual([
+      expect.objectContaining({
+        stepIndex: 1,
+        kind: "TOOL_CALL",
+        status: "SUCCESS",
+        durationMs: 10,
+        inputPreview: "{}",
+        outputPreview: "{}",
+        linkedToolCalls: [expect.objectContaining({
+          handlerMapping: "crm.lookup",
+          status: "APPROVAL_REQUIRED",
+        })],
+        linkedApprovals: [expect.objectContaining({
+          status: "PENDING",
+        })],
+      }),
+    ]);
 
     const superAdminDetail = await superAdminClient.query(api.agentRuns.getRunDetail, { runId });
     expect(superAdminDetail?.run._id).toBe(runId);
+    expect(superAdminDetail?.toolCalls[0]).toMatchObject({
+      argumentsPreview: "{\n  \"customerEmail\": \"private@example.com\",\n  \"query\": \"renewal\"\n}",
+      rawArgumentsPreview: "{\n  \"customerEmail\": \"private@example.com\",\n  \"query\": \"renewal\"\n}",
+      argumentViewMode: "RAW",
+      rawArgumentsAvailable: true,
+    });
+    expect(superAdminDetail?.toolCalls[0]).not.toHaveProperty("argumentsJson");
 
     await expect(adminBClient.query(api.agentRuns.getRunDetail, { runId })).rejects.toThrow("Unauthorized");
   });
@@ -744,7 +805,7 @@ describe("Agent Runs", () => {
   test("failed runs can be replayed and active runs can be cancelled with cleanup", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminAId, adminBId, failedRunId, successRunId, pendingRunId, pendingApprovalId, pendingToolCallId } = await t.run(async (ctx) => {
+    const { adminAId, adminBId, failedRunId, successRunId, pendingRunId, pendingApprovalId, pendingToolCallId, sourceVersionId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
       const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
       const adminAId = await ctx.db.insert("users", {
@@ -765,8 +826,74 @@ describe("Agent Runs", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      const sourceVersionId = await ctx.db.insert("agentVersions", {
+        agentId,
+        companyId: companyAId,
+        versionNumber: 1,
+        snapshotHash: "source-version-hash",
+        snapshotJson: JSON.stringify({
+          prompt: { systemPrompt: "Use the historical replay prompt." },
+          model: { modelId: "historical-model", modelSelectionMode: "manual", temperature: 0.2 },
+          tools: [
+            {
+              id: "historical-tool-read",
+              name: "company_lookup",
+              description: "Look up company records.",
+              handlerMapping: "company.lookup",
+              requiredRole: "ADMIN",
+              sideEffectLevel: "READ",
+              confirmationRequired: false,
+              inputSchema: "{\"type\":\"object\"}",
+              isActive: true,
+              version: "1.0.0",
+              updatedAt: 87,
+            },
+            {
+              id: "historical-tool-write",
+              name: "company_update",
+              description: "Update company records.",
+              handlerMapping: "company.overview.update",
+              requiredRole: "ADMIN",
+              sideEffectLevel: "WRITE",
+              confirmationRequired: true,
+              inputSchema: "{\"type\":\"object\"}",
+              isActive: true,
+              version: "1.0.0",
+              updatedAt: 87,
+            },
+          ],
+          memory: {
+            activeCount: 2,
+            latestUpdatedAt: 89,
+            items: [
+              {
+                kind: "FACT",
+                content: "Historical memory: prefer concise replay outputs.",
+                importance: 0.8,
+                updatedAt: 88,
+              },
+            ],
+          },
+          rules: [
+            {
+              name: "Replay rule",
+              trigger: "replay",
+              instruction: "Keep the historical replay answer short.",
+              priority: 5,
+            },
+          ],
+        }),
+        promptHash: "source-prompt",
+        toolSetHash: "source-tools",
+        memoryRevisionHash: "source-memory",
+        ruleSetHash: "source-rules",
+        modelConfigHash: "source-model",
+        policyHash: "source-policy",
+        createdAt: 90,
+      });
       const failedRunId = await ctx.db.insert("agentRuns", {
         agentId,
+        agentVersionId: sourceVersionId,
         companyId: companyAId,
         userId: adminAId,
         triggerType: "WORKFLOW",
@@ -836,7 +963,7 @@ describe("Agent Runs", () => {
         requestedAt: 213,
       });
 
-      return { adminAId, adminBId, failedRunId, successRunId, pendingRunId, pendingApprovalId, pendingToolCallId };
+      return { adminAId, adminBId, failedRunId, successRunId, pendingRunId, pendingApprovalId, pendingToolCallId, sourceVersionId };
     });
 
     const adminAClient = t.withIdentity({ subject: adminAId });
@@ -861,9 +988,153 @@ describe("Agent Runs", () => {
       status: "QUEUED",
       triggerType: "MANUAL",
       userId: adminAId,
+      replayOfRunId: failedRunId,
+      replayMode: "CURRENT_ACTIVE",
     });
+    expect(replayState.run?.agentVersionId).not.toBe(sourceVersionId);
     expect(replayState.steps[0]).toMatchObject({ kind: "OBSERVE", status: "SUCCESS" });
     expect(replayState.replayLogs).toHaveLength(1);
+    expect(JSON.parse(replayState.replayLogs[0]?.metadata || "{}")).toMatchObject({
+      sourceRunId: failedRunId,
+      sourceStatus: "FAILED",
+      replayMode: "CURRENT_ACTIVE",
+    });
+
+    const sourceDetail = await adminAClient.query(api.agentRuns.getRunDetail, { runId: failedRunId });
+    expect(sourceDetail?.replayContext.sourceRun).toBeNull();
+    expect(sourceDetail?.replayContext.replayRuns).toEqual([
+      expect.objectContaining({
+        runId: replay.runId,
+        status: "QUEUED",
+        replayMode: "CURRENT_ACTIVE",
+      }),
+    ]);
+
+    const replayDetail = await adminAClient.query(api.agentRuns.getRunDetail, { runId: replay.runId });
+    expect(replayDetail?.replayContext.sourceRun).toEqual(expect.objectContaining({
+      runId: failedRunId,
+      status: "FAILED",
+      errorPreview: "Provider failed",
+    }));
+    expect(replayDetail?.replayContext.comparison).toEqual(expect.objectContaining({
+      statusChanged: true,
+      sourceStatus: "FAILED",
+      replayStatus: "QUEUED",
+      stepCountDelta: 1,
+      outputChanged: false,
+      errorChanged: true,
+    }));
+    expect(replayDetail?.replayContext.timelineDiff).toEqual([
+      expect.objectContaining({
+        stepIndex: 1,
+        changeType: "ADDED",
+        kindChanged: true,
+        statusChanged: true,
+        outputChanged: true,
+        errorChanged: false,
+        replay: expect.objectContaining({
+          kind: "OBSERVE",
+          status: "SUCCESS",
+          outputPreview: expect.stringContaining("Replay requested from run"),
+        }),
+      }),
+    ]);
+
+    const sameVersionReplay = await adminAClient.mutation(api.agentRuns.replayRun, {
+      runId: failedRunId,
+      mode: "SAME_VERSION",
+    });
+    const sameVersionReplayState = await t.run(async (ctx) => ({
+      run: await ctx.db.get(sameVersionReplay.runId),
+      replayLogs: await ctx.db
+        .query("auditLogs")
+        .filter((q) => q.eq(q.field("entityId"), sameVersionReplay.runId))
+        .collect(),
+    }));
+    expect(sameVersionReplay).toMatchObject({
+      replayOfRunId: failedRunId,
+      replayMode: "SAME_VERSION",
+    });
+    expect(sameVersionReplayState.run).toMatchObject({
+      agentVersionId: sourceVersionId,
+      replayOfRunId: failedRunId,
+      replayMode: "SAME_VERSION",
+    });
+    expect(JSON.parse(sameVersionReplayState.replayLogs[0]?.metadata || "{}")).toMatchObject({
+      sourceRunId: failedRunId,
+      replayMode: "SAME_VERSION",
+    });
+    const sameVersionExecutionContext = await t.query(internal.agentRuns.getReplayExecutionContextInternal, {
+      runId: sameVersionReplay.runId,
+    });
+    expect(sameVersionExecutionContext).toMatchObject({
+      replayMode: "SAME_VERSION",
+      replayOfRunId: failedRunId,
+      agentVersionId: sourceVersionId,
+      versionNumber: 1,
+      snapshotHash: "source-version-hash",
+      promptHash: "source-prompt",
+      toolSetHash: "source-tools",
+      memoryRevisionHash: "source-memory",
+      ruleSetHash: "source-rules",
+      modelConfigHash: "source-model",
+      policyHash: "source-policy",
+      systemPrompt: "Use the historical replay prompt.",
+      modelId: "historical-model",
+      temperature: 0.2,
+      toolCount: 2,
+      tools: [
+        {
+          id: "historical-tool-read",
+          name: "company_lookup",
+          description: "Look up company records.",
+          handlerMapping: "company.lookup",
+          requiredRole: "ADMIN",
+          sideEffectLevel: "READ",
+          confirmationRequired: false,
+          inputSchema: "{\"type\":\"object\"}",
+          isActive: true,
+          version: "1.0.0",
+          updatedAt: 87,
+          replayExecutable: true,
+          replayPolicy: "TEST_MODE_CANDIDATE",
+        },
+        {
+          id: "historical-tool-write",
+          name: "company_update",
+          description: "Update company records.",
+          handlerMapping: "company.overview.update",
+          requiredRole: "ADMIN",
+          sideEffectLevel: "WRITE",
+          confirmationRequired: true,
+          inputSchema: "{\"type\":\"object\"}",
+          isActive: true,
+          version: "1.0.0",
+          updatedAt: 87,
+          replayExecutable: false,
+          replayPolicy: "BLOCKED",
+          replayBlockedReason: "Historical replay does not execute write, destructive, or external tools.",
+        },
+      ],
+      memoryActiveCount: 2,
+      ruleCount: 1,
+      memoryContents: [
+        {
+          kind: "FACT",
+          content: "Historical memory: prefer concise replay outputs.",
+          importance: 0.8,
+          updatedAt: 88,
+        },
+      ],
+      rules: [
+        {
+          name: "Replay rule",
+          trigger: "replay",
+          instruction: "Keep the historical replay answer short.",
+          priority: 5,
+        },
+      ],
+    });
 
     await expect(adminBClient.mutation(api.agentRuns.cancelRun, { runId: pendingRunId })).rejects.toThrow("Unauthorized");
     await adminAClient.mutation(api.agentRuns.cancelRun, {

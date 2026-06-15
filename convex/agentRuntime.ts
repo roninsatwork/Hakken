@@ -12,6 +12,7 @@ import {
   buildToolFailureResult,
   buildToolResultPayload,
   canExecuteTool,
+  executeRegisteredTool,
   normalizeAiRuntimeError,
   parseToolCallPayload,
   validateToolCallArgsAgainstSchema,
@@ -56,21 +57,6 @@ function getToolConfirmationRequired(sideEffectLevel: ToolSideEffectLevel, confi
     return sideEffectLevel === "READ" ? (configured ?? false) : true;
 }
 
-function getStringToolArg(args: Record<string, unknown>, key: string) {
-    const value = args[key];
-    return typeof value === "string" ? value.trim() : "";
-}
-
-function getNumberToolArg(args: Record<string, unknown>, key: string) {
-    const value = args[key];
-    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function getOptionalStringToolArg(args: Record<string, unknown>, key: string) {
-    const value = args[key];
-    return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
 function calculateModelCostGBP(args: {
     inputTokens: number;
     outputTokens: number;
@@ -89,8 +75,45 @@ function isConfirmationRequiredDenial(reason?: string) {
     return reason === "Tool execution requires explicit user confirmation.";
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function getApprovalRequiredMessage(toolName: string) {
     return `Approval required before continuing. The agent requested "${toolName}", and an administrator must approve or reject that tool call.`;
+}
+
+function getApprovedToolCompletionMessage(args: {
+    handlerMapping: string;
+    normalizedToolName: string;
+    result: unknown;
+}) {
+    if (args.handlerMapping === "company.overview.update" && isRecord(args.result)) {
+        return args.result.changed === false
+            ? "Approved company overview update completed with no changes."
+            : "Approved company overview update completed.";
+    }
+
+    return `Approved tool call completed: ${args.normalizedToolName}.`;
+}
+
+function buildHistoricalReplaySystemPrompt(args: {
+    systemPrompt: string | null | undefined;
+    rules: Array<{ name?: string; trigger?: string; instruction: string; priority?: number }>;
+}) {
+    const configuredPrompt = args.systemPrompt || "";
+    if (args.rules.length === 0) return configuredPrompt;
+
+    const compiledRules = args.rules
+        .map((rule) => {
+            const label = rule.name ? `RULE: ${rule.name}` : "RULE";
+            const priority = rule.priority !== undefined ? `PRIORITY: ${rule.priority}` : "PRIORITY: historical";
+            const trigger = rule.trigger ? `WHEN: ${rule.trigger}` : "WHEN: historical replay context applies";
+            return `[${label}]\n[${priority}]\n${trigger}\nTHEN: ${rule.instruction}`;
+        })
+        .join("\n\n---\n\n");
+
+    return `${configuredPrompt}\n\n====================\nHISTORICAL ACTIVE AGENT RULES FROM THE REPLAYED VERSION SNAPSHOT:\n\n${compiledRules}`;
 }
 
 export const runAgentObjective = internalAction({
@@ -584,48 +607,27 @@ export const runAgentObjective = internalAction({
                     status: "error",
                     error: toolError,
                 });
-            } else if (toolMetadata.handlerMapping === "knowledge.search") {
-                const query = getStringToolArg(toolCall.args, "query") || args.content;
-                const limit = getNumberToolArg(toolCall.args, "limit");
-                const result = await ctx.runQuery(internal.aiToolReadTools.searchKnowledge, {
-                    query,
-                    agentId: args.agentId,
-                    companyId: thread.companyId,
-                    limit,
-                });
-                toolStatus = "SUCCESS";
-                toolResponsePayload = buildToolResultPayload({
-                    status: "success",
-                    data: result,
-                });
-            } else if (toolMetadata.handlerMapping === "company.overview.update") {
-                if (!thread.companyId) {
-                    throw new Error("Company overview updates require a tenant context.");
-                }
-                if (!thread.userId) {
-                    throw new Error("Company overview updates require an authenticated actor.");
-                }
-                const overview = getStringToolArg(toolCall.args, "overview");
-                const idempotencyKey = getOptionalStringToolArg(toolCall.args, "idempotencyKey");
-                const result = await ctx.runMutation(internal.aiToolWriteTools.updateCompanyOverview, {
-                    companyId: thread.companyId,
-                    actorId: thread.userId,
-                    overview,
-                    runId,
-                    toolCallId: undefined,
-                    idempotencyKey,
-                });
-                toolStatus = "SUCCESS";
-                toolResponsePayload = buildToolResultPayload({
-                    status: "success",
-                    data: result,
-                });
             } else {
-                toolError = "Unknown or unimplemented tool handler mapping.";
-                toolResponsePayload = buildToolResultPayload({
-                    status: "error",
-                    error: toolError,
-                });
+                try {
+                    const result = await executeRegisteredTool({
+                        ctx,
+                        handlerMapping: toolMetadata.handlerMapping,
+                        args: toolCall.args,
+                        agentId: args.agentId,
+                        companyId: thread.companyId,
+                        userId: thread.userId,
+                        runId,
+                        fallbackQuery: args.content,
+                    });
+                    toolStatus = "SUCCESS";
+                    toolResponsePayload = buildToolResultPayload({
+                        status: "success",
+                        data: result,
+                    });
+                } catch (error: unknown) {
+                    toolError = getErrorMessage(error);
+                    toolResponsePayload = buildToolFailureResult(error);
+                }
             }
 
             toolCallCount += 1;
@@ -852,8 +854,23 @@ export const runTriggeredAgentObjective = internalAction({
       if (!agent) throw new Error("Agent not found.");
       if (agent.isActive === false) throw new Error("Agent is inactive.");
 
+      const replayExecutionContext = runId
+        ? await ctx.runQuery(internal.agentRuns.getReplayExecutionContextInternal, { runId })
+        : null;
+      const requestedModelId = replayExecutionContext?.modelId
+        ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId);
+      const executionSystemPrompt = replayExecutionContext
+        ? buildHistoricalReplaySystemPrompt({
+            systemPrompt: replayExecutionContext.systemPrompt ?? agent.systemPrompt,
+            rules: replayExecutionContext.rules,
+          })
+        : agent.systemPrompt;
+      const executionTemperature = replayExecutionContext?.temperature !== undefined
+        ? replayExecutionContext.temperature
+        : (agent.temperature !== undefined ? agent.temperature : 0.1);
+
       const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-        requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+        requestedModelId,
         companyId: args.companyId,
         useCase: args.triggerType === "WORKFLOW" ? "workflow" : "agent",
       });
@@ -880,13 +897,14 @@ export const runTriggeredAgentObjective = internalAction({
           status: "RUNNING",
         });
       }
+      let stepIndex = await ctx.runQuery(internal.agentRuns.getLatestStepIndexInternal, { runId });
 
       if (!safetyDecision.allowed) {
         await ctx.runMutation(internal.agentRuns.appendStepInternal, {
           runId,
           agentId: args.agentId,
           companyId: args.companyId,
-          stepIndex: 1,
+          stepIndex: stepIndex + 1,
           kind: "FINAL",
           status: "FAILED",
           output: safetyDecision.response,
@@ -910,7 +928,126 @@ export const runTriggeredAgentObjective = internalAction({
       }
 
       let objectiveContent = args.objective;
-      let stepIndex = 0;
+      if (replayExecutionContext) {
+        const replayExecutableTools = replayExecutionContext.tools.filter((tool) => tool.replayExecutable);
+        const blockedReplayTools = replayExecutionContext.tools.filter((tool) => !tool.replayExecutable);
+        stepIndex += 1;
+        await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+          runId,
+          agentId: args.agentId,
+          companyId: args.companyId,
+          stepIndex,
+          kind: "OBSERVE",
+          status: "SUCCESS",
+          input: args.objective,
+          output: JSON.stringify({
+            replayMode: replayExecutionContext.replayMode,
+            replayOfRunId: replayExecutionContext.replayOfRunId,
+            agentVersionId: replayExecutionContext.agentVersionId,
+            versionNumber: replayExecutionContext.versionNumber,
+            snapshotHash: replayExecutionContext.snapshotHash,
+            promptHash: replayExecutionContext.promptHash,
+            toolSetHash: replayExecutionContext.toolSetHash,
+            memoryRevisionHash: replayExecutionContext.memoryRevisionHash,
+            ruleSetHash: replayExecutionContext.ruleSetHash,
+            modelConfigHash: replayExecutionContext.modelConfigHash,
+            policyHash: replayExecutionContext.policyHash,
+            hydrated: {
+              prompt: replayExecutionContext.systemPrompt !== undefined,
+              model: replayExecutionContext.modelId !== undefined,
+              temperature: replayExecutionContext.temperature !== undefined,
+              toolDeclarations: replayExecutionContext.tools.length > 0,
+              toolExecution: false,
+              memoryContents: replayExecutionContext.memoryContents.length > 0,
+              rules: replayExecutionContext.rules.length > 0,
+            },
+            snapshotCounts: {
+              tools: replayExecutionContext.toolCount,
+              replayExecutableTools: replayExecutableTools.length,
+              blockedReplayTools: blockedReplayTools.length,
+              activeMemories: replayExecutionContext.memoryActiveCount,
+              rules: replayExecutionContext.ruleCount,
+            },
+            historicalTools: replayExecutionContext.tools.map((tool) => ({
+              name: tool.name,
+              handlerMapping: tool.handlerMapping,
+              requiredRole: tool.requiredRole,
+              sideEffectLevel: tool.sideEffectLevel,
+              confirmationRequired: tool.confirmationRequired,
+              isActive: tool.isActive,
+              version: tool.version,
+              replayExecutable: tool.replayExecutable,
+              replayPolicy: tool.replayPolicy,
+              replayBlockedReason: tool.replayBlockedReason,
+              hasInputSchema: Boolean(tool.inputSchema),
+            })),
+          }),
+        });
+        if (replayExecutionContext.tools.length > 0) {
+          stepIndex += 1;
+          await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+            runId,
+            agentId: args.agentId,
+            companyId: args.companyId,
+            stepIndex,
+            kind: "TOOL_CALL",
+            status: "SKIPPED",
+            input: JSON.stringify({
+              mode: "HISTORICAL_TOOL_REPLAY_TEST_MODE",
+              requestedToolCount: replayExecutionContext.tools.length,
+            }),
+            output: JSON.stringify({
+              executed: false,
+              reason: "Historical tool execution is recorded as a dry-run policy check. Live tool calls are not replayed from snapshots.",
+              testModeCandidates: replayExecutableTools.map((tool) => ({
+                name: tool.name,
+                handlerMapping: tool.handlerMapping,
+                requiredRole: tool.requiredRole,
+                sideEffectLevel: tool.sideEffectLevel,
+                hasInputSchema: Boolean(tool.inputSchema),
+              })),
+              blockedTools: blockedReplayTools.map((tool) => ({
+                name: tool.name,
+                handlerMapping: tool.handlerMapping,
+                sideEffectLevel: tool.sideEffectLevel,
+                replayBlockedReason: tool.replayBlockedReason,
+              })),
+            }),
+          });
+          objectiveContent += buildUntrustedKnowledgeContext({
+            sourceLabel: "historical replay tool declarations",
+            chunks: replayExecutionContext.tools.map((tool) => {
+              const status = tool.replayExecutable
+                ? "read-only historical tool declaration available for reasoning only"
+                : "historical tool execution blocked during replay";
+              return [
+                `tool: ${tool.name}`,
+                `handlerMapping: ${tool.handlerMapping}`,
+                tool.description ? `description: ${tool.description}` : undefined,
+                tool.requiredRole ? `requiredRole: ${tool.requiredRole}` : undefined,
+                tool.sideEffectLevel ? `sideEffectLevel: ${tool.sideEffectLevel}` : undefined,
+                tool.version ? `version: ${tool.version}` : undefined,
+                `replayStatus: ${status}`,
+              ].filter(Boolean).join("\n");
+            }),
+            maxChars: 8000,
+          });
+        }
+        if (replayExecutionContext.memoryContents.length > 0) {
+          objectiveContent += buildUntrustedKnowledgeContext({
+            sourceLabel: "historical replay memory snapshot",
+            chunks: replayExecutionContext.memoryContents.map((memory) => {
+              const metadata = [
+                memory.kind ? `kind: ${memory.kind}` : undefined,
+                memory.importance !== undefined ? `importance: ${memory.importance}` : undefined,
+                memory.updatedAt !== undefined ? `updatedAt: ${memory.updatedAt}` : undefined,
+              ].filter(Boolean).join(", ");
+              return metadata ? `[${metadata}]\n${memory.content}` : memory.content;
+            }),
+            maxChars: 6000,
+          });
+        }
+      }
       const memoryMatches = await ctx.runQuery(internal.agentMemories.searchMemoryInternal, {
         agentId: args.agentId,
         companyId: args.companyId,
@@ -950,8 +1087,8 @@ export const runTriggeredAgentObjective = internalAction({
           parts: [{ text: objectiveContent }],
         }] satisfies Content[],
         config: {
-          systemInstruction: buildAgentSystemInstruction(agent.systemPrompt),
-          temperature: agent.temperature !== undefined ? agent.temperature : 0.1,
+          systemInstruction: buildAgentSystemInstruction(executionSystemPrompt),
+          temperature: executionTemperature,
         },
       }, {
         operation: "triggeredAgentGenerate",
@@ -1078,52 +1215,31 @@ export const resumeApprovedToolCall = internalAction({
     let status: "SUCCESS" | "FAILED" = "FAILED";
     let error: string | undefined;
 
-    if (context.toolCall.handlerMapping === "knowledge.search") {
-      const query = getStringToolArg(parsedArgs, "query") || context.run.objective;
-      const limit = getNumberToolArg(parsedArgs, "limit");
-      const result = await ctx.runQuery(internal.aiToolReadTools.searchKnowledge, {
-        query,
+    try {
+      const result = await executeRegisteredTool({
+        ctx,
+        handlerMapping: context.toolCall.handlerMapping,
+        args: parsedArgs,
         agentId: context.approval.agentId,
         companyId: context.approval.companyId,
-        limit,
-      });
-      status = "SUCCESS";
-      resultPayload = buildToolResultPayload({
-        status: "success",
-        data: result,
-      });
-      finalOutput = `Approved tool call completed: ${context.toolCall.normalizedToolName}.`;
-    } else if (context.toolCall.handlerMapping === "company.overview.update") {
-      if (!context.approval.companyId) {
-        throw new Error("Company overview updates require a tenant context.");
-      }
-      if (!context.approval.reviewedBy) {
-        throw new Error("Company overview updates require an approving administrator.");
-      }
-      const overview = getStringToolArg(parsedArgs, "overview");
-      const idempotencyKey = getOptionalStringToolArg(parsedArgs, "idempotencyKey");
-      const result = await ctx.runMutation(internal.aiToolWriteTools.updateCompanyOverview, {
-        companyId: context.approval.companyId,
-        actorId: context.approval.reviewedBy,
-        overview,
+        userId: context.approval.reviewedBy,
         runId: context.approval.runId,
         toolCallId: context.toolCall._id,
-        idempotencyKey,
+        fallbackQuery: context.run.objective,
       });
       status = "SUCCESS";
       resultPayload = buildToolResultPayload({
         status: "success",
         data: result,
       });
-      finalOutput = result.changed
-        ? "Approved company overview update completed."
-        : "Approved company overview update completed with no changes.";
-    } else {
-      error = "Unknown or unimplemented tool handler mapping.";
-      resultPayload = buildToolResultPayload({
-        status: "error",
-        error,
+      finalOutput = getApprovedToolCompletionMessage({
+        handlerMapping: context.toolCall.handlerMapping,
+        normalizedToolName: context.toolCall.normalizedToolName,
+        result,
       });
+    } catch (toolError: unknown) {
+      error = getErrorMessage(toolError);
+      resultPayload = buildToolFailureResult(toolError);
       finalOutput = `Approved tool call failed: ${error}`;
     }
 

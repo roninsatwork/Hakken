@@ -5,7 +5,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
-import { Ban, Brain, Check, ClipboardCheck, Clock3, Lightbulb, Loader2, MessageSquare, MinusCircle, RotateCcw, ShieldCheck, SlidersHorizontal, ThumbsDown, ThumbsUp, Timer, Wrench, X, type LucideIcon } from "lucide-react";
+import { Ban, Brain, Check, ClipboardCheck, Clock3, Eye, Lightbulb, Loader2, MessageSquare, MinusCircle, PlayCircle, RotateCcw, ShieldCheck, SlidersHorizontal, ThumbsDown, ThumbsUp, Timer, Wrench, X, type LucideIcon } from "lucide-react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
@@ -22,6 +22,7 @@ type RunStatus = AgentRun["status"];
 type StatusFilter = "ALL" | RunStatus;
 type FeedbackRating = AgentRunFeedback["rating"];
 type FeedbackLabel = AgentRunFeedback["labels"][number];
+type ReplayMode = "CURRENT_ACTIVE" | "SAME_VERSION";
 
 const statusFilters: StatusFilter[] = ["ALL", "QUEUED", "RUNNING", "PENDING_APPROVAL", "SUCCESS", "FAILED", "CANCELLED"];
 const feedbackLabels: Array<{ label: FeedbackLabel; text: string }> = [
@@ -49,6 +50,24 @@ function formatDuration(ms: number) {
   if (!Number.isFinite(ms) || ms <= 0) return "0s";
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatSignedDurationDelta(ms: number | undefined) {
+  if (ms === undefined) return "not available";
+  const prefix = ms > 0 ? "+" : "";
+  return `${prefix}${formatDuration(ms)}`;
+}
+
+function formatSignedNumberDelta(value: number | undefined) {
+  if (value === undefined) return "not available";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toLocaleString()}`;
+}
+
+function formatSignedCurrencyDelta(value: number | undefined) {
+  if (value === undefined) return "not available";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatCurrency(value)}`;
 }
 
 function getStatusTone(status: RunStatus) {
@@ -84,6 +103,31 @@ function getReflectionTone(category: string) {
   return "text-sky-500 bg-sky-500/10 border-sky-500/20";
 }
 
+function getSmokeEvalTone(status: RunStatus) {
+  if (status === "SUCCESS") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
+  if (status === "FAILED") return "border-red-500/20 bg-red-500/10 text-red-500";
+  if (status === "CANCELLED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
+  return "border-sky-500/20 bg-sky-500/10 text-sky-500";
+}
+
+function getSmokeEvalModeLabel(mode: string) {
+  return mode === "MODEL_GRADED" ? "Model graded" : "Contract";
+}
+
+function getStepTone(status: string) {
+  if (status === "SUCCESS") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
+  if (status === "FAILED") return "border-red-500/20 bg-red-500/10 text-red-500";
+  if (status === "SKIPPED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
+  return "border-sky-500/20 bg-sky-500/10 text-sky-500";
+}
+
+function getStepDiffTone(changeType: string) {
+  if (changeType === "ADDED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
+  if (changeType === "REMOVED") return "border-red-500/20 bg-red-500/10 text-red-500";
+  if (changeType === "CHANGED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
+  return "border-border-dim bg-white/[0.03] text-muted";
+}
+
 function MetricTile({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
   return (
     <div className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex items-center gap-3 min-w-0">
@@ -103,7 +147,9 @@ export default function AgentRunsPage() {
   const agentId = params.id as Id<"agents">;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [activeRunId, setActiveRunId] = useState<Id<"agentRuns"> | null>(null);
+  const [detailRunId, setDetailRunId] = useState<Id<"agentRuns"> | null>(null);
   const [activeCandidateId, setActiveCandidateId] = useState<Id<"agentMemoryCandidates"> | null>(null);
+  const [isRunningEvalSuite, setIsRunningEvalSuite] = useState(false);
   const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
   const [feedbackDraft, setFeedbackDraft] = useState<{
     run: AgentRun;
@@ -118,13 +164,16 @@ export default function AgentRunsPage() {
   const generateMemoryCandidates = useMutation(api.agentMemoryCandidates.generateForRun);
   const decideMemoryCandidate = useMutation(api.agentMemoryCandidates.decideCandidate);
   const createEvalFixture = useMutation(api.agentEvalFixtures.createFromRun);
+  const runEvalSuite = useMutation(api.agentEvalFixtures.runEvalSuite);
   const generateImprovementSuggestions = useMutation(api.agentImprovementSuggestions.generateForRun);
   const decideImprovementSuggestion = useMutation(api.agentImprovementSuggestions.decideSuggestion);
   const analytics = useQuery(api.agentRuns.getAnalyticsForAgent, { agentId });
+  const runDetail = useQuery(api.agentRuns.getRunDetail, detailRunId ? { runId: detailRunId } : "skip");
   const myFeedback = useQuery(api.agentRunFeedback.getMineForAgent, { agentId });
   const reflections = useQuery(api.agentRunReflections.getRecentForAgent, { agentId });
   const memoryCandidates = useQuery(api.agentMemoryCandidates.getRecentForAgent, { agentId });
   const evalFixtures = useQuery(api.agentEvalFixtures.getRecentForAgent, { agentId });
+  const smokeEvalHistory = useQuery(api.agentEvalFixtures.getSmokeEvalHistory, { agentId, limit: 5 });
   const improvementSuggestions = useQuery(api.agentImprovementSuggestions.getRecentForAgent, { agentId });
   const {
     results: agentVersions,
@@ -186,14 +235,17 @@ export default function AgentRunsPage() {
     }
     return entries;
   }, [improvementSuggestions]);
+  const activeEvalFixtureCount = evalFixtures?.length ?? 0;
 
-  const handleReplay = async (runId: Id<"agentRuns">) => {
+  const handleReplay = async (runId: Id<"agentRuns">, mode: ReplayMode = "CURRENT_ACTIVE") => {
     setActiveRunId(runId);
     try {
-      const replay = await replayRun({ runId });
+      const replay = await replayRun({ runId, mode });
       setModalState({
         title: "Replay queued",
-        message: `Created replay run ${replay.runId}. It will execute through the governed agent runtime.`,
+        message: mode === "SAME_VERSION"
+          ? `Created replay run ${replay.runId}. It is pinned to the source run's agent version snapshot and links back to the original run.`
+          : `Created replay run ${replay.runId}. It will execute with the current active agent configuration and keep a link back to the original run.`,
       });
     } catch (error) {
       setModalState({
@@ -338,6 +390,24 @@ export default function AgentRunsPage() {
     }
   };
 
+  const handleRunEvalSuite = async () => {
+    setIsRunningEvalSuite(true);
+    try {
+      const result = await runEvalSuite({ agentId });
+      setModalState({
+        title: "Eval suite complete",
+        message: `Ran ${result.total} contract eval${result.total === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.active} still active.`,
+      });
+    } catch (error) {
+      setModalState({
+        title: "Eval suite blocked",
+        message: error instanceof Error ? error.message : "The eval suite could not be run.",
+      });
+    } finally {
+      setIsRunningEvalSuite(false);
+    }
+  };
+
   const handleGenerateSuggestions = async (runId: Id<"agentRuns">) => {
     setActiveRunId(runId);
     try {
@@ -419,6 +489,123 @@ export default function AgentRunsPage() {
           <MetricTile label="Total cost" value={analytics ? formatCurrency(analytics.totals.costGBP) : "..."} icon={Clock3} />
           <MetricTile label="Avg latency" value={analytics ? formatDuration(analytics.totals.averageLatencyMs) : "..."} icon={Timer} />
           <MetricTile label="Tool calls" value={analytics ? analytics.totals.toolCalls.toLocaleString() : "..."} icon={Wrench} />
+        </div>
+
+        <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-4 flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-[14px] font-semibold text-foreground tracking-tight flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4 text-brand" />
+                Eval health
+              </h3>
+              <p className="text-[12px] text-secondary mt-1">
+                Smoke eval coverage, recent pass/fail results, and fixture contract failures.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+              <button
+                type="button"
+                onClick={handleRunEvalSuite}
+                disabled={!evalFixtures || activeEvalFixtureCount === 0 || isRunningEvalSuite}
+                className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-9"
+              >
+                {isRunningEvalSuite ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                Run suite
+              </button>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-6 gap-y-2 min-w-0 lg:min-w-[540px]">
+                {[
+                  { label: "Fixtures", value: evalFixtures ? activeEvalFixtureCount.toLocaleString() : "..." },
+                  { label: "Smoke evals", value: smokeEvalHistory ? smokeEvalHistory.totals.total.toLocaleString() : "..." },
+                  { label: "Passed", value: smokeEvalHistory ? smokeEvalHistory.totals.passed.toLocaleString() : "..." },
+                  { label: "Failed", value: smokeEvalHistory ? smokeEvalHistory.totals.failed.toLocaleString() : "..." },
+                  { label: "Model graded", value: smokeEvalHistory ? smokeEvalHistory.totals.modelGraded.toLocaleString() : "..." },
+                ].map((stat) => (
+                  <div key={stat.label} className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>
+                    <div className="text-[17px] font-semibold text-foreground tracking-tight">{stat.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {!smokeEvalHistory ? (
+            <div className="py-8 flex items-center justify-center text-muted">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : smokeEvalHistory.entries.length === 0 ? (
+            <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
+              No smoke evals have been recorded for this agent yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              {smokeEvalHistory.entries.map((entry) => (
+                <div key={entry.runId} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-3 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getSmokeEvalTone(entry.status)}`}>
+                          {entry.status.replace("_", " ")}
+                        </span>
+                        <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
+                          {getSmokeEvalModeLabel(entry.gradingMode)}
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-foreground mt-2 leading-relaxed line-clamp-2">
+                        {entry.fixture?.objective || entry.objective}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono text-muted shrink-0">
+                      {formatDateTime(entry.completedAt ?? entry.startedAt)}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-[11px] font-mono text-muted">
+                    {entry.fixture && <span>{entry.fixture.type.toLowerCase().replaceAll("_", " ")}</span>}
+                    {entry.modelId && <span>model: {entry.modelId}</span>}
+                    {entry.agentVersionId && <span>version: {entry.agentVersionId}</span>}
+                  </div>
+
+                  {(entry.finalOutput || entry.error) && (
+                    <p className={`text-[12px] leading-relaxed line-clamp-2 ${entry.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                      {entry.error || entry.finalOutput}
+                    </p>
+                  )}
+
+                  {entry.missingToolMappings.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {entry.missingToolMappings.map((mapping) => (
+                        <span key={mapping} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-red-500/20 bg-red-500/10 text-red-400">
+                          missing {mapping}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {entry.expectedBlockedActionSummaries.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {entry.expectedBlockedActionSummaries.map((summary) => (
+                        <span key={summary} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                          blocked {summary}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setDetailRunId(entry.runId)}
+                      className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[11px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all flex items-center gap-2"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Inspect run
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {analytics && (
@@ -537,6 +724,14 @@ export default function AgentRunsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setDetailRunId(run._id)}
+                      className="p-2 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-secondary hover:text-foreground border border-border-dim transition-all"
+                      title="Inspect run details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                     {(suggestionsByRun.get(run._id) || []).slice(0, 1).map((suggestion) => (
                       <div key={suggestion._id} className="flex items-center gap-1">
                         <button
@@ -635,10 +830,10 @@ export default function AgentRunsPage() {
                     {canReplay(run.status) && (
                       <button
                         type="button"
-                        onClick={() => handleReplay(run._id)}
+                        onClick={() => handleReplay(run._id, "CURRENT_ACTIVE")}
                         disabled={activeRunId === run._id}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-brand/10 text-secondary hover:text-brand border border-border-dim transition-all disabled:opacity-50"
-                        title="Replay run"
+                        title="Replay with current active config"
                       >
                         {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                       </button>
@@ -693,6 +888,437 @@ export default function AgentRunsPage() {
             </button>
           </div>
         </div>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={!!detailRunId}
+        onClose={() => setDetailRunId(null)}
+        title="Run detail"
+        size="xl"
+      >
+        {!detailRunId ? null : runDetail === undefined ? (
+          <div className="py-16 flex items-center justify-center text-muted">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : runDetail === null ? (
+          <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
+            This run could not be found or is no longer accessible.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <div className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-3">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.run.status)}`}>
+                      {runDetail.run.status.replace("_", " ")}
+                    </span>
+                    <span className="text-[11px] font-mono text-muted">{runDetail.run.triggerType}</span>
+                    <span className="text-[11px] font-mono text-muted">{formatDateTime(runDetail.run.startedAt)}</span>
+                    {runDetail.run.completedAt && (
+                      <span className="text-[11px] font-mono text-muted">
+                        {formatDuration(runDetail.run.completedAt - runDetail.run.startedAt)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[14px] text-foreground leading-relaxed mt-3">{runDetail.run.objective}</p>
+                </div>
+                <div className="text-[11px] font-mono text-muted md:text-right flex flex-col gap-1 shrink-0">
+                  <span>run: {runDetail.run._id}</span>
+                  {runDetail.run.agentVersionId && <span>version: {runDetail.run.agentVersionId}</span>}
+                  {runDetail.run.modelId && <span>model: {runDetail.run.modelId}</span>}
+                </div>
+              </div>
+
+              {(runDetail.run.finalOutput || runDetail.run.error) && (
+                <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
+                    {runDetail.run.error ? "Error" : "Final output"}
+                  </div>
+                  <p className={`text-[12px] leading-relaxed whitespace-pre-wrap ${runDetail.run.error ? "text-red-400" : "text-secondary"}`}>
+                    {runDetail.run.error || runDetail.run.finalOutput}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Learning actions</h3>
+                <p className="text-[12px] text-secondary mt-1 leading-relaxed">
+                  {runDetail.evalFixtureContext.activeCount > 0
+                    ? `This run is covered by ${runDetail.evalFixtureContext.activeCount} active eval fixture${runDetail.evalFixtureContext.activeCount === 1 ? "" : "s"}.`
+                    : runDetail.evalFixtureContext.canCreateFromRun
+                      ? "Convert this completed run into a regression fixture from the same evidence view."
+                      : "Eval fixtures can be created after the run completes or is cancelled."}
+                </p>
+                {runDetail.evalFixtureContext.fixtures.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {runDetail.evalFixtureContext.fixtures.map((fixture) => (
+                      <span key={fixture.fixtureId} className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${
+                        fixture.status === "ACTIVE"
+                          ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
+                          : "border-border-dim bg-white/[0.03] text-muted"
+                      }`}>
+                        {fixture.type.toLowerCase().replaceAll("_", " ")} {fixture.status.toLowerCase()}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {canReplay(runDetail.run.status) && (
+                  <button
+                    type="button"
+                    onClick={() => handleReplay(runDetail.run._id, "CURRENT_ACTIVE")}
+                    disabled={activeRunId === runDetail.run._id}
+                    className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                    Replay current
+                  </button>
+                )}
+                {canReplay(runDetail.run.status) && runDetail.run.agentVersionId && (
+                  <button
+                    type="button"
+                    onClick={() => handleReplay(runDetail.run._id, "SAME_VERSION")}
+                    disabled={activeRunId === runDetail.run._id}
+                    className="px-3 py-2 rounded-[8px] border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 text-[12px] font-semibold hover:bg-indigo-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                    Replay version
+                  </button>
+                )}
+                {canReplay(runDetail.run.status) && (
+                  <button
+                    type="button"
+                    onClick={() => handleReflect(runDetail.run._id)}
+                    disabled={activeRunId === runDetail.run._id}
+                    className="px-3 py-2 rounded-[8px] border border-sky-500/20 bg-sky-500/10 text-sky-300 text-[12px] font-semibold hover:bg-sky-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                    Reflect
+                  </button>
+                )}
+                {runDetail.evalFixtureContext.canCreateFromRun && (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateEvalFixture(runDetail.run._id)}
+                    disabled={activeRunId === runDetail.run._id}
+                    className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                    {runDetail.evalFixtureContext.activeCount > 0 ? "Update eval" : "Create eval"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {(runDetail.replayContext.sourceRun || runDetail.replayContext.replayRuns.length > 0) && (
+              <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-3 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div>
+                    <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Replay context</h3>
+                    <p className="text-[12px] text-secondary mt-1">
+                      Compare replay lineage and status changes without leaving the run detail view.
+                    </p>
+                  </div>
+                  {runDetail.run.replayMode && (
+                    <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-sky-500/20 bg-sky-500/10 text-sky-300 self-start">
+                      {runDetail.run.replayMode.replace("_", " ").toLowerCase()}
+                    </span>
+                  )}
+                </div>
+
+                {runDetail.replayContext.sourceRun && runDetail.replayContext.comparison && (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-3 flex flex-col gap-3">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Replay of</div>
+                        <button
+                          type="button"
+                          onClick={() => setDetailRunId(runDetail.replayContext.sourceRun?.runId || null)}
+                          className="text-[13px] text-brand hover:text-brand-light transition-colors text-left break-all"
+                        >
+                          {runDetail.replayContext.sourceRun.runId}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.replayContext.sourceRun.status)}`}>
+                          original {runDetail.replayContext.sourceRun.status.replace("_", " ")}
+                        </span>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.replayContext.comparison.replayStatus)}`}>
+                          replay {runDetail.replayContext.comparison.replayStatus.replace("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+                      {[
+                        { label: "Latency", value: formatSignedDurationDelta(runDetail.replayContext.comparison.latencyDeltaMs) },
+                        { label: "Cost", value: formatSignedCurrencyDelta(runDetail.replayContext.comparison.costDeltaGBP) },
+                        { label: "Tokens", value: formatSignedNumberDelta(runDetail.replayContext.comparison.tokenDelta) },
+                        { label: "Steps", value: formatSignedNumberDelta(runDetail.replayContext.comparison.stepCountDelta) },
+                        {
+                          label: "Output",
+                          value: runDetail.replayContext.comparison.outputChanged ? "changed" : "same",
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
+                          <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{item.label}</div>
+                          <div className="text-[13px] text-foreground font-semibold mt-1 truncate">{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {runDetail.replayContext.timelineDiff.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Timeline diff</div>
+                        {runDetail.replayContext.timelineDiff.map((diff) => (
+                          <div key={diff.stepIndex} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-3 flex flex-col gap-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
+                                  step {diff.stepIndex}
+                                </span>
+                                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStepDiffTone(diff.changeType)}`}>
+                                  {diff.changeType.toLowerCase()}
+                                </span>
+                                {diff.durationDeltaMs !== undefined && (
+                                  <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-muted">
+                                    {formatSignedDurationDelta(diff.durationDeltaMs)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
+                                {diff.kindChanged && <span>kind</span>}
+                                {diff.statusChanged && <span>status</span>}
+                                {diff.outputChanged && <span>output</span>}
+                                {diff.errorChanged && <span>error</span>}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 min-w-0">
+                                <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">Original</div>
+                                {diff.source ? (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.source.kind.replace("_", " ")}</span>
+                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.source.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                                        {diff.source.status}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.source.summary}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] text-muted">No matching original step.</p>
+                                )}
+                              </div>
+                              <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 min-w-0">
+                                <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">Replay</div>
+                                {diff.replay ? (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.replay.kind.replace("_", " ")}</span>
+                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.replay.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                                        {diff.replay.status}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.replay.summary}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] text-muted">No matching replay step.</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {runDetail.replayContext.replayRuns.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Recent replays</div>
+                    {runDetail.replayContext.replayRuns.map((replay) => (
+                      <button
+                        key={replay.runId}
+                        type="button"
+                        onClick={() => setDetailRunId(replay.runId)}
+                        className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 text-left hover:bg-white/[0.05] transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                      >
+                        <span className="text-[12px] text-secondary break-all">{replay.runId}</span>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border self-start sm:self-auto ${getStatusTone(replay.status)}`}>
+                          {replay.status.replace("_", " ")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Steps</div>
+                <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.steps.length}</div>
+              </div>
+              <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Tool calls</div>
+                <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.toolCalls.length}</div>
+              </div>
+              <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Approvals</div>
+                <div className="text-[20px] font-semibold text-foreground mt-1">{runDetail.approvals.length}</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Execution timeline</h3>
+              {runDetail.timeline.length === 0 ? (
+                <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-6 text-[13px] text-secondary">
+                  No durable steps were recorded for this run.
+                </div>
+              ) : (
+                runDetail.timeline.map((step) => (
+                  <div key={step.stepId} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
+                          {step.stepIndex}. {step.kind.replace("_", " ")}
+                        </span>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStepTone(step.status)}`}>
+                          {step.status}
+                        </span>
+                        {step.durationMs !== undefined && (
+                          <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-black/20 text-muted">
+                            {formatDuration(step.durationMs)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-mono text-muted">{formatDateTime(step.startedAt)}</span>
+                    </div>
+                    <p className="text-[12px] text-secondary leading-relaxed whitespace-pre-wrap">{step.summary}</p>
+
+                    {(step.inputPreview || step.outputPreview || step.errorPreview) && (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                        {step.inputPreview && (
+                          <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
+                            <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">Input</div>
+                            <pre className="text-[11px] text-secondary whitespace-pre-wrap overflow-x-auto">{step.inputPreview}</pre>
+                          </div>
+                        )}
+                        {(step.outputPreview || step.errorPreview) && (
+                          <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
+                            <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
+                              {step.errorPreview ? "Error" : "Output"}
+                            </div>
+                            <pre className={`text-[11px] whitespace-pre-wrap overflow-x-auto ${step.errorPreview ? "text-red-400" : "text-secondary"}`}>
+                              {step.errorPreview || step.outputPreview}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3 text-[11px] font-mono text-muted">
+                      {step.modelId && <span>model: {step.modelId}</span>}
+                      {step.providerKey && <span>provider: {step.providerKey}</span>}
+                      {step.inputTokens !== undefined && <span>input: {step.inputTokens} tokens</span>}
+                      {step.outputTokens !== undefined && <span>output: {step.outputTokens} tokens</span>}
+                      {step.costGBP !== undefined && <span>cost: {formatCurrency(step.costGBP)}</span>}
+                    </div>
+                    {(step.linkedToolCalls.length > 0 || step.linkedApprovals.length > 0) && (
+                      <div className="flex flex-wrap gap-2">
+                        {step.linkedToolCalls.map((toolCall) => (
+                          <span key={toolCall.toolCallId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-sky-500/20 bg-sky-500/10 text-sky-300">
+                            tool {toolCall.handlerMapping}: {toolCall.status.toLowerCase().replace("_", " ")}
+                          </span>
+                        ))}
+                        {step.linkedApprovals.map((approval) => (
+                          <span key={approval.approvalId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-300">
+                            approval {approval.status.toLowerCase()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {runDetail.toolCalls.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Tool calls</h3>
+                {runDetail.toolCalls.map((toolCall) => (
+                  <div key={toolCall._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-foreground truncate">{toolCall.normalizedToolName}</div>
+                        <div className="text-[11px] font-mono text-muted truncate">{toolCall.handlerMapping}</div>
+                      </div>
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${toolCall.status === "SUCCESS" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : toolCall.status === "FAILED" || toolCall.status === "DENIED" ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-sky-500/20 bg-sky-500/10 text-sky-500"}`}>
+                        {toolCall.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-[11px] font-mono text-muted">
+                      <span>{toolCall.sideEffectLevel.toLowerCase()}</span>
+                      <span>{toolCall.requiredRole.toLowerCase()}</span>
+                      {toolCall.confirmationRequired && <span>confirmation required</span>}
+                      <span>{toolCall.argumentViewMode.toLowerCase()} args</span>
+                    </div>
+                    <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div className="text-[10px] uppercase tracking-widest font-mono text-muted">
+                          {toolCall.argumentViewMode === "RAW" ? "Raw arguments" : "Redacted arguments"}
+                        </div>
+                        {toolCall.rawArgumentsAvailable && toolCall.argumentViewMode !== "RAW" && (
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-muted">
+                            raw restricted
+                          </span>
+                        )}
+                      </div>
+                      <pre className="text-[11px] text-secondary overflow-x-auto whitespace-pre-wrap">
+                        {toolCall.argumentsPreview}
+                      </pre>
+                    </div>
+                    {(toolCall.resultJson || toolCall.error) && (
+                      <p className={`text-[12px] leading-relaxed line-clamp-4 ${toolCall.error ? "text-red-400" : "text-secondary"}`}>
+                        {toolCall.error || toolCall.resultJson}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {runDetail.approvals.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <h3 className="text-[12px] uppercase tracking-widest font-mono text-muted">Approvals</h3>
+                {runDetail.approvals.map((approval) => (
+                  <div key={approval._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border w-fit ${approval.status === "APPROVED" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : approval.status === "REJECTED" ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-sky-500/20 bg-sky-500/10 text-sky-500"}`}>
+                        {approval.status}
+                      </span>
+                      <span className="text-[11px] font-mono text-muted">{formatDateTime(approval.requestedAt)}</span>
+                    </div>
+                    {approval.message && <p className="text-[12px] text-secondary leading-relaxed">{approval.message}</p>}
+                    {approval.previewJson && (
+                      <pre className="text-[11px] text-secondary bg-black/20 border border-border-dim rounded-[8px] p-3 overflow-x-auto whitespace-pre-wrap">
+                        {approval.previewJson}
+                      </pre>
+                    )}
+                    {approval.decisionReason && (
+                      <p className="text-[12px] text-secondary leading-relaxed">
+                        <span className="text-muted font-mono">decision:</span> {approval.decisionReason}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </SonaeModal>
 
       <SonaeModal

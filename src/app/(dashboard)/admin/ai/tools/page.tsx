@@ -1,28 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
+  Activity,
   Plus,
   Search,
+  Settings,
   Trash2,
   TerminalSquare,
   Globe,
-  X
+  X,
+  Zap
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 export default function ConnectorsDashboard() {
+  const t = useTranslations("admin.aiTools.marketplace");
   const deleteToolMutation = useMutation(api.aiTools.deleteTool);
+  const installConnector = useMutation(api.aiTools.installConnector);
+  const testConnectorConnection = useMutation(api.aiTools.testConnectorConnection);
+  const marketplace = useQuery(api.aiTools.getConnectorMarketplace) || [];
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<Id<"aiTools"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [installingKey, setInstallingKey] = useState<string | null>(null);
+  const [testingConnectorId, setTestingConnectorId] = useState<Id<"toolConnectors"> | null>(null);
   const {
     results: tools,
     status,
@@ -46,6 +56,30 @@ export default function ConnectorsDashboard() {
       console.error(e);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleInstallConnector = async (key: string) => {
+    if (installingKey) return;
+    setInstallingKey(key);
+    try {
+      await installConnector({ key });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setInstallingKey(null);
+    }
+  };
+
+  const handleTestConnector = async (connectorId: Id<"toolConnectors">) => {
+    if (testingConnectorId) return;
+    setTestingConnectorId(connectorId);
+    try {
+      await testConnectorConnection({ connectorId });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTestingConnectorId(null);
     }
   };
 
@@ -94,6 +128,99 @@ export default function ConnectorsDashboard() {
           </Link>
         </div>
       </header>
+
+      <section className="w-full border border-border-dim bg-card/60 rounded-[8px] p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
+              <Zap className="w-4 h-4 text-brand" />
+              {t("title")}
+            </h2>
+            <p className="text-[12px] text-secondary mt-1 max-w-2xl">
+              {t("subtitle")}
+            </p>
+          </div>
+          <span className="text-[11px] text-muted font-mono">
+            {t("count", { count: marketplace.length })}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+          {marketplace.map((connector) => {
+            const installation = connector.installation;
+            const isInstalled = Boolean(installation);
+            const isBusy = installingKey === connector.key;
+            const isTesting = installation ? testingConnectorId === installation._id : false;
+
+            return (
+              <div key={connector.key} className="border border-border-dim bg-background/40 rounded-[8px] p-3 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-brand bg-brand/10 border border-brand/20 rounded-[6px] px-2 py-0.5">
+                        {connector.category}
+                      </span>
+                      <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted bg-foreground/5 border border-border-dim rounded-[6px] px-2 py-0.5">
+                        {connector.authMode}
+                      </span>
+                    </div>
+                    <h3 className="text-[14px] font-semibold text-foreground mt-2 truncate">{connector.name}</h3>
+                    <p className="text-[12px] text-muted mt-1 line-clamp-2">{connector.description}</p>
+                  </div>
+                  {installation && (
+                    <div className="flex flex-col items-end gap-1 text-right">
+                      <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-500">
+                        {installation.installStatus}
+                      </span>
+                      <span className="text-[10px] text-muted">
+                        {installation.testStatus || t("untested")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {connector.requiredScopes.map((scope) => (
+                    <span key={scope} className="text-[11px] font-mono text-secondary bg-foreground/5 rounded-[6px] px-2 py-1">
+                      {scope}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleInstallConnector(connector.key)}
+                    disabled={isBusy}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-[8px] bg-foreground text-background text-[12px] font-medium hover:opacity-90 disabled:opacity-60"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {isBusy ? t("installing") : isInstalled ? t("sync") : t("install")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => installation && handleTestConnector(installation._id)}
+                    disabled={!installation || isTesting}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-[8px] border border-border-dim text-[12px] font-medium text-foreground hover:bg-foreground/5 disabled:opacity-50"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    {isTesting ? t("testing") : t("test")}
+                  </button>
+                  {installation && (
+                    <Link
+                      href={`/admin/ai/tools/connectors/${installation._id}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-[8px] border border-border-dim text-[12px] font-medium text-foreground hover:bg-foreground/5"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      {t("manage")}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Control Bar */}
       <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">

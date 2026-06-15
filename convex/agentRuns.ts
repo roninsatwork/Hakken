@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
@@ -70,6 +70,11 @@ const approvalStatusValidator = v.union(
   v.literal("CANCELLED")
 );
 
+const replayModeValidator = v.union(
+  v.literal("CURRENT_ACTIVE"),
+  v.literal("SAME_VERSION")
+);
+
 type TerminalRunStatus = "SUCCESS" | "FAILED" | "CANCELLED";
 
 function isTerminalRunStatus(status: string): status is TerminalRunStatus {
@@ -125,6 +130,287 @@ function getRunLatencyMs(run: { startedAt: number; completedAt?: number }) {
   return run.completedAt !== undefined ? Math.max(0, run.completedAt - run.startedAt) : undefined;
 }
 
+function buildPreview(value: string | undefined, fallback = "") {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return fallback;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    const normalized = JSON.stringify(parsed, null, 2);
+    return normalized.length > 600 ? `${normalized.slice(0, 600)}...` : normalized;
+  } catch {
+    const normalized = trimmed.replace(/\s+/g, " ");
+    return normalized.length > 600 ? `${normalized.slice(0, 600)}...` : normalized;
+  }
+}
+
+function buildStepSummary(step: Doc<"agentRunSteps">) {
+  if (step.kind === "TOOL_CALL" && step.status === "SKIPPED" && step.output) {
+    try {
+      const parsed = JSON.parse(step.output) as {
+        executed?: boolean;
+        reason?: string;
+        testModeCandidates?: unknown[];
+        blockedTools?: unknown[];
+      };
+      if (parsed.executed === false && parsed.reason) {
+        const candidateCount = Array.isArray(parsed.testModeCandidates) ? parsed.testModeCandidates.length : 0;
+        const blockedCount = Array.isArray(parsed.blockedTools) ? parsed.blockedTools.length : 0;
+        return `${parsed.reason} Test-mode candidates: ${candidateCount}. Blocked tools: ${blockedCount}.`;
+      }
+    } catch {
+      // Fall through to regular preview handling.
+    }
+  }
+  if (step.error) return buildPreview(step.error, "Step failed.");
+  if (step.output) return buildPreview(step.output, "Step produced output.");
+  if (step.input) return buildPreview(step.input, "Step received input.");
+  return `${step.kind.toLowerCase().replace("_", " ")} step recorded.`;
+}
+
+function buildRunTimeline(args: {
+  steps: Doc<"agentRunSteps">[];
+  toolCalls: Doc<"agentToolCalls">[];
+  approvals: Doc<"agentRunApprovals">[];
+}) {
+  return args.steps.map((step) => {
+    const linkedToolCalls = args.toolCalls.filter((toolCall) => toolCall.stepId === step._id);
+    const linkedApprovals = args.approvals.filter((approval) => approval.stepId === step._id);
+    const durationMs = step.completedAt !== undefined ? Math.max(0, step.completedAt - step.startedAt) : undefined;
+    return {
+      stepId: step._id,
+      stepIndex: step.stepIndex,
+      kind: step.kind,
+      status: step.status,
+      startedAt: step.startedAt,
+      completedAt: step.completedAt,
+      durationMs,
+      summary: buildStepSummary(step),
+      inputPreview: buildPreview(step.input),
+      outputPreview: buildPreview(step.output),
+      errorPreview: buildPreview(step.error),
+      modelId: step.modelId,
+      providerKey: step.providerKey,
+      providerModelId: step.providerModelId,
+      inputTokens: step.inputTokens,
+      outputTokens: step.outputTokens,
+      costGBP: step.costGBP,
+      linkedToolCalls: linkedToolCalls.map((toolCall) => ({
+        toolCallId: toolCall._id,
+        normalizedToolName: toolCall.normalizedToolName,
+        handlerMapping: toolCall.handlerMapping,
+        status: toolCall.status,
+        sideEffectLevel: toolCall.sideEffectLevel,
+        confirmationRequired: toolCall.confirmationRequired,
+      })),
+      linkedApprovals: linkedApprovals.map((approval) => ({
+        approvalId: approval._id,
+        status: approval.status,
+        requestedAt: approval.requestedAt,
+        reviewedAt: approval.reviewedAt,
+      })),
+    };
+  });
+}
+
+function buildToolCallDetail(toolCall: Doc<"agentToolCalls">, viewerRole: string | undefined) {
+  const canViewRawArguments = viewerRole === "SUPER_ADMIN";
+  const argumentsPreview = canViewRawArguments
+    ? buildPreview(toolCall.argumentsJson)
+    : buildPreview(
+        toolCall.redactedArgumentsJson,
+        "Arguments redacted. Super admins can inspect raw arguments."
+      );
+
+  return {
+    _id: toolCall._id,
+    _creationTime: toolCall._creationTime,
+    runId: toolCall.runId,
+    stepId: toolCall.stepId,
+    agentId: toolCall.agentId,
+    toolId: toolCall.toolId,
+    normalizedToolName: toolCall.normalizedToolName,
+    handlerMapping: toolCall.handlerMapping,
+    argumentsPreview,
+    rawArgumentsPreview: canViewRawArguments ? buildPreview(toolCall.argumentsJson) : undefined,
+    redactedArgumentsPreview: buildPreview(toolCall.redactedArgumentsJson),
+    argumentViewMode: canViewRawArguments ? "RAW" : "REDACTED",
+    rawArgumentsAvailable: Boolean(toolCall.argumentsJson),
+    status: toolCall.status,
+    requiredRole: toolCall.requiredRole,
+    sideEffectLevel: toolCall.sideEffectLevel,
+    confirmationRequired: toolCall.confirmationRequired,
+    confirmationGrantedAt: toolCall.confirmationGrantedAt,
+    companyId: toolCall.companyId,
+    userId: toolCall.userId,
+    startedAt: toolCall.startedAt,
+    completedAt: toolCall.completedAt,
+    resultJson: toolCall.resultJson,
+    error: toolCall.error,
+  };
+}
+
+function buildEvalFixtureSummary(fixture: Doc<"agentEvalFixtures">) {
+  return {
+    fixtureId: fixture._id,
+    type: fixture.type,
+    status: fixture.status,
+    tags: fixture.tags,
+    updatedAt: fixture.updatedAt,
+  };
+}
+
+function parseAgentVersionSnapshot(snapshotJson: string) {
+  try {
+    const parsed = JSON.parse(snapshotJson) as {
+      prompt?: { systemPrompt?: string };
+      model?: {
+        modelId?: string;
+        modelSelectionMode?: string;
+        temperature?: number;
+      };
+      tools?: Array<{
+        id?: string;
+        name?: string;
+        description?: string;
+        handlerMapping?: string;
+        requiredRole?: string;
+        sideEffectLevel?: string;
+        confirmationRequired?: boolean;
+        inputSchema?: string;
+        isActive?: boolean;
+        version?: string;
+        updatedAt?: number;
+      }>;
+      memory?: {
+        activeCount?: number;
+        latestUpdatedAt?: number;
+        items?: Array<{ kind?: string; content?: string; importance?: number; updatedAt?: number }>;
+      };
+      rules?: Array<{ name?: string; trigger?: string; instruction?: string; priority?: number }>;
+    };
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildRunSummary(run: Doc<"agentRuns">) {
+  return {
+    runId: run._id,
+    agentVersionId: run.agentVersionId,
+    status: run.status,
+    triggerType: run.triggerType,
+    objective: run.objective,
+    startedAt: run.startedAt,
+    completedAt: run.completedAt,
+    latencyMs: getRunLatencyMs(run),
+    costGBP: run.costGBP,
+    inputTokens: run.inputTokens,
+    outputTokens: run.outputTokens,
+    finalOutputPreview: buildPreview(run.finalOutput),
+    errorPreview: buildPreview(run.error),
+    replayMode: run.replayMode,
+  };
+}
+
+function normalizeComparableText(value: string | undefined) {
+  return (value || "").trim().replace(/\s+/g, " ");
+}
+
+function buildReplayComparison(args: {
+  sourceRun: Doc<"agentRuns">;
+  replayRun: Doc<"agentRuns">;
+  sourceSteps: Doc<"agentRunSteps">[];
+  replaySteps: Doc<"agentRunSteps">[];
+}) {
+  const sourceLatencyMs = getRunLatencyMs(args.sourceRun);
+  const replayLatencyMs = getRunLatencyMs(args.replayRun);
+  const sourceTokens = (args.sourceRun.inputTokens ?? 0) + (args.sourceRun.outputTokens ?? 0);
+  const replayTokens = (args.replayRun.inputTokens ?? 0) + (args.replayRun.outputTokens ?? 0);
+
+  return {
+    statusChanged: args.sourceRun.status !== args.replayRun.status,
+    sourceStatus: args.sourceRun.status,
+    replayStatus: args.replayRun.status,
+    latencyDeltaMs: sourceLatencyMs !== undefined && replayLatencyMs !== undefined
+      ? replayLatencyMs - sourceLatencyMs
+      : undefined,
+    costDeltaGBP: args.sourceRun.costGBP !== undefined || args.replayRun.costGBP !== undefined
+      ? (args.replayRun.costGBP ?? 0) - (args.sourceRun.costGBP ?? 0)
+      : undefined,
+    tokenDelta: sourceTokens !== 0 || replayTokens !== 0 ? replayTokens - sourceTokens : undefined,
+    stepCountDelta: args.replaySteps.length - args.sourceSteps.length,
+    outputChanged: normalizeComparableText(args.sourceRun.finalOutput) !== normalizeComparableText(args.replayRun.finalOutput),
+    errorChanged: normalizeComparableText(args.sourceRun.error) !== normalizeComparableText(args.replayRun.error),
+  };
+}
+
+function buildStepDiffSummary(step: Doc<"agentRunSteps"> | undefined) {
+  if (!step) return undefined;
+  return {
+    kind: step.kind,
+    status: step.status,
+    summary: buildStepSummary(step),
+    outputPreview: buildPreview(step.output),
+    errorPreview: buildPreview(step.error),
+    durationMs: step.completedAt !== undefined ? Math.max(0, step.completedAt - step.startedAt) : undefined,
+  };
+}
+
+function buildReplayTimelineDiff(args: {
+  sourceSteps: Doc<"agentRunSteps">[];
+  replaySteps: Doc<"agentRunSteps">[];
+}) {
+  const sourceByIndex = new Map(args.sourceSteps.map((step) => [step.stepIndex, step]));
+  const replayByIndex = new Map(args.replaySteps.map((step) => [step.stepIndex, step]));
+  const stepIndexes = Array.from(new Set([
+    ...args.sourceSteps.map((step) => step.stepIndex),
+    ...args.replaySteps.map((step) => step.stepIndex),
+  ])).sort((a, b) => a - b);
+
+  return stepIndexes.slice(0, 50).map((stepIndex) => {
+    const sourceStep = sourceByIndex.get(stepIndex);
+    const replayStep = replayByIndex.get(stepIndex);
+    const sourceOutput = normalizeComparableText(sourceStep?.output);
+    const replayOutput = normalizeComparableText(replayStep?.output);
+    const sourceError = normalizeComparableText(sourceStep?.error);
+    const replayError = normalizeComparableText(replayStep?.error);
+    const sourceDurationMs = sourceStep?.completedAt !== undefined
+      ? Math.max(0, sourceStep.completedAt - sourceStep.startedAt)
+      : undefined;
+    const replayDurationMs = replayStep?.completedAt !== undefined
+      ? Math.max(0, replayStep.completedAt - replayStep.startedAt)
+      : undefined;
+
+    const kindChanged = sourceStep?.kind !== replayStep?.kind;
+    const statusChanged = sourceStep?.status !== replayStep?.status;
+    const outputChanged = sourceOutput !== replayOutput;
+    const errorChanged = sourceError !== replayError;
+    const changeType = !sourceStep
+      ? "ADDED"
+      : !replayStep
+        ? "REMOVED"
+        : kindChanged || statusChanged || outputChanged || errorChanged
+          ? "CHANGED"
+          : "UNCHANGED";
+
+    return {
+      stepIndex,
+      changeType,
+      kindChanged,
+      statusChanged,
+      outputChanged,
+      errorChanged,
+      durationDeltaMs: sourceDurationMs !== undefined && replayDurationMs !== undefined
+        ? replayDurationMs - sourceDurationMs
+        : undefined,
+      source: buildStepDiffSummary(sourceStep),
+      replay: buildStepDiffSummary(replayStep),
+    };
+  });
+}
+
 function incrementCount(target: Record<string, number>, key: string, increment = 1) {
   target[key] = (target[key] ?? 0) + increment;
 }
@@ -167,7 +453,7 @@ export const getRunDetail = query({
 
     assertAdminCanAccessCompany(user, run.companyId);
 
-    const [steps, toolCalls, approvals] = await Promise.all([
+    const [steps, toolCalls, approvals, replayRuns, evalFixtures] = await Promise.all([
       ctx.db
         .query("agentRunSteps")
         .withIndex("by_run_step", (q) => q.eq("runId", args.runId))
@@ -183,14 +469,156 @@ export const getRunDetail = query({
         .withIndex("by_run_requested", (q) => q.eq("runId", args.runId))
         .order("asc")
         .take(AGENT_RUN_DETAIL_LIMIT),
+      ctx.db
+        .query("agentRuns")
+        .withIndex("by_replay_source_started", (q) => q.eq("replayOfRunId", args.runId))
+        .order("desc")
+        .take(10),
+      ctx.db
+        .query("agentEvalFixtures")
+        .withIndex("by_run_created", (q) => q.eq("sourceRunId", args.runId))
+        .order("desc")
+        .take(10),
     ]);
+    const sourceRun = run.replayOfRunId ? await ctx.db.get(run.replayOfRunId) : null;
+    const accessibleSourceRun = sourceRun && sourceRun.companyId === run.companyId ? sourceRun : null;
+    const sourceSteps = accessibleSourceRun
+      ? await ctx.db
+          .query("agentRunSteps")
+          .withIndex("by_run_step", (q) => q.eq("runId", accessibleSourceRun._id))
+          .order("asc")
+          .take(AGENT_RUN_DETAIL_LIMIT)
+      : [];
 
     return {
       run,
       steps,
-      toolCalls,
+      toolCalls: toolCalls.map((toolCall) => buildToolCallDetail(toolCall, user.role)),
       approvals,
+      timeline: buildRunTimeline({ steps, toolCalls, approvals }),
+      evalFixtureContext: {
+        canCreateFromRun: isTerminalRunStatus(run.status),
+        activeCount: evalFixtures.filter((fixture) => fixture.status === "ACTIVE").length,
+        archivedCount: evalFixtures.filter((fixture) => fixture.status === "ARCHIVED").length,
+        fixtures: evalFixtures.map(buildEvalFixtureSummary),
+      },
+      replayContext: {
+        sourceRun: accessibleSourceRun ? buildRunSummary(accessibleSourceRun) : null,
+        replayRuns: replayRuns.map(buildRunSummary),
+        comparison: accessibleSourceRun
+          ? buildReplayComparison({
+              sourceRun: accessibleSourceRun,
+              replayRun: run,
+              sourceSteps,
+              replaySteps: steps,
+            })
+          : null,
+        timelineDiff: accessibleSourceRun
+          ? buildReplayTimelineDiff({
+              sourceSteps,
+              replaySteps: steps,
+            })
+          : [],
+      },
     };
+  },
+});
+
+export const getReplayExecutionContextInternal = internalQuery({
+  args: {
+    runId: v.id("agentRuns"),
+  },
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.replayMode !== "SAME_VERSION" || !run.agentVersionId) return null;
+
+    const version = await ctx.db.get(run.agentVersionId);
+    if (!version) return null;
+    const snapshot = parseAgentVersionSnapshot(version.snapshotJson);
+    if (!snapshot) return null;
+
+    return {
+      replayMode: run.replayMode,
+      replayOfRunId: run.replayOfRunId,
+      agentVersionId: run.agentVersionId,
+      versionNumber: version.versionNumber,
+      snapshotHash: version.snapshotHash,
+      promptHash: version.promptHash,
+      toolSetHash: version.toolSetHash,
+      memoryRevisionHash: version.memoryRevisionHash,
+      ruleSetHash: version.ruleSetHash,
+      modelConfigHash: version.modelConfigHash,
+      policyHash: version.policyHash,
+      systemPrompt: snapshot.prompt?.systemPrompt,
+      modelId: snapshot.model?.modelSelectionMode === "inherit" ? undefined : snapshot.model?.modelId,
+      temperature: snapshot.model?.temperature,
+      toolCount: Array.isArray(snapshot.tools) ? snapshot.tools.length : undefined,
+      tools: Array.isArray(snapshot.tools)
+        ? snapshot.tools
+            .filter((tool) => typeof tool.name === "string" && typeof tool.handlerMapping === "string")
+            .slice(0, 50)
+            .map((tool) => ({
+              id: tool.id,
+              name: tool.name!,
+              description: tool.description,
+              handlerMapping: tool.handlerMapping!,
+              requiredRole: tool.requiredRole,
+              sideEffectLevel: tool.sideEffectLevel,
+              confirmationRequired: tool.confirmationRequired,
+              inputSchema: tool.inputSchema,
+              isActive: tool.isActive,
+              version: tool.version,
+              updatedAt: tool.updatedAt,
+              replayExecutable: tool.sideEffectLevel === "READ" && tool.isActive !== false,
+              replayPolicy: tool.sideEffectLevel === "READ" && tool.isActive !== false
+                ? "TEST_MODE_CANDIDATE"
+                : "BLOCKED",
+              replayBlockedReason: tool.isActive === false
+                ? "Tool was inactive in the historical snapshot."
+                : tool.sideEffectLevel && tool.sideEffectLevel !== "READ"
+                  ? "Historical replay does not execute write, destructive, or external tools."
+                  : undefined,
+            }))
+        : [],
+      memoryActiveCount: snapshot.memory?.activeCount,
+      memoryContents: Array.isArray(snapshot.memory?.items)
+        ? snapshot.memory.items
+            .filter((memory) => typeof memory.content === "string" && memory.content.trim().length > 0)
+            .slice(0, 10)
+            .map((memory) => ({
+              kind: memory.kind,
+              content: memory.content!,
+              importance: memory.importance,
+              updatedAt: memory.updatedAt,
+            }))
+        : [],
+      ruleCount: Array.isArray(snapshot.rules) ? snapshot.rules.length : undefined,
+      rules: Array.isArray(snapshot.rules)
+        ? snapshot.rules
+            .filter((rule) => typeof rule.instruction === "string" && rule.instruction.trim().length > 0)
+            .slice(0, 25)
+            .map((rule) => ({
+              name: rule.name,
+              trigger: rule.trigger,
+              instruction: rule.instruction!,
+              priority: rule.priority,
+            }))
+        : [],
+    };
+  },
+});
+
+export const getLatestStepIndexInternal = internalQuery({
+  args: {
+    runId: v.id("agentRuns"),
+  },
+  handler: async (ctx, args) => {
+    const latestStep = await ctx.db
+      .query("agentRunSteps")
+      .withIndex("by_run_step", (q) => q.eq("runId", args.runId))
+      .order("desc")
+      .first();
+    return latestStep?.stepIndex ?? 0;
   },
 });
 
@@ -578,6 +1006,7 @@ export const decideApproval = mutation({
 export const replayRun = mutation({
   args: {
     runId: v.id("agentRuns"),
+    mode: v.optional(replayModeValidator),
   },
   handler: async (ctx, args) => {
     const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
@@ -593,10 +1022,16 @@ export const replayRun = mutation({
     if (agent.isActive === false) throw new Error("Agent is inactive");
 
     const now = Date.now();
-    const agentVersionId = run.agentVersionId || await ensureAgentVersionSnapshot(ctx, {
-      agentId: run.agentId,
-      companyId: run.companyId,
-    });
+    const replayMode = args.mode || "CURRENT_ACTIVE";
+    if (replayMode === "SAME_VERSION" && !run.agentVersionId) {
+      throw new Error("Same-version replay requires the source run to have an agent version snapshot.");
+    }
+    const agentVersionId = replayMode === "SAME_VERSION"
+      ? run.agentVersionId
+      : await ensureAgentVersionSnapshot(ctx, {
+          agentId: run.agentId,
+          companyId: run.companyId,
+        });
     const replayRunId = await ctx.db.insert("agentRuns", {
       agentId: run.agentId,
       agentVersionId,
@@ -615,6 +1050,8 @@ export const replayRun = mutation({
       maxRuntimeMs: run.maxRuntimeMs,
       startedAt: now,
       updatedAt: now,
+      replayOfRunId: args.runId,
+      replayMode,
     });
 
     await ctx.db.insert("agentRunSteps", {
@@ -640,6 +1077,7 @@ export const replayRun = mutation({
       metadata: JSON.stringify({
         sourceRunId: args.runId,
         sourceStatus: run.status,
+        replayMode,
       }),
     });
 
@@ -654,7 +1092,7 @@ export const replayRun = mutation({
       userId,
     });
 
-    return { runId: replayRunId };
+    return { runId: replayRunId, replayOfRunId: args.runId, replayMode };
   },
 });
 

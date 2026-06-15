@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+import { internal } from "./_generated/api";
 import {
   assertCanExecuteTool,
   buildProviderToolDeclaration,
@@ -6,6 +7,7 @@ import {
   buildToolResultPayload,
   canExecuteTool,
   executeRegisteredTool,
+  getRegisteredToolHandlerMappings,
   normalizeToolFunctionName,
   normalizeToolExecutionPolicy,
   normalizeAiRuntimeError,
@@ -244,9 +246,101 @@ describe("ai tool execution service", () => {
     });
   });
 
-  test("fails closed for unimplemented tool handlers", () => {
-    expect(() => executeRegisteredTool({ handlerMapping: "crm.lookup", args: {} })).toThrow(
-      "Unknown or unimplemented tool handler mapping."
-    );
+  test("exposes the allowlisted tool handler mappings", () => {
+    expect(getRegisteredToolHandlerMappings()).toEqual([
+      "company.overview.update",
+      "google_drive.search",
+      "http.request",
+      "knowledge.search",
+      "notification.send",
+      "slack.message.send",
+      "workflow.task.create",
+    ]);
+  });
+
+  test("dispatches knowledge search through the registered read handler", async () => {
+    const result = { matches: [], query: "pipeline risk" };
+    const runQuery = vi.fn().mockResolvedValue(result);
+    const runMutation = vi.fn();
+
+    await expect(
+      executeRegisteredTool({
+        ctx: { runQuery, runMutation },
+        handlerMapping: "knowledge.search",
+        args: { query: " pipeline risk ", limit: 3 },
+        agentId: "agent_1" as never,
+        companyId: "company_1" as never,
+        fallbackQuery: "fallback query",
+      })
+    ).resolves.toBe(result);
+
+    expect(runQuery).toHaveBeenCalledWith(internal.aiToolReadTools.searchKnowledge, {
+      query: "pipeline risk",
+      agentId: "agent_1",
+      companyId: "company_1",
+      limit: 3,
+    });
+    expect(runMutation).not.toHaveBeenCalled();
+  });
+
+  test("dispatches company overview updates through the registered write handler", async () => {
+    const result = { changed: true, overview: "New overview" };
+    const runQuery = vi.fn();
+    const runMutation = vi.fn().mockResolvedValue(result);
+
+    await expect(
+      executeRegisteredTool({
+        ctx: { runQuery, runMutation },
+        handlerMapping: "company.overview.update",
+        args: { overview: " New overview ", idempotencyKey: "run-1:overview" },
+        companyId: "company_1" as never,
+        userId: "user_1" as never,
+        runId: "run_1" as never,
+        toolCallId: "tool_call_1" as never,
+      })
+    ).resolves.toBe(result);
+
+    expect(runMutation).toHaveBeenCalledWith(internal.aiToolWriteTools.updateCompanyOverview, {
+      companyId: "company_1",
+      actorId: "user_1",
+      overview: "New overview",
+      runId: "run_1",
+      toolCallId: "tool_call_1",
+      idempotencyKey: "run-1:overview",
+    });
+    expect(runQuery).not.toHaveBeenCalled();
+  });
+
+  test("fails closed for unimplemented tool handlers", async () => {
+    await expect(
+      executeRegisteredTool({
+        ctx: { runQuery: vi.fn(), runMutation: vi.fn() },
+        handlerMapping: "crm.lookup",
+        args: {},
+      })
+    ).rejects.toThrow("Unknown or unimplemented tool handler mapping.");
+  });
+
+  test("external connector stubs fail safely without side effects", async () => {
+    const runQuery = vi.fn();
+    const runMutation = vi.fn();
+
+    await expect(
+      executeRegisteredTool({
+        ctx: { runQuery, runMutation },
+        handlerMapping: "slack.message.send",
+        args: { channel: "sales", text: "hello" },
+        companyId: "company_1" as never,
+      })
+    ).resolves.toEqual({
+      ok: false,
+      status: "not_implemented",
+      connectorName: "Slack",
+      handlerMapping: "slack.message.send",
+      companyId: "company_1",
+      message: "Slack connector execution is not implemented yet.",
+    });
+    expect(runQuery).not.toHaveBeenCalled();
+    expect(runMutation).not.toHaveBeenCalled();
   });
 });

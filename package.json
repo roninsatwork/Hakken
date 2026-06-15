@@ -27,7 +27,8 @@
     "test:e2e:real-auth": "playwright test -c playwright.real-auth.config.ts",
     "pretest:e2e:real-auth": "npm run verify:env",
     "auth:local:seed": "node scripts/local-test-auth.mjs seed",
-    "auth:local:state": "node scripts/local-test-auth.mjs state"
+    "auth:local:state": "node scripts/local-test-auth.mjs state",
+    "demo:local:seed": "node scripts/local-demo-seed.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

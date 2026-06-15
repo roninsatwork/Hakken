@@ -927,6 +927,81 @@
             }
         },
         "aiTools": {
+            "marketplace": {
+                "title": "Marketplace Connettori",
+                "subtitle": "Installa definizioni di connettori governate, verifica lo stato della connessione e crea tool sicuri da mapping handler approvati.",
+                "count": "{count} connettori starter",
+                "install": "Installa",
+                "installing": "Installazione...",
+                "sync": "Sincronizza",
+                "test": "Test",
+                "testing": "Test in corso...",
+                "manage": "Gestisci",
+                "untested": "NON TESTATO"
+            },
+            "connectorDetails": {
+                "back": "Torna ai Connettori",
+                "untested": "NON TESTATO",
+                "active": "Attivo",
+                "disabled": "Disattivato",
+                "save": "Salva Modifiche",
+                "saving": "Salvataggio...",
+                "test": "Test Connessione",
+                "testing": "Test in corso...",
+                "noSecrets": "Non sono richiesti riferimenti segreto.",
+                "noTools": "Questo connettore non espone ancora tool eseguibili.",
+                "noGeneratedTools": "Nessun tool generato e attualmente collegato.",
+                "noTestLogs": "Nessun test di connessione registrato.",
+                "noSecretRegistry": "Nessun record di riferimento segreto sincronizzato.",
+                "required": "Richiesto",
+                "optional": "Opzionale",
+                "sections": {
+                    "connection": "Configurazione Connessione",
+                    "tools": "Tool Abilitati",
+                    "oauth": "Connessione OAuth",
+                    "generatedTools": "Tool Generati",
+                    "secretRegistry": "Registro Riferimenti Segreto",
+                    "testHistory": "Storico Test"
+                },
+                "fields": {
+                    "authMode": "Modalità Auth",
+                    "availability": "Disponibilità",
+                    "active": "Attivo",
+                    "scope": "Ambito Installazione",
+                    "tenant": "Tenant",
+                    "oauthStatus": "Stato OAuth",
+                    "oauthAccount": "Rif Account",
+                    "oauthScopes": "Scope",
+                    "secretRefs": "Riferimenti Segreto Configurati"
+                },
+                "scope": {
+                    "global": "Globale",
+                    "tenant": "Limitato al tenant",
+                    "noTenant": "Nessun tenant selezionato"
+                },
+                "placeholders": {
+                    "secretRefs": "es. base_url, auth_header",
+                    "oauthState": "Stato OAuth",
+                    "oauthAccountRef": "account_ref",
+                    "oauthTokenRef": "vault/oauth/token_ref"
+                },
+                "oauth": {
+                    "notConnected": "NON_CONNESSO",
+                    "noAccount": "Nessun riferimento account",
+                    "start": "Avvia OAuth",
+                    "starting": "Avvio...",
+                    "complete": "Completa OAuth",
+                    "completing": "Completamento...",
+                    "disconnect": "Disconnetti OAuth",
+                    "latest": "Ultima sessione OAuth: {provider} / {status}"
+                },
+                "diagnostics": {
+                    "authMode": "Auth",
+                    "installStatus": "Installazione",
+                    "authConnectionStatus": "OAuth",
+                    "missingSecretRefs": "Rif mancanti"
+                }
+            },
             "new": {
                 "back": "Back to Tools Library",
                 "title": "Add AI Tool",
@@ -973,6 +1048,9 @@
             "modal": {
                 "initTitle": "Inizializza Nuovo Agent",
                 "initDesc": "Assegna un nome e una missione principale al tuo nuovo assistente.",
+                "template": "Template di Partenza",
+                "blankTemplate": "Agent Vuoto",
+                "blankTemplateDesc": "Inizia solo con nome e descrizione.",
                 "name": "Nome Agent",
                 "description": "Descrizione Funzionale",
                 "deleteTitle": "Elimina Agent",
@@ -991,8 +1069,45 @@
                 "creating": "Creazione...",
                 "deleting": "Eliminazione...",
                 "create": "Crea Agent",
+                "createDraft": "Crea Agent Bozza",
                 "delete": "Elimina Agent",
                 "cancel": "Annulla"
+            },
+            "builder": {
+                "back": "Indietro",
+                "next": "Avanti",
+                "objective": "Obiettivo",
+                "objectivePlaceholder": "Descrivi il lavoro che questo agent deve completare in modo affidabile.",
+                "audience": "Pubblico",
+                "audiencePlaceholder": "es. Admin supporto, responsabili vendite, operatori interni",
+                "approvalPolicy": "Policy Approvazioni",
+                "modelBehavior": "Comportamento Modello",
+                "useTemplateKnowledge": "Usa il piano conoscenza consigliato dal template",
+                "useTemplateTools": "Usa tool/connettori consigliati dal template",
+                "readinessAck": "Capisco che questo agent verrà creato come bozza e dovrebbe eseguire smoke eval prima dell'attivazione.",
+                "steps": {
+                    "template": "Template",
+                    "mission": "Missione",
+                    "policy": "Policy",
+                    "readiness": "Prontezza"
+                },
+                "approval": {
+                    "template": "Usa default template",
+                    "always": "Richiedi approvazioni",
+                    "read-only": "Prima tool solo lettura"
+                },
+                "behavior": {
+                    "balanced": "Bilanciato",
+                    "fast": "Veloce",
+                    "careful": "Prudente"
+                },
+                "checks": {
+                    "draft": "L'agent verrà salvato come bozza inattiva.",
+                    "eval": "Le fixture eval iniziali vengono preparate per eseguire uno smoke test prima dell'attivazione.",
+                    "approvals": "Tool rischiosi di scrittura o esterni dovrebbero restare soggetti ad approvazione.",
+                    "template": "Template selezionato: {name}.",
+                    "blank": "Gli agent vuoti dovrebbero ricevere tool, conoscenza ed eval prima dell'attivazione."
+                }
             },
             "details": {
                 "loading": "Caricamento agent...",
@@ -1003,6 +1118,7 @@
                 "tabs": {
                     "dashboard": "Dashboard",
                     "runs": "Esecuzioni",
+                    "evals": "Eval",
                     "settings": "Impostazioni",
                     "knowledge": "Conoscenza",
                     "memory": "Memoria",
@@ -1083,11 +1199,104 @@
                                 "label": "Stato di Distribuzione",
                                 "active": "Flotta Attiva",
                                 "inactive": "Manutenzione / Bozza"
+                            },
+                            "readiness": {
+                                "title": "Prontezza Attivazione",
+                                "loading": "Controllo della configurazione agent...",
+                                "ready": "Al momento non ci sono blocchi di attivazione per questo agent.",
+                                "activationWarning": "{count} avviso/i di prontezza da rivedere prima di attivare questo agent.",
+                                "activationBlocked": "Esegui uno smoke eval con successo prima di attivare questo agent in bozza.",
+                                "releaseGateBlocked": "L'ultimo smoke eval e fallito o e ancora in sospeso. Riesegui la suite eval e ottieni un ultimo risultato superato prima dell'attivazione.",
+                                "runSmokeEval": "Esegui Smoke Eval",
+                                "runningSmokeEval": "Esecuzione...",
+                                "runModelSmokeEval": "Valuta con Modello",
+                                "runningModelSmokeEval": "Valutazione...",
+                                "smokeRunQueued": "Smoke eval con valutazione modello in coda. L'ultimo risultato si aggiornera al termine.",
+                                "smokeRunSuccess": "Checkpoint smoke eval registrato. La checklist di prontezza si aggiornera automaticamente.",
+                                "smokeRunFailed": "Impossibile registrare lo smoke eval.",
+                                "latestSmokeEval": {
+                                    "title": "Ultimo Smoke Eval",
+                                    "empty": "Non eseguito",
+                                    "hint": "Esegui uno smoke eval da una fixture attiva per sbloccare l'attivazione della bozza.",
+                                    "status": {
+                                        "QUEUED": "In coda",
+                                        "RUNNING": "In esecuzione",
+                                        "PENDING_APPROVAL": "In attesa approvazione",
+                                        "SUCCESS": "Superato",
+                                        "FAILED": "Fallito",
+                                        "CANCELLED": "Annullato"
+                                    }
+                                },
+                                "coverage": {
+                                    "title": "Copertura Fixture",
+                                    "summary": "{covered}/{total} categorie fixture hanno copertura attiva.",
+                                    "smokeCovered": "{count} coperte da smoke",
+                                    "fixtureCount": "{count} attive",
+                                    "status": {
+                                        "missing": "Mancante",
+                                        "fixtureReady": "Fixture pronta",
+                                        "smokePassed": "Smoke superato"
+                                    },
+                                    "types": {
+                                        "HAPPY_PATH": "Percorso felice",
+                                        "TOOL_PLAN": "Piano tool",
+                                        "APPROVAL_PAUSE": "Pausa approvazione",
+                                        "REJECTED_ACTION": "Azione rifiutata",
+                                        "PROMPT_INJECTION": "Prompt injection",
+                                        "TENANT_BOUNDARY": "Confine tenant",
+                                        "BAD_TOOL_ARGS": "Argomenti tool errati",
+                                        "CANCELLATION": "Annullamento",
+                                        "REPLAYED_FAILURE": "Errore riprodotto",
+                                        "COST_LATENCY_BUDGET": "Budget costo/latenza"
+                                    }
+                                },
+                                "badge": {
+                                    "clear": "Pronto",
+                                    "review": "Rivedi"
+                                },
+                                "checks": {
+                                    "draftStatus": {
+                                        "title": "Revisione Bozza",
+                                        "pass": "L'agent resta in bozza mentre viene verificata la prontezza.",
+                                        "warn": "L'agent e gia attivo mentre restano avvisi di prontezza."
+                                    },
+                                    "modelDefault": {
+                                        "title": "Default Modello",
+                                        "pass": "E disponibile un default o override modello compatibile con agent.",
+                                        "warn": "Nessun modello default abilitato e compatibile con agent."
+                                    },
+                                    "tools": {
+                                        "title": "Accesso Tool",
+                                        "pass": "{count} binding tool disponibili.",
+                                        "warn": "Nessun tool e ancora collegato a questo agent."
+                                    },
+                                    "knowledge": {
+                                        "title": "Fonti Knowledge",
+                                        "pass": "{count} documento/i knowledge collegati.",
+                                        "warn": "Nessun documento knowledge approvato e collegato."
+                                    },
+                                    "evalFixtures": {
+                                        "title": "Fixture Eval",
+                                        "pass": "{count} fixture eval attive pronte.",
+                                        "warn": "Nessuna fixture eval attiva e pronta per i controlli di regressione."
+                                    },
+                                    "smokeEval": {
+                                        "title": "Smoke Eval",
+                                        "pass": "{count} smoke eval completati con successo.",
+                                        "warn": "Nessuno smoke eval completato con successo e stato registrato."
+                                    },
+                                    "releaseGate": {
+                                        "title": "Gate Rilascio",
+                                        "pass": "L'ultimo checkpoint smoke eval e superato.",
+                                        "warn": "L'ultimo checkpoint smoke eval non e superato."
+                                    }
+                                }
                             }
                         }
                     },
                     "errors": {
                         "saveFailed": "Violazione del protocollo: Impossibile sincronizzare l'agent.",
+                        "activationBlocked": "Esegui uno smoke eval con successo prima di attivare questo agent.",
                         "uploadFailed": "Caricamento del frame neurale fallito."
                     },
                     "uploadModal": {

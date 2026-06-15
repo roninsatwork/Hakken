@@ -8,6 +8,7 @@ import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const CANDIDATE_LIMIT = 200;
+const REVIEW_INBOX_LIMIT = 50;
 
 const candidateDecisionValidator = v.union(
   v.literal("APPROVED"),
@@ -53,6 +54,27 @@ function clampScore(value: number | undefined, fallback = 0.5) {
 function truncateText(value: string | undefined, limit = 360) {
   const normalized = normalizeMemoryContent(value || "");
   return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
+}
+
+function buildRunSummary(run: Doc<"agentRuns"> | null) {
+  if (!run) return null;
+  return {
+    runId: run._id,
+    status: run.status,
+    objective: truncateText(run.objective, 220),
+    error: truncateText(run.error || run.finalOutput, 220),
+    startedAt: run.startedAt,
+  };
+}
+
+function getReflectionRisk(category: Doc<"agentRunReflections">["category"]) {
+  if (category === "PROMPT_INJECTION_BLOCKED" || category === "TENANT_SCOPE_BLOCKED" || category === "POLICY_BLOCKED") {
+    return "HIGH" as const;
+  }
+  if (category === "BAD_TOOL_ARGUMENTS" || category === "TOOL_FAILURE" || category === "APPROVAL_REJECTED") {
+    return "MEDIUM" as const;
+  }
+  return "LOW" as const;
 }
 
 function shouldAutoApply(candidate: Pick<CandidateDraft, "kind" | "riskLevel">) {
@@ -338,5 +360,127 @@ export const getRecentForAgent = query({
       .filter((q) => q.eq(q.field("agentId"), args.agentId))
       .order("desc")
       .take(CANDIDATE_LIMIT);
+  },
+});
+
+export const getReviewInboxForAgent = query({
+  args: {
+    agentId: v.id("agents"),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    if (user.role === "ADMIN" && !user.companyId) {
+      throw new Error("Unauthorized");
+    }
+
+    const [memoryCandidates, improvementSuggestions, reflections] = user.role === "SUPER_ADMIN"
+      ? await Promise.all([
+          ctx.db
+            .query("agentMemoryCandidates")
+            .withIndex("by_agent_status_created", (q) => q.eq("agentId", args.agentId).eq("status", "PROPOSED"))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+          ctx.db
+            .query("agentImprovementSuggestions")
+            .withIndex("by_agent_status_created", (q) => q.eq("agentId", args.agentId).eq("status", "PROPOSED"))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+          ctx.db
+            .query("agentRunReflections")
+            .withIndex("by_agent_created", (q) => q.eq("agentId", args.agentId))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+        ])
+      : await Promise.all([
+          ctx.db
+            .query("agentMemoryCandidates")
+            .withIndex("by_company_status_created", (q) => q.eq("companyId", user.companyId).eq("status", "PROPOSED"))
+            .filter((q) => q.eq(q.field("agentId"), args.agentId))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+          ctx.db
+            .query("agentImprovementSuggestions")
+            .withIndex("by_company_status_created", (q) => q.eq("companyId", user.companyId).eq("status", "PROPOSED"))
+            .filter((q) => q.eq(q.field("agentId"), args.agentId))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+          ctx.db
+            .query("agentRunReflections")
+            .withIndex("by_company_created", (q) => q.eq("companyId", user.companyId))
+            .filter((q) => q.eq(q.field("agentId"), args.agentId))
+            .order("desc")
+            .take(REVIEW_INBOX_LIMIT),
+        ]);
+
+    const activeReflectionIds = new Set([
+      ...memoryCandidates.map((candidate) => candidate.sourceReflectionId).filter(Boolean),
+      ...improvementSuggestions.map((suggestion) => suggestion.sourceReflectionId).filter(Boolean),
+    ]);
+    const openReflections = reflections
+      .filter((reflection) => reflection.status === "GENERATED")
+      .filter((reflection) => activeReflectionIds.has(reflection._id) || reflection.proposedEvalFixture || reflection.proposedMemory || reflection.proposedPromptChange || reflection.proposedToolChange)
+      .slice(0, REVIEW_INBOX_LIMIT);
+
+    const runIds = Array.from(new Set([
+      ...memoryCandidates.map((candidate) => candidate.sourceRunId),
+      ...improvementSuggestions.map((suggestion) => suggestion.sourceRunId).filter(Boolean),
+      ...openReflections.map((reflection) => reflection.runId),
+    ]));
+    const runPairs = await Promise.all(runIds.map(async (runId) => {
+      if (!runId) return null;
+      const run = await ctx.db.get(runId);
+      if (!run) return null;
+      if (user.role === "ADMIN" && run.companyId !== user.companyId) return null;
+      return [runId, buildRunSummary(run)] as const;
+    }));
+    const runById = new Map(runPairs.filter((pair): pair is NonNullable<typeof pair> => pair !== null));
+
+    return {
+      totals: {
+        open: memoryCandidates.length + improvementSuggestions.length + openReflections.length,
+        memoryCandidates: memoryCandidates.length,
+        improvementSuggestions: improvementSuggestions.length,
+        reflections: openReflections.length,
+        highRisk: memoryCandidates.filter((candidate) => candidate.riskLevel === "HIGH").length
+          + improvementSuggestions.filter((suggestion) => suggestion.riskLevel === "HIGH").length
+          + openReflections.filter((reflection) => getReflectionRisk(reflection.category) === "HIGH").length,
+      },
+      memoryCandidates: memoryCandidates.map((candidate) => ({
+        candidateId: candidate._id,
+        sourceRun: runById.get(candidate.sourceRunId) || null,
+        sourceReflectionId: candidate.sourceReflectionId,
+        kind: candidate.kind,
+        content: truncateText(candidate.content, 500),
+        confidence: candidate.confidence,
+        riskLevel: candidate.riskLevel,
+        proposedBy: candidate.proposedBy,
+        createdAt: candidate.createdAt,
+      })),
+      improvementSuggestions: improvementSuggestions.map((suggestion) => ({
+        suggestionId: suggestion._id,
+        sourceRun: suggestion.sourceRunId ? runById.get(suggestion.sourceRunId) || null : null,
+        sourceReflectionId: suggestion.sourceReflectionId,
+        sourceEvalFixtureId: suggestion.sourceEvalFixtureId,
+        type: suggestion.type,
+        title: suggestion.title,
+        description: truncateText(suggestion.description, 500),
+        riskLevel: suggestion.riskLevel,
+        proposedPatchJson: suggestion.proposedPatchJson,
+        createdAt: suggestion.createdAt,
+      })),
+      reflections: openReflections.map((reflection) => ({
+        reflectionId: reflection._id,
+        sourceRun: runById.get(reflection.runId) || null,
+        category: reflection.category,
+        riskLevel: getReflectionRisk(reflection.category),
+        rootCause: truncateText(reflection.rootCause, 500),
+        confidence: reflection.confidence,
+        proposedMemory: truncateText(reflection.proposedMemory, 360),
+        proposedPromptChange: truncateText(reflection.proposedPromptChange, 360),
+        proposedToolChange: truncateText(reflection.proposedToolChange, 360),
+        proposedEvalFixture: truncateText(reflection.proposedEvalFixture, 360),
+        createdAt: reflection.createdAt,
+      })),
+    };
   },
 });

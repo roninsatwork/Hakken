@@ -9,15 +9,19 @@ import type { DragEvent, FormEvent } from "react";
 import { useParams } from "next/navigation";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
+  AlertTriangle,
   Bot,
   CheckCircle2,
+  ClipboardCheck,
   ImagePlus,
   Globe,
+  Sparkles,
   Loader2
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
+import { formatDateTime } from "@/src/lib/dates";
 import {
   AdminSaveAction,
   AdminSaveError,
@@ -26,6 +30,7 @@ import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";
+type SmokeEvalMode = "CONTRACT_ONLY" | "MODEL_GRADED";
 
 type AgentSettingsFormData = {
   name: string;
@@ -61,6 +66,7 @@ export default function AgentOverviewPage() {
   const agentId = params.id as Id<"agents">;
 
   const agent = useQuery(api.agents.get, { id: agentId });
+  const readiness = useQuery(api.agents.getAgentReadiness, { id: agentId });
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const activeModels = useMemo(
     () => (activeModelsData ?? []) as Doc<"aiModels">[],
@@ -72,6 +78,7 @@ export default function AgentOverviewPage() {
   );
 
   const updateAgent = useMutation(api.agents.updateAgent);
+  const runSmokeEval = useMutation(api.agentEvalFixtures.runSmokeEval);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
@@ -79,6 +86,8 @@ export default function AgentOverviewPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [readinessFeedback, setReadinessFeedback] = useState("");
+  const [smokeEvalMode, setSmokeEvalMode] = useState<SmokeEvalMode | null>(null);
 
   // Avatar Upload State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -109,6 +118,10 @@ export default function AgentOverviewPage() {
   const handleSave = async (e?: FormEvent) => {
     if (e) {
       e.preventDefault();
+    }
+    if (activationSmokeBlocked) {
+      setSaveError(t("errors.activationBlocked"));
+      return;
     }
     setIsSaving(true);
     setSaveError("");
@@ -186,6 +199,39 @@ export default function AgentOverviewPage() {
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       await processUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const readinessWarningCount = readiness?.activationWarnings.length ?? 0;
+  const hasActivationRisk = formData.isActive && readinessWarningCount > 0;
+  const isActivatingDraft = agent?.isActive === false && formData.isActive;
+  const activationSmokeBlocked = isActivatingDraft && (readiness?.successfulSmokeEvalRunCount ?? 0) === 0;
+  const activationReleaseBlocked = isActivatingDraft
+    && (readiness?.successfulSmokeEvalRunCount ?? 0) > 0
+    && (
+      readiness?.latestSmokeEvalRun?.status !== "SUCCESS"
+      || (readiness?.releaseGatePolicy.blockedCriticalFixtureCount ?? 0) > 0
+      || Boolean(readiness?.releaseGatePolicy.warning)
+    );
+  const latestSmokePassed = readiness?.latestSmokeEvalRun?.status === "SUCCESS";
+  const fixtureCoverageCoveredCount = readiness?.fixtureCoverage.filter((coverage) => coverage.activeCount > 0).length ?? 0;
+
+  const handleRunSmokeEval = async (gradingMode: SmokeEvalMode) => {
+    setSmokeEvalMode(gradingMode);
+    setReadinessFeedback("");
+    try {
+      const result = await runSmokeEval({ agentId, gradingMode });
+      setReadinessFeedback(
+        result.status === "QUEUED"
+          ? t("sections.engine.readiness.smokeRunQueued")
+          : result.status === "SUCCESS"
+            ? t("sections.engine.readiness.smokeRunSuccess")
+            : t("sections.engine.readiness.smokeRunFailed"),
+      );
+    } catch (error) {
+      setReadinessFeedback(getErrorMessage(error, t("sections.engine.readiness.smokeRunFailed")));
+    } finally {
+      setSmokeEvalMode(null);
     }
   };
 
@@ -367,6 +413,228 @@ export default function AgentOverviewPage() {
                 >
                   <CheckCircle2 className="w-4 h-4" /> {t("sections.engine.status.active")}
                 </button>
+              </div>
+            </div>
+
+            <div className="md:col-span-2 rounded-[12px] border border-border-dim bg-black/20 p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                    {hasActivationRisk ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    )}
+                    {t("sections.engine.readiness.title")}
+                  </h3>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    {readiness === undefined
+                      ? t("sections.engine.readiness.loading")
+                      : hasActivationRisk
+                        ? t("sections.engine.readiness.activationWarning", { count: readinessWarningCount })
+                        : t("sections.engine.readiness.ready")}
+                  </p>
+                </div>
+                {readiness && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRunSmokeEval("CONTRACT_ONLY")}
+                      disabled={smokeEvalMode !== null || readiness.activeEvalFixtureCount === 0}
+                      className="shrink-0 rounded-[8px] border border-border-dim bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-foreground transition-all hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {smokeEvalMode === "CONTRACT_ONLY" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
+                      {smokeEvalMode === "CONTRACT_ONLY"
+                        ? t("sections.engine.readiness.runningSmokeEval")
+                        : t("sections.engine.readiness.runSmokeEval")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRunSmokeEval("MODEL_GRADED")}
+                      disabled={smokeEvalMode !== null || readiness.activeEvalFixtureCount === 0}
+                      className="shrink-0 rounded-[8px] border border-brand/30 bg-brand/10 px-3 py-1.5 text-[11px] font-medium text-brand transition-all hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {smokeEvalMode === "MODEL_GRADED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {smokeEvalMode === "MODEL_GRADED"
+                        ? t("sections.engine.readiness.runningModelSmokeEval")
+                        : t("sections.engine.readiness.runModelSmokeEval")}
+                    </button>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-[10px] font-mono uppercase tracking-widest",
+                        hasActivationRisk
+                          ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                          : "border-green-400/30 bg-green-400/10 text-green-300",
+                      )}
+                    >
+                      {hasActivationRisk
+                        ? t("sections.engine.readiness.badge.review")
+                        : t("sections.engine.readiness.badge.clear")}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {activationSmokeBlocked && (
+                <div className="rounded-[10px] border border-red-400/20 bg-red-400/10 px-3 py-2 text-[12px] leading-relaxed text-red-300">
+                  {t("sections.engine.readiness.activationBlocked")}
+                </div>
+              )}
+              {activationReleaseBlocked && (
+                <div className="rounded-[10px] border border-red-400/20 bg-red-400/10 px-3 py-2 text-[12px] leading-relaxed text-red-300">
+                  {t("sections.engine.readiness.releaseGateBlocked")}
+                </div>
+              )}
+              {readinessFeedback && (
+                <div className="rounded-[10px] border border-border-dim bg-white/[0.03] px-3 py-2 text-[12px] leading-relaxed text-secondary">
+                  {readinessFeedback}
+                </div>
+              )}
+              {readiness && (
+                <div className="rounded-[10px] border border-border-dim bg-white/[0.03] px-3 py-3 flex flex-col gap-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="text-[11px] font-mono uppercase tracking-widest text-muted">
+                      {t("sections.engine.readiness.latestSmokeEval.title")}
+                    </span>
+                    {readiness.latestSmokeEvalRun ? (
+                      <span
+                        className={cn(
+                          "text-[11px] font-mono",
+                          latestSmokePassed ? "text-green-300" : "text-red-300",
+                        )}
+                      >
+                        {t(`sections.engine.readiness.latestSmokeEval.status.${readiness.latestSmokeEvalRun.status}`)} · {formatDateTime(readiness.latestSmokeEvalRun.completedAt)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-amber-300">
+                        {t("sections.engine.readiness.latestSmokeEval.empty")}
+                      </span>
+                    )}
+                  </div>
+                  {readiness.latestSmokeEvalRun ? (
+                    <>
+                      <p className="text-[12px] text-foreground leading-relaxed">
+                        {readiness.latestSmokeEvalRun.objective}
+                      </p>
+                      {readiness.latestSmokeEvalRun.finalOutput && (
+                        <p
+                          className={cn(
+                            "text-[11px] leading-relaxed line-clamp-2",
+                            latestSmokePassed ? "text-secondary" : "text-red-300",
+                          )}
+                        >
+                          {readiness.latestSmokeEvalRun.finalOutput}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[12px] text-secondary leading-relaxed">
+                      {t("sections.engine.readiness.latestSmokeEval.hint")}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {readiness && (
+                <div className="rounded-[10px] border border-border-dim bg-white/[0.03] px-3 py-3 flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-muted">
+                        {t("sections.engine.readiness.coverage.title")}
+                      </span>
+                      <p className="text-[12px] text-secondary leading-relaxed mt-1">
+                        {t("sections.engine.readiness.coverage.summary", {
+                          covered: fixtureCoverageCoveredCount,
+                          total: readiness.fixtureCoverage.length,
+                        })}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono text-muted">
+                      {t("sections.engine.readiness.coverage.smokeCovered", {
+                        count: readiness.fixtureCoverage.filter((coverage) => coverage.smokePassed).length,
+                      })}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2">
+                    {readiness.fixtureCoverage.map((coverage) => {
+                      const hasFixture = coverage.activeCount > 0;
+                      const isSmokeCovered = coverage.smokePassed;
+                      return (
+                        <div
+                          key={coverage.type}
+                          className={cn(
+                            "min-h-[78px] rounded-[8px] border px-3 py-2 flex flex-col justify-between gap-2",
+                            isSmokeCovered
+                              ? "border-green-400/20 bg-green-400/5"
+                              : hasFixture
+                                ? "border-sky-400/20 bg-sky-400/5"
+                                : "border-border-dim bg-black/20",
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-semibold text-foreground truncate">
+                              {t(`sections.engine.readiness.coverage.types.${coverage.type}`)}
+                            </div>
+                            <div className="text-[10px] text-muted font-mono mt-1">
+                              {t("sections.engine.readiness.coverage.fixtureCount", { count: coverage.activeCount })}
+                            </div>
+                          </div>
+                          <span
+                            className={cn(
+                              "w-fit rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest",
+                              isSmokeCovered
+                                ? "border-green-400/20 bg-green-400/10 text-green-300"
+                                : hasFixture
+                                  ? "border-sky-400/20 bg-sky-400/10 text-sky-300"
+                                  : "border-border-dim bg-white/[0.03] text-muted",
+                            )}
+                          >
+                            {isSmokeCovered
+                              ? t("sections.engine.readiness.coverage.status.smokePassed")
+                              : hasFixture
+                                ? t("sections.engine.readiness.coverage.status.fixtureReady")
+                                : t("sections.engine.readiness.coverage.status.missing")}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(readiness?.checks ?? []).map((check) => {
+                  const isPassing = check.status === "PASS";
+                  return (
+                    <div
+                      key={check.key}
+                      className={cn(
+                        "min-h-[92px] rounded-[10px] border p-3 flex gap-3",
+                        isPassing
+                          ? "border-green-400/20 bg-green-400/5"
+                          : "border-amber-400/20 bg-amber-400/5",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                          isPassing ? "bg-green-400/10 text-green-300" : "bg-amber-400/10 text-amber-300",
+                        )}
+                      >
+                        {isPassing ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="text-[12px] font-semibold text-foreground">
+                          {t(`sections.engine.readiness.checks.${check.key}.title`)}
+                        </span>
+                        <span className="text-[11px] leading-relaxed text-secondary">
+                          {t(`sections.engine.readiness.checks.${check.key}.${isPassing ? "pass" : "warn"}`, {
+                            count: check.count ?? 0,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

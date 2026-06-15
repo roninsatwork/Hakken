@@ -64,10 +64,12 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     return tool ? {
       id: tool._id,
       name: tool.name,
+      description: tool.description,
       handlerMapping: tool.handlerMapping,
       requiredRole: tool.requiredRole,
       sideEffectLevel: tool.sideEffectLevel,
       confirmationRequired: tool.confirmationRequired,
+      inputSchema: tool.inputSchema,
       isActive: tool.isActive,
       version: tool.version,
       updatedAt: tool.updatedAt,
@@ -90,6 +92,13 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
       counts[memory.kind] = (counts[memory.kind] ?? 0) + 1;
       return counts;
     }, {}),
+    items: memories.slice(0, 25).map((memory) => ({
+      id: memory._id,
+      kind: memory.kind,
+      content: memory.content,
+      importance: memory.importance,
+      updatedAt: memory.updatedAt,
+    })),
   };
   const ruleSnapshot = rules
     .map((rule) => ({
@@ -165,4 +174,3 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     createdAt: now,
   });
 }
-

@@ -317,11 +317,17 @@ export default defineSchema({
     updatedAt: v.number(),
     error: v.optional(v.string()),
     finalOutput: v.optional(v.string()),
+    replayOfRunId: v.optional(v.id("agentRuns")),
+    replayMode: v.optional(v.union(
+      v.literal("CURRENT_ACTIVE"),
+      v.literal("SAME_VERSION")
+    )),
   })
     .index("by_agent_started", ["agentId", "startedAt"])
     .index("by_agent_version_started", ["agentVersionId", "startedAt"])
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_company_status_started", ["companyId", "status", "startedAt"])
+    .index("by_replay_source_started", ["replayOfRunId", "startedAt"])
     .index("by_status_started", ["status", "startedAt"])
     .index("by_thread_started", ["threadId", "startedAt"])
     .index("by_workflow_started", ["workflowId", "startedAt"])
@@ -832,6 +838,10 @@ export default defineSchema({
     inputSchema: v.optional(v.string()), // Stringified JSON Schema
     outputSchema: v.optional(v.string()), // Stringified JSON Schema
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
+    releaseGateMode: v.optional(v.union(v.literal("TAG"), v.literal("PRESET"), v.literal("NONE"))),
+    releaseGateTags: v.optional(v.array(v.string())),
+    releaseGateSuitePresetId: v.optional(v.id("agentEvalSuitePresets")),
+    releaseGateRequiresModelGrading: v.optional(v.boolean()),
     isActive: v.boolean(),
     // Inline Sandbox Configuration
     isGlobal: v.optional(v.boolean()),
@@ -844,11 +854,136 @@ export default defineSchema({
     .index("by_active_created", ["isActive", "createdAt"])
     .searchIndex("search_name", { searchField: "name" }),
 
+  agentEvalSuitePresets: defineTable({
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    name: v.string(),
+    description: v.optional(v.string()),
+    suiteTag: v.optional(v.string()),
+    fixtureIds: v.optional(v.array(v.id("agentEvalFixtures"))),
+    isReleaseGate: v.optional(v.boolean()),
+    requiresModelGrading: v.optional(v.boolean()),
+    status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_agent_status_created", ["agentId", "status", "createdAt"])
+    .index("by_agent_release_created", ["agentId", "isReleaseGate", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"]),
+
+  // Installable connector definitions and tenant/global install state.
+  toolConnectors: defineTable({
+    key: v.string(),
+    name: v.string(),
+    description: v.string(),
+    category: v.union(
+      v.literal("KNOWLEDGE"),
+      v.literal("PROFILE"),
+      v.literal("WORKFLOW"),
+      v.literal("HTTP"),
+      v.literal("EMAIL"),
+      v.literal("CUSTOM")
+    ),
+    authMode: v.union(
+      v.literal("NONE"),
+      v.literal("SECRET_REF"),
+      v.literal("OAUTH")
+    ),
+    requiredScopes: v.optional(v.array(v.string())),
+    requiredSecretRefs: v.optional(v.array(v.string())),
+    configuredSecretRefs: v.optional(v.array(v.string())),
+    enabledToolMappings: v.optional(v.array(v.string())),
+    tenantAvailability: v.union(v.literal("GLOBAL"), v.literal("TENANT_RESTRICTED")),
+    companyId: v.optional(v.id("companies")),
+    installStatus: v.union(v.literal("INSTALLED"), v.literal("DISABLED"), v.literal("ERROR")),
+    testStatus: v.optional(v.union(v.literal("UNTESTED"), v.literal("SUCCESS"), v.literal("FAILURE"))),
+    lastTestedAt: v.optional(v.number()),
+    lastTestMessage: v.optional(v.string()),
+    authConnectionStatus: v.optional(v.union(
+      v.literal("NOT_CONNECTED"),
+      v.literal("PENDING"),
+      v.literal("CONNECTED"),
+      v.literal("ERROR")
+    )),
+    authAccountRef: v.optional(v.string()),
+    tokenRef: v.optional(v.string()),
+    oauthScopes: v.optional(v.array(v.string())),
+    oauthConnectedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.id("users"),
+  })
+    .index("by_key", ["key"])
+    .index("by_key_company", ["key", "companyId"])
+    .index("by_company", ["companyId"])
+    .index("by_status", ["installStatus"])
+    .index("by_createdAt", ["createdAt"]),
+
+  toolConnectorTestLogs: defineTable({
+    connectorId: v.id("toolConnectors"),
+    key: v.string(),
+    companyId: v.optional(v.id("companies")),
+    status: v.union(v.literal("SUCCESS"), v.literal("FAILURE")),
+    message: v.string(),
+    diagnosticCode: v.optional(v.string()),
+    diagnosticDetailsJson: v.optional(v.string()),
+    missingSecretRefs: v.optional(v.array(v.string())),
+    testedAt: v.number(),
+    testedBy: v.id("users"),
+  })
+    .index("by_connector_tested", ["connectorId", "testedAt"])
+    .index("by_company_tested", ["companyId", "testedAt"]),
+
+  toolConnectorSecretRefs: defineTable({
+    connectorId: v.id("toolConnectors"),
+    key: v.string(),
+    providerRef: v.string(),
+    status: v.union(v.literal("CONFIGURED"), v.literal("MISSING")),
+    required: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_connector", ["connectorId"])
+    .index("by_connector_key", ["connectorId", "key"]),
+
+  toolConnectorOAuthConnections: defineTable({
+    connectorId: v.id("toolConnectors"),
+    key: v.string(),
+    companyId: v.optional(v.id("companies")),
+    provider: v.string(),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("CONNECTED"),
+      v.literal("DISCONNECTED"),
+      v.literal("ERROR")
+    ),
+    state: v.string(),
+    authorizationUrl: v.string(),
+    scopes: v.array(v.string()),
+    accountRef: v.optional(v.string()),
+    tokenRef: v.optional(v.string()),
+    message: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    connectedAt: v.optional(v.number()),
+    initiatedBy: v.id("users"),
+  })
+    .index("by_connector_updated", ["connectorId", "updatedAt"])
+    .index("by_state", ["state"])
+    .index("by_company_updated", ["companyId", "updatedAt"]),
+
   // Global Tool Library
   aiTools: defineTable({
     name: v.string(), // "search_web", "query_database"
     description: v.string(), // Provide clear instructions on what the tool does
     handlerMapping: v.string(), // Points to internal mutation/action route (e.g., "internalActions.executeDatabaseQuery")
+    connectorId: v.optional(v.id("toolConnectors")),
+    connectorKey: v.optional(v.string()),
+    secretRefKeys: v.optional(v.array(v.string())),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     inputSchema: v.optional(v.string()),
     outputSchema: v.optional(v.string()),
@@ -866,6 +1001,8 @@ export default defineSchema({
     createdBy: v.id("users"),
   })
     .index("by_name", ["name"])
+    .index("by_connector", ["connectorId"])
+    .index("by_connector_key", ["connectorKey"])
     .index("by_createdAt", ["createdAt"])
     .searchIndex("search_name", { searchField: "name" }),
 

@@ -908,6 +908,81 @@
             }
         },
         "aiTools": {
+            "marketplace": {
+                "title": "Connector Marketplace",
+                "subtitle": "Install governed connector definitions, test connection state, and create safe tool records from approved handler mappings.",
+                "count": "{count} starter connectors",
+                "install": "Install",
+                "installing": "Installing...",
+                "sync": "Sync",
+                "test": "Test",
+                "testing": "Testing...",
+                "manage": "Manage",
+                "untested": "UNTESTED"
+            },
+            "connectorDetails": {
+                "back": "Back to Connectors",
+                "untested": "UNTESTED",
+                "active": "Active",
+                "disabled": "Disabled",
+                "save": "Save Changes",
+                "saving": "Saving...",
+                "test": "Test Connection",
+                "testing": "Testing...",
+                "noSecrets": "No secret references are required.",
+                "noTools": "This connector does not expose executable tools yet.",
+                "noGeneratedTools": "No generated tools are currently linked.",
+                "noTestLogs": "No connection tests have been recorded.",
+                "noSecretRegistry": "No secret reference records have been synchronized.",
+                "required": "Required",
+                "optional": "Optional",
+                "sections": {
+                    "connection": "Connection Configuration",
+                    "tools": "Enabled Tools",
+                    "oauth": "OAuth Connection",
+                    "generatedTools": "Generated Tools",
+                    "secretRegistry": "Secret Reference Registry",
+                    "testHistory": "Test History"
+                },
+                "fields": {
+                    "authMode": "Auth Mode",
+                    "availability": "Availability",
+                    "active": "Active",
+                    "scope": "Install Scope",
+                    "tenant": "Tenant",
+                    "oauthStatus": "OAuth Status",
+                    "oauthAccount": "Account Ref",
+                    "oauthScopes": "Scopes",
+                    "secretRefs": "Configured Secret References"
+                },
+                "scope": {
+                    "global": "Global",
+                    "tenant": "Tenant restricted",
+                    "noTenant": "No tenant selected"
+                },
+                "placeholders": {
+                    "secretRefs": "e.g. base_url, auth_header",
+                    "oauthState": "OAuth state",
+                    "oauthAccountRef": "account_ref",
+                    "oauthTokenRef": "vault/oauth/token_ref"
+                },
+                "oauth": {
+                    "notConnected": "NOT_CONNECTED",
+                    "noAccount": "No account reference",
+                    "start": "Start OAuth",
+                    "starting": "Starting...",
+                    "complete": "Complete OAuth",
+                    "completing": "Completing...",
+                    "disconnect": "Disconnect OAuth",
+                    "latest": "Latest OAuth session: {provider} / {status}"
+                },
+                "diagnostics": {
+                    "authMode": "Auth",
+                    "installStatus": "Install",
+                    "authConnectionStatus": "OAuth",
+                    "missingSecretRefs": "Missing refs"
+                }
+            },
             "new": {
                 "back": "Back to Tools Library",
                 "title": "Add AI Tool",
@@ -954,6 +1029,9 @@
             "modal": {
                 "initTitle": "Initialize New Agent",
                 "initDesc": "Assign a name and primary mission to your new assistant.",
+                "template": "Starter Template",
+                "blankTemplate": "Blank Agent",
+                "blankTemplateDesc": "Start with only a name and description.",
                 "name": "Agent Name",
                 "description": "Functional Description",
                 "deleteTitle": "Delete Agent",
@@ -972,8 +1050,45 @@
                 "creating": "Creating...",
                 "deleting": "Deleting...",
                 "create": "Create Agent",
+                "createDraft": "Create Draft Agent",
                 "delete": "Delete Agent",
                 "cancel": "Cancel"
+            },
+            "builder": {
+                "back": "Back",
+                "next": "Next",
+                "objective": "Objective",
+                "objectivePlaceholder": "Describe the job this agent should reliably complete.",
+                "audience": "Audience",
+                "audiencePlaceholder": "e.g. Support admins, sales managers, internal operators",
+                "approvalPolicy": "Approval Policy",
+                "modelBehavior": "Model Behavior",
+                "useTemplateKnowledge": "Use template-recommended knowledge plan",
+                "useTemplateTools": "Use template-recommended tools/connectors",
+                "readinessAck": "I understand this agent will be created as a draft and should run smoke evals before activation.",
+                "steps": {
+                    "template": "Template",
+                    "mission": "Mission",
+                    "policy": "Policy",
+                    "readiness": "Readiness"
+                },
+                "approval": {
+                    "template": "Use template defaults",
+                    "always": "Require approvals",
+                    "read-only": "Read-only tools first"
+                },
+                "behavior": {
+                    "balanced": "Balanced",
+                    "fast": "Fast",
+                    "careful": "Careful"
+                },
+                "checks": {
+                    "draft": "The agent will be saved as an inactive draft.",
+                    "eval": "Starter eval fixtures are seeded so a smoke test can run before activation.",
+                    "approvals": "Risky write or external tools should remain approval-gated.",
+                    "template": "Template selected: {name}.",
+                    "blank": "Blank agents should receive tools, knowledge, and evals before activation."
+                }
             },
             "details": {
                 "loading": "Loading agent...",
@@ -984,6 +1099,7 @@
                 "tabs": {
                     "dashboard": "Dashboard",
                     "runs": "Runs",
+                    "evals": "Evals",
                     "settings": "Settings",
                     "knowledge": "Knowledge",
                     "memory": "Memory",
@@ -1064,11 +1180,104 @@
                                 "label": "Status",
                                 "active": "Active",
                                 "inactive": "Draft"
+                            },
+                            "readiness": {
+                                "title": "Activation Readiness",
+                                "loading": "Checking agent setup...",
+                                "ready": "No activation blockers are currently flagged for this agent.",
+                                "activationWarning": "{count} readiness warning(s) should be reviewed before this agent is active.",
+                                "activationBlocked": "Run a successful smoke eval before activating this draft agent.",
+                                "releaseGateBlocked": "The latest smoke eval failed or is still pending. Rerun the eval suite and get a passing latest result before activation.",
+                                "runSmokeEval": "Run Smoke Eval",
+                                "runningSmokeEval": "Running...",
+                                "runModelSmokeEval": "Model Grade",
+                                "runningModelSmokeEval": "Grading...",
+                                "smokeRunQueued": "Model-graded smoke eval queued. The latest smoke result will refresh when grading completes.",
+                                "smokeRunSuccess": "Smoke eval checkpoint recorded. The readiness checklist will refresh automatically.",
+                                "smokeRunFailed": "Smoke eval could not be recorded.",
+                                "latestSmokeEval": {
+                                    "title": "Latest Smoke Eval",
+                                    "empty": "Not run",
+                                    "hint": "Run a smoke eval from an active fixture to unlock draft activation.",
+                                    "status": {
+                                        "QUEUED": "Queued",
+                                        "RUNNING": "Running",
+                                        "PENDING_APPROVAL": "Pending approval",
+                                        "SUCCESS": "Passed",
+                                        "FAILED": "Failed",
+                                        "CANCELLED": "Cancelled"
+                                    }
+                                },
+                                "coverage": {
+                                    "title": "Fixture Coverage",
+                                    "summary": "{covered}/{total} fixture categories have active coverage.",
+                                    "smokeCovered": "{count} smoke-covered",
+                                    "fixtureCount": "{count} active",
+                                    "status": {
+                                        "missing": "Missing",
+                                        "fixtureReady": "Fixture ready",
+                                        "smokePassed": "Smoke passed"
+                                    },
+                                    "types": {
+                                        "HAPPY_PATH": "Happy path",
+                                        "TOOL_PLAN": "Tool plan",
+                                        "APPROVAL_PAUSE": "Approval pause",
+                                        "REJECTED_ACTION": "Rejected action",
+                                        "PROMPT_INJECTION": "Prompt injection",
+                                        "TENANT_BOUNDARY": "Tenant boundary",
+                                        "BAD_TOOL_ARGS": "Bad tool args",
+                                        "CANCELLATION": "Cancellation",
+                                        "REPLAYED_FAILURE": "Replayed failure",
+                                        "COST_LATENCY_BUDGET": "Cost/latency budget"
+                                    }
+                                },
+                                "badge": {
+                                    "clear": "Clear",
+                                    "review": "Review"
+                                },
+                                "checks": {
+                                    "draftStatus": {
+                                        "title": "Draft Review",
+                                        "pass": "Agent is still in draft while readiness is reviewed.",
+                                        "warn": "Agent is already active while readiness warnings remain."
+                                    },
+                                    "modelDefault": {
+                                        "title": "Model Default",
+                                        "pass": "An agent-capable model default or override is available.",
+                                        "warn": "No enabled agent-capable default model is configured."
+                                    },
+                                    "tools": {
+                                        "title": "Tool Access",
+                                        "pass": "{count} tool binding(s) are available.",
+                                        "warn": "No tools are bound to this agent yet."
+                                    },
+                                    "knowledge": {
+                                        "title": "Knowledge Sources",
+                                        "pass": "{count} knowledge document(s) are linked.",
+                                        "warn": "No approved knowledge documents are linked."
+                                    },
+                                    "evalFixtures": {
+                                        "title": "Eval Fixtures",
+                                        "pass": "{count} active eval fixture(s) are ready.",
+                                        "warn": "No active eval fixtures are ready for regression checks."
+                                    },
+                                    "smokeEval": {
+                                        "title": "Smoke Eval",
+                                        "pass": "{count} successful smoke eval run(s) found.",
+                                        "warn": "No successful smoke eval run has been recorded."
+                                    },
+                                    "releaseGate": {
+                                        "title": "Release Gate",
+                                        "pass": "The latest smoke eval checkpoint is passing.",
+                                        "warn": "The latest smoke eval checkpoint is not passing."
+                                    }
+                                }
                             }
                         }
                     },
                     "errors": {
                         "saveFailed": "Failed to save agent profile.",
+                        "activationBlocked": "Run a successful smoke eval before activating this agent.",
                         "uploadFailed": "Avatar upload failed."
                     },
                     "uploadModal": {

@@ -5,13 +5,14 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
-import { Brain, Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { Brain, Loader2, Trash2, AlertTriangle, Check, X, SlidersHorizontal, Lightbulb } from "lucide-react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type AgentMemory = Doc<"agentMemories">;
+type ReviewActionId = `memory:${Id<"agentMemoryCandidates">}` | `suggestion:${Id<"agentImprovementSuggestions">}`;
 
 function getKindColor(kind: AgentMemory["kind"]) {
   if (kind === "PREFERENCE") return "text-indigo-500 bg-indigo-500/10 border-indigo-500/20";
@@ -34,11 +35,24 @@ function getFlagLabel(flag: string) {
   return flag.toLowerCase().replaceAll("_", " ");
 }
 
+function getRiskColor(risk: string) {
+  if (risk === "HIGH") return "text-red-400 bg-red-500/10 border-red-500/20";
+  if (risk === "MEDIUM") return "text-amber-400 bg-amber-500/10 border-amber-500/20";
+  return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+}
+
+function getReviewTypeLabel(value: string) {
+  return value.toLowerCase().replaceAll("_", " ");
+}
+
 export default function AgentMemoryPage() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
   const deleteMemory = useMutation(api.agentMemories.deleteMemory);
+  const decideCandidate = useMutation(api.agentMemoryCandidates.decideCandidate);
+  const decideSuggestion = useMutation(api.agentImprovementSuggestions.decideSuggestion);
   const memoryQuality = useQuery(api.agentMemories.getQualityForAgent, { agentId });
+  const reviewInbox = useQuery(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId });
   const { results: memories, status, loadMore } = usePaginatedQuery(
     api.agentMemories.getForAgent,
     { agentId },
@@ -46,7 +60,10 @@ export default function AgentMemoryPage() {
   );
   const [pendingDelete, setPendingDelete] = useState<AgentMemory | null>(null);
   const [activeDeletion, setActiveDeletion] = useState<Id<"agentMemories"> | null>(null);
+  const [activeReviewAction, setActiveReviewAction] = useState<ReviewActionId | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [reviewError, setReviewError] = useState("");
+  const [reviewNotice, setReviewNotice] = useState("");
 
   const isLoading = status === "LoadingFirstPage";
   const isLoadingMore = status === "LoadingMore";
@@ -54,6 +71,43 @@ export default function AgentMemoryPage() {
   const qualityByMemoryId = new Map((memoryQuality ?? []).map((entry) => [entry.memory._id, entry]));
   const reviewCount = memoryQuality?.filter((entry) => entry.flags.length > 0 || entry.qualityScore < 0.45).length ?? 0;
   const unusedCount = memoryQuality?.filter((entry) => entry.usageCount === 0).length ?? 0;
+
+  const handleMemoryDecision = async (candidateId: Id<"agentMemoryCandidates">, decision: "APPROVED" | "REJECTED") => {
+    setActiveReviewAction(`memory:${candidateId}`);
+    setReviewError("");
+    setReviewNotice("");
+    try {
+      await decideCandidate({
+        candidateId,
+        decision,
+        ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent memory review inbox" } : {}),
+      });
+      setReviewNotice(decision === "APPROVED" ? "Memory candidate approved and applied." : "Memory candidate rejected.");
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : "The memory candidate could not be reviewed.");
+    } finally {
+      setActiveReviewAction(null);
+    }
+  };
+
+  const handleSuggestionDecision = async (suggestionId: Id<"agentImprovementSuggestions">, decision: "APPROVED" | "REJECTED") => {
+    setActiveReviewAction(`suggestion:${suggestionId}`);
+    setReviewError("");
+    setReviewNotice("");
+    try {
+      await decideSuggestion({
+        suggestionId,
+        decision,
+        apply: decision === "APPROVED",
+        ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent memory review inbox" } : {}),
+      });
+      setReviewNotice(decision === "APPROVED" ? "Improvement suggestion approved and applied." : "Improvement suggestion rejected.");
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : "The improvement suggestion could not be reviewed.");
+    } finally {
+      setActiveReviewAction(null);
+    }
+  };
 
   return (
     <>
@@ -86,6 +140,166 @@ export default function AgentMemoryPage() {
             </div>
           </div>
         )}
+
+        <div className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-4 flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+            <div>
+              <h3 className="text-[14px] font-semibold text-foreground tracking-tight flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-brand" />
+                Learning review inbox
+              </h3>
+              <p className="text-[12px] text-secondary mt-1">
+                Review proposed memories, reflections, and agent improvement changes before anything becomes durable behavior.
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-2 min-w-0 lg:min-w-[420px]">
+              {[
+                { label: "Open", value: reviewInbox?.totals.open ?? 0 },
+                { label: "Memory", value: reviewInbox?.totals.memoryCandidates ?? 0 },
+                { label: "Suggestions", value: reviewInbox?.totals.improvementSuggestions ?? 0 },
+                { label: "High risk", value: reviewInbox?.totals.highRisk ?? 0 },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 min-w-0">
+                  <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>
+                  <div className="text-[17px] font-semibold text-foreground mt-1">{reviewInbox ? stat.value : "..."}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {(reviewError || reviewNotice) && (
+            <div className={`rounded-[8px] border px-3 py-2 text-[13px] ${
+              reviewError
+                ? "border-red-500/20 bg-red-500/10 text-red-400"
+                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+            }`}>
+              {reviewError || reviewNotice}
+            </div>
+          )}
+
+          {!reviewInbox ? (
+            <div className="py-8 flex items-center justify-center text-muted">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : reviewInbox.totals.open === 0 ? (
+            <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
+              No learning items are waiting for review.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Memory candidates</div>
+                {reviewInbox.memoryCandidates.length === 0 ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-4 text-[12px] text-secondary">
+                    No proposed memories.
+                  </div>
+                ) : reviewInbox.memoryCandidates.slice(0, 5).map((candidate) => (
+                  <div key={candidate.candidateId} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getRiskColor(candidate.riskLevel)}`}>
+                        {candidate.riskLevel}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{candidate.kind}</span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{Math.round(candidate.confidence * 100)}%</span>
+                    </div>
+                    <p className="text-[12px] text-secondary leading-relaxed whitespace-pre-wrap">{candidate.content}</p>
+                    {candidate.sourceRun && (
+                      <p className="text-[11px] text-muted leading-relaxed">Source: {candidate.sourceRun.objective}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMemoryDecision(candidate.candidateId, "APPROVED")}
+                        disabled={activeReviewAction === `memory:${candidate.candidateId}`}
+                        className="px-3 py-1.5 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {activeReviewAction === `memory:${candidate.candidateId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMemoryDecision(candidate.candidateId, "REJECTED")}
+                        disabled={activeReviewAction === `memory:${candidate.candidateId}`}
+                        className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Improvement suggestions</div>
+                {reviewInbox.improvementSuggestions.length === 0 ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-4 text-[12px] text-secondary">
+                    No proposed changes.
+                  </div>
+                ) : reviewInbox.improvementSuggestions.slice(0, 5).map((suggestion) => (
+                  <div key={suggestion.suggestionId} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getRiskColor(suggestion.riskLevel)}`}>
+                        {suggestion.riskLevel}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{getReviewTypeLabel(suggestion.type)}</span>
+                    </div>
+                    <div>
+                      <div className="text-[13px] text-foreground font-semibold leading-snug">{suggestion.title}</div>
+                      <p className="text-[12px] text-secondary leading-relaxed mt-1">{suggestion.description}</p>
+                    </div>
+                    {suggestion.sourceRun && (
+                      <p className="text-[11px] text-muted leading-relaxed">Source: {suggestion.sourceRun.objective}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestionDecision(suggestion.suggestionId, "APPROVED")}
+                        disabled={activeReviewAction === `suggestion:${suggestion.suggestionId}`}
+                        className="px-3 py-1.5 rounded-[8px] border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {activeReviewAction === `suggestion:${suggestion.suggestionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestionDecision(suggestion.suggestionId, "REJECTED")}
+                        disabled={activeReviewAction === `suggestion:${suggestion.suggestionId}`}
+                        className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Reflection evidence</div>
+                {reviewInbox.reflections.length === 0 ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-4 text-[12px] text-secondary">
+                    No unresolved reflections.
+                  </div>
+                ) : reviewInbox.reflections.slice(0, 5).map((reflection) => (
+                  <div key={reflection.reflectionId} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-3 flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getRiskColor(reflection.riskLevel)}`}>
+                        {reflection.riskLevel}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{getReviewTypeLabel(reflection.category)}</span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{Math.round(reflection.confidence * 100)}%</span>
+                    </div>
+                    <p className="text-[12px] text-secondary leading-relaxed">{reflection.rootCause}</p>
+                    {reflection.proposedEvalFixture && (
+                      <p className="text-[11px] text-sky-300 leading-relaxed">Eval: {reflection.proposedEvalFixture}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="w-full py-16 flex items-center justify-center text-muted">

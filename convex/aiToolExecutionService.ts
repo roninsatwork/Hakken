@@ -1,11 +1,22 @@
+import { internal } from "./_generated/api";
+import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+
 type JsonSchema = Record<string, unknown>;
 
 export type ToolAccessRole = "ADMIN" | "SUPER_ADMIN";
 export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 export type ToolHandlerExecutionInput = {
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">;
   handlerMapping: string;
   args: Record<string, unknown>;
+  agentId?: Id<"agents">;
+  companyId?: Id<"companies">;
+  userId?: Id<"users">;
+  runId?: Id<"agentRuns">;
+  toolCallId?: Id<"agentToolCalls">;
+  fallbackQuery?: string;
 };
 
 export type ToolDefinitionInput = {
@@ -61,6 +72,21 @@ function getJsonSchemaType(value: unknown) {
   if (value === null) return "null";
   if (Array.isArray(value)) return "array";
   return typeof value;
+}
+
+function getStringToolArg(args: Record<string, unknown>, key: string) {
+  const value = args[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getNumberToolArg(args: Record<string, unknown>, key: string) {
+  const value = args[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function getOptionalStringToolArg(args: Record<string, unknown>, key: string) {
+  const value = args[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 export function normalizeToolFunctionName(value: string) {
@@ -253,9 +279,69 @@ export function assertCanExecuteTool(args: Parameters<typeof canExecuteTool>[0])
   }
 }
 
-export function executeRegisteredTool(args: ToolHandlerExecutionInput) {
-  void args;
-  throw new Error("Unknown or unimplemented tool handler mapping.");
+type RegisteredToolHandler = (input: ToolHandlerExecutionInput) => Promise<unknown>;
+
+function buildConnectorStubResult(input: ToolHandlerExecutionInput, connectorName: string) {
+  return {
+    ok: false,
+    status: "not_implemented",
+    connectorName,
+    handlerMapping: input.handlerMapping,
+    companyId: input.companyId,
+    message: `${connectorName} connector execution is not implemented yet.`,
+  };
+}
+
+const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
+  "knowledge.search": async (input) => {
+    const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
+    const limit = getNumberToolArg(input.args, "limit");
+
+    return await input.ctx.runQuery(internal.aiToolReadTools.searchKnowledge, {
+      query,
+      agentId: input.agentId,
+      companyId: input.companyId,
+      limit,
+    });
+  },
+  "company.overview.update": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Company overview updates require a tenant context.");
+    }
+    if (!input.userId) {
+      throw new Error("Company overview updates require an authenticated actor.");
+    }
+
+    const overview = getStringToolArg(input.args, "overview");
+    const idempotencyKey = getOptionalStringToolArg(input.args, "idempotencyKey");
+
+    return await input.ctx.runMutation(internal.aiToolWriteTools.updateCompanyOverview, {
+      companyId: input.companyId,
+      actorId: input.userId,
+      overview,
+      runId: input.runId,
+      toolCallId: input.toolCallId,
+      idempotencyKey,
+    });
+  },
+  "workflow.task.create": async (input) => buildConnectorStubResult(input, "Sonae Workflow/Task"),
+  "http.request": async (input) => buildConnectorStubResult(input, "HTTP REST"),
+  "notification.send": async (input) => buildConnectorStubResult(input, "Email/Notification"),
+  "slack.message.send": async (input) => buildConnectorStubResult(input, "Slack"),
+  "google_drive.search": async (input) => buildConnectorStubResult(input, "Google Drive"),
+};
+
+export function getRegisteredToolHandlerMappings() {
+  return Object.keys(REGISTERED_TOOL_HANDLERS).sort();
+}
+
+export async function executeRegisteredTool(args: ToolHandlerExecutionInput) {
+  const handler = REGISTERED_TOOL_HANDLERS[args.handlerMapping];
+  if (!handler) {
+    throw new Error("Unknown or unimplemented tool handler mapping.");
+  }
+
+  return await handler(args);
 }
 
 export function normalizeAiRuntimeError(error: unknown, fallback = "AI runtime request failed.") {

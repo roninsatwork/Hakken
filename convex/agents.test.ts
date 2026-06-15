@@ -72,6 +72,935 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(agent?.modelSelectionMode).toBe("inherit");
   });
 
+  test("agent readiness reports activation warnings until tools, knowledge, fixtures, and smoke evals exist", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Readiness Agent",
+      description: "Tests readiness state.",
+    });
+
+    const initialReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(initialReadiness).toMatchObject({
+      isActive: true,
+      toolBindingCount: 0,
+      knowledgeDocumentCount: 0,
+      modelReadiness: {
+        status: "PASS",
+        source: "legacyDefault",
+        useCase: "agent",
+        modelId: "default-agent-model",
+      },
+      activeEvalFixtureCount: 0,
+      successfulSmokeEvalRunCount: 0,
+      activationRisk: true,
+      activationWarnings: ["draftStatus", "tools", "knowledge", "evalFixtures", "smokeEval"],
+    });
+    expect(initialReadiness.fixtureCoverage).toContainEqual({
+      type: "HAPPY_PATH",
+      activeCount: 0,
+      latestAt: undefined,
+      smokePassed: false,
+    });
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const toolId = await ctx.db.insert("aiTools", {
+        name: "Knowledge Search",
+        description: "Searches approved internal knowledge sources.",
+        handlerMapping: "knowledge.search",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        isActive: true,
+        createdAt: now,
+        createdBy: adminId,
+      });
+      await ctx.db.insert("agentTools", {
+        agentId,
+        toolId,
+        assignedAt: now,
+      });
+
+      const knowledgeDocumentId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Support Handbook",
+        textContent: "Escalation policy and triage steps.",
+        agentId,
+        status: "ready",
+        format: "text/plain",
+        createdBy: adminId,
+        createdAt: now,
+      });
+      await ctx.db.patch(agentId, {
+        isActive: false,
+        knowledgeDocumentIds: [knowledgeDocumentId],
+      });
+
+      const setupRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Template setup: Readiness Agent",
+        status: "SUCCESS",
+        startedAt: now - 2,
+        completedAt: now - 1,
+        updatedAt: now - 1,
+      });
+      await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        sourceRunId: setupRunId,
+        createdBy: adminId,
+        type: "HAPPY_PATH",
+        objective: "Answer a support handbook question.",
+        expectedToolPlanJson: JSON.stringify([{ handlerMapping: "knowledge.search" }]),
+        expectedFinalOutputRubric: "Uses the support handbook and cites the escalation policy.",
+        sourceEvidenceJson: JSON.stringify({ source: "test" }),
+        tags: ["smoke"],
+        status: "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+
+    const smokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, { agentId });
+    expect(smokeEval.runId).toBeDefined();
+    expect(smokeEval).toMatchObject({
+      status: "SUCCESS",
+      objective: "Smoke eval: Answer a support handbook question.",
+      rubricSummary: "Uses the support handbook and cites the escalation policy.",
+    });
+
+    const readyState = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(readyState).toMatchObject({
+      isActive: false,
+      toolBindingCount: 1,
+      knowledgeDocumentCount: 1,
+      modelReadiness: {
+        status: "PASS",
+        source: "legacyDefault",
+        useCase: "agent",
+        modelId: "default-agent-model",
+      },
+      activeEvalFixtureCount: 1,
+      successfulSmokeEvalRunCount: 1,
+      activationRisk: false,
+      activationWarnings: [],
+      latestSmokeEvalRun: {
+        runId: smokeEval.runId,
+        objective: "Smoke eval: Answer a support handbook question.",
+        finalOutput: expect.stringContaining("Smoke eval passed"),
+      },
+    });
+    expect(readyState.fixtureCoverage).toContainEqual({
+      type: "HAPPY_PATH",
+      activeCount: 1,
+      latestAt: expect.any(Number),
+      smokePassed: true,
+    });
+    expect(readyState.fixtureCoverage).toContainEqual({
+      type: "TOOL_PLAN",
+      activeCount: 0,
+      latestAt: undefined,
+      smokePassed: false,
+    });
+    expect(readyState.checks.every((check) => check.status === "PASS")).toBe(true);
+    const smokeRunSteps = await t.run(async (ctx) =>
+      ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", smokeEval.runId)).collect()
+    );
+    expect(smokeRunSteps).toHaveLength(2);
+    expect(smokeRunSteps[0]).toMatchObject({
+      kind: "OBSERVE",
+      status: "SUCCESS",
+    });
+    expect(JSON.parse(smokeRunSteps[0].output || "{}")).toMatchObject({
+      status: "PASSED",
+      fixtureType: "HAPPY_PATH",
+      expectedFinalOutputRubric: "Uses the support handbook and cites the escalation policy.",
+      expectedToolMappings: ["knowledge.search"],
+      missingToolMappings: [],
+    });
+    expect(smokeRunSteps[1]).toMatchObject({
+      kind: "FINAL",
+      status: "SUCCESS",
+    });
+
+    const smokeHistory = await client.query(api.agentEvalFixtures.getSmokeEvalHistory, { agentId, limit: 5 });
+    expect(smokeHistory.totals).toEqual({
+      total: 1,
+      passed: 1,
+      failed: 0,
+      active: 0,
+      modelGraded: 0,
+    });
+    expect(smokeHistory.entries[0]).toMatchObject({
+      runId: smokeEval.runId,
+      status: "SUCCESS",
+      gradingMode: "CONTRACT_ONLY",
+      evalStatus: "PASSED",
+      expectedToolMappings: ["knowledge.search"],
+      missingToolMappings: [],
+      failures: [],
+      fixture: {
+        type: "HAPPY_PATH",
+        objective: "Answer a support handbook question.",
+        expectedFinalOutputRubric: "Uses the support handbook and cites the escalation policy.",
+        tags: ["smoke"],
+      },
+    });
+
+    const { passingFixtureId, failingFixtureId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const activeFixtures = await ctx.db
+        .query("agentEvalFixtures")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "ACTIVE"))
+        .collect();
+      const passingFixture = activeFixtures.find((fixture) => fixture.objective === "Answer a support handbook question.");
+      if (!passingFixture) throw new Error("Expected passing fixture");
+      const setupRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Template setup: Failed release gate",
+        status: "SUCCESS",
+        startedAt: now - 2,
+        completedAt: now - 1,
+        updatedAt: now - 1,
+      });
+      const failingFixtureId = await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        sourceRunId: setupRunId,
+        createdBy: adminId,
+        type: "TOOL_PLAN",
+        objective: "Lookup the CRM record for Acme.",
+        expectedToolPlanJson: JSON.stringify([{ handlerMapping: "crm.lookup" }]),
+        expectedFinalOutputRubric: "Uses the CRM lookup tool before answering.",
+        sourceEvidenceJson: JSON.stringify({ source: "test" }),
+        tags: ["smoke", "release-gate"],
+        status: "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { passingFixtureId: passingFixture._id, failingFixtureId };
+    });
+
+    const failedReleaseEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, {
+      agentId,
+      fixtureId: failingFixtureId,
+    });
+    expect(failedReleaseEval).toMatchObject({
+      status: "FAILED",
+      missingToolMappings: ["crm.lookup"],
+    });
+
+    const blockedReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(blockedReadiness).toMatchObject({
+      successfulSmokeEvalRunCount: 1,
+      activationRisk: false,
+      activationWarnings: ["releaseGate"],
+      latestSmokeEvalRun: {
+        runId: failedReleaseEval.runId,
+        status: "FAILED",
+        finalOutput: expect.stringContaining("Missing required tool mapping"),
+      },
+      releaseGatePolicy: {
+        criticalFixtureCount: 1,
+        passedCriticalFixtureCount: 0,
+        blockedCriticalFixtureCount: 1,
+      },
+    });
+    expect(blockedReadiness.checks).toContainEqual(expect.objectContaining({
+      key: "releaseGate",
+      status: "WARN",
+    }));
+
+    const releasePresetId = await client.mutation(api.agentEvalFixtures.saveSuitePreset, {
+      agentId,
+      name: "CRM release gate",
+      fixtureIds: [failingFixtureId],
+      isReleaseGate: true,
+    });
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      releaseGateMode: "PRESET",
+      releaseGateSuitePresetId: releasePresetId,
+    })).resolves.toBe(agentId);
+    const presetReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(presetReadiness.releaseGatePolicy).toMatchObject({
+      mode: "PRESET",
+      suitePresetId: releasePresetId,
+      suitePresetName: "CRM release gate",
+      criticalFixtureCount: 1,
+      passedCriticalFixtureCount: 0,
+      blockedCriticalFixtureCount: 1,
+    });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).rejects.toThrow("Activation blocked: latest smoke eval must pass before activating this agent.");
+
+    await expect(
+      client.mutation(api.agentEvalFixtures.runSmokeEval, {
+        agentId,
+        fixtureId: passingFixtureId,
+      })
+    ).resolves.toMatchObject({ status: "SUCCESS" });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).rejects.toThrow("Activation blocked: critical eval suite must pass before activating this agent.");
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const toolId = await ctx.db.insert("aiTools", {
+        name: "CRM Lookup",
+        description: "Looks up CRM records.",
+        handlerMapping: "crm.lookup",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        isActive: true,
+        createdAt: now,
+        createdBy: adminId,
+      });
+      await ctx.db.insert("agentTools", {
+        agentId,
+        toolId,
+        assignedAt: now,
+      });
+    });
+
+    await expect(
+      client.mutation(api.agentEvalFixtures.runSmokeEval, {
+        agentId,
+        fixtureId: failingFixtureId,
+      })
+    ).resolves.toMatchObject({ status: "SUCCESS" });
+
+    const unblockedReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(unblockedReadiness.releaseGatePolicy).toMatchObject({
+      mode: "PRESET",
+      suitePresetId: releasePresetId,
+      criticalFixtureCount: 1,
+      passedCriticalFixtureCount: 1,
+      blockedCriticalFixtureCount: 0,
+    });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).resolves.toBe(agentId);
+  });
+
+  test("agent readiness warns when inherited agent model defaults are missing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      })
+    );
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "No Default Model Agent",
+      description: "Tests model default readiness.",
+    });
+
+    const readiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(readiness).toMatchObject({
+      modelReadiness: {
+        status: "WARN",
+        source: "missing",
+        useCase: "agent",
+      },
+    });
+    expect(readiness.activationWarnings).toContain("modelDefault");
+    expect(readiness.checks).toContainEqual({
+      key: "modelDefault",
+      status: "WARN",
+      count: 0,
+    });
+  });
+
+  test("failed smoke eval contracts do not unlock draft activation", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Missing Tool Agent",
+      description: "Tests failed smoke eval state.",
+    });
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.patch(agentId, { isActive: false });
+      const setupRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Template setup: Missing Tool Agent",
+        status: "SUCCESS",
+        startedAt: now - 2,
+        completedAt: now - 1,
+        updatedAt: now - 1,
+      });
+      await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        sourceRunId: setupRunId,
+        createdBy: adminId,
+        type: "TOOL_PLAN",
+        objective: "Lookup the CRM record for Acme.",
+        expectedToolPlanJson: JSON.stringify([{ handlerMapping: "crm.lookup" }]),
+        expectedFinalOutputRubric: "Uses the CRM lookup tool before answering.",
+        sourceEvidenceJson: JSON.stringify({ source: "test" }),
+        tags: ["smoke", "tool-plan"],
+        status: "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const smokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, { agentId });
+    expect(smokeEval).toMatchObject({
+      status: "FAILED",
+      missingToolMappings: ["crm.lookup"],
+    });
+
+    const readiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(readiness).toMatchObject({
+      successfulSmokeEvalRunCount: 0,
+      latestSmokeEvalRun: {
+        runId: smokeEval.runId,
+        status: "FAILED",
+        finalOutput: expect.stringContaining("Missing required tool mapping"),
+      },
+    });
+
+    const smokeHistory = await client.query(api.agentEvalFixtures.getSmokeEvalHistory, { agentId });
+    expect(smokeHistory.totals).toEqual({
+      total: 1,
+      passed: 0,
+      failed: 1,
+      active: 0,
+      modelGraded: 0,
+    });
+    expect(smokeHistory.entries[0]).toMatchObject({
+      runId: smokeEval.runId,
+      status: "FAILED",
+      gradingMode: "CONTRACT_ONLY",
+      evalStatus: "FAILED",
+      expectedToolMappings: ["crm.lookup"],
+      missingToolMappings: ["crm.lookup"],
+      failures: ["Missing required tool mapping(s): crm.lookup."],
+    });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+  });
+
+  test("model-graded smoke evals queue without unlocking activation until grading succeeds", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Model Graded Agent",
+      description: "Tests queued model grading state.",
+    });
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.patch(agentId, { isActive: false });
+      const setupRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Template setup: Model Graded Agent",
+        status: "SUCCESS",
+        startedAt: now - 2,
+        completedAt: now - 1,
+        updatedAt: now - 1,
+      });
+      await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        sourceRunId: setupRunId,
+        createdBy: adminId,
+        type: "HAPPY_PATH",
+        objective: "Summarize the onboarding policy.",
+        expectedFinalOutputRubric: "Mentions owner, next step, and source limits.",
+        sourceEvidenceJson: JSON.stringify({ source: "test" }),
+        tags: ["smoke", "model-graded"],
+        status: "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const smokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, {
+      agentId,
+      gradingMode: "MODEL_GRADED",
+    });
+    expect(smokeEval).toMatchObject({
+      status: "QUEUED",
+      gradingMode: "MODEL_GRADED",
+      missingToolMappings: [],
+    });
+
+    const readiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(readiness).toMatchObject({
+      successfulSmokeEvalRunCount: 0,
+      latestSmokeEvalRun: {
+        runId: smokeEval.runId,
+        status: "QUEUED",
+        finalOutput: expect.stringContaining("Model-graded smoke eval queued"),
+      },
+    });
+
+    const queuedRunSteps = await t.run(async (ctx) =>
+      ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", smokeEval.runId)).collect()
+    );
+    expect(queuedRunSteps).toHaveLength(2);
+    expect(JSON.parse(queuedRunSteps[0].output || "{}")).toMatchObject({
+      status: "MODEL_GRADING_QUEUED",
+      gradingMode: "MODEL_GRADED",
+    });
+    expect(queuedRunSteps[1]).toMatchObject({
+      kind: "FINAL",
+      status: "PENDING",
+    });
+
+    const smokeHistory = await client.query(api.agentEvalFixtures.getSmokeEvalHistory, { agentId });
+    expect(smokeHistory.totals).toEqual({
+      total: 1,
+      passed: 0,
+      failed: 0,
+      active: 1,
+      modelGraded: 1,
+    });
+    expect(smokeHistory.entries[0]).toMatchObject({
+      runId: smokeEval.runId,
+      status: "QUEUED",
+      gradingMode: "MODEL_GRADED",
+      evalStatus: "MODEL_GRADING_QUEUED",
+      missingToolMappings: [],
+      fixture: {
+        type: "HAPPY_PATH",
+        objective: "Summarize the onboarding policy.",
+      },
+    });
+
+    await expect(
+      client.mutation(api.agents.updateAgent, {
+        id: agentId,
+        isActive: true,
+      })
+    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+  });
+
+  test("release gates can require current model-graded eval success", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Model Required Release Agent",
+      description: "Requires model-graded release gate evidence.",
+    });
+
+    const fixtureId = await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.patch(agentId, {
+        isActive: false,
+        releaseGateMode: "TAG",
+        releaseGateTags: ["release-gate"],
+        releaseGateRequiresModelGrading: true,
+      });
+      const setupRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Template setup: Model required release",
+        status: "SUCCESS",
+        startedAt: now - 2,
+        completedAt: now - 1,
+        updatedAt: now - 1,
+      });
+      return await ctx.db.insert("agentEvalFixtures", {
+        agentId,
+        sourceRunId: setupRunId,
+        createdBy: adminId,
+        type: "HAPPY_PATH",
+        objective: "Summarize release policy.",
+        expectedFinalOutputRubric: "Mentions release owner and approval policy.",
+        sourceEvidenceJson: JSON.stringify({ source: "test" }),
+        tags: ["happy_path", "release-gate"],
+        status: "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await expect(client.mutation(api.agentEvalFixtures.runSmokeEval, {
+      agentId,
+      fixtureId,
+    })).resolves.toMatchObject({
+      status: "SUCCESS",
+      gradingMode: "CONTRACT_ONLY",
+    });
+
+    const contractOnlyReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(contractOnlyReadiness.releaseGatePolicy).toMatchObject({
+      requiresModelGrading: true,
+      criticalFixtureCount: 1,
+      passedCriticalFixtureCount: 0,
+      blockedCriticalFixtureCount: 1,
+      fixtures: [expect.objectContaining({
+        passed: false,
+        latestRun: expect.objectContaining({
+          gradingMode: "CONTRACT_ONLY",
+          modelGradingSatisfied: false,
+        }),
+      })],
+    });
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      isActive: true,
+    })).rejects.toThrow("Activation blocked: critical eval suite must pass before activating this agent.");
+
+    await t.run(async (ctx) => {
+      const now = Date.now() + 10;
+      const runId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Smoke eval: Summarize release policy.",
+        status: "SUCCESS",
+        userId: adminId,
+        startedAt: now,
+        completedAt: now + 1,
+        updatedAt: now + 1,
+        finalOutput: "Model-graded smoke eval passed.",
+      });
+      await ctx.db.insert("agentRunSteps", {
+        runId,
+        agentId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "Summarize release policy.",
+        output: JSON.stringify({
+          status: "PASSED",
+          gradingMode: "MODEL_GRADED",
+          fixtureId,
+          fixtureType: "HAPPY_PATH",
+        }),
+        startedAt: now,
+        completedAt: now,
+      });
+    });
+
+    const modelReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(modelReadiness.releaseGatePolicy).toMatchObject({
+      requiresModelGrading: true,
+      criticalFixtureCount: 1,
+      passedCriticalFixtureCount: 1,
+      blockedCriticalFixtureCount: 0,
+      fixtures: [expect.objectContaining({
+        passed: true,
+        latestRun: expect.objectContaining({
+          gradingMode: "MODEL_GRADED",
+          modelGradingSatisfied: true,
+        }),
+      })],
+    });
+
+    await expect(client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      isActive: true,
+    })).resolves.toBe(agentId);
+  });
+
+  test("SUPER_ADMIN can list templates and create an inactive draft agent from a template", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, knowledgeToolId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      const knowledgeToolId = await ctx.db.insert("aiTools", {
+        name: "Knowledge Search",
+        description: "Searches approved internal knowledge sources.",
+        handlerMapping: "knowledge.search",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        isActive: true,
+        createdAt: Date.now(),
+        createdBy: userId,
+      });
+
+      return { adminId: userId, knowledgeToolId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const templates = await client.query(api.agents.getAgentTemplatesForCreation, {});
+    expect(templates.map((template) => template.id)).toContain("support-triage-agent");
+
+    const agentId = await client.mutation(api.agents.createAgentFromTemplate, {
+      templateId: "support-triage-agent",
+      builderIntent: {
+        objective: "Triage support tickets before activation.",
+        audience: "Support admins",
+        approvalPolicy: "template",
+        modelBehavior: "balanced",
+        knowledgePlan: "template",
+        toolPlan: "template",
+        smokeEvalRequired: true,
+        readinessAcknowledged: true,
+      },
+    });
+
+    const { agent, auditLogs, fixtures, setupRuns, agentToolBindings } = await t.run(async (ctx) => ({
+      agent: await ctx.db.get(agentId),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+      fixtures: await ctx.db
+        .query("agentEvalFixtures")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "ACTIVE"))
+        .collect(),
+      setupRuns: await ctx.db
+        .query("agentRuns")
+        .withIndex("by_agent_started", (q) => q.eq("agentId", agentId))
+        .collect(),
+      agentToolBindings: await ctx.db
+        .query("agentTools")
+        .withIndex("by_agent", (q) => q.eq("agentId", agentId))
+        .collect(),
+    }));
+
+    expect(agent).toMatchObject({
+      name: "Support Triage Agent",
+      description: "Classifies inbound support requests, summarizes urgency, and proposes next actions.",
+      modelId: "default-agent-model",
+      modelSelectionMode: "inherit",
+      isActive: false,
+      humanApprovalRequired: true,
+      reasoningEffort: "MEDIUM",
+      triggerType: "MANUAL",
+    });
+    expect(agent?.systemPrompt).toContain("support triage agent");
+    expect(setupRuns).toHaveLength(1);
+    expect(setupRuns[0]).toMatchObject({
+      agentId,
+      objective: "Template setup: Support Triage Agent",
+      status: "SUCCESS",
+      finalOutput: "Template starter eval fixtures seeded.",
+    });
+    expect(fixtures).toHaveLength(2);
+    expect(fixtures.map((fixture) => fixture.type).sort()).toEqual(["APPROVAL_PAUSE", "HAPPY_PATH"]);
+    expect(fixtures.every((fixture) => fixture.tags.includes("template"))).toBe(true);
+    expect(JSON.parse(fixtures[0].sourceEvidenceJson)).toMatchObject({
+      source: "agent_template",
+      templateId: "support-triage-agent",
+    });
+    expect(agentToolBindings).toHaveLength(1);
+    expect(agentToolBindings[0]).toMatchObject({
+      agentId,
+      toolId: knowledgeToolId,
+    });
+    expect(auditLogs).toHaveLength(1);
+    expect(JSON.parse(auditLogs[0].metadata || "{}")).toEqual({
+      name: "Support Triage Agent",
+      scope: "global",
+      templateId: "support-triage-agent",
+      evalFixtureCount: 2,
+      toolBindingCount: 1,
+      missingToolMappings: [],
+      builderIntent: {
+        objective: "Triage support tickets before activation.",
+        audience: "Support admins",
+        approvalPolicy: "template",
+        modelBehavior: "balanced",
+        knowledgePlan: "template",
+        toolPlan: "template",
+        smokeEvalRequired: true,
+        readinessAcknowledged: true,
+      },
+    });
+  });
+
+  test("template creation records missing recommended tools without blocking the draft", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgentFromTemplate, {
+      templateId: "document-review-agent",
+    });
+
+    const { agentToolBindings, auditLogs } = await t.run(async (ctx) => ({
+      agentToolBindings: await ctx.db
+        .query("agentTools")
+        .withIndex("by_agent", (q) => q.eq("agentId", agentId))
+        .collect(),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(agentToolBindings).toHaveLength(0);
+    expect(JSON.parse(auditLogs[0].metadata || "{}")).toMatchObject({
+      name: "Document Review Agent",
+      templateId: "document-review-agent",
+      toolBindingCount: 0,
+      missingToolMappings: ["knowledge.search"],
+    });
+  });
+
+  test("template creation rejects unknown templates and non-super-admin users", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, userId } = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+      const userId = await ctx.db.insert("users", {
+        email: "user@test.com",
+        role: "USER",
+      });
+
+      return { adminId, userId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const userClient = t.withIdentity({ subject: userId });
+
+    await expect(
+      adminClient.mutation(api.agents.createAgentFromTemplate, {
+        templateId: "missing-template",
+      })
+    ).rejects.toThrow("Agent template not found.");
+
+    await expect(userClient.query(api.agents.getAgentTemplatesForCreation, {})).rejects.toThrow("Unauthorized");
+    await expect(
+      userClient.mutation(api.agents.createAgentFromTemplate, {
+        templateId: "support-triage-agent",
+      })
+    ).rejects.toThrow("Unauthorized");
+  });
+
   test("SUPER_ADMIN can create, list, get, update, and delete global agents with audit logs and binding cleanup", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
