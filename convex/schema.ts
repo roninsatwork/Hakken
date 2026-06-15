@@ -503,6 +503,9 @@ export default defineSchema({
       v.literal("DISMISSED"),
       v.literal("CONVERTED")
     ),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    dismissalReason: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -538,6 +538,14 @@ export const createFromRun = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload);
+      if (reflection && reflection.status === "GENERATED") {
+        await ctx.db.patch(reflection._id, {
+          status: "CONVERTED",
+          reviewedBy: userId,
+          reviewedAt: now,
+          updatedAt: now,
+        });
+      }
       await ctx.db.insert("auditLogs", {
         actorId: userId,
         actionType: "UPDATE_AGENT_EVAL_FIXTURE",
@@ -562,6 +570,14 @@ export const createFromRun = mutation({
       createdAt: now,
       ...payload,
     });
+    if (reflection && reflection.status === "GENERATED") {
+      await ctx.db.patch(reflection._id, {
+        status: "CONVERTED",
+        reviewedBy: userId,
+        reviewedAt: now,
+        updatedAt: now,
+      });
+    }
     await ctx.db.insert("auditLogs", {
       actorId: userId,
       actionType: "CREATE_AGENT_EVAL_FIXTURE",

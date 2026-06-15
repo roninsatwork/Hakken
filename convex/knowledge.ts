@@ -1,10 +1,13 @@
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
+import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import {
   assertCanAccessKnowledgeScope,
   buildKnowledgeChunkRecords,
@@ -15,6 +18,247 @@ import {
   isExpiredThreadKnowledgeDocument,
   isWebsiteDocumentUnderRootDomain,
 } from "./knowledgeService";
+
+const KNOWLEDGE_QUALITY_LIMIT = 500;
+const KNOWLEDGE_INSPECTION_CHUNK_LIMIT = 12;
+const KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT = 150;
+const KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT = 20;
+const KNOWLEDGE_RETRIEVAL_RESULT_LIMIT = 8;
+const KNOWLEDGE_HISTORY_LIMIT = 8;
+const STALE_INGESTION_MS = 15 * 60 * 1000;
+
+function truncatePreview(value: string | undefined, limit = 900) {
+  const normalized = (value || "").trim().replace(/\s+/g, " ");
+  return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
+}
+
+function getRetrievalTokens(value: string) {
+  return Array.from(new Set(value.toLowerCase().match(/[a-z0-9]+/g) ?? []))
+    .filter((token) => token.length >= 2)
+    .slice(0, 12);
+}
+
+function scoreChunkForRetrieval(args: { chunkText: string; query: string; tokens: string[] }) {
+  const normalizedText = args.chunkText.toLowerCase();
+  const normalizedQuery = args.query.toLowerCase().trim();
+  const tokenHits = args.tokens.filter((token) => normalizedText.includes(token));
+  const phraseHit = normalizedQuery.length >= 4 && normalizedText.includes(normalizedQuery);
+  return {
+    score: tokenHits.length + (phraseHit ? 4 : 0),
+    matchedTerms: tokenHits,
+    phraseHit,
+  };
+}
+
+function parseAuditMetadata(metadata: string | undefined) {
+  if (!metadata) return null;
+  try {
+    return JSON.parse(metadata) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function summarizeEmbeddingDrift(args: {
+  document: Pick<Doc<"knowledgeDocuments">, "status" | "embeddingModelId" | "embeddingProviderKey" | "embeddingProviderModelId" | "embeddingDimensions">;
+  activeEmbeddingModel: ActiveEmbeddingModel | null;
+}) {
+  if (args.document.status !== "ready" || !args.activeEmbeddingModel) return null;
+  if (!args.document.embeddingModelId && !args.document.embeddingProviderModelId && !args.document.embeddingDimensions) return null;
+
+  const storedProviderKey = args.document.embeddingProviderKey ?? GOOGLE_VERTEX_PROVIDER_KEY;
+  const providerChanged = storedProviderKey !== args.activeEmbeddingModel.providerKey;
+  const modelChanged = args.document.embeddingModelId !== args.activeEmbeddingModel.modelId;
+  const providerModelChanged = args.document.embeddingProviderModelId !== args.activeEmbeddingModel.providerModelId;
+  const dimensionsChanged = args.document.embeddingDimensions !== undefined && args.document.embeddingDimensions !== args.activeEmbeddingModel.embeddingDimensions;
+
+  if (!providerChanged && !modelChanged && !providerModelChanged && !dimensionsChanged) return null;
+
+  return {
+    storedModelId: args.document.embeddingModelId,
+    storedProviderKey,
+    storedProviderModelId: args.document.embeddingProviderModelId,
+    storedDimensions: args.document.embeddingDimensions,
+    activeModelId: args.activeEmbeddingModel.modelId,
+    activeProviderKey: args.activeEmbeddingModel.providerKey,
+    activeProviderModelId: args.activeEmbeddingModel.providerModelId,
+    activeDimensions: args.activeEmbeddingModel.embeddingDimensions,
+  };
+}
+
+function getKnowledgeDocumentQualityFlag(args: {
+  document: { status: "pending" | "processing" | "ready" | "failed"; createdAt: number };
+  chunkCount: number;
+  now: number;
+  embeddingDrift?: ReturnType<typeof summarizeEmbeddingDrift> | null;
+}) {
+  if (args.document.status === "failed") return "FAILED";
+  if (args.document.status === "ready" && args.chunkCount === 0) return "READY_WITHOUT_CHUNKS";
+  if (args.embeddingDrift) return "EMBEDDING_MODEL_DRIFT";
+  if ((args.document.status === "pending" || args.document.status === "processing") && args.now - args.document.createdAt > STALE_INGESTION_MS) {
+    return "STALE_INGESTION";
+  }
+  return null;
+}
+
+type ActiveEmbeddingModel = {
+  modelId: string;
+  providerKey: string;
+  providerModelId: string;
+  embeddingDimensions?: number;
+};
+
+async function getModelByStableId(ctx: QueryCtx, modelId: string) {
+  return await ctx.db
+    .query("aiModels")
+    .withIndex("by_model_id", (q) => q.eq("modelId", modelId))
+    .first();
+}
+
+async function getActiveEmbeddingModelForCompany(
+  ctx: QueryCtx,
+  companyId: Id<"companies"> | undefined
+): Promise<ActiveEmbeddingModel | null> {
+  const companyDefault = companyId
+    ? await ctx.db
+      .query("aiModelDefaults")
+      .withIndex("by_company_use_case", (q) => q.eq("companyId", companyId).eq("useCase", EMBEDDING_MODEL_USE_CASE))
+      .first()
+    : null;
+  const globalDefault = await ctx.db
+    .query("aiModelDefaults")
+    .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", EMBEDDING_MODEL_USE_CASE))
+    .first();
+
+  const modelIds = [
+    companyDefault?.modelId,
+    companyDefault?.fallbackModelId,
+    globalDefault?.modelId,
+    globalDefault?.fallbackModelId,
+  ].filter((modelId): modelId is string => !!modelId);
+
+  for (const modelId of modelIds) {
+    const model = await getModelByStableId(ctx, modelId);
+    if (!model?.isEnabled) continue;
+    return {
+      modelId: model.modelId,
+      providerKey: model.providerKey ?? GOOGLE_VERTEX_PROVIDER_KEY,
+      providerModelId: model.providerModelId ?? model.modelId,
+      embeddingDimensions: GOOGLE_VERTEX_EMBEDDING_DIMENSIONS,
+    };
+  }
+
+  return null;
+}
+
+function getWritableKnowledgeScope(user: Doc<"users">, args: { companyId?: Id<"companies">; agentId?: Id<"agents"> }) {
+  const companyId = args.companyId || (args.agentId && user.role === "ADMIN" ? getActiveCompanyId(user) : undefined);
+  assertCanAccessKnowledgeScope(user, companyId);
+  return {
+    companyId,
+    agentId: args.agentId,
+  };
+}
+
+async function getKnowledgeDocumentsForScope(
+  ctx: QueryCtx,
+  args: { companyId?: Id<"companies">; agentId?: Id<"agents"> },
+  limit = KNOWLEDGE_QUALITY_LIMIT
+) {
+  const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+
+  if (args.agentId) {
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized");
+    }
+
+    if (user.role === "ADMIN") {
+      const activeCompanyId = getActiveCompanyId(user);
+      if (!activeCompanyId) return [];
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .withIndex("by_agent_company", (q) => q.eq("agentId", args.agentId).eq("companyId", activeCompanyId))
+        .order("desc")
+        .take(limit);
+    }
+
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .order("desc")
+      .take(limit);
+  }
+
+  if (!args.companyId) {
+    if (user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized access to global knowledge base");
+    }
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_global", (q) => q.eq("companyId", undefined).eq("agentId", undefined).eq("threadId", undefined))
+      .order("desc")
+      .take(limit);
+  }
+
+  if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
+    throw new Error("Unauthorized access to company knowledge base");
+  }
+
+  return await ctx.db
+    .query("knowledgeDocuments")
+    .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+    .filter((q) => q.and(
+      q.eq(q.field("agentId"), undefined),
+      q.eq(q.field("threadId"), undefined)
+    ))
+    .order("desc")
+    .take(limit);
+}
+
+async function assertCanInspectKnowledgeDocument(
+  ctx: QueryCtx,
+  document: Doc<"knowledgeDocuments">
+) {
+  const current = await getCurrentUser(ctx);
+  if (!current) throw new Error("Unauthenticated request");
+
+  if (document.threadId) {
+    const thread = await ctx.db.get(document.threadId);
+    if (!thread || !canReadThreadKnowledgeDocuments(thread, current)) throw new Error("Unauthorized");
+    return;
+  }
+
+  if (!document.companyId) {
+    if (current.user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    return;
+  }
+
+  if (current.user.role !== "SUPER_ADMIN" && (current.user.role !== "ADMIN" || getActiveCompanyId(current.user) !== document.companyId)) {
+    throw new Error("Unauthorized");
+  }
+}
+
+async function assertCanRepairKnowledgeDocument(
+  ctx: MutationCtx,
+  document: Doc<"knowledgeDocuments">
+) {
+  const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+
+  if (document.threadId) {
+    throw new Error("Thread-scoped documents are repaired from their source thread.");
+  }
+
+  if (!document.companyId) {
+    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    return { userId, user };
+  }
+
+  if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== document.companyId)) {
+    throw new Error("Unauthorized");
+  }
+
+  return { userId, user };
+}
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -142,6 +386,208 @@ export const getPaginatedDocuments = query({
   },
 });
 
+export const getQualitySummary = query({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+  },
+  handler: async (ctx, args) => {
+    const documents = await getKnowledgeDocumentsForScope(ctx, args);
+    const now = Date.now();
+    const activeEmbeddingModels = new Map<string, ActiveEmbeddingModel | null>();
+    const getActiveEmbeddingModelForDocument = async (document: Doc<"knowledgeDocuments">) => {
+      const cacheKey = document.companyId ?? "global";
+      if (!activeEmbeddingModels.has(cacheKey)) {
+        activeEmbeddingModels.set(cacheKey, await getActiveEmbeddingModelForCompany(ctx, document.companyId));
+      }
+      return activeEmbeddingModels.get(cacheKey) ?? null;
+    };
+    const chunkPairs = await Promise.all(documents.map(async (document) => {
+      const chunks = await ctx.db
+        .query("knowledgeChunks")
+        .withIndex("by_document", (q) => q.eq("documentId", document._id))
+        .take(KNOWLEDGE_INSPECTION_CHUNK_LIMIT);
+      return [document._id, chunks.length] as const;
+    }));
+    const chunkCountByDocument = new Map(chunkPairs);
+    const embeddingDriftPairs = await Promise.all(documents.map(async (document) => {
+      const activeEmbeddingModel = await getActiveEmbeddingModelForDocument(document);
+      return [document._id, summarizeEmbeddingDrift({ document, activeEmbeddingModel })] as const;
+    }));
+    const embeddingDriftByDocument = new Map(embeddingDriftPairs);
+    const statusCounts = documents.reduce<Record<Doc<"knowledgeDocuments">["status"], number>>((counts, document) => {
+      counts[document.status] += 1;
+      return counts;
+    }, { pending: 0, processing: 0, ready: 0, failed: 0 });
+    const flaggedDocuments = documents
+      .map((document) => {
+        const chunkCount = chunkCountByDocument.get(document._id) ?? 0;
+        const embeddingDrift = embeddingDriftByDocument.get(document._id);
+        const flag = getKnowledgeDocumentQualityFlag({ document, chunkCount, now, embeddingDrift });
+        if (!flag) return null;
+        return {
+          documentId: document._id,
+          title: document.title,
+          status: document.status,
+          format: document.format,
+          sourceUrl: document.sourceUrl,
+          createdAt: document.createdAt,
+          chunkCount,
+          flag,
+          embeddingDrift,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .slice(0, 12);
+    const totalChunks = Array.from(chunkCountByDocument.values()).reduce((sum, count) => sum + count, 0);
+    const readyDocuments = statusCounts.ready;
+    const embeddingDriftCount = Array.from(embeddingDriftByDocument.values()).filter(Boolean).length;
+
+    return {
+      totals: {
+        documents: documents.length,
+        ready: readyDocuments,
+        pending: statusCounts.pending,
+        processing: statusCounts.processing,
+        failed: statusCounts.failed,
+        flagged: flaggedDocuments.length,
+        embeddingDrift: embeddingDriftCount,
+        sampledChunks: totalChunks,
+        readyCoverage: documents.length > 0 ? readyDocuments / documents.length : 0,
+      },
+      flaggedDocuments,
+    };
+  },
+});
+
+export const inspectDocument = query({
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+  },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document) throw new Error("Document not found");
+    await assertCanInspectKnowledgeDocument(ctx, document);
+
+    const chunks = await ctx.db
+      .query("knowledgeChunks")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .take(KNOWLEDGE_INSPECTION_CHUNK_LIMIT);
+    const activeEmbeddingModel = await getActiveEmbeddingModelForCompany(ctx, document.companyId);
+    const embeddingDrift = summarizeEmbeddingDrift({ document, activeEmbeddingModel });
+    const auditLogRows = await ctx.db
+      .query("auditLogs")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(200);
+    const history = await Promise.all(auditLogRows
+      .filter((log) => log.entityType === "knowledgeDocuments" && log.entityId === document._id)
+      .slice(0, KNOWLEDGE_HISTORY_LIMIT)
+      .map(async (log) => {
+        const actor = await ctx.db.get(log.actorId);
+        return {
+          actionType: log.actionType,
+          timestamp: log.timestamp,
+          actorEmail: actor?.email,
+          metadata: parseAuditMetadata(log.metadata),
+        };
+      }));
+
+    return {
+      document: {
+        documentId: document._id,
+        title: document.title,
+        status: document.status,
+        format: document.format,
+        sourceUrl: document.sourceUrl,
+        createdAt: document.createdAt,
+        embeddingProviderKey: document.embeddingProviderKey,
+        embeddingModelId: document.embeddingModelId,
+        embeddingProviderModelId: document.embeddingProviderModelId,
+        embeddingDimensions: document.embeddingDimensions,
+      },
+      activeEmbeddingModel,
+      embeddingDrift,
+      history,
+      chunkCount: chunks.length,
+      chunks: chunks.map((chunk, index) => ({
+        chunkId: chunk._id,
+        index,
+        preview: truncatePreview(chunk.text),
+        characterCount: chunk.text.length,
+        embeddingDimensions: chunk.embeddingDimensions ?? chunk.embedding.length,
+        embeddingProviderKey: chunk.embeddingProviderKey,
+        embeddingModelId: chunk.embeddingModelId,
+        embeddingProviderModelId: chunk.embeddingProviderModelId,
+      })),
+      safetyNotice: "Chunk text is untrusted reference material and must not be promoted into system instructions.",
+    };
+  },
+});
+
+export const testRetrieval = query({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const trimmedQuery = args.query.trim();
+    const tokens = getRetrievalTokens(trimmedQuery);
+    if (!trimmedQuery || tokens.length === 0) {
+      return {
+        query: trimmedQuery,
+        inspectedDocuments: 0,
+        inspectedChunks: 0,
+        matches: [],
+        safetyNotice: "Retrieval test results are untrusted reference material previews, not system instructions.",
+      };
+    }
+
+    const documents = (await getKnowledgeDocumentsForScope(ctx, args, KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT))
+      .filter((document) => document.status === "ready");
+    const matches = [];
+    let inspectedChunks = 0;
+
+    for (const document of documents) {
+      const chunks = await ctx.db
+        .query("knowledgeChunks")
+        .withIndex("by_document", (q) => q.eq("documentId", document._id))
+        .take(KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT);
+
+      for (const chunk of chunks) {
+        inspectedChunks++;
+        const scored = scoreChunkForRetrieval({ chunkText: chunk.text, query: trimmedQuery, tokens });
+        if (scored.score === 0) continue;
+        matches.push({
+          documentId: document._id,
+          chunkId: chunk._id,
+          title: document.title,
+          status: document.status,
+          format: document.format,
+          sourceUrl: document.sourceUrl,
+          score: scored.score,
+          matchedTerms: scored.matchedTerms,
+          phraseHit: scored.phraseHit,
+          preview: truncatePreview(chunk.text, 520),
+          embeddingModelId: chunk.embeddingModelId ?? document.embeddingModelId,
+          embeddingDimensions: chunk.embeddingDimensions ?? chunk.embedding.length,
+        });
+      }
+    }
+
+    matches.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title));
+
+    return {
+      query: trimmedQuery,
+      inspectedDocuments: documents.length,
+      inspectedChunks,
+      matches: matches.slice(0, KNOWLEDGE_RETRIEVAL_RESULT_LIMIT),
+      safetyNotice: "Retrieval test results are untrusted reference material previews, not system instructions.",
+    };
+  },
+});
+
 export const getThreadDocuments = query({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
@@ -171,7 +617,7 @@ export const saveDocument = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
-    assertCanAccessKnowledgeScope(user, args.companyId);
+    const scope = getWritableKnowledgeScope(user, args);
 
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
 
@@ -182,8 +628,8 @@ export const saveDocument = mutation({
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
-      companyId: args.companyId,
-      agentId: args.agentId,
+      companyId: scope.companyId,
+      agentId: scope.agentId,
     }));
 
     // Trigger off the heavy-duty background action for processing & embeddings
@@ -198,7 +644,7 @@ export const saveDocument = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: getKnowledgeAuditMetadata({ title: args.title, format: args.format, scope: args })
+      metadata: getKnowledgeAuditMetadata({ title: args.title, format: args.format, scope })
     });
 
     return documentId;
@@ -291,6 +737,43 @@ export const deleteDocument = mutation({
   }
 });
 
+export const retryDocumentIngestion = mutation({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document) throw new Error("Document not found");
+
+    const { userId } = await assertCanRepairKnowledgeDocument(ctx, document);
+    const nextStatus = document.format === "url" ? "pending" : "processing";
+
+    await ctx.db.patch(document._id, { status: nextStatus });
+    await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: document._id });
+
+    if (document.format === "url") {
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+    } else {
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
+        documentId: document._id,
+        ...(document.fileId ? { storageId: document.fileId } : {}),
+      });
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "RETRY_KNOWLEDGE_DOCUMENT",
+      actorId: userId,
+      entityType: "knowledgeDocuments",
+      entityId: document._id,
+      timestamp: Date.now(),
+      metadata: getKnowledgeAuditMetadata({ title: document.title, format: document.format, scope: document }),
+    });
+
+    return {
+      documentId: document._id,
+      status: nextStatus,
+    };
+  },
+});
+
 export const getDocInternal = internalQuery({
   args: { id: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
@@ -360,7 +843,7 @@ export const saveManualText = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
-    assertCanAccessKnowledgeScope(user, args.companyId);
+    const scope = getWritableKnowledgeScope(user, args);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
@@ -369,8 +852,8 @@ export const saveManualText = mutation({
       format: "text/plain",
       createdBy: userId,
       createdAt: Date.now(),
-      companyId: args.companyId,
-      agentId: args.agentId,
+      companyId: scope.companyId,
+      agentId: scope.agentId,
     }));
 
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
@@ -383,7 +866,7 @@ export const saveManualText = mutation({
       entityType: "knowledgeDocuments",
       entityId: documentId,
       timestamp: Date.now(),
-      metadata: getKnowledgeAuditMetadata({ title: args.title, format: "text/plain", scope: args })
+      metadata: getKnowledgeAuditMetadata({ title: args.title, format: "text/plain", scope })
     });
 
     return documentId;
@@ -399,7 +882,7 @@ export const queueWebsiteUrls = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
-    assertCanAccessKnowledgeScope(user, args.companyId);
+    const scope = getWritableKnowledgeScope(user, args);
 
     const docIds = [];
     for (const url of args.urls) {
@@ -409,7 +892,7 @@ export const queueWebsiteUrls = mutation({
         // Simple duplicates check
         const existing = await ctx.db
             .query("knowledgeDocuments")
-            .withIndex("by_source_company", (q) => q.eq("sourceUrl", url).eq("companyId", args.companyId).eq("agentId", args.agentId))
+            .withIndex("by_source_company", (q) => q.eq("sourceUrl", url).eq("companyId", scope.companyId).eq("agentId", scope.agentId))
             .first();
             
         if (existing) {
@@ -427,8 +910,8 @@ export const queueWebsiteUrls = mutation({
           format: "url",
           createdBy: userId,
           createdAt: Date.now(),
-          companyId: args.companyId,
-          agentId: args.agentId,
+          companyId: scope.companyId,
+          agentId: scope.agentId,
         }));
         docIds.push(documentId);
     }
@@ -449,18 +932,19 @@ export const deleteWebsiteBulk = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
-    assertCanAccessKnowledgeScope(user, args.companyId, "Unauthorized");
+    const scope = getWritableKnowledgeScope(user, args);
 
-    const docs = args.agentId
+    const docs = scope.agentId
         ? await ctx.db
           .query("knowledgeDocuments")
-          .withIndex("by_agent_format", (q) => q.eq("agentId", args.agentId).eq("format", "url"))
+          .withIndex("by_agent_format", (q) => q.eq("agentId", scope.agentId).eq("format", "url"))
+          .filter((q) => q.eq(q.field("companyId"), scope.companyId))
           .order("desc")
           .take(500)
-        : args.companyId
+        : scope.companyId
           ? await ctx.db
             .query("knowledgeDocuments")
-            .withIndex("by_company_format", (q) => q.eq("companyId", args.companyId).eq("format", "url"))
+            .withIndex("by_company_format", (q) => q.eq("companyId", scope.companyId).eq("format", "url"))
             .order("desc")
             .take(500)
           : await ctx.db

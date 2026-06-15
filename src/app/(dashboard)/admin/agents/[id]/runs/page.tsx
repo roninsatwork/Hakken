@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Ban, Brain, Check, ClipboardCheck, Clock3, Eye, Lightbulb, Loader2, MessageSquare, MinusCircle, PlayCircle, RotateCcw, ShieldCheck, SlidersHorizontal, ThumbsDown, ThumbsUp, Timer, Wrench, X, type LucideIcon } from "lucide-react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
@@ -144,7 +144,9 @@ function MetricTile({ label, value, icon: Icon }: { label: string; value: string
 
 export default function AgentRunsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const agentId = params.id as Id<"agents">;
+  const requestedRunId = searchParams.get("runId") as Id<"agentRuns"> | null;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [activeRunId, setActiveRunId] = useState<Id<"agentRuns"> | null>(null);
   const [detailRunId, setDetailRunId] = useState<Id<"agentRuns"> | null>(null);
@@ -236,6 +238,10 @@ export default function AgentRunsPage() {
     return entries;
   }, [improvementSuggestions]);
   const activeEvalFixtureCount = evalFixtures?.length ?? 0;
+
+  useEffect(() => {
+    if (requestedRunId) setDetailRunId(requestedRunId);
+  }, [requestedRunId]);
 
   const handleReplay = async (runId: Id<"agentRuns">, mode: ReplayMode = "CURRENT_ACTIVE") => {
     setActiveRunId(runId);

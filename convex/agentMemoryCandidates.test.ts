@@ -167,6 +167,13 @@ describe("Agent Memory Candidates", () => {
         type: "PROMPT_CHANGE",
         riskLevel: "HIGH",
         sourceRun: expect.objectContaining({ runId: failedRunId }),
+        patchPreview: [
+          expect.objectContaining({
+            operation: "APPEND",
+            target: "Agent system prompt",
+            after: "Escalation summaries require owner, blocker, and next action.",
+          }),
+        ],
       }),
     ]);
     expect(reviewInbox.reflections).toEqual([
@@ -176,6 +183,17 @@ describe("Agent Memory Candidates", () => {
         proposedEvalFixture: "Create an eval for escalation summaries.",
       }),
     ]);
+    const highRiskInbox = await adminAClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, {
+      agentId,
+      mode: "HIGH_RISK",
+    });
+    expect(highRiskInbox.totals).toMatchObject({
+      open: 1,
+      memoryCandidates: 0,
+      improvementSuggestions: 1,
+      reflections: 0,
+      highRisk: 1,
+    });
 
     const otherTenantInbox = await adminBClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId });
     expect(otherTenantInbox.totals.open).toBe(0);
@@ -206,6 +224,20 @@ describe("Agent Memory Candidates", () => {
       decision: "REJECTED",
       rejectionReason: "Too vague",
     });
+    const reviewedInbox = await adminAClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, {
+      agentId,
+      mode: "REVIEWED",
+    });
+    expect(reviewedInbox.totals).toMatchObject({
+      open: 3,
+      memoryCandidates: 3,
+      improvementSuggestions: 0,
+      reflections: 0,
+      highRisk: 0,
+    });
+    expect(reviewedInbox.memoryCandidates.map((candidate) => candidate.status).sort()).toEqual(["APPLIED", "APPLIED", "REJECTED"]);
+    expect(reviewedInbox.memoryCandidates.every((candidate) => candidate.reviewedAt)).toBe(true);
+    expect(reviewedInbox.memoryCandidates.every((candidate) => candidate.reviewer?.email === "admin-a@example.com")).toBe(true);
 
     const state = await t.run(async (ctx) => ({
       successCandidate: await ctx.db.get(successResult.createdIds[0]),

@@ -158,7 +158,7 @@ describe("Agent Eval Fixtures", () => {
   test("admins can convert scoped runs into repeatable eval fixtures", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminAId, adminBId, agentId, failedRunId, successRunId } = await t.run(async (ctx) => {
+    const { adminAId, adminBId, agentId, failedRunId, successRunId, reflectionId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
       const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
       const adminAId = await ctx.db.insert("users", {
@@ -290,7 +290,7 @@ describe("Agent Eval Fixtures", () => {
         updatedAt: 240,
       });
 
-      return { adminAId, adminBId, agentId, failedRunId, successRunId };
+      return { adminAId, adminBId, agentId, failedRunId, successRunId, reflectionId };
     });
 
     const adminAClient = t.withIdentity({ subject: adminAId });
@@ -346,6 +346,11 @@ describe("Agent Eval Fixtures", () => {
       stepCount: 1,
       toolCallCount: 1,
       memoryCandidateIds: expect.any(Array),
+    });
+    const convertedReflection = await t.run(async (ctx) => await ctx.db.get(reflectionId));
+    expect(convertedReflection).toMatchObject({
+      status: "CONVERTED",
+      reviewedBy: adminAId,
     });
 
     const successFixtures = await adminAClient.query(api.agentEvalFixtures.getForRun, {

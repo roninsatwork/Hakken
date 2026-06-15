@@ -147,6 +147,31 @@ describe("Agent Run Reflections", () => {
       toolStatus: "FAILED",
     });
 
+    await expect(
+      adminBClient.mutation(api.agentRunReflections.dismissReflection, {
+        reflectionId,
+        reason: "Not actionable",
+      })
+    ).rejects.toThrow("Unauthorized");
+
+    await adminAClient.mutation(api.agentRunReflections.dismissReflection, {
+      reflectionId,
+      reason: "Covered by an existing eval",
+    });
+    await expect(
+      adminAClient.mutation(api.agentRunReflections.dismissReflection, {
+        reflectionId,
+        reason: "Duplicate dismissal",
+      })
+    ).rejects.toThrow("Reflection has already been reviewed");
+
+    const dismissedReflection = await t.run(async (ctx) => await ctx.db.get(reflectionId));
+    expect(dismissedReflection).toMatchObject({
+      status: "DISMISSED",
+      reviewedBy: adminAId,
+      dismissalReason: "Covered by an existing eval",
+    });
+
     const cancelledReflectionId = await adminBClient.mutation(api.agentRunReflections.createForRun, {
       runId: cancelledRunId,
     });
@@ -168,8 +193,8 @@ describe("Agent Run Reflections", () => {
     expect(auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_AGENT_RUN_REFLECTION",
       "UPDATE_AGENT_RUN_REFLECTION",
+      "DISMISS_AGENT_RUN_REFLECTION",
       "CREATE_AGENT_RUN_REFLECTION",
     ]);
   });
 });
-

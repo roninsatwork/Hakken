@@ -2,8 +2,8 @@
 
 import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useRef, useMemo } from "react";
-import type { ChangeEvent, DragEvent, KeyboardEvent, ReactNode } from "react";
-import { useMutation, useAction, usePaginatedQuery } from "convex/react";
+import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
+import { useMutation, useAction, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -21,6 +21,11 @@ import {
   Search,
   RefreshCw,
   AlertCircle,
+  Eye,
+  Database,
+  Wrench,
+  TestTube2,
+  History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
@@ -31,7 +36,8 @@ import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
 
 type KnowledgeScope =
   | { type: "global" }
-  | { type: "company"; companyId: Id<"companies"> };
+  | { type: "company"; companyId: Id<"companies"> }
+  | { type: "agent"; agentId: Id<"agents"> };
 
 type KnowledgeManagerProps = {
   scope: KnowledgeScope;
@@ -43,6 +49,7 @@ type KnowledgeManagerProps = {
 type KnowledgeTab = "Website" | "File" | "Text";
 
 function buildScopeArgs(scope: KnowledgeScope) {
+  if (scope.type === "agent") return { agentId: scope.agentId };
   return scope.type === "company" ? { companyId: scope.companyId } : {};
 }
 
@@ -62,12 +69,14 @@ export function KnowledgeManager({
     scopeArgs,
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
+  const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
   const deleteDocument = useMutation(api.knowledge.deleteDocument);
   const saveManualText = useMutation(api.knowledge.saveManualText);
   const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
   const deleteWebsiteBulk = useMutation(api.knowledge.deleteWebsiteBulk);
+  const retryDocumentIngestion = useMutation(api.knowledge.retryDocumentIngestion);
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
 
   const [activeTab, setActiveTab] = useState<KnowledgeTab>("Website");
@@ -90,9 +99,22 @@ export function KnowledgeManager({
   const [rootToDelete, setRootToDelete] = useState<string | null>(null);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [websiteError, setWebsiteError] = useState("");
+  const [qualityActionError, setQualityActionError] = useState("");
+  const [retrievalQuery, setRetrievalQuery] = useState("");
+  const [submittedRetrievalQuery, setSubmittedRetrievalQuery] = useState("");
+  const [repairingDocumentIds, setRepairingDocumentIds] = useState<Record<string, boolean>>({});
   const [documentToDelete, setDocumentToDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
+  const [documentToInspect, setDocumentToInspect] = useState<Doc<"knowledgeDocuments"> | null>(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [documentDeleteError, setDocumentDeleteError] = useState("");
+  const documentInspection = useQuery(
+    api.knowledge.inspectDocument,
+    documentToInspect ? { documentId: documentToInspect._id } : "skip"
+  );
+  const retrievalTest = useQuery(
+    api.knowledge.testRetrieval,
+    submittedRetrievalQuery.trim() ? { ...scopeArgs, query: submittedRetrievalQuery.trim() } : "skip"
+  );
   const isLoadingDocuments = status === "LoadingFirstPage";
   const isLoadingMoreDocuments = status === "LoadingMore";
   const canLoadMoreDocuments = status === "CanLoadMore";
@@ -240,6 +262,24 @@ export function KnowledgeManager({
     }
   };
 
+  const handleRunRetrievalTest = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmittedRetrievalQuery(retrievalQuery.trim());
+  };
+
+  const handleRetryDocument = async (documentId: Id<"knowledgeDocuments">) => {
+    setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: true }));
+    setQualityActionError("");
+    try {
+      await retryDocumentIngestion({ documentId });
+    } catch (err: unknown) {
+      console.error(err);
+      setQualityActionError(getErrorMessage(err, "Failed to retry ingestion."));
+    } finally {
+      setRepairingDocumentIds((prev) => ({ ...prev, [documentId]: false }));
+    }
+  };
+
   const handleConfirmDocumentDelete = async () => {
     if (!documentToDelete || isDeletingDocument) return;
     setIsDeletingDocument(true);
@@ -266,6 +306,165 @@ export function KnowledgeManager({
     <>
       <div className="flex flex-col gap-6 w-full">
         {header}
+
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          {[
+            { label: "Documents", value: qualitySummary ? qualitySummary.totals.documents.toLocaleString() : "...", tone: "text-foreground" },
+            { label: "Ready", value: qualitySummary ? qualitySummary.totals.ready.toLocaleString() : "...", tone: "text-[#10b981]" },
+            { label: "Ingesting", value: qualitySummary ? (qualitySummary.totals.pending + qualitySummary.totals.processing).toLocaleString() : "...", tone: "text-amber-400" },
+            { label: "Failed", value: qualitySummary ? qualitySummary.totals.failed.toLocaleString() : "...", tone: "text-red-400" },
+            { label: "Drift", value: qualitySummary ? qualitySummary.totals.embeddingDrift.toLocaleString() : "...", tone: "text-amber-300" },
+            { label: "Chunks", value: qualitySummary ? qualitySummary.totals.sampledChunks.toLocaleString() : "...", tone: "text-secondary" },
+          ].map((item) => (
+            <div key={item.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-3">
+              <div className="text-[10px] uppercase tracking-widest font-mono text-muted">{item.label}</div>
+              <div className={`text-[20px] font-semibold mt-1 ${item.tone}`}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-4 flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <TestTube2 className="w-4 h-4 text-brand" />
+              <h3 className="text-[13px] font-semibold text-foreground">Retrieval test</h3>
+            </div>
+            <form onSubmit={handleRunRetrievalTest} className="flex flex-col sm:flex-row gap-2 lg:min-w-[460px]">
+              <input
+                type="text"
+                value={retrievalQuery}
+                onChange={(event) => setRetrievalQuery(event.target.value)}
+                placeholder="Search stored chunks"
+                className="h-9 flex-1 bg-background border border-border-dim rounded-[8px] px-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={!retrievalQuery.trim()}
+                className="h-9 px-4 rounded-[8px] bg-foreground text-background font-medium text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50"
+              >
+                <Search className="w-3.5 h-3.5" />
+                Test
+              </button>
+            </form>
+          </div>
+
+          {qualityActionError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">{qualityActionError}</span>
+            </div>
+          )}
+
+          {submittedRetrievalQuery.trim() && retrievalTest === undefined && (
+            <div className="py-4 flex items-center gap-2 text-[13px] text-secondary">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Checking stored chunks...
+            </div>
+          )}
+
+          {retrievalTest && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-widest font-mono text-muted">
+                <span>{retrievalTest.inspectedDocuments} ready docs</span>
+                <span>{retrievalTest.inspectedChunks} chunks checked</span>
+                <span>{retrievalTest.matches.length} matches</span>
+              </div>
+              {retrievalTest.matches.length === 0 ? (
+                <div className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] text-secondary">
+                  No stored chunks matched this phrase.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {retrievalTest.matches.map((match) => (
+                    <div key={match.chunkId} className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-semibold text-foreground truncate">{match.title}</div>
+                          <div className="text-[10px] uppercase tracking-widest font-mono text-muted mt-1">
+                            score {match.score} * {match.embeddingDimensions} dimensions
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const document = documents.find((entry) => entry._id === match.documentId);
+                            if (document) setDocumentToInspect(document);
+                          }}
+                          className="p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors shrink-0"
+                          title="Inspect chunks"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {match.matchedTerms.map((term) => (
+                          <span key={term} className="px-2 py-0.5 rounded-md border border-brand/20 bg-brand/10 text-brand text-[10px] font-mono">
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                      <pre className="text-[12px] text-secondary whitespace-pre-wrap break-words leading-relaxed max-h-28 overflow-auto">
+                        {match.preview}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex gap-3 text-amber-200">
+                <Database className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-[13px] leading-relaxed">{retrievalTest.safetyNotice}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {qualitySummary && qualitySummary.flaggedDocuments.length > 0 && (
+          <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-amber-300">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-[13px] font-semibold">Knowledge quality items need review</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              {qualitySummary.flaggedDocuments.map((item) => (
+                <div key={item.documentId} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[13px] text-foreground font-semibold truncate">{item.title}</div>
+                    <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted mt-1">
+                      <span>{item.flag.toLowerCase().replaceAll("_", " ")}</span>
+                      <span>{item.status}</span>
+                      <span>{item.chunkCount} chunks</span>
+                    </div>
+                    {item.embeddingDrift && (
+                      <div className="text-[11px] text-amber-200 mt-1 truncate">
+                        {item.embeddingDrift.storedModelId || "unknown model"} {"->"} {item.embeddingDrift.activeModelId}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const document = documents.find((entry) => entry._id === item.documentId);
+                      if (document) setDocumentToInspect(document);
+                    }}
+                    className="px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-300 text-[12px] font-semibold flex items-center gap-2 shrink-0"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Inspect
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRetryDocument(item.documentId)}
+                    disabled={repairingDocumentIds[item.documentId]}
+                    className="px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-200 text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-50"
+                  >
+                    {repairingDocumentIds[item.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                    Repair
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center bg-background border border-border-dim rounded-[10px] w-fit p-1">
           {(["Website", "File", "Text"] as const).map((tab) => (
@@ -425,6 +624,23 @@ export function KnowledgeManager({
                               {document.status === "processing" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
                               {document.status === "failed" && <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Failed</span>}
                               <button
+                                onClick={() => setDocumentToInspect(document)}
+                                className="text-secondary hover:text-brand transition-colors opacity-50 group-hover:opacity-100"
+                                title="Inspect chunks"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {document.status === "failed" && (
+                                <button
+                                  onClick={() => handleRetryDocument(document._id)}
+                                  disabled={repairingDocumentIds[document._id]}
+                                  className="text-secondary hover:text-amber-300 transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
+                                  title="Retry ingestion"
+                                >
+                                  {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
+                                </button>
+                              )}
+                              <button
                                 onClick={() => setDocumentToDelete(document)}
                                 className="text-secondary hover:text-red-500 transition-colors opacity-50 group-hover:opacity-100"
                                 title="Delete Document"
@@ -498,6 +714,25 @@ export function KnowledgeManager({
                         <div className="flex items-center gap-2 text-[11px] font-bold text-red-500 tracking-widest uppercase font-mono px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30">
                           <AlertTriangle className="w-3.5 h-3.5" /> Failed
                         </div>
+                      )}
+
+                      <button
+                        onClick={() => setDocumentToInspect(document)}
+                        className="p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Inspect chunks"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      {document.status === "failed" && (
+                        <button
+                          onClick={() => handleRetryDocument(document._id)}
+                          disabled={repairingDocumentIds[document._id]}
+                          className="p-2 rounded-lg border border-transparent text-secondary hover:text-amber-300 hover:bg-amber-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Retry ingestion"
+                        >
+                          {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
+                        </button>
                       )}
 
                       <button
@@ -619,6 +854,135 @@ export function KnowledgeManager({
               Delete Document
             </button>
           </div>
+        </div>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={!!documentToInspect}
+        onClose={() => setDocumentToInspect(null)}
+        title="Inspect Knowledge Document"
+        size="lg"
+      >
+        <div className="flex flex-col gap-5 w-full pt-4">
+          {!documentToInspect ? null : documentInspection === undefined ? (
+            <div className="py-12 flex justify-center text-muted">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : documentInspection === null ? (
+            <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
+              This document could not be inspected.
+            </div>
+          ) : (
+            <>
+              <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-black/20 text-secondary">
+                    {documentInspection.document.status}
+                  </span>
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
+                    {documentInspection.document.format}
+                  </span>
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
+                    {documentInspection.chunkCount} sampled chunks
+                  </span>
+                </div>
+                <h3 className="text-[15px] font-semibold text-foreground">{documentInspection.document.title}</h3>
+                {documentInspection.document.sourceUrl && (
+                  <a href={documentInspection.document.sourceUrl} target="_blank" rel="noreferrer" className="text-[12px] text-brand hover:underline break-all">
+                    {documentInspection.document.sourceUrl}
+                  </a>
+                )}
+                <div className="flex flex-wrap gap-3 text-[11px] text-muted font-mono">
+                  <span>{formatDate(documentInspection.document.createdAt)}</span>
+                  {documentInspection.document.embeddingModelId && <span>model: {documentInspection.document.embeddingModelId}</span>}
+                  {documentInspection.document.embeddingDimensions && <span>{documentInspection.document.embeddingDimensions} dimensions</span>}
+                </div>
+                {documentInspection.document.status === "failed" && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRetryDocument(documentInspection.document.documentId)}
+                      disabled={repairingDocumentIds[documentInspection.document.documentId]}
+                      className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-200 text-[12px] font-semibold flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                      Retry ingestion
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex gap-3 text-amber-200">
+                <Database className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-[13px] leading-relaxed">{documentInspection.safetyNotice}</p>
+              </div>
+
+              {documentInspection.embeddingDrift && (
+                <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex flex-col gap-2 text-amber-100">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-[13px] font-semibold">Embedding model drift detected</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-amber-100/80">
+                    <div>Stored: {documentInspection.embeddingDrift.storedModelId || "unknown"} ({documentInspection.embeddingDrift.storedDimensions || "?"} dims)</div>
+                    <div>Active: {documentInspection.embeddingDrift.activeModelId} ({documentInspection.embeddingDrift.activeDimensions || "?"} dims)</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRetryDocument(documentInspection.document.documentId)}
+                    disabled={repairingDocumentIds[documentInspection.document.documentId]}
+                    className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-100 text-[12px] font-semibold flex items-center gap-2 w-fit disabled:opacity-50"
+                  >
+                    {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                    Re-embed with active model
+                  </button>
+                </div>
+              )}
+
+              <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-secondary">
+                  <History className="w-4 h-4" />
+                  <span className="text-[13px] font-semibold text-foreground">Ingestion history</span>
+                </div>
+                {documentInspection.history.length === 0 ? (
+                  <div className="text-[13px] text-secondary">No recent document events were found.</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {documentInspection.history.map((event) => (
+                      <div key={`${event.actionType}-${event.timestamp}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 rounded-[8px] border border-border-dim bg-black/20 px-3 py-2">
+                        <div className="text-[12px] font-semibold text-foreground">{event.actionType.toLowerCase().replaceAll("_", " ")}</div>
+                        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
+                          <span>{formatDate(event.timestamp)}</span>
+                          {event.actorEmail && <span>{event.actorEmail}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {documentInspection.chunks.length === 0 ? (
+                <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-5 text-[13px] text-secondary">
+                  No chunks are stored for this document yet.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {documentInspection.chunks.map((chunk) => (
+                    <div key={chunk.chunkId} className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
+                        <span>Chunk {chunk.index + 1}</span>
+                        <span>{chunk.characterCount} chars</span>
+                        <span>{chunk.embeddingDimensions} dimensions</span>
+                      </div>
+                      <pre className="text-[12px] text-secondary whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-auto">
+                        {chunk.preview}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </SonaeModal>
 

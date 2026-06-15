@@ -310,6 +310,47 @@ export const createForRun = mutation({
   },
 });
 
+export const dismissReflection = mutation({
+  args: {
+    reflectionId: v.id("agentRunReflections"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const reflection = await ctx.db.get(args.reflectionId);
+    if (!reflection) throw new Error("Reflection not found");
+    assertAdminCanAccessCompany(user, reflection.companyId);
+    if (reflection.status !== "GENERATED") {
+      throw new Error("Reflection has already been reviewed");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.reflectionId, {
+      status: "DISMISSED",
+      reviewedBy: userId,
+      reviewedAt: now,
+      dismissalReason: args.reason,
+      updatedAt: now,
+    });
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "DISMISS_AGENT_RUN_REFLECTION",
+      entityId: args.reflectionId,
+      entityType: "agentRunReflections",
+      companyId: reflection.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        runId: reflection.runId,
+        agentId: reflection.agentId,
+        category: reflection.category,
+        reason: args.reason,
+      }),
+    });
+
+    return { reflectionId: args.reflectionId };
+  },
+});
+
 export const getForRun = query({
   args: {
     runId: v.id("agentRuns"),

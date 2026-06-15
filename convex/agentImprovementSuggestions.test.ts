@@ -131,6 +131,37 @@ describe("Agent Improvement Suggestions", () => {
       reviewedBy: adminAId,
       rejectionReason: "Tool schema change needs product review",
     });
+    const reviewedInbox = await adminAClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, {
+      agentId,
+      mode: "REVIEWED",
+    });
+    expect(reviewedInbox.improvementSuggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          suggestionId: promptSuggestion._id,
+          status: "APPLIED",
+          appliedEffect: "Prompt guidance appended and version snapshot updated.",
+          appliedAgentVersionId: applied.appliedAgentVersionId,
+          patchPreview: [
+            expect.objectContaining({
+              operation: "APPEND",
+              target: "Agent system prompt",
+              note: "Applied to the agent and captured in a version snapshot.",
+            }),
+          ],
+        }),
+        expect.objectContaining({
+          suggestionId: toolSuggestion._id,
+          status: "REJECTED",
+          patchPreview: expect.arrayContaining([
+            expect.objectContaining({
+              operation: "REVIEW",
+              target: "AI rule",
+            }),
+          ]),
+        }),
+      ])
+    );
     expect(state.versions).toHaveLength(1);
     expect(state.auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_AGENT_IMPROVEMENT_SUGGESTION",
@@ -140,4 +171,3 @@ describe("Agent Improvement Suggestions", () => {
     ]);
   });
 });
-
