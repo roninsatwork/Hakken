@@ -1,19 +1,33 @@
 # Starter Platform Expansion Plan
 
-This plan captures the next product layer for making Sonae feel like an exceptional reusable starter platform. It focuses on capabilities outside the connector marketplace.
+This plan captures the next platform layer for making Sonae an exceptional developer-led starter framework. It focuses on capabilities outside the connector marketplace.
 
-The goal is not to add random admin pages. The goal is to make Sonae a launchpad where a team can create, test, govern, publish, observe, and improve many different agentic products from one core platform.
+The goal is not to add random admin pages or turn Sonae into a no-code SaaS product. The goal is to make Sonae a product factory where developers and operators can assemble, test, govern, ship, observe, and extend many different agentic products from one core platform.
+
+## Direction Correction
+
+Sonae is not intended to be the final end-user application. It is the reusable core that gives a developer a strong starting point, reusable modules, governed defaults, and clear extension points.
+
+The admin surfaces should be treated as developer/operator tooling. They should help a builder prepare a product-specific implementation, not imply that a non-technical customer can self-serve the whole solution.
+
+Build decisions should follow these rules:
+
+- Prefer developer acceleration over self-serve SaaS ceremony.
+- Prefer reusable templates, code-backed defaults, fixtures, and extension points over no-code abstractions.
+- Make it obvious what is scaffolded, what is draft, and what still needs developer work.
+- Keep risky agents, workflows, widgets, and external actions draft or disabled until a developer/operator reviews them.
+- Use UI copy such as "starter," "build plan," "draft resources," and "developer follow-up" instead of implying a finished customer launch.
 
 ## Product North Star
 
-Sonae should let a builder start with a customer or app idea and quickly produce a governed, production-ready agentic application:
+Sonae should let a developer start with a customer or app idea and quickly produce a governed, product-specific starter that can then be completed with custom domain logic:
 
-1. Create a workspace.
-2. Pick an app template.
-3. Configure brand, model defaults, knowledge, connectors, workflows, and widgets.
-4. Build and test agents.
-5. Pass release gates.
-6. Publish internal and external surfaces.
+1. Create or seed a workspace.
+2. Pick an app kit.
+3. Generate a build plan with draft agents, connectors, knowledge scopes, workflows, evals, and suggested surfaces.
+4. Let a developer add product-specific data models, tool handlers, integrations, workflows, UI, and permissions.
+5. Test agents and workflows against fixtures and release gates.
+6. Ship only after a developer/operator review, not as an automatic customer self-serve flow.
 7. Observe runs, costs, approvals, knowledge quality, failures, and learning opportunities.
 8. Improve safely through reviewed memory, evals, prompt versions, and rollback controls.
 
@@ -31,9 +45,9 @@ These foundations already exist and should be extended rather than rebuilt:
 
 ## Build Themes
 
-### 1. App Template Gallery
+### 1. App Kit Gallery
 
-Move beyond single-agent templates into full app starters.
+Move beyond single-agent templates into full developer-ready app starters.
 
 Template catalogue:
 
@@ -122,6 +136,9 @@ Each template should define:
 - Eval fixtures and release-gate preset.
 - Demo seed data.
 - Readiness checklist items.
+- Developer follow-up items that make clear what code, mapping, product policy, or customer-specific implementation still needs to be completed.
+- Extension points for domain models, tool handlers, custom screens, fixtures, permissions, and observability hooks.
+- Implementation pointers that name the likely code areas a developer will touch while completing the product-specific layer.
 - Risk profile, approval policy, and blocked-action expectations.
 - Suggested dashboard cards or reports.
 - White-label navigation/module recommendations.
@@ -132,6 +149,8 @@ Acceptance:
 - Created resources are draft or disabled by default.
 - The template creates or recommends agents, tools, knowledge areas, workflows, evals, and widgets.
 - The template records audit metadata showing source template, created resources, missing requirements, and next steps.
+- Saved build plans preserve developer follow-up and extension-point guidance so the developer can complete the product-specific layer after scaffolding.
+- Saved build plans include code pointers so developers can move from plan to implementation without guessing which platform files own the next step.
 - English and Italian locale copy stays in parity.
 
 Primary areas:
@@ -146,11 +165,11 @@ Primary areas:
 - `messages/en.json`
 - `messages/it.json`
 
-### 2. New Workspace Launch Wizard
+### 2. Build Plan Workspace Setup
 
-Add a guided setup path for creating a new customer or app workspace.
+Add a guided developer/operator setup path for creating a new customer or app workspace build plan.
 
-Wizard steps:
+Build-plan steps:
 
 1. Company profile.
 2. Brand and theme.
@@ -160,14 +179,15 @@ Wizard steps:
 6. Starter knowledge import.
 7. Connector bundle selection.
 8. Agent readiness and smoke test.
-9. Publish internal app and optional widget.
+9. Developer follow-up checklist for internal app, widget, webhook, or public API surfaces.
 
 Acceptance:
 
-- A super-admin can create a usable tenant without jumping across ten admin pages.
-- The wizard can save progress and resume.
+- A super-admin can create a draft tenant build plan without jumping across ten admin pages.
+- The setup flow can save progress and resume.
 - The final review shows what will be created, what is missing, and what remains draft.
-- The wizard never activates risky agents, workflows, widgets, or external tools without explicit review.
+- The setup flow never activates risky agents, workflows, widgets, or external tools without explicit developer/operator review.
+- The output clearly lists what still needs developer implementation.
 
 Primary areas:
 
@@ -215,9 +235,9 @@ Primary areas:
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx`
 - `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx`
 
-### 4. Release Center
+### 4. Developer Ship Checks
 
-Add a central release management layer for agents, workflows, widgets, and app templates.
+Add a central developer/operator ship-check layer for agents, workflows, widgets, and app kits.
 
 Release flow:
 
@@ -233,14 +253,14 @@ Capabilities:
 - Candidate snapshots.
 - Eval results and release-gate status.
 - Prompt, rules, tools, model, knowledge, and workflow diffs.
-- Required reviewer approvals.
+- Required reviewer/developer approvals.
 - Rollback to previous live version.
 - Release notes generated from structured changes.
 
 Acceptance:
 
 - No high-risk agent or workflow can go live without release-gate evidence.
-- A release page explains exactly what changed and why it is safe.
+- A ship-check page explains exactly what changed, what evidence exists, and what still needs human/developer judgment.
 - Rollback is explicit, audited, and preserves tenant isolation.
 
 Primary areas:
@@ -435,30 +455,72 @@ Primary areas:
 
 ## Recommended Build Order
 
-### Phase 1: Productize The Launch Moment
+### Phase 1: Productize Developer Assembly
 
 Build:
 
-- App Template Gallery.
-- New Workspace Launch Wizard.
+- App Kit Gallery.
+- Build Plan Workspace Setup.
 - Demo Seed And Showcase Mode updates.
 
 Why first:
 
-- This creates the strongest "I can build many apps from this" moment.
-- It turns existing foundations into a coherent product path.
+- This creates the strongest "a developer can build many products from this" moment.
+- It turns existing foundations into a coherent product assembly path.
 
-### Phase 2: Make Agents Feel Shippable
+Current implementation status:
+
+- Added `Admin -> Launch` with a code-backed app kit gallery in `convex/appTemplates.ts`.
+- Added 12 starter templates spanning support, sales, operations, compliance, finance, product, industry, and platform/developer use cases.
+- Added saved build plans in `appLaunchPlans` with parsed plan detail, audit logs, archive flow, and recent plan listing.
+- Added target workspace creation/linking from saved build plans. Workspaces are real company records, audited, inventory-aware, idempotent, and linked back to the plan.
+- Added explicit draft-resource materialization from a saved build plan. Created agents and workflows start inactive, and seeded eval fixtures attach to the draft agents.
+- Added connector readiness checks for recommended connectors, including installed/missing state, auth connection state, test status, and links back to Marketplace.
+- Added a Build Plan Readiness summary with created/planned counts, connector coverage, blockers, and next actions.
+- Added Developer Handoff guidance with follow-up counts, extension-point counts, implementation code pointers, target surfaces, and a compact developer checklist.
+- Added a Developer Task Map on saved build plans covering workspace, draft resources, connectors, knowledge, code, and release checks with ready/pending/blocked status.
+- Added action labels and links to the Developer Task Map so builders can jump to the relevant workspace, Marketplace, knowledge, agents, or Ship Checks surface.
+- Added a task summary strip with blocked/pending/ready counts and the next recommended developer task for faster scanning.
+- Updated local demo seeding to include sample build plans, including one materialized plan linked to the seeded demo company and one draft plan for review-flow demos.
+- Added focused Convex and React tests for catalogue metadata, authorization, plan creation, materialization, connector readiness, and the app kit UI.
+
+Remaining Phase 1 gaps:
+
+- Workspace creation exists as a build-plan action, but the full developer setup path still needs brand, invite policy, model defaults, and plan assignment steps.
+- Knowledge scopes, dashboard cards, widgets, public APIs, and publish targets are still planned developer checklist items rather than created records.
+- Connector installation remains an explicit Marketplace action; App Kits only show readiness and links to the connector detail page.
+- The code-backed app template catalogue is not yet a first-class editable persisted object.
+- UI copy still uses some legacy "Launch" route names for stability; future polish should rename visible navigation toward App Kits or Build Plans.
+
+### Phase 2: Make Agents Developer-Shippable
 
 Build:
 
 - Agent Studio upgrades.
-- Release Center foundation.
+- Developer Ship Checks foundation.
 - Release notes and rollback path.
 
 Why second:
 
-- Users need confidence before giving agents real workflows and customers.
+- Developers/operators need confidence before wiring agents into real workflows, widgets, APIs, and customer-specific surfaces.
+
+Current implementation status:
+
+- Started `Admin -> Release Center` as the first Phase 2 ship-check foundation screen. The route name is legacy; visible UI should refer to Developer Ship Checks.
+- Added a code-backed release readiness overview in `convex/releases.ts` that reuses existing agent readiness checks, activation warnings, smoke evals, and release gate policy data.
+- Added summary counts for blocked drafts, ready release candidates, live agents that need attention, and healthy live agents.
+- Added agent-level next actions and direct links into settings, evals, and run history.
+- Added persisted `agentReleases` records with agent version snapshots, release notes, rollback plans, sign-off, activation, rollback, and audit logs.
+- Added ship-check controls in `Admin -> Release Center` for creating candidates, approving, activating, and rolling back releases.
+- Added inline Agent Studio release visibility on agent settings, including latest release state, version number, release notes, rollback warning, and a direct Ship Checks link.
+- Added inline Agent Studio release actions for the current lifecycle state: create candidate, approve candidate, activate release, and rollback release.
+- Added sidebar navigation and focused Convex/React tests for the Ship Checks foundation.
+
+Remaining Phase 2 gaps:
+
+- Release records exist, but richer owner assignment, approval comments, and scheduled activation windows still need workflow support.
+- Rollback currently deactivates the agent; a later slice should restore/compare prior active snapshots and surface post-rollback investigation steps.
+- Agent Studio now surfaces latest release state and lifecycle actions inline; later slices should add richer approval comments and assigned release owners.
 
 ### Phase 3: Make Trust Visible
 
@@ -519,10 +581,10 @@ Why fifth:
 
 The next practical slice is:
 
-1. Add a new `Admin -> Launch` route for the workspace/app launch wizard.
+1. Add a new `Admin -> Launch` route for the app kit/build-plan workspace setup flow.
 2. Add a code-backed app template catalogue with 5-7 templates.
-3. Let the wizard instantiate a draft tenant setup plan before creating resources.
+3. Let the setup flow instantiate a draft tenant build plan before creating resources.
 4. Create resources only after an explicit review step.
-5. Add demo seed coverage so the wizard can be shown with realistic data.
+5. Add demo seed coverage so the setup flow can be shown with realistic data.
 
 This slice gives Sonae the biggest product lift without requiring live third-party connector execution.

@@ -10,6 +10,13 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - Do not push after every small task. Batch related fixes, verify them, then push only when the user asks.
 - After merging or pushing to `main`, switch back to `dev` before continuing feature or cleanup work.
 
+## Progress Reporting
+
+- For roadmap, plan, or multi-step product builds, include a percentage-complete estimate in user updates and final summaries.
+- Report both the overall roadmap progress and the current slice/phase progress when they differ.
+- Update the estimate when scope changes, after meaningful implementation milestones, and before pausing, committing, or handing work back.
+- Use plain estimates such as "Overall: 10%. Current slice: 40%." Do not wait for the user to ask for percentages.
+
 ## Verification Gates
 
 Use Node `22.13.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.

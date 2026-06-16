@@ -57,7 +57,7 @@ describe("local demo seed", () => {
     expect(secondSeed.evalFixtures.fixtureIds).toHaveLength(0);
 
     const snapshot = await t.run(async (ctx) => {
-      const [company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures] = await Promise.all([
+      const [company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans] = await Promise.all([
         ctx.db
           .query("companies")
           .withIndex("by_name", (q) => q.eq("name", "Sonae Demo Company"))
@@ -84,8 +84,9 @@ describe("local demo seed", () => {
           .query("agentEvalFixtures")
           .withIndex("by_agent_status_created", (q) => q.eq("agentId", firstSeed.agent.agentId).eq("status", "ACTIVE"))
           .collect(),
+        ctx.db.query("appLaunchPlans").withIndex("by_createdAt").collect(),
       ]);
-      return { company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures };
+      return { company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans };
     });
 
     expect(snapshot.company?._id).toBe(firstSeed.company.companyId);
@@ -111,6 +112,21 @@ describe("local demo seed", () => {
       "workflow",
     ]);
     expect(snapshot.fixtures).toHaveLength(2);
+    expect(firstSeed.launchPlans.map((plan) => plan.action)).toEqual(["created", "created"]);
+    expect(secondSeed.launchPlans.map((plan) => plan.action)).toEqual(["updated", "updated"]);
+    expect(snapshot.launchPlans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          templateId: "support-desk-ai",
+          status: "MATERIALIZED",
+          targetCompanyId: firstSeed.company.companyId,
+        }),
+        expect.objectContaining({
+          templateId: "sales-research-copilot",
+          status: "DRAFT",
+        }),
+      ])
+    );
 
     const client = t.withIdentity({ subject: firstSeed.users[0].userId });
     const readiness = await client.query(api.agents.getAgentReadiness, { id: firstSeed.agent.agentId });

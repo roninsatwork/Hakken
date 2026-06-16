@@ -15,7 +15,8 @@ import {
   Settings,
   Workflow,
   Home,
-  Wrench
+  Wrench,
+  Rocket
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -149,6 +150,8 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
+  if (pathname.startsWith('/admin/launch')) return 'Launch';
+  if (pathname.startsWith('/admin/releases')) return 'Release Center';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
@@ -187,7 +190,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
+  const isAgentsActive = pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
 
   return {
     workspace: true,
@@ -314,6 +317,16 @@ export default function SidebarNavigation() {
 
                     {isSuperAdmin && (
                       <NavItem
+                        icon={Rocket}
+                        label={t('launch')}
+                        href="/admin/launch"
+                        isActive={activeItem === 'Launch' || pathname.startsWith('/admin/launch')}
+                        onClick={() => setActiveItem('Launch')}
+                      />
+                    )}
+
+                    {isSuperAdmin && (
+                      <NavItem
                         icon={Building2}
                         label={t('companies')}
                         isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
@@ -356,6 +369,7 @@ export default function SidebarNavigation() {
                         isActive={
                           activeItem === 'Agents' || 
                           activeItem === 'Agent Approvals' ||
+                          activeItem === 'Release Center' ||
                           activeItem === 'Manage Agents' || 
                           activeItem === 'Connectors' || 
                           activeItem === 'Workflows' || 
@@ -369,6 +383,7 @@ export default function SidebarNavigation() {
                         onToggle={() => toggleSection('agents')}
                       >
                         <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
+                        <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         <SubNavItem label={t('connectors')} href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
                         

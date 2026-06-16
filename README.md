@@ -88,4 +88,4 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 - `npm run lint`: Runs ESLint for code quality checks.
 - `npm run typecheck`: Runs TypeScript without emitting files.
 - `npm run test:run`: Runs the Vitest suite once.
-- `npm run demo:local:seed`: Seeds a local demo tenant, demo users, model defaults, knowledge tool, draft agent, starter knowledge, and eval fixtures when `LOCAL_DEMO_SEED_ENABLED=1` and `LOCAL_DEMO_SEED_SECRET` are configured for Convex.
+- `npm run demo:local:seed`: Seeds a local demo tenant, demo users, model defaults, knowledge tool, draft agent, starter knowledge, eval fixtures, and sample app build plans when `LOCAL_DEMO_SEED_ENABLED=1` and `LOCAL_DEMO_SEED_SECRET` are configured for Convex.

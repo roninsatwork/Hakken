@@ -2,7 +2,7 @@
 
 This is the practical starting point for building a new governed agentic app on Sonae.
 
-Use this guide when you want to understand which parts of the repo are platform core, which parts are app-specific configuration, and where to add a new agent, tool, connector, workflow, or customer setup.
+Sonae is a developer-led product factory, not a finished end-user SaaS product. Use this guide when you want to understand which parts of the repo are platform core, which parts are app-specific configuration, and where to add custom domain logic, data models, agents, tools, connectors, workflows, UI, or customer setup.
 
 ## What Sonae Provides
 
@@ -46,16 +46,16 @@ For a new agentic app or tenant:
 1. Read `AGENTS.md` for branch, verification, and frozen-demo rules.
 2. Run the local setup in `docs/getting-started.md`.
 3. Follow `docs/new-agentic-app-setup-checklist.md`.
-4. Choose or create an agent template using `convex/agentTemplates.ts`.
+4. Choose or create an app kit or agent template using `convex/appTemplates.ts` and `convex/agentTemplates.ts`.
 5. Configure model defaults in the AI Models admin surface.
 6. Install or create the required tools/connectors in the AI Tools admin surface.
 7. Create a draft agent from the guided builder.
 8. Add tenant-scoped knowledge and bind tools.
 9. Run contract smoke evals, then model-graded smoke evals if provider credentials are configured.
 10. Inspect durable runs and eval history before activation.
-11. Add workflow, schedule, widget, webhook, or public API surface only after the agent behavior is tested.
+11. Add product-specific code, data models, workflow, schedule, widget, webhook, or public API surface only after the agent behavior is tested.
 
-For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1` and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, and starter eval fixtures without requiring production credentials.
+For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1` and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, starter eval fixtures, and sample app build plans without requiring production credentials.
 
 ## Main Extension Points
 

@@ -294,7 +294,7 @@ async function assertModelOverrideAllowed(ctx: MutationCtx, args: { modelId: str
   }
 }
 
-async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id<"agents">) {
+export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id<"agents">) {
   const agent = await ctx.db.get(agentId);
   if (!agent) throw new Error("Agent not found");
 

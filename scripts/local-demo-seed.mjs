@@ -53,6 +53,7 @@ async function seed() {
   console.log(`- agent ${result.agent.name}: ${result.agent.action}`);
   console.log(`- knowledge ${result.knowledge.title}: ${result.knowledge.action}`);
   console.log(`- eval fixtures: ${result.evalFixtures.action} (${result.evalFixtures.fixtureIds.length} new)`);
+  console.log(`- launch plans: ${result.launchPlans.map((entry) => `${entry.templateId}:${entry.action}`).join(", ")}`);
 }
 
 try {
@@ -61,4 +62,3 @@ try {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 }
-

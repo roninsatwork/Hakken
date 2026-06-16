@@ -4,6 +4,7 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { DragEvent, FormEvent } from "react";
 import { useParams } from "next/navigation";
@@ -16,7 +17,8 @@ import {
   ImagePlus,
   Globe,
   Sparkles,
-  Loader2
+  Loader2,
+  Rocket
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -31,6 +33,20 @@ import { validateUploadFile } from "@/src/lib/constants/uploads";
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";
 type SmokeEvalMode = "CONTRACT_ONLY" | "MODEL_GRADED";
+type AgentReleaseStatus = "PENDING_SIGNOFF" | "APPROVED" | "ACTIVATED" | "ROLLED_BACK" | "CANCELLED";
+
+type LatestAgentRelease = {
+  _id: Id<"agentReleases">;
+  status: AgentReleaseStatus;
+  title: string;
+  releaseNotes: string;
+  rollbackPlan: string;
+  versionNumber?: number;
+  createdAt: number;
+  approvedAt?: number;
+  activatedAt?: number;
+  rolledBackAt?: number;
+};
 
 type AgentSettingsFormData = {
   name: string;
@@ -67,6 +83,7 @@ export default function AgentOverviewPage() {
 
   const agent = useQuery(api.agents.get, { id: agentId });
   const readiness = useQuery(api.agents.getAgentReadiness, { id: agentId });
+  const latestRelease = useQuery(api.releases.getLatestReleaseForAgent, { agentId }) as LatestAgentRelease | null | undefined;
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const activeModels = useMemo(
     () => (activeModelsData ?? []) as Doc<"aiModels">[],
@@ -80,6 +97,10 @@ export default function AgentOverviewPage() {
   const updateAgent = useMutation(api.agents.updateAgent);
   const runSmokeEval = useMutation(api.agentEvalFixtures.runSmokeEval);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const createReleaseCandidate = useMutation(api.releases.createReleaseCandidate);
+  const approveReleaseCandidate = useMutation(api.releases.approveReleaseCandidate);
+  const activateReleaseCandidate = useMutation(api.releases.activateReleaseCandidate);
+  const rollbackRelease = useMutation(api.releases.rollbackRelease);
 
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +108,8 @@ export default function AgentOverviewPage() {
   const [saveError, setSaveError] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [readinessFeedback, setReadinessFeedback] = useState("");
+  const [releaseFeedback, setReleaseFeedback] = useState("");
+  const [releaseAction, setReleaseAction] = useState<string | null>(null);
   const [smokeEvalMode, setSmokeEvalMode] = useState<SmokeEvalMode | null>(null);
 
   // Avatar Upload State
@@ -215,6 +238,38 @@ export default function AgentOverviewPage() {
     );
   const latestSmokePassed = readiness?.latestSmokeEvalRun?.status === "SUCCESS";
   const fixtureCoverageCoveredCount = readiness?.fixtureCoverage.filter((coverage) => coverage.activeCount > 0).length ?? 0;
+  const latestReleaseStatusClass = latestRelease?.status === "ACTIVATED"
+    ? "border-sky-400/30 bg-sky-400/10 text-sky-300"
+    : latestRelease?.status === "APPROVED"
+      ? "border-green-400/30 bg-green-400/10 text-green-300"
+      : latestRelease?.status === "ROLLED_BACK" || latestRelease?.status === "CANCELLED"
+        ? "border-neutral-400/30 bg-neutral-400/10 text-secondary"
+        : "border-amber-400/30 bg-amber-400/10 text-amber-300";
+  const hasOpenRelease = latestRelease?.status === "PENDING_SIGNOFF" || latestRelease?.status === "APPROVED";
+  const canCreateReleaseCandidate = Boolean(
+    readiness
+    && agent?.isActive === false
+    && readiness.activationWarnings.length === 0
+    && readiness.latestSmokeEvalRun?.status === "SUCCESS"
+    && (readiness.releaseGatePolicy.blockedCriticalFixtureCount ?? 0) === 0
+    && !readiness.releaseGatePolicy.warning
+    && !hasOpenRelease
+    && latestRelease?.status !== "ACTIVATED"
+  );
+
+  const runReleaseAction = async (actionKey: string, action: () => Promise<unknown>, successMessage: string) => {
+    if (releaseAction) return;
+    setReleaseAction(actionKey);
+    setReleaseFeedback("");
+    try {
+      await action();
+      setReleaseFeedback(successMessage);
+    } catch (error) {
+      setReleaseFeedback(getErrorMessage(error, "Release action failed."));
+    } finally {
+      setReleaseAction(null);
+    }
+  };
 
   const handleRunSmokeEval = async (gradingMode: SmokeEvalMode) => {
     setSmokeEvalMode(gradingMode);
@@ -417,6 +472,115 @@ export default function AgentOverviewPage() {
             </div>
 
             <div className="md:col-span-2 rounded-[12px] border border-border-dim bg-black/20 p-4 flex flex-col gap-4">
+              <div className="rounded-[10px] border border-border-dim bg-white/[0.03] px-3 py-3 flex flex-col gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-brand" />
+                      Release Status
+                    </h3>
+                    {latestRelease === undefined ? (
+                      <p className="text-[12px] text-secondary">Checking release governance state.</p>
+                    ) : latestRelease ? (
+                      <>
+                        <p className="text-[12px] text-foreground leading-relaxed">
+                          {latestRelease.title}
+                          {latestRelease.versionNumber ? ` · v${latestRelease.versionNumber}` : ""}
+                        </p>
+                        <p className="text-[11px] text-secondary leading-relaxed line-clamp-2">
+                          {latestRelease.releaseNotes}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-[12px] text-secondary leading-relaxed">
+                        No release candidate has been created for this agent yet. Once readiness is clear, create the candidate from Ship Checks or this page.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {latestRelease ? (
+                      <span className={cn("rounded-full border px-3 py-1 text-[10px] font-mono uppercase tracking-widest", latestReleaseStatusClass)}>
+                        {latestRelease.status.replaceAll("_", " ")}
+                      </span>
+                    ) : null}
+                    <Link
+                      href="/admin/releases"
+                      className="rounded-[8px] border border-border-dim bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-foreground transition-all hover:bg-white/[0.08]"
+                    >
+                      Open Ship Checks
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {canCreateReleaseCandidate ? (
+                    <button
+                      type="button"
+                      disabled={releaseAction !== null}
+                      onClick={() => runReleaseAction(
+                        "create",
+                        () => createReleaseCandidate({ agentId }),
+                        "Release candidate created."
+                      )}
+                      className="rounded-[8px] bg-foreground px-3 py-1.5 text-[11px] font-medium text-background transition-all hover:opacity-90 disabled:opacity-50"
+                    >
+                      {releaseAction === "create" ? "Creating..." : "Create candidate"}
+                    </button>
+                  ) : null}
+                  {latestRelease?.status === "PENDING_SIGNOFF" ? (
+                    <button
+                      type="button"
+                      disabled={releaseAction !== null}
+                      onClick={() => runReleaseAction(
+                        "approve",
+                        () => approveReleaseCandidate({ releaseId: latestRelease._id }),
+                        "Release candidate approved."
+                      )}
+                      className="rounded-[8px] bg-foreground px-3 py-1.5 text-[11px] font-medium text-background transition-all hover:opacity-90 disabled:opacity-50"
+                    >
+                      {releaseAction === "approve" ? "Approving..." : "Approve candidate"}
+                    </button>
+                  ) : null}
+                  {latestRelease?.status === "APPROVED" ? (
+                    <button
+                      type="button"
+                      disabled={releaseAction !== null}
+                      onClick={() => runReleaseAction(
+                        "activate",
+                        () => activateReleaseCandidate({ releaseId: latestRelease._id }),
+                        "Release activated."
+                      )}
+                      className="rounded-[8px] bg-foreground px-3 py-1.5 text-[11px] font-medium text-background transition-all hover:opacity-90 disabled:opacity-50"
+                    >
+                      {releaseAction === "activate" ? "Activating..." : "Activate release"}
+                    </button>
+                  ) : null}
+                  {latestRelease?.status === "ACTIVATED" ? (
+                    <button
+                      type="button"
+                      disabled={releaseAction !== null}
+                      onClick={() => runReleaseAction(
+                        "rollback",
+                        () => rollbackRelease({ releaseId: latestRelease._id }),
+                        "Release rolled back."
+                      )}
+                      className="rounded-[8px] border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-[11px] font-medium text-rose-300 transition-all hover:bg-rose-400/15 disabled:opacity-50"
+                    >
+                      {releaseAction === "rollback" ? "Rolling back..." : "Rollback release"}
+                    </button>
+                  ) : null}
+                </div>
+                {releaseFeedback ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2 text-[12px] text-secondary">
+                    {releaseFeedback}
+                  </div>
+                ) : null}
+                {latestRelease?.status === "ROLLED_BACK" ? (
+                  <div className="rounded-[8px] border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[12px] text-amber-300">
+                    This agent was rolled back. Review recent runs and release notes before creating a new candidate.
+                  </div>
+                ) : null}
+              </div>
+
               <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col gap-1">
                   <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">

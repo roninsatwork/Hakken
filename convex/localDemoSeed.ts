@@ -6,6 +6,7 @@ import { GOOGLE_VERTEX_PROVIDER_KEY, GOOGLE_VERTEX_EMBEDDING_MODEL_ID, SYSTEM_FA
 import { getAgentTemplateById } from "./agentTemplates";
 import { buildGlobalAgentRecord, buildCreateAgentFromTemplateAuditMetadata } from "./agentService";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { getAppTemplateById } from "./appTemplates";
 
 const DEMO_COMPANY_NAME = "Sonae Demo Company";
 const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@sonae.test";
@@ -16,6 +17,7 @@ const DEMO_KNOWLEDGE_TITLE = "Demo Knowledge Handbook";
 const DEMO_TOOL_MAPPING = "knowledge.search";
 const DEMO_TOOL_NAME = "Knowledge Search";
 const DEMO_AGENT_NAME = "Demo Knowledge Assistant";
+const DEMO_LAUNCH_PLAN_NAME = "Demo Launch Support Workspace";
 const DEFAULT_USE_CASES = ["agent", "workflow", "chat", "report", "embedding"];
 
 function assertLocalDemoSeedEnabled(secret: string) {
@@ -391,6 +393,81 @@ async function ensureTemplateFixtures(ctx: MutationCtx, args: {
   return { fixtureIds, action: fixtureIds.length > 0 ? "created" as const : "existing" as const };
 }
 
+function createDemoLaunchPlanPayload(templateId: string) {
+  const template = getAppTemplateById(templateId);
+  if (!template) throw new Error(`Demo app template is missing: ${templateId}`);
+
+  return {
+    templateId: template.id,
+    templateName: template.name,
+    category: template.category,
+    riskProfile: template.riskProfile,
+    primaryUsers: template.primaryUsers,
+    recommendedConnectorKeys: template.recommendedConnectorKeys,
+    draftResources: {
+      agents: template.agents,
+      knowledgeScopes: template.knowledgeScopes,
+      workflows: template.workflows,
+      evalFixtures: template.evalFixtures,
+      dashboardCards: template.dashboardCards,
+      publishTargets: template.publishTargets,
+    },
+    readinessChecks: template.readinessChecks,
+    safetyDefaults: {
+      resourceStatus: "DRAFT",
+      externalActionsRequireApproval: true,
+      releaseGateRequired: true,
+    },
+  };
+}
+
+async function upsertLaunchPlan(ctx: MutationCtx, args: {
+  templateId: string;
+  targetCompanyName: string;
+  notes: string;
+  createdBy: Id<"users">;
+  targetCompanyId?: Id<"companies">;
+  createdResourceJson?: string;
+  status?: "DRAFT" | "MATERIALIZED";
+}) {
+  const template = getAppTemplateById(args.templateId);
+  if (!template) throw new Error(`Demo app template is missing: ${args.templateId}`);
+  const existing = await ctx.db
+    .query("appLaunchPlans")
+    .withIndex("by_template_created", (q) => q.eq("templateId", args.templateId))
+    .collect()
+    .then((plans) => plans.find((plan) => plan.targetCompanyName === args.targetCompanyName));
+  const now = Date.now();
+  const fields = {
+    templateId: template.id,
+    templateName: template.name,
+    category: template.category,
+    riskProfile: template.riskProfile,
+    status: args.status ?? "DRAFT" as const,
+    targetCompanyId: args.targetCompanyId,
+    targetCompanyName: args.targetCompanyName,
+    notes: args.notes,
+    planJson: JSON.stringify(createDemoLaunchPlanPayload(template.id)),
+    createdResourceJson: args.createdResourceJson,
+    updatedAt: now,
+  };
+
+  if (existing) {
+    await ctx.db.patch(existing._id, fields);
+    return { planId: existing._id, templateId: template.id, action: "updated" as const };
+  }
+
+  return {
+    planId: await ctx.db.insert("appLaunchPlans", {
+      ...fields,
+      createdBy: args.createdBy,
+      createdAt: now,
+    }),
+    templateId: template.id,
+    action: "created" as const,
+  };
+}
+
 export const seed = mutation({
   args: { secret: v.string() },
   handler: async (ctx, args) => {
@@ -447,6 +524,26 @@ export const seed = mutation({
       createdBy: superAdmin.userId,
       template: agent.template,
     });
+    const materializedLaunchPlan = await upsertLaunchPlan(ctx, {
+      templateId: "support-desk-ai",
+      targetCompanyName: DEMO_LAUNCH_PLAN_NAME,
+      notes: "Seeded demo plan with an existing linked workspace and draft knowledge assistant foundation.",
+      createdBy: superAdmin.userId,
+      targetCompanyId: company.companyId,
+      createdResourceJson: JSON.stringify({
+        agentIds: [agent.agentId],
+        workflowIds: [],
+        fixtureIds: fixtures.fixtureIds,
+        sourceRunIds: [],
+      }),
+      status: "MATERIALIZED",
+    });
+    const draftLaunchPlan = await upsertLaunchPlan(ctx, {
+      templateId: "sales-research-copilot",
+      targetCompanyName: "Demo Sales Research Workspace",
+      notes: "Seeded draft plan for showing the review flow before workspace and resource creation.",
+      createdBy: superAdmin.userId,
+    });
 
     return {
       company: {
@@ -479,6 +576,7 @@ export const seed = mutation({
       },
       toolBinding: binding,
       evalFixtures: fixtures,
+      launchPlans: [materializedLaunchPlan, draftLaunchPlan],
     };
   },
 });
