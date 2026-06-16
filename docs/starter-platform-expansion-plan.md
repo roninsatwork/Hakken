@@ -198,7 +198,7 @@ Primary areas:
 - `convex/knowledge.ts`
 - `convex/widgets.ts`
 - `src/app/(dashboard)/admin/companies/page.tsx`
-- New route: `src/app/(dashboard)/admin/launch/page.tsx`
+- New route: `src/app/(dashboard)/admin/app-kits/page.tsx` with `/admin/launch` kept as a compatibility alias
 
 ### 3. Agent Studio
 
@@ -479,10 +479,11 @@ Why first:
 
 Current implementation status:
 
-- Added `Admin -> Launch` with a code-backed app kit gallery in `convex/appTemplates.ts`.
+- Added `Admin -> App Kits` with a code-backed app kit gallery in `convex/appTemplates.ts`; `/admin/app-kits` is the visible route and `/admin/launch` remains as a compatibility alias.
 - Added 12 starter templates spanning support, sales, operations, compliance, finance, product, industry, and platform/developer use cases.
 - Added saved build plans in `appLaunchPlans` with parsed plan detail, audit logs, archive flow, and recent plan listing.
 - Added target workspace creation/linking from saved build plans. Workspaces are real company records, audited, inventory-aware, idempotent, and linked back to the plan.
+- Added existing-workspace linking from saved build plans, so operators can connect a starter to a real tenant instead of always creating a new workspace.
 - Added explicit draft-resource materialization from a saved build plan. Created agents and workflows start inactive, and seeded eval fixtures attach to the draft agents.
 - Added connector readiness checks for recommended connectors, including installed/missing state, auth connection state, test status, and links back to Marketplace.
 - Added a Build Plan Readiness summary with created/planned counts, connector coverage, blockers, and next actions.
@@ -490,16 +491,26 @@ Current implementation status:
 - Added a Developer Task Map on saved build plans covering workspace, draft resources, connectors, knowledge, code, and release checks with ready/pending/blocked status.
 - Added action labels and links to the Developer Task Map so builders can jump to the relevant workspace, Marketplace, knowledge, agents, or Ship Checks surface.
 - Added a task summary strip with blocked/pending/ready counts and the next recommended developer task for faster scanning.
+- Added saved Workspace Setup Plan guidance to build plans covering brand/theme, first-admin invite policy, tenant model defaults, and plan assignment, with matching Developer Task Map rows and admin-surface links.
+- Added setup-intent fields to App Kit plan creation so operators can capture product name, brand accent, first-admin candidate, invite policy notes, model-default use cases, and target plan before saving a draft.
+- Added Guided Setup Actions on saved build plans so brand, first-admin invite, model defaults, and plan assignment show blocked/pending state and route operators to the exact existing admin surface.
+- Added Connector Bundle Plan metadata to build plans so operators can select connector keys, capture connector owner, and save integration setup notes before Marketplace activation.
+- Added Starter Knowledge Import planning to build plans so operators can capture knowledge owner, source candidates, and missing-source notes before ingestion work starts.
+- Added Publish Surface Plan metadata to build plans so operators can capture surface owner, target surfaces, dashboard-card review, and widget/API/embed notes before customer-facing activation.
+- Added Surface Implementation Actions on saved build plans so planned target surfaces and dashboard cards become explicit pending review items linked to widget, workflow, schedule, API/tool, app, or report surfaces.
+- Added a persisted App Kit catalogue registry with sync/update mutations, editable lifecycle status, owner, notes, source snapshots, demo seed coverage, and inline admin controls on the App Kits page.
+- Added `/admin/app-kits` route aliases for the gallery and saved build-plan detail pages, and moved visible navigation/module links to the App Kits path while preserving `/admin/launch`.
+- Polished visible navigation and review copy toward App Kits and build-plan language while keeping existing routes stable.
 - Updated local demo seeding to include sample build plans, including one materialized plan linked to the seeded demo company and one draft plan for review-flow demos.
 - Added focused Convex and React tests for catalogue metadata, authorization, plan creation, materialization, connector readiness, and the app kit UI.
 
-Remaining Phase 1 gaps:
+Phase 1 completion notes:
 
-- Workspace creation exists as a build-plan action, but the full developer setup path still needs brand, invite policy, model defaults, and plan assignment steps.
-- Knowledge scopes, dashboard cards, widgets, public APIs, and publish targets are still planned developer checklist items rather than created records.
-- Connector installation remains an explicit Marketplace action; App Kits only show readiness and links to the connector detail page.
-- The code-backed app template catalogue is not yet a first-class editable persisted object.
-- UI copy still uses some legacy "Launch" route names for stability; future polish should rename visible navigation toward App Kits or Build Plans.
+- Workspace setup is complete for Phase 1 as a guided build-plan flow: operators can create/link workspaces, preserve setup intent, and follow generated actions into existing admin surfaces without automatic tenant mutation.
+- Knowledge scopes, connector bundles, publish surfaces, and dashboard cards are complete for Phase 1 as planning and implementation-action records; creating production widgets, public APIs, dashboards, and connector installs remains deliberate developer/operator work.
+- The App Kit catalogue is now persisted as editable registry objects for lifecycle, owner, notes, and source snapshots; code templates remain the scaffold-default source.
+- `/admin/app-kits` is now the visible route; `/admin/launch` remains available for existing links.
+- Phase 1 is complete as a developer assembly foundation. The next product work starts in Phase 2: making agents more developer-shippable in Agent Studio and release flows.
 
 ### Phase 2: Make Agents Developer-Shippable
 
@@ -590,7 +601,7 @@ Why fifth:
 
 The next practical slice is:
 
-1. Add a new `Admin -> Launch` route for the app kit/build-plan workspace setup flow.
+1. Add a new `Admin -> App Kits` route for the app kit/build-plan workspace setup flow.
 2. Add a code-backed app template catalogue with 5-7 templates.
 3. Let the setup flow instantiate a draft tenant build plan before creating resources.
 4. Create resources only after an explicit review step.

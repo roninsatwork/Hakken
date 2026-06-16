@@ -231,6 +231,25 @@ export default defineSchema({
     .index("by_status_created", ["status", "createdAt"])
     .index("by_template_created", ["templateId", "createdAt"]),
 
+  appTemplateCatalogItems: defineTable({
+    templateId: v.string(),
+    templateName: v.string(),
+    category: v.string(),
+    riskProfile: v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH")),
+    lifecycleStatus: v.union(v.literal("ACTIVE"), v.literal("NEEDS_REVIEW"), v.literal("ARCHIVED")),
+    ownerEmail: v.optional(v.string()),
+    editorialNotes: v.optional(v.string()),
+    sourceJson: v.string(),
+    sourceUpdatedAt: v.number(),
+    lastSyncedAt: v.number(),
+    createdBy: v.id("users"),
+    updatedBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_template", ["templateId"])
+    .index("by_lifecycle", ["lifecycleStatus", "updatedAt"]),
+
   authEvents: defineTable({
     email: v.string(),
     eventType: v.union(

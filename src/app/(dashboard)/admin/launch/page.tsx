@@ -59,6 +59,22 @@ type LaunchPlan = {
   createdAt: number;
 };
 
+type CatalogRegistryItem = {
+  templateId: string;
+  templateName: string;
+  category: string;
+  riskProfile: "LOW" | "MEDIUM" | "HIGH";
+  registry: {
+    templateId: string;
+    lifecycleStatus: "ACTIVE" | "NEEDS_REVIEW" | "ARCHIVED";
+    ownerEmail?: string;
+    editorialNotes?: string;
+    lastSyncedAt: number;
+    updatedAt: number;
+  } | null;
+  isSynced: boolean;
+};
+
 const riskClassName = {
   LOW: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
   MEDIUM: "text-amber-500 bg-amber-500/10 border-amber-500/20",
@@ -99,11 +115,36 @@ function PreviewList({ title, items }: { title: string; items: string[] }) {
 export default function LaunchPage() {
   const templates = useQuery(api.appTemplates.getAppTemplateGallery) as Template[] | undefined;
   const recentPlans = useQuery(api.appTemplates.getRecentLaunchPlans) as LaunchPlan[] | undefined;
+  const catalogRegistry = useQuery(api.appTemplates.getAppTemplateCatalogRegistry) as CatalogRegistryItem[] | undefined;
   const createLaunchPlan = useMutation(api.appTemplates.createLaunchPlan);
+  const syncCatalogRegistry = useMutation(api.appTemplates.syncAppTemplateCatalogRegistry);
+  const updateCatalogItem = useMutation(api.appTemplates.updateAppTemplateCatalogItem);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [catalogLifecycleStatus, setCatalogLifecycleStatus] = useState<"ACTIVE" | "NEEDS_REVIEW" | "ARCHIVED">("ACTIVE");
+  const [catalogOwnerEmail, setCatalogOwnerEmail] = useState("");
+  const [catalogEditorialNotes, setCatalogEditorialNotes] = useState("");
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
+  const [isUpdatingCatalog, setIsUpdatingCatalog] = useState(false);
+  const [catalogMessage, setCatalogMessage] = useState("");
+  const [catalogError, setCatalogError] = useState("");
   const [targetCompanyName, setTargetCompanyName] = useState("");
+  const [brandProductName, setBrandProductName] = useState("");
+  const [brandAccentHex, setBrandAccentHex] = useState("");
+  const [firstAdminEmail, setFirstAdminEmail] = useState("");
+  const [invitePolicyNotes, setInvitePolicyNotes] = useState("");
+  const [modelDefaultUseCases, setModelDefaultUseCases] = useState("agent, workflow, chat, report, router, embedding");
+  const [targetPlanName, setTargetPlanName] = useState("");
+  const [connectorOwnerEmail, setConnectorOwnerEmail] = useState("");
+  const [selectedConnectorKeys, setSelectedConnectorKeys] = useState("");
+  const [connectorBundleNotes, setConnectorBundleNotes] = useState("");
+  const [knowledgeOwnerEmail, setKnowledgeOwnerEmail] = useState("");
+  const [starterKnowledgeSources, setStarterKnowledgeSources] = useState("");
+  const [knowledgeSourceNotes, setKnowledgeSourceNotes] = useState("");
+  const [surfaceOwnerEmail, setSurfaceOwnerEmail] = useState("");
+  const [selectedPublishTargets, setSelectedPublishTargets] = useState("");
+  const [publishSurfaceNotes, setPublishSurfaceNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -147,16 +188,107 @@ export default function LaunchPage() {
     return (templates ?? []).find((template) => template.id === selectedTemplateId) ?? filteredTemplates[0];
   }, [filteredTemplates, selectedTemplateId, templates]);
 
+  const selectedCatalogItem = useMemo(() => {
+    if (!selectedTemplate || !catalogRegistry) return undefined;
+    return catalogRegistry.find((item) => item.templateId === selectedTemplate.id);
+  }, [catalogRegistry, selectedTemplate]);
+
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    setCatalogLifecycleStatus(selectedCatalogItem?.registry?.lifecycleStatus ?? "ACTIVE");
+    setCatalogOwnerEmail(selectedCatalogItem?.registry?.ownerEmail ?? "");
+    setCatalogEditorialNotes(selectedCatalogItem?.registry?.editorialNotes ?? "");
+    setCatalogMessage("");
+    setCatalogError("");
+  }, [selectedCatalogItem, selectedTemplate]);
+
+  const registrySummary = useMemo(() => {
+    const items = catalogRegistry ?? [];
+    return {
+      persistedCount: items.filter((item) => item.registry).length,
+      staleCount: items.filter((item) => item.registry && !item.isSynced).length,
+    };
+  }, [catalogRegistry]);
+
+  const handleSyncCatalog = async () => {
+    if (isSyncingCatalog) return;
+    setIsSyncingCatalog(true);
+    setCatalogError("");
+    setCatalogMessage("");
+    try {
+      const result = await syncCatalogRegistry({});
+      setCatalogMessage(`Registry synced: ${result.createdCount} created, ${result.updatedCount} updated.`);
+    } catch (error) {
+      setCatalogError(getErrorMessage(error, "Could not sync app kit registry."));
+    } finally {
+      setIsSyncingCatalog(false);
+    }
+  };
+
+  const handleUpdateCatalogItem = async () => {
+    if (!selectedTemplate || isUpdatingCatalog) return;
+    setIsUpdatingCatalog(true);
+    setCatalogError("");
+    setCatalogMessage("");
+    try {
+      await updateCatalogItem({
+        templateId: selectedTemplate.id,
+        lifecycleStatus: catalogLifecycleStatus,
+        ownerEmail: catalogOwnerEmail,
+        editorialNotes: catalogEditorialNotes,
+      });
+      setCatalogMessage("Registry item saved.");
+    } catch (error) {
+      setCatalogError(getErrorMessage(error, "Could not update app kit registry item."));
+    } finally {
+      setIsUpdatingCatalog(false);
+    }
+  };
+
   const handleCreateLaunchPlan = async () => {
     if (!selectedTemplate || isCreatingPlan) return;
     setIsCreatingPlan(true);
     setCreateError("");
     setCreatedPlanId(null);
+    const parsedUseCases = Array.from(new Set(modelDefaultUseCases
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean)));
+    const parsedKnowledgeSources = Array.from(new Set(starterKnowledgeSources
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)));
+    const parsedConnectorKeys = Array.from(new Set(selectedConnectorKeys
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)));
+    const parsedPublishTargets = Array.from(new Set(selectedPublishTargets
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)));
+    const setupOverrides = {
+      ...(brandProductName.trim() ? { brandProductName: brandProductName.trim() } : {}),
+      ...(brandAccentHex.trim() ? { brandAccentHex: brandAccentHex.trim() } : {}),
+      ...(firstAdminEmail.trim() ? { firstAdminEmail: firstAdminEmail.trim() } : {}),
+      ...(invitePolicyNotes.trim() ? { invitePolicyNotes: invitePolicyNotes.trim() } : {}),
+      ...(parsedUseCases.length > 0 ? { modelDefaultUseCases: parsedUseCases } : {}),
+      ...(targetPlanName.trim() ? { targetPlanName: targetPlanName.trim() } : {}),
+      ...(connectorOwnerEmail.trim() ? { connectorOwnerEmail: connectorOwnerEmail.trim() } : {}),
+      ...(parsedConnectorKeys.length > 0 ? { selectedConnectorKeys: parsedConnectorKeys } : {}),
+      ...(connectorBundleNotes.trim() ? { connectorBundleNotes: connectorBundleNotes.trim() } : {}),
+      ...(knowledgeOwnerEmail.trim() ? { knowledgeOwnerEmail: knowledgeOwnerEmail.trim() } : {}),
+      ...(parsedKnowledgeSources.length > 0 ? { starterKnowledgeSources: parsedKnowledgeSources } : {}),
+      ...(knowledgeSourceNotes.trim() ? { knowledgeSourceNotes: knowledgeSourceNotes.trim() } : {}),
+      ...(surfaceOwnerEmail.trim() ? { surfaceOwnerEmail: surfaceOwnerEmail.trim() } : {}),
+      ...(parsedPublishTargets.length > 0 ? { selectedPublishTargets: parsedPublishTargets } : {}),
+      ...(publishSurfaceNotes.trim() ? { publishSurfaceNotes: publishSurfaceNotes.trim() } : {}),
+    };
     try {
       const planId = await createLaunchPlan({
         templateId: selectedTemplate.id,
         targetCompanyName: targetCompanyName.trim() || undefined,
         notes: notes.trim() || undefined,
+        setupOverrides,
       });
       setCreatedPlanId(planId);
       setNotes("");
@@ -314,6 +446,72 @@ export default function LaunchPage() {
                 ))}
               </div>
 
+              <div className="border border-border-dim bg-background/30 rounded-[8px] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Catalogue Registry</span>
+                    <p className="text-[12px] text-secondary mt-1">
+                      {selectedCatalogItem?.registry
+                        ? `${selectedCatalogItem.registry.lifecycleStatus.replaceAll("_", " ")} · ${selectedCatalogItem.isSynced ? "synced" : "needs sync"}`
+                        : "Not persisted yet"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-muted whitespace-nowrap">
+                    {registrySummary.persistedCount}/{templates.length} saved
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 mt-3">
+                  <select
+                    value={catalogLifecycleStatus}
+                    onChange={(event) => setCatalogLifecycleStatus(event.target.value as "ACTIVE" | "NEEDS_REVIEW" | "ARCHIVED")}
+                    aria-label="Catalogue lifecycle status"
+                    className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/40"
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="NEEDS_REVIEW">Needs review</option>
+                    <option value="ARCHIVED">Archived</option>
+                  </select>
+                  <input
+                    value={catalogOwnerEmail}
+                    onChange={(event) => setCatalogOwnerEmail(event.target.value)}
+                    placeholder="Catalogue owner email"
+                    className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                  />
+                  <textarea
+                    value={catalogEditorialNotes}
+                    onChange={(event) => setCatalogEditorialNotes(event.target.value)}
+                    placeholder="Catalogue registry notes"
+                    rows={2}
+                    className="w-full resize-none bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSyncCatalog}
+                      disabled={isSyncingCatalog}
+                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-[8px] border border-border-dim text-[12px] text-foreground hover:bg-foreground/5 disabled:opacity-50"
+                    >
+                      {isSyncingCatalog ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                      Sync registry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUpdateCatalogItem}
+                      disabled={isUpdatingCatalog}
+                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-[8px] bg-foreground text-background text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
+                    >
+                      {isUpdatingCatalog ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                      Save registry item
+                    </button>
+                  </div>
+                  {registrySummary.staleCount > 0 ? (
+                    <p className="text-[11px] text-amber-500">{registrySummary.staleCount} registry item{registrySummary.staleCount === 1 ? "" : "s"} need source sync.</p>
+                  ) : null}
+                  {catalogMessage ? <p className="text-[11px] text-emerald-500">{catalogMessage}</p> : null}
+                  {catalogError ? <p className="text-[11px] text-rose-500">{catalogError}</p> : null}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <PreviewList title="Agents" items={selectedTemplate.agents} />
                 <PreviewList title="Workflows" items={selectedTemplate.workflows} />
@@ -373,6 +571,112 @@ export default function LaunchPage() {
                     placeholder="Target workspace name"
                     className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
                   />
+                  <div className="grid grid-cols-1 gap-2 rounded-[8px] border border-border-dim bg-background/30 p-3">
+                    <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Workspace Setup Intent</span>
+                    <input
+                      value={brandProductName}
+                      onChange={(event) => setBrandProductName(event.target.value)}
+                      placeholder="Product or app name"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={brandAccentHex}
+                      onChange={(event) => setBrandAccentHex(event.target.value)}
+                      placeholder="Brand accent HEX, e.g. #0f766e"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={firstAdminEmail}
+                      onChange={(event) => setFirstAdminEmail(event.target.value)}
+                      placeholder="First tenant admin email"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <textarea
+                      value={invitePolicyNotes}
+                      onChange={(event) => setInvitePolicyNotes(event.target.value)}
+                      placeholder="Invite policy note"
+                      rows={2}
+                      className="w-full resize-none bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={modelDefaultUseCases}
+                      onChange={(event) => setModelDefaultUseCases(event.target.value)}
+                      placeholder="Model default use cases"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={targetPlanName}
+                      onChange={(event) => setTargetPlanName(event.target.value)}
+                      placeholder="Target plan name"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 rounded-[8px] border border-border-dim bg-background/30 p-3">
+                    <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Starter Knowledge Import</span>
+                    <input
+                      value={knowledgeOwnerEmail}
+                      onChange={(event) => setKnowledgeOwnerEmail(event.target.value)}
+                      placeholder="Knowledge owner email"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={starterKnowledgeSources}
+                      onChange={(event) => setStarterKnowledgeSources(event.target.value)}
+                      placeholder="Source candidates, comma separated"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <textarea
+                      value={knowledgeSourceNotes}
+                      onChange={(event) => setKnowledgeSourceNotes(event.target.value)}
+                      placeholder="Knowledge import notes or missing sources"
+                      rows={2}
+                      className="w-full resize-none bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 rounded-[8px] border border-border-dim bg-background/30 p-3">
+                    <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Connector Bundle Plan</span>
+                    <input
+                      value={connectorOwnerEmail}
+                      onChange={(event) => setConnectorOwnerEmail(event.target.value)}
+                      placeholder="Connector owner email"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={selectedConnectorKeys}
+                      onChange={(event) => setSelectedConnectorKeys(event.target.value)}
+                      placeholder="Connector keys, comma separated"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <textarea
+                      value={connectorBundleNotes}
+                      onChange={(event) => setConnectorBundleNotes(event.target.value)}
+                      placeholder="Connector setup notes or missing integrations"
+                      rows={2}
+                      className="w-full resize-none bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 rounded-[8px] border border-border-dim bg-background/30 p-3">
+                    <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Publish Surface Plan</span>
+                    <input
+                      value={surfaceOwnerEmail}
+                      onChange={(event) => setSurfaceOwnerEmail(event.target.value)}
+                      placeholder="Surface owner email"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <input
+                      value={selectedPublishTargets}
+                      onChange={(event) => setSelectedPublishTargets(event.target.value)}
+                      placeholder="Target surfaces, comma separated"
+                      className="w-full bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                    <textarea
+                      value={publishSurfaceNotes}
+                      onChange={(event) => setPublishSurfaceNotes(event.target.value)}
+                      placeholder="Surface notes, embed needs, or callback work"
+                      rows={2}
+                      className="w-full resize-none bg-transparent border border-border-dim rounded-[8px] px-3 py-2 text-[13px] text-foreground placeholder:text-muted/50 outline-none focus:border-brand/40"
+                    />
+                  </div>
                   <textarea
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
@@ -426,7 +730,7 @@ export default function LaunchPage() {
               <p className="text-[13px] text-muted mt-2">Loading recent build plans...</p>
             </div>
           ) : visibleRecentPlans.length > 0 ? visibleRecentPlans.map((plan) => (
-            <Link key={plan._id} href={`/admin/launch/plans/${plan._id}`} className={`block border rounded-[8px] p-3 bg-background/40 hover:border-brand/40 transition-colors ${createdPlanId === plan._id ? "border-brand/50" : "border-border-dim"}`}>
+            <Link key={plan._id} href={`/admin/app-kits/plans/${plan._id}`} className={`block border rounded-[8px] p-3 bg-background/40 hover:border-brand/40 transition-colors ${createdPlanId === plan._id ? "border-brand/50" : "border-border-dim"}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-brand">{plan.category}</span>

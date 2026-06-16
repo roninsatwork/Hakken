@@ -14,7 +14,7 @@ type WhiteLabelModulePresetsSectionProps = {
 const presetKeys: PresetKey[] = ["knowledgeAssistant", "supportWidget", "operatorWorkspace"];
 
 const presetLinks: Record<PresetKey, { href: string; labelKey: string }> = {
-  knowledgeAssistant: { href: "/admin/launch", labelKey: "modulePresets.links.launch" },
+  knowledgeAssistant: { href: "/admin/app-kits", labelKey: "modulePresets.links.launch" },
   supportWidget: { href: "/admin/ai/widget", labelKey: "modulePresets.links.widget" },
   operatorWorkspace: { href: "/admin/settings/system-health", labelKey: "modulePresets.links.health" },
 };

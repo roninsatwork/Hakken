@@ -1671,7 +1671,7 @@
                     "handoff": "Handoff checks"
                 },
                 "links": {
-                    "launch": "Open launch",
+                    "launch": "Open App Kits",
                     "widget": "Open widget",
                     "health": "Open health"
                 },

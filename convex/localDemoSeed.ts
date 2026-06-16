@@ -6,7 +6,7 @@ import { GOOGLE_VERTEX_PROVIDER_KEY, GOOGLE_VERTEX_EMBEDDING_MODEL_ID, SYSTEM_FA
 import { getAgentTemplateById } from "./agentTemplates";
 import { buildGlobalAgentRecord, buildCreateAgentFromTemplateAuditMetadata } from "./agentService";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
-import { getAppTemplateById } from "./appTemplates";
+import { createCatalogSourceJson, getAppTemplateById, getAppTemplates } from "./appTemplates";
 
 const DEMO_COMPANY_NAME = "Sonae Demo Company";
 const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@sonae.test";
@@ -396,6 +396,7 @@ async function ensureTemplateFixtures(ctx: MutationCtx, args: {
 function createDemoLaunchPlanPayload(templateId: string) {
   const template = getAppTemplateById(templateId);
   if (!template) throw new Error(`Demo app template is missing: ${templateId}`);
+  const workspaceLabel = `${template.name} demo workspace`;
 
   return {
     templateId: template.id,
@@ -413,6 +414,95 @@ function createDemoLaunchPlanPayload(templateId: string) {
       publishTargets: template.publishTargets,
     },
     readinessChecks: template.readinessChecks,
+    developerFollowUps: template.developerFollowUps,
+    extensionPoints: template.extensionPoints,
+    implementationPointers: template.implementationPointers,
+    connectorBundle: {
+      title: "Connector bundle plan",
+      summary: "Confirm connector ownership, auth mode, tenant scope, and Marketplace readiness before any connector-backed agent or workflow is activated.",
+      connectorKeys: template.recommendedConnectorKeys,
+      checklist: [
+        "Confirm which connectors are required for the first developer handoff.",
+        "Install, authorize, activate, and test each connector through Marketplace.",
+        "Keep connector-backed workflows inactive until auth and tenant scope are reviewed.",
+        "Document any missing connector, custom API, OAuth, or secret-reference work.",
+      ],
+      savedInputs: [
+        "Connector owner: demo-owner@example.com",
+        "Connector note: Demo seed keeps connector setup as a Marketplace readiness item.",
+      ],
+    },
+    knowledgeImport: {
+      title: "Starter knowledge import",
+      summary: "Prepare approved source material for the planned knowledge scopes before draft agents are tested or released.",
+      scopes: template.knowledgeScopes,
+      checklist: [
+        "Map each planned scope to approved source documents, URLs, or owner-provided notes.",
+        "Upload or connect sources through tenant-scoped knowledge surfaces before activation.",
+        "Run retrieval tests against the planned eval fixtures after ingestion.",
+        "Document stale, missing, or untrusted sources as developer follow-up items.",
+      ],
+      savedInputs: [
+        "Knowledge owner: demo-owner@example.com",
+        "Import note: Demo seed uses clearly fake starter docs and local support notes.",
+      ],
+    },
+    publishSurface: {
+      title: "Publish surface plan",
+      summary: "Review internal app, widget, webhook, API, digest, and dashboard surfaces before any customer-facing activation.",
+      targets: template.publishTargets,
+      dashboardCards: template.dashboardCards,
+      checklist: [
+        "Confirm which surfaces are in scope for the first developer handoff.",
+        "Keep widgets, webhooks, APIs, and external actions disabled until release checks pass.",
+        "Map each dashboard card to an existing or planned metric source.",
+        "Document any product-specific screens, embed code, or callback handlers still needed.",
+      ],
+      savedInputs: [
+        "Surface owner: demo-owner@example.com",
+        "Surface note: Demo seed keeps all publish surfaces as draft review items.",
+      ],
+    },
+    workspaceSetup: {
+      brand: {
+        title: "Brand and theme",
+        summary: `Prepare the ${workspaceLabel} name, product description, logo assets, and brand accent before tenant-facing surfaces are enabled.`,
+        checklist: [
+          "Confirm the workspace display name and short product description.",
+          "Add light and dark logo assets or document that global platform branding should be inherited.",
+          "Choose a brand accent that has enough contrast in internal app and widget surfaces.",
+        ],
+      },
+      invitePolicy: {
+        title: "First admin and invite policy",
+        summary: "Invite one accountable tenant admin first, keep super-admin privileges platform-owned, and confirm who can invite additional users.",
+        firstAdminRole: "ADMIN",
+        checklist: [
+          "Invite the first tenant owner as ADMIN after the workspace exists.",
+          "Do not grant SUPER_ADMIN to tenant operators.",
+          "Document whether additional invites are platform-managed or delegated to tenant admins.",
+        ],
+      },
+      modelDefaults: {
+        title: "Model defaults",
+        summary: "Review tenant model defaults for agent, workflow, chat, report, router, and embedding use cases before release gates run.",
+        useCases: ["agent", "workflow", "chat", "report", "router", "embedding"],
+        checklist: [
+          "Confirm provider credentials and health before setting tenant defaults.",
+          "Use stored model configuration instead of hardcoding model literals in runtime paths.",
+          "Run smoke evals after model defaults are selected.",
+        ],
+      },
+      planAssignment: {
+        title: "Plan assignment",
+        summary: "Assign a tenant plan deliberately so quotas, budgets, and inventory rollups match the starter's expected use.",
+        checklist: [
+          "Choose an active plan that covers expected agent, widget, workflow, and API volume.",
+          "Review usage limits before enabling customer-facing surfaces.",
+          "Confirm inventory rollups after assigning or changing the plan.",
+        ],
+      },
+    },
     safetyDefaults: {
       resourceStatus: "DRAFT",
       externalActionsRequireApproval: true,
@@ -468,6 +558,53 @@ async function upsertLaunchPlan(ctx: MutationCtx, args: {
   };
 }
 
+async function upsertAppTemplateCatalogRegistry(ctx: MutationCtx, userId: Id<"users">) {
+  const now = Date.now();
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const template of getAppTemplates()) {
+    const existing = await ctx.db
+      .query("appTemplateCatalogItems")
+      .withIndex("by_template", (q) => q.eq("templateId", template.id))
+      .first();
+    const sourceJson = createCatalogSourceJson(template);
+    const fields = {
+      templateName: template.name,
+      category: template.category,
+      riskProfile: template.riskProfile,
+      sourceJson,
+      sourceUpdatedAt: existing && existing.sourceJson === sourceJson ? existing.sourceUpdatedAt : now,
+      lastSyncedAt: now,
+      updatedBy: userId,
+      updatedAt: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, fields);
+      updatedCount += 1;
+      continue;
+    }
+
+    await ctx.db.insert("appTemplateCatalogItems", {
+      templateId: template.id,
+      lifecycleStatus: "ACTIVE",
+      ownerEmail: DEMO_SUPER_ADMIN_EMAIL,
+      editorialNotes: "Seeded demo registry item synced from the code-backed app kit catalogue.",
+      ...fields,
+      createdBy: userId,
+      createdAt: now,
+    });
+    createdCount += 1;
+  }
+
+  return {
+    createdCount,
+    updatedCount,
+    totalCount: createdCount + updatedCount,
+  };
+}
+
 export const seed = mutation({
   args: { secret: v.string() },
   handler: async (ctx, args) => {
@@ -503,6 +640,7 @@ export const seed = mutation({
         updatedBy: superAdmin.userId,
       })
     ));
+    const catalogRegistry = await upsertAppTemplateCatalogRegistry(ctx, superAdmin.userId);
     const tool = await upsertKnowledgeTool(ctx, superAdmin.userId);
     const agent = await upsertDemoAgent(ctx, superAdmin.userId);
     const knowledge = await upsertKnowledgeDocument(ctx, {
@@ -558,6 +696,7 @@ export const seed = mutation({
       provider,
       models: [model, embeddingModel],
       defaults,
+      catalogRegistry,
       tool: {
         toolId: tool.toolId,
         handlerMapping: DEMO_TOOL_MAPPING,

@@ -55,9 +55,11 @@ describe("local demo seed", () => {
     });
     expect(firstSeed.evalFixtures.fixtureIds).toHaveLength(2);
     expect(secondSeed.evalFixtures.fixtureIds).toHaveLength(0);
+    expect(firstSeed.catalogRegistry.createdCount).toBeGreaterThanOrEqual(10);
+    expect(secondSeed.catalogRegistry.updatedCount).toBeGreaterThanOrEqual(10);
 
     const snapshot = await t.run(async (ctx) => {
-      const [company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans] = await Promise.all([
+      const [company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans, catalogItems] = await Promise.all([
         ctx.db
           .query("companies")
           .withIndex("by_name", (q) => q.eq("name", "Sonae Demo Company"))
@@ -85,8 +87,9 @@ describe("local demo seed", () => {
           .withIndex("by_agent_status_created", (q) => q.eq("agentId", firstSeed.agent.agentId).eq("status", "ACTIVE"))
           .collect(),
         ctx.db.query("appLaunchPlans").withIndex("by_createdAt").collect(),
+        ctx.db.query("appTemplateCatalogItems").collect(),
       ]);
-      return { company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans };
+      return { company, superAdmin, companyAdmin, agent, knowledge, tools, defaults, fixtures, launchPlans, catalogItems };
     });
 
     expect(snapshot.company?._id).toBe(firstSeed.company.companyId);
@@ -124,6 +127,15 @@ describe("local demo seed", () => {
         expect.objectContaining({
           templateId: "sales-research-copilot",
           status: "DRAFT",
+        }),
+      ])
+    );
+    expect(snapshot.catalogItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          templateId: "support-desk-ai",
+          lifecycleStatus: "ACTIVE",
+          ownerEmail: "demo-super-admin@sonae.test",
         }),
       ])
     );

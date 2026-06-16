@@ -150,7 +150,7 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
-  if (pathname.startsWith('/admin/launch')) return 'Launch';
+  if (pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')) return 'App Kits';
   if (pathname.startsWith('/admin/releases')) return 'Release Center';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
@@ -190,7 +190,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
+  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
 
   return {
     workspace: true,
@@ -319,9 +319,9 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={Rocket}
                         label={t('launch')}
-                        href="/admin/launch"
-                        isActive={activeItem === 'Launch' || pathname.startsWith('/admin/launch')}
-                        onClick={() => setActiveItem('Launch')}
+                        href="/admin/app-kits"
+                        isActive={activeItem === 'App Kits' || pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')}
+                        onClick={() => setActiveItem('App Kits')}
                       />
                     )}
 

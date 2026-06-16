@@ -47,7 +47,7 @@ vi.mock("next-intl", () => ({
       "tabs.security": "Security",
       title: "Settings",
       "modulePresets.links.health": "Open health",
-      "modulePresets.links.launch": "Open launch",
+      "modulePresets.links.launch": "Open App Kits",
       "modulePresets.links.widget": "Open widget",
       "modulePresets.presets.knowledgeAssistant.handoff.0": "Replace demo knowledge",
       "modulePresets.presets.knowledgeAssistant.handoff.1": "Run the release gate",

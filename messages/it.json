@@ -1690,7 +1690,7 @@
                     "handoff": "Controlli handoff"
                 },
                 "links": {
-                    "launch": "Apri launch",
+                    "launch": "Apri Kit App",
                     "widget": "Apri widget",
                     "health": "Apri health"
                 },

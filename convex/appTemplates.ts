@@ -543,6 +543,45 @@ export function getAppTemplateById(id: string) {
   return template ? withDeveloperGuidance(template) : undefined;
 }
 
+export function createCatalogSourceJson(template: AppTemplate) {
+  return JSON.stringify({
+    id: template.id,
+    category: template.category,
+    name: template.name,
+    tagline: template.tagline,
+    riskProfile: template.riskProfile,
+    recommendedConnectorKeys: template.recommendedConnectorKeys,
+    agents: template.agents,
+    knowledgeScopes: template.knowledgeScopes,
+    workflows: template.workflows,
+    evalFixtures: template.evalFixtures,
+    dashboardCards: template.dashboardCards,
+    publishTargets: template.publishTargets,
+    readinessChecks: template.readinessChecks,
+    developerFollowUps: template.developerFollowUps,
+    extensionPoints: template.extensionPoints,
+    implementationPointers: template.implementationPointers,
+  });
+}
+
+function toCatalogSummary(record: {
+  templateId: string;
+  lifecycleStatus: "ACTIVE" | "NEEDS_REVIEW" | "ARCHIVED";
+  ownerEmail?: string;
+  editorialNotes?: string;
+  lastSyncedAt: number;
+  updatedAt: number;
+}): AppTemplateCatalogSummary {
+  return {
+    templateId: record.templateId,
+    lifecycleStatus: record.lifecycleStatus,
+    ownerEmail: record.ownerEmail,
+    editorialNotes: record.editorialNotes,
+    lastSyncedAt: record.lastSyncedAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
 type CreatedLaunchResources = {
   agentIds: Id<"agents">[];
   workflowIds: Id<"workflows">[];
@@ -603,7 +642,7 @@ type DeveloperHandoffSummary = {
 };
 
 type DeveloperTask = {
-  category: "Workspace" | "Resources" | "Connectors" | "Knowledge" | "Code" | "Release";
+  category: "Workspace" | "Brand" | "Access" | "Models" | "Plan" | "Resources" | "Connectors" | "Knowledge" | "Code" | "Surfaces" | "Release";
   title: string;
   status: "BLOCKED" | "PENDING" | "READY";
   detail: string;
@@ -620,10 +659,111 @@ type DeveloperTaskSummary = {
   nextTaskStatus?: DeveloperTask["status"];
 };
 
+type WorkspaceSetupAction = {
+  key: "brand" | "invitePolicy" | "modelDefaults" | "planAssignment";
+  title: string;
+  status: "BLOCKED" | "PENDING";
+  detail: string;
+  actionLabel: string;
+  actionHref?: string;
+  savedInputs?: string[];
+};
+
+type SurfaceImplementationAction = {
+  key: string;
+  kind: "target" | "dashboardCard";
+  title: string;
+  status: "PENDING";
+  detail: string;
+  actionLabel: string;
+  actionHref: string;
+};
+
+type AppTemplateCatalogSummary = {
+  templateId: string;
+  lifecycleStatus: "ACTIVE" | "NEEDS_REVIEW" | "ARCHIVED";
+  ownerEmail?: string;
+  editorialNotes?: string;
+  lastSyncedAt: number;
+  updatedAt: number;
+};
+
 type LaunchWorkspaceSummary = {
   id: Id<"companies">;
   name: string;
   createdAt: number;
+};
+
+type WorkspaceSetupPlan = {
+  brand: {
+    title: string;
+    summary: string;
+    checklist: string[];
+    savedInputs?: string[];
+  };
+  invitePolicy: {
+    title: string;
+    summary: string;
+    firstAdminRole: "ADMIN";
+    checklist: string[];
+    savedInputs?: string[];
+  };
+  modelDefaults: {
+    title: string;
+    summary: string;
+    useCases: string[];
+    checklist: string[];
+    savedInputs?: string[];
+  };
+  planAssignment: {
+    title: string;
+    summary: string;
+    checklist: string[];
+    savedInputs?: string[];
+  };
+};
+
+type KnowledgeImportPlan = {
+  title: string;
+  summary: string;
+  scopes: string[];
+  checklist: string[];
+  savedInputs?: string[];
+};
+
+type ConnectorBundlePlan = {
+  title: string;
+  summary: string;
+  connectorKeys: string[];
+  checklist: string[];
+  savedInputs?: string[];
+};
+
+type PublishSurfacePlan = {
+  title: string;
+  summary: string;
+  targets: string[];
+  dashboardCards: string[];
+  checklist: string[];
+  savedInputs?: string[];
+};
+
+type WorkspaceSetupOverrides = {
+  brandProductName?: string;
+  brandAccentHex?: string;
+  firstAdminEmail?: string;
+  invitePolicyNotes?: string;
+  modelDefaultUseCases?: string[];
+  targetPlanName?: string;
+  connectorOwnerEmail?: string;
+  selectedConnectorKeys?: string[];
+  connectorBundleNotes?: string;
+  knowledgeSourceNotes?: string;
+  knowledgeOwnerEmail?: string;
+  starterKnowledgeSources?: string[];
+  surfaceOwnerEmail?: string;
+  selectedPublishTargets?: string[];
+  publishSurfaceNotes?: string;
 };
 
 const APP_TEMPLATE_AGENT_ARCHETYPE: Record<string, AgentTemplateId> = {
@@ -733,6 +873,8 @@ function buildDeveloperHandoffSummary(args: {
         extensionPoints?: unknown;
         implementationPointers?: unknown;
         draftResources?: Record<string, unknown>;
+        workspaceSetup?: WorkspaceSetupPlan;
+        connectorBundle?: ConnectorBundlePlan;
       }
     : {};
   const developerFollowUps = getStringArray(plan.developerFollowUps);
@@ -749,6 +891,12 @@ function buildDeveloperHandoffSummary(args: {
 
   if (!args.hasWorkspace) {
     checklist.push("Create or link the tenant workspace for this build plan.");
+  }
+  if (plan.workspaceSetup) {
+    checklist.push("Review workspace brand, first-admin invite policy, model defaults, and plan assignment before handoff.");
+  }
+  if (plan.connectorBundle) {
+    checklist.push("Confirm connector bundle ownership, auth mode, tenant scope, and Marketplace setup before activation.");
   }
   if (!args.hasDraftResources) {
     checklist.push("Create draft agents, workflows, and smoke-test fixtures before product-specific coding starts.");
@@ -788,13 +936,55 @@ function buildDeveloperTasks(args: {
         implementationPointers?: unknown;
         draftResources?: Record<string, unknown>;
         readinessChecks?: unknown;
+        workspaceSetup?: WorkspaceSetupPlan;
+        connectorBundle?: ConnectorBundlePlan;
+        knowledgeImport?: KnowledgeImportPlan;
+        publishSurface?: PublishSurfacePlan;
       }
     : {};
   const knowledgeScopes = getStringArray(plan.draftResources?.knowledgeScopes);
   const evalFixtures = getStringArray(plan.draftResources?.evalFixtures);
+  const publishTargets = getStringArray(plan.draftResources?.publishTargets);
+  const dashboardCards = getStringArray(plan.draftResources?.dashboardCards);
   const developerFollowUps = getStringArray(plan.developerFollowUps);
   const implementationPointerCount = Array.isArray(plan.implementationPointers) ? plan.implementationPointers.length : 0;
   const notReadyConnectors = args.connectorReadiness.filter((connector) => !isConnectorReady(connector));
+  const setupStatus = args.hasWorkspace ? "PENDING" : "BLOCKED";
+  const setupActionHref = args.workspaceId ? `/admin/companies/${args.workspaceId}` : undefined;
+  const setupTasks: DeveloperTask[] = plan.workspaceSetup ? [
+    {
+      category: "Brand",
+      title: "Confirm workspace brand",
+      status: setupStatus,
+      detail: plan.workspaceSetup.brand.summary,
+      actionLabel: args.workspaceId ? "Open workspace profile" : "Create workspace first",
+      actionHref: setupActionHref,
+    },
+    {
+      category: "Access",
+      title: "Invite first admin",
+      status: setupStatus,
+      detail: plan.workspaceSetup.invitePolicy.summary,
+      actionLabel: args.workspaceId ? "Open invites" : "Create workspace first",
+      actionHref: args.workspaceId ? `/admin/companies/${args.workspaceId}/directory/invites` : undefined,
+    },
+    {
+      category: "Models",
+      title: "Set tenant model defaults",
+      status: setupStatus,
+      detail: plan.workspaceSetup.modelDefaults.summary,
+      actionLabel: "Open model defaults",
+      actionHref: "/admin/ai/models",
+    },
+    {
+      category: "Plan",
+      title: "Assign billing plan",
+      status: setupStatus,
+      detail: plan.workspaceSetup.planAssignment.summary,
+      actionLabel: args.workspaceId ? "Open workspace profile" : "Create workspace first",
+      actionHref: setupActionHref,
+    },
+  ] : [];
   const tasks: DeveloperTask[] = [
     {
       category: "Workspace",
@@ -806,6 +996,7 @@ function buildDeveloperTasks(args: {
       actionLabel: args.workspaceId ? "Open workspace" : "Create workspace below",
       actionHref: args.workspaceId ? `/admin/companies/${args.workspaceId}` : undefined,
     },
+    ...setupTasks,
     {
       category: "Resources",
       title: args.hasDraftResources ? "Draft resources created" : "Create draft resources",
@@ -820,9 +1011,11 @@ function buildDeveloperTasks(args: {
       category: "Connectors",
       title: notReadyConnectors.length === 0 ? "Recommended connectors ready" : "Set up recommended connectors",
       status: notReadyConnectors.length === 0 ? "READY" : "BLOCKED",
-      detail: notReadyConnectors.length === 0
-        ? "All recommended connectors are installed, active, tested, and connected where required."
-        : `${notReadyConnectors.length} recommended connector${notReadyConnectors.length === 1 ? "" : "s"} still need installation, auth, activation, or testing.`,
+      detail: notReadyConnectors.length > 0 && plan.connectorBundle?.savedInputs && plan.connectorBundle.savedInputs.length > 0
+        ? `${notReadyConnectors.length} connector${notReadyConnectors.length === 1 ? "" : "s"} need Marketplace setup using saved bundle notes.`
+        : notReadyConnectors.length === 0
+          ? "All recommended connectors are installed, active, tested, and connected where required."
+          : `${notReadyConnectors.length} recommended connector${notReadyConnectors.length === 1 ? "" : "s"} still need installation, auth, activation, or testing.`,
       actionLabel: "Open Marketplace",
       actionHref: "/admin/ai/tools",
     },
@@ -830,9 +1023,11 @@ function buildDeveloperTasks(args: {
       category: "Knowledge",
       title: "Map knowledge scopes",
       status: knowledgeScopes.length > 0 ? "PENDING" : "READY",
-      detail: knowledgeScopes.length > 0
-        ? `Map or upload these scopes: ${knowledgeScopes.slice(0, 4).join(", ")}${knowledgeScopes.length > 4 ? "." : "."}`
-        : "No explicit knowledge scopes were declared for this starter.",
+      detail: plan.knowledgeImport?.savedInputs && plan.knowledgeImport.savedInputs.length > 0
+        ? `Map or upload ${knowledgeScopes.length} planned scope${knowledgeScopes.length === 1 ? "" : "s"} using saved import notes.`
+        : knowledgeScopes.length > 0
+          ? `Map or upload these scopes: ${knowledgeScopes.slice(0, 4).join(", ")}${knowledgeScopes.length > 4 ? "." : "."}`
+          : "No explicit knowledge scopes were declared for this starter.",
       actionLabel: args.workspaceId ? "Open workspace knowledge" : "Open global knowledge",
       actionHref: args.workspaceId ? `/admin/companies/${args.workspaceId}/knowledge` : "/admin/ai/global-knowledge",
     },
@@ -844,6 +1039,17 @@ function buildDeveloperTasks(args: {
         ? `${implementationPointerCount} code pointer${implementationPointerCount === 1 ? "" : "s"} and ${developerFollowUps.length} follow-up item${developerFollowUps.length === 1 ? "" : "s"} need developer review.`
         : "No code pointers were declared for this starter.",
       actionLabel: "Review code pointers below",
+    },
+    {
+      category: "Surfaces",
+      title: "Plan publish surfaces",
+      status: publishTargets.length > 0 || dashboardCards.length > 0 ? "PENDING" : "READY",
+      detail: plan.publishSurface?.savedInputs && plan.publishSurface.savedInputs.length > 0
+        ? `Review saved surface intent for ${publishTargets.length} target surface${publishTargets.length === 1 ? "" : "s"} and ${dashboardCards.length} dashboard card${dashboardCards.length === 1 ? "" : "s"}.`
+        : publishTargets.length > 0
+          ? `Review target surfaces before shipping: ${publishTargets.join(", ")}.`
+          : "No target surfaces were declared for this starter.",
+      actionLabel: "Review surface plan below",
     },
     {
       category: "Release",
@@ -878,14 +1084,312 @@ function buildDeveloperTaskSummary(tasks: DeveloperTask[]): DeveloperTaskSummary
   };
 }
 
-function createLaunchPlanPayload(template: AppTemplate) {
+function buildWorkspaceSetupActions(args: {
+  parsedPlan: unknown;
+  workspaceId?: Id<"companies">;
+}): WorkspaceSetupAction[] {
+  const plan = args.parsedPlan && typeof args.parsedPlan === "object"
+    ? args.parsedPlan as { workspaceSetup?: WorkspaceSetupPlan }
+    : {};
+  const setup = plan.workspaceSetup;
+  if (!setup) return [];
+
+  const workspaceHref = args.workspaceId ? `/admin/companies/${args.workspaceId}` : undefined;
+  const needsWorkspaceStatus = args.workspaceId ? "PENDING" : "BLOCKED";
+  const needsWorkspaceLabel = args.workspaceId ? "Open workspace profile" : "Create workspace first";
+
+  return [
+    {
+      key: "brand",
+      title: "Apply brand and profile intent",
+      status: needsWorkspaceStatus,
+      detail: setup.brand.summary,
+      actionLabel: needsWorkspaceLabel,
+      actionHref: workspaceHref,
+      savedInputs: setup.brand.savedInputs,
+    },
+    {
+      key: "invitePolicy",
+      title: "Prepare first admin invite",
+      status: needsWorkspaceStatus,
+      detail: setup.invitePolicy.summary,
+      actionLabel: args.workspaceId ? "Open workspace invites" : "Create workspace first",
+      actionHref: args.workspaceId ? `/admin/companies/${args.workspaceId}/directory/invites` : undefined,
+      savedInputs: setup.invitePolicy.savedInputs,
+    },
+    {
+      key: "modelDefaults",
+      title: "Review model defaults",
+      status: "PENDING",
+      detail: setup.modelDefaults.summary,
+      actionLabel: args.workspaceId ? "Open tenant model defaults" : "Open global model defaults",
+      actionHref: args.workspaceId ? `/admin/companies/${args.workspaceId}/models` : "/admin/ai/models",
+      savedInputs: setup.modelDefaults.savedInputs,
+    },
+    {
+      key: "planAssignment",
+      title: "Assign tenant plan",
+      status: needsWorkspaceStatus,
+      detail: setup.planAssignment.summary,
+      actionLabel: needsWorkspaceLabel,
+      actionHref: workspaceHref,
+      savedInputs: setup.planAssignment.savedInputs,
+    },
+  ];
+}
+
+function slugifyActionKey(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "item";
+}
+
+function getSurfaceActionRoute(target: string) {
+  const normalized = target.toLowerCase();
+  if (normalized.includes("widget")) {
+    return {
+      actionLabel: "Open widget settings",
+      actionHref: "/admin/ai/widget",
+      detail: "Review widget branding, allowed domains, embed code, escalation policy, and release gating before enabling this surface.",
+    };
+  }
+  if (normalized.includes("webhook")) {
+    return {
+      actionLabel: "Review workflow triggers",
+      actionHref: "/admin/workflows",
+      detail: "Review webhook trigger handling, authentication, payload mapping, replay safety, and approval gates before enabling this surface.",
+    };
+  }
+  if (normalized.includes("digest") || normalized.includes("scheduled")) {
+    return {
+      actionLabel: "Open schedules",
+      actionHref: "/admin/workflows/schedules",
+      detail: "Review digest cadence, recipients, owner, workflow schedule, and preview checks before enabling this surface.",
+    };
+  }
+  if (normalized.includes("api") || normalized.includes("developer")) {
+    return {
+      actionLabel: "Review connector/API work",
+      actionHref: "/admin/ai/tools",
+      detail: "Review API handlers, connector permissions, auth mode, rate limits, and audit logging before enabling this surface.",
+    };
+  }
+  return {
+    actionLabel: "Review app surface",
+    actionHref: "/app",
+    detail: "Review the product-specific app screen, permissions, empty states, and release gate before enabling this surface.",
+  };
+}
+
+function buildSurfaceImplementationActions(parsedPlan: unknown): SurfaceImplementationAction[] {
+  const plan = parsedPlan && typeof parsedPlan === "object"
+    ? parsedPlan as { publishSurface?: PublishSurfacePlan; draftResources?: Record<string, unknown> }
+    : {};
+  const targets = plan.publishSurface?.targets ?? getStringArray(plan.draftResources?.publishTargets);
+  const dashboardCards = plan.publishSurface?.dashboardCards ?? getStringArray(plan.draftResources?.dashboardCards);
+  const targetActions = targets.map((target): SurfaceImplementationAction => {
+    const route = getSurfaceActionRoute(target);
+    return {
+      key: `target-${slugifyActionKey(target)}`,
+      kind: "target",
+      title: `Review ${target}`,
+      status: "PENDING",
+      detail: route.detail,
+      actionLabel: route.actionLabel,
+      actionHref: route.actionHref,
+    };
+  });
+  const cardActions = dashboardCards.map((card): SurfaceImplementationAction => ({
+    key: `dashboard-${slugifyActionKey(card)}`,
+    kind: "dashboardCard",
+    title: `Map dashboard card: ${card}`,
+    status: "PENDING",
+    detail: "Map this dashboard card to a metric source, owner, empty state, permissions boundary, and freshness expectation before launch review.",
+    actionLabel: "Review reports",
+    actionHref: "/app/reports",
+  }));
+
+  return [...targetActions, ...cardActions];
+}
+
+function normalizeOptionalString(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function normalizeUseCases(value?: string[]) {
+  const normalized = (value ?? [])
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set(normalized));
+}
+
+function normalizeStringList(value?: string[]) {
+  const normalized = (value ?? [])
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return Array.from(new Set(normalized));
+}
+
+function resolveConnectorKeys(template: AppTemplate, overrides?: WorkspaceSetupOverrides) {
+  const selectedConnectorKeys = normalizeStringList(overrides?.selectedConnectorKeys);
+  return selectedConnectorKeys.length > 0 ? selectedConnectorKeys : template.recommendedConnectorKeys;
+}
+
+function createWorkspaceSetupPlan(
+  template: AppTemplate,
+  targetCompanyName?: string,
+  overrides?: WorkspaceSetupOverrides
+): WorkspaceSetupPlan {
+  const brandProductName = normalizeOptionalString(overrides?.brandProductName);
+  const brandAccentHex = normalizeOptionalString(overrides?.brandAccentHex);
+  const firstAdminEmail = normalizeOptionalString(overrides?.firstAdminEmail);
+  const invitePolicyNotes = normalizeOptionalString(overrides?.invitePolicyNotes);
+  const targetPlanName = normalizeOptionalString(overrides?.targetPlanName);
+  const modelUseCases = normalizeUseCases(overrides?.modelDefaultUseCases);
+  const defaultUseCases = modelUseCases.length > 0
+    ? modelUseCases
+    : ["agent", "workflow", "chat", "report", "router", "embedding"];
+  const workspaceLabel = brandProductName || targetCompanyName || `${template.name} workspace`;
+
+  return {
+    brand: {
+      title: "Brand and theme",
+      summary: `Prepare the ${workspaceLabel} name, product description, logo assets, and brand accent before tenant-facing surfaces are enabled.`,
+      checklist: [
+        "Confirm the workspace display name and short product description.",
+        "Add light and dark logo assets or document that global platform branding should be inherited.",
+        "Choose a brand accent that has enough contrast in internal app and widget surfaces.",
+      ],
+      savedInputs: [
+        brandProductName ? `Product name: ${brandProductName}` : undefined,
+        brandAccentHex ? `Brand accent candidate: ${brandAccentHex}` : undefined,
+      ].filter((entry): entry is string => Boolean(entry)),
+    },
+    invitePolicy: {
+      title: "First admin and invite policy",
+      summary: "Invite one accountable tenant admin first, keep super-admin privileges platform-owned, and confirm who can invite additional users.",
+      firstAdminRole: "ADMIN",
+      checklist: [
+        "Invite the first tenant owner as ADMIN after the workspace exists.",
+        "Do not grant SUPER_ADMIN to tenant operators.",
+        "Document whether additional invites are platform-managed or delegated to tenant admins.",
+      ],
+      savedInputs: [
+        firstAdminEmail ? `First admin candidate: ${firstAdminEmail}` : undefined,
+        invitePolicyNotes ? `Invite policy note: ${invitePolicyNotes}` : undefined,
+      ].filter((entry): entry is string => Boolean(entry)),
+    },
+    modelDefaults: {
+      title: "Model defaults",
+      summary: "Review tenant model defaults for agent, workflow, chat, report, router, and embedding use cases before release gates run.",
+      useCases: defaultUseCases,
+      checklist: [
+        "Confirm provider credentials and health before setting tenant defaults.",
+        "Use stored model configuration instead of hardcoding model literals in runtime paths.",
+        "Run smoke evals after model defaults are selected.",
+      ],
+      savedInputs: modelUseCases.length > 0
+        ? [`Requested defaults: ${modelUseCases.join(", ")}`]
+        : undefined,
+    },
+    planAssignment: {
+      title: "Plan assignment",
+      summary: "Assign a tenant plan deliberately so quotas, budgets, and inventory rollups match the starter's expected use.",
+      checklist: [
+        "Choose an active plan that covers expected agent, widget, workflow, and API volume.",
+        "Review usage limits before enabling customer-facing surfaces.",
+        "Confirm inventory rollups after assigning or changing the plan.",
+      ],
+      savedInputs: targetPlanName ? [`Target plan candidate: ${targetPlanName}`] : undefined,
+    },
+  };
+}
+
+function createConnectorBundlePlan(template: AppTemplate, overrides?: WorkspaceSetupOverrides): ConnectorBundlePlan {
+  const ownerEmail = normalizeOptionalString(overrides?.connectorOwnerEmail);
+  const connectorNotes = normalizeOptionalString(overrides?.connectorBundleNotes);
+  const selectedConnectorKeys = normalizeStringList(overrides?.selectedConnectorKeys);
+  const connectorKeys = resolveConnectorKeys(template, overrides);
+
+  return {
+    title: "Connector bundle plan",
+    summary: "Confirm connector ownership, auth mode, tenant scope, and Marketplace readiness before any connector-backed agent or workflow is activated.",
+    connectorKeys,
+    checklist: [
+      "Confirm which connectors are required for the first developer handoff.",
+      "Install, authorize, activate, and test each connector through Marketplace.",
+      "Keep connector-backed workflows inactive until auth and tenant scope are reviewed.",
+      "Document any missing connector, custom API, OAuth, or secret-reference work.",
+    ],
+    savedInputs: [
+      ownerEmail ? `Connector owner: ${ownerEmail}` : undefined,
+      selectedConnectorKeys.length > 0 ? `Selected connectors: ${selectedConnectorKeys.join(", ")}` : undefined,
+      connectorNotes ? `Connector note: ${connectorNotes}` : undefined,
+    ].filter((entry): entry is string => Boolean(entry)),
+  };
+}
+
+function createKnowledgeImportPlan(template: AppTemplate, overrides?: WorkspaceSetupOverrides): KnowledgeImportPlan {
+  const sourceNotes = normalizeOptionalString(overrides?.knowledgeSourceNotes);
+  const ownerEmail = normalizeOptionalString(overrides?.knowledgeOwnerEmail);
+  const starterSources = normalizeStringList(overrides?.starterKnowledgeSources);
+
+  return {
+    title: "Starter knowledge import",
+    summary: "Prepare approved source material for the planned knowledge scopes before draft agents are tested or released.",
+    scopes: template.knowledgeScopes,
+    checklist: [
+      "Map each planned scope to approved source documents, URLs, or owner-provided notes.",
+      "Upload or connect sources through tenant-scoped knowledge surfaces before activation.",
+      "Run retrieval tests against the planned eval fixtures after ingestion.",
+      "Document stale, missing, or untrusted sources as developer follow-up items.",
+    ],
+    savedInputs: [
+      ownerEmail ? `Knowledge owner: ${ownerEmail}` : undefined,
+      sourceNotes ? `Import note: ${sourceNotes}` : undefined,
+      starterSources.length > 0 ? `Source candidates: ${starterSources.join(", ")}` : undefined,
+    ].filter((entry): entry is string => Boolean(entry)),
+  };
+}
+
+function createPublishSurfacePlan(template: AppTemplate, overrides?: WorkspaceSetupOverrides): PublishSurfacePlan {
+  const ownerEmail = normalizeOptionalString(overrides?.surfaceOwnerEmail);
+  const surfaceNotes = normalizeOptionalString(overrides?.publishSurfaceNotes);
+  const selectedTargets = normalizeStringList(overrides?.selectedPublishTargets);
+  const targets = selectedTargets.length > 0 ? selectedTargets : template.publishTargets;
+
+  return {
+    title: "Publish surface plan",
+    summary: "Review internal app, widget, webhook, API, digest, and dashboard surfaces before any customer-facing activation.",
+    targets,
+    dashboardCards: template.dashboardCards,
+    checklist: [
+      "Confirm which surfaces are in scope for the first developer handoff.",
+      "Keep widgets, webhooks, APIs, and external actions disabled until release checks pass.",
+      "Map each dashboard card to an existing or planned metric source.",
+      "Document any product-specific screens, embed code, or callback handlers still needed.",
+    ],
+    savedInputs: [
+      ownerEmail ? `Surface owner: ${ownerEmail}` : undefined,
+      selectedTargets.length > 0 ? `Selected targets: ${selectedTargets.join(", ")}` : undefined,
+      surfaceNotes ? `Surface note: ${surfaceNotes}` : undefined,
+    ].filter((entry): entry is string => Boolean(entry)),
+  };
+}
+
+function createLaunchPlanPayload(template: AppTemplate, targetCompanyName?: string, setupOverrides?: WorkspaceSetupOverrides) {
+  const connectorKeys = resolveConnectorKeys(template, setupOverrides);
+
   return {
     templateId: template.id,
     templateName: template.name,
     category: template.category,
     riskProfile: template.riskProfile,
     primaryUsers: template.primaryUsers,
-    recommendedConnectorKeys: template.recommendedConnectorKeys,
+    recommendedConnectorKeys: connectorKeys,
     draftResources: {
       agents: template.agents,
       knowledgeScopes: template.knowledgeScopes,
@@ -898,6 +1402,10 @@ function createLaunchPlanPayload(template: AppTemplate) {
     developerFollowUps: template.developerFollowUps,
     extensionPoints: template.extensionPoints,
     implementationPointers: template.implementationPointers,
+    workspaceSetup: createWorkspaceSetupPlan(template, targetCompanyName, setupOverrides),
+    connectorBundle: createConnectorBundlePlan(template, setupOverrides),
+    knowledgeImport: createKnowledgeImportPlan(template, setupOverrides),
+    publishSurface: createPublishSurfacePlan(template, setupOverrides),
     safetyDefaults: {
       resourceStatus: "DRAFT",
       externalActionsRequireApproval: true,
@@ -911,6 +1419,134 @@ export const getAppTemplateGallery = query({
   handler: async (ctx) => {
     await requireSuperAdmin(ctx);
     return getAppTemplates();
+  },
+});
+
+export const getAppTemplateCatalogRegistry = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx);
+    const records = await ctx.db.query("appTemplateCatalogItems").take(100);
+    const recordsByTemplate = new Map(records.map((record) => [record.templateId, record]));
+
+    return getAppTemplates().map((template) => {
+      const record = recordsByTemplate.get(template.id);
+      const sourceJson = createCatalogSourceJson(template);
+      return {
+        templateId: template.id,
+        templateName: template.name,
+        category: template.category,
+        riskProfile: template.riskProfile,
+        registry: record ? toCatalogSummary(record) : null,
+        isSynced: Boolean(record && record.sourceJson === sourceJson),
+      };
+    });
+  },
+});
+
+export const syncAppTemplateCatalogRegistry = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId } = await requireSuperAdmin(ctx);
+    const now = Date.now();
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const template of getAppTemplates()) {
+      const existing = await ctx.db
+        .query("appTemplateCatalogItems")
+        .withIndex("by_template", (q) => q.eq("templateId", template.id))
+        .first();
+      const sourceJson = createCatalogSourceJson(template);
+      if (!existing) {
+        await ctx.db.insert("appTemplateCatalogItems", {
+          templateId: template.id,
+          templateName: template.name,
+          category: template.category,
+          riskProfile: template.riskProfile,
+          lifecycleStatus: "ACTIVE",
+          sourceJson,
+          sourceUpdatedAt: now,
+          lastSyncedAt: now,
+          createdBy: userId,
+          updatedBy: userId,
+          createdAt: now,
+          updatedAt: now,
+        });
+        createdCount += 1;
+        continue;
+      }
+
+      await ctx.db.patch(existing._id, {
+        templateName: template.name,
+        category: template.category,
+        riskProfile: template.riskProfile,
+        sourceJson,
+        sourceUpdatedAt: existing.sourceJson === sourceJson ? existing.sourceUpdatedAt : now,
+        lastSyncedAt: now,
+        updatedBy: userId,
+        updatedAt: now,
+      });
+      updatedCount += 1;
+    }
+
+    return {
+      createdCount,
+      updatedCount,
+      totalCount: createdCount + updatedCount,
+    };
+  },
+});
+
+export const updateAppTemplateCatalogItem = mutation({
+  args: {
+    templateId: v.string(),
+    lifecycleStatus: v.optional(v.union(v.literal("ACTIVE"), v.literal("NEEDS_REVIEW"), v.literal("ARCHIVED"))),
+    ownerEmail: v.optional(v.string()),
+    editorialNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireSuperAdmin(ctx);
+    const template = getAppTemplateById(args.templateId);
+    if (!template) throw new Error("App template not found.");
+
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("appTemplateCatalogItems")
+      .withIndex("by_template", (q) => q.eq("templateId", template.id))
+      .first();
+    const sourceJson = createCatalogSourceJson(template);
+    const ownerEmail = args.ownerEmail === undefined ? undefined : normalizeOptionalString(args.ownerEmail);
+    const editorialNotes = args.editorialNotes === undefined ? undefined : normalizeOptionalString(args.editorialNotes);
+
+    if (!existing) {
+      const itemId = await ctx.db.insert("appTemplateCatalogItems", {
+        templateId: template.id,
+        templateName: template.name,
+        category: template.category,
+        riskProfile: template.riskProfile,
+        lifecycleStatus: args.lifecycleStatus ?? "NEEDS_REVIEW",
+        ownerEmail,
+        editorialNotes,
+        sourceJson,
+        sourceUpdatedAt: now,
+        lastSyncedAt: now,
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return itemId;
+    }
+
+    await ctx.db.patch(existing._id, {
+      ...(args.lifecycleStatus ? { lifecycleStatus: args.lifecycleStatus } : {}),
+      ...(args.ownerEmail !== undefined ? { ownerEmail } : {}),
+      ...(args.editorialNotes !== undefined ? { editorialNotes } : {}),
+      updatedBy: userId,
+      updatedAt: now,
+    });
+    return existing._id;
   },
 });
 
@@ -1042,6 +1678,11 @@ export const getLaunchPlanDetails = query({
       readinessSummary,
     });
     const developerTaskSummary = buildDeveloperTaskSummary(developerTasks);
+    const workspaceSetupActions = buildWorkspaceSetupActions({
+      parsedPlan,
+      workspaceId: linkedWorkspace?.id,
+    });
+    const surfaceImplementationActions = buildSurfaceImplementationActions(parsedPlan);
 
     return {
       plan,
@@ -1053,6 +1694,8 @@ export const getLaunchPlanDetails = query({
       developerHandoff,
       developerTasks,
       developerTaskSummary,
+      workspaceSetupActions,
+      surfaceImplementationActions,
       linkedWorkspace,
     };
   },
@@ -1235,11 +1878,69 @@ export const createWorkspaceForLaunchPlan = mutation({
   },
 });
 
+export const linkWorkspaceToLaunchPlan = mutation({
+  args: {
+    planId: v.id("appLaunchPlans"),
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireSuperAdmin(ctx);
+    const [plan, company] = await Promise.all([
+      ctx.db.get(args.planId),
+      ctx.db.get(args.companyId),
+    ]);
+    if (!plan) throw new Error("Launch plan not found.");
+    if (!company) throw new Error("Workspace not found.");
+    if (plan.status === "ARCHIVED") throw new Error("Archived launch plans cannot link workspaces.");
+    if (plan.targetCompanyId === args.companyId) return args.companyId;
+
+    const now = Date.now();
+    await ctx.db.patch(args.planId, {
+      targetCompanyId: args.companyId,
+      targetCompanyName: company.name,
+      updatedAt: now,
+    });
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "LINK_APP_LAUNCH_PLAN_WORKSPACE",
+      entityId: args.planId,
+      entityType: "appLaunchPlans",
+      companyId: args.companyId,
+      metadata: JSON.stringify({
+        companyId: args.companyId,
+        companyName: company.name,
+        previousCompanyId: plan.targetCompanyId ?? null,
+        templateId: plan.templateId,
+      }),
+      timestamp: now,
+    });
+
+    return args.companyId;
+  },
+});
+
 export const createLaunchPlan = mutation({
   args: {
     templateId: v.string(),
     targetCompanyName: v.optional(v.string()),
     notes: v.optional(v.string()),
+    setupOverrides: v.optional(v.object({
+      brandProductName: v.optional(v.string()),
+      brandAccentHex: v.optional(v.string()),
+      firstAdminEmail: v.optional(v.string()),
+      invitePolicyNotes: v.optional(v.string()),
+      modelDefaultUseCases: v.optional(v.array(v.string())),
+      targetPlanName: v.optional(v.string()),
+      connectorOwnerEmail: v.optional(v.string()),
+      selectedConnectorKeys: v.optional(v.array(v.string())),
+      connectorBundleNotes: v.optional(v.string()),
+      knowledgeSourceNotes: v.optional(v.string()),
+      knowledgeOwnerEmail: v.optional(v.string()),
+      starterKnowledgeSources: v.optional(v.array(v.string())),
+      surfaceOwnerEmail: v.optional(v.string()),
+      selectedPublishTargets: v.optional(v.array(v.string())),
+      publishSurfaceNotes: v.optional(v.string()),
+    })),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireSuperAdmin(ctx);
@@ -1249,7 +1950,7 @@ export const createLaunchPlan = mutation({
     const targetCompanyName = args.targetCompanyName?.trim();
     const notes = args.notes?.trim();
     const now = Date.now();
-    const planJson = JSON.stringify(createLaunchPlanPayload(template));
+    const planJson = JSON.stringify(createLaunchPlanPayload(template, targetCompanyName, args.setupOverrides));
 
     const planId = await ctx.db.insert("appLaunchPlans", {
       templateId: template.id,
