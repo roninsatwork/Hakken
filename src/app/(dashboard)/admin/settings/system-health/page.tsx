@@ -10,6 +10,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock3,
+  Download,
   Loader2,
   RefreshCcw,
   ShieldAlert,
@@ -38,6 +39,32 @@ type HealthSignal = {
   runbook: string;
 };
 
+type BudgetExample = {
+  id: string;
+  limit: number;
+  occurredAt?: number;
+  percentUsed: number;
+  summary: string;
+  targetName: string;
+  targetType: "agent" | "company";
+  used: number;
+};
+
+type BudgetBucket = {
+  count: number;
+  examples: BudgetExample[];
+};
+
+type AlertRule = {
+  count: number;
+  details: string[];
+  key: string;
+  label: string;
+  nextAction: string;
+  status: "ok" | "warning" | "critical";
+  threshold: string;
+};
+
 type SystemHealth = {
   analytics: {
     liveToday: {
@@ -57,18 +84,35 @@ type SystemHealth = {
       totalSnapshots: number;
     };
   };
+  alertRules: AlertRule[];
+  budgetHealth: {
+    agentCostBudgets: BudgetBucket;
+    tenantMessageBudgets: BudgetBucket;
+  };
   checkedAt: number;
   checkedDate: string;
   daysBack: number;
   operations: {
     agentFailures: HealthBucket;
     failedAgentTransactions: HealthBucket;
+    failedToolCalls: HealthBucket;
     failedScheduledExecutions: HealthBucket;
+    highCostAgents: HealthBucket;
     overdueSchedules: HealthBucket;
+    pendingApprovals: HealthBucket;
+    providerFailures: HealthBucket;
     schedulesMissingNextRun: HealthBucket;
+    staleAgentRuns: HealthBucket;
     staleRunningScheduledExecutions: HealthBucket;
   };
   overdueScheduleThresholdMinutes: number;
+  pendingApprovalThresholdMinutes: number;
+  highCostAgentThresholdGBP: number;
+  scope: {
+    companyId?: string;
+    companyName?: string;
+    type: "company" | "platform";
+  };
   staleRunningThresholdMinutes: number;
   windowStartDate: string;
 };
@@ -83,6 +127,33 @@ function formatDateTime(value?: number) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function formatBudgetExample(example: BudgetExample) {
+  return [
+    example.targetName,
+    `${formatPercent(example.percentUsed)} used`,
+    example.summary,
+    formatDateTime(example.occurredAt),
+    example.id,
+  ].filter(Boolean).join(" | ");
+}
+
+function downloadHealthReport(health: SystemHealth) {
+  const payload = JSON.stringify(health, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `sonae-system-health-${health.scope.type}-${health.checkedDate}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 function buildSignalRows(health: SystemHealth): HealthSignal[] {
@@ -107,6 +178,33 @@ function buildSignalRows(health: SystemHealth): HealthSignal[] {
 
   add("agentErrorLogs", "Agent execution errors", health.operations.agentFailures, "Open the agent log, inspect provider/config/tool failure, then retry or fix the agent configuration.");
   add("failedAgentTransactions", "Failed agent transactions", health.operations.failedAgentTransactions, "Compare with agent logs and provider health before treating it as billing-only telemetry.");
+  add("staleAgentRuns", "Stale agent runs", health.operations.staleAgentRuns, "Open the run detail timeline, inspect the latest step, and decide whether the run needs cancellation, replay, or provider/tool repair.");
+  add("pendingApprovals", "Pending agent approvals", health.operations.pendingApprovals, "Open agent approvals and either approve, reject, or tune the approval policy if these are repeatedly stranded.");
+  add("failedToolCalls", "Failed agent tool calls", health.operations.failedToolCalls, "Inspect the tool call arguments/result, connector diagnostics, and tenant policy before retrying the agent run.");
+  add("providerFailures", "Provider failure clusters", health.operations.providerFailures, "Check provider health, model defaults, credentials, and recent deploys before changing agent prompts or tools.");
+  add("highCostAgents", "High-cost agents", health.operations.highCostAgents, "Review run volume, token usage, model choice, budgets, and whether cheaper defaults or tighter retrieval limits are appropriate.");
+  if (health.budgetHealth.agentCostBudgets.count > 0) {
+    rows.push({
+      key: "agentCostBudgetPressure",
+      label: "Agent cost budget pressure",
+      count: health.budgetHealth.agentCostBudgets.count,
+      details: health.budgetHealth.agentCostBudgets.examples.length > 0
+        ? health.budgetHealth.agentCostBudgets.examples.map(formatBudgetExample)
+        : ["No examples captured."],
+      runbook: "Open the run timeline, check model choice, retrieval breadth, and maxCostGBP before raising the budget.",
+    });
+  }
+  if (health.budgetHealth.tenantMessageBudgets.count > 0) {
+    rows.push({
+      key: "tenantMessageBudgetPressure",
+      label: "Tenant message budget pressure",
+      count: health.budgetHealth.tenantMessageBudgets.count,
+      details: health.budgetHealth.tenantMessageBudgets.examples.length > 0
+        ? health.budgetHealth.tenantMessageBudgets.examples.map(formatBudgetExample)
+        : ["No examples captured."],
+      runbook: "Review the tenant plan assignment, current usage, and expected month-end activity before increasing capacity.",
+    });
+  }
   add("failedScheduledExecutions", "Failed scheduled executions", health.operations.failedScheduledExecutions, "Open workflow execution logs, fix the failed node or target configuration, then rerun manually.");
   add("staleScheduledExecutions", "Stale running scheduled executions", health.operations.staleRunningScheduledExecutions, "Inspect Convex action logs and workflow steps; determine whether the run is still processing or stranded.");
   add("overdueSchedules", "Overdue active schedules", health.operations.overdueSchedules, "Check whether workflow-schedule-dispatcher is running, the target exists, and nextRunAt recalculates.");
@@ -135,6 +233,12 @@ function buildSignalRows(health: SystemHealth): HealthSignal[] {
   }
 
   return rows;
+}
+
+function getRuleTone(status: AlertRule["status"]) {
+  if (status === "critical") return "border-red-500/20 bg-red-500/10 text-red-500";
+  if (status === "warning") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
+  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
 }
 
 function HealthCard({
@@ -180,22 +284,39 @@ export default function SystemHealthPage() {
           <p className="text-[13px] text-secondary mt-1">
             Monitor platform alerts for agents, schedules, analytics health, and operational drift.
           </p>
+          {health ? (
+            <p className="text-[12px] text-muted mt-2">
+              Scope: {health.scope.type === "platform" ? "Platform-wide" : health.scope.companyName || "Active company"}
+            </p>
+          ) : null}
         </div>
-        <div className={`inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full border text-[10px] uppercase font-mono tracking-widest ${
-          isLoading
-            ? "border-border-dim text-muted bg-card"
-            : isHealthy
-              ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10"
-              : "border-amber-500/20 text-amber-500 bg-amber-500/10"
-        }`}>
-          {isLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : isHealthy ? (
-            <CheckCircle2 className="w-3 h-3" />
-          ) : (
-            <AlertTriangle className="w-3 h-3" />
-          )}
-          <span>{isLoading ? "Checking" : isHealthy ? "Healthy" : `${formatCount(signalCount)} signals`}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {health ? (
+            <button
+              type="button"
+              onClick={() => downloadHealthReport(health)}
+              className="inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-[8px] border border-border-dim bg-card/50 text-[11px] text-secondary hover:text-foreground"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export report
+            </button>
+          ) : null}
+          <div className={`inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full border text-[10px] uppercase font-mono tracking-widest ${
+            isLoading
+              ? "border-border-dim text-muted bg-card"
+              : isHealthy
+                ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10"
+                : "border-amber-500/20 text-amber-500 bg-amber-500/10"
+          }`}>
+            {isLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : isHealthy ? (
+              <CheckCircle2 className="w-3 h-3" />
+            ) : (
+              <AlertTriangle className="w-3 h-3" />
+            )}
+            <span>{isLoading ? "Checking" : isHealthy ? "Healthy" : `${formatCount(signalCount)} signals`}</span>
+          </div>
         </div>
       </header>
 
@@ -207,7 +328,28 @@ export default function SystemHealthPage() {
           label="Agent errors"
           value={health?.operations.agentFailures.count ?? "--"}
           tone="text-red-500"
-          description={health ? `${formatCount(health.operations.failedAgentTransactions.count)} failed transactions in the same window.` : "Loading recent agent failure checks."}
+          description={health ? `${formatCount(health.operations.staleAgentRuns.count)} stale runs and ${formatCount(health.operations.failedAgentTransactions.count)} failed transactions.` : "Loading recent agent failure checks."}
+        />
+        <HealthCard
+          icon={ShieldAlert}
+          label="Approvals"
+          value={health?.operations.pendingApprovals.count ?? "--"}
+          tone="text-amber-500"
+          description={health ? `Pending longer than ${health.pendingApprovalThresholdMinutes} minutes.` : "Loading approval queue checks."}
+        />
+        <HealthCard
+          icon={Wrench}
+          label="Tool failures"
+          value={health?.operations.failedToolCalls.count ?? "--"}
+          tone="text-red-500"
+          description={health ? `${formatCount(health.operations.providerFailures.count)} provider failure signals in the same window.` : "Loading tool and provider checks."}
+        />
+        <HealthCard
+          icon={Activity}
+          label="Cost risk"
+          value={health ? health.operations.highCostAgents.count + health.budgetHealth.agentCostBudgets.count + health.budgetHealth.tenantMessageBudgets.count : "--"}
+          tone="text-rose-500"
+          description={health ? `Spend above £${health.highCostAgentThresholdGBP.toFixed(2)} or budgets above 80%.` : "Loading cost risk checks."}
         />
         <HealthCard
           icon={CalendarClock}
@@ -245,6 +387,43 @@ export default function SystemHealthPage() {
           description={health ? `${health.windowStartDate} through ${health.checkedDate}. Last checked ${formatDateTime(health.checkedAt)}.` : "Loading checked date range."}
         />
       </section>
+
+      {health ? (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="border border-border-dim bg-card/30 rounded-[10px] p-4 flex flex-col gap-3">
+            <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">Budget controls</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="border border-border-dim rounded-[8px] p-3 bg-background/40">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-muted">Run budgets</p>
+                <p className="text-xl font-semibold text-foreground mt-2">{formatCount(health.budgetHealth.agentCostBudgets.count)}</p>
+                <p className="text-[12px] text-secondary mt-1">Agent runs above 80% of configured maxCostGBP.</p>
+              </div>
+              <div className="border border-border-dim rounded-[8px] p-3 bg-background/40">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-muted">Tenant quotas</p>
+                <p className="text-xl font-semibold text-foreground mt-2">{formatCount(health.budgetHealth.tenantMessageBudgets.count)}</p>
+                <p className="text-[12px] text-secondary mt-1">Companies above 80% of assigned plan message limit.</p>
+              </div>
+            </div>
+          </div>
+          <div className="border border-border-dim bg-card/30 rounded-[10px] p-4 flex flex-col gap-3">
+            <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">Alert rules</h2>
+            <div className="grid grid-cols-1 gap-2">
+              {health.alertRules.map((rule) => (
+                <div key={rule.key} className="border border-border-dim rounded-[8px] p-3 bg-background/40 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] font-semibold text-foreground">{rule.label}</p>
+                    <span className={`px-2 py-1 rounded-[6px] border text-[10px] uppercase font-mono ${getRuleTone(rule.status)}`}>
+                      {rule.status}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-secondary">{rule.threshold}</p>
+                  {rule.count > 0 ? <p className="text-[12px] text-muted">{rule.nextAction}</p> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {health && signals.length === 0 ? (
         <section className="border border-emerald-500/20 bg-emerald-500/10 rounded-[10px] p-4 flex items-start gap-3 text-emerald-600 dark:text-emerald-400">
@@ -295,6 +474,9 @@ export default function SystemHealthPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
             <Link className="text-brand hover:underline" href="/admin/workflows/logs">Workflow execution logs</Link>
             <Link className="text-brand hover:underline" href="/admin/workflows/schedules">Schedules</Link>
+            <Link className="text-brand hover:underline" href="/admin/agents/approvals">Agent approvals</Link>
+            <Link className="text-brand hover:underline" href="/admin/agents">Agents</Link>
+            <Link className="text-brand hover:underline" href="/admin/ai/costs">AI costs</Link>
             <Link className="text-brand hover:underline" href="/admin/settings/analytics">Analytics data health</Link>
           </div>
         </section>

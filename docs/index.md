@@ -78,11 +78,13 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Step-by-step checklist for setting up a tenant/customer, model defaults, knowledge, tools/connectors, draft agents, evals, and activation readiness.
 37. **[Starter App Template Checklist](./starter-app-template-checklist.md)**
     Template authoring checklist for reusable vertical app packages, including agents, knowledge, tools, workflows, evals, and release gates.
-38. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
+38. **[Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)**
+    Checklist for rebranding, packaging, validating, and smoke-testing a vertical product starter built on Sonae.
+39. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
     Reference plan for turning Sonae into a reusable starter framework for governed agentic apps with templates, connectors, evals, replay, public APIs, and packaging.
-39. **[Starter Platform Expansion Plan](./starter-platform-expansion-plan.md)**
+40. **[Starter Platform Expansion Plan](./starter-platform-expansion-plan.md)**
     Product roadmap for making Sonae an exceptional reusable starter platform beyond the connector marketplace, including app templates, launch wizard, release center, observability, public APIs, and white-labeling.
-40. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
+41. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
     Required direction for future movement-demo body-motion work: source skeleton proof, neutral calibration, vector retargeting, foot locking, and what not to patch.
 
 ---

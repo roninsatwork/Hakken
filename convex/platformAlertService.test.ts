@@ -41,9 +41,14 @@ function buildOperationalReport(overrides: Partial<OperationalHealthReport> = {}
   return {
     agentFailures: { count: 0, examples: [] },
     failedAgentTransactions: { count: 0, examples: [] },
+    failedToolCalls: { count: 0, examples: [] },
     failedScheduledExecutions: { count: 0, examples: [] },
+    highCostAgents: { count: 0, examples: [] },
     overdueSchedules: { count: 0, examples: [] },
+    pendingApprovals: { count: 0, examples: [] },
+    providerFailures: { count: 0, examples: [] },
     schedulesMissingNextRun: { count: 0, examples: [] },
+    staleAgentRuns: { count: 0, examples: [] },
     staleRunningScheduledExecutions: { count: 0, examples: [] },
     ...overrides,
   };
@@ -52,11 +57,19 @@ function buildOperationalReport(overrides: Partial<OperationalHealthReport> = {}
 function buildSystemReport(overrides: Partial<SystemHealthReport> = {}): SystemHealthReport {
   return {
     analytics: buildReport(),
+    alertRules: [],
+    budgetHealth: {
+      agentCostBudgets: { count: 0, examples: [] },
+      tenantMessageBudgets: { count: 0, examples: [] },
+    },
     checkedAt: Date.parse("2026-06-02T10:00:00.000Z"),
     checkedDate: "2026-06-02",
     daysBack: 7,
+    highCostAgentThresholdGBP: 5,
     operations: buildOperationalReport(),
     overdueScheduleThresholdMinutes: 15,
+    pendingApprovalThresholdMinutes: 30,
+    scope: { type: "platform" },
     staleRunningThresholdMinutes: 60,
     windowStartDate: "2026-05-26",
     windowStartTs: Date.parse("2026-05-26T10:00:00.000Z"),
@@ -174,6 +187,44 @@ describe("platform alert service", () => {
     expect(decision.signals.map((signal) => signal.key)).toEqual(["agentErrorLogs", "failedScheduledExecutions"]);
     expect(decision.signals[0].details[0]).toContain("Sales Agent");
     expect(decision.signals[1].details[0]).toContain("Daily Workflow");
+  });
+
+  test("alerts for budget pressure", () => {
+    const decision = buildSystemHealthPlatformAlertDecision(buildSystemReport({
+      budgetHealth: {
+        agentCostBudgets: {
+          count: 1,
+          examples: [{
+            id: "run_1",
+            limit: 1,
+            percentUsed: 95,
+            summary: "GBP 0.95 of GBP 1.00",
+            targetName: "Budget Agent",
+            targetType: "agent",
+            used: 0.95,
+          }],
+        },
+        tenantMessageBudgets: {
+          count: 1,
+          examples: [{
+            id: "company_1",
+            limit: 100,
+            percentUsed: 90,
+            summary: "90 of 100 messages",
+            targetName: "Acme",
+            targetType: "company",
+            used: 90,
+          }],
+        },
+      },
+    }));
+
+    expect(decision.shouldAlert).toBe(true);
+    expect(decision.signals.map((signal) => signal.key)).toEqual([
+      "agentCostBudgetPressure",
+      "tenantMessageBudgetPressure",
+    ]);
+    expect(decision.subject).toBe("[Sonae] Platform alert: system health (2 signals)");
   });
 
   test("renders escaped system health email content", () => {

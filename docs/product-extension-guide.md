@@ -163,6 +163,21 @@ Branding checklist:
 - light/dark theme tokens
 - route visibility flags such as `diagnosticRoutingEnabled`
 
+## Package A Vertical App Starter
+
+Use `docs/vertical-app-packaging-checklist.md` when turning Sonae into a customer-specific or vertical starter.
+
+Packaging should happen in this order:
+
+1. Configure product identity through system settings and locale dictionaries.
+2. Choose or extend an app kit in `convex/appTemplates.ts`.
+3. Replace demo knowledge and seed data with clearly marked vertical-specific sample data.
+4. Configure auth, providers, connectors, and model defaults outside source control.
+5. Run `npm run setup:validate` locally and `npm run setup:validate -- --profile=production` for production handoff.
+6. Run release gates, System Health, and the fresh-deployment smoke checklist before activating customer-facing agents.
+
+Avoid editing core runtime files for product copy, navigation labels, model choices, or seed data unless the extension point is genuinely missing.
+
 ## Extension Safety Checklist
 
 Before committing a new product extension:
@@ -175,4 +190,3 @@ Before committing a new product extension:
 - Confirm AI model choices are resolved from stored configuration.
 - Confirm new workflow node config has parser tests.
 - Confirm high-value routes have Playwright smoke coverage.
-

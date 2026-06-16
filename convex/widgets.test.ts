@@ -189,6 +189,41 @@ describe("Widget Authorization", () => {
     expect(auditLogs.map((log) => log.actionType)).toEqual(["CREATE_WIDGET", "UPDATE_WIDGET", "CREATE_WIDGET", "DELETE_WIDGET"]);
   });
 
+  test("public widget config falls back to system branding when widget theme is unset", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const widgetId = await t.run(async (ctx) => {
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Assist",
+        brandColorHex: "#123456",
+        logoUrlLight: "https://cdn.example/acme-light.png",
+      });
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "creator@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      return await ctx.db.insert("widgets", {
+        companyId,
+        name: "Website Bot",
+        allowedDomains: ["*"],
+        isActive: true,
+        createdBy: creatorId,
+        createdAt: Date.now(),
+      });
+    });
+
+    await expect(t.query(api.widgets.getWidgetById, { widgetId })).resolves.toMatchObject({
+      name: "Website Bot",
+      themePrimaryColor: "#123456",
+      themeLogoUrl: "https://cdn.example/acme-light.png",
+      themeGreeting: "Hi! How can Acme Assist help you today?",
+      themePlaceholder: "Message Acme Assist...",
+    });
+  });
+
   test("anonymous widget thread and upload flow enforces origin, thread mapping, quota, and file policy", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

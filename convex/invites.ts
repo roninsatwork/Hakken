@@ -9,10 +9,18 @@ import {
   requireSuperAdmin,
 } from "./authz";
 import { requireActionUser } from "./actionAuth";
+import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
+
+function escapeEmailText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
 // --- QUERIES & MUTATIONS ---
 
@@ -229,6 +237,9 @@ export const dispatchInviteEmail = action({
 
     // 1. Generate secure arbitrary tracking token
     const token = crypto.randomUUID();
+    const storedEmailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
+    const emailBranding = buildEmailBranding(storedEmailBranding);
+    const footerName = escapeEmailText(emailBranding.platformName);
     
     const inviteLink = `${BASE_URL}/login`; // They just log in directly via Google matching their invite email.
 
@@ -256,7 +267,7 @@ export const dispatchInviteEmail = action({
             <h1 class="headline">${args.template.headline}</h1>
             <p class="body-text">${args.template.body.replace(/\n/g, '<br/>')}</p>
             <a href="${inviteLink}" class="button">${args.template.ctaText}</a>
-            <div class="footer">Sonae - to be prepared</div>
+            <div class="footer">${footerName} - to be prepared</div>
           </div>
         </body>
       </html>
@@ -271,7 +282,11 @@ export const dispatchInviteEmail = action({
     }
 
     try {
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "Sonae Team <noreply@ronins.co.uk>";
+      const fromAddress = buildEmailFromAddress({
+        envFromAddress: process.env.RESEND_FROM_EMAIL,
+        fallbackName: "Sonae Team",
+        settings: storedEmailBranding,
+      });
 
       const data = await sendResendEmail({
         apiKey: process.env.RESEND_API_KEY,

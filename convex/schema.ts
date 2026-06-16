@@ -26,6 +26,8 @@ export default defineSchema({
     monthlySeatPrice: v.optional(v.number()),
     logoUrlLight: v.optional(v.string()),
     logoUrlDark: v.optional(v.string()),
+    emailSenderName: v.optional(v.string()),
+    emailSenderAddress: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
     fontFamily: v.optional(v.string()), // Deprecated, keep for legacy
     headingFontFamily: v.optional(v.string()),
@@ -798,6 +800,10 @@ export default defineSchema({
     embeddingModelId: v.optional(v.string()),
     embeddingProviderModelId: v.optional(v.string()),
     embeddingDimensions: v.optional(v.number()),
+    lastQueuedAt: v.optional(v.number()),
+    lastIngestionStartedAt: v.optional(v.number()),
+    lastIngestedAt: v.optional(v.number()),
+    lastIngestionError: v.optional(v.string()),
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])

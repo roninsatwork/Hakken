@@ -18,6 +18,10 @@ export type KnowledgeDocumentRecordInput = KnowledgeScope & {
   fileId?: Id<"_storage">;
   sourceUrl?: string;
   textContent?: string;
+  lastQueuedAt?: number;
+  lastIngestionStartedAt?: number;
+  lastIngestedAt?: number;
+  lastIngestionError?: string;
 };
 
 export type KnowledgeChunkInput = {
@@ -85,6 +89,10 @@ export function buildKnowledgeDocumentRecord(args: KnowledgeDocumentRecordInput)
     ...getKnowledgeScopeFields(args),
     status: args.status,
     format: args.format,
+    ...(args.lastQueuedAt !== undefined ? { lastQueuedAt: args.lastQueuedAt } : {}),
+    ...(args.lastIngestionStartedAt !== undefined ? { lastIngestionStartedAt: args.lastIngestionStartedAt } : {}),
+    ...(args.lastIngestedAt !== undefined ? { lastIngestedAt: args.lastIngestedAt } : {}),
+    ...(args.lastIngestionError !== undefined ? { lastIngestionError: args.lastIngestionError } : {}),
     createdBy: args.createdBy,
     createdAt: args.createdAt,
   };

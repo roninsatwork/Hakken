@@ -17,7 +17,7 @@ Sonae should become a reusable foundation where a developer or product team can 
 2. Configure a tenant, model defaults, knowledge, and tools.
 3. Create one or more agents through a guided builder.
 4. Test the agent against evals before release.
-5. Deploy chat, workflows, widgets, webhooks, and scheduled automations.
+5. Deploy chat, workflows, widgets, governed connector integrations, and scheduled automations.
 6. Observe every run, approval, tool call, cost, memory, and failure.
 7. Improve safely through reviewed memories, prompt versions, tool contracts, and eval fixtures.
 
@@ -55,7 +55,7 @@ These areas exist structurally but are not yet complete enough to feel like a po
 - Run replay/debugging: durable run data exists, but the UI should become a richer execution timeline with replay and comparison tools.
 - Memory review: memory candidates/reflections exist, but the review workflow should become a first-class inbox.
 - Knowledge QA: ingestion and retrieval exist, but chunk inspection, retrieval tests, stale detection, and re-embedding controls are not complete product surfaces.
-- Public API: widgets exist, but signed API keys, webhook triggers, status polling, and callbacks need a more complete framework story.
+- Public API: intentionally deferred. Widgets and internal connectors remain the preferred external surface for now; broad inbound API keys, public run triggers, status polling, and callback URLs should not be built unless a concrete customer/product need appears.
 - Deployment/customer setup: scripts and docs exist, but a polished "new app/customer" initializer is missing.
 
 ### Mostly New
@@ -69,7 +69,7 @@ These are new product/framework layers to add on top of the existing foundation.
 - Eval suite runner and release gate.
 - Replayable run timeline with diffing.
 - Setup wizard for tenants, default models, sample tools, sample agents, and first knowledge import.
-- Public agent API with signed keys, webhook triggers, callback URLs, and rate limits.
+- Broad inbound public API and generic webhook triggers are deferred by product decision; revisit only for a specific external-channel or customer integration need.
 - Knowledge quality dashboard.
 - Framework packaging docs for forking, white-labeling, and building vertical apps.
 
@@ -87,7 +87,7 @@ These are new product/framework layers to add on top of the existing foundation.
 
 ## Implementation Progress
 
-Last updated: 2026-06-15.
+Last updated: 2026-06-16.
 
 | Roadmap item | Status | Notes |
 | --- | --- | --- |
@@ -99,7 +99,10 @@ Last updated: 2026-06-15.
 | Phase 6: Eval Runner And Release Gate | Complete foundation | Admins can run all active eval fixtures for an agent as a contract-only or model-graded suite from a dedicated Evals tab, create and edit manual eval fixtures with scoped source runs and audit logs, archive fixtures out of active suite runs, run tag-filtered suite groups, save/edit/archive suite presets, mark presets as requiring model grading, run presets, set or clear a preset as the release gate, see release-gate fixture counts, compare current release-candidate fixture results against previous eval checkpoints, persist suite results as durable eval runs, enforce tenant scoping, prove suite execution does not create real tool calls, validate expected blocked-action contracts, support explicit blocked-action policy assertions for approval-required, deny-tool, do-not-call, and tenant-boundary expectations, and block draft activation until the configured release gate passes with model grading when required. Next: Phase 7 run replay/debugging or optional release-candidate snapshots. |
 | Phase 7: Run Timeline, Replay, And Debugging | Complete foundation | First run-detail timeline slice is implemented: the backend derives readable timeline entries from durable run steps, attaches linked tool calls and approval requests, summarizes inputs/outputs/errors with bounded previews, calculates step latency, and exposes model/token/cost metadata. Replay lineage now persists source run and replay mode, run detail exposes source/replay summaries plus comparison deltas, and the admin modal shows replay context for both original runs and replay runs. Replay details now include a timeline-level diff aligned by step index so admins can see added, removed, changed, and unchanged steps with source/replay summaries. Tool arguments now default to sanitized previews from the run-detail query itself: admins receive redacted arguments, super-admins receive raw previews, and raw persisted argument fields are not exposed directly to the frontend. Run detail now exposes eval fixture coverage and a learning-action panel so terminal runs can become or update eval fixtures from the same evidence view. Replay controls now support current-active replay and same-version replay that pins the replay run to the source agent version snapshot. Triggered same-version replays now hydrate prompt, model choice, temperature, historical rules, bounded historical memory contents, and historical tool declarations from `agentVersions.snapshotJson`, start after queued seed steps, and record version-hydration plus historical tool dry-run policy trace steps. Future snapshots now include bounded memory items and tool schemas/descriptions for replay fidelity. Write/destructive/external historical tool execution remains blocked unless a future sandbox executor is explicitly added. Next: Phase 8 operational hardening or optional historical tool sandbox execution. |
 | Phase 8: Memory And Improvement Review Inbox | Complete foundation | First unified review inbox slice is implemented on the agent Memory tab. Backend `getReviewInboxForAgent` returns tenant-scoped memory candidates, improvement suggestions, reflections, source run summaries, reviewer attribution, risk counts, semantic patch operations, applied suggestion effects, and filtered totals across open, reviewed, high-risk, and all modes. The Memory UI now shows a learning review inbox with approve/reject memory actions, apply/dismiss improvement suggestions, dismissible reflection evidence, reviewer filters, reviewer metadata, status labels, reviewed history, risk labels, richer source evidence summaries, semantic patch previews for prompt/rule/policy changes, applied version/effect summaries, per-column show-more pagination through the review batch, source-run deep links into the run detail modal, and reflection-to-eval fixture shortcuts that convert reflection evidence into reviewed history. Next: Phase 9 production hardening or optional full backend cursor pagination for very large review queues. |
-| Phase 9: Knowledge Quality Operations | 75% complete | Shared quality-ops slices are implemented for global/company knowledge surfaces and the agent-specific Knowledge tab. Backend `getQualitySummary` returns tenant-scoped document status metrics, sampled chunk counts, ready coverage, embedding drift counts, and flagged failed/stale/ready-without-chunks/drift documents. Backend `inspectDocument` returns bounded chunk previews, active embedding model comparison, recent ingestion/repair audit history, and embedding metadata with an explicit untrusted-reference safety notice. Backend `testRetrieval` lets admins run bounded, tenant-scoped lexical retrieval diagnostics across stored chunks, and `retryDocumentIngestion` requeues failed, stale, or drifted documents through the existing ingestion paths with audit logs. Agent-scoped knowledge writes now inherit the admin's active company for tenant visibility and inspection. The shared Knowledge Manager now shows quality tiles, drift metrics, flagged document cards, document inspection buttons, a retrieval test panel, repair/re-embed controls, an inspection modal for sampled chunks, and recent ingestion history; it is reused by the agent Knowledge tab. Next: source freshness timestamps, richer website crawl failure reasons, and optional bulk remediation controls. |
+| Phase 9: Knowledge Quality Operations | Complete foundation | Shared quality-ops slices are implemented for global/company knowledge surfaces and the agent-specific Knowledge tab. Backend `getQualitySummary` returns tenant-scoped document status metrics, sampled chunk counts, ready coverage, embedding drift counts, and flagged failed/stale/ready-without-chunks/drift documents with source freshness and failure metadata. Backend `inspectDocument` returns bounded chunk previews, active embedding model comparison, recent ingestion/repair audit history, source freshness timestamps, crawl/ingestion failure reason, and embedding metadata with an explicit untrusted-reference safety notice. Backend `testRetrieval` lets admins run bounded, tenant-scoped lexical retrieval diagnostics across stored chunks. Backend `retryDocumentIngestion` and `repairFlaggedDocuments` requeue failed, stale, empty-ready, or drifted documents through the existing ingestion paths with audit logs. Agent-scoped knowledge writes now inherit the admin's active company for tenant visibility and inspection. The shared Knowledge Manager now shows quality tiles, drift metrics, flagged document cards, document inspection buttons, a retrieval test panel, single/bulk repair and re-embed controls, an inspection modal for sampled chunks, source freshness, failure reasons, and recent ingestion history; it is reused by the agent Knowledge tab. |
+| Phase 10: Public Agent API And Webhook Framework | Skipped / deferred | Product decision: do not build a broad inbound public API, Telegram channel, or generic external run-trigger surface as part of this foundation work. Sonae should continue to talk out to other apps through governed connectors/workflows. Revisit only if a specific customer or channel requirement makes inbound external access necessary. |
+| Phase 11: Observability, Billing, And Operations | Complete foundation | System Health now combines analytics drift, agent errors, failed transactions, stale queued/running runs, stale approvals, failed tool calls, provider failure clusters, schedule failures, stale scheduled executions, overdue schedules, and high-cost agents. Backend health is role-aware: super-admins see platform scope, tenant admins see only their active company. Existing plan quotas and run `maxCostGBP` values now produce budget-pressure signals for tenant message limits and agent run cost budgets. Derived alert rules cover stuck runs, stale approvals, repeated provider failures, cost/budget pressure, and tool failures with thresholds, concrete examples, and next actions. Platform alert emails include budget signals, and the System Health UI shows scope, budget controls, alert-rule status, investigation links, and an exportable JSON operational report. Next: Phase 12 framework packaging and white-label readiness. |
+| Phase 12: Framework Packaging And White-Label Readiness | Complete foundation | Added a dependency-free `npm run setup:validate` script for local and production profiles. The validator checks Convex URL/deployment, production public URL, bootstrap admin fallback, auth provider readiness, AI provider credential groups, and optional ingestion providers without printing secrets. Added `.env.example` guidance, a vertical app packaging checklist, fresh deployment smoke checks, and updated README/getting-started/deployment/product-extension docs so a new product build has a clear rebrand, validation, and handoff path. System Settings now includes a white-label readiness panel that automatically checks product identity, logo variants, brand color, diagnostic routing, and stored email sender configuration, and links/manual-flags widget branding and production setup validation. Runtime invite, workflow, auth fallback, and platform-alert email paths now resolve sender branding through stored settings when no deployment-level sender override is set. Public widget config now falls back to system platform name, brand color, logo, greeting, and placeholder when widget-specific theme values are unset. System Options now includes module presets for knowledge assistant, support widget, and operator workspace starter shapes so builders can choose visible modules, owner surfaces, and handoff checks without risky automatic route hiding. |
 
 ## Recommended Build Order
 
@@ -466,26 +469,30 @@ Primary files:
 
 ### Phase 10: Public Agent API And Webhook Framework
 
-Make agents callable from outside the dashboard safely.
+Skipped / deferred by product decision.
 
-Build:
+Rationale:
 
-- Add tenant-scoped API keys or signed trigger tokens.
-- Add public webhook trigger endpoint for agents and workflows.
-- Add run status polling endpoint.
-- Add optional callback URLs for terminal run states.
-- Add per-key rate limits and payload caps.
-- Add request logs with company, trigger, IP/user-agent metadata, status, latency, and cost.
+- The current product direction does not need a broad inbound platform API.
+- Sonae should talk to other apps through governed connectors, workflow nodes, and admin-configured integrations.
+- Inbound external channels should be considered only for a specific, concrete channel or customer requirement.
+- Telegram is explicitly not part of the current foundation work.
 
-Acceptance:
+Do not build now:
 
-- Public triggers cannot access admin-only logic.
-- Tenant scope is derived from the key/token, not client-provided company IDs.
-- Payload size limits defend paid model/provider calls.
-- Callback URLs are allowlisted or explicitly configured.
-- API keys can be revoked without code changes.
+- Tenant API keys for external callers.
+- Generic public agent run trigger endpoints.
+- Generic webhook callbacks for terminal run states.
+- External status polling endpoints.
+- Public developer API docs.
 
-Primary files:
+Revisit only if:
+
+- A named customer needs to call Sonae from their own system.
+- A specific channel integration becomes product-critical.
+- The security, rate-limit, tenant-boundary, audit, and support requirements are explicitly budgeted.
+
+Files to revisit only if reopened:
 
 - `convex/http.ts`
 - `convex/webhooks.ts`
@@ -621,7 +628,7 @@ npm run build
 git diff --check
 ```
 
-For tool, auth, workflow, public API, connector, or tenant-sensitive changes, also add or update Convex tests that prove:
+For tool, auth, workflow, connector, or tenant-sensitive changes, also add or update Convex tests that prove:
 
 - unauthenticated access fails
 - normal users cannot execute admin tools
@@ -641,7 +648,7 @@ These should be answered before the later phases.
 - Should connector installs be global-only at first, or should tenant admins manage allowed tenant connectors?
 - Should evals run against live provider models by default, or use deterministic mocked provider responses for CI?
 - What is the first external connector worth building: Slack, Gmail/Outlook, Google Drive, HubSpot, Notion, Linear/Jira, or generic REST?
-- Should public API keys be tenant-level, agent-level, or both?
+- Is there any named customer or channel requirement strong enough to reopen the deferred inbound public API work?
 - What is the intended first vertical app built on top of Sonae?
 
 ## Parking Lot

@@ -27,7 +27,6 @@ const DEFAULT_MODEL_LIMIT = 10;
 const AGENT_TOOL_BINDING_LIMIT = 250;
 const TEMPLATE_TOOL_LOOKUP_LIMIT = 250;
 const AGENT_READINESS_LOOKBACK_LIMIT = 250;
-const TEMPLATE_SETUP_OBJECTIVE_PREFIX = "Template setup:";
 const SMOKE_EVAL_OBJECTIVE_PREFIX = "Smoke eval:";
 const RELEASE_GATE_FIXTURE_TAGS = ["release-gate", "critical"];
 type AgentModelSelectionMode = "inherit" | "override";

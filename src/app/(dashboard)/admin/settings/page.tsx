@@ -26,6 +26,8 @@ import { IdentitySettingsSection } from "./_components/IdentitySettingsSection";
 import { PurgesSettingsSection } from "./_components/PurgesSettingsSection";
 import { SettingBlock } from "./_components/SettingBlock";
 import { isSettingsTab } from "./_components/settingsTabs";
+import { WhiteLabelModulePresetsSection } from "./_components/WhiteLabelModulePresetsSection";
+import { WhiteLabelReadinessSection } from "./_components/WhiteLabelReadinessSection";
 import {
   type AuditConfig,
   type PiiConfig,
@@ -449,6 +451,14 @@ export default function SystemSettingsPage() {
                   </button>
                 </div>
               </div>
+            </SettingBlock>
+
+            <SettingBlock title={t('whiteLabel.title')} sub={t('whiteLabel.subtitle')}>
+              <WhiteLabelReadinessSection formData={formData} t={t} />
+            </SettingBlock>
+
+            <SettingBlock title={t('modulePresets.title')} sub={t('modulePresets.subtitle')}>
+              <WhiteLabelModulePresetsSection t={t} />
             </SettingBlock>
           </section>
         )}

@@ -480,7 +480,19 @@ describe("analytics cron snapshots", () => {
     const now = Date.now();
 
     const setup = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Ops Health", createdAt: now });
+      const planId = await ctx.db.insert("plans", {
+        name: "Ops Plan",
+        messageLimit: 100,
+        priceGBP: 99,
+        isActive: true,
+        createdAt: now,
+      });
+      const companyId = await ctx.db.insert("companies", {
+        name: "Ops Health",
+        planId,
+        messagesUsedThisPeriod: 95,
+        createdAt: now,
+      });
       const userId = await ctx.db.insert("users", {
         email: "ops@example.com",
         role: "SUPER_ADMIN",
@@ -522,6 +534,59 @@ describe("analytics cron snapshots", () => {
         costGBP: 0,
         status: "FAILED",
         createdAt: now - 120_000,
+      });
+      await ctx.db.insert("agentTransactions", {
+        agentId,
+        userId,
+        companyId,
+        actionContext: "Expensive analysis",
+        inputTokens: 1,
+        outputTokens: 1,
+        modelUsed: "model-test",
+        providerKey: "google",
+        providerModelId: "model-test-provider",
+        costGBP: 6.5,
+        status: "SUCCESS",
+        createdAt: now - 90_000,
+      });
+      const staleRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Long-running operational check",
+        status: "RUNNING",
+        companyId,
+        userId,
+        modelId: "model-test",
+        maxCostGBP: 1,
+        costGBP: 0.95,
+        startedAt: now - 2 * 60 * 60 * 1000,
+        updatedAt: now - 90 * 60 * 1000,
+      });
+      await ctx.db.insert("agentRunApprovals", {
+        runId: staleRunId,
+        agentId,
+        companyId,
+        requestedBy: userId,
+        status: "PENDING",
+        message: "Approve external write",
+        requestedAt: now - 45 * 60 * 1000,
+      });
+      await ctx.db.insert("agentToolCalls", {
+        runId: staleRunId,
+        agentId,
+        normalizedToolName: "crm_update",
+        handlerMapping: "crm.update",
+        argumentsJson: "{}",
+        redactedArgumentsJson: "{}",
+        status: "FAILED",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        companyId,
+        userId,
+        startedAt: now - 30 * 60 * 1000,
+        completedAt: now - 29 * 60 * 1000,
+        error: "Connector timeout",
       });
       await ctx.db.insert("workflowExecutions", {
         workflowId,
@@ -570,6 +635,32 @@ describe("analytics cron snapshots", () => {
       targetType: "agent",
     });
     expect(health.operations.failedAgentTransactions).toMatchObject({ count: 1 });
+    expect(health.operations.staleAgentRuns).toMatchObject({ count: 1 });
+    expect(health.operations.staleAgentRuns.examples[0]).toMatchObject({
+      summary: expect.stringContaining("Long-running operational check"),
+      targetName: "Ops Agent",
+    });
+    expect(health.operations.pendingApprovals).toMatchObject({ count: 1 });
+    expect(health.operations.pendingApprovals.examples[0]).toMatchObject({
+      summary: "Approve external write",
+      targetName: "Ops Agent",
+    });
+    expect(health.operations.failedToolCalls).toMatchObject({ count: 1 });
+    expect(health.operations.failedToolCalls.examples[0]).toMatchObject({
+      label: "crm_update",
+      summary: "Connector timeout",
+      targetName: "Ops Agent",
+    });
+    expect(health.operations.providerFailures).toMatchObject({ count: 1 });
+    expect(health.operations.providerFailures.examples[0]).toMatchObject({
+      label: "unknown-provider",
+      summary: expect.stringContaining("1 failed transaction"),
+    });
+    expect(health.operations.highCostAgents).toMatchObject({ count: 1 });
+    expect(health.operations.highCostAgents.examples[0]).toMatchObject({
+      summary: expect.stringContaining("£6.50"),
+      targetName: "Ops Agent",
+    });
     expect(health.operations.failedScheduledExecutions).toMatchObject({ count: 1 });
     expect(health.operations.failedScheduledExecutions.examples[0]).toMatchObject({
       summary: "Node failed",
@@ -581,12 +672,26 @@ describe("analytics cron snapshots", () => {
     expect(health.operations.overdueSchedules.examples[0].id).toBe(setup.overdueScheduleId);
     expect(health.operations.schedulesMissingNextRun).toMatchObject({ count: 1 });
     expect(health.operations.schedulesMissingNextRun.examples[0].id).toBe(setup.missingNextRunScheduleId);
+    expect(health.budgetHealth.agentCostBudgets).toMatchObject({ count: 1 });
+    expect(health.budgetHealth.agentCostBudgets.examples[0]).toMatchObject({
+      percentUsed: 95,
+      targetName: "Ops Agent",
+    });
+    expect(health.budgetHealth.tenantMessageBudgets).toMatchObject({ count: 1 });
+    expect(health.budgetHealth.tenantMessageBudgets.examples[0]).toMatchObject({
+      percentUsed: 95,
+      targetName: "Ops Health",
+    });
+    expect(health.alertRules.find((rule) => rule.key === "costSpikes")).toMatchObject({
+      count: 3,
+      status: "critical",
+    });
   });
 
-  test("analytics data health public query is super-admin only", async () => {
+  test("analytics data health is super-admin only and system health scopes tenant admins", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminId, superAdminId } = await t.run(async (ctx) => {
+    const { adminId, companyId, superAdminId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Health Auth", createdAt: Date.now() });
       const adminId = await ctx.db.insert("users", {
         email: "admin@example.com",
@@ -597,7 +702,7 @@ describe("analytics cron snapshots", () => {
         email: "super@example.com",
         role: "SUPER_ADMIN",
       });
-      return { adminId, superAdminId };
+      return { adminId, companyId, superAdminId };
     });
 
     await expect(
@@ -610,10 +715,16 @@ describe("analytics cron snapshots", () => {
 
     await expect(
       t.withIdentity({ subject: adminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
-    ).rejects.toThrow("Unauthorized");
+    ).resolves.toMatchObject({
+      daysBack: 7,
+      scope: { companyId, type: "company" },
+    });
 
     await expect(
       t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
-    ).resolves.toMatchObject({ daysBack: 7 });
+    ).resolves.toMatchObject({
+      daysBack: 7,
+      scope: { type: "platform" },
+    });
   });
 });

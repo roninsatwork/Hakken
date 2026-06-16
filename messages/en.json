@@ -1501,7 +1501,13 @@
                 "logoLight": "Main Logo (Light)",
                 "logoLightSub": "Vector or high-res PNG for default surfaces.",
                 "logoDark": "System Logo (Dark)",
-                "logoDarkSub": "Variants optimized for dark and night environments."
+                "logoDarkSub": "Variants optimized for dark and night environments.",
+                "emailSender": "Email Sender",
+                "emailSenderSub": "Default branded sender used by invites, workflow emails, and platform alerts when no deployment override is set.",
+                "emailSenderName": "Sender Name",
+                "emailSenderNamePlaceholder": "Product Team",
+                "emailSenderAddress": "Sender Address",
+                "emailSenderAddressPlaceholder": "hello@example.com"
             },
             "appearance": {
                 "title": "Theming & Typography",
@@ -1605,6 +1611,129 @@
                 "title": "System Diagnostic Protocols",
                 "routingMatrix": "Diagnostic Routing Matrix",
                 "routingMatrixSub": "Enable developer backdoor debugging paths and cache systems."
+            },
+            "whiteLabel": {
+                "title": "White-Label Readiness",
+                "subtitle": "Review the configuration needed before this starter becomes a customer-facing product.",
+                "open": "Open",
+                "summary": {
+                    "ready": "Ready",
+                    "pending": "Pending",
+                    "manual": "Manual"
+                },
+                "status": {
+                    "ready": "Ready",
+                    "pending": "Pending",
+                    "manual": "Review"
+                },
+                "items": {
+                    "identity": {
+                        "label": "Product identity",
+                        "ready": "The platform name has been changed from the starter default.",
+                        "pending": "Set a customer-facing product name in Core Identity."
+                    },
+                    "logos": {
+                        "label": "Light and dark logos",
+                        "ready": "Both logo variants are configured for themed surfaces.",
+                        "pending": "Upload both light and dark logo variants before handoff."
+                    },
+                    "brandColor": {
+                        "label": "Brand accent",
+                        "ready": "A valid global brand color is configured.",
+                        "pending": "Set a six-digit HEX brand accent in Global Aesthetics."
+                    },
+                    "diagnostics": {
+                        "label": "Diagnostic routes",
+                        "ready": "Developer diagnostic routing is disabled for product handoff.",
+                        "pending": "Disable diagnostic routing unless this build is still in engineering review."
+                    },
+                    "widget": {
+                        "label": "Widget branding",
+                        "manual": "Review the public chat widget name, greeting, color, logo, placeholder, starters, and domain allowlist."
+                    },
+                    "email": {
+                        "label": "Email sender",
+                        "ready": "A stored sender address is configured for branded runtime emails.",
+                        "manual": "Confirm the deployment uses the intended sender name and domain for auth, workflow, and platform alert emails."
+                    },
+                    "production": {
+                        "label": "Production setup validation",
+                        "manual": "Run the production setup validator before deployment handoff and keep the output with release notes."
+                    }
+                }
+            },
+            "modulePresets": {
+                "title": "Module Presets",
+                "subtitle": "Use these starter bundles to decide which app and operator surfaces belong in a vertical build.",
+                "sections": {
+                    "visible": "Visible modules",
+                    "owner": "Owner surfaces",
+                    "handoff": "Handoff checks"
+                },
+                "links": {
+                    "launch": "Open launch",
+                    "widget": "Open widget",
+                    "health": "Open health"
+                },
+                "presets": {
+                    "knowledgeAssistant": {
+                        "title": "Knowledge Assistant",
+                        "summary": "A focused internal assistant backed by approved company knowledge and release gates.",
+                        "visible": {
+                            "0": "Assistant workspace",
+                            "1": "Knowledge surfaces",
+                            "2": "Reports only when needed"
+                        },
+                        "owner": {
+                            "0": "Agent builder and evals",
+                            "1": "Model defaults",
+                            "2": "System Health"
+                        },
+                        "handoff": {
+                            "0": "Replace demo knowledge",
+                            "1": "Run the release gate",
+                            "2": "Keep diagnostics disabled"
+                        }
+                    },
+                    "supportWidget": {
+                        "title": "Support Widget",
+                        "summary": "A public chat widget starter with governed escalation, knowledge, and domain controls.",
+                        "visible": {
+                            "0": "Public widget",
+                            "1": "Customer chat history",
+                            "2": "Knowledge QA"
+                        },
+                        "owner": {
+                            "0": "Widget setup",
+                            "1": "Connector marketplace",
+                            "2": "Approvals inbox"
+                        },
+                        "handoff": {
+                            "0": "Set allowed domains",
+                            "1": "Review widget branding",
+                            "2": "Test escalation policy"
+                        }
+                    },
+                    "operatorWorkspace": {
+                        "title": "Operator Workspace",
+                        "summary": "A heavier admin/operator starter for workflows, schedules, run review, and operational reporting.",
+                        "visible": {
+                            "0": "Dashboard and reports",
+                            "1": "Workflows and schedules",
+                            "2": "Approvals and runs"
+                        },
+                        "owner": {
+                            "0": "Release Center",
+                            "1": "System Health",
+                            "2": "Audit ledger"
+                        },
+                        "handoff": {
+                            "0": "Confirm role access",
+                            "1": "Set schedule owners",
+                            "2": "Export health report"
+                        }
+                    }
+                }
             },
             "purges": {
                 "title": "Log Retention & Purge Policies",

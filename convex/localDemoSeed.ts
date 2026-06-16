@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { GOOGLE_VERTEX_PROVIDER_KEY, GOOGLE_VERTEX_EMBEDDING_MODEL_ID, SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import { getAgentTemplateById } from "./agentTemplates";
@@ -435,7 +435,7 @@ async function upsertLaunchPlan(ctx: MutationCtx, args: {
   const existing = await ctx.db
     .query("appLaunchPlans")
     .withIndex("by_template_created", (q) => q.eq("templateId", args.templateId))
-    .collect()
+    .take(100)
     .then((plans) => plans.find((plan) => plan.targetCompanyName === args.targetCompanyName));
   const now = Date.now();
   const fields = {

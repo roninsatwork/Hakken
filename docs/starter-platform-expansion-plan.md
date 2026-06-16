@@ -421,6 +421,15 @@ Primary areas:
 - `src/ui/components/layout/SidebarNavigation.tsx`
 - `src/app/(dashboard)/admin/settings/page.tsx`
 
+Current implementation note:
+
+- `Admin -> Settings -> System Options` now includes a white-label readiness panel that checks product identity, light/dark logos, brand accent, and diagnostic routing state, then flags widget branding, email sender, and production setup validation as handoff review items.
+- Stored email sender name/address settings now feed invite, workflow, auth fallback, and platform-alert email sender defaults when `RESEND_FROM_EMAIL` is not set.
+- Public widget config now falls back to system platform name, brand color, logo, greeting, and placeholder when widget-specific theme fields are unset.
+- System Options now includes module presets for knowledge assistant, support widget, and operator workspace starter shapes so builders can decide visible modules, owner surfaces, and handoff checks without automatic route hiding.
+- `npm run setup:validate` and `docs/vertical-app-packaging-checklist.md` cover environment, provider, production smoke, and rebrand handoff checks for a new vertical starter.
+- Remaining future work is a persisted route visibility system if a concrete customer build needs runtime module hiding.
+
 ### 10. Demo Seed And Showcase Mode
 
 Create a "make the platform look alive" path for demos, onboarding, and QA.

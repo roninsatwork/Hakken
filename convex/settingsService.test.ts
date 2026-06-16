@@ -8,6 +8,7 @@ import {
   isStorageLogoReference,
   mergeSettingsWithDefaults,
 } from "./settingsService";
+import { buildEmailBranding, buildEmailFromAddress, isLikelyEmailAddress } from "./emailBrandingService";
 
 describe("settings service helpers", () => {
   test("detects storage logo references without changing existing http behavior", () => {
@@ -69,5 +70,31 @@ describe("settings service helpers", () => {
     expect(buildSettingsAuditMetadata({ platformName: "New Name", brandColorHex: "#ffffff" })).toBe(
       JSON.stringify({ modifiedFields: ["platformName", "brandColorHex"] })
     );
+  });
+
+  test("builds branded email sender fallbacks without exposing invalid addresses", () => {
+    expect(isLikelyEmailAddress("hello@example.com")).toBe(true);
+    expect(isLikelyEmailAddress("bad-address")).toBe(false);
+    expect(
+      buildEmailFromAddress({
+        settings: {
+          platformName: "Acme Ops",
+          emailSenderAddress: "hello@example.com",
+        },
+      })
+    ).toBe("Acme Ops <hello@example.com>");
+    expect(
+      buildEmailFromAddress({
+        envFromAddress: "Deploy Sender <verified@example.com>",
+        settings: {
+          platformName: "Acme Ops",
+          emailSenderAddress: "hello@example.com",
+        },
+      })
+    ).toBe("Deploy Sender <verified@example.com>");
+    expect(buildEmailBranding({ platformName: "Acme Ops" })).toMatchObject({
+      platformName: "Acme Ops",
+      fromAddress: "Sonae <noreply@ronins.co.uk>",
+    });
   });
 });

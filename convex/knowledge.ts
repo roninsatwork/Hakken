@@ -25,11 +25,16 @@ const KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT = 150;
 const KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT = 20;
 const KNOWLEDGE_RETRIEVAL_RESULT_LIMIT = 8;
 const KNOWLEDGE_HISTORY_LIMIT = 8;
+const KNOWLEDGE_BULK_REPAIR_LIMIT = 25;
 const STALE_INGESTION_MS = 15 * 60 * 1000;
 
 function truncatePreview(value: string | undefined, limit = 900) {
   const normalized = (value || "").trim().replace(/\s+/g, " ");
   return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
+}
+
+function truncateIngestionError(value: string | undefined, limit = 500) {
+  return truncatePreview(value || "Unknown ingestion failure", limit);
 }
 
 function getRetrievalTokens(value: string) {
@@ -87,7 +92,12 @@ function summarizeEmbeddingDrift(args: {
 }
 
 function getKnowledgeDocumentQualityFlag(args: {
-  document: { status: "pending" | "processing" | "ready" | "failed"; createdAt: number };
+  document: {
+    status: "pending" | "processing" | "ready" | "failed";
+    createdAt: number;
+    lastQueuedAt?: number;
+    lastIngestionStartedAt?: number;
+  };
   chunkCount: number;
   now: number;
   embeddingDrift?: ReturnType<typeof summarizeEmbeddingDrift> | null;
@@ -95,7 +105,8 @@ function getKnowledgeDocumentQualityFlag(args: {
   if (args.document.status === "failed") return "FAILED";
   if (args.document.status === "ready" && args.chunkCount === 0) return "READY_WITHOUT_CHUNKS";
   if (args.embeddingDrift) return "EMBEDDING_MODEL_DRIFT";
-  if ((args.document.status === "pending" || args.document.status === "processing") && args.now - args.document.createdAt > STALE_INGESTION_MS) {
+  const ingestionActivityAt = args.document.lastIngestionStartedAt ?? args.document.lastQueuedAt ?? args.document.createdAt;
+  if ((args.document.status === "pending" || args.document.status === "processing") && args.now - ingestionActivityAt > STALE_INGESTION_MS) {
     return "STALE_INGESTION";
   }
   return null;
@@ -108,7 +119,9 @@ type ActiveEmbeddingModel = {
   embeddingDimensions?: number;
 };
 
-async function getModelByStableId(ctx: QueryCtx, modelId: string) {
+type KnowledgeReadCtx = Pick<QueryCtx, "db">;
+
+async function getModelByStableId(ctx: KnowledgeReadCtx, modelId: string) {
   return await ctx.db
     .query("aiModels")
     .withIndex("by_model_id", (q) => q.eq("modelId", modelId))
@@ -116,7 +129,7 @@ async function getModelByStableId(ctx: QueryCtx, modelId: string) {
 }
 
 async function getActiveEmbeddingModelForCompany(
-  ctx: QueryCtx,
+  ctx: KnowledgeReadCtx,
   companyId: Id<"companies"> | undefined
 ): Promise<ActiveEmbeddingModel | null> {
   const companyDefault = companyId
@@ -215,6 +228,65 @@ async function getKnowledgeDocumentsForScope(
     .take(limit);
 }
 
+async function getRepairableKnowledgeDocumentsForScope(
+  ctx: MutationCtx,
+  args: { companyId?: Id<"companies">; agentId?: Id<"agents"> },
+  limit = KNOWLEDGE_QUALITY_LIMIT
+) {
+  const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+
+  if (args.agentId) {
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
+    if (user.role === "ADMIN") {
+      const activeCompanyId = getActiveCompanyId(user);
+      if (!activeCompanyId) return [];
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .withIndex("by_agent_company", (q) => q.eq("agentId", args.agentId).eq("companyId", activeCompanyId))
+        .order("desc")
+        .take(limit);
+    }
+
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .order("desc")
+      .take(limit);
+  }
+
+  if (!args.companyId) {
+    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_global", (q) => q.eq("companyId", undefined).eq("agentId", undefined).eq("threadId", undefined))
+      .order("desc")
+      .take(limit);
+  }
+
+  if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
+    throw new Error("Unauthorized access to company knowledge base");
+  }
+
+  return await ctx.db
+    .query("knowledgeDocuments")
+    .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+    .filter((q) => q.and(
+      q.eq(q.field("agentId"), undefined),
+      q.eq(q.field("threadId"), undefined)
+    ))
+    .order("desc")
+    .take(limit);
+}
+
+async function getKnowledgeDocumentChunkCount(ctx: KnowledgeReadCtx, documentId: Id<"knowledgeDocuments">) {
+  const chunks = await ctx.db
+    .query("knowledgeChunks")
+    .withIndex("by_document", (q) => q.eq("documentId", documentId))
+    .take(KNOWLEDGE_INSPECTION_CHUNK_LIMIT);
+  return chunks.length;
+}
+
 async function assertCanInspectKnowledgeDocument(
   ctx: QueryCtx,
   document: Doc<"knowledgeDocuments">
@@ -258,6 +330,28 @@ async function assertCanRepairKnowledgeDocument(
   }
 
   return { userId, user };
+}
+
+async function requeueKnowledgeDocument(ctx: MutationCtx, document: Doc<"knowledgeDocuments">) {
+  const nextStatus = document.format === "url" ? "pending" : "processing";
+
+  await ctx.db.patch(document._id, {
+    status: nextStatus,
+    lastQueuedAt: Date.now(),
+    lastIngestionError: undefined,
+  });
+  await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: document._id });
+
+  if (document.format === "url") {
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+  } else {
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
+      documentId: document._id,
+      ...(document.fileId ? { storageId: document.fileId } : {}),
+    });
+  }
+
+  return nextStatus;
 }
 
 export const generateUploadUrl = mutation({
@@ -432,6 +526,10 @@ export const getQualitySummary = query({
           format: document.format,
           sourceUrl: document.sourceUrl,
           createdAt: document.createdAt,
+          lastQueuedAt: document.lastQueuedAt,
+          lastIngestionStartedAt: document.lastIngestionStartedAt,
+          lastIngestedAt: document.lastIngestedAt,
+          lastIngestionError: document.lastIngestionError,
           chunkCount,
           flag,
           embeddingDrift,
@@ -501,6 +599,10 @@ export const inspectDocument = query({
         format: document.format,
         sourceUrl: document.sourceUrl,
         createdAt: document.createdAt,
+        lastQueuedAt: document.lastQueuedAt,
+        lastIngestionStartedAt: document.lastIngestionStartedAt,
+        lastIngestedAt: document.lastIngestedAt,
+        lastIngestionError: document.lastIngestionError,
         embeddingProviderKey: document.embeddingProviderKey,
         embeddingModelId: document.embeddingModelId,
         embeddingProviderModelId: document.embeddingProviderModelId,
@@ -628,6 +730,7 @@ export const saveDocument = mutation({
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
+      lastQueuedAt: Date.now(),
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
@@ -677,6 +780,7 @@ export const saveChatDocument = mutation({
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
+      lastQueuedAt: Date.now(),
     }));
 
     // Fire ephemeral doc ingestion job
@@ -744,19 +848,7 @@ export const retryDocumentIngestion = mutation({
     if (!document) throw new Error("Document not found");
 
     const { userId } = await assertCanRepairKnowledgeDocument(ctx, document);
-    const nextStatus = document.format === "url" ? "pending" : "processing";
-
-    await ctx.db.patch(document._id, { status: nextStatus });
-    await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: document._id });
-
-    if (document.format === "url") {
-      await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
-    } else {
-      await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
-        documentId: document._id,
-        ...(document.fileId ? { storageId: document.fileId } : {}),
-      });
-    }
+    const nextStatus = await requeueKnowledgeDocument(ctx, document);
 
     await ctx.db.insert("auditLogs", {
       actionType: "RETRY_KNOWLEDGE_DOCUMENT",
@@ -774,11 +866,96 @@ export const retryDocumentIngestion = mutation({
   },
 });
 
+export const repairFlaggedDocuments = mutation({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const documents = await getRepairableKnowledgeDocumentsForScope(ctx, args);
+    const activeEmbeddingModels = new Map<string, ActiveEmbeddingModel | null>();
+    const getActiveEmbeddingModelForDocument = async (document: Doc<"knowledgeDocuments">) => {
+      const cacheKey = document.companyId ?? "global";
+      if (!activeEmbeddingModels.has(cacheKey)) {
+        activeEmbeddingModels.set(cacheKey, await getActiveEmbeddingModelForCompany(ctx, document.companyId));
+      }
+      return activeEmbeddingModels.get(cacheKey) ?? null;
+    };
+
+    const repaired = [];
+    const now = Date.now();
+    for (const document of documents) {
+      if (document.threadId || repaired.length >= KNOWLEDGE_BULK_REPAIR_LIMIT) continue;
+      const chunkCount = await getKnowledgeDocumentChunkCount(ctx, document._id);
+      const embeddingDrift = summarizeEmbeddingDrift({
+        document,
+        activeEmbeddingModel: await getActiveEmbeddingModelForDocument(document),
+      });
+      const flag = getKnowledgeDocumentQualityFlag({ document, chunkCount, now, embeddingDrift });
+      if (!flag) continue;
+
+      const status = await requeueKnowledgeDocument(ctx, document);
+      repaired.push({
+        documentId: document._id,
+        title: document.title,
+        flag,
+        status,
+      });
+    }
+
+    if (repaired.length > 0) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "BULK_REPAIR_KNOWLEDGE_DOCUMENTS",
+        actorId: userId,
+        entityType: "knowledgeDocuments",
+        entityId: args.agentId ?? args.companyId ?? "GLOBAL_KNOWLEDGE",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({
+          count: repaired.length,
+          documentIds: repaired.map((entry) => entry.documentId),
+          flags: repaired.map((entry) => entry.flag),
+        }),
+      });
+    }
+
+    return {
+      repairedCount: repaired.length,
+      repaired,
+    };
+  },
+});
+
 export const getDocInternal = internalQuery({
   args: { id: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
       return await ctx.db.get(args.id);
   }
+});
+
+export const markDocIngestionStartedInternal = internalMutation({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.documentId, {
+      status: "processing",
+      lastIngestionStartedAt: Date.now(),
+      lastIngestionError: undefined,
+    });
+  },
+});
+
+export const markDocPendingInternal = internalMutation({
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.documentId, {
+      status: "pending",
+      lastQueuedAt: Date.now(),
+      lastIngestionError: args.reason ? truncateIngestionError(args.reason) : undefined,
+    });
+  },
 });
 
 export const getThreadDocumentsInternal = internalQuery({
@@ -852,6 +1029,7 @@ export const saveManualText = mutation({
       format: "text/plain",
       createdBy: userId,
       createdAt: Date.now(),
+      lastQueuedAt: Date.now(),
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
@@ -897,7 +1075,11 @@ export const queueWebsiteUrls = mutation({
             
         if (existing) {
              if (args.forceRefresh) {
-                 await ctx.db.patch(existing._id, { status: "pending" });
+                 await ctx.db.patch(existing._id, {
+                   status: "pending",
+                   lastQueuedAt: Date.now(),
+                   lastIngestionError: undefined,
+                 });
                  docIds.push(existing._id);
              }
              continue;
@@ -910,6 +1092,7 @@ export const queueWebsiteUrls = mutation({
           format: "url",
           createdBy: userId,
           createdAt: Date.now(),
+          lastQueuedAt: Date.now(),
           companyId: scope.companyId,
           agentId: scope.agentId,
         }));
@@ -1036,16 +1219,22 @@ export const saveChunksInternal = internalMutation({
             embeddingModelId: args.embeddingModelId,
             embeddingProviderModelId: args.embeddingProviderModelId,
             embeddingDimensions: args.embeddingDimensions,
+            lastIngestedAt: Date.now(),
+            lastIngestionError: undefined,
         });
       }
   }
 });
 
 export const markDocFailedInternal = internalMutation({
-  args: { documentId: v.id("knowledgeDocuments") },
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+    error: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
      await ctx.db.patch(args.documentId, {
-         status: "failed"
+         status: "failed",
+         lastIngestionError: truncateIngestionError(args.error),
      });
   }
 });

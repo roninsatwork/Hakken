@@ -13,6 +13,7 @@ A comprehensive guide for developers is available in the **[/docs](./docs/index.
 - **[Deployment](./docs/deployment.md)**: CI/CD and hosting.
 - **[Agentic Starter Framework Overview](./docs/agentic-starter-framework-overview.md)**: Start-here guide for building governed agentic apps on this foundation.
 - **[New Agentic App Setup Checklist](./docs/new-agentic-app-setup-checklist.md)**: Tenant/customer setup checklist for model defaults, knowledge, tools, draft agents, evals, and activation.
+- **[Vertical App Packaging Checklist](./docs/vertical-app-packaging-checklist.md)**: Rebrand, validate, and smoke-test a product-specific starter built on Sonae.
 - **[Agent Handoff](./AGENTS.md)**: branch rules, quality gates, and future-agent guardrails.
 
 ---
@@ -20,11 +21,11 @@ A comprehensive guide for developers is available in the **[/docs](./docs/index.
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-Ensure you have [Node.js](https://nodejs.org/) installed.
+Use Node `22.13.0` and npm 10, matching `.nvmrc`, `.node-version`, and CI.
 
 ### 2. Install Dependencies
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Setup Convex Backend
@@ -40,6 +41,20 @@ Once you run `npm run convex:dev`, it will automatically create or update your `
 
 ```bash
 NEXT_PUBLIC_CONVEX_URL=https://your-deployment-name.convex.cloud
+CONVEX_DEPLOYMENT=dev:your-deployment-name
+```
+
+Validate local setup before trusting checks:
+
+```bash
+npm run verify:env
+npm run setup:validate
+```
+
+For a production handoff, run:
+
+```bash
+npm run setup:validate -- --profile=production
 ```
 
 ### 5. Run Next.js Development Server
@@ -82,6 +97,7 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 
 - `npm run dev`: Starts the Next.js development server.
 - `npm run convex:dev`: Starts the Convex development environment.
+- `npm run setup:validate`: Validates required setup, auth/provider readiness, and optional integration credentials without printing secret values.
 - `npm run check`: Runs lint, typecheck, and the Vitest suite.
 - `npm run lint:all`: Runs the full lint suite, including warning visibility.
 - `npm run build`: Builds the production application.

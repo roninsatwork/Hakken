@@ -14,6 +14,10 @@ import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
 import { createVertexGenAIClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export const ingestDocument = internalAction({
   args: {
     documentId: v.id("knowledgeDocuments"),
@@ -23,6 +27,7 @@ export const ingestDocument = internalAction({
     try {
       const doc = await ctx.runQuery(internal.knowledge.getDocInternal, { id: args.documentId });
       if (!doc) throw new Error("Document missing from DB");
+      await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId: args.documentId });
 
       let rawText = "";
 
@@ -53,7 +58,10 @@ export const ingestDocument = internalAction({
 
     } catch (error) {
        console.error("Critical Failure in Knowledge Ingestion:", error);
-       await ctx.runMutation(internal.knowledge.markDocFailedInternal, { documentId: args.documentId });
+       await ctx.runMutation(internal.knowledge.markDocFailedInternal, {
+         documentId: args.documentId,
+         error: getErrorMessage(error),
+       });
     }
   },
 });
@@ -94,6 +102,7 @@ export const processWebsiteQueue = internalAction({
   handler: async (ctx) => {
      const nextDoc = await ctx.runQuery(internal.knowledge.getNextPendingUrlInternal);
      if (!nextDoc || nextDoc.status !== "pending") return;
+     await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId: nextDoc._id });
 
      try {
        const firecrawlKey = process.env.FIRECRAWL_API_KEY;
@@ -111,6 +120,10 @@ export const processWebsiteQueue = internalAction({
        if (!response.ok) {
            if (response.status === 429) {
                console.warn("Firecrawl Rate Limit Hit (429). Executing exponential backoff.");
+               await ctx.runMutation(internal.knowledge.markDocPendingInternal, {
+                 documentId: nextDoc._id,
+                 reason: "Firecrawl rate limit hit; queued for retry.",
+               });
                await ctx.scheduler.runAfter(10000, internal.knowledgeActions.processWebsiteQueue);
                return; 
            }
@@ -124,7 +137,10 @@ export const processWebsiteQueue = internalAction({
        await embedAndStoreDoc(ctx, nextDoc._id, nextDoc.companyId, nextDoc.agentId, nextDoc.threadId, markdownText);
      } catch (e) {
        console.error("Queue Scrape Error", e);
-       await ctx.runMutation(internal.knowledge.markDocFailedInternal, { documentId: nextDoc._id });
+       await ctx.runMutation(internal.knowledge.markDocFailedInternal, {
+         documentId: nextDoc._id,
+         error: getErrorMessage(e),
+       });
      }
 
      // Trigger another check after processing to handle queue

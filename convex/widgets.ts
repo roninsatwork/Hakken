@@ -13,6 +13,25 @@ import {
   validateStoredUpload,
   validateWidgetAttachmentMetadata,
 } from "./utils/uploadPolicy";
+import { DEFAULT_SETTINGS, isStorageLogoReference } from "./settingsService";
+import type { QueryCtx } from "./_generated/server";
+
+async function getSystemWidgetBranding(ctx: QueryCtx) {
+  const settings = await ctx.db.query("systemSettings").first();
+  const platformName = settings?.platformName || DEFAULT_SETTINGS.platformName;
+  const themePrimaryColor = settings?.brandColorHex || DEFAULT_SETTINGS.brandColorHex;
+  let themeLogoUrl = settings?.logoUrlLight || settings?.logoUrlDark;
+
+  if (isStorageLogoReference(themeLogoUrl)) {
+    themeLogoUrl = await ctx.storage.getUrl(themeLogoUrl as Id<"_storage">) || themeLogoUrl;
+  }
+
+  return {
+    platformName,
+    themePrimaryColor,
+    themeLogoUrl,
+  };
+}
 
 export const getWidgetsByCompany = query({
   args: { companyId: v.id("companies") },
@@ -79,17 +98,18 @@ export const getWidgetById = query({
        const agent = await ctx.db.get(widget.agentId);
        if (agent) agentAvatar = agent.avatar; 
     }
+    const systemBranding = await getSystemWidgetBranding(ctx);
 
     return {
       _id: widget._id,
-      name: widget.name,
+      name: widget.name || systemBranding.platformName,
       companyId: widget.companyId,
       agentId: widget.agentId,
       allowedDomains: widget.allowedDomains,
-      themePrimaryColor: widget.themePrimaryColor,
-      themeGreeting: widget.themeGreeting,
-      themeLogoUrl: widget.themeLogoUrl,
-      themePlaceholder: widget.themePlaceholder,
+      themePrimaryColor: widget.themePrimaryColor || systemBranding.themePrimaryColor,
+      themeGreeting: widget.themeGreeting || `Hi! How can ${systemBranding.platformName} help you today?`,
+      themeLogoUrl: widget.themeLogoUrl || systemBranding.themeLogoUrl,
+      themePlaceholder: widget.themePlaceholder || `Message ${systemBranding.platformName}...`,
       enableSounds: widget.enableSounds,
       showPopupPreview: widget.showPopupPreview,
       requireName: widget.requireName,

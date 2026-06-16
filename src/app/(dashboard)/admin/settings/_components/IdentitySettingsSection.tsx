@@ -75,6 +75,31 @@ export function IdentitySettingsSection({
           </div>
         </SettingBlock>
       </div>
+
+      <SettingBlock title={t("identity.emailSender")} sub={t("identity.emailSenderSub")}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex flex-col gap-2">
+            <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("identity.emailSenderName")}</span>
+            <input
+              type="text"
+              value={formData.emailSenderName || ""}
+              onChange={(event) => setFormData({ ...formData, emailSenderName: event.target.value })}
+              className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
+              placeholder={t("identity.emailSenderNamePlaceholder")}
+            />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("identity.emailSenderAddress")}</span>
+            <input
+              type="email"
+              value={formData.emailSenderAddress || ""}
+              onChange={(event) => setFormData({ ...formData, emailSenderAddress: event.target.value })}
+              className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
+              placeholder={t("identity.emailSenderAddressPlaceholder")}
+            />
+          </label>
+        </div>
+      </SettingBlock>
     </section>
   );
 }

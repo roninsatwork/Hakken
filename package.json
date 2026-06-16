@@ -22,6 +22,7 @@
     "verify:env": "node scripts/verify-local-environment.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run verify:env && npm run lint && npm run typecheck && npm run test:run",
+    "setup:validate": "node scripts/validate-setup.mjs",
     "test:e2e": "playwright test",
     "pretest:e2e": "npm run verify:env",
     "test:e2e:real-auth": "playwright test -c playwright.real-auth.config.ts",

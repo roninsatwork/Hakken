@@ -25,6 +25,24 @@ The deployment sequence is managed by `.github/workflows/deploy.yml`.
 3.  **Container Build**: Builds the Docker image and pushes it to the registry.
 4.  **Cloud Run Rollout**: Deploys the new container image to Google Cloud Run.
 
+## Pre-Deployment Setup Validation
+
+Before handing a fresh environment to operators, run the production setup validator from an environment that has the same runtime variables available:
+
+```bash
+npm run setup:validate -- --profile=production
+```
+
+The validator checks:
+
+- Convex deployment URL and deployment name.
+- Public app URL and bootstrap super-admin fallback.
+- At least one production auth provider.
+- At least one live AI provider credential group.
+- Optional ingestion providers such as Firecrawl and Apify.
+
+It reports pass, warning, and failure rows without printing secret values. Use `-- --profile=production --strict` when warnings should block handoff.
+
 ## 🔐 Required GitHub Secrets
 
 The automation requires the following secrets to be configured in GitHub Actions:
@@ -34,6 +52,18 @@ The automation requires the following secrets to be configured in GitHub Actions
 - `GCP_PROJECT`: Required for Artifact Registry and Cloud Run deployment.
 - `NEXT_PUBLIC_CONVEX_URL`: Passed to the Docker build and Cloud Run service.
 - `CONVEX_DEPLOYMENT`: Passed to the Docker build and Cloud Run service.
+
+## Fresh Deployment Smoke Checklist
+
+After deployment:
+
+- Sign in with the intended auth provider.
+- Confirm the first super-admin can reach `/admin`.
+- Confirm tenant admins see only their own company data.
+- Confirm model defaults resolve for chat, agent, workflow, report, and embedding use cases.
+- Run one draft-agent smoke eval before activating the agent.
+- Open System Health and confirm there are no unexpected critical alert rules.
+- Export the System Health report and attach it to the deployment handoff.
 
 ---
 

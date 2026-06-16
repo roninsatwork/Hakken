@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { requireSuperAdmin } from "./authz";
@@ -47,6 +47,8 @@ export const update = mutation({
     monthlySeatPrice: v.optional(v.number()),
     logoUrlLight: v.optional(v.string()),
     logoUrlDark: v.optional(v.string()),
+    emailSenderName: v.optional(v.string()),
+    emailSenderAddress: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
     fontFamily: v.optional(v.string()), // Deprecated
     headingFontFamily: v.optional(v.string()),
@@ -108,6 +110,18 @@ export const update = mutation({
     });
 
     return true;
+  },
+});
+
+export const getEmailBranding = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db.query("systemSettings").first();
+    return {
+      platformName: settings?.platformName || DEFAULT_SETTINGS.platformName,
+      emailSenderName: settings?.emailSenderName,
+      emailSenderAddress: settings?.emailSenderAddress,
+    };
   },
 });
 

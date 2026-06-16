@@ -1520,7 +1520,13 @@
                 "logoLight": "Logo Principale (Light)",
                 "logoLightSub": "PNG vettoriale o ad alta risoluzione per superfici predefinite.",
                 "logoDark": "Logo di Sistema (Dark)",
-                "logoDarkSub": "Variante ottimizzata per ambienti scuri e notturni."
+                "logoDarkSub": "Variante ottimizzata per ambienti scuri e notturni.",
+                "emailSender": "Mittente Email",
+                "emailSenderSub": "Mittente brandizzato predefinito usato da inviti, email workflow e alert di piattaforma quando non e impostato un override di deployment.",
+                "emailSenderName": "Nome Mittente",
+                "emailSenderNamePlaceholder": "Team Prodotto",
+                "emailSenderAddress": "Indirizzo Mittente",
+                "emailSenderAddressPlaceholder": "hello@example.com"
             },
             "appearance": {
                 "title": "Temi & Tipografia",
@@ -1624,6 +1630,129 @@
                 "title": "Protocolli Diagnostici di Sistema",
                 "routingMatrix": "Matrice di Routing Diagnostico",
                 "routingMatrixSub": "Abilita i percorsi di debug per sviluppatori e sistemi di cache backdoor."
+            },
+            "whiteLabel": {
+                "title": "Prontezza White-Label",
+                "subtitle": "Controlla la configurazione necessaria prima che questo starter diventi un prodotto per clienti.",
+                "open": "Apri",
+                "summary": {
+                    "ready": "Pronto",
+                    "pending": "In sospeso",
+                    "manual": "Manuale"
+                },
+                "status": {
+                    "ready": "Pronto",
+                    "pending": "In sospeso",
+                    "manual": "Verifica"
+                },
+                "items": {
+                    "identity": {
+                        "label": "Identita prodotto",
+                        "ready": "Il nome della piattaforma e stato cambiato dal valore predefinito dello starter.",
+                        "pending": "Imposta un nome prodotto visibile ai clienti in Identita Core."
+                    },
+                    "logos": {
+                        "label": "Loghi light e dark",
+                        "ready": "Entrambe le varianti del logo sono configurate per le superfici a tema.",
+                        "pending": "Carica entrambe le varianti logo light e dark prima dell'handoff."
+                    },
+                    "brandColor": {
+                        "label": "Accento brand",
+                        "ready": "E configurato un colore brand globale valido.",
+                        "pending": "Imposta un accento brand HEX a sei cifre in Aspetto Globale."
+                    },
+                    "diagnostics": {
+                        "label": "Route diagnostiche",
+                        "ready": "Il routing diagnostico per sviluppatori e disattivato per l'handoff prodotto.",
+                        "pending": "Disattiva il routing diagnostico salvo che questa build sia ancora in revisione tecnica."
+                    },
+                    "widget": {
+                        "label": "Branding widget",
+                        "manual": "Controlla nome, saluto, colore, logo, placeholder, suggerimenti e domini consentiti del widget chat pubblico."
+                    },
+                    "email": {
+                        "label": "Mittente email",
+                        "ready": "E configurato un indirizzo mittente salvato per le email runtime brandizzate.",
+                        "manual": "Conferma che il deployment usi nome e dominio mittente corretti per auth, workflow e alert di piattaforma."
+                    },
+                    "production": {
+                        "label": "Validazione setup produzione",
+                        "manual": "Esegui il validatore setup produzione prima dell'handoff deployment e conserva l'output nelle note di rilascio."
+                    }
+                }
+            },
+            "modulePresets": {
+                "title": "Preset Moduli",
+                "subtitle": "Usa questi bundle starter per decidere quali superfici app e operative appartengono a una build verticale.",
+                "sections": {
+                    "visible": "Moduli visibili",
+                    "owner": "Superfici owner",
+                    "handoff": "Controlli handoff"
+                },
+                "links": {
+                    "launch": "Apri launch",
+                    "widget": "Apri widget",
+                    "health": "Apri health"
+                },
+                "presets": {
+                    "knowledgeAssistant": {
+                        "title": "Assistente Knowledge",
+                        "summary": "Un assistente interno focalizzato, basato su conoscenza aziendale approvata e release gate.",
+                        "visible": {
+                            "0": "Workspace assistente",
+                            "1": "Superfici knowledge",
+                            "2": "Report solo quando necessari"
+                        },
+                        "owner": {
+                            "0": "Builder agent ed eval",
+                            "1": "Default modelli",
+                            "2": "System Health"
+                        },
+                        "handoff": {
+                            "0": "Sostituisci la knowledge demo",
+                            "1": "Esegui il release gate",
+                            "2": "Mantieni disattivate le diagnostiche"
+                        }
+                    },
+                    "supportWidget": {
+                        "title": "Widget Supporto",
+                        "summary": "Uno starter widget chat pubblico con escalation governata, knowledge e controlli dominio.",
+                        "visible": {
+                            "0": "Widget pubblico",
+                            "1": "Cronologia chat clienti",
+                            "2": "QA knowledge"
+                        },
+                        "owner": {
+                            "0": "Setup widget",
+                            "1": "Marketplace connector",
+                            "2": "Inbox approvazioni"
+                        },
+                        "handoff": {
+                            "0": "Imposta i domini consentiti",
+                            "1": "Controlla il branding widget",
+                            "2": "Testa la policy escalation"
+                        }
+                    },
+                    "operatorWorkspace": {
+                        "title": "Workspace Operativo",
+                        "summary": "Uno starter admin/operatore piu completo per workflow, schedulazioni, review run e report operativi.",
+                        "visible": {
+                            "0": "Dashboard e report",
+                            "1": "Workflow e schedulazioni",
+                            "2": "Approvazioni e run"
+                        },
+                        "owner": {
+                            "0": "Release Center",
+                            "1": "System Health",
+                            "2": "Registro audit"
+                        },
+                        "handoff": {
+                            "0": "Conferma accessi ruolo",
+                            "1": "Imposta owner schedulazioni",
+                            "2": "Esporta report health"
+                        }
+                    }
+                }
             },
             "purges": {
                 "title": "Ritenzione Log & Politiche di Purge",

@@ -77,6 +77,7 @@ export function KnowledgeManager({
   const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
   const deleteWebsiteBulk = useMutation(api.knowledge.deleteWebsiteBulk);
   const retryDocumentIngestion = useMutation(api.knowledge.retryDocumentIngestion);
+  const repairFlaggedDocuments = useMutation(api.knowledge.repairFlaggedDocuments);
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
 
   const [activeTab, setActiveTab] = useState<KnowledgeTab>("Website");
@@ -103,6 +104,7 @@ export function KnowledgeManager({
   const [retrievalQuery, setRetrievalQuery] = useState("");
   const [submittedRetrievalQuery, setSubmittedRetrievalQuery] = useState("");
   const [repairingDocumentIds, setRepairingDocumentIds] = useState<Record<string, boolean>>({});
+  const [isBulkRepairing, setIsBulkRepairing] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
   const [documentToInspect, setDocumentToInspect] = useState<Doc<"knowledgeDocuments"> | null>(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
@@ -280,6 +282,20 @@ export function KnowledgeManager({
     }
   };
 
+  const handleRepairFlaggedDocuments = async () => {
+    if (isBulkRepairing) return;
+    setIsBulkRepairing(true);
+    setQualityActionError("");
+    try {
+      await repairFlaggedDocuments(scopeArgs);
+    } catch (err: unknown) {
+      console.error(err);
+      setQualityActionError(getErrorMessage(err, "Failed to repair flagged documents."));
+    } finally {
+      setIsBulkRepairing(false);
+    }
+  };
+
   const handleConfirmDocumentDelete = async () => {
     if (!documentToDelete || isDeletingDocument) return;
     setIsDeletingDocument(true);
@@ -420,9 +436,20 @@ export function KnowledgeManager({
 
         {qualitySummary && qualitySummary.flaggedDocuments.length > 0 && (
           <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-amber-300">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-[13px] font-semibold">Knowledge quality items need review</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2 text-amber-300">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-[13px] font-semibold">Knowledge quality items need review</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRepairFlaggedDocuments}
+                disabled={isBulkRepairing}
+                className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-200 text-[12px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
+              >
+                {isBulkRepairing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                Repair flagged
+              </button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {qualitySummary.flaggedDocuments.map((item) => (
@@ -433,10 +460,16 @@ export function KnowledgeManager({
                       <span>{item.flag.toLowerCase().replaceAll("_", " ")}</span>
                       <span>{item.status}</span>
                       <span>{item.chunkCount} chunks</span>
+                      {item.lastIngestedAt && <span>fresh {formatDate(item.lastIngestedAt)}</span>}
                     </div>
                     {item.embeddingDrift && (
                       <div className="text-[11px] text-amber-200 mt-1 truncate">
                         {item.embeddingDrift.storedModelId || "unknown model"} {"->"} {item.embeddingDrift.activeModelId}
+                      </div>
+                    )}
+                    {item.lastIngestionError && (
+                      <div className="text-[11px] text-red-200 mt-1 truncate">
+                        {item.lastIngestionError}
                       </div>
                     )}
                   </div>
@@ -894,9 +927,17 @@ export function KnowledgeManager({
                 )}
                 <div className="flex flex-wrap gap-3 text-[11px] text-muted font-mono">
                   <span>{formatDate(documentInspection.document.createdAt)}</span>
+                  {documentInspection.document.lastQueuedAt && <span>queued: {formatDate(documentInspection.document.lastQueuedAt)}</span>}
+                  {documentInspection.document.lastIngestionStartedAt && <span>started: {formatDate(documentInspection.document.lastIngestionStartedAt)}</span>}
+                  {documentInspection.document.lastIngestedAt && <span>fresh: {formatDate(documentInspection.document.lastIngestedAt)}</span>}
                   {documentInspection.document.embeddingModelId && <span>model: {documentInspection.document.embeddingModelId}</span>}
                   {documentInspection.document.embeddingDimensions && <span>{documentInspection.document.embeddingDimensions} dimensions</span>}
                 </div>
+                {documentInspection.document.lastIngestionError && (
+                  <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-[12px] text-red-200">
+                    {documentInspection.document.lastIngestionError}
+                  </div>
+                )}
                 {documentInspection.document.status === "failed" && (
                   <div className="pt-2">
                     <button

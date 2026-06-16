@@ -46,6 +46,74 @@ vi.mock("next-intl", () => ({
       "tabs.purges": "Purges",
       "tabs.security": "Security",
       title: "Settings",
+      "modulePresets.links.health": "Open health",
+      "modulePresets.links.launch": "Open launch",
+      "modulePresets.links.widget": "Open widget",
+      "modulePresets.presets.knowledgeAssistant.handoff.0": "Replace demo knowledge",
+      "modulePresets.presets.knowledgeAssistant.handoff.1": "Run the release gate",
+      "modulePresets.presets.knowledgeAssistant.handoff.2": "Keep diagnostics disabled",
+      "modulePresets.presets.knowledgeAssistant.owner.0": "Agent builder and evals",
+      "modulePresets.presets.knowledgeAssistant.owner.1": "Model defaults",
+      "modulePresets.presets.knowledgeAssistant.owner.2": "System Health",
+      "modulePresets.presets.knowledgeAssistant.summary": "A focused internal assistant backed by approved company knowledge and release gates.",
+      "modulePresets.presets.knowledgeAssistant.title": "Knowledge Assistant",
+      "modulePresets.presets.knowledgeAssistant.visible.0": "Assistant workspace",
+      "modulePresets.presets.knowledgeAssistant.visible.1": "Knowledge surfaces",
+      "modulePresets.presets.knowledgeAssistant.visible.2": "Reports only when needed",
+      "modulePresets.presets.operatorWorkspace.handoff.0": "Confirm role access",
+      "modulePresets.presets.operatorWorkspace.handoff.1": "Set schedule owners",
+      "modulePresets.presets.operatorWorkspace.handoff.2": "Export health report",
+      "modulePresets.presets.operatorWorkspace.owner.0": "Release Center",
+      "modulePresets.presets.operatorWorkspace.owner.1": "System Health",
+      "modulePresets.presets.operatorWorkspace.owner.2": "Audit ledger",
+      "modulePresets.presets.operatorWorkspace.summary": "A heavier admin/operator starter for workflows, schedules, run review, and operational reporting.",
+      "modulePresets.presets.operatorWorkspace.title": "Operator Workspace",
+      "modulePresets.presets.operatorWorkspace.visible.0": "Dashboard and reports",
+      "modulePresets.presets.operatorWorkspace.visible.1": "Workflows and schedules",
+      "modulePresets.presets.operatorWorkspace.visible.2": "Approvals and runs",
+      "modulePresets.presets.supportWidget.handoff.0": "Set allowed domains",
+      "modulePresets.presets.supportWidget.handoff.1": "Review widget branding",
+      "modulePresets.presets.supportWidget.handoff.2": "Test escalation policy",
+      "modulePresets.presets.supportWidget.owner.0": "Widget setup",
+      "modulePresets.presets.supportWidget.owner.1": "Connector marketplace",
+      "modulePresets.presets.supportWidget.owner.2": "Approvals inbox",
+      "modulePresets.presets.supportWidget.summary": "A public chat widget starter with governed escalation, knowledge, and domain controls.",
+      "modulePresets.presets.supportWidget.title": "Support Widget",
+      "modulePresets.presets.supportWidget.visible.0": "Public widget",
+      "modulePresets.presets.supportWidget.visible.1": "Customer chat history",
+      "modulePresets.presets.supportWidget.visible.2": "Knowledge QA",
+      "modulePresets.sections.handoff": "Handoff checks",
+      "modulePresets.sections.owner": "Owner surfaces",
+      "modulePresets.sections.visible": "Visible modules",
+      "modulePresets.subtitle": "Use these starter bundles to decide which app and operator surfaces belong in a vertical build.",
+      "modulePresets.title": "Module Presets",
+      "whiteLabel.items.brandColor.label": "Brand accent",
+      "whiteLabel.items.brandColor.pending": "Set a six-digit HEX brand accent in Global Aesthetics.",
+      "whiteLabel.items.brandColor.ready": "A valid global brand color is configured.",
+      "whiteLabel.items.diagnostics.label": "Diagnostic routes",
+      "whiteLabel.items.diagnostics.pending": "Disable diagnostic routing unless this build is still in engineering review.",
+      "whiteLabel.items.diagnostics.ready": "Developer diagnostic routing is disabled for product handoff.",
+      "whiteLabel.items.email.label": "Email sender",
+      "whiteLabel.items.email.manual": "Confirm the deployment uses the intended sender name and domain.",
+      "whiteLabel.items.identity.label": "Product identity",
+      "whiteLabel.items.identity.pending": "Set a customer-facing product name in Core Identity.",
+      "whiteLabel.items.identity.ready": "The platform name has been changed from the starter default.",
+      "whiteLabel.items.logos.label": "Light and dark logos",
+      "whiteLabel.items.logos.pending": "Upload both light and dark logo variants before handoff.",
+      "whiteLabel.items.logos.ready": "Both logo variants are configured for themed surfaces.",
+      "whiteLabel.items.production.label": "Production setup validation",
+      "whiteLabel.items.production.manual": "Run the production setup validator before deployment handoff.",
+      "whiteLabel.items.widget.label": "Widget branding",
+      "whiteLabel.items.widget.manual": "Review the public chat widget name, greeting, color, logo, placeholder, starters, and domain allowlist.",
+      "whiteLabel.open": "Open",
+      "whiteLabel.status.manual": "Review",
+      "whiteLabel.status.pending": "Pending",
+      "whiteLabel.status.ready": "Ready",
+      "whiteLabel.subtitle": "Review the configuration needed before this starter becomes a customer-facing product.",
+      "whiteLabel.summary.manual": "Manual",
+      "whiteLabel.summary.pending": "Pending",
+      "whiteLabel.summary.ready": "Ready",
+      "whiteLabel.title": "White-label readiness",
     };
     return labels[key] ?? key;
   },
@@ -159,5 +227,22 @@ describe("SystemSettingsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Audit/i }));
     expect(screen.getByText("Audit rows 1")).toBeInTheDocument();
+  });
+
+  it("shows white-label readiness checks in system options", () => {
+    render(<SystemSettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Options/i }));
+
+    expect(screen.getByText("White-label readiness")).toBeInTheDocument();
+    expect(screen.getByText("Product identity")).toBeInTheDocument();
+    expect(screen.getByText("Set a customer-facing product name in Core Identity.")).toBeInTheDocument();
+    expect(screen.getByText("Widget branding")).toBeInTheDocument();
+    expect(screen.getByText("npm run setup:validate -- --profile=production")).toBeInTheDocument();
+    expect(screen.getByText("Module Presets")).toBeInTheDocument();
+    expect(screen.getByText("Knowledge Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Support Widget")).toBeInTheDocument();
+    expect(screen.getByText("Operator Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Replace demo knowledge")).toBeInTheDocument();
   });
 });

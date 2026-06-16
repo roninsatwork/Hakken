@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
+import { buildEmailFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
 import {
   buildActionRequest,
@@ -98,16 +99,21 @@ async function executeMergeRuntimeNode(ctx: ActionCtx, args: {
   return buildMergeNodeOutput({ nodeId: args.nodeId, executionSteps, edges });
 }
 
-async function executeEmailRuntimeNode(args: {
+async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
   executionId: Id<"workflowExecutions">;
   nodeId: string;
   currentNodeData: Record<string, unknown>;
   globalStatePayload: Record<string, unknown>;
 }) {
+  const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
   const { fromAddress, toAddresses, subject, body } = buildEmailMessage({
     nodeData: args.currentNodeData,
     globalStatePayload: args.globalStatePayload,
-    defaultFromAddress: process.env.RESEND_FROM_EMAIL || "Sonae Automations <hello@ronins.co.uk>",
+    defaultFromAddress: buildEmailFromAddress({
+      envFromAddress: process.env.RESEND_FROM_EMAIL,
+      fallbackName: "Sonae Automations",
+      settings: emailBranding,
+    }),
   });
 
   if (!process.env.RESEND_API_KEY) {
@@ -300,7 +306,7 @@ export const executeNode = internalAction({
       }
       else if (node.type === "emailNode") {
         try {
-          outputPayload = await executeEmailRuntimeNode({
+          outputPayload = await executeEmailRuntimeNode(ctx, {
             executionId: args.executionId,
             nodeId: args.nodeId,
             currentNodeData,

@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = {
   borderRadius: undefined as string | undefined,
   logoUrlLight: undefined as string | undefined,
   logoUrlDark: undefined as string | undefined,
+  emailSenderName: undefined as string | undefined,
+  emailSenderAddress: undefined as string | undefined,
 
   lightBg: undefined as string | undefined,
   lightFg: undefined as string | undefined,

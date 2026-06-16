@@ -61,6 +61,7 @@ import type * as chatService from "../chatService.js";
 import type * as companies from "../companies.js";
 import type * as companyService from "../companyService.js";
 import type * as crons from "../crons.js";
+import type * as emailBrandingService from "../emailBrandingService.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
 import type * as http from "../http.js";
 import type * as inventoryRollups from "../inventoryRollups.js";
@@ -176,6 +177,7 @@ declare const fullApi: ApiFromModules<{
   companies: typeof companies;
   companyService: typeof companyService;
   crons: typeof crons;
+  emailBrandingService: typeof emailBrandingService;
   googleProviderAdapter: typeof googleProviderAdapter;
   http: typeof http;
   inventoryRollups: typeof inventoryRollups;

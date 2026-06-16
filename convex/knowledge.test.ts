@@ -548,6 +548,7 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
         textContent: "Retry me",
         companyId: companyAId,
         status: "failed",
+        lastIngestionError: "Old failure",
         createdBy: adminAId,
         format: "text/plain",
         createdAt: Date.now(),
@@ -602,6 +603,8 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
 
     expect(state.textDocument?.status).toBe("processing");
     expect(state.urlDocument?.status).toBe("pending");
+    expect(state.textDocument?.lastQueuedAt).toEqual(expect.any(Number));
+    expect(state.textDocument?.lastIngestionError).toBeUndefined();
     expect(state.otherTenantDocument?.status).toBe("failed");
     expect(state.auditLogs.map((log) => log.actionType)).toEqual([
       "RETRY_KNOWLEDGE_DOCUMENT",
@@ -612,6 +615,116 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
       expect.objectContaining({ title: "Failed Website", format: "url", scope: "company" }),
     ]);
     expect(companyAId).not.toBe(companyBId);
+  });
+
+  test("admins can bulk repair scoped flagged knowledge documents", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, adminAId, failedId, staleId, readyWithoutChunksId, healthyId, otherTenantId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+      const adminBId = await ctx.db.insert("users", {
+        email: "admin-b@test.com",
+        role: "ADMIN",
+        companyId: companyBId,
+        createdAt: Date.now(),
+      });
+      const failedId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Failed Import",
+        textContent: "Retry failed import",
+        companyId: companyAId,
+        status: "failed",
+        lastIngestionError: "Embedding failed",
+        createdBy: adminAId,
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+      const staleId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Stale Website",
+        sourceUrl: "https://example.com/stale",
+        companyId: companyAId,
+        status: "pending",
+        lastQueuedAt: Date.now() - 60 * 60 * 1000,
+        createdBy: adminAId,
+        format: "url",
+        createdAt: Date.now() - 60 * 60 * 1000,
+      });
+      const readyWithoutChunksId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Empty Ready",
+        textContent: "No chunks",
+        companyId: companyAId,
+        status: "ready",
+        createdBy: adminAId,
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+      const healthyId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Healthy Ready",
+        textContent: "Has chunks",
+        companyId: companyAId,
+        status: "ready",
+        createdBy: adminAId,
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("knowledgeChunks", {
+        documentId: healthyId,
+        companyId: companyAId,
+        isGlobal: false,
+        text: "healthy chunk",
+        embedding: [0.1, 0.2, 0.3],
+      });
+      const otherTenantId = await ctx.db.insert("knowledgeDocuments", {
+        title: "Other Tenant Failed",
+        textContent: "Private",
+        companyId: companyBId,
+        status: "failed",
+        createdBy: adminBId,
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+
+      return { companyAId, adminAId, failedId, staleId, readyWithoutChunksId, healthyId, otherTenantId };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+
+    const result = await adminAClient.mutation(api.knowledge.repairFlaggedDocuments, { companyId: companyAId });
+    expect(result.repairedCount).toBe(3);
+    expect(result.repaired.map((entry) => entry.documentId).sort()).toEqual([
+      failedId,
+      readyWithoutChunksId,
+      staleId,
+    ].sort());
+    expect(result.repaired.map((entry) => entry.flag).sort()).toEqual([
+      "FAILED",
+      "READY_WITHOUT_CHUNKS",
+      "STALE_INGESTION",
+    ].sort());
+
+    const state = await t.run(async (ctx) => ({
+      failed: await ctx.db.get(failedId),
+      stale: await ctx.db.get(staleId),
+      readyWithoutChunks: await ctx.db.get(readyWithoutChunksId),
+      healthy: await ctx.db.get(healthyId),
+      otherTenant: await ctx.db.get(otherTenantId),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(state.failed?.status).toBe("processing");
+    expect(state.failed?.lastIngestionError).toBeUndefined();
+    expect(state.stale?.status).toBe("pending");
+    expect(state.stale?.lastIngestionError).toBeUndefined();
+    expect(state.readyWithoutChunks).toMatchObject({ status: "processing" });
+    expect(state.healthy?.status).toBe("ready");
+    expect(state.otherTenant?.status).toBe("failed");
+    expect(state.auditLogs.map((log) => log.actionType)).toEqual(["BULK_REPAIR_KNOWLEDGE_DOCUMENTS"]);
   });
 
   test("agent-scoped reads are company-isolated for admins and complete for super admins", async () => {

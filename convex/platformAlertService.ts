@@ -53,7 +53,15 @@ export type OperationalHealthReport = {
     count: number;
     examples: OperationalFailureExample[];
   };
+  failedToolCalls: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
   failedScheduledExecutions: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  highCostAgents: {
     count: number;
     examples: OperationalFailureExample[];
   };
@@ -61,7 +69,19 @@ export type OperationalHealthReport = {
     count: number;
     examples: OperationalFailureExample[];
   };
+  pendingApprovals: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  providerFailures: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
   schedulesMissingNextRun: {
+    count: number;
+    examples: OperationalFailureExample[];
+  };
+  staleAgentRuns: {
     count: number;
     examples: OperationalFailureExample[];
   };
@@ -71,14 +91,60 @@ export type OperationalHealthReport = {
   };
 };
 
+export type BudgetHealthExample = {
+  id: string;
+  limit: number;
+  occurredAt?: number;
+  percentUsed: number;
+  summary: string;
+  targetName: string;
+  targetType: "agent" | "company";
+  used: number;
+};
+
+export type BudgetHealthReport = {
+  agentCostBudgets: {
+    count: number;
+    examples: BudgetHealthExample[];
+  };
+  tenantMessageBudgets: {
+    count: number;
+    examples: BudgetHealthExample[];
+  };
+};
+
+export type AlertRuleStatus = {
+  count: number;
+  details: string[];
+  key:
+    | "costSpikes"
+    | "repeatedProviderFailures"
+    | "staleApprovals"
+    | "stuckRuns"
+    | "toolFailures";
+  label: string;
+  nextAction: string;
+  status: "ok" | "warning" | "critical";
+  threshold: string;
+};
+
 export type SystemHealthReport = {
   analytics: AnalyticsHealthReport;
+  alertRules: AlertRuleStatus[];
+  budgetHealth: BudgetHealthReport;
   checkedAt: number;
   checkedDate: string;
   daysBack: number;
+  highCostAgentThresholdGBP: number;
   operations: OperationalHealthReport;
+  pendingApprovalThresholdMinutes: number;
   staleRunningThresholdMinutes: number;
   overdueScheduleThresholdMinutes: number;
+  scope: {
+    companyId?: string;
+    companyName?: string;
+    type: "company" | "platform";
+  };
   windowStartDate: string;
   windowStartTs: number;
 };
@@ -90,14 +156,21 @@ export type PlatformAlertSignal = {
     | "agentErrorLogs"
     | "duplicateSnapshots"
     | "failedAgentTransactions"
+    | "failedToolCalls"
     | "failedScheduledExecutions"
+    | "highCostAgents"
+    | "agentCostBudgetPressure"
     | "mismatchedDimensions"
     | "missingDimensions"
     | "missingGlobalSnapshots"
     | "missingThreads"
     | "overdueSchedules"
+    | "pendingApprovals"
+    | "providerFailures"
     | "schedulesMissingNextRun"
-    | "staleScheduledExecutions";
+    | "staleAgentRuns"
+    | "staleScheduledExecutions"
+    | "tenantMessageBudgetPressure";
   label: string;
   runbook: string;
 };
@@ -220,6 +293,56 @@ function buildOperationalHealthSignals(report: OperationalHealthReport) {
     });
   }
 
+  if (report.staleAgentRuns.count > 0) {
+    signals.push({
+      count: report.staleAgentRuns.count,
+      details: compactDetails(report.staleAgentRuns.examples.map(formatOperationalExample), "No stale agent run examples captured."),
+      key: "staleAgentRuns",
+      label: "Stale agent runs",
+      runbook: "Open the run detail timeline, inspect the latest step, and decide whether the run needs cancellation, replay, or provider/tool repair.",
+    });
+  }
+
+  if (report.pendingApprovals.count > 0) {
+    signals.push({
+      count: report.pendingApprovals.count,
+      details: compactDetails(report.pendingApprovals.examples.map(formatOperationalExample), "No pending approval examples captured."),
+      key: "pendingApprovals",
+      label: "Pending agent approvals",
+      runbook: "Open agent approvals and either approve, reject, or tune the approval policy if these are repeatedly stranded.",
+    });
+  }
+
+  if (report.failedToolCalls.count > 0) {
+    signals.push({
+      count: report.failedToolCalls.count,
+      details: compactDetails(report.failedToolCalls.examples.map(formatOperationalExample), "No failed tool-call examples captured."),
+      key: "failedToolCalls",
+      label: "Failed agent tool calls",
+      runbook: "Inspect the tool call arguments/result, connector diagnostics, and tenant policy before retrying the agent run.",
+    });
+  }
+
+  if (report.providerFailures.count > 0) {
+    signals.push({
+      count: report.providerFailures.count,
+      details: compactDetails(report.providerFailures.examples.map(formatOperationalExample), "No provider failure examples captured."),
+      key: "providerFailures",
+      label: "Provider failure clusters",
+      runbook: "Check provider health, model defaults, credentials, and recent deploys before changing agent prompts or tools.",
+    });
+  }
+
+  if (report.highCostAgents.count > 0) {
+    signals.push({
+      count: report.highCostAgents.count,
+      details: compactDetails(report.highCostAgents.examples.map(formatOperationalExample), "No high-cost agent examples captured."),
+      key: "highCostAgents",
+      label: "High-cost agents",
+      runbook: "Review run volume, token usage, model choice, budgets, and whether cheaper defaults or tighter retrieval limits are appropriate.",
+    });
+  }
+
   if (report.failedScheduledExecutions.count > 0) {
     signals.push({
       count: report.failedScheduledExecutions.count,
@@ -263,6 +386,44 @@ function buildOperationalHealthSignals(report: OperationalHealthReport) {
   return signals;
 }
 
+function formatBudgetExample(example: BudgetHealthExample) {
+  const parts = [
+    example.targetName,
+    `${example.percentUsed.toFixed(0)}% used`,
+    example.summary,
+    example.occurredAt ? new Date(example.occurredAt).toISOString() : undefined,
+    example.id,
+  ].filter(Boolean);
+
+  return parts.join(" | ");
+}
+
+function buildBudgetHealthSignals(report: BudgetHealthReport) {
+  const signals: PlatformAlertSignal[] = [];
+
+  if (report.agentCostBudgets.count > 0) {
+    signals.push({
+      count: report.agentCostBudgets.count,
+      details: compactDetails(report.agentCostBudgets.examples.map(formatBudgetExample), "No agent budget examples captured."),
+      key: "agentCostBudgetPressure",
+      label: "Agent cost budget pressure",
+      runbook: "Open the agent run timeline, check model choice, retrieval breadth, and maxCostGBP before raising the budget.",
+    });
+  }
+
+  if (report.tenantMessageBudgets.count > 0) {
+    signals.push({
+      count: report.tenantMessageBudgets.count,
+      details: compactDetails(report.tenantMessageBudgets.examples.map(formatBudgetExample), "No tenant budget examples captured."),
+      key: "tenantMessageBudgetPressure",
+      label: "Tenant message budget pressure",
+      runbook: "Review the tenant plan assignment, current usage, and expected month-end activity before increasing capacity.",
+    });
+  }
+
+  return signals;
+}
+
 export function buildAnalyticsHealthPlatformAlertDecision(report: AnalyticsHealthReport): PlatformAlertDecision {
   const signals = buildAnalyticsHealthSignals(report);
   const issueCount = signals.reduce((sum, signal) => sum + signal.count, 0);
@@ -287,6 +448,7 @@ export function buildSystemHealthPlatformAlertDecision(report: SystemHealthRepor
   const signals = [
     ...buildAnalyticsHealthSignals(report.analytics),
     ...buildOperationalHealthSignals(report.operations),
+    ...buildBudgetHealthSignals(report.budgetHealth),
   ];
   const issueCount = signals.reduce((sum, signal) => sum + signal.count, 0);
   const range = `${report.windowStartDate} to ${report.checkedDate}`;
@@ -363,6 +525,8 @@ export function buildSystemHealthPlatformAlertEmailHtml(report: SystemHealthRepo
         <li>Today assistant messages: ${formatNumber(report.analytics.liveToday.assistantMessages)}</li>
         <li>Today agent transactions: ${formatNumber(report.analytics.liveToday.agentTransactions)}</li>
         <li>Agent errors: ${formatNumber(report.operations.agentFailures.count)}</li>
+        <li>Agent budget warnings: ${formatNumber(report.budgetHealth.agentCostBudgets.count)}</li>
+        <li>Tenant budget warnings: ${formatNumber(report.budgetHealth.tenantMessageBudgets.count)}</li>
         <li>Failed scheduled executions: ${formatNumber(report.operations.failedScheduledExecutions.count)}</li>
         <li>Stale scheduled executions: ${formatNumber(report.operations.staleRunningScheduledExecutions.count)}</li>
         <li>Overdue schedules: ${formatNumber(report.operations.overdueSchedules.count)}</li>

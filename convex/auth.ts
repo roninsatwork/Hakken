@@ -6,6 +6,7 @@ import Resend from "@auth/core/providers/resend";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { internal } from "./_generated/api";
 import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
+import { buildEmailFromAddress } from "./emailBrandingService";
 
 const providers: AuthProviderConfig[] = [
   Google({
@@ -14,7 +15,10 @@ const providers: AuthProviderConfig[] = [
   }),
   Resend({
     apiKey: process.env.RESEND_API_KEY,
-    from: process.env.RESEND_FROM_EMAIL || "noreply@ronins.co.uk",
+    from: buildEmailFromAddress({
+      envFromAddress: process.env.RESEND_FROM_EMAIL,
+      fallbackName: "Sonae Auth",
+    }),
   }),
 ];
 
