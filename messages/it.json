@@ -336,6 +336,7 @@
         "agents": "Agenti",
         "agentApprovals": "Approvazioni Agenti",
         "releaseCenter": "Controlli Ship",
+        "runObservatory": "Osservatorio Run",
         "manageAgents": "Gestisci Agenti",
         "connectors": "Connettori",
         "workflows": "Workflow",
@@ -348,6 +349,8 @@
         "systemAdmins": "Admin di Sistema",
         "settings": "Impostazioni",
         "systemSettings": "Impostazioni di Sistema",
+        "apiKeys": "Chiavi API",
+        "webhookDeliveries": "Consegne Webhook",
         "analytics": "Analytics",
         "maintenance": "Manutenzione",
         "systemHealth": "Salute del Sistema",
@@ -1636,6 +1639,7 @@
                 "subtitle": "Controlla la configurazione necessaria prima che questo starter diventi un prodotto per clienti.",
                 "open": "Apri",
                 "summary": {
+                    "score": "Punteggio",
                     "ready": "Pronto",
                     "pending": "In sospeso",
                     "manual": "Manuale"
@@ -1668,6 +1672,8 @@
                     },
                     "widget": {
                         "label": "Branding widget",
+                        "ready": "Un widget attivo ha stile brand, saluto, placeholder, logo e una allowlist domini limitata.",
+                        "pending": "Configura un widget attivo con branding personalizzato e una allowlist domini limitata.",
                         "manual": "Controlla nome, saluto, colore, logo, placeholder, suggerimenti e domini consentiti del widget chat pubblico."
                     },
                     "email": {
@@ -1679,6 +1685,41 @@
                         "label": "Validazione setup produzione",
                         "manual": "Esegui il validatore setup produzione prima dell'handoff deployment e conserva l'output nelle note di rilascio."
                     }
+                }
+            },
+            "handoffSummary": {
+                "title": "Riepilogo Handoff Brand",
+                "subtitle": "Conferma identita, widget e postura email che seguiranno uno starter verticale.",
+                "emailNote": "Usato dagli helper email runtime salvo override RESEND_FROM_EMAIL nel deployment.",
+                "fields": {
+                    "product": "Prodotto",
+                    "email": "Mittente runtime",
+                    "readiness": "Punteggio prontezza",
+                    "widget": "Postura widget",
+                    "diagnostics": "Diagnostica",
+                    "production": "Gate produzione",
+                    "nextActions": "Prossime azioni",
+                    "recommendedPresets": "Preset pronti"
+                },
+                "logoModes": {
+                    "light-and-dark": "Le varianti logo light e dark sono configurate.",
+                    "partial": "E configurata una sola variante logo.",
+                    "missing": "Le varianti logo devono ancora essere caricate."
+                },
+                "widget": {
+                    "ready": "Widget brandizzato attivo",
+                    "needs-review": "Richiede review widget"
+                },
+                "diagnostics": {
+                    "ready": "Disattivata per l'handoff",
+                    "needs-review": "Ancora attiva"
+                },
+                "production": {
+                    "manual": "Esegui la validazione setup prima dell'handoff"
+                },
+                "empty": {
+                    "nextActions": "Nessuna prossima azione automatica e attualmente in coda.",
+                    "recommendedPresets": "Completa altri controlli di prontezza prima di marcare un preset come pronto."
                 }
             },
             "modulePresets": {
@@ -1693,6 +1734,34 @@
                     "launch": "Apri Kit App",
                     "widget": "Apri widget",
                     "health": "Apri health"
+                },
+                "items": {
+                    "assistantWorkspace": "Workspace assistente",
+                    "knowledgeSurfaces": "Superfici knowledge",
+                    "reportsOptional": "Report solo quando necessari",
+                    "agentBuilderEvals": "Builder agent ed eval",
+                    "modelDefaults": "Default modelli",
+                    "systemHealth": "System Health",
+                    "replaceDemoKnowledge": "Sostituisci la knowledge demo",
+                    "runReleaseGate": "Esegui il release gate",
+                    "keepDiagnosticsDisabled": "Mantieni disattivate le diagnostiche",
+                    "publicWidget": "Widget pubblico",
+                    "customerChatHistory": "Cronologia chat clienti",
+                    "knowledgeQa": "QA knowledge",
+                    "widgetSetup": "Setup widget",
+                    "connectorMarketplace": "Marketplace connector",
+                    "approvalsInbox": "Inbox approvazioni",
+                    "setAllowedDomains": "Imposta i domini consentiti",
+                    "reviewWidgetBranding": "Controlla il branding widget",
+                    "testEscalationPolicy": "Testa la policy escalation",
+                    "dashboardReports": "Dashboard e report",
+                    "workflowsSchedules": "Workflow e schedulazioni",
+                    "approvalsRuns": "Approvazioni e run",
+                    "releaseCenter": "Release Center",
+                    "auditLedger": "Registro audit",
+                    "confirmRoleAccess": "Conferma accessi ruolo",
+                    "setScheduleOwners": "Imposta owner schedulazioni",
+                    "exportHealthReport": "Esporta report health"
                 },
                 "presets": {
                     "knowledgeAssistant": {
@@ -1753,6 +1822,119 @@
                         }
                     }
                 }
+            },
+            "navigationProfiles": {
+                "title": "Profili Navigazione",
+                "subtitle": "Anteprima dei gruppi route che uno starter verticale dovrebbe mostrare, riservare agli operatori o nascondere durante il packaging.",
+                "sections": {
+                    "visible": "Visibili",
+                    "owner": "Solo owner",
+                    "hide": "Candidati da nascondere",
+                    "notes": "Note implementazione"
+                },
+                "items": {
+                    "appDashboard": "Dashboard app",
+                    "assistant": "Assistente",
+                    "reports": "Report",
+                    "organization": "Impostazioni organizzazione",
+                    "systemSettings": "System Settings",
+                    "systemHealth": "System Health",
+                    "adminCompanies": "Admin aziende",
+                    "releaseCenter": "Release Center",
+                    "apiKeys": "API key",
+                    "webhookDeliveries": "Consegne webhook",
+                    "publicWidget": "Widget pubblico",
+                    "customerChatHistory": "Cronologia chat clienti",
+                    "knowledgeQa": "QA knowledge",
+                    "widgetSetup": "Setup widget",
+                    "globalKnowledge": "Global Knowledge",
+                    "chatLogs": "Log chat",
+                    "properties": "Proprieta",
+                    "arcade": "Arcade",
+                    "diagnostics": "Diagnostica",
+                    "adminDashboard": "Dashboard admin",
+                    "agents": "Agent",
+                    "workflows": "Workflow",
+                    "approvals": "Approvazioni",
+                    "runObservatory": "Run Observatory",
+                    "auditLogs": "Log audit",
+                    "tenantScoped": "Persisti la visibilita per tenant o package prodotto.",
+                    "preserveAdminRoutes": "Mantieni raggiungibili le route admin per operatori autorizzati.",
+                    "keepServerAuthz": "Tratta il hiding navigazione solo come presentazione; mantieni l'autorizzazione server.",
+                    "domainAllowlist": "Abbina le route pubbliche alle allowlist domini del widget.",
+                    "widgetBranding": "Controlla il branding widget prima di esporre la chat pubblica.",
+                    "emailSender": "Conferma il mittente runtime prima delle email verso clienti.",
+                    "superAdminOnly": "Mantieni le route solo owner limitate agli operatori super-admin.",
+                    "auditRouteChanges": "Registra in audit le modifiche di visibilita route.",
+                    "documentHiddenRoutes": "Documenta le route nascoste nell'handoff build."
+                },
+                "profiles": {
+                    "customerWorkspace": {
+                        "title": "Workspace Cliente",
+                        "summary": "Una shell app interna minimale per utenti tenant, con tooling owner fuori dal percorso cliente."
+                    },
+                    "supportWidget": {
+                        "title": "Widget Supporto",
+                        "summary": "Uno starter supporto pubblico focalizzato su widget, review conversazioni e qualita knowledge."
+                    },
+                    "operatorConsole": {
+                        "title": "Console Operativa",
+                        "summary": "Una console admin governata per team che gestiscono agent, workflow, approvazioni, release e osservabilita."
+                    }
+                }
+            },
+            "customDomain": {
+                "title": "Prontezza Dominio Custom",
+                "subtitle": "Pianifica i controlli host, widget, email, DNS, TLS, redirect e routing tenant per un deployment brandizzato.",
+                "loading": "Preparazione prontezza dominio custom...",
+                "note": "Questi controlli sono solo evidenza di pianificazione. DNS, TLS e routing dominio-tenant richiedono ancora setup hosting-provider e review sviluppatore prima del runtime route hiding.",
+                "summary": {
+                    "ready": "Pronto",
+                    "pending": "In sospeso",
+                    "manual": "Manuale",
+                    "total": "Totale"
+                },
+                "status": {
+                    "ready": "Pronto",
+                    "pending": "In sospeso",
+                    "manual": "Verifica"
+                },
+                "items": {
+                    "appHost": {
+                        "label": "Host app primario",
+                        "manual": "Conferma il dominio app produzione con il provider hosting."
+                    },
+                    "widgetDomains": {
+                        "label": "Allowlist domini widget",
+                        "ready": "Il widget attivo ha domini consentiti limitati.",
+                        "pending": "Imposta domini consentiti limitati prima di esporre il widget pubblico."
+                    },
+                    "emailDomain": {
+                        "label": "Dominio mittente email",
+                        "ready": "E configurato un dominio mittente brandizzato.",
+                        "manual": "Conferma il mittente email brandizzato o l'override deployment."
+                    },
+                    "dnsTls": {
+                        "label": "DNS e TLS",
+                        "manual": "Valida record DNS e certificati TLS fuori dall'app."
+                    },
+                    "redirects": {
+                        "label": "Policy redirect",
+                        "manual": "Conferma il comportamento redirect per apex, www e route legacy."
+                    },
+                    "tenantIsolation": {
+                        "label": "Isolamento routing tenant",
+                        "manual": "Conferma che i domini custom mappino al tenant corretto e preservino l'autorizzazione server."
+                    }
+                }
+            },
+            "packagingChecklist": {
+                "title": "Checklist Packaging",
+                "subtitle": "Copia un artifact handoff per sviluppatori che combina evidenze brand, prontezza, moduli e navigazione.",
+                "loading": "Preparazione checklist packaging...",
+                "copy": "Copia checklist",
+                "copied": "Copiata",
+                "summary": "{productName} e pronto al {readinessPercent}% per il packaging white-label."
             },
             "purges": {
                 "title": "Ritenzione Log & Politiche di Purge",

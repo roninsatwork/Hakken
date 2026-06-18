@@ -12,6 +12,14 @@ crons.interval(
   {}
 );
 
+// Activate approved agent releases when their reviewed launch window opens.
+crons.interval(
+  "agent-release-activation-dispatcher",
+  { minutes: 1 },
+  internal.releases.activateDueReleaseCandidates,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",

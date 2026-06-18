@@ -167,6 +167,78 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     );
   });
 
+  test("public workflow trigger creates tenant-scoped webhook executions only for active webhook workflows", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Public Workflow Tenant", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "workflow-owner@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const webhookWorkflowId = await ctx.db.insert("workflows", {
+        name: "Public Webhook Workflow",
+        isActive: true,
+        triggerType: "WEBHOOK",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
+      const manualWorkflowId = await ctx.db.insert("workflows", {
+        name: "Manual Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
+      const inactiveWorkflowId = await ctx.db.insert("workflows", {
+        name: "Inactive Webhook Workflow",
+        isActive: false,
+        triggerType: "WEBHOOK",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
+
+      return { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId };
+    });
+
+    const created = await t.mutation(internal.workflows.createPublicWorkflowRunInternal, {
+      workflowId: webhookWorkflowId,
+      companyId,
+      initialInput: JSON.stringify({ source: "public-api" }),
+    });
+    expect(created.status).toBe("RUNNING");
+
+    const execution = await t.run(async (ctx) => await ctx.db.get(created.executionId));
+    expect(execution).toMatchObject({
+      workflowId: webhookWorkflowId,
+      companyId,
+      triggerType: "WEBHOOK",
+      status: "RUNNING",
+      startedBy: creatorId,
+    });
+
+    await expect(t.mutation(internal.workflows.createPublicWorkflowRunInternal, {
+      workflowId: manualWorkflowId,
+      companyId,
+      initialInput: "{}",
+    })).rejects.toThrow("Workflow not found or not configured for public triggers");
+
+    await expect(t.mutation(internal.workflows.createPublicWorkflowRunInternal, {
+      workflowId: inactiveWorkflowId,
+      companyId,
+      initialInput: "{}",
+    })).rejects.toThrow("Workflow not found or not configured for public triggers");
+  });
+
   test("Super admins can page and search workflows without loading the full table", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

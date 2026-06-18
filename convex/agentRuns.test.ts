@@ -138,6 +138,71 @@ describe("Agent Runs", () => {
     expect(approvals[0]).toMatchObject({ status: "PENDING", message: "Approve knowledge lookup?" });
   });
 
+  test("public trigger creates a tenant-scoped queued webhook run with a version snapshot", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { activeAgentId, inactiveAgentId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Public API Company", createdAt: Date.now() });
+      const activeAgentId = await ctx.db.insert("agents", {
+        name: "Public Trigger Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const inactiveAgentId = await ctx.db.insert("agents", {
+        name: "Inactive Public Trigger Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      return { activeAgentId, inactiveAgentId, companyId };
+    });
+
+    const created = await t.mutation(internal.agentRuns.createPublicAgentRunInternal, {
+      agentId: activeAgentId,
+      companyId,
+      objective: "  Create a tenant summary from the public API.  ",
+    });
+    expect(created.status).toBe("QUEUED");
+
+    const state = await t.run(async (ctx) => {
+      const run = await ctx.db.get(created.runId);
+      const version = run?.agentVersionId ? await ctx.db.get(run.agentVersionId) : null;
+      return { run, version };
+    });
+    expect(state.run).toMatchObject({
+      agentId: activeAgentId,
+      companyId,
+      triggerType: "WEBHOOK",
+      objective: "Create a tenant summary from the public API.",
+      status: "QUEUED",
+    });
+    expect(state.run?.userId).toBeUndefined();
+    expect(state.run?.agentVersionId).toBeDefined();
+    expect(state.version).toMatchObject({
+      agentId: activeAgentId,
+      companyId,
+      versionNumber: 1,
+    });
+
+    await expect(t.mutation(internal.agentRuns.createPublicAgentRunInternal, {
+      agentId: inactiveAgentId,
+      companyId,
+      objective: "Should not run",
+    })).rejects.toThrow("Agent not found or inactive");
+
+    await expect(t.mutation(internal.agentRuns.createPublicAgentRunInternal, {
+      agentId: activeAgentId,
+      companyId,
+      objective: " ",
+    })).rejects.toThrow("Objective is required");
+  });
+
   test("admins see only their company agent runs while super admins see all runs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -375,6 +440,106 @@ describe("Agent Runs", () => {
     expect(superAdminDetail?.toolCalls[0]).not.toHaveProperty("argumentsJson");
 
     await expect(adminBClient.query(api.agentRuns.getRunDetail, { runId })).rejects.toThrow("Unauthorized");
+  });
+
+  test("public run status reader returns sanitized tenant-scoped state", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, companyBId, agentId, runAId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Public Status Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const runAId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId: companyAId,
+        triggerType: "WEBHOOK",
+        objective: "Prepare public status summary",
+        status: "SUCCESS",
+        finalOutput: JSON.stringify({ answer: "Completed", privateTrace: "omit raw internals" }),
+        startedAt: 100,
+        completedAt: 180,
+        updatedAt: 180,
+        inputTokens: 10,
+        outputTokens: 20,
+        costGBP: 0.01,
+      });
+      const stepId = await ctx.db.insert("agentRunSteps", {
+        runId: runAId,
+        agentId,
+        companyId: companyAId,
+        stepIndex: 1,
+        kind: "MODEL",
+        status: "SUCCESS",
+        input: "Sensitive prompt",
+        output: "Safe result",
+        startedAt: 110,
+        completedAt: 170,
+      });
+      await ctx.db.insert("agentToolCalls", {
+        runId: runAId,
+        stepId,
+        agentId,
+        companyId: companyAId,
+        normalizedToolName: "knowledge.search",
+        handlerMapping: "knowledge.search",
+        argumentsJson: JSON.stringify({ query: "private" }),
+        status: "SUCCESS",
+        sideEffectLevel: "READ",
+        requiredRole: "ADMIN",
+        confirmationRequired: false,
+        startedAt: 120,
+        completedAt: 130,
+      });
+      await ctx.db.insert("agentRunApprovals", {
+        runId: runAId,
+        stepId,
+        agentId,
+        companyId: companyAId,
+        message: "Approval evidence",
+        status: "APPROVED",
+        requestedAt: 130,
+        reviewedAt: 140,
+      });
+
+      return { companyAId, companyBId, agentId, runAId };
+    });
+
+    const status = await t.query(internal.agentRuns.getPublicRunStatusInternal, {
+      runId: runAId,
+      companyId: companyAId,
+    });
+    expect(status).toMatchObject({
+      runId: runAId,
+      agentId,
+      companyId: companyAId,
+      status: "SUCCESS",
+      triggerType: "WEBHOOK",
+      objective: "Prepare public status summary",
+      latencyMs: 80,
+      inputTokens: 10,
+      outputTokens: 20,
+      costGBP: 0.01,
+      counts: {
+        steps: 1,
+        approvals: 1,
+        toolCalls: 1,
+      },
+    });
+    expect(status?.finalOutputPreview).toContain("Completed");
+    expect(JSON.stringify(status)).not.toContain("Sensitive prompt");
+    expect(JSON.stringify(status)).not.toContain("argumentsJson");
+
+    await expect(t.query(internal.agentRuns.getPublicRunStatusInternal, {
+      runId: runAId,
+      companyId: companyBId,
+    })).resolves.toBeNull();
   });
 
   test("pending approval list and decisions are tenant-scoped and audited", async () => {
@@ -800,6 +965,162 @@ describe("Agent Runs", () => {
     expect(superAdminAnalytics.totals.costGBP).toBeCloseTo(0.91);
     expect(superAdminAnalytics.totals.toolCalls).toBe(4);
     expect(superAdminAnalytics.totals.feedback).toBe(3);
+  });
+
+  test("run observatory summarizes recent runs across visible agents", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminAId, superAdminId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: now });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@example.com",
+        role: "ADMIN",
+        companyId: companyAId,
+      });
+      const adminBId = await ctx.db.insert("users", {
+        email: "admin-b@example.com",
+        role: "ADMIN",
+        companyId: companyBId,
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const supportAgentId = await ctx.db.insert("agents", {
+        name: "Support Agent",
+        modelId: "model-support",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const billingAgentId = await ctx.db.insert("agents", {
+        name: "Billing Agent",
+        modelId: "model-billing",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const successRunId = await ctx.db.insert("agentRuns", {
+        agentId: supportAgentId,
+        companyId: companyAId,
+        userId: adminAId,
+        triggerType: "CHAT",
+        objective: "Answer support question",
+        status: "SUCCESS",
+        modelId: "model-support",
+        providerKey: "openai",
+        inputTokens: 100,
+        outputTokens: 30,
+        costGBP: 0.2,
+        startedAt: now - 10_000,
+        completedAt: now - 9_000,
+        updatedAt: now - 9_000,
+      });
+      const failedRunId = await ctx.db.insert("agentRuns", {
+        agentId: billingAgentId,
+        companyId: companyAId,
+        userId: adminAId,
+        triggerType: "WORKFLOW",
+        objective: "Prepare billing exception",
+        status: "FAILED",
+        modelId: "model-billing",
+        providerKey: "google",
+        inputTokens: 50,
+        outputTokens: 10,
+        costGBP: 0.1,
+        startedAt: now - 8_000,
+        completedAt: now - 7_000,
+        updatedAt: now - 7_000,
+        error: "Tool validation failed",
+      });
+      await ctx.db.insert("agentRuns", {
+        agentId: supportAgentId,
+        companyId: companyBId,
+        userId: adminBId,
+        triggerType: "SCHEDULE",
+        objective: "Foreign tenant report",
+        status: "FAILED",
+        modelId: "model-support",
+        providerKey: "openai",
+        costGBP: 9,
+        startedAt: now - 6_000,
+        completedAt: now - 5_000,
+        updatedAt: now - 5_000,
+        error: "Foreign tenant failure",
+      });
+      await ctx.db.insert("agentToolCalls", {
+        runId: successRunId,
+        agentId: supportAgentId,
+        normalizedToolName: "knowledge_search",
+        handlerMapping: "knowledge.search",
+        argumentsJson: "{}",
+        resultJson: "{}",
+        status: "SUCCESS",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        companyId: companyAId,
+        userId: adminAId,
+        startedAt: now - 9_800,
+        completedAt: now - 9_700,
+      });
+      await ctx.db.insert("agentToolCalls", {
+        runId: failedRunId,
+        agentId: billingAgentId,
+        normalizedToolName: "billing_update",
+        handlerMapping: "billing.exception.update",
+        argumentsJson: "{}",
+        status: "FAILED",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        companyId: companyAId,
+        userId: adminAId,
+        startedAt: now - 7_800,
+        completedAt: now - 7_700,
+      });
+
+      return { adminAId, superAdminId };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const adminObservatory = await adminAClient.query(api.agentRuns.getRunObservatory, { lookbackDays: 1 });
+    expect(adminObservatory.scope).toBe("company");
+    expect(adminObservatory.totals).toMatchObject({
+      runs: 2,
+      successfulRuns: 1,
+      failedRuns: 1,
+      activeRuns: 0,
+      inputTokens: 150,
+      outputTokens: 40,
+      successRate: 0.5,
+      averageLatencyMs: 1000,
+    });
+    expect(adminObservatory.totals.costGBP).toBeCloseTo(0.3);
+    expect(adminObservatory.agentStats).toEqual(expect.arrayContaining([
+      expect.objectContaining({ agentName: "Billing Agent", failures: 1 }),
+      expect.objectContaining({ agentName: "Support Agent", runs: 1 }),
+    ]));
+    expect(adminObservatory.toolStats).toEqual(expect.arrayContaining([
+      expect.objectContaining({ handlerMapping: "billing.exception.update", calls: 1, failures: 1, writeOrExternal: 1 }),
+    ]));
+    expect(adminObservatory.failureReasons).toEqual([{ reason: "Tool validation failed", count: 1 }]);
+    expect(adminObservatory.recentRuns.map((run) => run.objective)).not.toContain("Foreign tenant report");
+
+    const superAdminObservatory = await superAdminClient.query(api.agentRuns.getRunObservatory, { lookbackDays: 1 });
+    expect(superAdminObservatory.scope).toBe("platform");
+    expect(superAdminObservatory.totals.runs).toBe(3);
+    expect(superAdminObservatory.failureReasons).toEqual(expect.arrayContaining([
+      { reason: "Foreign tenant failure", count: 1 },
+      { reason: "Tool validation failed", count: 1 },
+    ]));
   });
 
   test("failed runs can be replayed and active runs can be cancelled with cleanup", async () => {

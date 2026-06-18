@@ -15,7 +15,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
+  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={alt} {...props} />
+  ),
 }));
 
 vi.mock("next/link", () => ({
@@ -82,6 +85,30 @@ const latestRelease = {
   releaseNotes: "Ready after release gate coverage.",
   rollbackPlan: "Deactivate and review recent runs.",
   versionNumber: 1,
+  snapshotComparison: {
+    baselineVersionNumber: 0,
+    currentVersionNumber: 1,
+    changedAreas: ["Prompt and schemas", "Tools", "Policy"],
+    unchangedAreas: ["Model config"],
+    details: [
+      {
+        area: "Prompt and schemas",
+        before: "Prompt: Draft support prompt",
+        after: "Prompt: Reviewed support prompt",
+      },
+      {
+        area: "Tools",
+        before: "knowledge.search",
+        after: "knowledge.search | tickets.create",
+      },
+      {
+        area: "Policy",
+        before: "internet blocked / manual trigger",
+        after: "internet allowed / manual trigger",
+      },
+    ],
+    summary: "3 release areas changed from the previous live snapshot.",
+  },
   createdAt: Date.UTC(2026, 5, 16),
   approvedAt: Date.UTC(2026, 5, 16, 11),
 };
@@ -91,7 +118,8 @@ describe("AgentOverviewPage release visibility", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockImplementation((queryFn, _args?) => {
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
       const functionName = getFunctionName(queryFn);
       if (functionName === "agents:get") return agent as unknown as ReturnType<typeof useQuery>;
       if (functionName === "agents:getAgentReadiness") return readiness as unknown as ReturnType<typeof useQuery>;
@@ -110,7 +138,24 @@ describe("AgentOverviewPage release visibility", () => {
     expect(screen.getByText("Ready after release gate coverage.")).toBeInTheDocument();
     expect(screen.getByText("APPROVED")).toBeInTheDocument();
     expect(screen.getByText("Activate release")).toBeInTheDocument();
+    expect(screen.getByText("Snapshot comparison")).toBeInTheDocument();
+    expect(screen.getByText("3 release areas changed from the previous live snapshot.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Ship Checks" })).toHaveAttribute("href", "/admin/releases");
+  });
+
+  it("expands the full release snapshot field diff", () => {
+    render(<AgentOverviewPage />);
+
+    expect(screen.getAllByText("Prompt and schemas").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Tools").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Before: internet blocked/)).not.toBeInTheDocument();
+    expect(screen.getByText("Stable fields")).toBeInTheDocument();
+    expect(screen.getByText("Model config")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all 3 fields" }));
+
+    expect(screen.getByText(/Before: internet blocked/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show fewer fields" })).toBeInTheDocument();
   });
 
   it("can activate an approved release from agent settings", async () => {

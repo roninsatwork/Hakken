@@ -43,6 +43,12 @@ type PatchPreviewRow = {
   after?: string;
   note?: string;
 };
+type ReviewGuidance = {
+  priority: "HIGH" | "MEDIUM" | "LOW" | "CLEAR";
+  label: string;
+  detail: string;
+  nextAction: string;
+};
 
 const REVIEW_INBOX_MODES: Array<{ value: ReviewInboxMode; label: string }> = [
   { value: "OPEN", label: "Open" },
@@ -89,6 +95,13 @@ function getStatusColor(status: string) {
   if (status === "APPLIED" || status === "CONVERTED") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
   if (status === "REJECTED" || status === "DISMISSED") return "text-red-400 bg-red-500/10 border-red-500/20";
   return "text-secondary bg-foreground/5 border-border-dim";
+}
+
+function getGuidanceColor(priority: ReviewGuidance["priority"]) {
+  if (priority === "HIGH") return "border-red-500/20 bg-red-500/10 text-red-300";
+  if (priority === "MEDIUM") return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+  if (priority === "LOW") return "border-sky-500/20 bg-sky-500/10 text-sky-300";
+  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
 }
 
 function getReviewTypeLabel(value: string) {
@@ -495,6 +508,18 @@ export default function AgentMemoryPage() {
               ))}
             </div>
           </div>
+
+          {reviewInbox?.reviewGuidance ? (
+            <div className={`rounded-[8px] border px-4 py-3 flex flex-col gap-2 ${getGuidanceColor(reviewInbox.reviewGuidance.priority)}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                <span className="text-[10px] uppercase tracking-widest font-mono">{reviewInbox.reviewGuidance.priority}</span>
+                <span className="text-[13px] font-semibold text-foreground">{reviewInbox.reviewGuidance.label}</span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-secondary">{reviewInbox.reviewGuidance.detail}</p>
+              <p className="text-[12px] leading-relaxed text-foreground">{reviewInbox.reviewGuidance.nextAction}</p>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             {REVIEW_INBOX_MODES.map((mode) => (

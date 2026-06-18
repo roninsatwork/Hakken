@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("release readiness overview", () => {
@@ -132,11 +132,26 @@ describe("release readiness overview", () => {
       activationRisk: false,
     });
 
+    const activationWindowStart = Date.now() - 60_000;
+    const activationWindowEnd = Date.now() + 60_000;
+    await expect(client.mutation(api.releases.createReleaseCandidate, {
+      agentId: readyAgentId,
+      title: "Invalid Window",
+      activationWindowStart: activationWindowEnd,
+      activationWindowEnd: activationWindowStart,
+    })).rejects.toThrow("Activation window end must be after the start.");
+
     const releaseId = await client.mutation(api.releases.createReleaseCandidate, {
       agentId: readyAgentId,
       title: "Ready Candidate v1",
+      ownerEmail: "release-owner@example.com",
+      activationWindowStart,
+      activationWindowEnd,
     });
-    await expect(client.mutation(api.releases.approveReleaseCandidate, { releaseId })).resolves.toBe(releaseId);
+    await expect(client.mutation(api.releases.approveReleaseCandidate, {
+      releaseId,
+      approvalComment: "Reviewed smoke eval, release gate, and rollback plan.",
+    })).resolves.toBe(releaseId);
     await expect(client.mutation(api.releases.activateReleaseCandidate, { releaseId })).resolves.toBe(releaseId);
     const activeAgent = await t.run(async (ctx) => await ctx.db.get(readyAgentId));
     expect(activeAgent?.isActive).toBe(true);
@@ -149,15 +164,107 @@ describe("release readiness overview", () => {
       title: "Ready Candidate v1",
       status: "ACTIVATED",
       versionNumber: 1,
+      ownerEmail: "release-owner@example.com",
+      approvalComment: "Reviewed smoke eval, release gate, and rollback plan.",
+      activationWindowStart,
+      activationWindowEnd,
+    });
+    expect(recentReleases[0]?.evidenceSummary).toMatchObject({
+      summary: "Release evidence was complete when this record was created or refreshed.",
+      items: expect.arrayContaining([
+        { label: "Smoke evals", value: "1 passed", status: "PASS" },
+        { label: "Release gate", value: "1/1 critical passed", status: "PASS" },
+      ]),
+    });
+    expect(recentReleases[0]?.nextAction).toMatchObject({
+      tone: "REVIEW",
+      label: "Monitor live release",
     });
 
-    await expect(client.mutation(api.releases.rollbackRelease, { releaseId })).resolves.toBe(releaseId);
+    await expect(client.mutation(api.releases.rollbackRelease, {
+      releaseId,
+      rollbackReason: "Regression found in post-release run review.",
+    })).resolves.toBe(releaseId);
     const rolledBackAgent = await t.run(async (ctx) => await ctx.db.get(readyAgentId));
     expect(rolledBackAgent?.isActive).toBe(false);
     const rolledBackReleases = await client.query(api.releases.getRecentReleases, {});
     expect(rolledBackReleases[0]).toMatchObject({
       _id: releaseId,
       status: "ROLLED_BACK",
+      rollbackReason: "Regression found in post-release run review.",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(readyAgentId, {
+        systemPrompt: "Use the release handbook and include a concise escalation summary.",
+        updatedAt: Date.now(),
+      });
+    });
+    const changedReleaseId = await client.mutation(api.releases.createReleaseCandidate, {
+      agentId: readyAgentId,
+      title: "Ready Candidate v2",
+    });
+    const comparedReleases = await client.query(api.releases.getRecentReleases, {});
+    const changedRelease = comparedReleases.find((release) => release._id === changedReleaseId);
+    expect(changedRelease?.snapshotComparison).toMatchObject({
+      baselineReleaseId: releaseId,
+      baselineTitle: "Ready Candidate v1",
+      baselineVersionNumber: 1,
+      currentVersionNumber: 2,
+      changedAreas: ["Prompt and schemas"],
+      details: [{
+        area: "Prompt and schemas",
+        before: "Prompt: Empty | Input: None | Output: None",
+        after: "Prompt: Use the release handbook and include a concise escalation summary. | Input: None | Output: None",
+      }],
+    });
+    await expect(client.mutation(api.releases.cancelReleaseCandidate, {
+      releaseId: changedReleaseId,
+      cancellationReason: "Superseded before activation.",
+    })).resolves.toBe(changedReleaseId);
+    const cancelledReleases = await client.query(api.releases.getRecentReleases, {});
+    expect(cancelledReleases.find((release) => release._id === changedReleaseId)).toMatchObject({
+      status: "CANCELLED",
+      cancellationReason: "Superseded before activation.",
+    });
+
+    const scheduledActivationNow = Date.now();
+    const restoreReleaseId = await client.mutation(api.releases.createReleaseCandidate, {
+      agentId: readyAgentId,
+      title: "Ready Candidate v3",
+      activationWindowStart: scheduledActivationNow - 1,
+      activationWindowEnd: scheduledActivationNow + 60_000,
+    });
+    await expect(client.mutation(api.releases.approveReleaseCandidate, {
+      releaseId: restoreReleaseId,
+      approvalComment: "Approve changed prompt for rollback restore coverage.",
+    })).resolves.toBe(restoreReleaseId);
+    await expect(t.mutation(internal.releases.activateDueReleaseCandidates, {
+      now: scheduledActivationNow,
+    })).resolves.toMatchObject({
+      checked: 1,
+      activated: 1,
+      failed: 0,
+    });
+    const changedPromptAgent = await t.run(async (ctx) => await ctx.db.get(readyAgentId));
+    expect(changedPromptAgent).toMatchObject({
+      isActive: true,
+      systemPrompt: "Use the release handbook and include a concise escalation summary.",
+    });
+
+    await expect(client.mutation(api.releases.rollbackRelease, {
+      releaseId: restoreReleaseId,
+      rollbackReason: "Restore the previous live prompt after review.",
+    })).resolves.toBe(restoreReleaseId);
+    const restoredAgent = await t.run(async (ctx) => await ctx.db.get(readyAgentId));
+    expect(restoredAgent).toMatchObject({
+      isActive: true,
+      systemPrompt: "",
+    });
+    const restoredReleases = await client.query(api.releases.getRecentReleases, {});
+    expect(restoredReleases.find((release) => release._id === restoreReleaseId)).toMatchObject({
+      status: "ROLLED_BACK",
+      rollbackReason: "Restore the previous live prompt after review.",
     });
   });
 });

@@ -108,4 +108,319 @@ describe("OWASP: Broken Access Control - Settings", () => {
     });
     expect(auditLogs[1].entityId).toBe(settingsRows[0]._id);
   });
+
+  test("white-label readiness is super-admin scoped and includes widget evidence", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Ops",
+        brandColorHex: "#123456",
+        logoUrlLight: "https://cdn.example/light.png",
+        logoUrlDark: "https://cdn.example/dark.png",
+        emailSenderAddress: "ops@example.com",
+        diagnosticRoutingEnabled: false,
+      });
+      await ctx.db.insert("widgets", {
+        companyId,
+        name: "Acme Widget",
+        allowedDomains: ["https://acme.example"],
+        themePrimaryColor: "#123456",
+        themeGreeting: "Hello from Acme",
+        themeLogoUrl: "https://cdn.example/widget.png",
+        themePlaceholder: "Ask Acme",
+        isActive: true,
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+      });
+      return { companyId, superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelReadiness, {})).rejects.toThrow("Unauthorized");
+
+    const readiness = await superAdminClient.query(api.settings.getWhiteLabelReadiness, {});
+    expect(readiness).toMatchObject({
+      readyCount: 6,
+      pendingCount: 0,
+      manualCount: 1,
+      nextActions: ["production"],
+    });
+    expect(readiness.items.find((item) => item.key === "widget")).toMatchObject({
+      status: "ready",
+      evidence: "active-branded-widget",
+    });
+    expect(companyId).toBeDefined();
+  });
+
+  test("white-label module presets are super-admin scoped and code-backed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      return { superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelModulePresets, {})).rejects.toThrow("Unauthorized");
+
+    const presets = await superAdminClient.query(api.settings.getWhiteLabelModulePresets, {});
+    expect(presets.map((preset) => preset.key)).toEqual([
+      "knowledgeAssistant",
+      "supportWidget",
+      "operatorWorkspace",
+    ]);
+    expect(presets[1]).toMatchObject({
+      href: "/admin/ai/widget",
+      linkLabelKey: "widget",
+      readinessDependencies: ["identity", "brandColor", "widget", "email", "production"],
+    });
+  });
+
+  test("white-label handoff summary is super-admin scoped and composes brand, widget, and email posture", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Ops",
+        brandColorHex: "#123456",
+        logoUrlLight: "https://cdn.example/light.png",
+        logoUrlDark: "https://cdn.example/dark.png",
+        emailSenderName: "Acme Ops",
+        emailSenderAddress: "ops@example.com",
+        diagnosticRoutingEnabled: false,
+      });
+      await ctx.db.insert("widgets", {
+        companyId,
+        name: "Acme Widget",
+        allowedDomains: ["https://acme.example"],
+        themePrimaryColor: "#123456",
+        themeGreeting: "Hello from Acme",
+        themeLogoUrl: "https://cdn.example/widget.png",
+        themePlaceholder: "Ask Acme",
+        isActive: true,
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+      });
+      return { companyId, superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelHandoffSummary, {})).rejects.toThrow("Unauthorized");
+
+    const summary = await superAdminClient.query(api.settings.getWhiteLabelHandoffSummary, {});
+    expect(summary).toMatchObject({
+      productName: "Acme Ops",
+      brandColorHex: "#123456",
+      logoMode: "light-and-dark",
+      emailFromAddress: "Acme Ops <ops@example.com>",
+      widgetStatus: "ready",
+      widgetEvidence: "active-branded-widget",
+      diagnosticsStatus: "ready",
+      productionStatus: "manual",
+      nextActions: ["production"],
+      recommendedPresetKeys: ["knowledgeAssistant", "supportWidget", "operatorWorkspace"],
+    });
+    expect(summary.readinessScore).toBeCloseTo(6 / 7);
+    expect(companyId).toBeDefined();
+  });
+
+  test("white-label navigation profiles are super-admin scoped and code-backed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      return { superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelNavigationProfiles, {})).rejects.toThrow("Unauthorized");
+
+    const profiles = await superAdminClient.query(api.settings.getWhiteLabelNavigationProfiles, {});
+    expect(profiles.map((profile) => profile.key)).toEqual([
+      "customerWorkspace",
+      "supportWidget",
+      "operatorConsole",
+    ]);
+    expect(profiles[2]).toMatchObject({
+      visible: ["adminDashboard", "agents", "workflows", "approvals", "runObservatory"],
+      owner: ["releaseCenter", "systemHealth", "auditLogs"],
+      implementationNotes: ["superAdminOnly", "auditRouteChanges", "documentHiddenRoutes"],
+    });
+  });
+
+  test("white-label packaging checklist is super-admin scoped and composes handoff evidence", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Ops",
+        brandColorHex: "#123456",
+        logoUrlLight: "https://cdn.example/light.png",
+        logoUrlDark: "https://cdn.example/dark.png",
+        emailSenderName: "Acme Ops",
+        emailSenderAddress: "ops@example.com",
+        diagnosticRoutingEnabled: false,
+      });
+      await ctx.db.insert("widgets", {
+        companyId,
+        name: "Acme Widget",
+        allowedDomains: ["https://acme.example"],
+        themePrimaryColor: "#123456",
+        themeGreeting: "Hello from Acme",
+        themeLogoUrl: "https://cdn.example/widget.png",
+        themePlaceholder: "Ask Acme",
+        isActive: true,
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+      });
+      return { superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelPackagingChecklist, {})).rejects.toThrow("Unauthorized");
+
+    const checklist = await superAdminClient.query(api.settings.getWhiteLabelPackagingChecklist, {});
+    expect(checklist).toMatchObject({
+      title: "Acme Ops white-label packaging checklist",
+      productName: "Acme Ops",
+      readinessPercent: 86,
+    });
+    expect(checklist.sections.map((section) => section.key)).toEqual([
+      "brand",
+      "readiness",
+      "modules",
+      "navigation",
+      "domains",
+      "developerFollowUp",
+    ]);
+    expect(checklist.markdown).toContain("Runtime sender: Acme Ops <ops@example.com>");
+    expect(checklist.markdown).toContain("customerWorkspace: show appDashboard");
+    expect(checklist.markdown).toContain("Custom domain readiness");
+    expect(checklist.markdown).toContain("ready - widgetDomains: https://acme.example");
+  });
+
+  test("white-label custom domain checklist is super-admin scoped and includes widget and email evidence", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, superAdminId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Ops",
+        brandColorHex: "#123456",
+        emailSenderAddress: "ops@example.com",
+        diagnosticRoutingEnabled: false,
+      });
+      await ctx.db.insert("widgets", {
+        companyId,
+        name: "Acme Widget",
+        allowedDomains: ["https://acme.example"],
+        isActive: true,
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+      });
+      return { companyId, superAdminId, adminId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await expect(adminClient.query(api.settings.getWhiteLabelCustomDomainChecklist, {})).rejects.toThrow("Unauthorized");
+
+    const checklist = await superAdminClient.query(api.settings.getWhiteLabelCustomDomainChecklist, {});
+    expect(checklist).toMatchObject({
+      readyCount: 2,
+      manualCount: 4,
+      pendingCount: 0,
+      totalCount: 6,
+    });
+    expect(checklist.items.find((item) => item.key === "widgetDomains")).toMatchObject({
+      status: "ready",
+      evidence: "https://acme.example",
+    });
+    expect(checklist.items.find((item) => item.key === "emailDomain")).toMatchObject({
+      status: "ready",
+      evidence: "example.com",
+    });
+    expect(companyId).toBeDefined();
+  });
 });

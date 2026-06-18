@@ -3,13 +3,20 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { requireSuperAdmin } from "./authz";
 import {
+  buildWhiteLabelCustomDomainChecklist,
+  buildWhiteLabelHandoffSummary,
+  buildWhiteLabelPackagingChecklist,
   buildSettingsAuditMetadata,
   buildSettingsInsertRecord,
   buildSettingsPatch,
+  buildWhiteLabelReadiness,
   DEFAULT_SETTINGS,
+  getWhiteLabelModulePresets as getWhiteLabelModulePresetCatalog,
+  getWhiteLabelNavigationProfiles as getWhiteLabelNavigationProfileCatalog,
   isStorageLogoReference,
   mergeSettingsWithDefaults,
 } from "./settingsService";
+import { buildEmailBranding } from "./emailBrandingService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const get = query({
@@ -122,6 +129,109 @@ export const getEmailBranding = internalQuery({
       emailSenderName: settings?.emailSenderName,
       emailSenderAddress: settings?.emailSenderAddress,
     };
+  },
+});
+
+export const getWhiteLabelReadiness = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
+    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
+      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
+        .find((widget) => widget.isActive);
+
+    return buildWhiteLabelReadiness({ settings, activeWidget });
+  },
+});
+
+export const getWhiteLabelModulePresets = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    return getWhiteLabelModulePresetCatalog();
+  },
+});
+
+export const getWhiteLabelNavigationProfiles = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    return getWhiteLabelNavigationProfileCatalog();
+  },
+});
+
+export const getWhiteLabelCustomDomainChecklist = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
+    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
+      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
+        .find((widget) => widget.isActive);
+
+    return buildWhiteLabelCustomDomainChecklist({ settings, activeWidget });
+  },
+});
+
+export const getWhiteLabelHandoffSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
+    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
+      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
+        .find((widget) => widget.isActive);
+    const readiness = buildWhiteLabelReadiness({ settings, activeWidget });
+    const modulePresets = getWhiteLabelModulePresetCatalog();
+    const emailBranding = buildEmailBranding(settings);
+
+    return buildWhiteLabelHandoffSummary({
+      settings,
+      activeWidget,
+      readiness,
+      presets: modulePresets,
+      emailFromAddress: emailBranding.fromAddress,
+    });
+  },
+});
+
+export const getWhiteLabelPackagingChecklist = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
+    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
+      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
+        .find((widget) => widget.isActive);
+    const readiness = buildWhiteLabelReadiness({ settings, activeWidget });
+    const modulePresets = getWhiteLabelModulePresetCatalog();
+    const navigationProfiles = getWhiteLabelNavigationProfileCatalog();
+    const customDomainChecklist = buildWhiteLabelCustomDomainChecklist({ settings, activeWidget });
+    const emailBranding = buildEmailBranding(settings);
+    const handoffSummary = buildWhiteLabelHandoffSummary({
+      settings,
+      activeWidget,
+      readiness,
+      presets: modulePresets,
+      emailFromAddress: emailBranding.fromAddress,
+    });
+
+    return buildWhiteLabelPackagingChecklist({
+      handoffSummary,
+      readiness,
+      modulePresets,
+      navigationProfiles,
+      customDomainChecklist,
+    });
   },
 });
 

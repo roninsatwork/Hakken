@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query, internalQuery, action, httpAction } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation, action, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
@@ -20,6 +20,8 @@ function constantTimeEqual(a: string, b: string) {
   }
   return result === 0;
 }
+
+const PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH = 20_000;
 
 export const list = query({
   args: {},
@@ -236,6 +238,40 @@ export const triggerManualRun = mutation({
     });
 
     return executionId;
+  },
+});
+
+export const createPublicWorkflowRunInternal = internalMutation({
+  args: {
+    workflowId: v.id("workflows"),
+    companyId: v.id("companies"),
+    initialInput: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ executionId: Id<"workflowExecutions">; status: "RUNNING" }> => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow || !workflow.isActive || workflow.triggerType !== "WEBHOOK") {
+      throw new Error("Workflow not found or not configured for public triggers.");
+    }
+
+    const initialInput = args.initialInput?.trim();
+    if (initialInput && initialInput.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
+      throw new Error(`Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} characters.`);
+    }
+
+    const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
+      workflowId: args.workflowId,
+      companyId: args.companyId,
+      triggerType: "WEBHOOK",
+      startedBy: workflow.createdBy,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.workflowRuntime.startWorkflow, {
+      workflowId: args.workflowId,
+      executionId,
+      initialInput,
+    });
+
+    return { executionId, status: "RUNNING" };
   },
 });
 

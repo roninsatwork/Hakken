@@ -27,6 +27,29 @@ const KNOWLEDGE_RETRIEVAL_RESULT_LIMIT = 8;
 const KNOWLEDGE_HISTORY_LIMIT = 8;
 const KNOWLEDGE_BULK_REPAIR_LIMIT = 25;
 const STALE_INGESTION_MS = 15 * 60 * 1000;
+const KNOWLEDGE_COVERAGE_TERM_LIMIT = 6;
+const KNOWLEDGE_COVERAGE_CHUNK_SAMPLE_LIMIT = 8;
+
+const coverageStopWords = new Set([
+  "agent",
+  "assistant",
+  "support",
+  "help",
+  "with",
+  "from",
+  "that",
+  "this",
+  "will",
+  "should",
+  "using",
+  "into",
+  "about",
+  "company",
+  "customer",
+  "customers",
+  "user",
+  "users",
+]);
 
 function truncatePreview(value: string | undefined, limit = 900) {
   const normalized = (value || "").trim().replace(/\s+/g, " ");
@@ -41,6 +64,20 @@ function getRetrievalTokens(value: string) {
   return Array.from(new Set(value.toLowerCase().match(/[a-z0-9]+/g) ?? []))
     .filter((token) => token.length >= 2)
     .slice(0, 12);
+}
+
+function getCoverageTokens(value: string) {
+  return Array.from(new Set(value.toLowerCase().match(/[a-z0-9]+/g) ?? []))
+    .filter((token) => token.length >= 4 && !coverageStopWords.has(token))
+    .slice(0, 40);
+}
+
+function getAgentCoverageTerms(agent: Pick<Doc<"agents">, "name" | "description" | "systemPrompt">) {
+  return getCoverageTokens([
+    agent.name,
+    agent.description,
+    agent.systemPrompt,
+  ].filter(Boolean).join(" ")).slice(0, KNOWLEDGE_COVERAGE_TERM_LIMIT);
 }
 
 function scoreChunkForRetrieval(args: { chunkText: string; query: string; tokens: string[] }) {
@@ -540,6 +577,40 @@ export const getQualitySummary = query({
     const totalChunks = Array.from(chunkCountByDocument.values()).reduce((sum, count) => sum + count, 0);
     const readyDocuments = statusCounts.ready;
     const embeddingDriftCount = Array.from(embeddingDriftByDocument.values()).filter(Boolean).length;
+    const agent = args.agentId ? await ctx.db.get(args.agentId) : null;
+    const coverageTerms = agent ? getAgentCoverageTerms(agent) : [];
+    const readyDocumentsForCoverage = coverageTerms.length > 0
+      ? documents.filter((document) => document.status === "ready")
+      : [];
+    const coverageTextParts = await Promise.all(readyDocumentsForCoverage.map(async (document) => {
+      const chunks = await ctx.db
+        .query("knowledgeChunks")
+        .withIndex("by_document", (q) => q.eq("documentId", document._id))
+        .take(KNOWLEDGE_COVERAGE_CHUNK_SAMPLE_LIMIT);
+      return [
+        document.title,
+        document.textContent,
+        ...chunks.map((chunk) => chunk.text),
+      ].filter(Boolean).join(" ");
+    }));
+    const coverageCorpus = coverageTextParts.join(" ").toLowerCase();
+    const coverageCorpusTokens = new Set(coverageCorpus.match(/[a-z0-9]+/g) ?? []);
+    const coveredCoverageTerms = coverageTerms.filter((term) => coverageCorpusTokens.has(term));
+    const topicCoverage = coverageTerms.length > 0 ? {
+      score: coveredCoverageTerms.length / coverageTerms.length,
+      terms: coverageTerms.map((term) => ({
+        term,
+        covered: coverageCorpusTokens.has(term),
+      })),
+      coveredCount: coveredCoverageTerms.length,
+      totalCount: coverageTerms.length,
+      readyDocumentCount: readyDocumentsForCoverage.length,
+      recommendation: readyDocumentsForCoverage.length === 0
+        ? "Add approved knowledge documents before relying on this agent."
+        : coverageTerms.some((term) => !coverageCorpusTokens.has(term))
+          ? "Add or repair knowledge for missing agent-purpose topics before release."
+          : "Agent-purpose topics are represented in sampled ready knowledge.",
+    } : null;
 
     return {
       totals: {
@@ -553,6 +624,7 @@ export const getQualitySummary = query({
         sampledChunks: totalChunks,
         readyCoverage: documents.length > 0 ? readyDocuments / documents.length : 0,
       },
+      topicCoverage,
       flaggedDocuments,
     };
   },

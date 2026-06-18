@@ -119,7 +119,8 @@ describe("LaunchPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockImplementation((queryFn, _args?) => {
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
       const functionName = getFunctionName(queryFn);
       if (functionName === "appTemplates:getAppTemplateGallery") {
         return templates as unknown as ReturnType<typeof useQuery>;

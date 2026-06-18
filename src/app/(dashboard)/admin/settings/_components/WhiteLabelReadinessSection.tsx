@@ -10,15 +10,25 @@ type ReadinessStatus = "ready" | "pending" | "manual";
 
 type ReadinessItem = {
   key: string;
-  label: string;
-  description: string;
   status: ReadinessStatus;
   href?: string;
   command?: string;
+  evidence?: string;
+};
+
+export type WhiteLabelReadiness = {
+  score: number;
+  readyCount: number;
+  pendingCount: number;
+  manualCount: number;
+  totalCount: number;
+  items: ReadinessItem[];
+  nextActions: string[];
 };
 
 type WhiteLabelReadinessSectionProps = {
   formData: SystemSettingsFormData;
+  readiness?: WhiteLabelReadiness;
   t: TranslationFn;
 };
 
@@ -60,7 +70,7 @@ function getStatusStyles(status: ReadinessStatus) {
   };
 }
 
-export function WhiteLabelReadinessSection({ formData, t }: WhiteLabelReadinessSectionProps) {
+function buildLocalReadiness(formData: SystemSettingsFormData): WhiteLabelReadiness {
   const platformName = typeof formData.platformName === "string" ? formData.platformName.trim() : "";
   const hasCustomName = platformName.length > 0 && !DEFAULT_PLATFORM_NAMES.has(platformName.toLowerCase());
   const hasEmailSender = isLikelyEmailAddress(formData.emailSenderAddress);
@@ -68,56 +78,32 @@ export function WhiteLabelReadinessSection({ formData, t }: WhiteLabelReadinessS
   const items: ReadinessItem[] = [
     {
       key: "identity",
-      label: t("whiteLabel.items.identity.label"),
-      description: hasCustomName
-        ? t("whiteLabel.items.identity.ready")
-        : t("whiteLabel.items.identity.pending"),
       status: hasCustomName ? "ready" : "pending",
     },
     {
       key: "logos",
-      label: t("whiteLabel.items.logos.label"),
-      description: isPresent(formData.logoUrlLight) && isPresent(formData.logoUrlDark)
-        ? t("whiteLabel.items.logos.ready")
-        : t("whiteLabel.items.logos.pending"),
       status: isPresent(formData.logoUrlLight) && isPresent(formData.logoUrlDark) ? "ready" : "pending",
     },
     {
       key: "brandColor",
-      label: t("whiteLabel.items.brandColor.label"),
-      description: isHexColor(formData.brandColorHex)
-        ? t("whiteLabel.items.brandColor.ready")
-        : t("whiteLabel.items.brandColor.pending"),
       status: isHexColor(formData.brandColorHex) ? "ready" : "pending",
     },
     {
       key: "diagnostics",
-      label: t("whiteLabel.items.diagnostics.label"),
-      description: formData.diagnosticRoutingEnabled
-        ? t("whiteLabel.items.diagnostics.pending")
-        : t("whiteLabel.items.diagnostics.ready"),
       status: formData.diagnosticRoutingEnabled ? "pending" : "ready",
     },
     {
       key: "widget",
-      label: t("whiteLabel.items.widget.label"),
-      description: t("whiteLabel.items.widget.manual"),
-      status: "manual",
+      status: "pending",
       href: "/admin/ai/widget",
     },
     {
       key: "email",
-      label: t("whiteLabel.items.email.label"),
-      description: hasEmailSender
-        ? t("whiteLabel.items.email.ready")
-        : t("whiteLabel.items.email.manual"),
       status: hasEmailSender ? "ready" : "manual",
       command: hasEmailSender ? undefined : "RESEND_FROM_EMAIL",
     },
     {
       key: "production",
-      label: t("whiteLabel.items.production.label"),
-      description: t("whiteLabel.items.production.manual"),
       status: "manual",
       command: "npm run setup:validate -- --profile=production",
     },
@@ -127,27 +113,47 @@ export function WhiteLabelReadinessSection({ formData, t }: WhiteLabelReadinessS
   const pendingCount = items.filter((item) => item.status === "pending").length;
   const manualCount = items.filter((item) => item.status === "manual").length;
 
+  return {
+    score: readyCount / items.length,
+    readyCount,
+    pendingCount,
+    manualCount,
+    totalCount: items.length,
+    items,
+    nextActions: items.filter((item) => item.status !== "ready").slice(0, 3).map((item) => item.key),
+  };
+}
+
+export function WhiteLabelReadinessSection({ formData, readiness, t }: WhiteLabelReadinessSectionProps) {
+  const resolvedReadiness = readiness ?? buildLocalReadiness(formData);
+  const readinessPercent = Math.round(resolvedReadiness.score * 100);
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
+          <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.score")}</span>
+          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{readinessPercent}%</span>
+        </div>
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.ready")}</span>
-          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{readyCount}</span>
+          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{resolvedReadiness.readyCount}</span>
         </div>
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.pending")}</span>
-          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{pendingCount}</span>
+          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{resolvedReadiness.pendingCount}</span>
         </div>
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.manual")}</span>
-          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{manualCount}</span>
+          <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{resolvedReadiness.manualCount}</span>
         </div>
       </div>
 
       <div className="border border-border-dim rounded-[16px] overflow-hidden">
-        {items.map((item, index) => {
+        {resolvedReadiness.items.map((item, index) => {
           const styles = getStatusStyles(item.status);
           const Icon = styles.icon;
+          const descriptionKey = item.status === "ready" ? "ready" : item.status === "pending" ? "pending" : "manual";
           return (
             <div
               key={item.key}
@@ -156,8 +162,11 @@ export function WhiteLabelReadinessSection({ formData, t }: WhiteLabelReadinessS
               <div className="flex items-start gap-3 min-w-0">
                 <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-current" />
                 <div className="flex flex-col gap-1 min-w-0">
-                  <span className="text-[14px] text-foreground font-semibold">{item.label}</span>
-                  <span className="text-[12px] text-muted leading-relaxed">{item.description}</span>
+                  <span className="text-[14px] text-foreground font-semibold">{t(`whiteLabel.items.${item.key}.label`)}</span>
+                  <span className="text-[12px] text-muted leading-relaxed">{t(`whiteLabel.items.${item.key}.${descriptionKey}`)}</span>
+                  {item.evidence && (
+                    <span className="text-[10px] font-mono text-muted/80">{item.evidence}</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3 lg:justify-end">

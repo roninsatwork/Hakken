@@ -153,6 +153,11 @@ describe("Agent Memory Candidates", () => {
       reflections: 1,
       highRisk: 1,
     });
+    expect(reviewInbox.reviewGuidance).toMatchObject({
+      priority: "HIGH",
+      label: "High-risk learning requires review",
+      nextAction: "Open High risk mode, inspect source runs, and approve only changes with clear evidence.",
+    });
     expect(reviewInbox.memoryCandidates.map((candidate) => candidate.candidateId).sort()).toEqual(
       failedResult.createdIds.map((id) => id).sort()
     );
@@ -194,6 +199,7 @@ describe("Agent Memory Candidates", () => {
       reflections: 0,
       highRisk: 1,
     });
+    expect(highRiskInbox.reviewGuidance.detail).toBe("1 high-risk learning item should be reviewed before routine memory approvals.");
 
     const otherTenantInbox = await adminBClient.query(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId });
     expect(otherTenantInbox.totals.open).toBe(0);
@@ -234,6 +240,11 @@ describe("Agent Memory Candidates", () => {
       improvementSuggestions: 0,
       reflections: 0,
       highRisk: 0,
+    });
+    expect(reviewedInbox.reviewGuidance).toMatchObject({
+      priority: "CLEAR",
+      label: "Reviewed learning history",
+      detail: "3 reviewed learning items matched the current filter.",
     });
     expect(reviewedInbox.memoryCandidates.map((candidate) => candidate.status).sort()).toEqual(["APPLIED", "APPLIED", "REJECTED"]);
     expect(reviewedInbox.memoryCandidates.every((candidate) => candidate.reviewedAt)).toBe(true);

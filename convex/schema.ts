@@ -212,6 +212,94 @@ export default defineSchema({
     .index("by_company", ["companyId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
 
+  apiKeys: defineTable({
+    companyId: v.id("companies"),
+    name: v.string(),
+    keyPrefix: v.string(),
+    keyDigest: v.string(),
+    scopes: v.array(v.union(
+      v.literal("agent:run"),
+      v.literal("workflow:run"),
+      v.literal("run:read"),
+      v.literal("webhook:deliver")
+    )),
+    status: v.union(v.literal("ACTIVE"), v.literal("REVOKED")),
+    rateLimitPerMinute: v.number(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    revokedBy: v.optional(v.id("users")),
+    revokedAt: v.optional(v.number()),
+    revocationReason: v.optional(v.string()),
+  })
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_prefix", ["keyPrefix"])
+    .index("by_created", ["createdAt"]),
+
+  publicApiRequests: defineTable({
+    companyId: v.optional(v.id("companies")),
+    apiKeyId: v.optional(v.id("apiKeys")),
+    keyPrefix: v.optional(v.string()),
+    method: v.string(),
+    path: v.string(),
+    requiredScope: v.optional(v.union(
+      v.literal("agent:run"),
+      v.literal("workflow:run"),
+      v.literal("run:read"),
+      v.literal("webhook:deliver")
+    )),
+    status: v.union(
+      v.literal("AUTHORIZED"),
+      v.literal("UNAUTHORIZED"),
+      v.literal("FORBIDDEN"),
+      v.literal("RATE_LIMITED")
+    ),
+    statusCode: v.number(),
+    error: v.optional(v.string()),
+    requestedAt: v.number(),
+  })
+    .index("by_company_requested", ["companyId", "requestedAt"])
+    .index("by_api_key_requested", ["apiKeyId", "requestedAt"])
+    .index("by_requested", ["requestedAt"]),
+
+  webhookDeliveries: defineTable({
+    companyId: v.id("companies"),
+    eventType: v.string(),
+    destinationUrl: v.string(),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("DELIVERING"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("RETRY_SCHEDULED"),
+      v.literal("ABANDONED")
+    ),
+    sourceType: v.optional(v.union(
+      v.literal("agentRun"),
+      v.literal("workflowRun"),
+      v.literal("publicApi"),
+      v.literal("manual")
+    )),
+    sourceId: v.optional(v.string()),
+    requestBodyPreview: v.optional(v.string()),
+    responseBodyPreview: v.optional(v.string()),
+    attemptCount: v.number(),
+    maxAttempts: v.number(),
+    lastStatusCode: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    nextAttemptAt: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_created", ["createdAt"]),
+
   appLaunchPlans: defineTable({
     templateId: v.string(),
     templateName: v.string(),
@@ -711,6 +799,10 @@ export default defineSchema({
     title: v.string(),
     releaseNotes: v.string(),
     rollbackPlan: v.string(),
+    ownerEmail: v.optional(v.string()),
+    approvalComment: v.optional(v.string()),
+    rollbackReason: v.optional(v.string()),
+    cancellationReason: v.optional(v.string()),
     activationWindowStart: v.optional(v.number()),
     activationWindowEnd: v.optional(v.number()),
     readinessJson: v.string(),
@@ -1113,6 +1205,7 @@ export default defineSchema({
 
   workflowExecutions: defineTable({
     workflowId: v.optional(v.id("workflows")),
+    companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
     agentRunId: v.optional(v.id("agentRuns")),
     status: v.union(v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
@@ -1122,6 +1215,7 @@ export default defineSchema({
     startedBy: v.id("users"),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
   }).index("by_workflow", ["workflowId", "startedAt"])
+    .index("by_company_started", ["companyId", "startedAt"])
     .index("by_startedAt", ["startedAt"]),
   schedules: defineTable({
     name: v.string(),

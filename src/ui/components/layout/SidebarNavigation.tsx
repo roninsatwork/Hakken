@@ -152,6 +152,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
   if (pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')) return 'App Kits';
   if (pathname.startsWith('/admin/releases')) return 'Release Center';
+  if (pathname.startsWith('/admin/run-observatory')) return 'Run Observatory';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
@@ -172,6 +173,8 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
   if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
+  if (pathname.startsWith('/admin/settings/webhook-deliveries')) return 'Webhook Deliveries';
+  if (pathname.startsWith('/admin/settings/api-keys')) return 'API Keys';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
   if (pathname.startsWith('/admin/settings')) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
@@ -190,7 +193,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
+  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/run-observatory') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
 
   return {
     workspace: true,
@@ -370,6 +373,7 @@ export default function SidebarNavigation() {
                           activeItem === 'Agents' || 
                           activeItem === 'Agent Approvals' ||
                           activeItem === 'Release Center' ||
+                          activeItem === 'Run Observatory' ||
                           activeItem === 'Manage Agents' || 
                           activeItem === 'Connectors' || 
                           activeItem === 'Workflows' || 
@@ -384,6 +388,7 @@ export default function SidebarNavigation() {
                       >
                         <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
                         <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
+                        <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         <SubNavItem label={t('connectors')} href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
                         
@@ -402,6 +407,8 @@ export default function SidebarNavigation() {
                             !pathname.startsWith('/admin/settings/scripts') &&
                             !pathname.startsWith('/admin/settings/system-health')) ||
                             activeItem === 'System Settings' ||
+                            activeItem === 'API Keys' ||
+                            activeItem === 'Webhook Deliveries' ||
                             activeItem === 'Analytics'}
                           onClick={() => setActiveItem('System Settings')}
                           hasChildren
@@ -410,6 +417,8 @@ export default function SidebarNavigation() {
                         >
                           <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
                           <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+                          <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
+                          <SubNavItem label={t('webhookDeliveries')} href="/admin/settings/webhook-deliveries" isActive={activeItem === 'Webhook Deliveries' || pathname.startsWith('/admin/settings/webhook-deliveries')} onClick={() => setActiveItem('Webhook Deliveries')} />
                           <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
 

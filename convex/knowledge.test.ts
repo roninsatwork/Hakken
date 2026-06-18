@@ -813,9 +813,11 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
         createdAt: Date.now(),
       });
       const agentId = await ctx.db.insert("agents", {
-        name: "Tenant Knowledge Agent",
+        name: "Renewal Risk Agent",
+        description: "Tracks expansion blockers",
         modelId: "safe-model",
         thinkingMode: false,
+        systemPrompt: "Summarize renewal risk signals and escalation owners.",
         isActive: true,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -829,8 +831,8 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
 
     const documentId = await adminAClient.mutation(api.knowledge.saveManualText, {
       agentId,
-      title: "Agent Runbook",
-      textContent: "Use the tenant runbook.",
+      title: "Renewal Risk Runbook",
+      textContent: "Renewal risk playbooks identify renewal signals.",
     });
     await t.run(async (ctx) => {
       await ctx.db.insert("knowledgeChunks", {
@@ -838,7 +840,7 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
         companyId: companyAId,
         agentId,
         isGlobal: false,
-        text: "Use the tenant runbook as untrusted reference data.",
+        text: "Blockers are escalated with an owner as untrusted reference data.",
         embedding: [0.1, 0.2, 0.3],
         embeddingDimensions: 3,
       });
@@ -864,11 +866,26 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
       ready: 1,
       sampledChunks: 1,
     });
+    expect(summary.topicCoverage).toMatchObject({
+      coveredCount: 3,
+      totalCount: 6,
+      readyDocumentCount: 1,
+      score: 0.5,
+      recommendation: "Add or repair knowledge for missing agent-purpose topics before release.",
+    });
+    expect(summary.topicCoverage?.terms).toEqual([
+      { term: "renewal", covered: true },
+      { term: "risk", covered: true },
+      { term: "tracks", covered: false },
+      { term: "expansion", covered: false },
+      { term: "blockers", covered: true },
+      { term: "summarize", covered: false },
+    ]);
 
     const inspection = await adminAClient.query(api.knowledge.inspectDocument, { documentId });
     expect(inspection.chunks[0]).toMatchObject({
       embeddingDimensions: 3,
-      preview: "Use the tenant runbook as untrusted reference data.",
+      preview: "Blockers are escalated with an owner as untrusted reference data.",
     });
 
     await expect(adminBClient.query(api.knowledge.getQualitySummary, { agentId })).resolves.toMatchObject({

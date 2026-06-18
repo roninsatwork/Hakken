@@ -9,6 +9,9 @@ import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
 const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
+const RUN_OBSERVATORY_LIMIT = 120;
+const RUN_OBSERVATORY_TOOL_LIMIT = 300;
+const PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH = 4000;
 
 const agentRunStatusValidator = v.union(
   v.literal("QUEUED"),
@@ -314,6 +317,30 @@ function buildRunSummary(run: Doc<"agentRuns">) {
   };
 }
 
+function buildEmptyRunObservatoryStatusCounts() {
+  return {
+    QUEUED: 0,
+    RUNNING: 0,
+    PENDING_APPROVAL: 0,
+    SUCCESS: 0,
+    FAILED: 0,
+    CANCELLED: 0,
+  };
+}
+
+function getRunObservabilityAction(run: Doc<"agentRuns">) {
+  if (run.status === "FAILED" || run.status === "CANCELLED") {
+    return "Open the run timeline, inspect failed steps, and convert the failure into an eval fixture if it should never repeat.";
+  }
+  if (run.status === "PENDING_APPROVAL") {
+    return "Review the pending approval before the agent continues.";
+  }
+  if (run.status === "RUNNING" || run.status === "QUEUED") {
+    return "Check whether the run is still progressing or should be cancelled.";
+  }
+  return "Monitor for drift and compare with future replays if behavior changes.";
+}
+
 function normalizeComparableText(value: string | undefined) {
   return (value || "").trim().replace(/\s+/g, " ");
 }
@@ -519,6 +546,48 @@ export const getRunDetail = query({
               replaySteps: steps,
             })
           : [],
+      },
+    };
+  },
+});
+
+export const getPublicRunStatusInternal = internalQuery({
+  args: {
+    runId: v.id("agentRuns"),
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.companyId !== args.companyId) return null;
+
+    const [stepCount, approvalCount, toolCallCount] = await Promise.all([
+      ctx.db
+        .query("agentRunSteps")
+        .withIndex("by_run_step", (q) => q.eq("runId", args.runId))
+        .take(AGENT_RUN_DETAIL_LIMIT),
+      ctx.db
+        .query("agentRunApprovals")
+        .withIndex("by_run_requested", (q) => q.eq("runId", args.runId))
+        .take(AGENT_RUN_DETAIL_LIMIT),
+      ctx.db
+        .query("agentToolCalls")
+        .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
+        .take(AGENT_RUN_DETAIL_LIMIT),
+    ]);
+
+    return {
+      ...buildRunSummary(run),
+      companyId: run.companyId,
+      agentId: run.agentId,
+      workflowId: run.workflowId,
+      scheduleId: run.scheduleId,
+      threadId: run.threadId,
+      cancelledAt: run.cancelledAt,
+      updatedAt: run.updatedAt,
+      counts: {
+        steps: stepCount.length,
+        approvals: approvalCount.length,
+        toolCalls: toolCallCount.length,
       },
     };
   },
@@ -878,6 +947,194 @@ export const getAnalyticsForAgent = query({
   },
 });
 
+export const getRunObservatory = query({
+  args: {
+    lookbackDays: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    if (user.role === "ADMIN" && !user.companyId) {
+      throw new Error("Unauthorized");
+    }
+
+    const limit = Math.min(Math.max(args.limit ?? RUN_OBSERVATORY_LIMIT, 1), RUN_OBSERVATORY_LIMIT);
+    const lookbackDays = Math.min(Math.max(args.lookbackDays ?? 7, 1), 90);
+    const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
+
+    const recentRuns = user.role === "SUPER_ADMIN"
+      ? (await Promise.all(
+          (["QUEUED", "RUNNING", "PENDING_APPROVAL", "SUCCESS", "FAILED", "CANCELLED"] as const).map((status) =>
+            ctx.db
+              .query("agentRuns")
+              .withIndex("by_status_started", (q) => q.eq("status", status))
+              .order("desc")
+              .take(limit)
+          )
+        ))
+          .flat()
+          .filter((run) => run.startedAt >= cutoff)
+          .toSorted((left, right) => right.startedAt - left.startedAt)
+          .slice(0, limit)
+      : await ctx.db
+          .query("agentRuns")
+          .withIndex("by_company_started", (q) => q.eq("companyId", user.companyId))
+          .order("desc")
+          .filter((q) => q.gte(q.field("startedAt"), cutoff))
+          .take(limit);
+
+    const statusCounts = buildEmptyRunObservatoryStatusCounts();
+    const triggerCounts: Record<string, number> = {};
+    const modelCounts: Record<string, { modelId: string; providerKey?: string; runs: number; failures: number; costGBP: number }> = {};
+    const agentCounts: Record<string, { agentId: Id<"agents">; agentName: string; runs: number; failures: number; costGBP: number; lastRunAt: number }> = {};
+    const failureReasons: Record<string, number> = {};
+    let totalCostGBP = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let completedLatencyTotalMs = 0;
+    let completedLatencyCount = 0;
+
+    const agentIds = Array.from(new Set(recentRuns.map((run) => run.agentId)));
+    const agents = await Promise.all(agentIds.map(async (agentId) => await ctx.db.get(agentId)));
+    const agentNameById = new Map(agentIds.map((agentId, index) => [
+      agentId,
+      agents[index]?.name ?? "Unknown agent",
+    ]));
+
+    for (const run of recentRuns) {
+      statusCounts[run.status] += 1;
+      incrementCount(triggerCounts, run.triggerType);
+      totalCostGBP += run.costGBP ?? 0;
+      totalInputTokens += run.inputTokens ?? 0;
+      totalOutputTokens += run.outputTokens ?? 0;
+
+      const latencyMs = getRunLatencyMs(run);
+      if (latencyMs !== undefined) {
+        completedLatencyTotalMs += latencyMs;
+        completedLatencyCount += 1;
+      }
+
+      if (run.status === "FAILED" || run.status === "CANCELLED") {
+        incrementCount(failureReasons, run.error || run.finalOutput || run.status);
+      }
+
+      const modelKey = run.modelId || run.providerModelId || "unresolved";
+      if (!modelCounts[modelKey]) {
+        modelCounts[modelKey] = {
+          modelId: modelKey,
+          providerKey: run.providerKey,
+          runs: 0,
+          failures: 0,
+          costGBP: 0,
+        };
+      }
+      modelCounts[modelKey].runs += 1;
+      modelCounts[modelKey].costGBP += run.costGBP ?? 0;
+      if (run.status === "FAILED" || run.status === "CANCELLED") modelCounts[modelKey].failures += 1;
+
+      const agentKey = run.agentId;
+      if (!agentCounts[agentKey]) {
+        agentCounts[agentKey] = {
+          agentId: run.agentId,
+          agentName: agentNameById.get(run.agentId) ?? "Unknown agent",
+          runs: 0,
+          failures: 0,
+          costGBP: 0,
+          lastRunAt: run.startedAt,
+        };
+      }
+      agentCounts[agentKey].runs += 1;
+      agentCounts[agentKey].costGBP += run.costGBP ?? 0;
+      agentCounts[agentKey].lastRunAt = Math.max(agentCounts[agentKey].lastRunAt, run.startedAt);
+      if (run.status === "FAILED" || run.status === "CANCELLED") agentCounts[agentKey].failures += 1;
+    }
+
+    const sampledToolCalls = (await Promise.all(recentRuns.slice(0, 60).map(async (run) =>
+      await ctx.db
+        .query("agentToolCalls")
+        .withIndex("by_run_started", (q) => q.eq("runId", run._id))
+        .order("desc")
+        .take(20)
+    ))).flat().slice(0, RUN_OBSERVATORY_TOOL_LIMIT);
+    const toolStats: Record<string, {
+      handlerMapping: string;
+      calls: number;
+      failures: number;
+      approvalsRequired: number;
+      denied: number;
+      writeOrExternal: number;
+    }> = {};
+    for (const toolCall of sampledToolCalls) {
+      if (user.role === "ADMIN" && toolCall.companyId !== user.companyId) continue;
+      const key = toolCall.handlerMapping;
+      if (!toolStats[key]) {
+        toolStats[key] = {
+          handlerMapping: key,
+          calls: 0,
+          failures: 0,
+          approvalsRequired: 0,
+          denied: 0,
+          writeOrExternal: 0,
+        };
+      }
+      toolStats[key].calls += 1;
+      if (toolCall.status === "FAILED" || toolCall.status === "CANCELLED") toolStats[key].failures += 1;
+      if (toolCall.status === "APPROVAL_REQUIRED") toolStats[key].approvalsRequired += 1;
+      if (toolCall.status === "DENIED") toolStats[key].denied += 1;
+      if (toolCall.sideEffectLevel === "WRITE" || toolCall.sideEffectLevel === "DESTRUCTIVE" || toolCall.sideEffectLevel === "EXTERNAL") {
+        toolStats[key].writeOrExternal += 1;
+      }
+    }
+
+    const successfulRuns = statusCounts.SUCCESS;
+    const failedRuns = statusCounts.FAILED + statusCounts.CANCELLED;
+    const activeRuns = statusCounts.QUEUED + statusCounts.RUNNING + statusCounts.PENDING_APPROVAL;
+    const completedRuns = successfulRuns + failedRuns;
+
+    return {
+      scope: user.role === "SUPER_ADMIN" ? "platform" : "company",
+      lookbackDays,
+      sampledRuns: recentRuns.length,
+      sampledToolCalls: sampledToolCalls.length,
+      totals: {
+        runs: recentRuns.length,
+        successfulRuns,
+        failedRuns,
+        activeRuns,
+        costGBP: totalCostGBP,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        successRate: completedRuns > 0 ? successfulRuns / completedRuns : 0,
+        averageLatencyMs: completedLatencyCount > 0 ? completedLatencyTotalMs / completedLatencyCount : 0,
+      },
+      statusCounts,
+      triggerCounts,
+      modelStats: Object.values(modelCounts).sort((a, b) => b.runs - a.runs).slice(0, 8),
+      agentStats: Object.values(agentCounts).sort((a, b) => b.failures - a.failures || b.runs - a.runs).slice(0, 8),
+      toolStats: Object.values(toolStats).sort((a, b) => b.failures - a.failures || b.calls - a.calls).slice(0, 8),
+      failureReasons: Object.entries(failureReasons)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8),
+      recentRuns: recentRuns.slice(0, 12).map((run) => ({
+        runId: run._id,
+        agentId: run.agentId,
+        agentName: agentNameById.get(run.agentId) ?? "Unknown agent",
+        status: run.status,
+        triggerType: run.triggerType,
+        objective: run.objective,
+        startedAt: run.startedAt,
+        completedAt: run.completedAt,
+        latencyMs: getRunLatencyMs(run),
+        costGBP: run.costGBP,
+        modelId: run.modelId || run.providerModelId,
+        error: run.error || (run.status === "FAILED" || run.status === "CANCELLED" ? run.finalOutput : undefined),
+        nextAction: getRunObservabilityAction(run),
+      })),
+    };
+  },
+});
+
 export const getPendingApprovals = query({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -1214,6 +1471,51 @@ export const createRunInternal = internalMutation({
       startedAt: now,
       updatedAt: now,
     });
+  },
+});
+
+export const createPublicAgentRunInternal = internalMutation({
+  args: {
+    agentId: v.id("agents"),
+    companyId: v.id("companies"),
+    objective: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const objective = args.objective.trim();
+    if (!objective) throw new Error("Objective is required.");
+    if (objective.length > PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH) {
+      throw new Error(`Objective cannot exceed ${PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH} characters.`);
+    }
+
+    const agent = await ctx.db.get(args.agentId);
+    if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
+
+    const runId = await ctx.db.insert("agentRuns", {
+      agentId: args.agentId,
+      companyId: args.companyId,
+      triggerType: "WEBHOOK",
+      objective,
+      status: "QUEUED",
+      agentVersionId: await ensureAgentVersionSnapshot(ctx, {
+        agentId: args.agentId,
+        companyId: args.companyId,
+      }),
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId: args.agentId,
+      objective,
+      triggerType: "WEBHOOK",
+      runId,
+      companyId: args.companyId,
+    });
+
+    return {
+      runId,
+      status: "QUEUED" as const,
+    };
   },
 });
 

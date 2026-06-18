@@ -26,8 +26,12 @@ import { IdentitySettingsSection } from "./_components/IdentitySettingsSection";
 import { PurgesSettingsSection } from "./_components/PurgesSettingsSection";
 import { SettingBlock } from "./_components/SettingBlock";
 import { isSettingsTab } from "./_components/settingsTabs";
-import { WhiteLabelModulePresetsSection } from "./_components/WhiteLabelModulePresetsSection";
-import { WhiteLabelReadinessSection } from "./_components/WhiteLabelReadinessSection";
+import { WhiteLabelCustomDomainChecklistSection, type WhiteLabelCustomDomainChecklist } from "./_components/WhiteLabelCustomDomainChecklistSection";
+import { WhiteLabelHandoffSummarySection, type WhiteLabelHandoffSummary } from "./_components/WhiteLabelHandoffSummarySection";
+import { WhiteLabelModulePresetsSection, type WhiteLabelModulePreset } from "./_components/WhiteLabelModulePresetsSection";
+import { WhiteLabelNavigationProfilesSection, type WhiteLabelNavigationProfile } from "./_components/WhiteLabelNavigationProfilesSection";
+import { WhiteLabelPackagingChecklistSection, type WhiteLabelPackagingChecklist } from "./_components/WhiteLabelPackagingChecklistSection";
+import { WhiteLabelReadinessSection, type WhiteLabelReadiness } from "./_components/WhiteLabelReadinessSection";
 import {
   type AuditConfig,
   type PiiConfig,
@@ -39,6 +43,12 @@ export default function SystemSettingsPage() {
   const t = useTranslations('admin.settings');
 
   const currentSettings = useQuery(api.settings.get);
+  const whiteLabelReadiness = useQuery(api.settings.getWhiteLabelReadiness);
+  const whiteLabelModulePresets = useQuery(api.settings.getWhiteLabelModulePresets);
+  const whiteLabelNavigationProfiles = useQuery(api.settings.getWhiteLabelNavigationProfiles);
+  const whiteLabelCustomDomainChecklist = useQuery(api.settings.getWhiteLabelCustomDomainChecklist);
+  const whiteLabelHandoffSummary = useQuery(api.settings.getWhiteLabelHandoffSummary);
+  const whiteLabelPackagingChecklist = useQuery(api.settings.getWhiteLabelPackagingChecklist);
   const updateSettings = useMutation(api.settings.update);
   const generateUploadUrl = useMutation(api.settings.generateUploadUrl);
 
@@ -454,11 +464,47 @@ export default function SystemSettingsPage() {
             </SettingBlock>
 
             <SettingBlock title={t('whiteLabel.title')} sub={t('whiteLabel.subtitle')}>
-              <WhiteLabelReadinessSection formData={formData} t={t} />
+              <WhiteLabelReadinessSection
+                formData={formData}
+                readiness={whiteLabelReadiness as WhiteLabelReadiness | undefined}
+                t={t}
+              />
+            </SettingBlock>
+
+            <SettingBlock title={t('handoffSummary.title')} sub={t('handoffSummary.subtitle')}>
+              <WhiteLabelHandoffSummarySection
+                formData={formData}
+                summary={whiteLabelHandoffSummary as WhiteLabelHandoffSummary | undefined}
+                t={t}
+              />
             </SettingBlock>
 
             <SettingBlock title={t('modulePresets.title')} sub={t('modulePresets.subtitle')}>
-              <WhiteLabelModulePresetsSection t={t} />
+              <WhiteLabelModulePresetsSection
+                presets={whiteLabelModulePresets as WhiteLabelModulePreset[] | undefined}
+                t={t}
+              />
+            </SettingBlock>
+
+            <SettingBlock title={t('navigationProfiles.title')} sub={t('navigationProfiles.subtitle')}>
+              <WhiteLabelNavigationProfilesSection
+                profiles={whiteLabelNavigationProfiles as WhiteLabelNavigationProfile[] | undefined}
+                t={t}
+              />
+            </SettingBlock>
+
+            <SettingBlock title={t('customDomain.title')} sub={t('customDomain.subtitle')}>
+              <WhiteLabelCustomDomainChecklistSection
+                checklist={whiteLabelCustomDomainChecklist as WhiteLabelCustomDomainChecklist | undefined}
+                t={t}
+              />
+            </SettingBlock>
+
+            <SettingBlock title={t('packagingChecklist.title')} sub={t('packagingChecklist.subtitle')}>
+              <WhiteLabelPackagingChecklistSection
+                checklist={whiteLabelPackagingChecklist as WhiteLabelPackagingChecklist | undefined}
+                t={t}
+              />
             </SettingBlock>
           </section>
         )}

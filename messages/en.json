@@ -336,6 +336,7 @@
         "agents": "Agents",
         "agentApprovals": "Agent Approvals",
         "releaseCenter": "Ship Checks",
+        "runObservatory": "Run Observatory",
         "manageAgents": "Manage Agents",
         "connectors": "Connectors",
         "workflows": "Workflows",
@@ -348,6 +349,8 @@
         "systemAdmins": "System Admins",
         "settings": "Settings",
         "systemSettings": "System Settings",
+        "apiKeys": "API Keys",
+        "webhookDeliveries": "Webhook Deliveries",
         "analytics": "Analytics",
         "maintenance": "Maintenance",
         "systemHealth": "System Health",
@@ -1617,6 +1620,7 @@
                 "subtitle": "Review the configuration needed before this starter becomes a customer-facing product.",
                 "open": "Open",
                 "summary": {
+                    "score": "Score",
                     "ready": "Ready",
                     "pending": "Pending",
                     "manual": "Manual"
@@ -1649,6 +1653,8 @@
                     },
                     "widget": {
                         "label": "Widget branding",
+                        "ready": "An active widget has custom brand styling, greeting, placeholder, logo, and a restricted domain allowlist.",
+                        "pending": "Configure an active widget with custom branding and a restricted domain allowlist.",
                         "manual": "Review the public chat widget name, greeting, color, logo, placeholder, starters, and domain allowlist."
                     },
                     "email": {
@@ -1660,6 +1666,41 @@
                         "label": "Production setup validation",
                         "manual": "Run the production setup validator before deployment handoff and keep the output with release notes."
                     }
+                }
+            },
+            "handoffSummary": {
+                "title": "Brand Handoff Summary",
+                "subtitle": "Confirm the identity, widget, and email posture that will travel with a vertical starter.",
+                "emailNote": "Used by runtime email helpers unless the deployment overrides RESEND_FROM_EMAIL.",
+                "fields": {
+                    "product": "Product",
+                    "email": "Runtime sender",
+                    "readiness": "Readiness score",
+                    "widget": "Widget posture",
+                    "diagnostics": "Diagnostics",
+                    "production": "Production gate",
+                    "nextActions": "Next actions",
+                    "recommendedPresets": "Ready presets"
+                },
+                "logoModes": {
+                    "light-and-dark": "Light and dark logo variants are configured.",
+                    "partial": "Only one logo variant is configured.",
+                    "missing": "Logo variants still need to be uploaded."
+                },
+                "widget": {
+                    "ready": "Active branded widget",
+                    "needs-review": "Needs widget review"
+                },
+                "diagnostics": {
+                    "ready": "Disabled for handoff",
+                    "needs-review": "Still enabled"
+                },
+                "production": {
+                    "manual": "Run setup validation before handoff"
+                },
+                "empty": {
+                    "nextActions": "No automatic next action is currently queued.",
+                    "recommendedPresets": "Complete more readiness checks before a preset is marked ready."
                 }
             },
             "modulePresets": {
@@ -1674,6 +1715,34 @@
                     "launch": "Open App Kits",
                     "widget": "Open widget",
                     "health": "Open health"
+                },
+                "items": {
+                    "assistantWorkspace": "Assistant workspace",
+                    "knowledgeSurfaces": "Knowledge surfaces",
+                    "reportsOptional": "Reports only when needed",
+                    "agentBuilderEvals": "Agent builder and evals",
+                    "modelDefaults": "Model defaults",
+                    "systemHealth": "System Health",
+                    "replaceDemoKnowledge": "Replace demo knowledge",
+                    "runReleaseGate": "Run the release gate",
+                    "keepDiagnosticsDisabled": "Keep diagnostics disabled",
+                    "publicWidget": "Public widget",
+                    "customerChatHistory": "Customer chat history",
+                    "knowledgeQa": "Knowledge QA",
+                    "widgetSetup": "Widget setup",
+                    "connectorMarketplace": "Connector marketplace",
+                    "approvalsInbox": "Approvals inbox",
+                    "setAllowedDomains": "Set allowed domains",
+                    "reviewWidgetBranding": "Review widget branding",
+                    "testEscalationPolicy": "Test escalation policy",
+                    "dashboardReports": "Dashboard and reports",
+                    "workflowsSchedules": "Workflows and schedules",
+                    "approvalsRuns": "Approvals and runs",
+                    "releaseCenter": "Release Center",
+                    "auditLedger": "Audit ledger",
+                    "confirmRoleAccess": "Confirm role access",
+                    "setScheduleOwners": "Set schedule owners",
+                    "exportHealthReport": "Export health report"
                 },
                 "presets": {
                     "knowledgeAssistant": {
@@ -1734,6 +1803,119 @@
                         }
                     }
                 }
+            },
+            "navigationProfiles": {
+                "title": "Navigation Profiles",
+                "subtitle": "Preview which route groups a vertical starter should show, reserve for operators, or hide during packaging.",
+                "sections": {
+                    "visible": "Visible",
+                    "owner": "Owner-only",
+                    "hide": "Hide candidates",
+                    "notes": "Implementation notes"
+                },
+                "items": {
+                    "appDashboard": "App dashboard",
+                    "assistant": "Assistant",
+                    "reports": "Reports",
+                    "organization": "Organization settings",
+                    "systemSettings": "System Settings",
+                    "systemHealth": "System Health",
+                    "adminCompanies": "Companies admin",
+                    "releaseCenter": "Release Center",
+                    "apiKeys": "API keys",
+                    "webhookDeliveries": "Webhook deliveries",
+                    "publicWidget": "Public widget",
+                    "customerChatHistory": "Customer chat history",
+                    "knowledgeQa": "Knowledge QA",
+                    "widgetSetup": "Widget setup",
+                    "globalKnowledge": "Global Knowledge",
+                    "chatLogs": "Chat logs",
+                    "properties": "Properties",
+                    "arcade": "Arcade",
+                    "diagnostics": "Diagnostics",
+                    "adminDashboard": "Admin dashboard",
+                    "agents": "Agents",
+                    "workflows": "Workflows",
+                    "approvals": "Approvals",
+                    "runObservatory": "Run Observatory",
+                    "auditLogs": "Audit logs",
+                    "tenantScoped": "Persist visibility per tenant or product package.",
+                    "preserveAdminRoutes": "Keep admin routes reachable for authorized operators.",
+                    "keepServerAuthz": "Treat navigation hiding as presentation only; keep server authorization.",
+                    "domainAllowlist": "Pair public routes with widget domain allowlists.",
+                    "widgetBranding": "Review widget branding before exposing public chat.",
+                    "emailSender": "Confirm the runtime sender before customer-facing email.",
+                    "superAdminOnly": "Keep owner-only routes scoped to super-admin operators.",
+                    "auditRouteChanges": "Audit route visibility changes.",
+                    "documentHiddenRoutes": "Document hidden routes in the build handoff."
+                },
+                "profiles": {
+                    "customerWorkspace": {
+                        "title": "Customer Workspace",
+                        "summary": "A minimal internal app shell for tenant users with owner tooling kept outside the customer path."
+                    },
+                    "supportWidget": {
+                        "title": "Support Widget",
+                        "summary": "A public support starter focused on the widget, conversation review, and knowledge quality."
+                    },
+                    "operatorConsole": {
+                        "title": "Operator Console",
+                        "summary": "A governed admin console for teams managing agents, workflows, approvals, releases, and observability."
+                    }
+                }
+            },
+            "customDomain": {
+                "title": "Custom Domain Readiness",
+                "subtitle": "Plan the host, widget, email, DNS, TLS, redirect, and tenant-routing checks for a branded deployment.",
+                "loading": "Preparing custom domain readiness...",
+                "note": "These checks are planning evidence only. DNS, TLS, and domain-to-tenant routing still need hosting-provider setup and developer review before runtime route hiding.",
+                "summary": {
+                    "ready": "Ready",
+                    "pending": "Pending",
+                    "manual": "Manual",
+                    "total": "Total"
+                },
+                "status": {
+                    "ready": "Ready",
+                    "pending": "Pending",
+                    "manual": "Review"
+                },
+                "items": {
+                    "appHost": {
+                        "label": "Primary app host",
+                        "manual": "Confirm the production app domain with the hosting provider."
+                    },
+                    "widgetDomains": {
+                        "label": "Widget domain allowlist",
+                        "ready": "The active widget has restricted allowed domains.",
+                        "pending": "Set restricted allowed domains before exposing the public widget."
+                    },
+                    "emailDomain": {
+                        "label": "Email sender domain",
+                        "ready": "A branded sender domain is configured.",
+                        "manual": "Confirm the branded email sender or deployment override."
+                    },
+                    "dnsTls": {
+                        "label": "DNS and TLS",
+                        "manual": "Validate DNS records and TLS certificates outside the app."
+                    },
+                    "redirects": {
+                        "label": "Redirect policy",
+                        "manual": "Confirm apex, www, and legacy route redirect behavior."
+                    },
+                    "tenantIsolation": {
+                        "label": "Tenant routing isolation",
+                        "manual": "Confirm custom domains map to the correct tenant and preserve server authorization."
+                    }
+                }
+            },
+            "packagingChecklist": {
+                "title": "Packaging Checklist",
+                "subtitle": "Copy a developer handoff artifact that combines brand, readiness, module, and navigation evidence.",
+                "loading": "Preparing packaging checklist...",
+                "copy": "Copy checklist",
+                "copied": "Copied",
+                "summary": "{productName} is {readinessPercent}% ready for white-label packaging."
             },
             "purges": {
                 "title": "Log Retention & Purge Policies",

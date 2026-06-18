@@ -80,11 +80,15 @@ Welcome to the Sonae Platform developer documentation. This guide is designed to
     Template authoring checklist for reusable vertical app packages, including agents, knowledge, tools, workflows, evals, and release gates.
 38. **[Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)**
     Checklist for rebranding, packaging, validating, and smoke-testing a vertical product starter built on Sonae.
-39. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
+39. **[White-Label Packaging Operator Guide](./white-label-packaging-operator-guide.md)**
+    Guide for using System Options white-label readiness, brand handoff, module presets, navigation profiles, custom domain readiness, and the copy-ready packaging checklist.
+40. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
     Reference plan for turning Sonae into a reusable starter framework for governed agentic apps with templates, connectors, evals, replay, public APIs, and packaging.
-40. **[Starter Platform Expansion Plan](./starter-platform-expansion-plan.md)**
+41. **[Starter Platform Expansion Plan](./starter-platform-expansion-plan.md)**
     Product roadmap for making Sonae an exceptional reusable starter platform beyond the connector marketplace, including app templates, launch wizard, release center, observability, public APIs, and white-labeling.
-41. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
+42. **[Developer Ship Checks Operator Guide](./developer-ship-checks-operator-guide.md)**
+    Plain-English guide for reviewing, approving, activating, cancelling, and rolling back agent release candidates.
+43. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
     Required direction for future movement-demo body-motion work: source skeleton proof, neutral calibration, vector retargeting, foot locking, and what not to patch.
 
 ---

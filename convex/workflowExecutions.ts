@@ -6,12 +6,14 @@ const EXECUTION_STEP_LIST_LIMIT = 500;
 export const createExecution = internalMutation({
   args: {
     workflowId: v.id("workflows"),
+    companyId: v.optional(v.id("companies")),
     triggerType: v.string(),
     startedBy: v.id("users"),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("workflowExecutions", {
       workflowId: args.workflowId,
+      companyId: args.companyId,
       triggerType: args.triggerType,
       status: "RUNNING",
       startedAt: Date.now(),

@@ -117,6 +117,67 @@ function buildSuggestionAppliedEffect(suggestion: Doc<"agentImprovementSuggestio
   return "Suggestion applied and version snapshot updated.";
 }
 
+function buildReviewGuidance(args: {
+  memoryCandidates: Doc<"agentMemoryCandidates">[];
+  improvementSuggestions: Doc<"agentImprovementSuggestions">[];
+  reflections: Doc<"agentRunReflections">[];
+}) {
+  const highRiskCount = args.memoryCandidates.filter((candidate) => candidate.riskLevel === "HIGH").length
+    + args.improvementSuggestions.filter((suggestion) => suggestion.riskLevel === "HIGH").length
+    + args.reflections.filter((reflection) => getReflectionRisk(reflection.category) === "HIGH").length;
+  const proposedSuggestionCount = args.improvementSuggestions.filter((suggestion) => suggestion.status === "PROPOSED").length;
+  const proposedMemoryCount = args.memoryCandidates.filter((candidate) => candidate.status === "PROPOSED").length;
+  const generatedReflectionCount = args.reflections.filter((reflection) => reflection.status === "GENERATED").length;
+  const totalCount = args.memoryCandidates.length + args.improvementSuggestions.length + args.reflections.length;
+
+  if (highRiskCount > 0) {
+    return {
+      priority: "HIGH" as const,
+      label: "High-risk learning requires review",
+      detail: `${highRiskCount} high-risk learning item${highRiskCount === 1 ? "" : "s"} should be reviewed before routine memory approvals.`,
+      nextAction: "Open High risk mode, inspect source runs, and approve only changes with clear evidence.",
+    };
+  }
+
+  if (proposedSuggestionCount > 0) {
+    return {
+      priority: "MEDIUM" as const,
+      label: "Improvement suggestions need sign-off",
+      detail: `${proposedSuggestionCount} prompt, rule, policy, or tool suggestion${proposedSuggestionCount === 1 ? "" : "s"} can change agent behavior.`,
+      nextAction: "Review proposed patches and apply only the changes that are supported by run evidence.",
+    };
+  }
+
+  if (proposedMemoryCount > 0) {
+    return {
+      priority: "MEDIUM" as const,
+      label: "Memory candidates are waiting",
+      detail: `${proposedMemoryCount} proposed memor${proposedMemoryCount === 1 ? "y" : "ies"} can become durable agent context after approval.`,
+      nextAction: "Approve factual, tenant-safe memories and reject vague or unsafe context.",
+    };
+  }
+
+  if (generatedReflectionCount > 0) {
+    return {
+      priority: "LOW" as const,
+      label: "Reflection evidence is ready",
+      detail: `${generatedReflectionCount} reflection${generatedReflectionCount === 1 ? "" : "s"} can become eval fixtures, memory, or future improvement work.`,
+      nextAction: "Create regression fixtures for repeatable failures or dismiss reflections that are no longer useful.",
+    };
+  }
+
+  return {
+    priority: "CLEAR" as const,
+    label: totalCount > 0 ? "Reviewed learning history" : "Learning inbox is clear",
+    detail: totalCount > 0
+      ? `${totalCount} reviewed learning item${totalCount === 1 ? "" : "s"} matched the current filter.`
+      : "No learning items match the current filter.",
+    nextAction: totalCount > 0
+      ? "Use reviewed history for audit context before changing this agent again."
+      : "Generate candidates from run evidence when useful patterns or failures appear.",
+  };
+}
+
 function buildSuggestionPatchPreview(suggestion: Doc<"agentImprovementSuggestions">): PatchPreviewRow[] {
   const patch = parseJsonObject(suggestion.proposedPatchJson);
   const appliedNote = suggestion.status === "APPLIED" ? "Applied to the agent and captured in a version snapshot." : undefined;
@@ -603,6 +664,11 @@ export const getReviewInboxForAgent = query({
           + suggestionItems.filter((suggestion) => suggestion.riskLevel === "HIGH").length
           + reflectionItems.filter((reflection) => getReflectionRisk(reflection.category) === "HIGH").length,
       },
+      reviewGuidance: buildReviewGuidance({
+        memoryCandidates: memoryItems,
+        improvementSuggestions: suggestionItems,
+        reflections: reflectionItems,
+      }),
       memoryCandidates: memoryItems.map((candidate) => ({
         candidateId: candidate._id,
         sourceRun: runById.get(candidate.sourceRunId) || null,

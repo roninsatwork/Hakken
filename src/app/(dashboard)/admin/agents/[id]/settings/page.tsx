@@ -35,17 +35,56 @@ type ModelSelectionMode = "inherit" | "override";
 type SmokeEvalMode = "CONTRACT_ONLY" | "MODEL_GRADED";
 type AgentReleaseStatus = "PENDING_SIGNOFF" | "APPROVED" | "ACTIVATED" | "ROLLED_BACK" | "CANCELLED";
 
+type ReleaseSnapshotComparison = {
+  baselineTitle?: string;
+  baselineVersionNumber?: number;
+  currentVersionNumber?: number;
+  changedAreas: string[];
+  unchangedAreas: string[];
+  details: Array<{
+    area: string;
+    before: string;
+    after: string;
+  }>;
+  summary: string;
+};
+
+type ReleaseEvidenceSummary = {
+  summary: string;
+  items: Array<{
+    label: string;
+    value: string;
+    status: "PASS" | "WARN";
+  }>;
+};
+
+type ReleaseNextAction = {
+  tone: "READY" | "REVIEW" | "WAIT" | "BLOCKED";
+  label: string;
+  detail: string;
+};
+
 type LatestAgentRelease = {
   _id: Id<"agentReleases">;
   status: AgentReleaseStatus;
   title: string;
   releaseNotes: string;
   rollbackPlan: string;
+  ownerEmail?: string;
+  approvalComment?: string;
+  rollbackReason?: string;
+  cancellationReason?: string;
+  activationWindowStart?: number;
+  activationWindowEnd?: number;
   versionNumber?: number;
   createdAt: number;
   approvedAt?: number;
   activatedAt?: number;
   rolledBackAt?: number;
+  cancelledAt?: number;
+  evidenceSummary?: ReleaseEvidenceSummary;
+  nextAction?: ReleaseNextAction;
+  snapshotComparison?: ReleaseSnapshotComparison | null;
 };
 
 type AgentSettingsFormData = {
@@ -75,6 +114,98 @@ const emptyFormData: AgentSettingsFormData = {
 
 const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
 
+function getActivationWindowState(release: Pick<LatestAgentRelease, "activationWindowStart" | "activationWindowEnd">) {
+  const now = Date.now();
+  if (release.activationWindowStart && now < release.activationWindowStart) {
+    return {
+      canActivate: false,
+      label: "Window not open",
+      detail: `Activation opens ${formatDateTime(release.activationWindowStart)}.`,
+    };
+  }
+  if (release.activationWindowEnd && now > release.activationWindowEnd) {
+    return {
+      canActivate: false,
+      label: "Window expired",
+      detail: `Activation closed ${formatDateTime(release.activationWindowEnd)}. Cancel or create a replacement candidate.`,
+    };
+  }
+  if (release.activationWindowEnd) {
+    return {
+      canActivate: true,
+      label: "Activate release",
+      detail: `Activation window closes ${formatDateTime(release.activationWindowEnd)}.`,
+    };
+  }
+  return {
+    canActivate: true,
+    label: "Activate release",
+    detail: "Manual activation is available after approval.",
+  };
+}
+
+function ReleaseSnapshotComparisonPanel({ comparison }: { comparison: ReleaseSnapshotComparison }) {
+  const [showAllDetails, setShowAllDetails] = useState(false);
+  const visibleDetails = showAllDetails ? comparison.details : comparison.details.slice(0, 2);
+
+  return (
+    <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted">Snapshot comparison</span>
+        <span className="text-[11px] text-muted">
+          v{comparison.currentVersionNumber ?? "?"}
+          {comparison.baselineVersionNumber
+            ? ` vs v${comparison.baselineVersionNumber}`
+            : ""}
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-secondary leading-relaxed">
+        {comparison.summary}
+      </p>
+      {comparison.changedAreas.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {comparison.changedAreas.map((area) => (
+            <span key={area} className="rounded-[6px] border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] text-brand">
+              {area}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {visibleDetails.length > 0 ? (
+        <div className="mt-2 grid grid-cols-1 gap-1.5">
+          {visibleDetails.map((detail) => (
+            <div key={detail.area} className="rounded-[6px] border border-border-dim bg-black/10 px-2 py-1.5 text-[10px] text-muted">
+              <div className="font-medium text-secondary">{detail.area}</div>
+              <div className="mt-1">Before: {detail.before}</div>
+              <div>After: {detail.after}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {comparison.details.length > 2 ? (
+        <button
+          type="button"
+          onClick={() => setShowAllDetails((current) => !current)}
+          className="mt-2 rounded-[6px] border border-border-dim bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-foreground transition-all hover:bg-white/[0.08]"
+        >
+          {showAllDetails ? "Show fewer fields" : `Show all ${comparison.details.length} fields`}
+        </button>
+      ) : null}
+      {comparison.unchangedAreas.length > 0 ? (
+        <div className="mt-2 border-t border-border-dim pt-2">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Stable fields</div>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {comparison.unchangedAreas.map((area) => (
+              <span key={area} className="rounded-[6px] border border-border-dim bg-black/10 px-2 py-1 text-[10px] text-muted">
+                {area}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");
@@ -99,6 +230,7 @@ export default function AgentOverviewPage() {
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
   const createReleaseCandidate = useMutation(api.releases.createReleaseCandidate);
   const approveReleaseCandidate = useMutation(api.releases.approveReleaseCandidate);
+  const cancelReleaseCandidate = useMutation(api.releases.cancelReleaseCandidate);
   const activateReleaseCandidate = useMutation(api.releases.activateReleaseCandidate);
   const rollbackRelease = useMutation(api.releases.rollbackRelease);
 
@@ -245,6 +377,7 @@ export default function AgentOverviewPage() {
       : latestRelease?.status === "ROLLED_BACK" || latestRelease?.status === "CANCELLED"
         ? "border-neutral-400/30 bg-neutral-400/10 text-secondary"
         : "border-amber-400/30 bg-amber-400/10 text-amber-300";
+  const activationWindowState = latestRelease ? getActivationWindowState(latestRelease) : null;
   const hasOpenRelease = latestRelease?.status === "PENDING_SIGNOFF" || latestRelease?.status === "APPROVED";
   const canCreateReleaseCandidate = Boolean(
     readiness
@@ -490,6 +623,50 @@ export default function AgentOverviewPage() {
                         <p className="text-[11px] text-secondary leading-relaxed line-clamp-2">
                           {latestRelease.releaseNotes}
                         </p>
+                        <div className="flex flex-wrap gap-2 text-[11px] text-muted">
+                          <span>Owner: {latestRelease.ownerEmail || "Current reviewer"}</span>
+                          {(latestRelease.activationWindowStart || latestRelease.activationWindowEnd) ? (
+                            <span>
+                              Window: {latestRelease.activationWindowStart ? formatDateTime(latestRelease.activationWindowStart) : "Any time"} - {latestRelease.activationWindowEnd ? formatDateTime(latestRelease.activationWindowEnd) : "No close"}
+                            </span>
+                          ) : null}
+                          {latestRelease.approvalComment ? (
+                            <span>Sign-off: {latestRelease.approvalComment}</span>
+                          ) : null}
+                        </div>
+                        {latestRelease.evidenceSummary ? (
+                          <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2">
+                            <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Release evidence</div>
+                            <p className="mt-1 text-[11px] text-secondary leading-relaxed">{latestRelease.evidenceSummary.summary}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {latestRelease.evidenceSummary.items.map((item) => (
+                                <span
+                                  key={item.label}
+                                  className={`rounded-[6px] border px-2 py-1 text-[10px] ${
+                                    item.status === "PASS"
+                                      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                      : "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                                  }`}
+                                >
+                                  {item.label}: {item.value}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        {latestRelease.nextAction ? (
+                          <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2">
+                            <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Recommended next action</div>
+                            <p className="mt-1 text-[12px] font-semibold text-foreground">{latestRelease.nextAction.label}</p>
+                            <p className="mt-1 text-[11px] text-secondary leading-relaxed">{latestRelease.nextAction.detail}</p>
+                          </div>
+                        ) : null}
+                        {latestRelease.snapshotComparison ? (
+                          <ReleaseSnapshotComparisonPanel
+                            key={`${latestRelease._id}:${latestRelease.snapshotComparison.currentVersionNumber ?? "unknown"}`}
+                            comparison={latestRelease.snapshotComparison}
+                          />
+                        ) : null}
                       </>
                     ) : (
                       <p className="text-[12px] text-secondary leading-relaxed">
@@ -543,7 +720,7 @@ export default function AgentOverviewPage() {
                   {latestRelease?.status === "APPROVED" ? (
                     <button
                       type="button"
-                      disabled={releaseAction !== null}
+                      disabled={releaseAction !== null || activationWindowState?.canActivate === false}
                       onClick={() => runReleaseAction(
                         "activate",
                         () => activateReleaseCandidate({ releaseId: latestRelease._id }),
@@ -551,7 +728,24 @@ export default function AgentOverviewPage() {
                       )}
                       className="rounded-[8px] bg-foreground px-3 py-1.5 text-[11px] font-medium text-background transition-all hover:opacity-90 disabled:opacity-50"
                     >
-                      {releaseAction === "activate" ? "Activating..." : "Activate release"}
+                      {releaseAction === "activate" ? "Activating..." : activationWindowState?.label ?? "Activate release"}
+                    </button>
+                  ) : null}
+                  {(latestRelease?.status === "PENDING_SIGNOFF" || latestRelease?.status === "APPROVED") ? (
+                    <button
+                      type="button"
+                      disabled={releaseAction !== null}
+                      onClick={() => runReleaseAction(
+                        "cancel",
+                        () => cancelReleaseCandidate({
+                          releaseId: latestRelease._id,
+                          cancellationReason: "Cancelled from Agent Studio before activation. Review readiness and create a replacement candidate when the release scope is clear.",
+                        }),
+                        "Release candidate cancelled."
+                      )}
+                      className="rounded-[8px] border border-border-dim bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-secondary transition-all hover:bg-white/[0.08] hover:text-foreground disabled:opacity-50"
+                    >
+                      {releaseAction === "cancel" ? "Cancelling..." : "Cancel candidate"}
                     </button>
                   ) : null}
                   {latestRelease?.status === "ACTIVATED" ? (
@@ -560,7 +754,10 @@ export default function AgentOverviewPage() {
                       disabled={releaseAction !== null}
                       onClick={() => runReleaseAction(
                         "rollback",
-                        () => rollbackRelease({ releaseId: latestRelease._id }),
+                        () => rollbackRelease({
+                          releaseId: latestRelease._id,
+                          rollbackReason: "Rolled back from Agent Studio. Review recent runs and snapshot comparison before creating a replacement candidate.",
+                        }),
                         "Release rolled back."
                       )}
                       className="rounded-[8px] border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-[11px] font-medium text-rose-300 transition-all hover:bg-rose-400/15 disabled:opacity-50"
@@ -569,6 +766,11 @@ export default function AgentOverviewPage() {
                     </button>
                   ) : null}
                 </div>
+                {latestRelease?.status === "APPROVED" && activationWindowState ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2 text-[12px] text-secondary">
+                    {activationWindowState.detail}
+                  </div>
+                ) : null}
                 {releaseFeedback ? (
                   <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2 text-[12px] text-secondary">
                     {releaseFeedback}
@@ -576,7 +778,24 @@ export default function AgentOverviewPage() {
                 ) : null}
                 {latestRelease?.status === "ROLLED_BACK" ? (
                   <div className="rounded-[8px] border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[12px] text-amber-300">
-                    This agent was rolled back. Review recent runs and release notes before creating a new candidate.
+                    <p>
+                      This agent was rolled back. Review recent runs and release notes before creating a new candidate.
+                    </p>
+                    {latestRelease.rollbackReason ? (
+                      <p className="mt-2 text-[11px] leading-relaxed">
+                        Reason: {latestRelease.rollbackReason}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {latestRelease?.status === "CANCELLED" ? (
+                  <div className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-2 text-[12px] text-secondary">
+                    <p>This release candidate was cancelled before activation.</p>
+                    {latestRelease.cancellationReason ? (
+                      <p className="mt-2 text-[11px] leading-relaxed">
+                        Reason: {latestRelease.cancellationReason}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

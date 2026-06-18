@@ -53,6 +53,10 @@ function buildScopeArgs(scope: KnowledgeScope) {
   return scope.type === "company" ? { companyId: scope.companyId } : {};
 }
 
+function formatCoveragePercent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
 export function KnowledgeManager({
   scope,
   header,
@@ -338,6 +342,43 @@ export function KnowledgeManager({
             </div>
           ))}
         </div>
+
+        {qualitySummary?.topicCoverage ? (
+          <div className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-4 flex flex-col gap-3">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-foreground">
+                  <Database className="w-4 h-4 text-brand" />
+                  <h3 className="text-[13px] font-semibold">Agent topic coverage</h3>
+                </div>
+                <p className="text-[12px] text-secondary mt-1">
+                  Compares the agent profile against sampled ready knowledge before release review.
+                </p>
+              </div>
+              <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 text-right min-w-[120px]">
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Coverage</div>
+                <div className="text-[20px] font-semibold text-foreground">{formatCoveragePercent(qualitySummary.topicCoverage.score)}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {qualitySummary.topicCoverage.terms.map((term) => (
+                <span
+                  key={term.term}
+                  className={`px-2 py-1 rounded-[6px] border text-[11px] ${
+                    term.covered
+                      ? "border-[#10b981]/20 bg-[#10b981]/10 text-[#10b981]"
+                      : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                  }`}
+                >
+                  {term.term}
+                </span>
+              ))}
+            </div>
+            <div className="text-[12px] text-secondary">
+              {qualitySummary.topicCoverage.coveredCount}/{qualitySummary.topicCoverage.totalCount} topics covered across {qualitySummary.topicCoverage.readyDocumentCount} ready document{qualitySummary.topicCoverage.readyDocumentCount === 1 ? "" : "s"}. {qualitySummary.topicCoverage.recommendation}
+            </div>
+          </div>
+        ) : null}
 
         <div className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-4 flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">

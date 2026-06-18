@@ -427,8 +427,13 @@ Current implementation note:
 - Stored email sender name/address settings now feed invite, workflow, auth fallback, and platform-alert email sender defaults when `RESEND_FROM_EMAIL` is not set.
 - Public widget config now falls back to system platform name, brand color, logo, greeting, and placeholder when widget-specific theme fields are unset.
 - System Options now includes module presets for knowledge assistant, support widget, and operator workspace starter shapes so builders can decide visible modules, owner surfaces, and handoff checks without automatic route hiding.
+- System Options now includes a brand handoff summary that composes product identity, logo mode, brand color, runtime email sender, widget posture, diagnostics posture, production validation, next actions, and ready module presets for vertical packaging.
+- System Options now includes code-backed navigation profiles for Customer Workspace, Support Widget, and Operator Console builds, showing visible route groups, owner-only routes, hide candidates, and implementation notes without changing runtime authorization or route visibility yet.
+- System Options now includes a custom domain readiness checklist for primary app host, widget domain allowlist, email sender domain, DNS/TLS, redirects, and tenant routing isolation as planning evidence before branded deployment.
+- System Options now includes a copy-ready packaging checklist that combines brand handoff, readiness evidence, ready module presets, navigation profile previews, and developer follow-up into a single markdown artifact.
 - `npm run setup:validate` and `docs/vertical-app-packaging-checklist.md` cover environment, provider, production smoke, and rebrand handoff checks for a new vertical starter.
-- Remaining future work is a persisted route visibility system if a concrete customer build needs runtime module hiding.
+- `docs/white-label-packaging-operator-guide.md` now explains the System Options white-label workflow from readiness review through packaging-checklist handoff.
+- Remaining future work is a persisted route visibility system when a concrete customer build is ready to turn these profile previews into tenant-scoped runtime navigation.
 
 ### 10. Demo Seed And Showcase Mode
 
@@ -461,6 +466,21 @@ Primary areas:
 - `scripts/local-demo-seed.mjs`
 - `README.md`
 - `docs/new-agentic-app-setup-checklist.md`
+
+Current implementation status:
+
+- `npm run demo:local:seed` is available as the one-command local demo seed entrypoint through `scripts/local-demo-seed.mjs`.
+- `convex/localDemoSeed.ts` seeds a clearly marked local demo tenant, demo super-admin and company-admin users, model defaults, starter knowledge, a `knowledge.search` tool, a draft demo knowledge assistant, starter eval fixtures, app template catalogue records, and sample build plans.
+- The seed is idempotent: repeated runs update deterministic records and do not duplicate eval fixtures or launch plans.
+- The seed fails closed unless `LOCAL_DEMO_SEED_ENABLED=1` and the shared `LOCAL_DEMO_SEED_SECRET` match, and it is blocked when `LOCAL_DEMO_SEED_ENVIRONMENT=production`.
+- `convex/localDemoSeed.test.ts` verifies idempotency, draft-agent readiness, seeded catalogue/build-plan coverage, and disabled/production/wrong-secret failure paths.
+- `docs/agentic-starter-framework-overview.md` and `docs/new-agentic-app-setup-checklist.md` document the local no-production-credentials seed path.
+
+Phase 10 completion notes:
+
+- Phase 10 is complete as a safe local showcase foundation. A fresh local environment can be made demo-ready with one command after enabling the guarded seed settings.
+- Demo data remains clearly fake, deterministic, local-only, and does not require production credentials.
+- Future showcase polish can add more vertical-specific sample data, but the roadmap acceptance criteria for Demo Seed and Showcase Mode are complete.
 
 ## Recommended Build Order
 
@@ -529,18 +549,29 @@ Current implementation status:
 - Started `Admin -> Release Center` as the first Phase 2 ship-check foundation screen. The route name is legacy; visible UI should refer to Developer Ship Checks.
 - Added a code-backed release readiness overview in `convex/releases.ts` that reuses existing agent readiness checks, activation warnings, smoke evals, and release gate policy data.
 - Added summary counts for blocked drafts, ready release candidates, live agents that need attention, and healthy live agents.
+- Added release-lifecycle counts for recent pending, approved, activated, rolled-back, and cancelled ship-check records so operators can scan the release queue separately from agent readiness.
 - Added agent-level next actions and direct links into settings, evals, and run history.
+- Added record-level recommended next actions for pending, approved, live, rolled-back, and cancelled releases so each ship-check record explains the immediate operator move.
 - Added persisted `agentReleases` records with agent version snapshots, release notes, rollback plans, sign-off, activation, rollback, and audit logs.
 - Added ship-check controls in `Admin -> Release Center` for creating candidates, approving, activating, and rolling back releases.
+- Added release evidence summaries on ship-check records so stored readiness evidence for tools, knowledge, fixtures, smoke evals, release gates, and model configuration is visible without reopening raw agent state.
 - Added inline Agent Studio release visibility on agent settings, including latest release state, version number, release notes, rollback warning, and a direct Ship Checks link.
 - Added inline Agent Studio release actions for the current lifecycle state: create candidate, approve candidate, activate release, and rollback release.
+- Added release owner assignment and approval-comment capture to Developer Ship Checks, with owner/comment visibility in Agent Studio and release audit metadata.
+- Added manual activation-window capture, display, and enforcement so approved releases can be constrained to a reviewed launch window before activation.
+- Added compact release snapshot comparison against the previous live agent version so Ship Checks and Agent Studio can show which tracked areas changed before approval, with short before/after details for prompt, tools, rules, memory, model, and policy changes.
+- Added visible activation-window guards to Ship Checks and Agent Studio so approved candidates show whether activation is open, pending, or expired before an operator clicks Activate.
+- Added scheduled activation automation so approved release candidates with reviewed activation windows are activated automatically when the window opens.
+- Added expandable Agent Studio snapshot diffs with full tracked-field before/after details and stable-field visibility for deeper release review.
+- Added release-candidate cancellation with cancellation reason capture, audit metadata, recent-record visibility, and inline Agent Studio controls for pending or approved candidates that should not ship.
+- Added rollback reason capture, audit metadata, and post-rollback investigation guidance so a rollback explains what happened before a replacement candidate is created.
+- Added rollback restoration for prior live agent snapshots when available, falling back to deactivation only when there is no earlier live release to restore.
 - Added sidebar navigation and focused Convex/React tests for the Ship Checks foundation.
 
-Remaining Phase 2 gaps:
+Phase 2 foundation status:
 
-- Release records exist, but richer owner assignment, approval comments, and scheduled activation windows still need workflow support.
-- Rollback currently deactivates the agent; a later slice should restore/compare prior active snapshots and surface post-rollback investigation steps.
-- Agent Studio now surfaces latest release state and lifecycle actions inline; later slices should add richer approval comments and assigned release owners.
+- Release records now preserve owner assignment, approval comments, cancellation reasons, manual activation windows, scheduled activation automation, rollback reasons, and prior-live-snapshot rollback restoration.
+- Agent Studio now surfaces latest release state, lifecycle actions, owner assignment, approval comments, activation windows, compact snapshot comparisons, expandable full tracked-field diffs, and stable-field visibility inline.
 
 ### Phase 3: Make Trust Visible
 
@@ -554,6 +585,16 @@ Why third:
 
 - The platform becomes explainable, debuggable, and self-improving under human governance.
 
+Current implementation status:
+
+- Started `Admin -> Run Observatory` as the first Phase 3 trust surface for cross-agent run health.
+- Added a code-backed run observatory summary in `convex/agentRuns.ts` that aggregates recent run status, success rate, active runs, failures, cost, token usage, latency, trigger mix, model mix, top agents, tool risk, failure reasons, and recent run next actions.
+- Added tenant-scoped observatory behavior: company admins see only their company runs; super admins see platform-wide sampled runs.
+- Added deep links from observatory rows back into existing per-agent run timelines for sanitized step inspection, replay, fixture creation, and memory candidate workflows.
+- Added sidebar navigation and focused Convex/React tests for the Run Observatory foundation.
+- Started Knowledge Quality Center refinements with an agent topic coverage score that compares agent profile terms against sampled ready knowledge, highlights covered and missing topics, and gives release-review guidance before operators trust a candidate.
+- Added Learning Review Inbox triage guidance so the agent memory screen prioritizes high-risk learning, improvement suggestions, proposed memories, and reflection evidence before reviewers approve durable behavior changes.
+
 ### Phase 4: Make It Infrastructure
 
 Build:
@@ -566,6 +607,18 @@ Why fourth:
 
 - Once the core experience is safe and observable, Sonae can power external products and customer systems.
 
+Current implementation status:
+
+- Started the Public API foundation with tenant-scoped API key governance before enabling external trigger endpoints.
+- Added API key records with company scope, scopes, one-time raw secret return, stored digest and prefix, rate limit metadata, revocation fields, and create/revoke audit logs.
+- Added `Admin -> Settings -> API Keys` so operators can create keys for companies, inspect prefixes/scopes/status/limits, and revoke keys through an in-app flow.
+- Added internal public-request authentication with request logs, scope checks, expiration/revocation checks, `lastUsedAt` updates, and per-key rate limit enforcement, plus a signed `/api/public/v1/ping` smoke endpoint for validating keys before trigger endpoints are enabled.
+- Added a signed `/api/public/v1/run-status?runId=...` polling endpoint that requires `run:read`, enforces API-key tenant scope, and returns sanitized run state without raw tool arguments or step payloads.
+- Added a signed `POST /api/public/v1/agent-runs` trigger endpoint that requires `agent:run`, creates tenant-scoped queued agent runs from external systems, snapshots the active agent configuration, and returns the run ID plus polling URL.
+- Added a signed `POST /api/public/v1/workflow-runs` trigger endpoint that requires `workflow:run`, runs only active webhook-configured workflows, and records the API-key tenant on the workflow execution.
+- Started webhook delivery logs with tenant-scoped delivery records, attempt/retry/failure metadata, preview-only request/response storage, summary health metrics, and an `Admin -> Settings -> Webhook Deliveries` inspection surface.
+- Added a reusable webhook delivery dispatcher that queues callback payloads, posts them with bounded previews, records success/failure evidence, schedules exponential retries, and marks exhausted deliveries as abandoned.
+
 ### Phase 5: Make It Rebrandable
 
 Build:
@@ -577,6 +630,39 @@ Build:
 Why fifth:
 
 - This turns the platform into a repeatable base for many vertical products.
+
+Current implementation status:
+
+- Started the white-label readiness foundation with a code-backed `settings.getWhiteLabelReadiness` query that scores product identity, logos, brand color, diagnostic route posture, widget branding, email sender setup, and production setup validation.
+- Connected the settings readiness panel to backend readiness evidence while preserving the existing local form fallback during loading or unsaved edits.
+- Added a code-backed white-label module preset catalog via `settings.getWhiteLabelModulePresets`, giving Knowledge Assistant, Support Widget, and Operator Workspace stable module lists, owner surfaces, handoff checks, readiness dependencies, and destination links for reuse beyond the settings UI.
+- Added a code-backed `settings.getWhiteLabelHandoffSummary` query and settings panel so builders can confirm the product name, logo posture, brand color, runtime sender, widget readiness, diagnostics posture, production gate, next actions, and ready presets from one packaging summary.
+- Added code-backed white-label navigation profiles via `settings.getWhiteLabelNavigationProfiles`, previewing which route groups a vertical starter should show, reserve for operators, or hide while preserving server-side authorization as the real access boundary.
+- Added a code-backed `settings.getWhiteLabelCustomDomainChecklist` query and settings panel so builders can track branded host, widget allowlist, sender domain, DNS/TLS, redirect, and tenant-routing review evidence before packaging.
+- Added a code-backed `settings.getWhiteLabelPackagingChecklist` query and settings panel that produces a copy-ready markdown handoff artifact from readiness evidence, brand posture, module presets, navigation profiles, and developer follow-up.
+- Added `docs/white-label-packaging-operator-guide.md` and expanded `docs/vertical-app-packaging-checklist.md` so operators know how to use the white-label readiness, handoff, module, navigation, custom-domain, and packaging panels before a customer-specific build handoff.
+
+Phase 5 completion notes:
+
+- Phase 5 is complete as a rebrandable starter foundation: builders can review white-label readiness, confirm brand and email posture, choose module presets, preview navigation profiles, track custom-domain handoff evidence, and copy a packaging checklist from System Options.
+- Widget and email branding alignment is complete at the starter layer: stored system branding feeds runtime email sender fallback behavior and public widget defaults, while widget-specific configuration can still override the customer-facing experience.
+- Module and navigation customization remains intentionally planning-first. Runtime route hiding should only be persisted for a concrete product build after server authorization, tenant routing, audit behavior, and support workflows are reviewed.
+- The next roadmap work starts after Phase 5 with demo seed/showcase mode and any customer-specific packaging polish requested during an actual vertical build.
+
+## Roadmap Completion
+
+This Starter Platform Expansion Plan is complete as a foundation implementation.
+
+Completed foundations:
+
+- App Kit Gallery and build-plan workspace setup
+- Agent Studio and developer ship checks
+- Trust, run observability, knowledge quality, and learning review surfaces
+- Public API, API key governance, workflow triggers, and webhook delivery foundations
+- White-label/rebrandable packaging tools
+- Local demo seed and showcase mode
+
+Remaining work should now be treated as customer-specific product packaging, persisted route visibility for a concrete build, flagship showcase content, or follow-on roadmap work rather than unfinished scope in this plan.
 
 ## Design Principles
 

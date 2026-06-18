@@ -457,7 +457,7 @@ describe("Agent Eval Fixtures", () => {
         tags: ["tool_plan", "suite"],
         status: "ACTIVE",
         createdAt: now + 1,
-        updatedAt: now + 1,
+        updatedAt: now - 1,
       });
 
       return { adminAId, adminBId, agentId, passingFixtureId, failingFixtureId };

@@ -328,7 +328,8 @@ describe("LaunchPlanDetailPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockImplementation((queryFn, _args?) => {
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
       const functionName = getFunctionName(queryFn);
       if (functionName === "appTemplates:getLaunchPlanDetails") {
         return details as unknown as ReturnType<typeof useQuery>;
@@ -494,7 +495,8 @@ describe("LaunchPlanDetailPage", () => {
   });
 
   it("renders created draft resource links", () => {
-    vi.mocked(useQuery).mockImplementation((queryFn, _args?) => {
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
       const functionName = getFunctionName(queryFn);
       if (functionName === "appTemplates:getLaunchPlanDetails") {
         return {
