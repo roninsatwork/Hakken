@@ -81,6 +81,25 @@ describe("assistant prompt assembly", () => {
     expect(instruction).toContain("CONFIGURED AGENT BEHAVIOR");
   });
 
+  test("compiles enabled agent skills after configured agent behavior", () => {
+    const instruction = buildAgentSystemInstruction("Base agent instruction.", [
+      {
+        name: "Approval Handoff",
+        category: "STARTER",
+        riskLevel: "HIGH",
+        instruction: "Pause before risky side effects and ask for explicit approval.",
+      },
+    ]);
+
+    expect(instruction.indexOf("CONFIGURED AGENT BEHAVIOR")).toBeLessThan(
+      instruction.indexOf("ENABLED AGENT SKILLS")
+    );
+    expect(instruction).toContain("[SKILL: Approval Handoff]");
+    expect(instruction).toContain("CATEGORY: STARTER");
+    expect(instruction).toContain("RISK: HIGH");
+    expect(instruction).toContain("Pause before risky side effects");
+  });
+
   test("orders main chat knowledge as global, then company, then thread", () => {
     const orderedMatches = orderAssistantKnowledgeMatches({
       globalMatches: ["global knowledge"],

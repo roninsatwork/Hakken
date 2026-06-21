@@ -170,4 +170,271 @@ describe("Agent Improvement Suggestions", () => {
       "REJECT_AGENT_IMPROVEMENT_SUGGESTION",
     ]);
   });
+
+  test("failed skill smoke evals create and apply shared skill instruction suggestions", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "super-admin@example.com",
+        role: "SUPER_ADMIN",
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Shared Skill Learning Agent",
+      description: "Tests skill-scoped improvement suggestions.",
+    });
+    const skillId = await client.mutation(api.agentSkills.createSkill, {
+      name: "Escalation Tool Skill",
+      category: "TEST",
+      status: "ACTIVE",
+      riskLevel: "HIGH",
+      instruction: "Escalate material events with the approved workflow.",
+      suggestedEvalFixturesJson: JSON.stringify([{
+        type: "TOOL_PLAN",
+        objective: "Escalate a material event through the required escalation tool.",
+        expectedFinalOutputRubric: "The agent should call the escalation workflow tool before reporting success.",
+        expectedToolMappings: ["missing.escalation.workflow"],
+        tags: ["skill", "tool-plan"],
+      }]),
+    });
+    const binding = await client.mutation(api.agentSkills.bindSkillToAgent, {
+      agentId,
+      skillId,
+      seedEvalFixtures: true,
+    });
+    const sourceSkillVersionId = binding.skillVersionId;
+    expect(binding.seededEvalFixtureIds).toHaveLength(1);
+
+    const failedSmokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, {
+      agentId,
+      fixtureId: binding.seededEvalFixtureIds[0],
+    });
+    expect(failedSmokeEval).toMatchObject({
+      status: "FAILED",
+      missingToolMappings: ["missing.escalation.workflow"],
+    });
+
+    await client.mutation(api.agentRunReflections.createForRun, {
+      runId: failedSmokeEval.runId,
+    });
+    const generated = await client.mutation(api.agentImprovementSuggestions.generateForRun, {
+      runId: failedSmokeEval.runId,
+    });
+    expect(generated.createdIds.length).toBeGreaterThanOrEqual(1);
+
+    const suggestions = await client.query(api.agentImprovementSuggestions.getRecentForAgent, { agentId });
+    const skillSuggestion = suggestions.find((suggestion) => suggestion.type === "SKILL_INSTRUCTION_CHANGE");
+    expect(skillSuggestion).toBeDefined();
+    if (!skillSuggestion) throw new Error("Expected skill improvement suggestion");
+    expect(skillSuggestion).toMatchObject({
+      sourceSkillId: skillId,
+      sourceSkillVersionId,
+      sourceEvalFixtureId: binding.seededEvalFixtureIds[0],
+      riskLevel: "HIGH",
+    });
+    expect(JSON.parse(skillSuggestion.proposedPatchJson)).toMatchObject({
+      sourceSkillId: skillId,
+      sourceSkillVersionId,
+    });
+
+    const applied = await client.mutation(api.agentImprovementSuggestions.decideSuggestion, {
+      suggestionId: skillSuggestion._id,
+      decision: "APPROVED",
+      apply: true,
+    });
+    expect(applied.appliedAgentVersionId).toBeNull();
+    expect(applied.appliedSkillVersionId).toBeTruthy();
+    expect(applied.appliedSkillVersionId).not.toBe(sourceSkillVersionId);
+
+    const state = await t.run(async (ctx) => {
+      const skill = await ctx.db.get(skillId);
+      const updatedSuggestion = await ctx.db.get(skillSuggestion._id);
+      const updatedBinding = await ctx.db
+        .query("agentSkillBindings")
+        .withIndex("by_agent_skill", (q) => q.eq("agentId", agentId).eq("skillId", skillId))
+        .first();
+      const skillVersions = await ctx.db
+        .query("agentSkillVersions")
+        .withIndex("by_skill_created", (q) => q.eq("skillId", skillId))
+        .collect();
+      const fixtures = await ctx.db
+        .query("agentEvalFixtures")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "ACTIVE"))
+        .collect();
+      return { skill, updatedSuggestion, updatedBinding, skillVersions, fixtures };
+    });
+
+    expect(state.skill?.instruction).toContain("Approved learning note");
+    expect(state.updatedSuggestion).toMatchObject({
+      status: "APPLIED",
+      appliedSkillVersionId: applied.appliedSkillVersionId,
+    });
+    expect(state.updatedSuggestion).not.toHaveProperty("appliedAgentVersionId");
+    expect(state.updatedBinding?.skillVersionId).toBe(sourceSkillVersionId);
+    expect(state.skillVersions).toHaveLength(2);
+    const updatedSkillFixture = state.fixtures.find((fixture) => fixture._id === binding.seededEvalFixtureIds[0]);
+    expect(JSON.parse(updatedSkillFixture?.sourceEvidenceJson || "{}")).toMatchObject({
+      source: "agent_skill",
+      skillId,
+      skillVersionId: sourceSkillVersionId,
+    });
+  });
+
+  test("failed runtime runs can attribute improvement suggestions to active skills", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "runtime-skill-admin@example.com",
+        role: "SUPER_ADMIN",
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Runtime Skill Attribution Agent",
+      description: "Tests skill attribution for normal failed runs.",
+    });
+    const escalationSkillId = await client.mutation(api.agentSkills.createSkill, {
+      name: "Client Escalation",
+      category: "ESCALATION",
+      status: "ACTIVE",
+      riskLevel: "HIGH",
+      instruction: "Escalate client risk events with the escalation workflow and clear approval context.",
+      requiredToolMappingsJson: JSON.stringify(["client.escalation.workflow"]),
+    });
+    const approvalSkillId = await client.mutation(api.agentSkills.createSkill, {
+      name: "Sensitive Concession Approval",
+      category: "APPROVAL",
+      status: "ACTIVE",
+      riskLevel: "HIGH",
+      instruction: "Require explicit approval before proposing discounts, concessions, or contract changes.",
+      requiredToolMappingsJson: JSON.stringify(["contracts.discount.approve"]),
+    });
+    const escalationBinding = await client.mutation(api.agentSkills.bindSkillToAgent, {
+      agentId,
+      skillId: escalationSkillId,
+      seedEvalFixtures: false,
+    });
+    const approvalBinding = await client.mutation(api.agentSkills.bindSkillToAgent, {
+      agentId,
+      skillId: approvalSkillId,
+      seedEvalFixtures: false,
+    });
+
+    const runId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const failedRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        userId: adminId,
+        triggerType: "MANUAL",
+        objective: "Approve a sensitive client concession.",
+        status: "FAILED",
+        error: "The approval was rejected because the discount exceeded policy.",
+        startedAt: now,
+        completedAt: now + 50,
+        updatedAt: now + 50,
+      });
+      await ctx.db.insert("agentRunSteps", {
+        runId: failedRunId,
+        agentId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "Runtime skills",
+        output: JSON.stringify({
+          skills: [{
+            skillId: escalationSkillId,
+            skillVersionId: escalationBinding.skillVersionId,
+            name: "Client Escalation",
+            category: "ESCALATION",
+            riskLevel: "HIGH",
+            requiredToolMappings: ["client.escalation.workflow"],
+          }, {
+            skillId: approvalSkillId,
+            skillVersionId: approvalBinding.skillVersionId,
+            name: "Sensitive Concession Approval",
+            category: "APPROVAL",
+            riskLevel: "HIGH",
+            requiredToolMappings: ["contracts.discount.approve"],
+          }],
+        }),
+        startedAt: now,
+        completedAt: now,
+      });
+      const toolCallId = await ctx.db.insert("agentToolCalls", {
+        runId: failedRunId,
+        agentId,
+        normalizedToolName: "approve_discount",
+        handlerMapping: "contracts.discount.approve",
+        argumentsJson: JSON.stringify({ discountPercent: 35 }),
+        status: "APPROVAL_REQUIRED",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        startedAt: now + 10,
+      });
+      await ctx.db.insert("agentRunApprovals", {
+        runId: failedRunId,
+        toolCallId,
+        agentId,
+        status: "REJECTED",
+        message: "Approve 35% discount concession?",
+        previewJson: JSON.stringify({ discountPercent: 35, policyLimit: 20 }),
+        requestedAt: now + 11,
+        reviewedAt: now + 30,
+        decisionReason: "Discount concession exceeds approved threshold.",
+      });
+      return failedRunId;
+    });
+
+    await client.mutation(api.agentRunFeedback.upsertForRun, {
+      runId,
+      rating: "NEGATIVE",
+      labels: ["NEEDS_APPROVAL_POLICY_CHANGE"],
+      comment: "This needs tighter approval handling for sensitive concessions.",
+    });
+    await client.mutation(api.agentRunReflections.createForRun, { runId });
+
+    const generated = await client.mutation(api.agentImprovementSuggestions.generateForRun, { runId });
+    expect(generated.createdIds.length).toBeGreaterThanOrEqual(1);
+
+    const suggestions = await client.query(api.agentImprovementSuggestions.getRecentForAgent, { agentId });
+    const skillSuggestion = suggestions.find((suggestion) => suggestion.type === "SKILL_INSTRUCTION_CHANGE");
+    expect(skillSuggestion).toBeDefined();
+    if (!skillSuggestion) throw new Error("Expected runtime skill improvement suggestion");
+    expect(skillSuggestion).toMatchObject({
+      sourceSkillId: approvalSkillId,
+      sourceSkillVersionId: approvalBinding.skillVersionId,
+      riskLevel: "HIGH",
+    });
+    const proposedPatch = JSON.parse(skillSuggestion.proposedPatchJson);
+    expect(proposedPatch).toMatchObject({
+      sourceSkillId: approvalSkillId,
+      sourceSkillVersionId: approvalBinding.skillVersionId,
+      evidenceSource: "runtime_trace",
+    });
+    expect(proposedPatch.attributionReason).toContain("approval tool overlap");
+  });
 });

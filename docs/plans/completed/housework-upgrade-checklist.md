@@ -71,10 +71,10 @@ Scope:
 - `AGENTS.md`
 - `README.md`
 - `docs/index.md`
-- `docs/getting-started.md`
-- `docs/deployment.md`
-- `docs/current-cleanup-checklist.md`
-- `docs/future-agent-maintenance-plan.md`
+- `docs/developer/getting-started.md`
+- `docs/developer/deployment.md`
+- `docs/plans/completed/current-cleanup-checklist.md`
+- `docs/developer/future-agent-maintenance-plan.md`
 - `GEMINI.md`
 
 Checklist:
@@ -83,7 +83,7 @@ Checklist:
 - [x] Confirm `GEMINI.md` only acts as a legacy pointer.
 - [x] Make `README.md` point to the right docs for local dev, deployment, and agent handoff.
 - [x] Make `docs/index.md` list the current docs in a useful order.
-- [x] Make `docs/deployment.md` clearly explain `dev` versus `main`.
+- [x] Make `docs/developer/deployment.md` clearly explain `dev` versus `main`.
 - [x] Keep the completed 6-phase cleanup checklist marked complete.
 - [x] Avoid duplicating long instructions across multiple docs.
 - [x] Run `git diff --check`.
@@ -141,7 +141,7 @@ Goal:
 Scope:
 
 - `.github/workflows/**`
-- `docs/deployment.md`
+- `docs/developer/deployment.md`
 - `AGENTS.md`
 - `README.md`
 

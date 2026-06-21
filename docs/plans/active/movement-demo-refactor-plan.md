@@ -32,7 +32,7 @@ Routes and files:
   - `movements` table: `title`, `difficulty`, `poseData`, `createdAt`.
 - `convex/movements.test.ts`
   - Auth hardening tests only.
-- `docs/movement-tracking.md`
+- `docs/developer/movement-tracking.md`
   - Existing coordinate-system notes for MediaPipe, VRM, Kalidokit, and Three.js.
 
 ## Current Data Flow
@@ -171,7 +171,7 @@ Completed on 2026-06-03:
 - Added repeatable unauthenticated browser smoke coverage for the movement library, capture, detail, and play routes. These routes must now return a non-5xx shell or redirect cleanly to login with no client errors.
 - Added deterministic e2e movement fixture data and authenticated browser smoke coverage for the movement library, capture shell, detail viewer, and play avatar lobby.
 - Updated the e2e Convex React mock to avoid auth-user hydration mismatch noise by deferring cookie-dependent user data until the client has hydrated.
-- Added a dedicated signed-in manual smoke checklist for the real camera and MediaPipe tracking paths: `docs/movement-demo-manual-smoke-checklist.md`.
+- Added a dedicated signed-in manual smoke checklist for the real camera and MediaPipe tracking paths: `docs/operator/movement-demo-manual-smoke-checklist.md`.
 - Confirmed movement recordings remain shared demo assets for all authenticated users, not tenant-scoped production assets.
 - Tuned live and captured hand tracking after manual smoke: player hands are no longer forcibly mirrored before Kalidokit solving, hand smoothing is more responsive, and finger rotations are applied with stronger player-side curl.
 - Added the whole-body tracking follow-up plan covering calibration, head/neck accuracy, arm/hand chains, torso/hips/legs/feet, avatar profiles, debug tooling, and manual smoke requirements.
@@ -278,7 +278,7 @@ Goal: make the current behavior observable before moving code.
 
 Tasks:
 
-- Add `docs/movement-demo-refactor-plan.md` and link it from `docs/index.md`.
+- Add `docs/plans/active/movement-demo-refactor-plan.md` and link it from `docs/index.md`.
 - Add a quality-drift exception note that movement demo scope is explicitly reopened by this plan.
 - Add tests for pure frame parsing once the codec exists.
 - Add browser smoke test stubs or a manual checklist for:
@@ -508,7 +508,7 @@ If it stays a demo:
 If it becomes product:
 
 - Keep tenant isolation out of this demo unless it graduates into a production product surface.
-- Add upload policy coverage to `docs/upload-and-knowledge-policy.md`.
+- Add upload policy coverage to `docs/developer/upload-and-knowledge-policy.md`.
 - Add audit logs for create/delete.
 - Add storage cleanup/backfill.
 - Add richer e2e coverage with mocked camera inputs.
@@ -547,7 +547,7 @@ npm run test:e2e
 
 Manual smoke checklist:
 
-- Run `docs/movement-demo-manual-smoke-checklist.md` in a real signed-in browser session with camera access enabled.
+- Run `docs/operator/movement-demo-manual-smoke-checklist.md` in a real signed-in browser session with camera access enabled.
 
 ## Open Decisions
 

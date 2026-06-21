@@ -4,10 +4,10 @@ This plan is the reference point for turning Sonae from a strong internal agenti
 
 Use this plan when deciding what to build next, what already exists, and where new work should land. It complements:
 
-- `docs/true-agentic-platform-plan.md` for the core durable agent runtime.
-- `docs/agent-learning-improvement-plan.md` for memory, feedback, reflections, and governed improvement.
-- `docs/product-extension-guide.md` for extension patterns and code ownership boundaries.
-- `docs/future-agent-maintenance-plan.md` for repo guardrails, quality gates, and frozen demo scope.
+- `docs/plans/active/true-agentic-platform-plan.md` for the core durable agent runtime.
+- `docs/plans/active/agent-learning-improvement-plan.md` for memory, feedback, reflections, and governed improvement.
+- `docs/developer/product-extension-guide.md` for extension patterns and code ownership boundaries.
+- `docs/developer/future-agent-maintenance-plan.md` for repo guardrails, quality gates, and frozen demo scope.
 
 ## Goal
 
@@ -112,10 +112,10 @@ Give future builders a clear "start here" path.
 
 Build:
 
-- Create a starter framework overview page in docs that links architecture, setup, agent runtime, tools, workflows, templates, and deployment. Implemented in `docs/agentic-starter-framework-overview.md`.
-- Add a "new app/customer setup" checklist covering tenant creation, first super-admin, model defaults, provider setup, sample tools, sample agents, and seed knowledge. Implemented in `docs/new-agentic-app-setup-checklist.md`.
+- Create a starter framework overview page in docs that links architecture, setup, agent runtime, tools, workflows, templates, and deployment. Implemented in `docs/developer/agentic-starter-framework-overview.md`.
+- Add a "new app/customer setup" checklist covering tenant creation, first super-admin, model defaults, provider setup, sample tools, sample agents, and seed knowledge. Implemented in `docs/developer/new-agentic-app-setup-checklist.md`.
 - Add a seeded demo dataset or sample tenant that does not depend on production credentials. Implemented with `npm run demo:local:seed` and `convex/localDemoSeed.ts`.
-- Add a `docs/starter-app-template-checklist.md` or equivalent template spec for future vertical apps. Implemented in `docs/starter-app-template-checklist.md`.
+- Add a `docs/developer/starter-app-template-checklist.md` or equivalent template spec for future vertical apps. Implemented in `docs/developer/starter-app-template-checklist.md`.
 
 Acceptance:
 
@@ -127,8 +127,8 @@ Primary files:
 
 - `README.md`
 - `docs/index.md`
-- `docs/getting-started.md`
-- `docs/product-extension-guide.md`
+- `docs/developer/getting-started.md`
+- `docs/developer/product-extension-guide.md`
 - `scripts/local-test-auth.mjs`
 - `convex/seedUsers.ts`
 
@@ -560,9 +560,9 @@ Acceptance:
 Primary files:
 
 - `README.md`
-- `docs/getting-started.md`
-- `docs/deployment.md`
-- `docs/product-extension-guide.md`
+- `docs/developer/getting-started.md`
+- `docs/developer/deployment.md`
+- `docs/developer/product-extension-guide.md`
 - `convex/settingsService.ts`
 - `messages/en.json`
 - `messages/it.json`

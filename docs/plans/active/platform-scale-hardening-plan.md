@@ -28,7 +28,7 @@ This plan does not cover:
 
 ## Current Baseline
 
-Analytics, AI running costs, company dashboards, and chart rendering have already been strengthened through `docs/analytics-scale-optimization-plan.md`.
+Analytics, AI running costs, company dashboards, and chart rendering have already been strengthened through `docs/plans/active/analytics-scale-optimization-plan.md`.
 
 The remaining scale risks are lower urgency but still worth fixing before they become part of the platform's shape:
 
@@ -399,7 +399,7 @@ Acceptance:
 
 - `npm run check` catches new unclassified broad reads.
 - `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check` pass before merge/push.
-- Production gate commands remain documented in `docs/deployment.md`.
+- Production gate commands remain documented in `docs/developer/deployment.md`.
 
 Status:
 

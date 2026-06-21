@@ -335,6 +335,7 @@
         "models": "Models",
         "agents": "Agents",
         "agentApprovals": "Agent Approvals",
+        "agentSkills": "Agent Skills",
         "releaseCenter": "Ship Checks",
         "runObservatory": "Run Observatory",
         "manageAgents": "Manage Agents",
@@ -1106,6 +1107,7 @@
                     "runs": "Runs",
                     "evals": "Evals",
                     "settings": "Settings",
+                    "skills": "Skills",
                     "knowledge": "Knowledge",
                     "memory": "Memory",
                     "prompt": "Prompt",
@@ -1255,6 +1257,11 @@
                                         "title": "Tool Access",
                                         "pass": "{count} tool binding(s) are available.",
                                         "warn": "No tools are bound to this agent yet."
+                                    },
+                                    "skills": {
+                                        "title": "Skills",
+                                        "pass": "{count} enabled skill(s) are attached.",
+                                        "warn": "Required skill tools or high-risk skill smoke evals need attention."
                                     },
                                     "knowledge": {
                                         "title": "Knowledge Sources",

@@ -9,7 +9,7 @@ describe("Agent Memory Candidates", () => {
   test("admins can generate, approve, reject, and auto-apply scoped memory candidates", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminAId, adminBId, agentId, successRunId, failedRunId } = await t.run(async (ctx) => {
+    const { adminAId, adminBId, agentId, successRunId, failedRunId, skillId, skillVersionId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
       const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
       const adminAId = await ctx.db.insert("users", {
@@ -29,6 +29,50 @@ describe("Agent Memory Candidates", () => {
         isActive: true,
         createdAt: Date.now(),
         updatedAt: Date.now(),
+      });
+      const skillId = await ctx.db.insert("agentSkills", {
+        name: "Escalation Workflow",
+        description: "Guides owner, blocker, and next-action escalation summaries.",
+        category: "Operations",
+        status: "ACTIVE",
+        riskLevel: "MEDIUM",
+        instruction: "Escalation summaries must include owner, blocker, and next action.",
+        requiredToolMappingsJson: JSON.stringify(["client.escalations.read"]),
+        createdBy: adminAId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const skillVersionId = await ctx.db.insert("agentSkillVersions", {
+        skillId,
+        versionNumber: 1,
+        snapshotHash: "skill-memory-attribution-v1",
+        snapshotJson: "{}",
+        instructionHash: "instruction-hash",
+        toolRequirementHash: "tool-hash",
+        evalHash: "eval-hash",
+        createdAt: Date.now(),
+      });
+      const approvalSkillId = await ctx.db.insert("agentSkills", {
+        name: "Sensitive Approval",
+        description: "Handles unrelated approval workflows.",
+        category: "Approvals",
+        status: "ACTIVE",
+        riskLevel: "HIGH",
+        instruction: "Require approval for sensitive external side effects.",
+        requiredToolMappingsJson: JSON.stringify(["contracts.discount.approve"]),
+        createdBy: adminAId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const approvalSkillVersionId = await ctx.db.insert("agentSkillVersions", {
+        skillId: approvalSkillId,
+        versionNumber: 1,
+        snapshotHash: "skill-sensitive-approval-v1",
+        snapshotJson: "{}",
+        instructionHash: "approval-instruction-hash",
+        toolRequirementHash: "approval-tool-hash",
+        evalHash: "approval-eval-hash",
+        createdAt: Date.now(),
       });
       const successRunId = await ctx.db.insert("agentRuns", {
         agentId,
@@ -66,6 +110,62 @@ describe("Agent Memory Candidates", () => {
         completedAt: 240,
         updatedAt: 240,
       });
+      await ctx.db.insert("agentRunSteps", {
+        runId: failedRunId,
+        agentId,
+        companyId: companyAId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "Runtime skills",
+        output: JSON.stringify({
+          skills: [{
+            skillId,
+            skillVersionId,
+            name: "Escalation Workflow",
+            category: "Operations",
+            riskLevel: "MEDIUM",
+            requiredToolMappings: ["client.escalations.read"],
+          }, {
+            skillId: approvalSkillId,
+            skillVersionId: approvalSkillVersionId,
+            name: "Sensitive Approval",
+            category: "Approvals",
+            riskLevel: "HIGH",
+            requiredToolMappings: ["contracts.discount.approve"],
+          }],
+        }),
+        startedAt: 201,
+        completedAt: 202,
+      });
+      const toolCallId = await ctx.db.insert("agentToolCalls", {
+        runId: failedRunId,
+        agentId,
+        normalizedToolName: "read_escalations",
+        handlerMapping: "client.escalations.read",
+        argumentsJson: "{}",
+        status: "FAILED",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        companyId: companyAId,
+        userId: adminAId,
+        startedAt: 203,
+        completedAt: 204,
+        error: "Missing escalation context",
+      });
+      await ctx.db.insert("agentRunApprovals", {
+        runId: failedRunId,
+        toolCallId,
+        agentId,
+        companyId: companyAId,
+        status: "REJECTED",
+        message: "Approve reading escalation context for summary generation?",
+        previewJson: JSON.stringify({ requiredFields: ["owner", "blocker", "nextAction"] }),
+        requestedAt: 205,
+        reviewedAt: 206,
+        decisionReason: "Escalation context request was incomplete.",
+      });
       await ctx.db.insert("agentRunFeedback", {
         runId: failedRunId,
         agentId,
@@ -96,7 +196,7 @@ describe("Agent Memory Candidates", () => {
         updatedAt: 250,
       });
 
-      return { adminAId, adminBId, agentId, successRunId, failedRunId };
+      return { adminAId, adminBId, agentId, successRunId, failedRunId, skillId, skillVersionId };
     });
 
     const adminAClient = t.withIdentity({ subject: adminAId });
@@ -166,6 +266,14 @@ describe("Agent Memory Candidates", () => {
       status: "FAILED",
       objective: "Prepare escalation summary",
     });
+    expect(reviewInbox.memoryCandidates.every((candidate) => candidate.sourceSkill?.skillId === skillId)).toBe(true);
+    expect(reviewInbox.memoryCandidates[0]?.sourceSkill).toMatchObject({
+      skillId,
+      skillVersionId,
+      name: "Escalation Workflow",
+      versionNumber: 1,
+      attributionReason: expect.stringContaining("approval tool overlap"),
+    });
     expect(reviewInbox.improvementSuggestions).toEqual([
       expect.objectContaining({
         suggestionId,
@@ -211,6 +319,8 @@ describe("Agent Memory Candidates", () => {
     expect(failedCandidates.page).toHaveLength(2);
     expect(failedCandidates.page.map((candidate) => candidate.status)).toEqual(["PROPOSED", "PROPOSED"]);
     expect(failedCandidates.page.map((candidate) => candidate.kind).sort()).toEqual(["FACT", "FACT"]);
+    expect(failedCandidates.page.every((candidate) => candidate.sourceSkillId === skillId)).toBe(true);
+    expect(failedCandidates.page.every((candidate) => candidate.sourceSkillVersionId === skillVersionId)).toBe(true);
 
     const recentProposed = await adminAClient.query(api.agentMemoryCandidates.getRecentForAgent, { agentId });
     expect(recentProposed.map((candidate) => candidate._id).sort()).toEqual(

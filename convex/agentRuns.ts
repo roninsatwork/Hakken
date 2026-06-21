@@ -291,6 +291,17 @@ function parseAgentVersionSnapshot(snapshotJson: string) {
         items?: Array<{ kind?: string; content?: string; importance?: number; updatedAt?: number }>;
       };
       rules?: Array<{ name?: string; trigger?: string; instruction?: string; priority?: number }>;
+      skills?: Array<{
+        id?: string;
+        versionId?: string;
+        name?: string;
+        category?: string;
+        riskLevel?: string;
+        instruction?: string;
+        requiredToolMappings?: string[];
+        recommendedToolMappings?: string[];
+        snapshotHash?: string;
+      }>;
     };
     return parsed && typeof parsed === "object" ? parsed : null;
   } catch {
@@ -671,6 +682,23 @@ export const getReplayExecutionContextInternal = internalQuery({
               trigger: rule.trigger,
               instruction: rule.instruction!,
               priority: rule.priority,
+            }))
+        : [],
+      skillCount: Array.isArray(snapshot.skills) ? snapshot.skills.length : undefined,
+      skills: Array.isArray(snapshot.skills)
+        ? snapshot.skills
+            .filter((skill) => typeof skill.name === "string" && typeof skill.instruction === "string" && skill.instruction.trim().length > 0)
+            .slice(0, 25)
+            .map((skill) => ({
+              id: skill.id,
+              versionId: skill.versionId,
+              name: skill.name!,
+              category: skill.category,
+              riskLevel: skill.riskLevel,
+              instruction: skill.instruction!,
+              requiredToolMappings: Array.isArray(skill.requiredToolMappings) ? skill.requiredToolMappings : [],
+              recommendedToolMappings: Array.isArray(skill.recommendedToolMappings) ? skill.recommendedToolMappings : [],
+              snapshotHash: skill.snapshotHash,
             }))
         : [],
     };

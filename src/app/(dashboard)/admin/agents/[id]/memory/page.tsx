@@ -30,6 +30,15 @@ type SourceRunSummary = {
   completedAt?: number;
   costGBP?: number;
 };
+type SourceSkillSummary = {
+  skillId: Id<"agentSkills">;
+  name: string;
+  category: string;
+  riskLevel: string;
+  skillVersionId?: Id<"agentSkillVersions">;
+  versionNumber?: number;
+  attributionReason?: string;
+};
 type ReviewerSummary = {
   userId: Id<"users">;
   name: string;
@@ -168,6 +177,34 @@ function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary |
   );
 }
 
+function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary | null }) {
+  if (!sourceSkill) return null;
+  const versionLabel = typeof sourceSkill.versionNumber === "number" ? `v${sourceSkill.versionNumber}` : "pinned version";
+
+  return (
+    <div className="rounded-[8px] border border-sky-500/20 bg-sky-500/10 px-3 py-2 flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] uppercase font-mono tracking-widest text-sky-300">Skill attribution</span>
+        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getRiskColor(sourceSkill.riskLevel)}`}>
+          {sourceSkill.riskLevel}
+        </span>
+        <span className="text-[10px] font-mono text-muted">{versionLabel}</span>
+      </div>
+      <Link
+        href={`/admin/agents/skills/${sourceSkill.skillId}`}
+        className="text-[12px] text-foreground hover:text-brand-light font-semibold flex items-center gap-1 w-fit"
+      >
+        <ExternalLink className="w-3 h-3" />
+        {sourceSkill.name}
+      </Link>
+      <p className="text-[11px] text-secondary leading-relaxed">
+        {sourceSkill.category}
+        {sourceSkill.attributionReason ? `: ${sourceSkill.attributionReason}` : ""}
+      </p>
+    </div>
+  );
+}
+
 function getOperationColor(operation: PatchPreviewRow["operation"]) {
   if (operation === "APPEND") return "text-sky-300 bg-sky-500/10 border-sky-500/20";
   if (operation === "CREATE") return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
@@ -244,15 +281,17 @@ function ReviewMetadata({
   reviewer,
   reason,
   appliedAgentVersionId,
+  appliedSkillVersionId,
   appliedEffect,
 }: {
   reviewedAt?: number;
   reviewer?: ReviewerSummary | null;
   reason?: string;
   appliedAgentVersionId?: Id<"agentVersions">;
+  appliedSkillVersionId?: Id<"agentSkillVersions">;
   appliedEffect?: string | null;
 }) {
-  if (!reviewedAt && !reviewer && !reason && !appliedAgentVersionId && !appliedEffect) return null;
+  if (!reviewedAt && !reviewer && !reason && !appliedAgentVersionId && !appliedSkillVersionId && !appliedEffect) return null;
 
   return (
     <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 flex flex-col gap-1 text-[11px] text-muted">
@@ -266,6 +305,9 @@ function ReviewMetadata({
       {appliedEffect && <p className="text-emerald-300 leading-relaxed">{appliedEffect}</p>}
       {appliedAgentVersionId && (
         <p className="font-mono break-all">version: {appliedAgentVersionId}</p>
+      )}
+      {appliedSkillVersionId && (
+        <p className="font-mono break-all">skill version: {appliedSkillVersionId}</p>
       )}
     </div>
   );
@@ -611,6 +653,7 @@ export default function AgentMemoryPage() {
                       <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{Math.round(candidate.confidence * 100)}%</span>
                     </div>
                     <p className="text-[12px] text-secondary leading-relaxed whitespace-pre-wrap">{candidate.content}</p>
+                    <SourceSkillDetail sourceSkill={candidate.sourceSkill} />
                     <SourceRunDetail sourceRun={candidate.sourceRun} agentId={agentId} />
                     <ReviewMetadata
                       reviewedAt={candidate.reviewedAt}
@@ -677,6 +720,7 @@ export default function AgentMemoryPage() {
                       reviewer={suggestion.reviewer}
                       reason={suggestion.rejectionReason}
                       appliedAgentVersionId={suggestion.appliedAgentVersionId}
+                      appliedSkillVersionId={suggestion.appliedSkillVersionId}
                       appliedEffect={suggestion.appliedEffect}
                     />
                     {suggestion.status === "PROPOSED" && (

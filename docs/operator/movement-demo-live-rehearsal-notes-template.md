@@ -3,7 +3,7 @@
 Last reviewed: 2026-06-14
 Purpose: capture the exact observations needed to tune the live posture studio after a real camera run.
 
-Use this during the `?debugTracking=1` rehearsal pass from `docs/movement-demo-pitch-runbook.md`.
+Use this during the `?debugTracking=1` rehearsal pass from `docs/operator/movement-demo-pitch-runbook.md`.
 
 ## Session Details
 

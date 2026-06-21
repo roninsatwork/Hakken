@@ -100,9 +100,21 @@ function getApprovedToolCompletionMessage(args: {
 function buildHistoricalReplaySystemPrompt(args: {
     systemPrompt: string | null | undefined;
     rules: Array<{ name?: string; trigger?: string; instruction: string; priority?: number }>;
+    skills?: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }>;
 }) {
     const configuredPrompt = args.systemPrompt || "";
-    if (args.rules.length === 0) return configuredPrompt;
+    const skillInstruction = args.skills && args.skills.length > 0
+        ? "\n\n====================\nHISTORICAL ENABLED AGENT SKILLS FROM THE REPLAYED VERSION SNAPSHOT:\n\n" + args.skills
+            .map((skill) => {
+                const metadata = [
+                    skill.category ? `CATEGORY: ${skill.category}` : undefined,
+                    skill.riskLevel ? `RISK: ${skill.riskLevel}` : undefined,
+                ].filter(Boolean).join("\n");
+                return `[SKILL: ${skill.name}]\n${metadata ? `${metadata}\n` : ""}${skill.instruction}`;
+            })
+            .join("\n\n---\n\n")
+        : "";
+    if (args.rules.length === 0) return `${configuredPrompt}${skillInstruction}`;
 
     const compiledRules = args.rules
         .map((rule) => {
@@ -113,7 +125,7 @@ function buildHistoricalReplaySystemPrompt(args: {
         })
         .join("\n\n---\n\n");
 
-    return `${configuredPrompt}\n\n====================\nHISTORICAL ACTIVE AGENT RULES FROM THE REPLAYED VERSION SNAPSHOT:\n\n${compiledRules}`;
+    return `${configuredPrompt}${skillInstruction}\n\n====================\nHISTORICAL ACTIVE AGENT RULES FROM THE REPLAYED VERSION SNAPSHOT:\n\n${compiledRules}`;
 }
 
 export const runAgentObjective = internalAction({
@@ -143,11 +155,15 @@ export const runAgentObjective = internalAction({
         const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
         if (!agent) throw new Error("Agent not found.");
 
-        const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt);
-
         // 2. Fetch Conversation History 
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         if (!thread) throw new Error("Thread context missing");
+        const runtimeSkills = await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
+            agentId: args.agentId,
+            companyId: thread.companyId,
+        });
+
+        const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills);
 
         const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
            requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
@@ -171,6 +187,28 @@ export const runAgentObjective = internalAction({
         });
         const runId = agentRunId;
         let preLoopStepIndex = 0;
+        if (runtimeSkills.length > 0) {
+            preLoopStepIndex += 1;
+            await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+                runId,
+                agentId: args.agentId,
+                companyId: thread.companyId,
+                stepIndex: preLoopStepIndex,
+                kind: "OBSERVE",
+                status: "SUCCESS",
+                input: args.content,
+                output: JSON.stringify({
+                    skills: runtimeSkills.map((skill) => ({
+                        skillId: skill.skillId,
+                        skillVersionId: skill.skillVersionId,
+                        name: skill.name,
+                        category: skill.category,
+                        riskLevel: skill.riskLevel,
+                        requiredToolMappings: skill.requiredToolMappings,
+                    })),
+                }),
+            });
+        }
 
         const messages = await ctx.runQuery(internal.chat.getMessagesForAI, {
             threadId: args.threadId,
@@ -859,10 +897,11 @@ export const runTriggeredAgentObjective = internalAction({
         : null;
       const requestedModelId = replayExecutionContext?.modelId
         ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId);
-      const executionSystemPrompt = replayExecutionContext
+          const executionSystemPrompt = replayExecutionContext
         ? buildHistoricalReplaySystemPrompt({
             systemPrompt: replayExecutionContext.systemPrompt ?? agent.systemPrompt,
             rules: replayExecutionContext.rules,
+            skills: replayExecutionContext.skills,
           })
         : agent.systemPrompt;
       const executionTemperature = replayExecutionContext?.temperature !== undefined
@@ -960,6 +999,7 @@ export const runTriggeredAgentObjective = internalAction({
               toolExecution: false,
               memoryContents: replayExecutionContext.memoryContents.length > 0,
               rules: replayExecutionContext.rules.length > 0,
+              skills: replayExecutionContext.skills.length > 0,
             },
             snapshotCounts: {
               tools: replayExecutionContext.toolCount,
@@ -967,6 +1007,7 @@ export const runTriggeredAgentObjective = internalAction({
               blockedReplayTools: blockedReplayTools.length,
               activeMemories: replayExecutionContext.memoryActiveCount,
               rules: replayExecutionContext.ruleCount,
+              skills: replayExecutionContext.skillCount,
             },
             historicalTools: replayExecutionContext.tools.map((tool) => ({
               name: tool.name,
@@ -1079,6 +1120,34 @@ export const runTriggeredAgentObjective = internalAction({
           maxChars: 6000,
         });
       }
+      const runtimeSkills = replayExecutionContext
+        ? []
+        : await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
+            agentId: args.agentId,
+            companyId: args.companyId,
+          });
+      if (runtimeSkills.length > 0) {
+        stepIndex += 1;
+        await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+          runId,
+          agentId: args.agentId,
+          companyId: args.companyId,
+          stepIndex,
+          kind: "OBSERVE",
+          status: "SUCCESS",
+          input: args.objective,
+          output: JSON.stringify({
+            skills: runtimeSkills.map((skill) => ({
+              skillId: skill.skillId,
+              skillVersionId: skill.skillVersionId,
+              name: skill.name,
+              category: skill.category,
+              riskLevel: skill.riskLevel,
+              requiredToolMappings: skill.requiredToolMappings,
+            })),
+          }),
+        });
+      }
 
       const response = await generateVertexContentWithRetry(ai, {
         model: targetModel,
@@ -1087,7 +1156,7 @@ export const runTriggeredAgentObjective = internalAction({
           parts: [{ text: objectiveContent }],
         }] satisfies Content[],
         config: {
-          systemInstruction: buildAgentSystemInstruction(executionSystemPrompt),
+          systemInstruction: buildAgentSystemInstruction(executionSystemPrompt, runtimeSkills),
           temperature: executionTemperature,
         },
       }, {

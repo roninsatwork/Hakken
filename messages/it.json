@@ -335,6 +335,7 @@
         "models": "Modelli",
         "agents": "Agenti",
         "agentApprovals": "Approvazioni Agenti",
+        "agentSkills": "Skill Agent",
         "releaseCenter": "Controlli Ship",
         "runObservatory": "Osservatorio Run",
         "manageAgents": "Gestisci Agenti",
@@ -1125,6 +1126,7 @@
                     "runs": "Esecuzioni",
                     "evals": "Eval",
                     "settings": "Impostazioni",
+                    "skills": "Skill",
                     "knowledge": "Conoscenza",
                     "memory": "Memoria",
                     "prompt": "Prompt di Sistema",
@@ -1274,6 +1276,11 @@
                                         "title": "Accesso Tool",
                                         "pass": "{count} binding tool disponibili.",
                                         "warn": "Nessun tool e ancora collegato a questo agent."
+                                    },
+                                    "skills": {
+                                        "title": "Skill",
+                                        "pass": "{count} skill abilitate collegate.",
+                                        "warn": "I tool richiesti dalle skill o gli smoke eval delle skill ad alto rischio richiedono attenzione."
                                     },
                                     "knowledge": {
                                         "title": "Fonti Knowledge",

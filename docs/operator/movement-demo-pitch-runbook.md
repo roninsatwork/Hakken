@@ -4,7 +4,7 @@ Last reviewed: 2026-06-14
 Status: active draft
 Audience: premium posture / Pilates client demo for children aged 8-14.
 
-Quick presenter card: `docs/movement-demo-presenter-card.md`.
+Quick presenter card: `docs/operator/movement-demo-presenter-card.md`.
 
 ## Positioning
 
@@ -132,7 +132,7 @@ Avoid during the pitch:
 
 Use this pass only before the meeting, not in front of the client.
 
-Capture findings in `docs/movement-demo-live-rehearsal-notes-template.md` so the next tuning pass has exact fallback labels and visible-motion notes.
+Capture findings in `docs/operator/movement-demo-live-rehearsal-notes-template.md` so the next tuning pass has exact fallback labels and visible-motion notes.
 
 1. Open the live route with `?debugTracking=1`.
 2. Complete Posture Check-In with the presenter framed head to feet.

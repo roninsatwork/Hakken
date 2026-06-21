@@ -561,6 +561,6 @@ The first implementation PR should be intentionally small:
 - Add AI models status filter regression tests:
   - backend query behavior for omitted, active, and inactive filters.
   - frontend page test proving All omits `statusFilter`.
-- Add `docs/comprehensive-test-coverage-plan.md` to the docs index.
+- Add `docs/plans/active/comprehensive-test-coverage-plan.md` to the docs index.
 
 This creates measurement, fixes one known e2e blind spot, and protects the bug that triggered this coverage review.

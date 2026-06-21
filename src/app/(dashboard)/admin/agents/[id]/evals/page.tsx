@@ -9,6 +9,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Archive,
+  BrainCircuit,
   CheckCircle2,
   ClipboardCheck,
   Pencil,
@@ -28,6 +29,13 @@ type AgentEvalFixture = Doc<"agentEvalFixtures">;
 type AgentEvalSuitePreset = Doc<"agentEvalSuitePresets">;
 type AgentRunStatus = Doc<"agentRuns">["status"];
 type FixtureType = AgentEvalFixture["type"];
+type SkillFilter = "ALL" | Id<"agentSkills">;
+
+type FixtureSkillEvidence = {
+  skillId: Id<"agentSkills">;
+  skillVersionId?: Id<"agentSkillVersions">;
+  skillName?: string;
+};
 
 const fixtureTypes: FixtureType[] = [
   "HAPPY_PATH",
@@ -128,6 +136,23 @@ function expectedBlockedActions(fixture: AgentEvalFixture) {
   return Array.from(new Set(summaries)).sort();
 }
 
+function parseSkillEvidence(fixture: AgentEvalFixture): FixtureSkillEvidence | null {
+  const parsed = parseJson(fixture.sourceEvidenceJson);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const source = parsed as {
+    source?: unknown;
+    skillId?: unknown;
+    skillVersionId?: unknown;
+    skillName?: unknown;
+  };
+  if (source.source !== "agent_skill" || typeof source.skillId !== "string") return null;
+  return {
+    skillId: source.skillId as Id<"agentSkills">,
+    ...(typeof source.skillVersionId === "string" ? { skillVersionId: source.skillVersionId as Id<"agentSkillVersions"> } : {}),
+    ...(typeof source.skillName === "string" ? { skillName: source.skillName } : {}),
+  };
+}
+
 function getStatusTone(status: AgentRunStatus) {
   if (status === "SUCCESS") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
   if (status === "FAILED") return "border-red-500/20 bg-red-500/10 text-red-500";
@@ -166,6 +191,7 @@ export default function AgentEvalsPage() {
   const [editingFixtureId, setEditingFixtureId] = useState<Id<"agentEvalFixtures"> | null>(null);
   const [pendingArchiveFixture, setPendingArchiveFixture] = useState<AgentEvalFixture | null>(null);
   const [isArchivingFixture, setIsArchivingFixture] = useState(false);
+  const [selectedSkillId, setSelectedSkillId] = useState<SkillFilter>("ALL");
   const [fixtureForm, setFixtureForm] = useState(emptyFixtureForm);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [isSavingPreset, setIsSavingPreset] = useState(false);
@@ -215,6 +241,70 @@ export default function AgentEvalsPage() {
     }
     return Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right));
   }, [fixtures]);
+
+  const fixtureSkillEvidenceById = useMemo(() => {
+    const entries = new Map<Id<"agentEvalFixtures">, FixtureSkillEvidence>();
+    for (const fixture of fixtures || []) {
+      const evidence = parseSkillEvidence(fixture);
+      if (evidence) entries.set(fixture._id, evidence);
+    }
+    return entries;
+  }, [fixtures]);
+
+  const skillCoverageRows = useMemo(() => {
+    const rows = new Map<Id<"agentSkills">, {
+      skillId: Id<"agentSkills">;
+      name: string;
+      riskLevel?: string;
+      activeFixtureCount: number;
+      latestRunStatus?: string;
+      latestRunIsCurrent?: boolean;
+      skillSmokePassed?: boolean;
+      fixtureIds: Id<"agentEvalFixtures">[];
+    }>();
+
+    for (const skill of readiness?.skillReadiness.skills ?? []) {
+      rows.set(skill.skillId, {
+        skillId: skill.skillId,
+        name: skill.name,
+        riskLevel: skill.riskLevel,
+        activeFixtureCount: skill.activeEvalFixtureCount ?? 0,
+        latestRunStatus: skill.latestSkillSmokeEval?.status,
+        latestRunIsCurrent: skill.latestSkillSmokeEval?.isCurrent,
+        skillSmokePassed: skill.skillSmokePassed,
+        fixtureIds: [],
+      });
+    }
+
+    for (const fixture of fixtures || []) {
+      const evidence = fixtureSkillEvidenceById.get(fixture._id);
+      if (!evidence) continue;
+      const existing = rows.get(evidence.skillId);
+      rows.set(evidence.skillId, {
+        skillId: evidence.skillId,
+        name: existing?.name ?? evidence.skillName ?? "Skill fixture",
+        riskLevel: existing?.riskLevel,
+        activeFixtureCount: existing?.activeFixtureCount ?? 0,
+        latestRunStatus: existing?.latestRunStatus,
+        latestRunIsCurrent: existing?.latestRunIsCurrent,
+        skillSmokePassed: existing?.skillSmokePassed,
+        fixtureIds: [...(existing?.fixtureIds ?? []), fixture._id],
+      });
+    }
+
+    return Array.from(rows.values())
+      .map((row) => ({
+        ...row,
+        activeFixtureCount: Math.max(row.activeFixtureCount, row.fixtureIds.length),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [fixtureSkillEvidenceById, fixtures, readiness?.skillReadiness.skills]);
+
+  const filteredFixtures = useMemo(() => {
+    if (!fixtures) return undefined;
+    if (selectedSkillId === "ALL") return fixtures;
+    return fixtures.filter((fixture) => fixtureSkillEvidenceById.get(fixture._id)?.skillId === selectedSkillId);
+  }, [fixtureSkillEvidenceById, fixtures, selectedSkillId]);
 
   const releaseGatePolicy = readiness?.releaseGatePolicy;
   const hasCriticalFixtures = Boolean(releaseGatePolicy && releaseGatePolicy.criticalFixtureCount > 0);
@@ -557,6 +647,103 @@ export default function AgentEvalsPage() {
         <MetricTile label="Release gate" value={!readiness?.latestSmokeEvalRun ? "Not run" : latestEvalPassed ? "Passing" : "Blocked"} icon={ShieldCheck} />
       </div>
 
+      {skillCoverageRows.length > 0 && (
+        <section className="border border-border-dim rounded-[8px] bg-black/20 px-4 py-4 flex flex-col gap-3 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h3 className="text-[14px] font-semibold text-foreground tracking-tight flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-brand" />
+                Skill eval coverage
+              </h3>
+              <p className="text-[12px] text-secondary mt-1">
+                Filter fixtures by attached skill and run skill-specific smoke coverage from here.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedSkillId("ALL")}
+              className={`px-3 py-1.5 rounded-[8px] border text-[11px] font-medium transition-all ${
+                selectedSkillId === "ALL"
+                  ? "border-brand/30 bg-brand/10 text-brand"
+                  : "border-border-dim bg-white/[0.03] text-secondary hover:text-foreground"
+              }`}
+            >
+              All fixtures
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+            {skillCoverageRows.map((skill) => {
+              const isSelected = selectedSkillId === skill.skillId;
+              const isPassing = skill.skillSmokePassed === true;
+              const isStale = skill.latestRunStatus === "SUCCESS" && skill.latestRunIsCurrent === false;
+              const hasFixtures = skill.activeFixtureCount > 0;
+              return (
+                <div
+                  key={skill.skillId}
+                  className={`rounded-[8px] border px-3 py-3 flex flex-col gap-3 ${
+                    isSelected ? "border-brand/40 bg-brand/10" : "border-border-dim bg-white/[0.02]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13px] font-semibold text-foreground truncate">{skill.name}</span>
+                        {skill.riskLevel && (
+                          <span className="text-[10px] uppercase tracking-widest font-mono text-muted">{skill.riskLevel.toLowerCase()} risk</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-secondary mt-1">
+                        {skill.activeFixtureCount} active fixture{skill.activeFixtureCount === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-widest font-mono px-2 py-1 rounded-md border ${
+                      isPassing
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                        : isStale
+                          ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                          : hasFixtures
+                            ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
+                            : "border-red-500/20 bg-red-500/10 text-red-300"
+                    }`}>
+                      {isPassing ? "passing" : isStale ? "stale" : hasFixtures ? "not run" : "missing"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSkillId(isSelected ? "ALL" : skill.skillId)}
+                      className="px-2.5 py-1.5 rounded-md border border-border-dim bg-white/[0.03] text-[10px] uppercase tracking-widest font-mono text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all"
+                    >
+                      {isSelected ? "Clear" : "Filter"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => runSuite(undefined, skill.fixtureIds)}
+                      disabled={skill.fixtureIds.length === 0 || activeFixtureId !== null}
+                      className="px-2.5 py-1.5 rounded-md border border-brand/30 bg-brand/10 text-[10px] uppercase tracking-widest font-mono text-brand hover:bg-brand/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    >
+                      <PlayCircle className="w-3 h-3" />
+                      Run skill
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => runSuite(undefined, skill.fixtureIds, undefined, "MODEL_GRADED")}
+                      disabled={skill.fixtureIds.length === 0 || activeFixtureId !== null}
+                      className="px-2.5 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/10 text-[10px] uppercase tracking-widest font-mono text-violet-300 hover:bg-violet-500/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    >
+                      <ShieldCheck className="w-3 h-3" />
+                      Model
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {readiness?.latestSmokeEvalRun && !latestEvalPassed && (
         <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-300 flex items-start gap-3">
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -714,7 +901,11 @@ export default function AgentEvalsPage() {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
               <h3 className="text-[14px] font-semibold text-foreground tracking-tight">Active fixtures</h3>
-              <p className="text-[12px] text-secondary mt-1">Fixture contracts run without executing external or destructive side effects.</p>
+              <p className="text-[12px] text-secondary mt-1">
+                {selectedSkillId === "ALL"
+                  ? "Fixture contracts run without executing external or destructive side effects."
+                  : `${filteredFixtures?.length ?? 0} fixture${(filteredFixtures?.length ?? 0) === 1 ? "" : "s"} shown for the selected skill.`}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               {fixtureTypeCounts.map(([type, count]) => (
@@ -821,11 +1012,16 @@ export default function AgentEvalsPage() {
             <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-8 text-[13px] text-secondary">
               No active eval fixtures are ready for this agent.
             </div>
+          ) : filteredFixtures && filteredFixtures.length === 0 ? (
+            <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-8 text-[13px] text-secondary">
+              No active eval fixtures match the selected skill.
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {fixtures.map((fixture) => {
+              {(filteredFixtures ?? []).map((fixture) => {
                 const toolMappings = expectedToolMappings(fixture);
                 const blockedActions = expectedBlockedActions(fixture);
+                const skillEvidence = fixtureSkillEvidenceById.get(fixture._id);
                 return (
                   <div key={fixture._id} className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-3 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -835,6 +1031,11 @@ export default function AgentEvalsPage() {
                             {fixture.type.toLowerCase().replaceAll("_", " ")}
                           </span>
                           <span className="text-[11px] font-mono text-muted">{formatDateTime(fixture.updatedAt)}</span>
+                          {skillEvidence && (
+                            <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-brand/20 bg-brand/10 text-brand">
+                              {skillEvidence.skillName ?? "skill"}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[13px] text-foreground mt-2 leading-relaxed">{fixture.objective}</p>
                         <p className="text-[12px] text-secondary mt-2 leading-relaxed line-clamp-2">{fixture.expectedFinalOutputRubric}</p>

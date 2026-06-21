@@ -431,8 +431,8 @@ Current implementation note:
 - System Options now includes code-backed navigation profiles for Customer Workspace, Support Widget, and Operator Console builds, showing visible route groups, owner-only routes, hide candidates, and implementation notes without changing runtime authorization or route visibility yet.
 - System Options now includes a custom domain readiness checklist for primary app host, widget domain allowlist, email sender domain, DNS/TLS, redirects, and tenant routing isolation as planning evidence before branded deployment.
 - System Options now includes a copy-ready packaging checklist that combines brand handoff, readiness evidence, ready module presets, navigation profile previews, and developer follow-up into a single markdown artifact.
-- `npm run setup:validate` and `docs/vertical-app-packaging-checklist.md` cover environment, provider, production smoke, and rebrand handoff checks for a new vertical starter.
-- `docs/white-label-packaging-operator-guide.md` now explains the System Options white-label workflow from readiness review through packaging-checklist handoff.
+- `npm run setup:validate` and `docs/operator/vertical-app-packaging-checklist.md` cover environment, provider, production smoke, and rebrand handoff checks for a new vertical starter.
+- `docs/operator/white-label-packaging-operator-guide.md` now explains the System Options white-label workflow from readiness review through packaging-checklist handoff.
 - Remaining future work is a persisted route visibility system when a concrete customer build is ready to turn these profile previews into tenant-scoped runtime navigation.
 
 ### 10. Demo Seed And Showcase Mode
@@ -465,7 +465,7 @@ Primary areas:
 - `convex/localDemoSeed.ts`
 - `scripts/local-demo-seed.mjs`
 - `README.md`
-- `docs/new-agentic-app-setup-checklist.md`
+- `docs/developer/new-agentic-app-setup-checklist.md`
 
 Current implementation status:
 
@@ -474,7 +474,7 @@ Current implementation status:
 - The seed is idempotent: repeated runs update deterministic records and do not duplicate eval fixtures or launch plans.
 - The seed fails closed unless `LOCAL_DEMO_SEED_ENABLED=1` and the shared `LOCAL_DEMO_SEED_SECRET` match, and it is blocked when `LOCAL_DEMO_SEED_ENVIRONMENT=production`.
 - `convex/localDemoSeed.test.ts` verifies idempotency, draft-agent readiness, seeded catalogue/build-plan coverage, and disabled/production/wrong-secret failure paths.
-- `docs/agentic-starter-framework-overview.md` and `docs/new-agentic-app-setup-checklist.md` document the local no-production-credentials seed path.
+- `docs/developer/agentic-starter-framework-overview.md` and `docs/developer/new-agentic-app-setup-checklist.md` document the local no-production-credentials seed path.
 
 Phase 10 completion notes:
 
@@ -640,7 +640,7 @@ Current implementation status:
 - Added code-backed white-label navigation profiles via `settings.getWhiteLabelNavigationProfiles`, previewing which route groups a vertical starter should show, reserve for operators, or hide while preserving server-side authorization as the real access boundary.
 - Added a code-backed `settings.getWhiteLabelCustomDomainChecklist` query and settings panel so builders can track branded host, widget allowlist, sender domain, DNS/TLS, redirect, and tenant-routing review evidence before packaging.
 - Added a code-backed `settings.getWhiteLabelPackagingChecklist` query and settings panel that produces a copy-ready markdown handoff artifact from readiness evidence, brand posture, module presets, navigation profiles, and developer follow-up.
-- Added `docs/white-label-packaging-operator-guide.md` and expanded `docs/vertical-app-packaging-checklist.md` so operators know how to use the white-label readiness, handoff, module, navigation, custom-domain, and packaging panels before a customer-specific build handoff.
+- Added `docs/operator/white-label-packaging-operator-guide.md` and expanded `docs/operator/vertical-app-packaging-checklist.md` so operators know how to use the white-label readiness, handoff, module, navigation, custom-domain, and packaging panels before a customer-specific build handoff.
 
 Phase 5 completion notes:
 

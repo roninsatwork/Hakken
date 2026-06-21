@@ -34,6 +34,21 @@ type CandidateDraft = {
   proposedBy: "SYSTEM_REFLECTION" | "ADMIN";
 };
 
+type RuntimeSkillRecord = {
+  skillId: Id<"agentSkills">;
+  skillVersionId?: Id<"agentSkillVersions">;
+  name?: string;
+  category?: string;
+  riskLevel?: string;
+  requiredToolMappings: string[];
+};
+
+type SkillAttribution = {
+  sourceSkillId: Id<"agentSkills">;
+  sourceSkillVersionId?: Id<"agentSkillVersions">;
+  reason: string;
+};
+
 type PatchPreviewRow = {
   operation: "APPEND" | "SET" | "CREATE" | "REVIEW";
   target: string;
@@ -83,6 +98,50 @@ function parseJsonObject(value: string | undefined) {
   }
 }
 
+function getOptionalString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function getStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+    : [];
+}
+
+function getSkillId(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value as Id<"agentSkills"> : undefined;
+}
+
+function getSkillVersionId(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value as Id<"agentSkillVersions"> : undefined;
+}
+
+function parseStoredStringArray(value: string | undefined) {
+  if (!value) return [];
+  try {
+    return getStringArray(JSON.parse(value) as unknown);
+  } catch {
+    return [];
+  }
+}
+
+function tokenize(value: string) {
+  return new Set(value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 4));
+}
+
+function countTokenOverlap(left: Set<string>, right: Set<string>, limit = 4) {
+  let count = 0;
+  for (const token of left) {
+    if (right.has(token)) count += 1;
+    if (count >= limit) break;
+  }
+  return count;
+}
+
 function buildRunSummary(run: Doc<"agentRuns"> | null) {
   if (!run) return null;
   return {
@@ -107,6 +166,23 @@ function buildUserSummary(user: Doc<"users"> | null) {
   };
 }
 
+function buildSkillSummary(args: {
+  skill: Doc<"agentSkills"> | null | undefined;
+  version: Doc<"agentSkillVersions"> | null | undefined;
+  reason?: string;
+}) {
+  if (!args.skill) return null;
+  return {
+    skillId: args.skill._id,
+    name: args.skill.name,
+    category: args.skill.category,
+    riskLevel: args.skill.riskLevel,
+    skillVersionId: args.version?._id,
+    versionNumber: args.version?.versionNumber,
+    attributionReason: args.reason,
+  };
+}
+
 function buildSuggestionAppliedEffect(suggestion: Doc<"agentImprovementSuggestions">) {
   if (suggestion.status !== "APPLIED") return null;
   if (suggestion.type === "PROMPT_CHANGE") return "Prompt guidance appended and version snapshot updated.";
@@ -114,6 +190,7 @@ function buildSuggestionAppliedEffect(suggestion: Doc<"agentImprovementSuggestio
   if (suggestion.type === "RULE_CHANGE") return "AI rule created and version snapshot updated.";
   if (suggestion.type === "TOOL_SCHEMA_CHANGE") return "Tool schema review rule created and version snapshot updated.";
   if (suggestion.type === "ROUTING_CHANGE") return "Routing review rule created and version snapshot updated.";
+  if (suggestion.type === "SKILL_INSTRUCTION_CHANGE") return "Shared skill guidance appended and skill version snapshot updated.";
   return "Suggestion applied and version snapshot updated.";
 }
 
@@ -202,6 +279,18 @@ function buildSuggestionPatchPreview(suggestion: Doc<"agentImprovementSuggestion
     }];
   }
 
+  if (suggestion.type === "SKILL_INSTRUCTION_CHANGE") {
+    return [{
+      operation: "APPEND",
+      target: "Shared agent skill instruction",
+      before: "Existing skill instruction",
+      after: typeof patch.appendSkillInstruction === "string" ? truncateText(patch.appendSkillInstruction, 700) : suggestion.description,
+      note: suggestion.status === "APPLIED"
+        ? "Applied to the shared skill and captured in a skill version snapshot."
+        : "Adds reviewed learning guidance to the reusable skill used by bound agents.",
+    }];
+  }
+
   if (suggestion.type === "RULE_CHANGE" || suggestion.type === "TOOL_SCHEMA_CHANGE" || suggestion.type === "ROUTING_CHANGE") {
     return [
       {
@@ -245,6 +334,168 @@ function getReflectionRisk(category: Doc<"agentRunReflections">["category"]) {
     return "MEDIUM" as const;
   }
   return "LOW" as const;
+}
+
+function getRuntimeSkillRecordsFromSteps(steps: Doc<"agentRunSteps">[]) {
+  const records = new Map<Id<"agentSkills">, RuntimeSkillRecord>();
+
+  for (const step of steps) {
+    if (step.kind !== "OBSERVE") continue;
+    const metadata = parseJsonObject(step.output);
+    const skills = Array.isArray(metadata.skills) ? metadata.skills : [];
+    for (const entry of skills) {
+      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+      const record = entry as Record<string, unknown>;
+      const skillId = getSkillId(record.skillId);
+      if (!skillId || records.has(skillId)) continue;
+      records.set(skillId, {
+        skillId,
+        skillVersionId: getSkillVersionId(record.skillVersionId),
+        name: getOptionalString(record.name),
+        category: getOptionalString(record.category),
+        riskLevel: getOptionalString(record.riskLevel),
+        requiredToolMappings: getStringArray(record.requiredToolMappings),
+      });
+    }
+  }
+
+  return Array.from(records.values());
+}
+
+async function getSkillAttributionForDraft(ctx: Pick<MutationCtx, "db">, args: {
+  draft: CandidateDraft;
+  run: Doc<"agentRuns">;
+  reflections: Doc<"agentRunReflections">[];
+  feedback: Doc<"agentRunFeedback">[];
+  runtimeSkillRecords: RuntimeSkillRecord[];
+  toolCalls: Doc<"agentToolCalls">[];
+  approvals: Doc<"agentRunApprovals">[];
+}): Promise<SkillAttribution | null> {
+  if (args.runtimeSkillRecords.length === 0) return null;
+
+  const toolCallById = new Map(args.toolCalls.map((toolCall) => [toolCall._id, toolCall]));
+  const allToolMappings = new Set(args.toolCalls.map((toolCall) => toolCall.handlerMapping).filter(Boolean));
+  const failedToolMappings = new Set(args.toolCalls
+    .filter((toolCall) => toolCall.status !== "SUCCESS")
+    .map((toolCall) => toolCall.handlerMapping)
+    .filter(Boolean));
+  const approvalToolMappings = new Set(args.approvals
+    .filter((approval) => approval.status !== "APPROVED")
+    .map((approval) => approval.toolCallId ? toolCallById.get(approval.toolCallId)?.handlerMapping : undefined)
+    .filter(Boolean));
+  const labels = new Set(args.feedback.flatMap((entry) => entry.labels));
+  const evidenceTokens = tokenize([
+    args.draft.content,
+    args.run.objective,
+    args.run.error,
+    args.run.finalOutput,
+    ...args.approvals.flatMap((approval) => [
+      approval.status,
+      approval.message,
+      approval.previewJson,
+      approval.decisionReason,
+    ]),
+    ...args.reflections.flatMap((reflection) => [
+      reflection.category,
+      reflection.rootCause,
+      reflection.missingContext,
+      reflection.proposedMemory,
+      reflection.proposedPromptChange,
+      reflection.proposedToolChange,
+      reflection.proposedEvalFixture,
+    ]),
+    ...args.feedback.flatMap((entry) => [
+      entry.rating,
+      entry.comment,
+      ...entry.labels,
+    ]),
+  ].filter(Boolean).join(" "));
+
+  let best: {
+    sourceSkillId: Id<"agentSkills">;
+    sourceSkillVersionId?: Id<"agentSkillVersions">;
+    score: number;
+    reasons: string[];
+  } | null = null;
+
+  for (const record of args.runtimeSkillRecords) {
+    const skill = await ctx.db.get(record.skillId);
+    if (!skill) continue;
+    const skillToolMappings = Array.from(new Set([
+      ...record.requiredToolMappings,
+      ...parseStoredStringArray(skill.requiredToolMappingsJson),
+      ...parseStoredStringArray(skill.recommendedToolMappingsJson),
+    ]));
+    const reasons: string[] = [];
+    let score = 0;
+
+    const failedOverlap = skillToolMappings.filter((mapping) => failedToolMappings.has(mapping));
+    if (failedOverlap.length > 0) {
+      score += 8 + failedOverlap.length;
+      reasons.push(`failed tool overlap: ${failedOverlap.slice(0, 3).join(", ")}`);
+    }
+
+    const approvalOverlap = skillToolMappings.filter((mapping) => approvalToolMappings.has(mapping));
+    if (approvalOverlap.length > 0) {
+      score += 10 + approvalOverlap.length;
+      reasons.push(`approval tool overlap: ${approvalOverlap.slice(0, 3).join(", ")}`);
+    }
+
+    const usedOverlap = skillToolMappings.filter((mapping) => allToolMappings.has(mapping));
+    if (usedOverlap.length > 0) {
+      score += 3;
+      reasons.push(`tool use overlap: ${usedOverlap.slice(0, 3).join(", ")}`);
+    }
+
+    const skillTokens = tokenize([
+      record.name,
+      record.category,
+      skill.name,
+      skill.category,
+      skill.description,
+      skill.instruction,
+      ...skillToolMappings,
+    ].filter(Boolean).join(" "));
+    const tokenOverlap = countTokenOverlap(skillTokens, evidenceTokens);
+    if (tokenOverlap > 0) {
+      score += tokenOverlap;
+      reasons.push(`semantic overlap: ${tokenOverlap} matched term${tokenOverlap === 1 ? "" : "s"}`);
+    }
+
+    if (labels.has("BAD_TOOL_ARGS") || labels.has("WRONG_TOOL")) {
+      score += skillToolMappings.length > 0 ? 2 : 1;
+      reasons.push("operator feedback points at tool behavior");
+    }
+    if (skill.riskLevel === "HIGH" && args.reflections.some((reflection) =>
+      reflection.category === "APPROVAL_REJECTED"
+      || reflection.category === "POLICY_BLOCKED"
+      || reflection.category === "TENANT_SCOPE_BLOCKED"
+      || reflection.category === "PROMPT_INJECTION_BLOCKED"
+    )) {
+      score += 2;
+      reasons.push("high-risk skill active during safety or approval evidence");
+    }
+    if (args.runtimeSkillRecords.length === 1 && score === 0) {
+      score = 1;
+      reasons.push("only active skill during the source run");
+    }
+
+    if (!best || score > best.score) {
+      best = {
+        sourceSkillId: skill._id,
+        sourceSkillVersionId: record.skillVersionId,
+        score,
+        reasons,
+      };
+    }
+  }
+
+  if (!best || best.score <= 0) return null;
+  return {
+    sourceSkillId: best.sourceSkillId,
+    sourceSkillVersionId: best.sourceSkillVersionId,
+    reason: best.reasons.join("; ") || "The skill was active during the source run.",
+  };
 }
 
 function shouldAutoApply(candidate: Pick<CandidateDraft, "kind" | "riskLevel">) {
@@ -354,7 +605,7 @@ export const generateForRun = mutation({
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
-    const [reflections, feedback, existingCandidates] = await Promise.all([
+    const [reflections, feedback, existingCandidates, steps, toolCalls, approvals] = await Promise.all([
       ctx.db
         .query("agentRunReflections")
         .withIndex("by_run_created", (q) => q.eq("runId", args.runId))
@@ -370,10 +621,26 @@ export const generateForRun = mutation({
         .withIndex("by_run_created", (q) => q.eq("sourceRunId", args.runId))
         .order("desc")
         .take(CANDIDATE_LIMIT),
+      ctx.db
+        .query("agentRunSteps")
+        .withIndex("by_run_step", (q) => q.eq("runId", args.runId))
+        .order("asc")
+        .take(CANDIDATE_LIMIT),
+      ctx.db
+        .query("agentToolCalls")
+        .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
+        .order("asc")
+        .take(CANDIDATE_LIMIT),
+      ctx.db
+        .query("agentRunApprovals")
+        .withIndex("by_run_requested", (q) => q.eq("runId", args.runId))
+        .order("asc")
+        .take(CANDIDATE_LIMIT),
     ]);
 
     const existingByContent = new Set(existingCandidates.map((candidate) => candidate.normalizedContent));
     const drafts = getCandidateDrafts({ run, reflections, feedback });
+    const runtimeSkillRecords = getRuntimeSkillRecordsFromSteps(steps);
     const now = Date.now();
     const createdIds: Id<"agentMemoryCandidates">[] = [];
     const appliedIds: Id<"agentMemories">[] = [];
@@ -383,12 +650,24 @@ export const generateForRun = mutation({
       const normalizedKey = normalizedContent.toLowerCase();
       if (existingByContent.has(normalizedKey)) continue;
       existingByContent.add(normalizedKey);
+      const skillAttribution = await getSkillAttributionForDraft(ctx, {
+        draft,
+        run,
+        reflections,
+        feedback,
+        runtimeSkillRecords,
+        toolCalls,
+        approvals,
+      });
 
       const candidateId = await ctx.db.insert("agentMemoryCandidates", {
         agentId: run.agentId,
         companyId: run.companyId,
         sourceRunId: args.runId,
         sourceReflectionId: draft.sourceReflectionId,
+        sourceSkillId: skillAttribution?.sourceSkillId,
+        sourceSkillVersionId: skillAttribution?.sourceSkillVersionId,
+        skillAttributionReason: skillAttribution?.reason,
         proposedBy: draft.proposedBy,
         kind: draft.kind,
         content: normalizedContent,
@@ -414,6 +693,8 @@ export const generateForRun = mutation({
           sourceRunId: args.runId,
           kind: draft.kind,
           riskLevel: draft.riskLevel,
+          sourceSkillId: skillAttribution?.sourceSkillId,
+          sourceSkillVersionId: skillAttribution?.sourceSkillVersionId,
           autoApplyLowRisk: args.autoApplyLowRisk === true,
         }),
       });
@@ -653,6 +934,22 @@ export const getReviewInboxForAgent = query({
       return [reviewerId, buildUserSummary(reviewer)] as const;
     }));
     const reviewerById = new Map(reviewerPairs.filter((pair): pair is NonNullable<typeof pair> => pair !== null));
+    const skillIds = Array.from(new Set(memoryItems.map((candidate) => candidate.sourceSkillId).filter(Boolean)));
+    const skillVersionIds = Array.from(new Set(memoryItems.map((candidate) => candidate.sourceSkillVersionId).filter(Boolean)));
+    const skillPairs = await Promise.all(skillIds.map(async (skillId) => {
+      if (!skillId) return null;
+      const skill = await ctx.db.get(skillId);
+      if (!skill) return null;
+      return [skillId, skill] as const;
+    }));
+    const skillVersionPairs = await Promise.all(skillVersionIds.map(async (skillVersionId) => {
+      if (!skillVersionId) return null;
+      const version = await ctx.db.get(skillVersionId);
+      if (!version) return null;
+      return [skillVersionId, version] as const;
+    }));
+    const skillById = new Map(skillPairs.filter((pair): pair is NonNullable<typeof pair> => pair !== null));
+    const skillVersionById = new Map(skillVersionPairs.filter((pair): pair is NonNullable<typeof pair> => pair !== null));
 
     return {
       totals: {
@@ -679,6 +976,13 @@ export const getReviewInboxForAgent = query({
         riskLevel: candidate.riskLevel,
         status: candidate.status,
         proposedBy: candidate.proposedBy,
+        sourceSkill: candidate.sourceSkillId
+          ? buildSkillSummary({
+              skill: skillById.get(candidate.sourceSkillId),
+              version: candidate.sourceSkillVersionId ? skillVersionById.get(candidate.sourceSkillVersionId) : null,
+              reason: candidate.skillAttributionReason,
+            })
+          : null,
         reviewedAt: candidate.reviewedAt,
         reviewer: candidate.reviewedBy ? reviewerById.get(candidate.reviewedBy) || null : null,
         rejectionReason: candidate.rejectionReason,
@@ -700,6 +1004,7 @@ export const getReviewInboxForAgent = query({
         reviewer: suggestion.reviewedBy ? reviewerById.get(suggestion.reviewedBy) || null : null,
         rejectionReason: suggestion.rejectionReason,
         appliedAgentVersionId: suggestion.appliedAgentVersionId,
+        appliedSkillVersionId: suggestion.appliedSkillVersionId,
         appliedEffect: buildSuggestionAppliedEffect(suggestion),
         createdAt: suggestion.createdAt,
       })),

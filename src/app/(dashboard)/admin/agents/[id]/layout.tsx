@@ -8,7 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, Timer, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -55,6 +55,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     { label: t('tabs.runs'), href: `/admin/agents/${agentId}/runs`, icon: Timer },
     { label: t('tabs.evals'), href: `/admin/agents/${agentId}/evals`, icon: ClipboardCheck },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
+    { label: t('tabs.skills'), href: `/admin/agents/${agentId}/skills`, icon: BrainCircuit },
     { label: t('tabs.knowledge'), href: `/admin/agents/${agentId}/knowledge`, icon: Library },
     { label: t('tabs.memory'), href: `/admin/agents/${agentId}/memory`, icon: Brain },
     { label: t('tabs.prompt'), href: `/admin/agents/${agentId}/system-prompt`, icon: Terminal },

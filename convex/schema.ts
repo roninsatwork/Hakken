@@ -647,6 +647,9 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     sourceRunId: v.id("agentRuns"),
     sourceReflectionId: v.optional(v.id("agentRunReflections")),
+    sourceSkillId: v.optional(v.id("agentSkills")),
+    sourceSkillVersionId: v.optional(v.id("agentSkillVersions")),
+    skillAttributionReason: v.optional(v.string()),
     proposedBy: v.union(
       v.literal("AGENT"),
       v.literal("USER"),
@@ -683,6 +686,7 @@ export default defineSchema({
   })
     .index("by_run_created", ["sourceRunId", "createdAt"])
     .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
+    .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"])
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
     .index("by_status_created", ["status", "createdAt"]),
@@ -732,13 +736,16 @@ export default defineSchema({
     sourceRunId: v.optional(v.id("agentRuns")),
     sourceReflectionId: v.optional(v.id("agentRunReflections")),
     sourceEvalFixtureId: v.optional(v.id("agentEvalFixtures")),
+    sourceSkillId: v.optional(v.id("agentSkills")),
+    sourceSkillVersionId: v.optional(v.id("agentSkillVersions")),
     createdBy: v.id("users"),
     type: v.union(
       v.literal("PROMPT_CHANGE"),
       v.literal("RULE_CHANGE"),
       v.literal("TOOL_SCHEMA_CHANGE"),
       v.literal("ROUTING_CHANGE"),
-      v.literal("APPROVAL_POLICY_CHANGE")
+      v.literal("APPROVAL_POLICY_CHANGE"),
+      v.literal("SKILL_INSTRUCTION_CHANGE")
     ),
     title: v.string(),
     description: v.string(),
@@ -758,6 +765,7 @@ export default defineSchema({
     reviewedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
     appliedAgentVersionId: v.optional(v.id("agentVersions")),
+    appliedSkillVersionId: v.optional(v.id("agentSkillVersions")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -766,6 +774,7 @@ export default defineSchema({
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
     .index("by_eval_fixture_created", ["sourceEvalFixtureId", "createdAt"])
     .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
+    .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"])
     .index("by_status_created", ["status", "createdAt"]),
 
   agentVersions: defineTable({
@@ -776,6 +785,7 @@ export default defineSchema({
     snapshotJson: v.string(),
     promptHash: v.string(),
     toolSetHash: v.string(),
+    skillSetHash: v.optional(v.string()),
     memoryRevisionHash: v.string(),
     ruleSetHash: v.string(),
     modelConfigHash: v.string(),
@@ -821,6 +831,62 @@ export default defineSchema({
     .index("by_agent_created", ["agentId", "createdAt"])
     .index("by_status_created", ["status", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"]),
+
+  agentSkills: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    status: v.union(
+      v.literal("DRAFT"),
+      v.literal("ACTIVE"),
+      v.literal("ARCHIVED")
+    ),
+    riskLevel: v.union(
+      v.literal("LOW"),
+      v.literal("MEDIUM"),
+      v.literal("HIGH")
+    ),
+    instruction: v.string(),
+    requiredToolMappingsJson: v.optional(v.string()),
+    recommendedToolMappingsJson: v.optional(v.string()),
+    recommendedKnowledgeJson: v.optional(v.string()),
+    defaultRulesJson: v.optional(v.string()),
+    suggestedEvalFixturesJson: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_category_created", ["category", "createdAt"])
+    .searchIndex("search_name", { searchField: "name" }),
+
+  agentSkillVersions: defineTable({
+    skillId: v.id("agentSkills"),
+    versionNumber: v.number(),
+    snapshotHash: v.string(),
+    snapshotJson: v.string(),
+    instructionHash: v.string(),
+    toolRequirementHash: v.string(),
+    evalHash: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_skill_created", ["skillId", "createdAt"])
+    .index("by_skill_hash", ["skillId", "snapshotHash"]),
+
+  agentSkillBindings: defineTable({
+    agentId: v.id("agents"),
+    skillId: v.id("agentSkills"),
+    skillVersionId: v.id("agentSkillVersions"),
+    companyId: v.optional(v.id("companies")),
+    isEnabled: v.boolean(),
+    assignedBy: v.id("users"),
+    assignedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_agent_enabled", ["agentId", "isEnabled"])
+    .index("by_skill_enabled", ["skillId", "isEnabled"])
+    .index("by_agent_skill", ["agentId", "skillId"])
+    .index("by_company_enabled", ["companyId", "isEnabled"]),
 
   agentMemories: defineTable({
     agentId: v.id("agents"),

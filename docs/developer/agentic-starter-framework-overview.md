@@ -44,8 +44,8 @@ When in doubt, keep product-specific behavior out of shared runtime paths. Add c
 For a new agentic app or tenant:
 
 1. Read `AGENTS.md` for branch, verification, and frozen-demo rules.
-2. Run the local setup in `docs/getting-started.md`.
-3. Follow `docs/new-agentic-app-setup-checklist.md`.
+2. Run the local setup in `docs/developer/getting-started.md`.
+3. Follow `docs/developer/new-agentic-app-setup-checklist.md`.
 4. Choose or create an app kit or agent template using `convex/appTemplates.ts` and `convex/agentTemplates.ts`.
 5. Configure model defaults in the AI Models admin surface.
 6. Install or create the required tools/connectors in the AI Tools admin surface.
@@ -87,7 +87,7 @@ Every runtime handler should be allowlisted, tenant-scoped, role-checked, and au
 Use:
 
 - `knowledgeDocuments` and related knowledge tables in `convex/schema.ts`.
-- Existing upload and knowledge policy in `docs/upload-and-knowledge-policy.md`.
+- Existing upload and knowledge policy in `docs/developer/upload-and-knowledge-policy.md`.
 - Agent knowledge bindings through `knowledgeDocumentIds`.
 
 Knowledge should be tenant-scoped unless it is explicitly global and safe to share.

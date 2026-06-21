@@ -3,7 +3,7 @@
 Last reviewed: 2026-06-14
 Audience: presenter running the premium posture studio demo.
 
-Use this as the quick pre-call checklist. Use `docs/movement-demo-pitch-runbook.md` for the full runbook.
+Use this as the quick pre-call checklist. Use `docs/operator/movement-demo-pitch-runbook.md` for the full runbook.
 
 ## Primary Route
 

@@ -56,6 +56,15 @@ const reviewInbox = {
     riskLevel: "MEDIUM",
     status: "PROPOSED",
     proposedBy: "SYSTEM_REFLECTION",
+    sourceSkill: {
+      skillId: "skill_escalation",
+      name: "Escalation Workflow",
+      category: "Operations",
+      riskLevel: "MEDIUM",
+      skillVersionId: "skill_version_1",
+      versionNumber: 1,
+      attributionReason: "failed tool overlap: client.escalations.read",
+    },
     createdAt: Date.UTC(2026, 5, 18, 9, 2),
   }],
   improvementSuggestions: [{
@@ -111,5 +120,8 @@ describe("AgentMemoryPage", () => {
     expect(screen.getByText("Open High risk mode, inspect source runs, and approve only changes with clear evidence.")).toBeInTheDocument();
     expect(screen.getByText("Add escalation summary guidance")).toBeInTheDocument();
     expect(screen.getByText("Escalation summaries should include owner, blocker, and next action.")).toBeInTheDocument();
+    expect(screen.getByText("Skill attribution")).toBeInTheDocument();
+    expect(screen.getByText("Escalation Workflow")).toBeInTheDocument();
+    expect(screen.getByText("Operations: failed tool overlap: client.escalations.read")).toBeInTheDocument();
   });
 });

@@ -25,7 +25,7 @@ Sonae already has useful agentic foundations:
 - `convex/aiToolExecutionService.ts` has early tool declaration, policy normalization, role checks, tenant checks, and normalized result payload helpers.
 - Admin surfaces already expose agents, tools, rules, knowledge, schemas, models, logs, transactions, workflows, and schedules.
 
-The main gap has been closed at the minimum-platform level: the named agent runtime now has a bounded durable loop, read-only tools, first-class approval pause/resume, one governed write tool, generic manual/scheduled/workflow triggers, tenant-scoped memory, replay/cancellation controls, analytics, and admin run inspection. Future work should broaden the tool inventory, add deeper replay diffing, harden evaluator coverage, and follow `docs/agent-learning-improvement-plan.md` for governed agent learning over time, but the core architecture now supports the agentic automation platform claim.
+The main gap has been closed at the minimum-platform level: the named agent runtime now has a bounded durable loop, read-only tools, first-class approval pause/resume, one governed write tool, generic manual/scheduled/workflow triggers, tenant-scoped memory, replay/cancellation controls, analytics, and admin run inspection. Future work should broaden the tool inventory, add deeper replay diffing, harden evaluator coverage, and follow `docs/plans/active/agent-learning-improvement-plan.md` for governed agent learning over time, but the core architecture now supports the agentic automation platform claim.
 
 ## Honest Product Language
 
@@ -221,7 +221,7 @@ Memory writes must be policy-controlled:
 
 Agents should improve over time from approved retained context, measured outcomes, replayed failures, and human feedback. This is operational learning, not silent model-weight training.
 
-The follow-on roadmap is saved in `docs/agent-learning-improvement-plan.md`.
+The follow-on roadmap is saved in `docs/plans/active/agent-learning-improvement-plan.md`.
 
 The high-level loop is:
 

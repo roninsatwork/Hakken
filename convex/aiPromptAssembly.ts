@@ -58,18 +58,37 @@ ${configuredPlatformPrompt}`;
   return instruction;
 }
 
-export function buildAgentSystemInstruction(agentSystemPrompt: string | null | undefined) {
+export function buildAgentSystemInstruction(
+  agentSystemPrompt: string | null | undefined,
+  skillInstructions: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }> = []
+) {
   const configuredAgentPrompt =
     agentSystemPrompt && agentSystemPrompt.trim().length > 0
       ? agentSystemPrompt
       : "You are an autonomous Sonae Agent. Use available tools to fulfill user requests.";
 
-  return `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
+  let instruction = `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
 
 ====================
 CONFIGURED AGENT BEHAVIOR:
 
 ${configuredAgentPrompt}`;
+
+  if (skillInstructions.length > 0) {
+    const compiledSkills = skillInstructions
+      .map((skill) => {
+        const metadata = [
+          skill.category ? `CATEGORY: ${skill.category}` : undefined,
+          skill.riskLevel ? `RISK: ${skill.riskLevel}` : undefined,
+        ].filter(Boolean).join("\n");
+        return `[SKILL: ${skill.name}]\n${metadata ? `${metadata}\n` : ""}${skill.instruction}`;
+      })
+      .join("\n\n---\n\n");
+
+    instruction += `\n\n====================\nENABLED AGENT SKILLS:\n\n${compiledSkills}`;
+  }
+
+  return instruction;
 }
 
 export function orderAssistantKnowledgeMatches<T>(args: {

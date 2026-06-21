@@ -446,8 +446,8 @@ describe('Quality Drift Guardrails', () => {
   test('handoff and platform plans keep movement demo files out of scope', () => {
     const guardrailFiles = [
       'AGENTS.md',
-      'docs/code-quality-95-plan.md',
-      'docs/current-cleanup-checklist.md',
+      'docs/plans/active/code-quality-95-plan.md',
+      'docs/plans/completed/current-cleanup-checklist.md',
     ];
     const requiredNoTouchPaths = [
       'src/app/(dashboard)/demos/movements/**',
@@ -468,7 +468,7 @@ describe('Quality Drift Guardrails', () => {
 
   test('deployment docs match the production GitHub Actions gate', () => {
     const workflow = readRepoFile('.github/workflows/deploy.yml');
-    const deploymentDocs = readRepoFile('docs/deployment.md');
+    const deploymentDocs = readRepoFile('docs/developer/deployment.md');
     const requiredGateCommands = [
       'npm audit --audit-level=high',
       'npm run lint',
@@ -479,7 +479,7 @@ describe('Quality Drift Guardrails', () => {
 
     const missingCommands = requiredGateCommands.flatMap((command) => {
       const missingFromWorkflow = workflow.includes(command) ? [] : [`.github/workflows/deploy.yml: ${command}`];
-      const missingFromDocs = deploymentDocs.includes(command) ? [] : [`docs/deployment.md: ${command}`];
+      const missingFromDocs = deploymentDocs.includes(command) ? [] : [`docs/developer/deployment.md: ${command}`];
 
       return [...missingFromWorkflow, ...missingFromDocs];
     });
@@ -842,10 +842,10 @@ describe('Quality Drift Guardrails', () => {
       'convex/aiModelsActions.ts',
       'convex/aiModels.test.ts',
       'convex/seedWorkflows.ts',
-      'docs/code-quality-95-plan.md',
-      'docs/future-agent-maintenance-plan.md',
+      'docs/plans/active/code-quality-95-plan.md',
+      'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',
-      'docs/model-provider-agnostic-plan.md',
+      'docs/plans/active/model-provider-agnostic-plan.md',
       'messages/en.json',
       'messages/it.json',
       'src/quality-drift.test.ts',
@@ -965,7 +965,7 @@ describe('Quality Drift Guardrails', () => {
       'convex/knowledge.test.ts',
       'convex/openaiProviderService.test.ts',
       'convex/seedWorkflows.ts',
-      'docs/model-provider-agnostic-plan.md',
+      'docs/plans/active/model-provider-agnostic-plan.md',
       'src/app/(dashboard)/admin/ai/costs/_components/AICostCharts.test.tsx',
       'src/quality-drift.test.ts',
     ]);

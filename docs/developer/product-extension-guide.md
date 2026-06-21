@@ -131,7 +131,7 @@ Model records are data. Provider adapters are code. Keep that boundary intact.
 2. Keep model selection and default handling in `convex/aiModelService.ts`.
 3. Add provider-specific client setup in a dedicated adapter service, following `convex/vertexProviderService.ts`.
 4. Pass provider-neutral requests into the adapter boundary. Do not import provider SDKs inside React components, route handlers, or generic runtime services.
-5. Update `docs/ai-provider-tool-extension.md` if the provider introduces new adapter rules.
+5. Update `docs/developer/ai-provider-tool-extension.md` if the provider introduces new adapter rules.
 6. Add service tests for model fallback, disabled/default behavior, and any provider-specific normalization.
 
 Provider-neutral call shape:
@@ -165,7 +165,7 @@ Branding checklist:
 
 ## Package A Vertical App Starter
 
-Use `docs/vertical-app-packaging-checklist.md` when turning Sonae into a customer-specific or vertical starter.
+Use `docs/operator/vertical-app-packaging-checklist.md` when turning Sonae into a customer-specific or vertical starter.
 
 Packaging should happen in this order:
 

@@ -4,16 +4,19 @@ A Next.js and Convex application for real-time AI orchestration, administration,
 
 ## 📚 Internal Documentation
 
-A comprehensive guide for developers is available in the **[/docs](./docs/index.md)** folder. It covers:
+The **[/docs](./docs/index.md)** folder is the documentation hub. It is organized by audience and lifecycle:
 
-- **[Getting Started](./docs/getting-started.md)**: Local setup and environment.
-- **[System Architecture](./docs/architecture.md)**: Tech stack and system design.
-- **[Frontend Development](./docs/frontend.md)**: Design system and Sonae Modal Protocol.
-- **[Backend & Data Layer](./docs/backend.md)**: Convex and AI orchestration.
-- **[Deployment](./docs/deployment.md)**: CI/CD and hosting.
-- **[Agentic Starter Framework Overview](./docs/agentic-starter-framework-overview.md)**: Start-here guide for building governed agentic apps on this foundation.
-- **[New Agentic App Setup Checklist](./docs/new-agentic-app-setup-checklist.md)**: Tenant/customer setup checklist for model defaults, knowledge, tools, draft agents, evals, and activation.
-- **[Vertical App Packaging Checklist](./docs/vertical-app-packaging-checklist.md)**: Rebrand, validate, and smoke-test a product-specific starter built on Sonae.
+- **[Getting Started](./docs/developer/getting-started.md)**: Local setup and environment.
+- **[System Architecture](./docs/developer/architecture.md)**: Tech stack and system design.
+- **[Frontend Development](./docs/developer/frontend.md)**: Design system and Sonae Modal Protocol.
+- **[Backend & Data Layer](./docs/developer/backend.md)**: Convex and AI orchestration.
+- **[Deployment](./docs/developer/deployment.md)**: CI/CD and hosting.
+- **[Plans](./docs/plans/index.md)**: Active and completed implementation plans.
+- **[Operator Guides](./docs/operator/index.md)**: Internal release, packaging, and demo runbooks.
+- **[End User Docs](./docs/end-user/index.md)**: Customer-friendly platform documentation.
+- **[Agentic Starter Framework Overview](./docs/developer/agentic-starter-framework-overview.md)**: Start-here guide for building governed agentic apps on this foundation.
+- **[New Agentic App Setup Checklist](./docs/developer/new-agentic-app-setup-checklist.md)**: Tenant/customer setup checklist for model defaults, knowledge, tools, draft agents, evals, and activation.
+- **[Vertical App Packaging Checklist](./docs/operator/vertical-app-packaging-checklist.md)**: Rebrand, validate, and smoke-test a product-specific starter built on Sonae.
 - **[Agent Handoff](./AGENTS.md)**: branch rules, quality gates, and future-agent guardrails.
 
 ---
@@ -89,7 +92,7 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 - `src/context/`: Client-side providers (Convex, UI State).
 - `convex/`: Backend schema, queries, mutations, and actions.
 - `messages/`: Translation files for `next-intl`.
-- `docs/`: Developer documentation and cleanup plans.
+- `docs/`: Documentation hub for plans, developer docs, operator guides, and end-user docs.
 
 ---
 

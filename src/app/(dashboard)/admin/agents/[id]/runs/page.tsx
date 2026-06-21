@@ -717,8 +717,15 @@ export default function AgentRunsPage() {
                         </span>
                       )}
                       {(suggestionsByRun.get(run._id) || []).map((suggestion) => (
-                        <span key={suggestion._id} className="px-2 py-0.5 rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-500">
-                          suggestion: {suggestion.type.toLowerCase().replaceAll("_", " ")}
+                        <span
+                          key={suggestion._id}
+                          className={`px-2 py-0.5 rounded-md border ${
+                            suggestion.type === "SKILL_INSTRUCTION_CHANGE"
+                              ? "border-sky-500/20 bg-sky-500/10 text-sky-500"
+                              : "border-indigo-500/20 bg-indigo-500/10 text-indigo-500"
+                          }`}
+                        >
+                          {suggestion.type === "SKILL_INSTRUCTION_CHANGE" ? "skill" : "suggestion"}: {suggestion.type.toLowerCase().replaceAll("_", " ")}
                         </span>
                       ))}
                       {run.agentVersionId && <span>version: {run.agentVersionId}</span>}

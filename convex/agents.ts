@@ -32,7 +32,7 @@ const RELEASE_GATE_FIXTURE_TAGS = ["release-gate", "critical"];
 type AgentModelSelectionMode = "inherit" | "override";
 type AgentModelUseCase = "agent" | "workflow";
 type AgentReadinessStatus = "PASS" | "WARN";
-type AgentReadinessCheckKey = "draftStatus" | "modelDefault" | "tools" | "knowledge" | "evalFixtures" | "smokeEval" | "releaseGate";
+type AgentReadinessCheckKey = "draftStatus" | "modelDefault" | "tools" | "skills" | "knowledge" | "evalFixtures" | "smokeEval" | "releaseGate";
 type ReleaseGateMode = "TAG" | "PRESET" | "NONE";
 type AgentEvalFixtureType =
   | "HAPPY_PATH"
@@ -110,6 +110,43 @@ function parseSmokeEvalMetadata(output: string | undefined) {
       : {};
   } catch {
     return {};
+  }
+}
+
+function parseSourceEvidenceJson(value: string | undefined) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function getSkillEvidenceFromFixture(fixture: { sourceEvidenceJson: string }) {
+  const evidence = parseSourceEvidenceJson(fixture.sourceEvidenceJson);
+  return {
+    source: typeof evidence.source === "string" ? evidence.source : undefined,
+    skillId: typeof evidence.skillId === "string" ? evidence.skillId as Id<"agentSkills"> : undefined,
+    skillVersionId: typeof evidence.skillVersionId === "string" ? evidence.skillVersionId as Id<"agentSkillVersions"> : undefined,
+  };
+}
+
+function parseSkillToolMappings(value: string | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? Array.from(new Set(parsed
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+      ))
+      : [];
+  } catch {
+    return [];
   }
 }
 
@@ -297,7 +334,7 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
   const agent = await ctx.db.get(agentId);
   if (!agent) throw new Error("Agent not found");
 
-  const [toolBindings, activeEvalFixtures, recentRuns] = await Promise.all([
+  const [toolBindings, activeEvalFixtures, recentRuns, skillBindings, allTools] = await Promise.all([
     ctx.db
       .query("agentTools")
       .withIndex("by_agent", (q) => q.eq("agentId", agentId))
@@ -311,7 +348,66 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
       .withIndex("by_agent_started", (q) => q.eq("agentId", agentId))
       .order("desc")
       .take(AGENT_READINESS_LOOKBACK_LIMIT),
+    ctx.db
+      .query("agentSkillBindings")
+      .withIndex("by_agent_enabled", (q) => q.eq("agentId", agentId).eq("isEnabled", true))
+      .take(AGENT_TOOL_BINDING_LIMIT),
+    ctx.db
+      .query("aiTools")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(AGENT_TOOL_BINDING_LIMIT),
   ]);
+  const activeToolMappings = new Set(allTools
+    .filter((tool) => tool.isActive !== false)
+    .map((tool) => tool.handlerMapping));
+  let skillReadinessRows = await Promise.all(skillBindings.map(async (binding) => {
+    const [skill, version] = await Promise.all([
+      ctx.db.get(binding.skillId),
+      ctx.db.get(binding.skillVersionId),
+    ]);
+    if (!skill || skill.status !== "ACTIVE") {
+      return {
+        bindingId: binding._id,
+        skillId: binding.skillId,
+        skillVersionId: binding.skillVersionId,
+        name: skill?.name ?? "Archived skill",
+        status: skill?.status ?? "ARCHIVED",
+        riskLevel: skill?.riskLevel,
+        versionNumber: version?.versionNumber,
+        requiredToolMappings: [] as string[],
+        missingRequiredToolMappings: ["skill_unavailable"],
+        activeEvalFixtureCount: 0,
+        latestSkillSmokeEval: null as null | {
+          runId: Id<"agentRuns">;
+          status: string;
+          completedAt?: number;
+          isCurrent: boolean;
+        },
+        skillSmokePassed: false,
+      };
+    }
+    const requiredToolMappings = parseSkillToolMappings(skill.requiredToolMappingsJson);
+    return {
+      bindingId: binding._id,
+      skillId: binding.skillId,
+      skillVersionId: binding.skillVersionId,
+      name: skill.name,
+      status: skill.status,
+      riskLevel: skill.riskLevel,
+      versionNumber: version?.versionNumber,
+      requiredToolMappings,
+      missingRequiredToolMappings: requiredToolMappings.filter((mapping) => !activeToolMappings.has(mapping)),
+      activeEvalFixtureCount: 0,
+      latestSkillSmokeEval: null as null | {
+        runId: Id<"agentRuns">;
+        status: string;
+        completedAt?: number;
+        isCurrent: boolean;
+      },
+      skillSmokePassed: false,
+    };
+  }));
 
   const smokeEvalRuns = recentRuns.filter((run) => run.objective.startsWith(SMOKE_EVAL_OBJECTIVE_PREFIX));
   const latestSmokeEvalRun = smokeEvalRuns[0];
@@ -338,6 +434,7 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
     runId: Id<"agentRuns">;
     status: string;
     gradingMode: "CONTRACT_ONLY" | "MODEL_GRADED";
+    skillVersionId?: Id<"agentSkillVersions">;
     startedAt: number;
     completedAt?: number;
     updatedAt: number;
@@ -345,15 +442,66 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
   for (const record of smokeEvalRecords) {
     const fixtureId = typeof record.metadata.fixtureId === "string" ? record.metadata.fixtureId : undefined;
     if (!fixtureId || latestSmokeEvalByFixtureId.has(fixtureId)) continue;
+    const runEvidence = typeof record.metadata.sourceEvidenceJson === "string"
+      ? parseSourceEvidenceJson(record.metadata.sourceEvidenceJson)
+      : {};
+    const runSkillVersionId = typeof runEvidence.skillVersionId === "string"
+      ? runEvidence.skillVersionId as Id<"agentSkillVersions">
+      : undefined;
     latestSmokeEvalByFixtureId.set(fixtureId, {
       runId: record.run._id,
       status: record.run.status,
       gradingMode: record.metadata.gradingMode === "MODEL_GRADED" ? "MODEL_GRADED" : "CONTRACT_ONLY",
+      skillVersionId: runSkillVersionId,
       startedAt: record.run.startedAt,
       completedAt: record.run.completedAt,
       updatedAt: record.run.updatedAt,
     });
   }
+  skillReadinessRows = skillReadinessRows.map((row) => {
+    const skillFixtures = activeEvalFixtures.filter((fixture) => {
+      const evidence = getSkillEvidenceFromFixture(fixture);
+      return evidence.source === "agent_skill" && evidence.skillId === row.skillId;
+    });
+    const latestRuns = skillFixtures
+      .map((fixture) => {
+        const latestRun = latestSmokeEvalByFixtureId.get(fixture._id);
+        const evidence = getSkillEvidenceFromFixture(fixture);
+        const isCurrent = latestRun
+          ? latestRun.startedAt >= fixture.updatedAt
+            && evidence.skillVersionId === row.skillVersionId
+            && latestRun.skillVersionId === row.skillVersionId
+          : false;
+        return latestRun ? {
+          ...latestRun,
+          fixtureUpdatedAt: fixture.updatedAt,
+          isCurrent,
+        } : null;
+      })
+      .filter((run): run is NonNullable<typeof run> => run !== null)
+      .toSorted((left, right) => right.startedAt - left.startedAt);
+    const latestSkillSmokeEval = latestRuns[0];
+    const skillSmokePassed = latestRuns.some((run) => run.status === "SUCCESS" && run.isCurrent);
+    return {
+      ...row,
+      activeEvalFixtureCount: skillFixtures.length,
+      latestSkillSmokeEval: latestSkillSmokeEval ? {
+        runId: latestSkillSmokeEval.runId,
+        status: latestSkillSmokeEval.status,
+        completedAt: latestSkillSmokeEval.completedAt ?? latestSkillSmokeEval.updatedAt,
+        isCurrent: latestSkillSmokeEval.isCurrent,
+      } : null,
+      skillSmokePassed,
+    };
+  });
+  const missingRequiredSkillToolCount = skillReadinessRows.reduce(
+    (count, row) => count + row.missingRequiredToolMappings.length,
+    0
+  );
+  const missingHighRiskSkillEvalCount = skillReadinessRows.filter((row) =>
+    row.riskLevel === "HIGH" && !row.skillSmokePassed
+  ).length;
+  const missingSkillReadinessIssueCount = missingRequiredSkillToolCount + missingHighRiskSkillEvalCount;
   const knowledgeDocumentCount = agent.knowledgeDocumentIds?.length ?? 0;
   const toolBindingCount = toolBindings.length;
   const activeEvalFixtureCount = activeEvalFixtures.length;
@@ -451,6 +599,11 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
       count: toolBindingCount,
     },
     {
+      key: "skills",
+      status: missingSkillReadinessIssueCount === 0 ? "PASS" : "WARN",
+      count: skillReadinessRows.length,
+    },
+    {
       key: "knowledge",
       status: knowledgeDocumentCount > 0 ? "PASS" : "WARN",
       count: knowledgeDocumentCount,
@@ -484,6 +637,12 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
     knowledgeDocumentCount,
     modelReadiness,
     activeEvalFixtureCount,
+    skillReadiness: {
+      enabledCount: skillReadinessRows.length,
+      missingRequiredToolCount: missingRequiredSkillToolCount,
+      missingHighRiskEvalCount: missingHighRiskSkillEvalCount,
+      skills: skillReadinessRows,
+    },
     fixtureCoverage,
     successfulSmokeEvalRunCount,
     latestSmokeEvalAt: latestSmokeEvalRun?.completedAt ?? latestSmokeEvalRun?.updatedAt,
@@ -755,6 +914,12 @@ export const updateAgent = mutation({
       }
       if (readiness.releaseGatePolicy.warning) {
         throw new Error("Activation blocked: release gate policy must be configured before activating this agent.");
+      }
+      if (
+        readiness.skillReadiness.missingRequiredToolCount > 0
+        || readiness.skillReadiness.missingHighRiskEvalCount > 0
+      ) {
+        throw new Error("Activation blocked: enabled skills are missing required tools or high-risk skill smoke evals.");
       }
     }
 

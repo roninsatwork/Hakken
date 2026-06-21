@@ -22,6 +22,7 @@ import type * as agentRuns from "../agentRuns.js";
 import type * as agentRuntime from "../agentRuntime.js";
 import type * as agentRuntimeService from "../agentRuntimeService.js";
 import type * as agentService from "../agentService.js";
+import type * as agentSkills from "../agentSkills.js";
 import type * as agentTemplates from "../agentTemplates.js";
 import type * as agentTransactions from "../agentTransactions.js";
 import type * as agentVersioningService from "../agentVersioningService.js";
@@ -142,6 +143,7 @@ declare const fullApi: ApiFromModules<{
   agentRuntime: typeof agentRuntime;
   agentRuntimeService: typeof agentRuntimeService;
   agentService: typeof agentService;
+  agentSkills: typeof agentSkills;
   agentTemplates: typeof agentTemplates;
   agentTransactions: typeof agentTransactions;
   agentVersioningService: typeof agentVersioningService;

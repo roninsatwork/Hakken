@@ -464,7 +464,7 @@ Completed data/upload policy slices:
 - Reused backend upload validation in chat, knowledge, widget, settings, agent avatar, and user profile storage flows.
 - Added frontend upload policy helpers and reused them in chat, assistant, knowledge, profile, widget logo, system logo, and agent avatar upload flows.
 - Added backend and frontend policy tests for allowed/rejected file types and size limits.
-- Documented upload entry points, current limits, tenant-scope requirements, and the future file-type extension process in `docs/upload-and-knowledge-policy.md`.
+- Documented upload entry points, current limits, tenant-scope requirements, and the future file-type extension process in `docs/developer/upload-and-knowledge-policy.md`.
 
 Acceptance:
 
@@ -563,7 +563,7 @@ Checklist:
 
 Completed extension slices:
 
-- Added `docs/product-extension-guide.md` with the intended platform layers and the current source paths for app shell, admin shell, Convex backend, AI runtime, workflow runtime, integrations/tools, and tenant settings.
+- Added `docs/developer/product-extension-guide.md` with the intended platform layers and the current source paths for app shell, admin shell, Convex backend, AI runtime, workflow runtime, integrations/tools, and tenant settings.
 - Documented the expected path for new admin sections, including shared admin primitives, Convex auth guards, sidebar entries, locale parity, pagination, and browser coverage.
 - Documented the workflow node extension path across editor types, config parsing, runtime execution, drawer UI, and parser/runtime tests.
 - Documented safe AI tool registration through `aiTools`, `agentTools`, provider declarations, role checks, tenant checks, and normalized tool result payloads.

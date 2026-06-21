@@ -215,7 +215,7 @@ npm run build
 
 - Confirm the docs agree with the actual command outputs.
 - Confirm no movement-demo files changed unless the user explicitly allowed it.
-- Confirm any remaining scale caveat is documented here or in `docs/post-scale-hardening-plan.md`.
+- Confirm any remaining scale caveat is documented here or in `docs/plans/active/post-scale-hardening-plan.md`.
 
 Acceptance:
 

@@ -2,7 +2,7 @@
 
 This document defines how Sonae agents should improve over time after the true agentic runtime foundation is in place.
 
-It is a follow-on plan to `docs/true-agentic-platform-plan.md`. The goal is not to silently retrain model weights. The goal is to make agents improve operationally through governed memory, measured feedback, replayed failures, evaluation fixtures, and approved configuration updates.
+It is a follow-on plan to `docs/plans/active/true-agentic-platform-plan.md`. The goal is not to silently retrain model weights. The goal is to make agents improve operationally through governed memory, measured feedback, replayed failures, evaluation fixtures, and approved configuration updates.
 
 ## Target Claim
 

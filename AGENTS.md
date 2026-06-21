@@ -60,7 +60,7 @@ Frozen areas:
 
 The user considers this demo temporary and expects to delete it after the client has seen it. Focus maintainability work elsewhere.
 
-If the user explicitly reopens avatar body motion, read `docs/movement-demo-retargeting-approach.md` before changing `VrmAvatar` or lower-body tracking. The documented direction is source-skeleton proof, neutral calibration, vector retargeting, and foot locking; do not drive body animation primarily from labels such as `squat` or from canned poses.
+If the user explicitly reopens avatar body motion, read `docs/developer/movement-demo-retargeting-approach.md` before changing `VrmAvatar` or lower-body tracking. The documented direction is source-skeleton proof, neutral calibration, vector retargeting, and foot locking; do not drive body animation primarily from labels such as `squat` or from canned poses.
 
 ## Project Guardrails
 
@@ -83,4 +83,4 @@ If the user explicitly reopens avatar body motion, read `docs/movement-demo-reta
 7. Continue splitting workflow editor/runtime types and helpers, but leave movement demo code alone.
 8. Add regression tests for auth redirects, locale parity, no-native-dialog drift, and 15-row admin pagination.
 
-See `docs/future-agent-maintenance-plan.md` for the fuller plan.
+See `docs/developer/future-agent-maintenance-plan.md` for the fuller plan.

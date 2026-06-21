@@ -1,97 +1,68 @@
 # Sonae Documentation
 
-Welcome to the Sonae Platform developer documentation. This guide is designed to help you understand the system architecture, design principles, and deployment workflows for the platform.
+This is the front door for Sonae documentation. Use the audience sections below to decide where a document belongs and where to start reading.
 
-## 📚 Table of Contents
+## Structure
 
-1.  **[Getting Started](./getting-started.md)**  
-    Local environment setup, requirements, and development commands.
-2.  **[System Architecture](./architecture.md)**  
-    High-level design, tech stack overview, and security/tenancy model.
-3.  **[Frontend Development](./frontend.md)**  
-    Glassmorphism design system, Fluid Workspace layout, and the Sonae Modal Protocol.
-4.  **[Backend & Data Layer](./backend.md)**  
-    Convex schema, Mutations/Actions, Swarm Engine, and the Audit Ledger.
-5.  **[Infrastructure & Deployment](./deployment.md)**  
-    CI/CD pipeline with GitHub Actions, Google Cloud Run, and branching protocols.
-6.  **[Roadmap & Technical Debt](./roadmap-and-debt.md)**  
-    Known trade-offs and future implementation highlights.
-7.  **[Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)**
-    Handoff rules and code-quality cleanup priorities for future agents.
-8.  **[Auth And Login Hardening Plan](./auth-login-hardening-plan.md)**
-    Locked phased plan for invite-only auth diagnostics, login UX, repair tooling, callback URL checks, and magic-link regression coverage.
-9.  **[Platform Grade Refactor And Test Upgrade Plan](./code-quality-95-plan.md)**
-    Deeper refactor roadmap for turning Sonae into a reusable product core with stronger contracts, naming, tests, and extension points.
-10. **[Product Extension Guide](./product-extension-guide.md)**
-    Extension points for adding admin sections, workflow nodes, AI tools, model providers, branding, navigation, and tenant settings.
-11. **[Large Page Decomposition Plan](./large-page-decomposition-plan.md)**
-    Follow-on plan for reducing page-level complexity in large non-movement product/admin pages.
-12. **[Comprehensive Test Coverage Plan](./comprehensive-test-coverage-plan.md)**
-    Phased plan for measurable frontend, backend, and browser coverage, including CI gates and authenticated e2e coverage.
-13. **[Current Cleanup Checklist](./current-cleanup-checklist.md)**
-    Completed 6-phase refactor checklist and verification record.
-14. **[Housework Upgrade Checklist](./housework-upgrade-checklist.md)**
-    Completed low-risk repo hygiene, handoff docs, package scripts, and CI/deploy sanity plan.
-15. **[Analytics Scale Optimization Plan](./analytics-scale-optimization-plan.md)**
-    Locked phased plan for scaling analytics, AI running costs, admin dashboards, and company dashboards without losing tenant isolation.
-16. **[Platform Scale Hardening Plan](./platform-scale-hardening-plan.md)**
-    Belt-and-braces plan for bounded admin inventory, knowledge, chat logs, workflows, inventory rollups, and legacy/debug cleanup.
-17. **[Post Scale Hardening Plan](./post-scale-hardening-plan.md)**
-    Follow-up plan for production smoke checks, inventory rollup backfill, workflow database-node contracts, scheduler optimization, and dependency cleanup.
-18. **[Model Provider Agnostic Platform Plan](./model-provider-agnostic-plan.md)**
-    Sitewide plan for Gemini, OpenAI, Anthropic, provider adapters, model defaults, runtime selection, telemetry, and analytics dashboards.
-19. **[Final Scale Readiness Plan](./final-scale-readiness-plan.md)**
-    Morning-ready checklist for clearing the remaining lint warnings, adding the System Settings maintenance scripts UI, production smoke, low-risk scale confidence review, and locking the repo before the next major refactor.
-20. **[Movement Demo Refactor Plan](./movement-demo-refactor-plan.md)**
-    Scoped plan for safely reopening the movement demo, stabilizing capture/playback/scoring, tightening data contracts, and making the demo maintainable.
-21. **[Movement Demo Manual Smoke Checklist](./movement-demo-manual-smoke-checklist.md)**
-    Repeatable signed-in browser checklist for camera, MediaPipe model loading, capture, save, detail playback, and match-play smoke before demos or pushes.
-22. **[Movement Demo Whole-Body Tracking Accuracy Plan](./movement-demo-whole-body-tracking-plan.md)**
-    Phased plan for calibration, debug overlays, head accuracy, arm/hand chains, lower-body constraints, avatar profiles, and whole-body tracking regression checks.
-23. **[Movement Demo Client Pitch Excellence Plan](./movement-demo-client-pitch-excellence-plan.md)**
-    Sales-critical plan for rewriting the avatar body-motion layer, tuning a primary pitch avatar, adding demo-safe fallbacks, and rehearsing a client-ready movement script.
-24. **[Movement Demo Pitch Runbook](./movement-demo-pitch-runbook.md)**
-    Presenter-facing runbook for positioning, setup, safe movements, fallback wording, and readiness checks before the premium posture client demo.
-25. **[Movement Demo Live Rehearsal Notes Template](./movement-demo-live-rehearsal-notes-template.md)**
-    Fill-in template for recording camera setup, debug overlay labels, movement issues, and live-vs-preview demo decisions.
-26. **[Movement Demo Presenter Card](./movement-demo-presenter-card.md)**
-    Short pre-call card for opening the guided preview, using premium posture language, and falling back cleanly.
-27. **[AI Runtime Retry Hardening Plan](./ai-runtime-retry-hardening-plan.md)**
-    Audited plan for making AI provider calls pause, retry, and continue safely after throttling, transient provider errors, and SDK/network failures.
-28. **[Agent Scheduler Upgrade Plan](./agent-scheduler-upgrade-plan.md)**
-    Plan for upgrading the admin schedule builder with recurring cadence, targeted times, timezone previews, structured configs, and agent dispatch support.
-29. **[System Health Alerts Expansion Plan](./system-health-alerts-plan.md)**
-    Plan for adding agent failures, schedule failures, stale runs, and overdue schedules to the daily platform alert path.
-30. **[Local Real Auth E2E Plan](./local-real-auth-e2e-plan.md)**
-    Plan for adding a local-only real Convex Auth browser testing lane alongside the existing mocked Playwright suite.
-31. **[Ask Sonae Safety Hardening Plan](./ask-sonae-safety-hardening-plan.md)**
-    Locked phased plan for jailbreak, prompt-injection, RAG, tool execution, and admin prompt guardrails across the Ask Sonae assistant.
-32. **[Company Workspace AI Navigation Consolidation Plan](./company-workspace-ai-navigation-plan.md)**
-    Planning document for moving company Knowledge, Prompt, AI Rules, AI Models, and Chat Logs under a single AI workspace tab with a third-level submenu.
-33. **[True Agentic Platform Plan](./true-agentic-platform-plan.md)**
-    Locked phased plan for turning configurable agents and AI workflows into a durable, tool-executing, approval-aware agentic automation platform.
-34. **[Agent Learning And Improvement Plan](./agent-learning-improvement-plan.md)**
-    Follow-on plan for making agents improve over time through governed memory, run feedback, replayed failures, evaluation fixtures, and approved behavior updates.
-35. **[Agentic Starter Framework Overview](./agentic-starter-framework-overview.md)**
-    Practical start-here guide for building governed agentic apps on Sonae, including platform core boundaries, extension points, and first build path.
-36. **[New Agentic App Setup Checklist](./new-agentic-app-setup-checklist.md)**
-    Step-by-step checklist for setting up a tenant/customer, model defaults, knowledge, tools/connectors, draft agents, evals, and activation readiness.
-37. **[Starter App Template Checklist](./starter-app-template-checklist.md)**
-    Template authoring checklist for reusable vertical app packages, including agents, knowledge, tools, workflows, evals, and release gates.
-38. **[Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)**
-    Checklist for rebranding, packaging, validating, and smoke-testing a vertical product starter built on Sonae.
-39. **[White-Label Packaging Operator Guide](./white-label-packaging-operator-guide.md)**
-    Guide for using System Options white-label readiness, brand handoff, module presets, navigation profiles, custom domain readiness, and the copy-ready packaging checklist.
-40. **[Agentic App Foundation Build Plan](./agentic-app-foundation-build-plan.md)**
-    Reference plan for turning Sonae into a reusable starter framework for governed agentic apps with templates, connectors, evals, replay, public APIs, and packaging.
-41. **[Starter Platform Expansion Plan](./starter-platform-expansion-plan.md)**
-    Product roadmap for making Sonae an exceptional reusable starter platform beyond the connector marketplace, including app templates, launch wizard, release center, observability, public APIs, and white-labeling.
-42. **[Developer Ship Checks Operator Guide](./developer-ship-checks-operator-guide.md)**
-    Plain-English guide for reviewing, approving, activating, cancelling, and rolling back agent release candidates.
-43. **[Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)**
-    Required direction for future movement-demo body-motion work: source skeleton proof, neutral calibration, vector retargeting, foot locking, and what not to patch.
+- [Plans](./plans/index.md): active, completed, and historical plans created during product and engineering work.
+- [Developer](./developer/index.md): technical setup, architecture, implementation guides, platform extension notes, and agent handoff material.
+- [Operator](./operator/index.md): internal runbooks for release review, packaging, demos, and platform operations.
+- [End User](./end-user/index.md): customer-friendly documentation about the platform, features, and workflows.
 
----
+## Start Here
 
-> [!TIP]
-> This documentation is intended for developers. For end-user guides, please refer to the internal help center.
+- New coding agents: read [AGENTS.md](../AGENTS.md), then [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md).
+- Local development: read [Getting Started](./developer/getting-started.md), then [Deployment](./developer/deployment.md).
+- Product or customer context: read [Platform Overview](./end-user/platform-overview.md).
+- Planning work: add new plans under [Plans](./plans/index.md), usually in `docs/plans/active/`.
+
+## Placement Rules
+
+- Put work plans, roadmaps, phased refactors, and cleanup checklists in `docs/plans/`.
+- Put implementation details, architecture, tests, backend/frontend rules, and future-agent guidance in `docs/developer/`.
+- Put internal human runbooks and launch/demo procedures in `docs/operator/`.
+- Put customer-facing explanations in `docs/end-user/`.
+- Move completed execution checklists from `docs/plans/active/` to `docs/plans/completed/` when they are no longer current work.
+
+## Complete Map
+
+### Plans
+
+- [Plans Index](./plans/index.md)
+- [Active Plans](./plans/index.md#active-plans)
+- [Completed Plans](./plans/index.md#completed-plans)
+
+### Developer
+
+- [Developer Index](./developer/index.md)
+- [Getting Started](./developer/getting-started.md)
+- [Architecture](./developer/architecture.md)
+- [Frontend](./developer/frontend.md)
+- [Backend](./developer/backend.md)
+- [Deployment](./developer/deployment.md)
+- [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md)
+- [Product Extension Guide](./developer/product-extension-guide.md)
+- [Upload And Knowledge Policy](./developer/upload-and-knowledge-policy.md)
+- [AI Provider Tool Extension](./developer/ai-provider-tool-extension.md)
+- [Agent Skill Authoring Guide](./developer/agent-skill-authoring-guide.md)
+- [Agentic Starter Framework Overview](./developer/agentic-starter-framework-overview.md)
+- [New Agentic App Setup Checklist](./developer/new-agentic-app-setup-checklist.md)
+- [Starter App Template Checklist](./developer/starter-app-template-checklist.md)
+- [Movement Tracking](./developer/movement-tracking.md)
+- [Movement Demo Retargeting Approach](./developer/movement-demo-retargeting-approach.md)
+
+### Operator
+
+- [Operator Index](./operator/index.md)
+- [Developer Ship Checks Operator Guide](./operator/developer-ship-checks-operator-guide.md)
+- [White-Label Packaging Operator Guide](./operator/white-label-packaging-operator-guide.md)
+- [Vertical App Packaging Checklist](./operator/vertical-app-packaging-checklist.md)
+- [Movement Demo Pitch Runbook](./operator/movement-demo-pitch-runbook.md)
+- [Movement Demo Manual Smoke Checklist](./operator/movement-demo-manual-smoke-checklist.md)
+- [Movement Demo Live Rehearsal Notes Template](./operator/movement-demo-live-rehearsal-notes-template.md)
+- [Movement Demo Presenter Card](./operator/movement-demo-presenter-card.md)
+
+### End User
+
+- [End User Index](./end-user/index.md)
+- [Platform Overview](./end-user/platform-overview.md)

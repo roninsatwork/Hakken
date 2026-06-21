@@ -142,7 +142,7 @@ Targets:
 - Resolve execution models through stored configuration and `convex/aiModelService.ts`, not hardcoded runtime literals.
 - Rename stale Gemini-era product/platform copy to provider-neutral language unless the reference is a real model ID, provider catalogue entry, or provider adapter note.
 - Keep provider-specific tool-call and response shapes behind normalization helpers.
-- Update `docs/ai-provider-tool-extension.md` when a provider boundary or adapter rule changes.
+- Update `docs/developer/ai-provider-tool-extension.md` when a provider boundary or adapter rule changes.
 - Avoid leaking provider names into React pages, generic Convex services, workflow nodes, audit labels, or admin UX unless the user is managing that provider directly.
 
 Acceptance:
@@ -156,13 +156,13 @@ Acceptance:
 Status:
 
 - `GEMINI.md` is now a compatibility pointer to `AGENTS.md`, not an active source of development instructions.
-- `docs/ai-provider-tool-extension.md` documents provider adapter boundaries.
+- `docs/developer/ai-provider-tool-extension.md` documents provider adapter boundaries.
 - `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
-- Use `docs/model-provider-agnostic-plan.md` as the locked source of truth for sitewide Gemini/OpenAI/Anthropic model selection, provider adapters, defaults, telemetry, and analytics dashboard work.
+- Use `docs/plans/active/model-provider-agnostic-plan.md` as the locked source of truth for sitewide Gemini/OpenAI/Anthropic model selection, provider adapters, defaults, telemetry, and analytics dashboard work.
 
 ## Phase 5B: Analytics Scale Optimization
 
-Analytics, admin dashboards, AI running costs, and company dashboards should move toward snapshot-first reads and indexed live-day overlays. Use `docs/analytics-scale-optimization-plan.md` as the locked source of truth for this work.
+Analytics, admin dashboards, AI running costs, and company dashboards should move toward snapshot-first reads and indexed live-day overlays. Use `docs/plans/active/analytics-scale-optimization-plan.md` as the locked source of truth for this work.
 
 Targets:
 
@@ -180,7 +180,7 @@ Acceptance:
 
 Status:
 
-- Added `docs/analytics-scale-optimization-plan.md` as the phased source of truth.
+- Added `docs/plans/active/analytics-scale-optimization-plan.md` as the phased source of truth.
 
 ## Phase 5C: Platform Scale Hardening
 
@@ -197,16 +197,16 @@ Targets:
 
 Acceptance:
 
-- Use `docs/platform-scale-hardening-plan.md` as the locked source of truth.
+- Use `docs/plans/active/platform-scale-hardening-plan.md` as the locked source of truth.
 - New broad reads are classified by drift tests or removed.
 - Tenant isolation, admin pagination, provider-neutral language, and analytics scale checks remain green.
 - Movement demo files stay untouched unless the user explicitly changes scope.
 
 Status:
 
-- Added `docs/platform-scale-hardening-plan.md` as the phased source of truth.
+- Added `docs/plans/active/platform-scale-hardening-plan.md` as the phased source of truth.
 - Completed the main platform scale-hardening phases and promoted them through `main`.
-- Use `docs/post-scale-hardening-plan.md` for the remaining operational follow-up work: production smoke checks, inventory rollup backfill, workflow database-node query contracts, scheduler `nextRunAt`, and dependency cleanup.
+- Use `docs/plans/active/post-scale-hardening-plan.md` for the remaining operational follow-up work: production smoke checks, inventory rollup backfill, workflow database-node query contracts, scheduler `nextRunAt`, and dependency cleanup.
 
 ## Phase 6: Release Readiness Checklist
 

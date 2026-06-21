@@ -314,7 +314,7 @@ Acceptance:
 
 Goal: make the technology feel like a product story.
 
-Presenter runbook: `docs/movement-demo-pitch-runbook.md`.
+Presenter runbook: `docs/operator/movement-demo-pitch-runbook.md`.
 
 Tasks:
 
@@ -362,7 +362,7 @@ Focused tests:
 
 Manual gates:
 
-- Run `docs/movement-demo-manual-smoke-checklist.md`.
+- Run `docs/operator/movement-demo-manual-smoke-checklist.md`.
 - Run the pitch script on the actual laptop, browser, camera, and room setup when possible.
 - Test with `?debugTracking=1`, then repeat without debug mode.
 - Capture short screen recordings of the best run and the fallback run.

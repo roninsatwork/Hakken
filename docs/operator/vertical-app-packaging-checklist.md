@@ -4,7 +4,7 @@ Use this checklist when turning Sonae into a new customer-specific or vertical p
 
 The goal is to make product-specific changes through configuration, translations, templates, seed data, and extension points before editing core runtime code.
 
-For the System Options workflow, use `docs/white-label-packaging-operator-guide.md`.
+For the System Options workflow, use `docs/operator/white-label-packaging-operator-guide.md`.
 
 ## 1. Product Identity
 

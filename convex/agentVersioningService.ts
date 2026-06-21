@@ -57,8 +57,12 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
           .query("agentMemories")
           .withIndex("by_agent_active_updated", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
           .order("desc")
-          .take(VERSION_SNAPSHOT_LIMIT),
+	      .take(VERSION_SNAPSHOT_LIMIT),
   ]);
+  const skillBindings = await ctx.db
+    .query("agentSkillBindings")
+    .withIndex("by_agent_enabled", (q) => q.eq("agentId", args.agentId).eq("isEnabled", true))
+    .take(VERSION_SNAPSHOT_LIMIT);
   const tools = await Promise.all(bindings.map(async (binding) => {
     const tool = await ctx.db.get(binding.toolId);
     return tool ? {
@@ -73,8 +77,49 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
       isActive: tool.isActive,
       version: tool.version,
       updatedAt: tool.updatedAt,
-    } : null;
+	    } : null;
   }));
+  const skills = await Promise.all(skillBindings
+    .filter((binding) => !binding.companyId || binding.companyId === args.companyId)
+    .map(async (binding) => {
+      const [skill, version] = await Promise.all([
+        ctx.db.get(binding.skillId),
+        ctx.db.get(binding.skillVersionId),
+      ]);
+      if (!skill || skill.status !== "ACTIVE") return null;
+
+      let parsedSnapshot: {
+        requiredToolMappings?: string[];
+        recommendedToolMappings?: string[];
+      } = {};
+      try {
+        const parsed = version?.snapshotJson ? JSON.parse(version.snapshotJson) as unknown : {};
+        parsedSnapshot = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? parsed as typeof parsedSnapshot
+          : {};
+      } catch {
+        parsedSnapshot = {};
+      }
+
+      return {
+        id: skill._id,
+        versionId: binding.skillVersionId,
+        bindingId: binding._id,
+        companyId: binding.companyId,
+        name: skill.name,
+        category: skill.category,
+        riskLevel: skill.riskLevel,
+        instruction: skill.instruction,
+        requiredToolMappings: Array.isArray(parsedSnapshot.requiredToolMappings)
+          ? parsedSnapshot.requiredToolMappings
+          : [],
+        recommendedToolMappings: Array.isArray(parsedSnapshot.recommendedToolMappings)
+          ? parsedSnapshot.recommendedToolMappings
+          : [],
+        versionNumber: version?.versionNumber,
+        snapshotHash: version?.snapshotHash,
+      };
+    }));
 
   const promptSnapshot = {
     systemPrompt: agent.systemPrompt || "",
@@ -107,8 +152,11 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
       trigger: rule.trigger,
       instruction: rule.instruction,
       priority: rule.priority,
-    }))
+	    }))
     .sort((left, right) => left.id.localeCompare(right.id));
+  const skillSnapshot = skills
+    .filter((skill): skill is NonNullable<typeof skill> => skill !== null)
+    .sort((left, right) => left.name.localeCompare(right.name));
   const modelSnapshot = {
     modelId: agent.modelId,
     modelSelectionMode: agent.modelSelectionMode,
@@ -132,6 +180,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     companyId: args.companyId,
     prompt: promptSnapshot,
     tools: toolSnapshot,
+    skills: skillSnapshot,
     rules: ruleSnapshot,
     memory: memorySnapshot,
     model: modelSnapshot,
@@ -140,6 +189,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
 
   const promptHash = hashValue(promptSnapshot);
   const toolSetHash = hashValue(toolSnapshot);
+  const skillSetHash = hashValue(skillSnapshot);
   const memoryRevisionHash = hashValue(memorySnapshot);
   const ruleSetHash = hashValue(ruleSnapshot);
   const modelConfigHash = hashValue(modelSnapshot);
@@ -167,6 +217,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     snapshotJson,
     promptHash,
     toolSetHash,
+    skillSetHash,
     memoryRevisionHash,
     ruleSetHash,
     modelConfigHash,
