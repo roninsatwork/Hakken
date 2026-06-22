@@ -11,6 +11,11 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Deployment](./deployment.md)
 - [Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)
 
+## Product Areas
+
+- [Assistant Chat](./assistant-chat.md)
+- [Administration](./administration.md)
+
 ## Platform Development
 
 - [Product Extension Guide](./product-extension-guide.md)
@@ -27,3 +32,7 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 - [Movement Tracking](./movement-tracking.md)
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
+
+## Documentation Still Needed
+
+Implementation areas discovered during the first documentation generator pass that still need dedicated developer coverage include AI model and provider administration, AI rules and prompt management, global and company knowledge management, tool connectors, widgets, agents, skills, approvals, releases, run observatory, workflows and schedules, analytics and cost reporting, app kits and launch plans, API keys, webhook deliveries, maintenance scripts, system health, auth diagnostics, audit log detail screens, white-label settings, company directory detail pages, reports, properties, organization settings, and the temporary posture studio user flow.

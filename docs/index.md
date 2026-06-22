@@ -41,6 +41,8 @@ This is the front door for Sonae documentation. Use the audience sections below 
 - [Backend](./developer/backend.md)
 - [Deployment](./developer/deployment.md)
 - [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md)
+- [Assistant Chat](./developer/assistant-chat.md)
+- [Administration](./developer/administration.md)
 - [Product Extension Guide](./developer/product-extension-guide.md)
 - [Upload And Knowledge Policy](./developer/upload-and-knowledge-policy.md)
 - [AI Provider Tool Extension](./developer/ai-provider-tool-extension.md)
@@ -66,3 +68,5 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 - [End User Index](./end-user/index.md)
 - [Platform Overview](./end-user/platform-overview.md)
+- [Assistant Chat](./end-user/assistant-chat.md)
+- [Administration](./end-user/administration.md)

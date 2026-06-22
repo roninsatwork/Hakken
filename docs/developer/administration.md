@@ -1,0 +1,71 @@
+# Administration Developer Guide
+
+## Scope
+
+Administration covers the Sonae screens and backend APIs used to manage the platform, tenant companies, users, invitations, AI configuration, agents, workflows, settings, maintenance, analytics, and audit trails. The admin area is implemented under `src/app/(dashboard)/admin/` and is reached at `/admin`. It is rendered inside the shared dashboard layout from `src/app/(dashboard)/layout.tsx` and the admin-specific guard in `src/app/(dashboard)/admin/layout.tsx`. The current layout redirects any signed-in user whose role is not `SUPER_ADMIN` back to `/app`, and returns `null` during loading or redirect to prevent admin UI flashing.
+
+This guide focuses on current implemented behavior. It intentionally does not describe every nested admin feature in full detail; many of those areas still need dedicated documents. Use this as the entry point for admin route structure, authorization expectations, tenancy rules, user and company management, invitations, and verification.
+
+## Navigation and Routes
+
+Admin navigation is controlled by `src/ui/components/layout/SidebarNavigation.tsx`. When the current path starts with `/admin`, the sidebar switches to admin labels and route groups. The admin dashboard is `/admin`. App kit and launch plan screens live under `/admin/app-kits` and `/admin/launch`. Company management lives under `/admin/companies`, with company detail routes for overview, directory, users, invites, AI settings, knowledge, models, prompt, rules, chat logs, and widget configuration. AI administration includes `/admin/ai/costs`, `/admin/ai/chat-logs`, `/admin/ai/rules`, `/admin/ai/system-prompt`, `/admin/ai/global-knowledge`, `/admin/ai/widget`, `/admin/ai/models`, and `/admin/ai/tools`.
+
+Agent and workflow operations include `/admin/agents`, `/admin/agents/approvals`, `/admin/agents/skills`, `/admin/releases`, `/admin/run-observatory`, `/admin/workflows`, `/admin/workflows/schedules`, and `/admin/workflows/logs`. Settings and maintenance include `/admin/settings`, `/admin/settings/plans`, `/admin/settings/api-keys`, `/admin/settings/webhook-deliveries`, `/admin/settings/analytics`, `/admin/settings/system-health`, `/admin/settings/scripts`, and `/admin/auth-diagnostics`. Global user and super-admin routes include `/admin/users`, `/admin/users/invite`, `/admin/users/[id]`, `/admin/super-admins`, `/admin/super-admins/invite`, and `/admin/super-admins/[id]`.
+
+The normal app sidebar also exposes an organization section for company admins at `/app/settings`, `/app/settings/team`, and `/app/settings/auth-diagnostics`. Those organization screens are not inside `/admin` because `src/app/(dashboard)/admin/layout.tsx` only permits super admins. Backend user-management functions support both global super-admin use and scoped tenant-admin use, so the route split is important: UI access and Convex authorization are both part of the model.
+
+## Shared Admin UI Patterns
+
+Admin pages use a family of shared components under `src/app/(dashboard)/admin/_components/`: `AdminConfirmationModal`, `AdminDetailLayout`, `AdminDetailTabs`, `AdminModalForm`, `AdminPageHeader`, `AdminRouteSubmenu`, `AdminRulesTable`, `AdminSaveControls`, and `AdminTable`. These are covered by component tests and should be reused before adding new admin-specific table or modal patterns. Pagination helpers live in `src/app/(dashboard)/admin/_lib/pagination.ts`; administrative tables and feeds should default to 15 rows per page unless a product requirement says otherwise.
+
+The users page at `src/app/(dashboard)/admin/users/page.tsx` shows the typical pattern: it uses `usePaginatedQuery`, `ADMIN_PAGE_SIZE`, a search input, a table, pending invitation rows, hover actions, a modal form, and `AdminConfirmationModal` for destructive actions. It avoids native browser dialogs and surfaces save/delete errors inline. New admin pages should follow the same feedback pattern.
+
+The admin dashboard in `src/app/(dashboard)/admin/page.tsx` uses analytics queries and Recharts through `ChartExportWrapper`. It includes a timeframe selector, metric tiles, timelines, provider/model distribution charts, cost metrics, active-user metrics, and inventory metrics. It is a super-admin overview screen, not a tenant-admin dashboard.
+
+## Authorization Model
+
+The core authorization helpers live in `convex/authz.ts`. `getCurrentUser` reads the Convex auth user ID and loads the matching row from `users`. `requireCurrentUser` rejects unauthenticated callers. `requireRole`, `requireAdmin`, and `requireSuperAdmin` enforce role membership. Roles are stored as `USER`, `ADMIN`, and `SUPER_ADMIN`. `getActiveCompanyId` returns `impersonatingCompanyId` when set, otherwise `companyId`. `canAccessCompany` allows super admins or active-company matches. `assertAdminCanAccessCompany` allows super admins and tenant admins scoped to their active company.
+
+Do not rely only on frontend route guards. Most admin-sensitive Convex functions enforce authorization again. Company CRUD in `convex/companies.ts` requires `requireSuperAdmin` for listing, creating, updating, deleting, profile changes, company prompt updates, plan assignment, and company option lookup. User CRUD in `convex/users.ts` starts with `requireCurrentUser` because the same functions serve both global super admins and tenant-scoped admins, then delegates privilege checks to `convex/userManagementService.ts`.
+
+`convex/userManagementService.ts` is the important privilege boundary for managed users. An unimpersonated super admin can create, update, and delete managed users globally. A scoped admin, including an impersonating super admin, must operate within the active company. Scoped admins cannot create, update, or delete super admins and cannot move users outside the active company. Future changes to roles, user editing, or impersonation should add or update tests in `convex/userManagementService.test.ts` and related Convex tests before changing UI assumptions.
+
+## Tenancy and Impersonation
+
+Tenant isolation is company-based. User rows can hold `companyId`, while super admins can temporarily hold `impersonatingCompanyId`. The sidebar shows an impersonation block when a super admin is impersonating a company and provides an exit action. The exit action calls `api.users.impersonateCompany` with `companyId: undefined` and navigates back to `/admin/companies`.
+
+Impersonation changes the active company returned by `getActiveCompanyId`. This affects tenant-scoped queries, user management, chat thread creation, quota resolution, company knowledge, and other company-aware behavior. The distinction between “super admin” and “unimpersonated super admin” is deliberate. `userManagementService.ts` treats impersonating super admins as scoped admins for managed-user writes, preventing accidental global privilege escalation while operating inside a tenant.
+
+Company management in `convex/companies.ts` is currently super-admin-only. Deleting a company schedules `internal.companies.purgeCompanyEntitiesInternal`, deletes the company record, adjusts inventory totals, and writes an audit log. The purge internal mutation batches users and invitations in chunks of 100 and reschedules itself while more company-owned entities remain. It also schedules per-user cleanup through `internal.users.purgeUserEntitiesInternal`. Because the company record is deleted before all cleanup necessarily completes, admin UI and docs should present company deletion as destructive asynchronous cleanup.
+
+## Users, Invitations, and Login Tracking
+
+The `users` table stores profile fields, email, role, company assignment, plan override, message usage, auth token identifier, and impersonation state. `api.users.getPaginatedUsers` returns tenant-scoped results for `ADMIN` users and impersonating super admins; unimpersonated super admins receive global results. It supports email search through `search_email` and enriches rows with company names. `api.users.getAllUsers`, `api.users.getUsersByCompany`, `api.users.getSuperAdmins`, and `api.users.getUserById` apply related access rules.
+
+`api.users.addUser`, `api.users.updateUser`, and `api.users.deleteUser` write `auditLogs` entries for create, update, and delete. Manual user creation inserts a token identifier with a `manual|` prefix. Deleting a user schedules `internal.users.purgeUserEntitiesInternal`, deletes the user row, adjusts global inventory, and audits the delete. The purge routine deletes login records, AI rules created by the user, thread messages, and thread roots in batches. Threads with many messages can require repeated internal scheduling.
+
+Invitations are implemented in `convex/invites.ts` and stored in `invitations`. Admins can list pending invites, revoke invites, and dispatch invite emails. `dispatchInviteEmail` is an action because it sends through Resend and reads environment variables. It uses `SITE_URL` or `NEXT_PUBLIC_APP_URL`, falling back to `http://localhost:3000`, to build the login link. If `RESEND_API_KEY` is missing, the action logs a simulated email and still creates the invite record, which is useful in local development. Invite creation overwrites an existing non-accepted invite for the same lowercased email. The actual invite link currently points to `/login`, relying on the invited email matching the authenticated Google account rather than exposing the stored token as a URL parameter.
+
+Login tracking is initiated in `src/ui/components/layout/Header.tsx`. On the first session load it calls `https://ipapi.co/json/`, then records login metadata through `api.users.recordLogin`; if the IP lookup fails, it records a concealed/unknown fallback. Repeated identical device/IP logins are throttled for 60 minutes. Admin and super-admin login and logout events are also written to `auditLogs`.
+
+## Data Model and Audit Behavior
+
+Key admin tables in `convex/schema.ts` include `companies`, `users`, `invitations`, `emailTemplates`, `systemSettings`, `systemConfig`, `auditLogs`, `plans`, `apiKeys`, `webhookDeliveries`, `analyticsDailySnapshots`, `inventoryRollups`, `maintenanceScriptRuns`, and the AI/agent/workflow tables. Companies index by name and plan and expose a name search index. Users index by email, company, token, and email search. Invitations index by email, company/status, and token. Audit logs index by actor, company, and timestamp.
+
+Audit log coverage is broad but not uniform. Company create/update/delete, company prompt changes, user create/update/delete, invite revocation, invite creation, email template saves, login/logout, impersonation changes, super-admin assignment/detachment, and assistant safety refusals all write audit records. Some lower-level settings or feature-specific admin actions may use their own modules and should be checked before assuming audit coverage. When adding a new destructive or privilege-sensitive mutation, add an audit log unless there is a clear reason not to.
+
+## Configuration and External Services
+
+Admin behavior visible in the repo uses several environment variables. `RESEND_API_KEY` and `RESEND_FROM_EMAIL` affect invitation delivery. `SITE_URL` and `NEXT_PUBLIC_APP_URL` affect generated invite login links. `FIRECRAWL_API_KEY` affects website knowledge ingestion. AI provider configuration is stored in Convex tables and provider modules rather than hardcoded through admin screens. System branding, platform name, logos, email sender values, colors, fonts, radius, and diagnostic routing are stored in `systemSettings`.
+
+The admin UI is localized through `messages/en.json` and `messages/it.json`. Any new admin strings must keep those dictionaries in parity. Empty state copy should also be checked; the current users page includes an Italian hardcoded empty-state title and description fallback, which should be reviewed in a future localization pass.
+
+## Verification
+
+Relevant tests include `src/app/(dashboard)/admin/page.test.tsx`, `src/app/(dashboard)/admin/users/page.test.tsx`, `src/app/(dashboard)/admin/companies/page.test.tsx`, `src/app/(dashboard)/admin/companies/[id]/users/page.test.tsx`, `src/app/(dashboard)/admin/_components/*.test.tsx`, `src/app/(dashboard)/admin/_lib/pagination.test.ts`, `convex/users.test.ts`, `convex/users.internal.test.ts`, `convex/userManagementService.test.ts`, `convex/companies.test.ts`, `convex/companies.internal.test.ts`, `convex/invites.test.ts`, `convex/authz.test.ts`, `convex/auditLogs.test.ts`, `e2e/admin-roles.spec.ts`, `e2e/admin-smoke.spec.ts`, `e2e/admin/routes.spec.ts`, `e2e/admin/tables.spec.ts`, and `e2e/admin/journeys.spec.ts`.
+
+Before requesting a merge for admin work, run the repo gates from `AGENTS.md`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`. For user or company management changes, also manually verify super-admin global access, tenant-admin scoped access, super-admin impersonation, failed privilege escalation, user delete confirmation, invite revocation, and pagination at 15 rows.
+
+## Known Gaps
+
+This document is an umbrella guide. The implementation contains substantial admin subsystems that still need dedicated developer documents: AI model and provider configuration, AI rules and prompts, global and company knowledge management, tool connectors, widgets, agents, skills, approvals, releases, run observatory, workflows and schedules, analytics and cost reporting, app kits and launch plans, API keys, webhook deliveries, maintenance scripts, system health, auth diagnostics, audit log detail screens, white-label settings, and company directory detail pages. Do not treat this guide as complete coverage for those subsystems.
