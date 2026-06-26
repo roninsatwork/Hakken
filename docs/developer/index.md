@@ -15,6 +15,8 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 
 - [Assistant Chat](./assistant-chat.md)
 - [Administration](./administration.md)
+- [Workflow Automation](./workflow-automation.md)
+- [Property Research And Board Reports](./property-research-and-reports.md)
 
 ## Platform Development
 
@@ -35,4 +37,4 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 ## Documentation Still Needed
 
-Implementation areas discovered during the first documentation generator pass that still need dedicated developer coverage include AI model and provider administration, AI rules and prompt management, global and company knowledge management, tool connectors, widgets, agents, skills, approvals, releases, run observatory, workflows and schedules, analytics and cost reporting, app kits and launch plans, API keys, webhook deliveries, maintenance scripts, system health, auth diagnostics, audit log detail screens, white-label settings, company directory detail pages, reports, properties, organization settings, and the temporary posture studio user flow.
+Implementation areas discovered during documentation generator passes that still need dedicated developer coverage include AI model and provider administration, AI rules and prompt management, global and company knowledge management, tool connectors, widgets, agents, skills, approvals outside workflow execution, releases, run observatory, analytics and cost reporting, app kits and launch plans, API keys, webhook deliveries, maintenance scripts, system health, auth diagnostics, audit log detail screens, white-label settings, company directory detail pages, organization settings, and the temporary posture studio user flow.

@@ -10,7 +10,9 @@ End-user docs are customer-friendly explanations of the Sonae platform, its feat
 
 - [Assistant Chat](./assistant-chat.md)
 - [Administration](./administration.md)
+- [Workflow Automation](./workflow-automation.md)
+- [Property Research And Board Reports](./property-research-and-reports.md)
 
 ## Documentation Still Needed
 
-Implemented areas that still need dedicated customer-friendly guides include reports, properties, organization settings and team management, company workspaces, AI model and rule administration, knowledge management, widgets, agents, workflows, app kits, releases, approvals, run observatory, API keys, webhook deliveries, system health, maintenance scripts, auth diagnostics, audit logs, and the temporary posture studio demo.
+Implemented areas that still need dedicated customer-friendly guides include organization settings and team management, company workspaces, AI model and rule administration, knowledge management, widgets, agents, app kits, releases, approvals outside workflow execution, run observatory, API keys, webhook deliveries, system health, maintenance scripts, auth diagnostics, audit logs, and the temporary posture studio demo.
