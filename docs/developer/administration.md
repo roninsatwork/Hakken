@@ -4,7 +4,7 @@
 
 Administration covers the Sonae screens and backend APIs used to manage the platform, tenant companies, users, invitations, AI configuration, agents, workflows, settings, maintenance, analytics, and audit trails. The admin area is implemented under `src/app/(dashboard)/admin/` and is reached at `/admin`. It is rendered inside the shared dashboard layout from `src/app/(dashboard)/layout.tsx` and the admin-specific guard in `src/app/(dashboard)/admin/layout.tsx`. The current layout redirects any signed-in user whose role is not `SUPER_ADMIN` back to `/app`, and returns `null` during loading or redirect to prevent admin UI flashing.
 
-This guide focuses on current implemented behavior. It intentionally does not describe every nested admin feature in full detail; many of those areas still need dedicated documents. Use this as the entry point for admin route structure, authorization expectations, tenancy rules, user and company management, invitations, and verification.
+This guide focuses on current implemented behavior. It intentionally does not describe every nested admin feature in full detail because specialized areas have dedicated documents. Use this as the entry point for admin route structure, authorization expectations, tenancy rules, user and company management, invitations, and verification.
 
 ## Navigation and Routes
 
@@ -68,4 +68,4 @@ Before requesting a merge for admin work, run the repo gates from `AGENTS.md`: `
 
 ## Known Gaps
 
-This document is an umbrella guide. The implementation contains substantial admin subsystems that still need dedicated developer documents: AI model and provider configuration, AI rules and prompts, global and company knowledge management, tool connectors, widgets, agents, skills, approvals, releases, run observatory, workflows and schedules, analytics and cost reporting, app kits and launch plans, API keys, webhook deliveries, maintenance scripts, system health, auth diagnostics, audit log detail screens, white-label settings, and company directory detail pages. Do not treat this guide as complete coverage for those subsystems.
+This document is an umbrella guide. Dedicated developer documents now cover AI administration, agents, launch and releases, run observability, workflow automation, platform operations settings, organization/company workspaces, and the temporary posture studio demo. Do not treat this guide as complete coverage for specialized subsystems; start from the relevant dedicated guide when one exists.

@@ -1,0 +1,124 @@
+# Platform Plans And Quotas Developer Guide
+
+Platform plans define subscription tiers, monthly message limits, pricing display values, company plan assignment, user overrides, and billing-period message counter resets. Read this before changing `convex/plans.ts`, `convex/planService.ts`, plan schema fields, company plan assignment, profile usage displays, or the plan catalog UI.
+
+For user and company management boundaries, see [Company And User Management](./company-user-management.md). For settings and white-label packaging, see [System Settings And Branding](./system-settings-and-branding.md). For launch handoff, see [App Kit And Launch Plan Implementation](./app-kit-launch-plan-implementation.md).
+
+## Product Surface
+
+Plan-related routes:
+
+- `src/app/(dashboard)/admin/settings/plans/page.tsx` manages the global plan catalog.
+- `src/app/(dashboard)/admin/companies/[id]/overview/page.tsx` assigns a plan to a company.
+- `src/app/(dashboard)/app/profile/page.tsx` shows the signed-in user's plan status and message usage.
+- `src/app/(dashboard)/app/settings/page.tsx` shows company usage and cost context.
+
+Backend modules:
+
+- `convex/plans.ts` exposes plan reads, catalog mutations, company/user status queries, and billing reset internals.
+- `convex/planService.ts` contains plan-status resolution and plan record helpers.
+- `convex/companies.ts` owns company plan assignment through `assignPlanToCompany`.
+- `convex/utils/inventoryRollupService.ts` keeps global inventory plan and MRR totals aligned.
+
+## Data Model
+
+`plans` rows store:
+
+- `name`
+- optional `description`
+- `messageLimit`
+- `priceGBP`
+- `isActive`
+- `createdAt`
+
+The table is indexed by active state, creation time, and name search. A `messageLimit` of `-1` represents unlimited usage.
+
+Company rows can hold `planId` and `messagesUsedThisPeriod`. User rows can hold `planOverrideId` and `messagesUsedThisPeriod`.
+
+## Plan Reads
+
+`getPlans` requires any authenticated user and returns up to the bounded catalog limit.
+
+`getActivePlans` requires any authenticated user and returns active plans only.
+
+`getPaginatedPlans` requires a super admin. It supports name search through `search_name` and otherwise pages by `by_createdAt` descending. The admin UI uses `ADMIN_PAGE_SIZE`.
+
+`getMyCompanyPlanStatus` resolves the signed-in user's status. User plan overrides win before company plan status. If no override or company plan applies, the result is `System Default` with unlimited messages.
+
+`getCompanyPlanStatus` checks `canAccessCompany` before returning a company plan status. Foreign company admins receive `null`.
+
+## Plan Mutations
+
+`createPlan`, `updatePlan`, and `deletePlan` require `requireSuperAdmin`.
+
+`createPlan` builds the plan record through `buildPlanRecord`, inserts it, then upserts global inventory plan totals.
+
+`updatePlan` patches supplied fields and upserts the plan in global inventory totals.
+
+`deletePlan` refuses deletion when any company is assigned to the plan. It reads up to 101 assigned companies and formats the error count with a cap of 100. If no company uses the plan, it deletes the row and removes the plan from global inventory totals.
+
+User override references are not checked in the current delete guard. If override deletion semantics become important, add implementation and test coverage before documenting stricter behavior.
+
+## Company Assignment
+
+`companies.assignPlanToCompany` validates the target company and plan, patches the company `planId`, and updates global inventory rollups for old and new plan assignments.
+
+Plan assignment is a super-admin company management action. Do not expose company plan assignment to tenant admins without a product decision and explicit authorization tests.
+
+## Status Resolution
+
+`getPlanStatusFromUser` resolves in this order:
+
+1. If `user.planOverrideId` exists, return `Custom {plan.name}` when the override row exists, otherwise `System Default`; use the user's own `messagesUsedThisPeriod`.
+2. If the user has `companyId`, return company status from `getPlanStatusFromCompany`.
+3. Otherwise return `DEFAULT_PLAN_STATUS`.
+
+`getPlanStatusFromCompany` returns the company plan name and limit when a plan exists, otherwise `System Default`; usage comes from `company.messagesUsedThisPeriod`.
+
+This means a missing override does not fall back to the company plan. Preserve that behavior unless a product decision changes support expectations.
+
+## Billing Reset
+
+`resetBillingCycle` is an internal mutation. It resets company usage counters and user override counters in batches.
+
+Batch behavior:
+
+- company batch size is `500`
+- user batch size is `500`
+- companies with non-zero `messagesUsedThisPeriod` are patched to zero
+- users with `planOverrideId` and non-zero `messagesUsedThisPeriod` are patched to zero
+- continuation cursors schedule follow-up internal mutations immediately
+
+The reset is not exposed as an arbitrary admin button in the current plan catalog page. If a manual reset UI is added, it should be explicit, audited, and tested.
+
+## Inventory Rollups
+
+Plan create/update/delete and company assignment update global inventory rollup records. This powers admin overview inventory and MRR signals.
+
+When adding a new plan lifecycle path, keep inventory rollups aligned. If rollups drift, the current maintenance script `inventory-rollup-rebuild` can recalculate inventory from current companies, users, and plans.
+
+## UI Notes
+
+The plan catalog page uses shared admin table primitives and `AdminConfirmationModal`. It avoids native browser dialogs and surfaces save/delete errors in the modal state.
+
+Visible strings are localized under the admin plans namespace. Keep `messages/en.json` and `messages/it.json` in parity when touching the page.
+
+## Verification
+
+Focused tests:
+
+- `convex/plans.test.ts`
+- `convex/planService.test.ts`
+- `convex/companies.test.ts` for company plan assignment behavior
+- `convex/maintenanceScripts.test.ts` for inventory rebuild behavior
+- settings/admin UI tests when changing `src/app/(dashboard)/admin/settings/plans/page.tsx`
+
+For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
+
+```bash
+npm run verify:env
+npm run lint:all
+npm run check
+npm run build
+git diff --check
+```

@@ -4,7 +4,7 @@
 
 The administration area is the control centre for running Sonae. It is where authorized operators manage companies, users, invitations, AI settings, models, knowledge, agents, workflows, plans, analytics, maintenance tools, and platform settings. The main admin area is reached at `/admin`, and the sidebar changes to an admin navigation structure when you are in that area.
 
-This guide describes the administration experience that is currently implemented at a high level. Some specialized admin areas, such as agent releases, workflow schedules, connectors, and system health, have enough product depth to deserve their own user guides. Until those are written, this page should be treated as the starting point for understanding who can access admin, what the main groups are, and what happens when administrators manage users, companies, invitations, impersonation, and platform settings.
+This guide describes the administration experience that is currently implemented at a high level. Specialized admin areas such as AI administration, agents, workflow automation, launch and releases, and platform operations settings now have dedicated guides. Treat this page as the starting point for understanding who can access admin, what the main groups are, and what happens when administrators manage users, companies, invitations, impersonation, and platform settings.
 
 ## Who Can Access It
 
@@ -66,7 +66,7 @@ Changes to model and prompt configuration can affect users immediately. Test wit
 
 The agents group contains advanced operational tools: approvals, skills, release center, run observatory, agent management, connectors, workflows, schedules, and workflow logs. These areas are for configuring and observing automated or agentic behavior. They are more powerful than normal assistant chat because they can involve tools, approvals, schedules, logs, releases, and runtime steps.
 
-Use approvals and logs to understand what automated systems have done or are waiting to do. Use workflow schedules when a workflow should run on a recurring timetable. Use connectors to define external tool access. These areas should be handled by operators who understand the customer workflow and the consequences of automation. Dedicated user guides are still needed for these subsystems before handing them to non-technical customer admins.
+Use approvals and logs to understand what automated systems have done or are waiting to do. Use workflow schedules when a workflow should run on a recurring timetable. Use connectors to define external tool access. These areas should be handled by operators who understand the customer workflow and the consequences of automation. See the dedicated agent, AI administration, workflow automation, and launch operations guides before handing these controls to non-technical customer admins.
 
 ## Settings and Maintenance
 

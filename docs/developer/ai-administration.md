@@ -1,0 +1,123 @@
+# AI Administration Developer Guide
+
+AI administration is the implementation surface for Sonae's model catalog, provider controls, AI defaults, global and company prompts, rules, knowledge, widgets, tools/connectors, chat logs, and cost reporting. It is split across global admin routes under `src/app/(dashboard)/admin/ai/`, company-scoped routes under `src/app/(dashboard)/admin/companies/[id]/`, public widget routes under `src/app/w/[widgetId]/` and `src/app/sandbox/[widgetId]/`, and Convex modules that enforce authorization and runtime resolution.
+
+This guide describes current behavior only. It should be read with `docs/developer/assistant-chat.md`, `docs/developer/upload-and-knowledge-policy.md`, `docs/developer/ai-provider-tool-extension.md`, and `docs/developer/agents.md` before changing AI runtime or administration behavior.
+
+## Product Surface
+
+Global AI routes:
+
+- `src/app/(dashboard)/admin/ai/costs/page.tsx` renders global AI cost analytics from `api.analytics.getGlobalAnalytics`.
+- `src/app/(dashboard)/admin/ai/chat-logs/page.tsx` lists global chat threads and fetches selected messages through `api.chatAdmin`.
+- `src/app/(dashboard)/admin/ai/rules/page.tsx`, `rules/new/page.tsx`, and `rules/[id]/page.tsx` manage global AI rules.
+- `src/app/(dashboard)/admin/ai/system-prompt/page.tsx` edits the global system prompt.
+- `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` renders `KnowledgeManager` with global scope.
+- `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget.
+- `src/app/(dashboard)/admin/ai/models/page.tsx` manages providers, model catalog rows, global defaults, sync, test, filtering, and enabled status.
+- `src/app/(dashboard)/admin/ai/models/[id]/page.tsx` edits a model friendly name and pricing configuration.
+- `src/app/(dashboard)/admin/ai/tools/page.tsx`, `tools/new/page.tsx`, `tools/[id]/page.tsx`, `tools/mcp/new/page.tsx`, and `tools/connectors/[id]/page.tsx` manage tools and connectors.
+
+Company AI routes include `src/app/(dashboard)/admin/companies/[id]/ai/**`, `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx`. They use the same backend tables but pass a company id and apply company-scoped authorization.
+
+The shared knowledge UI lives in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx`. It is reused for global, company, and agent knowledge.
+
+## Data Model
+
+AI administration touches these schema areas in `convex/schema.ts`:
+
+- `aiProviders` stores provider catalog state, enabled status, sync status, health metadata, and provider settings.
+- `aiModels` stores provider model metadata, enabled state, legacy default state, capabilities, supported use cases, context/output limits, pricing metadata, friendly names, and token cost fields.
+- `aiModelDefaults` stores global and company defaults by use case, including fallback model ids.
+- `aiRules` stores global, company, and agent-scoped rules with trigger, instruction, priority, active state, creator, and indexes for global/company/agent lookup.
+- `systemConfig` stores global config such as the system prompt, analytics id, and PII redaction configuration.
+- `knowledgeDocuments` and `knowledgeChunks` store global, company, agent, and thread knowledge plus embedding metadata.
+- `toolConnectors`, `toolConnectorTestLogs`, `toolConnectorSecretRefs`, and `toolConnectorOAuthConnections` store connector install state, diagnostics, secret references, and OAuth state.
+- `aiTools` and `agentTools` store global tool definitions and agent bindings.
+- `widgets` stores global and company embeddable widget configuration.
+- `threads` and `messages` store chat, widget, and agent conversation messages with company/user/agent/widget analytics dimensions.
+- `analyticsDailySnapshots` and message metadata support cost and usage reporting.
+
+Keep sparse scope fields meaningful. A global knowledge document has no company id, agent id, or thread id. A company knowledge document has a company id. Agent knowledge can have an agent id and, for admin-scoped writes, may also carry company scope. Thread knowledge has a thread id.
+
+## Models And Providers
+
+`convex/aiModels.ts` is the main model catalog module. Public selector queries such as `getModels` and `getActiveModels` are readable by authenticated users because normal chat, agent, and workflow screens need model choices. Administrative catalog queries and mutations such as `getOffsetPaginatedModels`, `getProviders`, provider enablement, global defaults, model enforcement, legacy default changes, model detail, and pricing updates require `requireSuperAdmin`.
+
+`convex/aiModelsActions.ts` contains provider sync and test actions for Google, OpenAI, Anthropic, and Vertex aliases. Provider sync updates catalog metadata; provider testing records health status and messages. Keep provider-specific API details in provider services and actions, not scattered through runtime callers.
+
+Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals.
+
+The model admin page filters by status, provider, capability, use case, and search term. It uses `ADMIN_PAGE_SIZE`. The model detail page updates friendly name and pricing fields through `updatePricingConfig`; pricing powers cost estimates and analytics, not provider billing.
+
+## Prompts And Rules
+
+`convex/system.ts` stores and reads the global system prompt. `getSystemPrompt` is an admin query and `updateSystemPrompt` is super-admin-only. `getInternalSystemPrompt` is used by runtime assembly. System prompt updates write audit metadata.
+
+`convex/aiRules.ts` stores rules. Rules can be global, company-scoped, or agent-scoped. Global rules are only visible and manageable by super admins. Company rules can be read and managed by admins with access to that company. Agent rules for standard admins must still be company-scoped; global agent rules are super-admin territory. `getActiveRulesInternal` combines active global, company, and agent rules and deduplicates them before runtime use.
+
+When changing rule behavior, preserve the distinction between trigger matching, instruction content, priority, and scope. Rules are untrusted configuration relative to tenant isolation and system safety; they should shape AI behavior but never grant data access.
+
+## Knowledge
+
+`KnowledgeManager` calls `convex/knowledge.ts` for document listing, pagination, quality summary, upload URL generation, document save/delete, manual text save, website URL queueing, retry, repair, inspection, and retrieval tests. Website mapping runs through `convex/knowledgeActions.ts`.
+
+`convex/knowledge.ts` enforces scope with helpers such as `assertCanAccessKnowledgeScope` and `getWritableKnowledgeScope`. Global knowledge requires super-admin access. Company knowledge requires super-admin or admin access to that active company. Agent knowledge supports company-scoped admin access where the agent knowledge record is tied to the active company. Thread knowledge follows chat thread ownership paths documented in the assistant guide.
+
+Ingestion actions extract text, chunk it, resolve the active embedding model for company/global scope, and write vectors to `knowledgeChunks`. The current vector index is 768 dimensions. If changing embedding providers or dimensions, coordinate schema, ingestion, retrieval tests, and existing data expectations.
+
+The upload policy is centralized in `src/lib/constants/uploads.ts` and documented in `docs/developer/upload-and-knowledge-policy.md`. Do not add new file paths that bypass validation or backend metadata checks.
+
+## Tools And Connectors
+
+`convex/aiTools.ts` implements connector marketplace, connector installation, connector details, connector update, connector testing, tool listing, tool CRUD, and agent tool binding. Connector marketplace and install details are admin-readable with company filtering. Installing connector definitions is super-admin-only. Updating and testing connector installs require admin access to the connector's company scope. Global tool CRUD is super-admin-only.
+
+Tool definitions include handler mappings, optional connector ids/keys, secret reference keys, required role, input/output schemas, side-effect level, confirmation requirement, active state, and version. Connector definitions include category, auth mode, required scopes, secret refs, tenant availability, company id, install status, test status, OAuth status, and diagnostics.
+
+The runtime guardrail is that model tool requests are not execution authority. Tool execution services must validate the tool, parse JSON args, enforce required role, enforce tenant boundaries, respect side-effect/confirmation behavior, and return normalized results. Keep provider-specific function declaration translation separate from internal tool authorization.
+
+## Widgets
+
+`convex/widgets.ts` implements global and company widgets. Global widget reads and writes require super-admin access. Company widget reads and writes require admin access to the company. `saveWidget` validates scope, stores appearance/gateway/integration settings, and writes audit logs. Logo uploads use the admin image upload policy.
+
+The public route `src/app/w/[widgetId]/page.tsx` reads active widget configuration, validates referrer/allowed domains in the browser, optionally gates by visitor name/email, creates widget threads through `api.widgets.createWidgetThread`, and sends messages through normal chat mutation paths. It posts widget popup configuration to the parent only when the referrer is allowed. The sandbox route `src/app/sandbox/[widgetId]/page.tsx` injects `/embed.js` with the widget id into a simulated host page.
+
+Client-side domain checks are helpful for the iframe experience, but sensitive widget behavior must remain backend-scoped by widget id, company id, and active state. Avoid adding public widget mutations that trust host page data without backend validation.
+
+## Costs And Chat Logs
+
+Global AI costs use `api.analytics.getGlobalAnalytics`, which requires super-admin access. The cost screen displays timeline, aggregates, provider/model distribution, and leaderboards. Company metrics use company-scoped analytics access in `convex/analytics.ts`.
+
+Global chat logs use `convex/chatAdmin.ts`. Global paginated thread reads require super-admin access. Company thread reads allow super admins and admins who can read the company. `getAdminThreadMessages` requires admin access and enforces company access for non-super-admins before returning up to 500 messages.
+
+Chat transcript copy is built in the browser through `src/lib/chatTranscript.ts`. Treat transcripts as sensitive data because they can include user prompts, assistant responses, uploaded-file references, and business context.
+
+## Authorization And Audit Expectations
+
+Global AI administration should stay super-admin-only unless there is a deliberate product change. Company-scoped AI routes should pass company ids and rely on backend `requireAdmin`, `assertAdminCanAccessCompany`, or feature-specific company checks. Do not use client route checks as the only boundary.
+
+Audit coverage exists across many AI admin mutations: system prompt changes, rule changes, knowledge saves/deletes/repairs, model default and enforcement changes, provider changes, tool and connector changes, widget changes, and safety refusals where implemented. Coverage is not perfectly uniform across older surfaces, so check the target mutation before telling operators an action is audited.
+
+## Verification
+
+Focused tests include:
+
+- `convex/aiModels.test.ts`, `convex/aiModelsActions.test.ts`, `convex/aiModelService.test.ts`, and provider service tests.
+- `convex/aiRules.test.ts`, `convex/aiPromptAssembly.test.ts`, and `convex/aiSafetyPolicy.test.ts`.
+- `convex/knowledge.test.ts`, `convex/knowledgeActions.test.ts`, `convex/knowledgeService.test.ts`, and `convex/utils/uploadPolicy.test.ts`.
+- `convex/aiTools.test.ts`, `convex/aiToolReadTools.test.ts`, `convex/aiToolWriteTools.test.ts`, and `convex/aiToolExecutionService.test.ts`.
+- `convex/widgets.test.ts`, `src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx`, and widget config component tests.
+- `convex/analytics.test.ts`, cost component tests under `src/app/(dashboard)/admin/ai/costs/_components/`, and chat admin tests where present.
+- UI tests under `src/app/(dashboard)/admin/ai/**`.
+
+For documentation-only changes, run `git diff --check`. Before merging code changes in this area, follow the full repo gate:
+
+```bash
+npm run verify:env
+npm run lint:all
+npm run check
+npm run build
+git diff --check
+```
+
+When touching localized admin UI, keep `messages/en.json` and `messages/it.json` in parity. When touching widgets, manually verify the admin preview, sandbox page, iframe route, allowed-domain behavior, gateway fields, and a normal widget message path.

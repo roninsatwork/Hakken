@@ -34,6 +34,19 @@ Current document types:
 - Excel
 - Word `.docx`
 
+## Storage Metadata Validation
+
+`validateStoredUpload` is the shared backend gate for stored uploads. It reads Convex storage metadata with `ctx.storage.getMetadata`, then applies the caller-specific validator:
+
+- `validateChatAttachmentMetadata` for chat attachments.
+- `validateKnowledgeDocumentMetadata` for admin and thread knowledge documents.
+- `validateAdminImageMetadata` for profile photos, agent avatars, system logos, and widget logos.
+- `validateWidgetAttachmentMetadata` for anonymous widget attachments.
+
+Rejected uploads are deleted from Convex storage before the validation error is rethrown. This keeps oversized or disallowed files from remaining attached after a failed mutation.
+
+The `mockStorageMetadata` schema table exists only to support upload validation tests. Some Convex test storage shims can store blobs but cannot return metadata through `ctx.storage.getMetadata`. In test mode, `convex/utils/uploadPolicy.ts` falls back to `mockStorageMetadata` for size and content type, and deletes the mock row when a rejected upload is cleaned up. Do not use this table as a product metadata source.
+
 ## Tenant Scope
 
 Knowledge document records and chunk records must be created through `buildKnowledgeDocumentRecord` and `buildKnowledgeChunkRecords` in `convex/knowledgeService.ts`. These helpers preserve sparse scope fields for:
