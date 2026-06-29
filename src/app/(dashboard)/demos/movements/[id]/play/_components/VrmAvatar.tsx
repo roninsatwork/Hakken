@@ -25,6 +25,7 @@ import {
   getMovementBodyConfidence,
   getMovementHeadMotionIntent,
   getMovementLowerBodyIntent,
+  getNeutralMovementHeadAngles,
   selectMovementKneeTarget,
   selectMovementTrackingEndpoint,
   type MovementCalibration,
@@ -452,6 +453,10 @@ export default function VrmAvatar({
         easeBoneToRotation("leftHand", { x: 0, y: 0, z: 0 }, factor);
       };
 
+      const easeHandToNeutral = (side: "left" | "right", factor = isPlayer ? 0.48 : 0.32) => {
+        easeBoneToRotation(`${side}Hand` as VrmBoneName, { x: 0, y: 0, z: 0 }, factor);
+      };
+
       const hipsNode = vrmRef.current.humanoid.getNormalizedBoneNode("hips");
 
       if (hipsNode && !baseHipsPositionRef.current) {
@@ -468,7 +473,7 @@ export default function VrmAvatar({
         autoCalibrationSamplesRef.current = [];
       }
 
-      if (!trackingCalibration && !autoCalibrationRef.current) {
+      if (isPlayer && !trackingCalibration && !autoCalibrationRef.current) {
         const autoCalibrationSample = buildUprightMovementAutoCalibration({
           poseLandmarks: imageLms,
           faceLandmarks: payload?.faceLandmarks,
@@ -489,7 +494,9 @@ export default function VrmAvatar({
         }
       }
 
-      const activeCalibration = trackingCalibration ?? autoCalibrationRef.current;
+      const activeCalibration = isPlayer
+        ? trackingCalibration ?? autoCalibrationRef.current
+        : null;
       if (retargetSourceModel) {
         retargetSourceModelRef.current = retargetSourceModel;
       } else if (!retargetSourceModelRef.current) {
@@ -515,7 +522,10 @@ export default function VrmAvatar({
       let visualRootDrop = 0;
       let footLockCorrection = 0;
       let footLockDrift = 0;
+      let footOwner = "neutral";
+      let lowerBodyOwner = "neutral";
       let retargetAppliedLowerBody = 0;
+      let retargetAppliedLegs = 0;
       let plantedSquatIkDepth = 0;
       const rightArmTrackingReady =
         !isPlayer ||
@@ -543,10 +553,19 @@ export default function VrmAvatar({
           ) >= 0.35
         );
       const torsoTrackingReady = !isPlayer || bodyConfidence.torso >= 0.45;
-      const shouldApplyLiveBody = !isPlayer || Boolean(activeCalibration);
+      const shouldApplyLiveBody = isPlayer
+        ? Boolean(activeCalibration)
+        : Boolean(retargetSourceModelRef.current);
+      const shouldApplySolverTorso = isPlayer && shouldApplyLiveBody;
+      const torsoOwner = shouldApplySolverTorso ? "player-solver" : "neutral";
       const groundedSquatDepth = retargetFrame.contacts.leftFoot && retargetFrame.contacts.rightFoot
         ? squatPoseDepth
         : 0;
+      const instructorLowerBodyMotion = Math.max(
+        groundedSquatDepth,
+        retargetFrame.kneeLift.left,
+        retargetFrame.kneeLift.right,
+      );
       visualRootDrop = lowerBodyTrackingReady && shouldApplyLiveBody
         ? groundedSquatDepth * (isPlayer ? 1.08 : 0.56)
         : 0;
@@ -626,6 +645,22 @@ export default function VrmAvatar({
         const vrm = vrmRef.current;
         const segment = retargetFrame.segments[mapping.segment];
         if (!vrm || !segment || segment.confidence < 0.3) return false;
+        const activeFootMotion = Math.max(
+          retargetFrame.squatDepth,
+          retargetFrame.kneeLift.left,
+          retargetFrame.kneeLift.right,
+        );
+        if (!isPlayer && mapping.type === "foot" && activeFootMotion < 0.22) return false;
+        if (!isPlayer && mapping.type === "foot") {
+          const isLeftFoot = mapping.segment === "leftFoot";
+          const isPlanted = isLeftFoot
+            ? retargetFrame.contacts.leftFoot
+            : retargetFrame.contacts.rightFoot;
+          const kneeLift = isLeftFoot
+            ? retargetFrame.kneeLift.left
+            : retargetFrame.kneeLift.right;
+          if (isPlanted || kneeLift < 0.45) return false;
+        }
 
         let restPose = retargetAvatarRestRef.current[mapping.bone];
         if (!restPose) {
@@ -831,6 +866,17 @@ export default function VrmAvatar({
         footLockCorrection = lock.correction.length() * correctionScale;
       };
 
+      const easeInstructorFootToPlanted = (side: "left" | "right", factor = 0.62) => {
+        if (isPlayer) return;
+        easeBoneToRotation(`${side}Foot` as VrmBoneName, { x: 0, y: 0, z: 0 }, factor);
+        easeBoneToRotation(`${side}Toes` as VrmBoneName, { x: 0, y: 0, z: 0 }, factor);
+        footOwner = footOwner.includes("planted-flat")
+          ? footOwner
+          : footOwner === "neutral"
+            ? "planted-flat"
+            : `${footOwner}+planted-flat`;
+      };
+
       const applySquatFlexionPose = (depth: number) => {
         const flexDepth = THREE.MathUtils.smoothstep(depth, 0.1, 0.92);
         if (flexDepth <= 0.001) return;
@@ -899,7 +945,7 @@ export default function VrmAvatar({
         });
       };
 
-      if (torsoTrackingReady && shouldApplyLiveBody) {
+      if (torsoTrackingReady && shouldApplySolverTorso) {
         applyRot("hips", rp.Hips?.rotation, isPlayer ? 0.34 : 0.26, {
           limits: { x: 0.35, y: 0.75, z: 0.45 },
         });
@@ -915,7 +961,7 @@ export default function VrmAvatar({
           limits: { x: 0.25, y: 0.35, z: 0.25 },
           scale: 0.2,
         });
-      } else if (isPlayer) {
+      } else {
         easeBoneToRotation("hips", { x: 0, y: 0, z: 0 }, 0.14);
         easeBoneToRotation("spine", { x: 0.02, y: 0, z: 0 }, 0.14);
         easeBoneToRotation("chest", { x: 0.02, y: 0, z: 0 }, 0.14);
@@ -937,7 +983,7 @@ export default function VrmAvatar({
           visibilityThreshold: isPlayer ? avatarTrackingProfile.armVisibility : 0.2,
           zScale: isPlayer ? 0.1 : undefined,
         });
-        applyRot("rightHand", rp.RightHand, isPlayer ? 0.7 : 0.42);
+        easeHandToNeutral("right");
       } else {
         easeArmToRelaxed("right");
       }
@@ -957,7 +1003,7 @@ export default function VrmAvatar({
           visibilityThreshold: isPlayer ? avatarTrackingProfile.armVisibility : 0.2,
           zScale: isPlayer ? 0.1 : undefined,
         });
-        applyRot("leftHand", rp.LeftHand, isPlayer ? 0.7 : 0.42);
+        easeHandToNeutral("left");
       } else {
         easeArmToRelaxed("left");
       }
@@ -983,19 +1029,51 @@ export default function VrmAvatar({
           aimVector("leftFoot", "leftToes", solverLms[29], leftToeTarget, footAimOptions);
         };
 
-        vrmRef.current.scene.updateMatrixWorld(true);
-        retargetAppliedLowerBody = LOWER_BODY_RETARGET_MAPPINGS.reduce(
-          (applied, mapping) => applied + (applyRetargetSegment(mapping) ? 1 : 0),
-          0,
-        );
+        if (!isPlayer && instructorLowerBodyMotion < 0.18) {
+          lowerBodyOwner = "recorded-neutral";
+          easeLowerBodyToNeutral();
+          easeInstructorFootToPlanted("right");
+          easeInstructorFootToPlanted("left");
+        } else {
+          vrmRef.current.scene.updateMatrixWorld(true);
+          LOWER_BODY_RETARGET_MAPPINGS.forEach((mapping) => {
+            if (!applyRetargetSegment(mapping)) return;
+            retargetAppliedLowerBody += 1;
+            if (mapping.type === "leg") retargetAppliedLegs += 1;
+            if (mapping.type === "foot") footOwner = "recorded-retarget";
+          });
 
-        if (retargetAppliedLowerBody < 4) {
-          applyLegacyLowerBodyAim();
+          const instructorRetargetOwnsLowerBody =
+            !isPlayer &&
+            retargetAppliedLegs >= 4 &&
+            retargetFrame.debug.sourceQuality >= 0.45;
+          const shouldUseLegacyLowerBody = isPlayer || !instructorRetargetOwnsLowerBody;
+          lowerBodyOwner = instructorRetargetOwnsLowerBody
+            ? "recorded-retarget"
+            : retargetAppliedLowerBody > 0
+              ? "retarget-legacy-fallback"
+              : "legacy-fallback";
+
+          if (retargetAppliedLowerBody < 4) {
+            applyLegacyLowerBodyAim();
+          }
+
+          if (shouldUseLegacyLowerBody) {
+            applySolvedLowerBodyPose(squatPoseDepth);
+          }
+          plantedSquatIkDepth = shouldUseLegacyLowerBody
+            ? applyPlantedSquatIk(groundedSquatDepth)
+            : 0;
+          if (shouldUseLegacyLowerBody) {
+            applySquatFlexionPose(groundedSquatDepth);
+          }
+          if (!isPlayer && retargetFrame.contacts.rightFoot) {
+            easeInstructorFootToPlanted("right");
+          }
+          if (!isPlayer && retargetFrame.contacts.leftFoot) {
+            easeInstructorFootToPlanted("left");
+          }
         }
-
-        applySolvedLowerBodyPose(squatPoseDepth);
-        plantedSquatIkDepth = applyPlantedSquatIk(groundedSquatDepth);
-        applySquatFlexionPose(groundedSquatDepth);
       } else {
         easeLowerBodyToNeutral();
       }
@@ -1011,12 +1089,15 @@ export default function VrmAvatar({
             poseLandmarks: imageLms,
             faceLandmarks: payload?.faceLandmarks,
           });
-          const appliedHead = applyHeadCalibration({
-            rawHead,
-            calibration: activeCalibration,
-            profile: avatarTrackingProfile,
-          });
-          const shouldApplyHeadMotion = Boolean(activeCalibration);
+          const appliedHead = isPlayer && activeCalibration
+            ? applyHeadCalibration({
+                rawHead,
+                calibration: activeCalibration,
+                profile: avatarTrackingProfile,
+              })
+            : getNeutralMovementHeadAngles(avatarTrackingProfile);
+          const shouldApplyHeadMotion = isPlayer && Boolean(activeCalibration);
+          const headOwner = shouldApplyHeadMotion ? "player-calibrated" : "neutral";
           const headPitch = appliedHead.pitch + (shouldApplyHeadMotion ? headMotionIntent.depth * 0.22 : 0);
           const headYaw = appliedHead.yaw + (shouldApplyHeadMotion ? headMotionIntent.lateral * 0.18 : 0);
           const headRoll = appliedHead.roll + (shouldApplyHeadMotion ? -headMotionIntent.lateral * 0.16 : 0);
@@ -1078,10 +1159,13 @@ export default function VrmAvatar({
           }
 
           if (trackingDebugRef) {
-            const lowerBodyLabel = activeCalibration === trackingCalibration
-              ? lowerBodyIntent.label
-              : `${lowerBodyIntent.label}-auto`;
+            const lowerBodyLabel = isPlayer
+              ? activeCalibration === trackingCalibration
+                ? lowerBodyIntent.label
+                : `${lowerBodyIntent.label}-auto`
+              : "recorded";
             const lowerBodyDebugLabel = `${lowerBodyLabel} d${lowerBodyIntent.squatDepth.toFixed(2)} h${lowerBodyIntent.squatSignals.hipDrop.toFixed(2)} k${lowerBodyIntent.squatSignals.kneeBend.toFixed(2)} t${lowerBodyIntent.squatSignals.torsoDrop.toFixed(2)} l${lowerBodyIntent.leftKneeRaise.toFixed(2)} r${lowerBodyIntent.rightKneeRaise.toFixed(2)}`;
+            const ownerDebugLabel = `head ${headOwner}; torso ${torsoOwner}; lower ${lowerBodyOwner}; feet ${footOwner}`;
 
             const totalRetargetSegments =
               retargetFrame.debug.solvedSegments.length + retargetFrame.debug.heldSegments.length;
@@ -1114,7 +1198,7 @@ export default function VrmAvatar({
                   ? (rawHead.confidence > 0.25 ? rawHead.source : "last-good")
                   : activeCalibration
                     ? `${rawHead.confidence > 0.25 ? rawHead.source : "last-good"}-auto`
-                    : (rawHead.confidence > 0.25 ? `${rawHead.source}-uncalibrated` : "neutral"),
+                    : "neutral",
                 headMotion: activeCalibration ? headMotionIntent.label : "uncalibrated",
                 rightArm: rightArmTrackingReady ? rightWristSelection.source : "relaxed-arm",
                 leftArm: leftArmTrackingReady ? leftWristSelection.source : "relaxed-arm",
@@ -1123,11 +1207,14 @@ export default function VrmAvatar({
                 rightFoot: lowerBodyTrackingReady && shouldApplyLiveBody ? rightToeSelection.source : "neutral-stance",
                 leftFoot: lowerBodyTrackingReady && shouldApplyLiveBody ? leftToeSelection.source : "neutral-stance",
                 floor: lowerBodyTrackingReady && shouldApplyLiveBody && (bodyConfidence.leftFoot > 0.35 || bodyConfidence.rightFoot > 0.35)
-                  ? activeCalibration === trackingCalibration ? "calibrated-floor" : "auto-floor"
+                  ? isPlayer
+                    ? activeCalibration === trackingCalibration ? "calibrated-floor" : "auto-floor"
+                    : "recorded-floor"
                   : "fixed-floor",
                 lowerBody: lowerBodyTrackingReady && shouldApplyLiveBody
                   ? lowerBodyDebugLabel
                   : "neutral-stance",
+                owners: ownerDebugLabel,
                 retarget: `q${retargetDebug.sourceQuality.toFixed(2)} s${retargetDebug.squatDepth.toFixed(2)} hip${retargetDebug.hipDrop.toFixed(2)} knee ${retargetDebug.leftKneeLift.toFixed(2)}/${retargetDebug.rightKneeLift.toFixed(2)} feet ${retargetDebug.leftFootContact ? "L" : "-"}${retargetDebug.rightFootContact ? "R" : "-"} bones ${retargetDebug.solvedSegments}/${retargetDebug.totalSegments} apply ${retargetDebug.appliedLowerBody}/${retargetDebug.totalLowerBody} drop ${retargetDebug.visualRootDrop.toFixed(2)} ik ${retargetDebug.plantedSquatIkDepth.toFixed(2)}`,
               },
               retarget: retargetDebug,
@@ -1279,6 +1366,7 @@ export default function VrmAvatar({
             const rot = rig[rigKey];
             if (bone && rot) {
               const isWrist = rigKey.endsWith("Wrist");
+              if (isWrist) return;
               const isThumb = rigKey.includes("Thumb");
               const tunedRot = strengthenVrmHandRotation(rot, { isPlayer, isWrist, isThumb });
               const targetQ = new THREE.Quaternion().setFromEuler(

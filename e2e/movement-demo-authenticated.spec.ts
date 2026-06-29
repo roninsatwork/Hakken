@@ -41,4 +41,16 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByRole("heading", { name: "Student", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Coach", exact: true })).toBeVisible();
   });
+
+  test("guided debug preview enters recorded playback with scrub controls", async ({ page }) => {
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?guidedPreview=1&debugTracking=1`,
+    );
+    await skipWhenRedirectedToLogin(page, "Movement guided preview smoke requires the super-admin storage state.");
+
+    await expect(page.getByText("Debug Scrub")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByRole("spinbutton", { name: "Debug frame number" })).toBeVisible();
+    await expect(page.getByText("Coach Diagnostics")).toBeVisible();
+  });
 });

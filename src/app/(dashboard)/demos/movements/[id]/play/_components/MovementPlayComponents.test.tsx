@@ -508,6 +508,7 @@ describe("movement play components", () => {
           leftFoot: "pose",
           rightFoot: "pose",
           floor: "calibrated-floor",
+          owners: "head neutral; torso neutral; lower recorded-neutral; feet planted-flat",
         },
         retarget: {
           appliedLowerBody: 6,
@@ -551,6 +552,7 @@ describe("movement play components", () => {
     expect(screen.getByText("Tune: Restart camera tracking")).toBeInTheDocument();
     expect(screen.getByText("VIPE_Hero__1793.vrm")).toBeInTheDocument();
     expect(screen.getByText("Tracking data is stale")).toBeInTheDocument();
+    expect(screen.getByText("head neutral; torso neutral; lower recorded-neutral; feet planted-flat")).toBeInTheDocument();
     expect(screen.getByText("pose / hand")).toBeInTheDocument();
     expect(screen.getByText("Retarget Metrics")).toBeInTheDocument();
     expect(screen.getByText("0.66 / 0.51")).toBeInTheDocument();

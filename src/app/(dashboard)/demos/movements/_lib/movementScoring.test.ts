@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   calculateAngle,
   calculateHandAperture,
+  calculateLandmarkMotion,
   calculateMovementSync,
   isZenExpressionActive,
   updateMovementScore,
@@ -63,6 +64,21 @@ describe("movement scoring", () => {
 
     expect(result.sync).toBe(100);
     expect(result.validAngles).toBeGreaterThan(0);
+  });
+
+  test("reports no player motion for identical tracking frames", () => {
+    const landmarks = makeLandmarks();
+
+    expect(calculateLandmarkMotion(landmarks, landmarks.map((landmark) => ({ ...landmark })))).toBe(0);
+  });
+
+  test("reports player motion when tracked joints move", () => {
+    const previous = makeLandmarks();
+    const current = makeLandmarks();
+    current[15] = { ...current[15]!, x: current[15]!.x + 0.08 };
+    current[16] = { ...current[16]!, x: current[16]!.x - 0.08 };
+
+    expect(calculateLandmarkMotion(previous, current)).toBeGreaterThan(0.01);
   });
 
   test("adds hand aperture bonus when both mirrored hands match", () => {

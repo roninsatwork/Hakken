@@ -124,6 +124,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetScoring,
   } = useMovementMatchScoring({
     isPlaying,
+    isScoringEnabled: isCalibrated,
     setIsPlaying,
     playerLiveLmRef,
     advanceInstructorFrame,
@@ -134,11 +135,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     if (
       !isGuidedPreviewRoute ||
       hasStartedGuidedPreviewRef.current ||
-      isLobby ||
       !movement ||
       isFramesLoading ||
       loadedFrames.length === 0
     ) {
+      return;
+    }
+
+    if (isLobby) {
+      startMatch();
       return;
     }
 
@@ -157,6 +162,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetScoring,
     setIsPlaying,
     skipCalibration,
+    startMatch,
   ]);
 
   useEffect(() => {

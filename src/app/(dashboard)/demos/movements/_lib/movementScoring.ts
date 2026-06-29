@@ -49,6 +49,8 @@ const FEEDBACK_BY_COMBO = new Map([
   [250, "PRECISION AND POWER"],
 ]);
 
+const MOTION_TRACKING_INDICES = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28] as const;
+
 function getAxis(value: number | undefined) {
   return value ?? 0;
 }
@@ -155,6 +157,34 @@ export function calculateMovementSync(args: {
     isZenActive: isZenExpressionActive(args.playerBlendshapes),
     validAngles,
   };
+}
+
+export function calculateLandmarkMotion(
+  previousLandmarks: ScoreLandmark[] | null | undefined,
+  currentLandmarks: ScoreLandmark[],
+) {
+  if (!previousLandmarks || previousLandmarks.length < 33 || currentLandmarks.length < 33) {
+    return 0;
+  }
+
+  let totalMotion = 0;
+  let validLandmarks = 0;
+
+  MOTION_TRACKING_INDICES.forEach((index) => {
+    const previous = previousLandmarks[index];
+    const current = currentLandmarks[index];
+    if (!previous || !current) return;
+    if ((previous.visibility ?? 0.8) < 0.35 || (current.visibility ?? 0.8) < 0.35) return;
+
+    totalMotion += Math.hypot(
+      current.x - previous.x,
+      current.y - previous.y,
+      getAxis(current.z) - getAxis(previous.z),
+    );
+    validLandmarks += 1;
+  });
+
+  return validLandmarks > 0 ? totalMotion / validLandmarks : 0;
 }
 
 export function updateMovementScore(args: {

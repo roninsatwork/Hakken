@@ -8,6 +8,7 @@ import {
   type VrmMotionRef,
 } from "../_lib/vrmRigging";
 import {
+  calculateLandmarkMotion,
   calculateMovementSync,
   updateMovementScore,
   type ScoreBlendshape,
@@ -24,13 +25,18 @@ type InstructorPlaybackAdvance = {
 
 type UseMovementMatchScoringInput = {
   isPlaying: boolean;
+  isScoringEnabled?: boolean;
   setIsPlaying: (isPlaying: boolean) => void;
   playerLiveLmRef: RefObject<VrmMotionPayload | null>;
   advanceInstructorFrame: () => InstructorPlaybackAdvance;
 };
 
+const PLAYER_MOTION_SCORE_THRESHOLD = 0.012;
+const SCORE_UPDATE_INTERVAL_MS = 140;
+
 export function useMovementMatchScoring({
   isPlaying,
+  isScoringEnabled = true,
   setIsPlaying,
   playerLiveLmRef,
   advanceInstructorFrame,
@@ -44,6 +50,8 @@ export function useMovementMatchScoring({
   const comboRef = useRef(0);
   const syncRef = useRef(0);
   const lastHudUpdateRef = useRef(0);
+  const lastPlayerLandmarksRef = useRef<ScoreLandmark[] | null>(null);
+  const lastScoreUpdateRef = useRef(0);
 
   useEffect(() => {
     if (!feedbackMsg) return;
@@ -92,8 +100,15 @@ export function useMovementMatchScoring({
       }
 
       if (currentPL.length >= 33 && instructorLandmarks.length >= 33) {
+        const playerLandmarks = currentPL as ScoreLandmark[];
+        const playerMotion = calculateLandmarkMotion(
+          lastPlayerLandmarksRef.current,
+          playerLandmarks,
+        );
+        lastPlayerLandmarksRef.current = playerLandmarks.map((landmark) => ({ ...landmark }));
+
         const syncResult = calculateMovementSync({
-          playerLandmarks: currentPL as ScoreLandmark[],
+          playerLandmarks,
           instructorLandmarks: instructorLandmarks as ScoreLandmark[],
           playerHands: pData?.hands as ScoreHandsPayload | undefined,
           instructorHands: iPayload?.hands as ScoreHandsPayload | undefined,
@@ -102,23 +117,32 @@ export function useMovementMatchScoring({
 
         syncRef.current = syncResult.sync;
 
-        const scoreUpdate = updateMovementScore({
-          sync: syncResult.sync,
-          combo: comboRef.current,
-          score: scoreRef.current,
-          isZenActive: syncResult.isZenActive,
-        });
+        const now = performance.now();
+        const shouldUpdateScore = now - lastScoreUpdateRef.current >= SCORE_UPDATE_INTERVAL_MS;
+        const hasMeaningfulPlayerMotion = playerMotion >= PLAYER_MOTION_SCORE_THRESHOLD;
 
-        comboRef.current = scoreUpdate.combo;
-        scoreRef.current = scoreUpdate.score;
-
-        if (scoreUpdate.feedbackText) {
-          setFeedbackMsg({ text: scoreUpdate.feedbackText, id: Date.now() });
-        } else if (scoreUpdate.shouldClearFeedback) {
+        if (!isScoringEnabled || !hasMeaningfulPlayerMotion) {
+          comboRef.current = 0;
           setFeedbackMsg(null);
+        } else if (shouldUpdateScore) {
+          lastScoreUpdateRef.current = now;
+          const scoreUpdate = updateMovementScore({
+            sync: syncResult.sync,
+            combo: comboRef.current,
+            score: scoreRef.current,
+            isZenActive: syncResult.isZenActive,
+          });
+
+          comboRef.current = scoreUpdate.combo;
+          scoreRef.current = scoreUpdate.score;
+
+          if (scoreUpdate.feedbackText) {
+            setFeedbackMsg({ text: scoreUpdate.feedbackText, id: Date.now() });
+          } else if (scoreUpdate.shouldClearFeedback) {
+            setFeedbackMsg(null);
+          }
         }
 
-        const now = performance.now();
         if (now - lastHudUpdateRef.current > 100) {
           lastHudUpdateRef.current = now;
           setHudScore(scoreRef.current);
@@ -132,13 +156,15 @@ export function useMovementMatchScoring({
       active = false;
       cancelAnimationFrame(animationFrameId);
     };
-  }, [advanceInstructorFrame, isPlaying, playerLiveLmRef, setIsPlaying]);
+  }, [advanceInstructorFrame, isPlaying, isScoringEnabled, playerLiveLmRef, setIsPlaying]);
 
   const resetScoring = useCallback(() => {
     setIsComplete(false);
     scoreRef.current = 0;
     comboRef.current = 0;
     syncRef.current = 0;
+    lastPlayerLandmarksRef.current = null;
+    lastScoreUpdateRef.current = 0;
     setFinalScore(0);
     setHudScore(0);
     setHudSync(0);

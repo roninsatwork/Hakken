@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Classifications } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import {
+  mirrorVrmLandmarkArray,
+  normalizeVrmLandmark,
+} from "../_lib/vrmRigging";
+import {
   buildMovementRetargetSourceModel,
   solveMovementRetargetFrame,
   type MovementRetargetSourceModel,
@@ -93,6 +97,17 @@ const getInstructorMotionLandmarks = (
   return value.pose ?? value.landmarks ?? [];
 };
 
+const getMirroredInstructorMotionLandmarks = (
+  value: MovementInstructorMotionRef,
+): InstructorPoseLandmark[] => {
+  const landmarks = withDepth(getInstructorMotionLandmarks(value))
+    .map((landmark) => normalizeVrmLandmark(landmark));
+
+  mirrorVrmLandmarkArray(landmarks, (x) => 1 - x);
+
+  return landmarks;
+};
+
 function getRetargetNeutralScore(model: MovementRetargetSourceModel) {
   const neutralKneeLift = (model.neutralKneeLift.left + model.neutralKneeLift.right) / 2;
   return neutralKneeLift + (1 - model.quality) * 0.08;
@@ -105,7 +120,7 @@ export function buildInstructorRetargetSourceModel(
   let bestScore = Number.POSITIVE_INFINITY;
 
   frames.forEach((frame, index) => {
-    const poseLandmarks = getInstructorMotionLandmarks(frame);
+    const poseLandmarks = getMirroredInstructorMotionLandmarks(frame);
     if (poseLandmarks.length < 33) return;
 
     const model = buildMovementRetargetSourceModel({
@@ -129,7 +144,7 @@ function toRetargetFrameAnalysis(
   frame: MovementInstructorMotionFrame,
   retargetSourceModel: MovementRetargetSourceModel,
 ): MovementInstructorRetargetFrameAnalysis | null {
-  const poseLandmarks = getInstructorMotionLandmarks(frame);
+  const poseLandmarks = getMirroredInstructorMotionLandmarks(frame);
   if (poseLandmarks.length < 33) return null;
 
   const retargetFrame = solveMovementRetargetFrame({

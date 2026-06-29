@@ -110,22 +110,22 @@ export default function MovementHud({
         </div>
       </div>
 
-      <div className="mt-auto flex items-end justify-between pointer-events-auto">
-        <div className="flex items-center gap-4 rounded-full border border-white/10 bg-[#111018]/[0.72] p-2 pr-8 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
+      <div className="mt-auto flex items-end justify-between gap-4 pointer-events-auto">
+        <div className="flex min-w-0 max-w-[min(78vw,380px)] items-center gap-4 rounded-full border border-white/10 bg-[#111018]/[0.72] p-2 pr-6 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl sm:max-w-none sm:pr-8">
           <div className="flex items-center gap-4">
             <button
               onClick={onTogglePlaying}
               disabled={isPlaybackDisabled}
               aria-label={isPlaying ? "Pause practice" : "Start practice"}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f7efe7] text-[#17131d] transition-all hover:scale-105 hover:bg-[#f6ccbe] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#f7efe7] text-[#17131d] transition-all hover:scale-105 hover:bg-[#f6ccbe] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               {isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current" />}
             </button>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-wide text-white">
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-lg font-bold tracking-wide text-white">
                 {practiceLabel}
               </span>
-              <span className={`text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
+              <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
                 {readinessLabel}
               </span>
               {visionError && (
@@ -157,7 +157,7 @@ export default function MovementHud({
           </div>
         </div>
 
-        <div className="flex items-center gap-5 rounded-full border border-white/10 bg-[#111018]/[0.72] py-4 pl-5 pr-10 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
+        <div className="flex shrink-0 items-center gap-5 rounded-full border border-white/10 bg-[#111018]/[0.72] py-4 pl-5 pr-10 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#a8d5ba]/[0.45] bg-[#a8d5ba]/[0.18]">
             <Crosshair className="h-6 w-6 text-[#a8d5ba]" />
           </div>
@@ -170,7 +170,7 @@ export default function MovementHud({
 
       <div
         data-testid="movement-camera-preview"
-        className="absolute bottom-8 left-1/2 aspect-video w-[min(72vw,420px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/50 shadow-2xl backdrop-blur-md pointer-events-auto sm:w-[min(38vw,420px)]"
+        className="absolute bottom-28 left-1/2 aspect-video w-[min(72vw,420px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/50 shadow-2xl backdrop-blur-md pointer-events-auto sm:bottom-8 sm:w-[min(38vw,420px)]"
       >
         <Webcam
           ref={webcamRef}

@@ -155,6 +155,8 @@ export default function MovementTrackingDebugOverlay({
         <span>{debugState?.fallbacks.lowerBody ?? "waiting"}</span>
         <span>Floor</span>
         <span>{debugState?.fallbacks.floor ?? "waiting"}</span>
+        <span>Owners</span>
+        <span>{debugState?.fallbacks.owners ?? "waiting"}</span>
         <span>Retarget</span>
         <span>{debugState?.fallbacks.retarget ?? "waiting"}</span>
       </div>

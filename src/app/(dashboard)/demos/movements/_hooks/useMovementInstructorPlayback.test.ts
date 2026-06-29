@@ -50,6 +50,26 @@ describe("buildInstructorRetargetSourceModel", () => {
     expect(model.neutralKneeLift.right).toBe(0);
   });
 
+  it("mirrors front-facing instructor frames before building the retarget baseline", () => {
+    const pose = withCorePose();
+    pose[23] = { ...pose[23]!, x: 0.58 };
+    pose[24] = { ...pose[24]!, x: 0.42 };
+    pose[25] = { ...pose[25]!, x: 0.56 };
+    pose[26] = { ...pose[26]!, x: 0.44 };
+    pose[27] = { ...pose[27]!, x: 0.55 };
+    pose[28] = { ...pose[28]!, x: 0.45 };
+    pose[31] = { ...pose[31]!, x: 0.54 };
+    pose[32] = { ...pose[32]!, x: 0.46 };
+
+    const model = buildInstructorRetargetSourceModel([
+      { landmarks: pose },
+    ] satisfies MovementInstructorMotionFrame[]);
+
+    expect(model).not.toBeNull();
+    expect(model?.segments.leftThigh?.direction.x).toBeLessThan(0);
+    expect(model?.segments.rightThigh?.direction.x).toBeGreaterThan(0);
+  });
+
   it("finds the strongest single-knee lift frame in a recording", () => {
     const uprightPose = withCorePose();
     const squatPose = withCorePose();
@@ -74,8 +94,8 @@ describe("buildInstructorRetargetSourceModel", () => {
 
     expect(analysis.peakSquat?.frameIndex).toBe(1);
     expect(analysis.peakSingleKneeLift?.frameIndex).toBe(2);
-    expect(analysis.peakLeftKneeLift?.leftKneeLift).toBeGreaterThan(0.6);
-    expect(analysis.peakRightKneeLift?.rightKneeLift).toBeLessThan(0.2);
+    expect(analysis.peakRightKneeLift?.rightKneeLift).toBeGreaterThan(0.6);
+    expect(analysis.peakLeftKneeLift?.leftKneeLift).toBeLessThan(0.2);
   });
 
   it("ignores weak startup frames when choosing peak squat", () => {

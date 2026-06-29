@@ -115,7 +115,7 @@ describe("vrmRigging", () => {
     expect(prepared.map((landmark) => landmark.x)).toEqual([0.8, 0.19999999999999996]);
   });
 
-  it("strengthens finger rotations while leaving wrist rotations untouched", () => {
+  it("strengthens finger rotations while leaving wrist rotations unchanged for callers that keep wrist solving", () => {
     const wrist = strengthenVrmHandRotation(
       { x: 0.2, y: -0.1, z: 0.3 },
       { isPlayer: true, isWrist: true, isThumb: false },
