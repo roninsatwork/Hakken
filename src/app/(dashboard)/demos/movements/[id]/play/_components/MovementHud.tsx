@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Webcam from "react-webcam";
-import { ArrowLeft, Crosshair, Pause, Play, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, Crosshair, Pause, Play, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 
@@ -26,6 +26,8 @@ type MovementHudProps = {
   onTogglePlaying: () => void;
   onRetryVision: () => void;
   onCalibrate: () => void;
+  onResetStudio: () => void;
+  onStartGuidedPreview?: () => void;
   onCameraReady?: () => void;
   onCameraError?: (error: string) => void;
 };
@@ -49,6 +51,8 @@ export default function MovementHud({
   onTogglePlaying,
   onRetryVision,
   onCalibrate,
+  onResetStudio,
+  onStartGuidedPreview,
   onCameraReady,
   onCameraError,
 }: MovementHudProps) {
@@ -82,9 +86,20 @@ export default function MovementHud({
   return (
     <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>
       <div className="flex items-center justify-between rounded-[28px] border border-white/10 bg-[#111018]/[0.72] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl pointer-events-auto">
-        <Link href="/demos/movements" className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-white/[0.68] transition-colors hover:border-white/20 hover:text-white">
-          <ArrowLeft className="h-4 w-4" /> Leave Studio
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/demos/movements" className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-white/[0.68] transition-colors hover:border-white/20 hover:text-white">
+            <ArrowLeft className="h-4 w-4" /> Leave Studio
+          </Link>
+          <button
+            type="button"
+            onClick={onResetStudio}
+            aria-label="Reset studio"
+            title="Reset studio"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/[0.68] transition-colors hover:border-white/20 hover:text-white"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        </div>
 
         <div className="flex items-center gap-6 px-8">
           <div className="flex flex-col items-end">
@@ -138,9 +153,21 @@ export default function MovementHud({
                 </button>
               )}
               {cameraNeedsAttention && !isPreviewMode && (
-                <span className="mt-1 max-w-[220px] text-[10px] font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
-                  {cameraError ?? "Allow camera access"}
-                </span>
+                <div className="mt-1 flex max-w-[260px] flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
+                    {cameraError ?? "Allow camera access"}
+                  </span>
+                  {onStartGuidedPreview && (
+                    <button
+                      type="button"
+                      onClick={onStartGuidedPreview}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#f6ccbe]/[0.22] bg-[#f6ccbe]/[0.10] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#f6ccbe] transition-colors hover:bg-[#f6ccbe]/[0.16] hover:text-white"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Guided Preview
+                    </button>
+                  )}
+                </div>
               )}
               {isVisionReady && (
                 <button

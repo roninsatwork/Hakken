@@ -27,6 +27,7 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Movement Demo Whole Body Tracking Plan](./active/movement-demo-whole-body-tracking-plan.md)
 - [Platform Scale Hardening Plan](./active/platform-scale-hardening-plan.md)
 - [Post Scale Hardening Plan](./active/post-scale-hardening-plan.md)
+- [Posture Studio Pre-Demo Polish Plan](./active/posture-studio-pre-demo-polish-plan.md)
 - [Roadmap And Debt](./active/roadmap-and-debt.md)
 - [Starter Platform Expansion Plan](./active/starter-platform-expansion-plan.md)
 - [System Health Alerts Plan](./active/system-health-alerts-plan.md)

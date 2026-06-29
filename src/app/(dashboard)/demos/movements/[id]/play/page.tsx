@@ -92,6 +92,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     calibrationSampleCount,
     calibrationCountdownSeconds,
     startCalibration,
+    resetCalibration,
     skipCalibration,
   } = useMovementTrackingCalibration({
     isVisionReady,
@@ -264,6 +265,16 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         onTogglePlaying={togglePlaying}
         onRetryVision={retryVision}
         onCalibrate={startCalibration}
+        onResetStudio={() => {
+          resetCalibration();
+          resetMatch({ returnToLobby: true, resetInstructorPlayback, resetScoring });
+        }}
+        onStartGuidedPreview={() => {
+          skipCalibration();
+          resetInstructorPlayback();
+          resetScoring();
+          setIsPlaying(true);
+        }}
         onCameraReady={() => {
           setCameraStatus("ready");
           setCameraError(null);

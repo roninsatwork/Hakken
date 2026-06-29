@@ -241,6 +241,7 @@ describe("movement play components", () => {
         onTogglePlaying={onTogglePlaying}
         onRetryVision={onRetryVision}
         onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
       />,
     );
 
@@ -275,6 +276,7 @@ describe("movement play components", () => {
         onTogglePlaying={onTogglePlaying}
         onRetryVision={vi.fn()}
         onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
       />,
     );
 
@@ -303,6 +305,7 @@ describe("movement play components", () => {
         onTogglePlaying={vi.fn()}
         onRetryVision={vi.fn()}
         onCalibrate={onCalibrate}
+        onResetStudio={vi.fn()}
       />,
     );
 
@@ -334,6 +337,7 @@ describe("movement play components", () => {
         onTogglePlaying={vi.fn()}
         onRetryVision={vi.fn()}
         onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
       />,
     );
 
@@ -345,6 +349,45 @@ describe("movement play components", () => {
 
     expect(screen.getByText("Camera check needed")).toBeInTheDocument();
     expect(screen.getByText("Allow camera access")).toBeInTheDocument();
+  });
+
+  it("offers presenter reset and guided preview recovery from camera issues", () => {
+    vi.useFakeTimers();
+
+    const onResetStudio = vi.fn();
+    const onStartGuidedPreview = vi.fn();
+
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying={false}
+        isVisionReady
+        isTrackingCalibrated={false}
+        isCalibrating={false}
+        visionStatus="ready"
+        visionError={null}
+        isCameraReady={false}
+        cameraError="Camera permission is blocked"
+        calibrationStatus="Calibration needed"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={vi.fn()}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+        onResetStudio={onResetStudio}
+        onStartGuidedPreview={onStartGuidedPreview}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset studio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guided Preview" }));
+
+    expect(screen.getByText("Camera check needed")).toBeInTheDocument();
+    expect(screen.getByText("Camera permission is blocked")).toBeInTheDocument();
+    expect(onResetStudio).toHaveBeenCalledTimes(1);
+    expect(onStartGuidedPreview).toHaveBeenCalledTimes(1);
   });
 
   it("labels skipped calibration as preview mode even when camera permission is blocked", () => {
@@ -370,6 +413,7 @@ describe("movement play components", () => {
         onTogglePlaying={vi.fn()}
         onRetryVision={vi.fn()}
         onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
       />,
     );
 
@@ -406,6 +450,7 @@ describe("movement play components", () => {
         onTogglePlaying={onTogglePlaying}
         onRetryVision={vi.fn()}
         onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
       />,
     );
 
