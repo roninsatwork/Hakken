@@ -15,6 +15,36 @@ Future agents should read this before changing:
 - `src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration.ts`
 - `src/app/(dashboard)/demos/movements/_lib/vrmRigging.ts`
 
+The frozen movement demo implementation currently spans these route-local files:
+
+- `src/app/(dashboard)/demos/movements/_components/MovementCapturePanel.tsx` renders capture camera/model/status controls, live tracking indicators, and capture actions.
+- `src/app/(dashboard)/demos/movements/_components/MovementDeleteDialog.tsx` is the shared delete confirmation for library/detail cleanup.
+- `src/app/(dashboard)/demos/movements/_components/MovementFrameViewer.tsx` renders recorded frame playback for detail and preview-style inspection.
+- `src/app/(dashboard)/demos/movements/_components/MovementLibraryTable.tsx` renders the paginated/searchable movement library rows and action buttons.
+- `src/app/(dashboard)/demos/movements/_components/MovementSaveDialog.tsx` captures save metadata for a recording before upload.
+- `src/app/(dashboard)/demos/movements/_hooks/useMediaPipeVision.ts` loads and shares the MediaPipe vision runtime.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementCapture.ts` owns capture webcam processing, smoothing, frame buffering, skeleton drawing, and tracking-quality state.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementFrames.ts` loads movement rows, resolves storage URLs, parses stored frame payloads, and exposes normalized frame data.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementMatchScoring.ts` drives score/combo feedback and completion state for the play loop.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementMatchSession.ts` owns lobby, avatar selection, playback toggles, calibration reset, rematch, and exit-reset state.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementPlayerTracking.ts` runs the live webcam MediaPipe loop for the player avatar during practice.
+- `src/app/(dashboard)/demos/movements/_hooks/useMovementTrackingCalibration.ts` manages live tracking calibration state for the play route.
+- `src/app/(dashboard)/demos/movements/_lib/handMatching.ts` compares hand landmarks and hand openness for movement matching.
+- `src/app/(dashboard)/demos/movements/_lib/mediaPipeConfig.ts` centralizes MediaPipe model and runtime configuration.
+- `src/app/(dashboard)/demos/movements/_lib/movementAvatarProfiles.ts` defines selectable avatar profiles and presentation metadata.
+- `src/app/(dashboard)/demos/movements/_lib/movementFrameCodec.ts` parses and normalizes saved movement frame payloads.
+- `src/app/(dashboard)/demos/movements/_lib/movementPresentation.ts` formats route-facing movement presentation labels and values.
+- `src/app/(dashboard)/demos/movements/_lib/movementScoring.ts` contains pure scoring helpers for angle sync, tolerance, expression, hand matching, and combo behavior.
+- `src/app/(dashboard)/demos/movements/_lib/movementSkeleton.ts` draws normalized skeleton previews from movement landmarks.
+- `src/app/(dashboard)/demos/movements/_lib/movementTypes.ts` defines the shared movement frame, landmark, metadata, and tracking types.
+- `src/app/(dashboard)/demos/movements/_lib/saveMovementRecording.ts` validates capture save inputs, uploads the frame payload, calculates metadata, and creates the movement row.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementCalibrationOverlay.tsx` renders the live calibration overlay before practice.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementCompletionDialog.tsx` renders completion/rematch/exit actions.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementFeedbackOverlay.tsx` renders transient practice feedback.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementHud.tsx` renders score, sync, playback readiness, retry action, and webcam picture-in-picture.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementMatchScene.tsx` composes the Three.js training scene, instructor/player avatars, lights, controls, grid, and debug source skeleton overlays.
+- `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementSparkles.tsx` renders the lightweight scene feedback particles.
+
 The business context matters: this is a pitch-critical premium posture / Pilates demo for a client interested in posture coaching for children aged 8-14. The avatar body cannot look broken, disabled, floppy, or artificially puppeted.
 
 ## Core Finding

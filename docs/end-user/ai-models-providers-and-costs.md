@@ -45,7 +45,7 @@ Enabling a model makes it available to compatible selectors and defaults, as lon
 
 ## Defaults
 
-The defaults tab maps AI use cases to default models. Sonae resolves defaults by use case so chat, agents, workflows, reports, title generation, embeddings, transcription, vision, and tool-calling paths do not need to use the same model.
+The defaults tab maps AI use cases to default models. The implemented default slots are chat, fast chat, reasoning, agent, workflow, report, router, title, transcription, and embedding. Catalog filters can still show capabilities such as vision and tool calling, but those are model capabilities or catalog use-case tags rather than separate default slots in the current defaults UI.
 
 Global defaults apply platform-wide. Company defaults override global defaults for a tenant. Clearing a company default falls back to the global default for that use case.
 
@@ -57,13 +57,13 @@ Before changing a default:
 4. Save the default.
 5. Test the affected assistant, agent, workflow, or ingestion path.
 
-Embedding defaults need special care because the current vector index expects Google Vertex embedding behavior and 768-dimensional vectors.
+Embedding defaults need special care because the current vector index expects Google Vertex embedding behavior and 768-dimensional vectors. If no compatible embedding default is configured, Sonae falls back to the Google Vertex `text-embedding-004` failsafe for embedding execution.
 
 ## Model Details And Pricing
 
 The model detail page shows read-only provider metadata and editable operational pricing fields. Operators can set a friendly name and pricing values for standard input, cached input, response output, and reasoning output.
 
-Friendly names appear in user-facing selectors and toolbars. Pricing values feed analytics and estimated cost displays. Treat them as operational reporting inputs unless a separate billing process validates them.
+Friendly names appear in user-facing selectors and toolbars. The current cost analytics calculation uses the standard input and response output pricing fields. Cached input and reasoning output prices are stored as model metadata for operator visibility and future reporting work, but they are not part of the implemented dashboard cost calculation yet. Treat all pricing values as operational reporting inputs unless a separate billing process validates them.
 
 The detail page also shows capabilities, supported use cases, context window, max output, provider model id, internal model id, sync date, pricing source, units, currency, and pricing effective date where recorded.
 
@@ -75,13 +75,15 @@ The dashboard includes:
 
 - timeline chart with daily, weekly, or monthly aggregation
 - aggregate cost, message, and token metrics
-- provider distribution
+- provider distribution for the live raw-data overlay
 - model distribution
 - top agents
 - top companies
 - top users
 
 Cost is computed from recorded message or snapshot usage and model pricing metadata. Analytics are useful for trend analysis, debugging expensive behavior, and finding unusual usage. They should not be treated as invoice-grade billing without an external billing control.
+
+For longer historical windows, model distribution, costs, leaderboards, messages, and token totals are backed by daily snapshots. Provider distribution is currently more limited because historical snapshots do not store provider totals separately.
 
 ## Company Metrics
 
@@ -100,6 +102,7 @@ After any model default change, test the affected path:
 - workflow execution for workflow defaults
 - knowledge ingestion for embedding defaults
 - report generation for report defaults
-- transcription or vision path for media-specific defaults
+- transcription for transcription defaults
+- the relevant media surface when changing model catalog capability or use-case metadata such as vision
 
 If costs move unexpectedly, check whether the model default changed, whether a provider sync altered metadata, whether message volume increased, and whether the relevant model has complete pricing fields.

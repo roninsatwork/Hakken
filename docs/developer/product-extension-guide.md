@@ -9,7 +9,7 @@ Sonae is organized around these layers:
 - App shell: `src/app/(dashboard)/layout.tsx`, `src/ui/components/layout/SidebarNavigation.tsx`, `src/ui/components/layout/Header.tsx`, and `src/ui/components/layout/FluidWorkspace.tsx`.
 - Admin shell: `src/app/(dashboard)/admin/layout.tsx` plus reusable admin UI in `src/app/(dashboard)/admin/_components`.
 - Convex backend: public queries/mutations/actions in `convex/*.ts`, shared business logic in service files, auth guards in `convex/authz.ts`, and generated API bindings in `convex/_generated`.
-- AI runtime: provider-neutral orchestration in `convex/ai.ts`, model selection in `convex/aiModelService.ts`, model records in `convex/aiModels.ts`, and provider-specific adapter code such as `convex/vertexProviderService.ts`.
+- AI runtime: model selection in `convex/aiModelService.ts`, model records in `convex/aiModels.ts`, shared provider adapters in `convex/aiProviderRegistry.ts`, and provider-specific code such as `convex/vertexProviderService.ts`. Some current runtime paths still call Vertex helpers directly after model resolution; use `docs/developer/ai-provider-tool-extension.md` before assuming a path is provider-neutral.
 - Workflow runtime: graph validation in `convex/utils/workflowTypes.ts`, execution helpers in `convex/workflowRuntimeService.ts`, scheduling in `convex/workflowRuntime.ts`, and visual editor types in `src/ui/components/workflows/types.ts`.
 - Integrations and tools: global tool metadata in `aiTools`, agent bindings in `agentTools`, declarations/execution guards in `convex/aiToolExecutionService.ts`, and admin management under `src/app/(dashboard)/admin/ai/tools`.
 - Tenant settings: system branding/settings in `convex/settings.ts` and `convex/settingsService.ts`, consumed on the frontend through `src/context/SystemSettingsContext.tsx`.
@@ -130,7 +130,7 @@ Model records are data. Provider adapters are code. Keep that boundary intact.
 1. Add model records through `convex/aiModels.ts` or a provider sync action. Runtime code should resolve models through `resolveModelForExecution`.
 2. Keep model selection and default handling in `convex/aiModelService.ts`.
 3. Add provider-specific client setup in a dedicated adapter service, following `convex/vertexProviderService.ts`.
-4. Pass provider-neutral requests into the adapter boundary. Do not import provider SDKs inside React components, route handlers, or generic runtime services.
+4. Pass provider-neutral requests into the adapter boundary for new runtime work. Do not import provider SDKs inside React components, route handlers, or generic runtime services; existing direct Vertex runtime paths should be treated as implementation debt, not a pattern to copy.
 5. Update `docs/developer/ai-provider-tool-extension.md` if the provider introduces new adapter rules.
 6. Add service tests for model fallback, disabled/default behavior, and any provider-specific normalization.
 

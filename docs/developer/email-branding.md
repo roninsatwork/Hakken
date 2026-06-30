@@ -7,6 +7,7 @@ Read this before changing invite emails, magic-link sender configuration, workfl
 ## Product Surface
 
 - `convex/emailBrandingService.ts` normalizes sender values, validates sender addresses, builds Resend `from` values, and exposes compact branding data.
+- `convex/resendEmailService.ts` sends Resend email requests through the shared provider HTTP retry layer.
 - `convex/settings.ts` stores `emailSenderName` and `emailSenderAddress` through system settings and exposes `internal.settings.getEmailBranding`.
 - `convex/settingsService.ts` uses email sender evidence in white-label readiness, custom-domain checks, and handoff summaries.
 - `convex/auth.ts` uses `buildEmailFromAddress` for auth email delivery.
@@ -49,11 +50,13 @@ Invite emails use this to keep footer/product text aligned with the runtime send
 
 Auth email configuration passes `RESEND_FROM_EMAIL` and a fallback name into `buildEmailFromAddress`.
 
-Invites load `internal.settings.getEmailBranding`, build branded copy, then resolve the sender with the environment override and stored settings.
+Invites load `internal.settings.getEmailBranding`, build branded copy, then resolve the sender with the environment override and stored settings. Invite delivery uses `sendResendEmail` so Resend requests share provider error handling and retry behavior instead of calling `fetch` directly.
 
-Workflow runtime loads email branding before building email tool defaults so workflow email nodes have a safe sender even when node data omits one.
+Workflow runtime loads email branding before building email tool defaults so workflow email nodes have a safe sender even when node data omits one. Workflow email dispatch also uses `sendResendEmail` when `RESEND_API_KEY` is configured, and records simulated output when the key is absent.
 
-Platform alerts load email branding before Resend dispatch and use a dedicated fallback name of `Sonae Operations`.
+Platform alerts load email branding before Resend dispatch and use a dedicated fallback name of `Sonae Operations`. Alert dispatch uses an idempotency key for the alert type and report window.
+
+`sendResendEmail` posts to `https://api.resend.com/emails` with JSON content, an optional idempotency key, and a three-attempt retry policy capped at 15 seconds by default. Keep this helper as the single Resend transport path for runtime email so provider retries, error normalization, and tests stay consistent.
 
 When adding another email sender, preserve this pattern:
 
@@ -82,6 +85,7 @@ Do not use stored sender values as evidence that Resend domain verification is c
 
 Focused tests include:
 
+- `convex/resendEmailService.test.ts` for Resend transport success, error, retry, and idempotency behavior.
 - `convex/settingsService.test.ts` for `buildEmailFromAddress`, environment override behavior, invalid address fallback, `buildEmailBranding`, white-label readiness, custom-domain checklist, and handoff summaries.
 - `convex/settings.test.ts` for super-admin settings updates, sender persistence, audit logs, and white-label queries.
 - Invite, workflow runtime, and platform alert tests where sender behavior is exercised by those features.

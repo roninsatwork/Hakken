@@ -76,9 +76,11 @@ The provider also sets wrapper `fontFamily` and `fontSize` from settings values.
 
 ## Identity And Appearance UI
 
-`IdentitySettingsSection` edits platform name, logos, and email sender fields. Logo upload controls accept light and dark variants and call the page-level upload handler.
+`src/app/(dashboard)/admin/settings/_components/IdentitySettingsSection.tsx` edits platform name, logos, and email sender fields. Logo upload controls accept light and dark variants and call the page-level upload handler.
 
-`AppearanceSettingsSection` edits heading/body font selections, heading/subtext sizes, dark palette values, light palette values, and the global brand color.
+`src/app/(dashboard)/admin/settings/_components/AppearanceSettingsSection.tsx` edits heading/body font selections, heading/subtext sizes, dark palette values, light palette values, and the global brand color.
+
+Both sections share settings form types from `src/app/(dashboard)/admin/settings/_components/types.ts`.
 
 The page hydrates form state from `settings.get` and fills several UI defaults that mirror existing global CSS. These UI defaults make controls usable even when optional settings fields are absent; they do not necessarily mean every optional token has been stored.
 

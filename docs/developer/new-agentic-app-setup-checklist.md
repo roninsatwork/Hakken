@@ -4,6 +4,17 @@ Use this checklist when creating a new customer setup, demo tenant, or vertical 
 
 The goal is to get from empty tenant to tested draft agent without relying on production-only credentials or hidden manual steps.
 
+Implementation references:
+
+- `docs/developer/agentic-starter-framework-overview.md`
+- `docs/developer/starter-app-template-checklist.md`
+- `docs/developer/app-kit-launch-plan-implementation.md`
+- `docs/operator/local-demo-seed-runbook.md`
+- `convex/appTemplates.ts`
+- `convex/agentTemplates.ts`
+- `convex/localDemoSeed.ts`
+- `scripts/local-demo-seed.mjs`
+
 ## 1. Repository And Environment
 
 - Confirm the current branch is `dev`.
@@ -36,7 +47,29 @@ LOCAL_DEMO_SEED_SECRET=replace-with-local-secret npm run demo:local:seed
 
 This seeds a demo company, super-admin, company admin, model defaults, starter knowledge, `knowledge.search` tool, a draft knowledge assistant, and starter eval fixtures.
 
-## 3. AI Provider And Model Defaults
+The seed is local-only. `convex/localDemoSeed.ts` refuses to run unless `LOCAL_DEMO_SEED_ENABLED=1`, the passed secret matches `LOCAL_DEMO_SEED_SECRET`, and `LOCAL_DEMO_SEED_ENVIRONMENT` is not `production`. Use the operator runbook for the full safety and troubleshooting flow.
+
+The local seed also syncs app template catalog rows and creates sample launch-plan state. It is useful for rehearsing the setup flow, but it is not a production onboarding or migration tool.
+
+## 3. App Kit Or Agent Template Selection
+
+Sonae has two starter paths:
+
+- App kits in `convex/appTemplates.ts` for broader vertical workspaces with planned agents, workflows, knowledge scopes, connectors, readiness checks, publish targets, and implementation pointers.
+- Agent templates in `convex/agentTemplates.ts` for individual governed agents with starter prompts, approval policy, tool recommendations, and eval fixtures.
+
+Use an app kit when the new setup needs a workspace plan, connector bundle, knowledge import notes, draft workflows, launch-plan review, or follow-up implementation tasks. Use an agent template when the setup only needs a single draft agent.
+
+For app-kit setups:
+
+- Confirm the template exists in the static `APP_TEMPLATES` catalog.
+- Sync or review the persistent `appTemplateCatalogItems` registry before relying on operator-facing lifecycle metadata.
+- Create a launch plan from the template rather than manually copying setup notes.
+- Review target company, workspace setup overrides, connector notes, knowledge import notes, safety defaults, readiness checks, extension points, and implementation pointers.
+- Materialize only after review. `materializeLaunchPlan` creates inactive draft agents, inactive manual workflows, eval fixtures, and source run ids. It is idempotent at the launch-plan level and does not create a production-ready app automatically.
+- Confirm the template is mapped in `APP_TEMPLATE_AGENT_ARCHETYPE` when the default internal-knowledge archetype is not appropriate.
+
+## 4. AI Provider And Model Defaults
 
 - Configure provider credentials outside the repo.
 - Enable the provider in the AI provider admin surface or seed path.
@@ -50,7 +83,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Confirm the target agent readiness panel shows the model default check passing.
 - Avoid hardcoding model literals in runtime code.
 
-## 4. Knowledge Sources
+If app-kit resources were materialized, review model selection before activation. Materialized draft agents inherit model selection and use the system failsafe model id until defaults or overrides are intentionally configured.
+
+## 5. Knowledge Sources
 
 - Decide which knowledge is global and which is tenant-scoped.
 - Upload or seed starter knowledge documents.
@@ -58,7 +93,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Bind relevant documents to the draft agent.
 - Add a retrieval smoke objective that proves the agent uses the intended knowledge.
 
-## 5. Tools And Connectors
+For app kits, compare the template knowledge scopes with the actual imported documents. Do not treat the launch plan's knowledge import notes as proof that documents already exist.
+
+## 6. Tools And Connectors
 
 - Install the required built-in connector definitions.
 - Add or create AI tools for internal handlers.
@@ -68,7 +105,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Bind the required tools to the draft agent.
 - Confirm tool side-effect level and approval requirement match product risk.
 
-## 6. Agent Template And Draft Agent
+For app kits, start from `recommendedConnectorKeys` and the launch-plan connector bundle. A connector being recommended by a template is not the same as being installed, authenticated, tested, or approved for side effects.
+
+## 7. Agent Template And Draft Agent
 
 - Pick an existing template or add a new template in `convex/agentTemplates.ts`.
 - Define:
@@ -82,7 +121,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Keep it inactive while reviewing readiness.
 - Review generated audit metadata for template id, builder intent, missing tools, and seeded fixtures.
 
-## 7. Evals And Activation Readiness
+For app-kit materialization, inspect every created draft agent and workflow. Generated draft resources are starting points: agents are inactive, workflows are manual and inactive, and human approval is required by default.
+
+## 8. Evals And Activation Readiness
 
 - Confirm readiness checks cover:
   - draft status
@@ -98,7 +139,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Inspect the durable run detail timeline for steps, tool calls, and approvals.
 - Activate only after the successful smoke eval gate passes.
 
-## 8. Workflow, Schedule, Widget, Or API Surface
+For app kits, reconcile the template readiness checks with actual eval coverage. A template can describe intended checks, but release readiness comes from the configured agent, bound tools, linked knowledge, and passing eval evidence.
+
+## 9. Workflow, Schedule, Widget, Or API Surface
 
 - Add workflow nodes only after the agent behavior is tested.
 - Add schedules only after manual workflow runs are reliable.
@@ -106,7 +149,9 @@ This seeds a demo company, super-admin, company admin, model defaults, starter k
 - Add webhook/public API surfaces only with signed access, rate limits, and audit records.
 - Keep external side effects behind explicit authorization and approval policy.
 
-## 9. Handoff Verification
+For app-kit launch plans, treat publish targets as implementation intent. Verify each actual surface separately before handoff.
+
+## 10. Handoff Verification
 
 Run:
 
@@ -125,7 +170,9 @@ Record:
 - Tenant/company used for setup.
 - Model defaults configured.
 - Connectors installed and diagnostics status.
-- Agent template used.
+- App kit and launch plan used, if applicable.
+- Agent template or app-kit archetype used.
 - Agent id and activation status.
+- Materialized workflow ids and activation status, if applicable.
 - Smoke eval run ids.
 - Known gaps or intentionally deferred production credentials.

@@ -1,4 +1,4 @@
-import { httpAction, internalMutation } from "./_generated/server";
+import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
@@ -100,6 +100,17 @@ export const updateRunStatus = internalMutation({
         completedAt,
       });
     }
+  },
+});
+
+export const getRunByRunIdInternal = internalQuery({
+  args: {
+    runId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.query("apifyRuns")
+      .withIndex("by_runId", q => q.eq("runId", args.runId))
+      .unique();
   },
 });
 

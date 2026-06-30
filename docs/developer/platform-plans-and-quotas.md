@@ -9,6 +9,7 @@ For user and company management boundaries, see [Company And User Management](./
 Plan-related routes:
 
 - `src/app/(dashboard)/admin/settings/plans/page.tsx` manages the global plan catalog.
+- `src/app/(dashboard)/admin/companies/page.tsx` can assign or clear a plan while creating or editing a company from the company list.
 - `src/app/(dashboard)/admin/companies/[id]/overview/page.tsx` assigns a plan to a company.
 - `src/app/(dashboard)/app/profile/page.tsx` shows the signed-in user's plan status and message usage.
 - `src/app/(dashboard)/app/settings/page.tsx` shows company usage and cost context.
@@ -17,6 +18,8 @@ Backend modules:
 
 - `convex/plans.ts` exposes plan reads, catalog mutations, company/user status queries, and billing reset internals.
 - `convex/planService.ts` contains plan-status resolution and plan record helpers.
+- `convex/chatService.ts` resolves chat quota targets, detects exhausted finite quotas, and increments the relevant usage counter after a send passes validation.
+- `convex/chat.ts` applies the quota check in the assistant chat send mutation.
 - `convex/companies.ts` owns company plan assignment through `assignPlanToCompany`.
 - `convex/utils/inventoryRollupService.ts` keeps global inventory plan and MRR totals aligned.
 
@@ -61,7 +64,7 @@ User override references are not checked in the current delete guard. If overrid
 
 ## Company Assignment
 
-`companies.assignPlanToCompany` validates the target company and plan, patches the company `planId`, and updates global inventory rollups for old and new plan assignments.
+`companies.assignPlanToCompany` validates the target company and plan, patches the company `planId`, and updates global inventory rollups for old and new plan assignments. The mutation is called from both the company list create/edit modal and the company overview assignment form.
 
 Plan assignment is a super-admin company management action. Do not expose company plan assignment to tenant admins without a product decision and explicit authorization tests.
 
@@ -76,6 +79,22 @@ Plan assignment is a super-admin company management action. Do not expose compan
 `getPlanStatusFromCompany` returns the company plan name and limit when a plan exists, otherwise `System Default`; usage comes from `company.messagesUsedThisPeriod`.
 
 This means a missing override does not fall back to the company plan. Preserve that behavior unless a product decision changes support expectations.
+
+Chat quota resolution is intentionally implemented in `convex/chatService.ts`, not in the profile status helper. `resolveChatQuota` checks a valid user override first, then falls through to the active company plan when the override row is missing, and finally returns unlimited usage when neither target has a valid plan. Keep this distinction in mind when changing deleted-plan or cleanup semantics: profile display can show `System Default` for a dangling override while the chat send path may still meter against the company plan.
+
+## Chat Enforcement
+
+The monthly plan counter is currently enforced in `chat.sendMessage`.
+
+Before the quota check, the mutation verifies thread access, attachment policy, and the per-thread user-message rate limit. It then resolves the quota target:
+
+- valid user override: use the user's override plan and increment `users.messagesUsedThisPeriod`
+- active company plan: use the active company plan and increment `companies.messagesUsedThisPeriod`
+- no valid plan target: allow unlimited usage without incrementing a usage row
+
+When a finite quota is exhausted, the mutation still records the attempted user message, inserts an assistant soft-block message that tells the user the AI allocation is exhausted, updates the thread timestamp, and returns without running model generation. A successful send increments the selected usage counter before PII redaction and message insertion.
+
+Do not describe plan quotas as a global AI feature gate unless more call sites are wired to `resolveChatQuota`, `isChatQuotaExceeded`, and `incrementChatQuota`. Provider rate limits, public API limits, workflow payload limits, upload limits, and widget upload quotas are separate controls.
 
 ## Billing Reset
 
@@ -101,7 +120,7 @@ When adding a new plan lifecycle path, keep inventory rollups aligned. If rollup
 
 The plan catalog page uses shared admin table primitives and `AdminConfirmationModal`. It avoids native browser dialogs and surfaces save/delete errors in the modal state.
 
-Visible strings are localized under the admin plans namespace. Keep `messages/en.json` and `messages/it.json` in parity when touching the page.
+Most visible strings are localized under the admin plans namespace. The current plan row status labels still render as literal English `Active` and `Inactive` strings in `src/app/(dashboard)/admin/settings/plans/page.tsx`; treat that as implementation debt and localize those labels if the page is touched. Keep `messages/en.json` and `messages/it.json` in parity when changing localized copy.
 
 ## Verification
 

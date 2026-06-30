@@ -141,10 +141,12 @@ describe("Agent Runs", () => {
   test("public trigger creates a tenant-scoped queued webhook run with a version snapshot", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { activeAgentId, inactiveAgentId, companyId } = await t.run(async (ctx) => {
+    const { activeAgentId, inactiveAgentId, otherCompanyAgentId, companyId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Public API Company", createdAt: Date.now() });
+      const otherCompanyId = await ctx.db.insert("companies", { name: "Other Public API Company", createdAt: Date.now() });
       const activeAgentId = await ctx.db.insert("agents", {
         name: "Public Trigger Agent",
+        companyId,
         modelId: "model-test",
         thinkingMode: false,
         isActive: true,
@@ -153,14 +155,24 @@ describe("Agent Runs", () => {
       });
       const inactiveAgentId = await ctx.db.insert("agents", {
         name: "Inactive Public Trigger Agent",
+        companyId,
         modelId: "model-test",
         thinkingMode: false,
         isActive: false,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      const otherCompanyAgentId = await ctx.db.insert("agents", {
+        name: "Other Company Public Trigger Agent",
+        companyId: otherCompanyId,
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-      return { activeAgentId, inactiveAgentId, companyId };
+      return { activeAgentId, inactiveAgentId, otherCompanyAgentId, companyId };
     });
 
     const created = await t.mutation(internal.agentRuns.createPublicAgentRunInternal, {
@@ -194,6 +206,12 @@ describe("Agent Runs", () => {
       agentId: inactiveAgentId,
       companyId,
       objective: "Should not run",
+    })).rejects.toThrow("Agent not found or inactive");
+
+    await expect(t.mutation(internal.agentRuns.createPublicAgentRunInternal, {
+      agentId: otherCompanyAgentId,
+      companyId,
+      objective: "Should not run across tenants",
     })).rejects.toThrow("Agent not found or inactive");
 
     await expect(t.mutation(internal.agentRuns.createPublicAgentRunInternal, {

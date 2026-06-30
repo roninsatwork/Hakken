@@ -17,7 +17,16 @@ Company routes:
 - `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` re-exports the company model-default implementation and passes company context.
 - `src/app/(dashboard)/admin/companies/[id]/models/page.tsx` is the concrete company model-default page used by the `/ai/models` alias.
 
-Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`, including chart, metric, leaderboard, and formatting modules.
+Cost components live under `src/app/(dashboard)/admin/ai/costs/_components/`:
+
+- `src/app/(dashboard)/admin/ai/costs/_components/AICostsHeader.tsx`: timeframe controls and route header actions.
+- `src/app/(dashboard)/admin/ai/costs/_components/AICostsMetricGrid.tsx`: top-level cost and usage metric blocks.
+- `src/app/(dashboard)/admin/ai/costs/_components/AICostTimelineChart.tsx`: timeline chart wrapper.
+- `src/app/(dashboard)/admin/ai/costs/_components/AICostDistributionCharts.tsx`: model, provider, and token distribution charts.
+- `src/app/(dashboard)/admin/ai/costs/_components/AICostLeaderboards.tsx`: company, user, and agent leaderboards.
+- `src/app/(dashboard)/admin/ai/costs/_components/MetricBlock.tsx`: compact metric display primitive.
+- `src/app/(dashboard)/admin/ai/costs/_components/costFormatters.ts`: display formatting helpers for cost values.
+- `src/app/(dashboard)/admin/ai/costs/_components/types.ts`: shared analytics component prop types.
 
 ## Backend Modules
 
@@ -65,7 +74,9 @@ Provider sync and test actions should keep provider-specific API details in prov
 
 ## Model Defaults And Resolution
 
-Defaults are use-case based. Supported default use cases come from `DEFAULT_MODEL_USE_CASES` and include chat, agent, workflow, report, router, title, embedding, transcription, vision, and tool-calling style paths.
+Defaults are use-case based. Supported default slots come from `DEFAULT_MODEL_USE_CASES` in `convex/aiModelService.ts`: `chat`, `fast-chat`, `reasoning`, `agent`, `workflow`, `report`, `router`, `title`, `transcription`, and `embedding`.
+
+Do not confuse default slots with catalog capabilities or catalog use-case filters. The model catalog UI can filter models by capabilities such as `vision` and `tool-calling`, and provider sync can store those capability tags on model rows. The current default-management mutations reject unsupported default use cases, so `vision` and `tool-calling` should not be documented as standalone default slots unless `DEFAULT_MODEL_USE_CASES` changes.
 
 Default mutations validate that:
 
@@ -77,7 +88,7 @@ Default mutations validate that:
 
 Company defaults override global defaults. If a company default is missing or invalid, resolution falls back to the global default for the same use case. If configured defaults are unavailable, runtime resolution falls back to legacy default model rows through the shared model service.
 
-Embedding resolution is stricter. The current vector index expects 768 dimensions, so `resolveEmbeddingModelConfigForExecution` requires a compatible Google Vertex embedding model and returns explicit embedding dimension metadata.
+Embedding resolution is stricter. The current vector index expects 768 dimensions, so `resolveEmbeddingModelConfigForExecution` requires a compatible Google Vertex embedding model and returns explicit embedding dimension metadata. When no configured embedding default is available, it falls back to the Google Vertex `text-embedding-004` failsafe with 768 dimensions.
 
 ## Pricing And Cost Computation
 
@@ -89,7 +100,7 @@ The model detail page writes pricing fields through `updatePricingConfig`. The e
 - output response cost
 - output reasoning cost
 
-Pricing metadata is used by analytics cost estimates through `buildModelCostContext` and `computeCostFromMap`. Analytics currently convert computed USD cost to GBP with the implemented conversion used in `convex/analytics.ts`.
+Pricing metadata is used by analytics cost estimates through `buildModelCostContext` and `computeCostFromMap`. The implemented calculation currently reads `standardInputCostBelow200k`, `standardInputCostAbove200k`, and `outputResponseCost`; cached-input and reasoning-output pricing fields are stored on the model row and shown in admin tooling but are not consumed by the dashboard cost calculation yet. Analytics currently convert computed USD cost to GBP with the implemented conversion used in `convex/analytics.ts`.
 
 Treat these values as operational analytics inputs. Do not reuse them for customer billing unless billing-specific validation, currency, exchange-rate, and reconciliation controls are added.
 
@@ -99,12 +110,14 @@ Global analytics:
 
 - `getGlobalAnalytics` requires super-admin access.
 - It combines historical `analyticsDailySnapshots` with recent raw assistant messages.
+- Historical snapshots store model metrics but not provider distribution, so provider distribution is populated from the live raw overlay rather than from full historical provider totals.
 - It returns timeline, aggregate totals, provider distribution, model distribution, company leaderboard, user leaderboard, and agent leaderboard.
 
 Company metrics:
 
 - `getCompanyMetrics` requires admin access to the target company.
 - It combines company snapshots with recent company-scoped messages and agent transactions.
+- Company snapshots also lack provider distribution, so long-window provider charts should be treated as partial until provider metrics are added to snapshot rows.
 - It returns tenant-level timeline, aggregates, distributions, and leaderboards.
 
 The admin AI costs route uses `getGlobalAnalytics` with fixed or custom timeframe arguments. The UI chooses daily, weekly, or monthly labels based on backend aggregation type.

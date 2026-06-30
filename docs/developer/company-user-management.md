@@ -9,14 +9,15 @@ Read this before changing `convex/companies.ts`, `convex/users.ts`, `convex/user
 Super-admin routes:
 
 - `/admin/companies` lists and creates companies.
-- `/admin/companies/[id]` redirects into the company detail surface.
+- `/admin/companies/[id]` redirects into the company detail surface from `src/app/(dashboard)/admin/companies/[id]/page.tsx`.
 - `/admin/companies/[id]/overview` edits profile fields and plan assignment.
-- `/admin/companies/[id]/users` manages users in one company.
-- `/admin/companies/[id]/invites` manages pending invites for one company.
-- `/admin/companies/[id]/directory/users` re-exports the company users page.
-- `/admin/companies/[id]/directory/invites` re-exports the company invites page.
+- `/admin/companies/[id]/users` manages users in one company through `src/app/(dashboard)/admin/companies/[id]/users/page.tsx`.
+- `/admin/companies/[id]/invites` manages pending invites for one company through `src/app/(dashboard)/admin/companies/[id]/invites/page.tsx`.
+- `/admin/companies/[id]/directory` is the company directory section, with `src/app/(dashboard)/admin/companies/[id]/directory/layout.tsx`, `src/app/(dashboard)/admin/companies/[id]/directory/page.tsx`, `src/app/(dashboard)/admin/companies/[id]/directory/users/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/directory/invites/page.tsx`.
 - `/admin/users`, `/admin/users/invite`, and `/admin/users/[id]` manage global users.
-- `/admin/super-admins`, `/admin/super-admins/invite`, and `/admin/super-admins/[id]` manage super-admin users.
+- `/admin/super-admins`, `/admin/super-admins/invite`, and `/admin/super-admins/[id]` manage super-admin users through `src/app/(dashboard)/admin/super-admins/page.tsx`, `src/app/(dashboard)/admin/super-admins/invite/page.tsx`, and `src/app/(dashboard)/admin/super-admins/[id]/page.tsx`.
+
+The company detail shell is implemented by `src/app/(dashboard)/admin/companies/[id]/layout.tsx`. Company-specific AI, models, rules, prompt, knowledge, chat logs, and widget routes live beside the user/directory routes and are documented in [AI Administration](./ai-administration.md) and [Embedded Widgets](./embedded-widgets.md).
 
 Tenant routes:
 
@@ -92,6 +93,8 @@ Invitations are implemented in `convex/invites.ts` and stored in `invitations`.
 `getInvitesByCompany` requires an admin and then calls `canAccessCompany`.
 
 `revokeInvite` requires an admin, deletes the invite, and writes `REVOKE_INVITE`. Non-super-admins can only revoke invites for their own company. Because it deletes the row, revoked invites are not retained as status rows.
+
+Invite email templates are stored in `emailTemplates` with `templateType: "INVITE"`. `getActiveTemplate` returns `null` for unauthenticated users, returns the stored invite template when one exists, and otherwise returns the built-in default subject, headline, body, and CTA text. The invite pages under `/admin/users/invite`, `/admin/companies/[id]/invites`, and `/admin/super-admins/invite` all read this same active template, so saving it changes the global invite copy used by those screens. `saveTemplate` requires `requireSuperAdmin`, upserts the single active invite template, and writes `UPDATE_EMAIL_TEMPLATE`.
 
 `dispatchInviteEmail` is an action because it sends email through Resend. It:
 

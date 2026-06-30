@@ -3,6 +3,12 @@ import { convexTest } from "convex-test";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
+import {
+    assertValidTranscriptionPayload,
+    buildNodeConfigContext,
+    getBase64DecodedByteLength,
+} from "./ai";
+import { assertWithinAiActionRateLimit } from "./aiActionRequestService";
 
 const {
     createVertexGenAIClientMock,
@@ -38,6 +44,90 @@ beforeEach(() => {
 });
 
 describe("OWASP for LLMs: Denial of Wallet & Resource Exhaustion (LLM04)", () => {
+    test("transcription guardrails reject unsupported, malformed, and oversized audio before provider calls", () => {
+        expect(getBase64DecodedByteLength(Buffer.from("hello").toString("base64"))).toBe(5);
+        expect(assertValidTranscriptionPayload({
+            audioBase64: Buffer.from("small audio").toString("base64"),
+            mimeType: "audio/webm;codecs=opus",
+        })).toEqual({
+            audioBase64: Buffer.from("small audio").toString("base64"),
+            mimeType: "audio/webm",
+        });
+
+        expect(() => assertValidTranscriptionPayload({
+            audioBase64: Buffer.from("small audio").toString("base64"),
+            mimeType: "text/plain",
+        })).toThrow("Unsupported audio MIME type");
+
+        expect(() => assertValidTranscriptionPayload({
+            audioBase64: "",
+            mimeType: "audio/webm",
+        })).toThrow("Audio payload is required");
+
+        expect(() => assertValidTranscriptionPayload({
+            audioBase64: "not base64!",
+            mimeType: "audio/webm",
+        })).toThrow("Invalid audio payload encoding");
+
+        expect(() => assertValidTranscriptionPayload({
+            audioBase64: "A".repeat(14 * 1024 * 1024),
+            mimeType: "audio/webm",
+        })).toThrow("Audio payload cannot exceed 10MB");
+    });
+
+    test("workflow node generation guardrails bound prompt and graph context before provider calls", () => {
+        expect(buildNodeConfigContext({
+            prompt: " Map the upstream summary ",
+            nodeType: "agentNode",
+            availableNodes: [{ id: "node-1", type: "input", label: "Lead intake" }],
+        })).toEqual({
+            prompt: "Map the upstream summary",
+            nodeType: "agentNode",
+            nodesContext: "- ID: node-1 (Type: input, Label: Lead intake)",
+        });
+
+        expect(() => buildNodeConfigContext({
+            prompt: "x".repeat(4001),
+            nodeType: "agentNode",
+            availableNodes: [],
+        })).toThrow("Prompt cannot exceed 4000 characters");
+
+        expect(() => buildNodeConfigContext({
+            prompt: "configure",
+            nodeType: "agentNode",
+            availableNodes: Array.from({ length: 101 }, (_, index) => ({
+                id: `node-${index}`,
+                type: "input",
+            })),
+        })).toThrow("Available node context cannot exceed 100 nodes");
+
+        expect(() => buildNodeConfigContext({
+            prompt: "configure",
+            nodeType: "agentNode",
+            availableNodes: [{ id: "x".repeat(121), type: "input" }],
+        })).toThrow("Available node fields cannot exceed 120 characters");
+    });
+
+    test("AI action rate limiter rejects calls once the actor exhausts the request window", () => {
+        const now = Date.now();
+        const recentRequests = [
+            { requestedAt: now - 1000 },
+            { requestedAt: now - 2000 },
+        ];
+
+        expect(() => assertWithinAiActionRateLimit(recentRequests, {
+            now,
+            windowMs: 60000,
+            maxRequests: 3,
+        })).not.toThrow();
+
+        expect(() => assertWithinAiActionRateLimit(recentRequests, {
+            now,
+            windowMs: 60000,
+            maxRequests: 2,
+        })).toThrow("429 Too Many Requests");
+    });
+
     test("Core AI generator rejects excessive payload lengths before invoking Vertex AI", async () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         

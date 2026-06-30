@@ -26,11 +26,21 @@ Inside an active thread, use the bottom composer to send follow-up questions. Th
 
 Each message includes a small timestamp. User messages use your account image when available. Assistant responses support formatted text through Sonae’s markdown renderer, so answers may include headings, lists, code blocks, tables, or links when useful. The product warns that AI can make mistakes, and users should check important answers before relying on them externally.
 
+## Managing Conversation History
+
+On desktop-sized layouts, assistant conversations include a history sidebar. Use the plus button in that sidebar to start a new conversation, or choose an existing conversation title to reopen it. The search box filters your own recent conversations by title; it does not search inside message content or other users' conversations.
+
+Hover over a conversation in the history list to show rename and delete controls. Rename opens an inline title editor; press Enter or use the check button to save, or press Escape to leave edit mode. Delete opens an in-app confirmation modal and, after confirmation, removes the conversation from your history. If you delete the conversation you are currently viewing, the app returns you to the assistant welcome screen.
+
+Thread titles start as `New Conversation` and are normally replaced by an AI-generated short title after the first message. You can rename the title later if the generated name is not useful. Blank manual titles are normalized by the backend rather than stored as empty names.
+
 ## Choosing an AI Engine
 
 The model selector shows active chat engines configured by the platform administrators. A workspace may have one model or several. If you do not choose one, Sonae uses the configured default. Model names in the selector come from the admin configuration, so they may be friendly names rather than raw provider model IDs.
 
 The model you choose is sent with the next message. The backend still resolves the final execution model through Sonae’s stored configuration, which means a disabled model may fall back to the current default or platform failsafe. Users should treat the selector as a preference among available engines, not a guarantee that an unavailable provider will be forced. If the selected provider is temporarily unavailable, the assistant may return a provider error message asking you to try again.
+
+Provider support can also differ by message shape. Plain text assistant prompts can use the configured chat provider path, but file-heavy prompts need model and provider support for the inline content Sonae sends alongside the text. If a non-default engine works for text but fails when attachments are included, retry with the default engine or ask an administrator to confirm which providers support the uploaded-file workflow.
 
 ## Choosing Reasoning Effort
 
@@ -44,13 +54,15 @@ Assistant chat supports document upload from both the welcome screen and active 
 
 Uploaded documents are used in two ways. First, the assistant can send small enough file content directly to the selected model as part of the request. Second, Sonae stores the document in a thread-specific knowledge area, extracts text, breaks it into chunks, and creates vector embeddings so future questions in that thread can retrieve relevant passages. The visible status panel tells you when the system is still processing documents. If processing takes too long or fails, the assistant may answer without fully using that document, and you may need to try a smaller or cleaner file.
 
-For best results, use documents with extractable text rather than scanned images. Standard PDFs, text files, CSVs, and DOCX files usually work better than image-only files. If the assistant gives an incomplete answer after an upload, ask it what information it used, or retry with a clearer version of the file.
+For best results, use documents with extractable text rather than scanned images. Standard PDFs, text files, CSVs, and DOCX files usually work better than image-only files. If the assistant gives an incomplete answer after an upload, ask it what information it used, retry with a clearer version of the file, or use the workspace default model if a manually selected model appears not to support attachment context.
 
 ## Voice Dictation
 
 The microphone button starts voice dictation through your browser. When recording is active, the composer changes state and the microphone icon indicates that Sonae is listening. Stop recording to transcribe the audio into prompt text. If you submit while recording, the app stops the recorder cleanly before sending. Browser microphone access is required. If the browser blocks access, Sonae shows a modal explaining how to allow the microphone from the browser’s address bar.
 
 Voice dictation is useful for rough drafting and longer natural-language prompts, but you should review the transcribed text before sending sensitive or high-impact requests. The transcription result is added to the prompt field and can be edited like normal text.
+
+Voice transcription is also guarded by backend limits. Sonae accepts supported audio formats, rejects malformed or oversized audio before sending it to the AI provider, and rate-limits repeated transcription attempts by user. Transcription currently uses the platform's global transcription model setting rather than a company-specific override. If dictation repeatedly fails, wait briefly, check browser microphone permissions, and try again with a shorter recording.
 
 ## Permissions, Company Boundaries, and Limits
 

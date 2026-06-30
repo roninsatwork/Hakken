@@ -29,6 +29,8 @@ import type * as agentVersioningService from "../agentVersioningService.js";
 import type * as agentVersions from "../agentVersions.js";
 import type * as agents from "../agents.js";
 import type * as ai from "../ai.js";
+import type * as aiActionRequestService from "../aiActionRequestService.js";
+import type * as aiActionRequests from "../aiActionRequests.js";
 import type * as aiModelService from "../aiModelService.js";
 import type * as aiModels from "../aiModels.js";
 import type * as aiModelsActions from "../aiModelsActions.js";
@@ -150,6 +152,8 @@ declare const fullApi: ApiFromModules<{
   agentVersions: typeof agentVersions;
   agents: typeof agents;
   ai: typeof ai;
+  aiActionRequestService: typeof aiActionRequestService;
+  aiActionRequests: typeof aiActionRequests;
   aiModelService: typeof aiModelService;
   aiModels: typeof aiModels;
   aiModelsActions: typeof aiModelsActions;

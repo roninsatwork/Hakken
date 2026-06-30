@@ -34,6 +34,8 @@ Analytics settings also manage the Google Analytics or Google Tag Manager tracki
 
 Indexes include date, type/date, company/date, and user/date access patterns. Preserve these if dashboard queries are refactored; the current queries intentionally read historical snapshots by date/type and add live data separately.
 
+Snapshots currently persist model distribution through `modelMetrics`, but they do not persist provider distribution. Provider distribution in `getGlobalAnalytics` and `getCompanyMetrics` is built from the live raw-message and agent-transaction overlay for the current day. Do not describe provider distribution as a complete historical rollup until provider metrics are added to snapshots and query aggregation.
+
 ## Snapshot Generation
 
 `generateDailySnapshots` is an internal mutation. Without a target date it generates yesterday's UTC snapshot. With `targetDateStr`, it generates the requested `YYYY-MM-DD` UTC window.
@@ -80,6 +82,8 @@ Keep analytics model choices resolved from stored model configuration. Do not ha
 Historical windows combine snapshots with live data.
 
 For days before today, queries read `analyticsDailySnapshots`. For today, queries read raw assistant messages and agent transactions directly. This keeps dashboards current without regenerating snapshots during the day.
+
+Because historical snapshots do not store provider distribution, provider-distribution charts are currently strongest for live-day provider attribution and weaker for long historical windows. Model distribution, costs, leaderboards, messages, tokens, and active users are supported by stored snapshot fields.
 
 Important queries:
 

@@ -72,13 +72,17 @@ Manual workflows are run from the builder. This is the safest mode for testing b
 
 Scheduled workflows are intended to run automatically. When a saved workflow graph contains a trigger node set to schedule mode, Sonae creates or updates a linked schedule record for that workflow. The workflow also needs to remain active and have trigger type `SCHEDULE` for the backend dispatcher to run it.
 
-Webhook workflows expose an endpoint that an external system can call with a `POST` request. The builder displays the endpoint format. A secure webhook secret is generated for webhook workflows and must be sent in the `x-sonae-secret` request header. The secret is not accepted in the URL, which reduces the chance of leaking it through proxy or browser logs. The request body becomes the initial workflow payload. If the workflow is inactive or is no longer configured for webhooks, the webhook should not run.
+Webhook workflows expose an endpoint that an external system can call with a `POST` request. The builder displays the endpoint format. A secure webhook secret is generated for webhook workflows and must be sent in the `x-sonae-secret` request header. The secret is not accepted in the URL, which reduces the chance of leaking it through proxy or browser logs. The request body becomes the initial workflow payload and must stay within the current 20,000-character limit. If the workflow is inactive, is no longer configured for webhooks, has the wrong secret, or receives an oversized payload, the webhook should not run.
 
 ## Configuring Agent Nodes
 
 An AI Agent node can use an inline agent that belongs to the workflow or an existing global agent. When opening the agent editor, you can set the agent name, instructions, expected input variables, output variables, model behavior, reasoning settings, internet access, and temperature. The mapping tab controls how upstream workflow data is passed into the agent.
 
 For most operators, the mapping tab is the practical starting point. You can describe what data should be sent to the agent and let Sonae generate a mapping, or switch to developer mapping to bind values manually. The advanced engine tab is more technical and should be changed carefully because it controls the actual model behavior and the shape of data expected from the agent.
+
+Workflow agent execution currently requires the resolved workflow or agent model to be compatible with the Google Vertex runtime path. Treat non-Vertex providers in the model catalog as available for the surfaces that already support them, not as a guarantee that workflow agent nodes can execute with them.
+
+AI-generated mapping is intended for short, specific configuration help. Very long prompts, oversized graph context, or repeated rapid generation attempts can be rejected before Sonae calls the AI provider. The mapping helper currently uses the platform global workflow model setting rather than a tenant-specific model override. If generation fails, shorten the request, configure the mapping manually, or wait before trying again.
 
 Inline agents can be promoted to global agents. Promoting makes the agent reusable outside this one workflow, so treat that as a governance action rather than a routine edit.
 
@@ -122,7 +126,7 @@ When building workflows, start small. Create the workflow, add a trigger and one
 
 For scheduled operations, confirm both the schedule and the workflow trigger type. A standalone schedule can target a workflow, but the backend dispatcher only runs workflow graph schedules when the workflow exists, is active, and is configured as a scheduled workflow. Paused schedules, inactive workflows, deleted targets, and workflows with the wrong trigger type will not produce the expected automated run.
 
-For webhook operations, verify the endpoint, workflow id, active status, trigger type, and `x-sonae-secret` header. The request body becomes initial workflow data, so keep it within the expected shape and avoid sending unnecessary sensitive data.
+For webhook operations, verify the endpoint, workflow id, active status, trigger type, `x-sonae-secret` header, and request size. The request body becomes initial workflow data, so keep it within the expected shape and avoid sending unnecessary sensitive data. Oversized webhook payloads are rejected before execution rather than truncated into the workflow run.
 
 For approvals, monitor execution logs. A run can remain in progress while it waits for approval. Approving resumes the downstream path. Failed runs should be inspected from the step list and execution state before being retried.
 

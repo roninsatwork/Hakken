@@ -20,9 +20,11 @@ The arcade page is a client component that renders a themed launch screen, game 
 
 The page uses:
 
-- `RoninCanvas` for gameplay rendering.
-- Engine modules under `src/app/(dashboard)/app/arcade/ronins-run/engine/`.
-- `AudioEngine` for menu and start sounds.
+- `src/app/(dashboard)/app/arcade/ronins-run/RoninCanvas.tsx` for gameplay rendering and engine lifecycle.
+- `src/app/(dashboard)/app/arcade/ronins-run/engine/GameEngine.ts` for the fixed-step canvas loop, score/life/level state, collision handling, and game-over callback.
+- `src/app/(dashboard)/app/arcade/ronins-run/engine/Player.ts` and `src/app/(dashboard)/app/arcade/ronins-run/engine/Enemy.ts` for grid movement, player turns, enemy chase/frightened/dead states, and collision geometry.
+- `src/app/(dashboard)/app/arcade/ronins-run/engine/MapData.ts` for the tile grid and canvas dimensions.
+- `src/app/(dashboard)/app/arcade/ronins-run/engine/AudioEngine.ts` for Web Audio synthesis, ambient loops, sirens, pickups, and menu/start sounds.
 - `api.arcade.submitScore` to persist scores after game over.
 - `api.arcade.getPaginatedLeaderboard` and `api.arcade.getScoresCount` for the leaderboard.
 
@@ -73,6 +75,8 @@ The sandbox does not create a separate message system. It writes standard `threa
 ### Auto-Routing Behavior
 
 When `Any (Auto-Route)` is selected, the client calls `routeAgentIntent` before sending the message. The action loads active agents available to the user's company, builds an intent-routing prompt, and resolves the router model through stored AI model configuration for the `router` use case.
+
+Routing remains Vertex-specific today. `convex/orchestrator.ts` calls `getGoogleVertexProviderModelId` after resolving the configured router model and uses the Google Vertex generation helper with a strict JSON response schema. A non-Vertex router default can therefore make routing fail open to the global assistant until the router path is moved onto the shared provider adapter layer.
 
 The action returns a matched agent only when confidence is greater than `0.65` and the model returns a non-empty agent id. Otherwise it fails open to the global assistant path by returning no matched agent.
 

@@ -21,16 +21,38 @@ Embedded widgets are the public chat surface implemented by `public/embed.js`, `
 - `getWidgetById` is public and returns only iframe-safe configuration for active widgets.
 - `saveWidget` creates or updates widgets and writes `CREATE_WIDGET` or `UPDATE_WIDGET` audit logs.
 - `deleteWidget` deletes widgets and writes `DELETE_WIDGET` audit logs.
-- `createWidgetThread` creates anonymous or signed-in threads for active widgets after source-origin validation.
-- `generateWidgetUploadUrl` and `finalizeWidgetUpload` support widget attachment uploads after active-widget, thread-mapping, quota, and upload-policy checks.
+- `createWidgetThread` creates anonymous or signed-in threads for active widgets after source-origin validation and returns `{ threadId, accessToken }` for the iframe session.
+- `generateWidgetUploadUrl` and `finalizeWidgetUpload` support widget attachment uploads after active-widget, thread-mapping, widget access token, quota, and upload-policy checks.
 
 Global widget management is limited to super admins. Non-super-admin admins must supply a company id, cannot create global widgets, and must pass company access checks.
 
 ## Data Model
 
-The `widgets` table in `convex/schema.ts` stores company/global scope, name, linked agent, domain allowlist, theme fields, visitor gates, conversation starters, active status, creator, and creation timestamp. Threads store optional `widgetId`, `companyId`, `agentId`, and `sourceUrl`, allowing chat logs and runtime checks to identify widget-originated conversations.
+The `widgets` table in `convex/schema.ts` stores company/global scope, name, linked agent, domain allowlist, theme fields, visitor gates, conversation starters, active status, creator, and creation timestamp. Threads store optional `widgetId`, `widgetAccessTokenHash`, `companyId`, `agentId`, and `sourceUrl`, allowing chat logs and runtime checks to identify widget-originated conversations while requiring the browser-held widget session token for anonymous thread reads, sends, and uploads.
 
 The public config query resolves system branding fallbacks from `systemSettings` when a widget does not specify color, logo, greeting, or placeholder values. Storage-backed logos are converted to URLs before being returned.
+
+## Company Widget Editor
+
+`src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` is a client route that edits the primary widget for the active company id. It loads `api.widgets.getPrimaryWidgetByCompany`, saves through `api.widgets.saveWidget`, uploads widget logos through `api.users.generateUploadUrl`, validates uploaded logos with `validateUploadFile(file, "adminImage")`, and keeps the local form state in sync with the loaded widget once the query resolves.
+
+The editor initializes new company widgets with the current form defaults when no widget exists. Once a widget exists, the page exposes a sticky tab rail, section-specific forms, a publish button, and an appearance preview. The publish mutation always sends `isActive: true`, `isGlobal: false`, the route company id, parsed domain allowlist, theme settings, visitor gates, greeting state, sound/popup preferences, and conversation starters.
+
+The route-specific component map is:
+
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConfigTabs.tsx` renders the sticky tab rail for `Appearance`, `Welcome Screen`, `Conversation Starters`, `Greeting`, and `Integration`.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPanel.tsx` is the common section frame used by the company widget editor panels.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetEmptyState.tsx` shows the unconfigured-widget state and calls the same create/update handler used by publishing.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetAppearanceSection.tsx` edits the public widget name, primary color text/color inputs, logo upload/removal, input placeholder, sound notifications, and popup preview toggle.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetWelcomeSection.tsx` controls the optional first-screen name and email fields.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConversationStartersSection.tsx` manages up to four quick-start prompts and disables adding empty entries or entries beyond the limit.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetGreetingSection.tsx` toggles the default greeting and edits its copy while disabled greetings keep the textarea inactive.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetIntegrationSection.tsx` edits authorized domains, displays the generated `<script>` snippet, handles clipboard copy feedback, and links to `/sandbox/[widgetId]` for manual testing.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPreviewPanel.tsx` renders the sticky appearance preview, including the collapsed launcher, popup greeting, visitor gate fields, greeting message, starter prompts when greetings are off, logo preview, and placeholder text.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/types.ts` defines the shared tab union and logo upload handler type.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/widgetConfigUtils.ts` owns the tab list, comma-separated domain parsing, embed snippet generation, local logo preview URL handling, and conversation starter add guard.
+
+The company editor intentionally separates browser-only editing state from Convex validation. Frontend parsing and disabled controls improve the admin experience, but Convex remains responsible for tenant checks, global-widget restrictions, origin enforcement, audit logs, and widget-thread credentials.
 
 ## Origin And Tenant Controls
 
@@ -40,12 +62,17 @@ The security boundary is `createWidgetThread`:
 
 - inactive or missing widgets are rejected
 - `*` allows all origins
+- an empty allowlist does not authorize backend thread creation; configure `*` explicitly for broad testing or add concrete hostnames for production
 - non-empty allowlists require an absolute `http://` or `https://` source URL
 - URLs with credentials or invalid syntax are rejected
 - exact hosts and subdomains of allowlisted hosts are accepted
 - rejected attempts write `BLOCKED_WIDGET_ACCESS` audit logs
 
-Widget threads inherit the widget company id and linked agent id. The chat message send path receives `dynamicAgentId` from the iframe when the widget has an agent.
+Widget threads inherit the widget company id and linked agent id. The chat message send path receives `dynamicAgentId` from the iframe when the widget has an agent, but anonymous widget conversations cannot switch to a different agent after the thread is created. If the supplied dynamic agent would change the thread's agent id, `api.chat.sendMessage` rejects the request instead of patching the thread.
+
+`createWidgetThread` generates a high-entropy access token, stores only its SHA-256 hash on the thread, and returns the raw token to the iframe session. The iframe stores the thread id and raw token in widget-specific localStorage keys, `sonae_widget_{widgetId}_thread` and `sonae_widget_{widgetId}_token`. If only one value is present on load, the iframe clears the partial session and creates a fresh thread/token pair before sending messages.
+
+Anonymous widget calls into chat access helpers must pass the raw token as `widgetAccessToken`; otherwise `canAccessThread` returns false and `assertCanAccessThread` throws `Unauthorized: Invalid widget session`. This prevents a visitor who learns a thread id from reading or writing that widget thread without the browser-held session credential.
 
 ## Upload Policy
 
@@ -53,6 +80,7 @@ Widget uploads are deliberately narrower than normal authenticated uploads:
 
 - the widget must exist and be active
 - the target thread must belong to the widget
+- the caller must present the matching widget access token for that thread
 - a thread can have at most ten messages with attachments
 - stored uploads are validated by `validateWidgetAttachmentMetadata`
 

@@ -8,6 +8,7 @@ import {
   requireAdmin,
   requireSuperAdmin,
 } from "./authz";
+import { digestWidgetAccessToken } from "./chatService";
 import {
   validateAdminImageMetadata,
   validateStoredUpload,
@@ -274,7 +275,8 @@ export const deleteWidget = mutation({
 export const generateWidgetUploadUrl = mutation({
   args: { 
     widgetId: v.id("widgets"),
-    threadId: v.id("threads")
+    threadId: v.id("threads"),
+    widgetAccessToken: v.string(),
   },
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
@@ -283,6 +285,9 @@ export const generateWidgetUploadUrl = mutation({
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.widgetId !== args.widgetId) {
       throw new Error("Invalid thread mapping for target widget");
+    }
+    if (!thread.widgetAccessTokenHash || (await digestWidgetAccessToken(args.widgetAccessToken.trim())) !== thread.widgetAccessTokenHash) {
+      throw new Error("Unauthorized: Invalid widget session");
     }
 
     // Rate limiting: Count the number of messages with attachments in this thread
@@ -306,6 +311,7 @@ export const finalizeWidgetUpload = mutation({
     widgetId: v.id("widgets"),
     threadId: v.id("threads"),
     storageId: v.id("_storage"),
+    widgetAccessToken: v.string(),
   },
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
@@ -314,6 +320,9 @@ export const finalizeWidgetUpload = mutation({
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.widgetId !== args.widgetId) {
       throw new Error("Invalid thread mapping for target widget");
+    }
+    if (!thread.widgetAccessTokenHash || (await digestWidgetAccessToken(args.widgetAccessToken.trim())) !== thread.widgetAccessTokenHash) {
+      throw new Error("Unauthorized: Invalid widget session");
     }
 
     await validateStoredUpload(ctx, args.storageId, validateWidgetAttachmentMetadata);
@@ -395,18 +404,20 @@ export const createWidgetThread = mutation({
     }
 
     const now = Date.now();
+    const accessToken = `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
     
     const threadId = await ctx.db.insert("threads", {
       userId,
       companyId: widget.companyId,
       agentId: widget.agentId,
       widgetId: args.widgetId,
+      widgetAccessTokenHash: await digestWidgetAccessToken(accessToken),
       sourceUrl: args.sourceUrl,
       title: "Widget Interaction",
       createdAt: now,
       updatedAt: now,
     });
 
-    return threadId;
+    return { threadId, accessToken };
   },
 });

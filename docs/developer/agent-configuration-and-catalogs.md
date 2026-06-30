@@ -8,12 +8,24 @@ Agent configuration routes live under `src/app/(dashboard)/admin/agents/`:
 
 - `page.tsx`: agent catalogue, search, template builder, blank-agent creation, template-agent creation, and delete confirmation.
 - `[id]/page.tsx`: agent dashboard with transaction summary cards and paginated transaction history.
+- `[id]/layout.tsx`: agent detail shell, tab navigation, and the manual `Launch Run` action that calls `api.scheduler.manualRunSchedule`.
+- `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, activation readiness, smoke-eval actions, and release candidate controls.
+- `[id]/knowledge/page.tsx`: per-agent knowledge library management through the shared knowledge admin surface.
+- `[id]/system-prompt/page.tsx`: system prompt editing.
+- `[id]/rules/page.tsx`, `[id]/rules/new/page.tsx`, and `[id]/rules/[ruleId]/page.tsx`: agent rule list, creation, and editing.
+- `[id]/integrations/page.tsx`: agent tool and integration mappings.
 - `[id]/schemas/page.tsx`: input and output JSON schema editing through `JsonSchemaBuilder`.
+- `[id]/runs/page.tsx`: run review, run detail, replay, cancellation, feedback, reflections, memory candidate generation/review, eval creation, eval-suite execution, and improvement suggestions.
+- `[id]/evals/page.tsx`: eval fixtures, smoke evals, suite presets, skill coverage, release-gate policy, and release candidate comparison.
+- `[id]/memory/page.tsx`: active memories, memory quality, memory candidates, reflections, and improvement suggestions.
 - `[id]/logs/page.tsx`: searchable agent trace list with offset pagination and delete confirmation.
 - `[id]/logs/[logId]/page.tsx`: single trace detail.
 - `skills/page.tsx`: reusable skill catalogue, analytics cards, starter seeding, manual creation, and bundle import.
 - `skills/[id]/page.tsx`: skill detail, edit, archive, clone, export bundle, rollout, learning analytics, and bulk upgrade.
 - `[id]/skills/page.tsx`: attach, enable/disable, upgrade, and remove skills for one agent.
+- `approvals/page.tsx`: global pending approval queue for agent tool calls.
+
+This guide focuses on configuration, catalogs, schemas, skills, logs, and transactions. Runtime review details for runs, evals, memory, approvals, version snapshots, and releases live in [Agent Runtime Operations](./agent-runtime-operations.md).
 
 These screens are admin surfaces. Most global agent and skill catalogue writes are super-admin-only, while record evidence such as logs and transactions uses company scope for ordinary admins.
 

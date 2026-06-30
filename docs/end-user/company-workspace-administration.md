@@ -27,7 +27,7 @@ Company pages are tenant-boundary surfaces. Always confirm the company id and co
 
 ## Organization Dashboard
 
-The organization dashboard shows company-scoped usage and cost signals for the signed-in user's company. It includes a timeframe selector, metric cards, usage timeline, provider distribution, top users, and top agents.
+The organization dashboard shows company-scoped usage and cost signals for the signed-in user's company. It includes a timeframe selector, metric cards, usage timeline, provider distribution, top users, and top agents. For longer historical windows, treat provider distribution as partial because stored daily snapshots currently carry model metrics rather than provider totals.
 
 Use it to answer:
 
@@ -87,7 +87,7 @@ Do not describe the directory as a separate implemented product module. It is a 
 
 Users can edit their own profile at `/app/profile`. The profile page supports name, phone number, and profile image updates. Email is displayed but fixed.
 
-The profile page also shows company plan and AI message usage when a finite plan applies. If usage reaches the plan limit, non-critical AI interactions are paused until the reset cycle.
+The profile page also shows company plan and AI message usage when a finite plan applies. If assistant chat reaches the plan limit, Sonae records the attempted message and returns a quota-block assistant reply until the reset cycle or a plan change.
 
 Profile image uploads use the platform upload policy. Do not ask users to paste arbitrary image links when the upload flow is available.
 

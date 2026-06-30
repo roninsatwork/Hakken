@@ -13,7 +13,7 @@ For the broader settings map, see [Platform Operations Settings](./platform-oper
 - `/admin/agents/approvals`: pending approval queue when system health reports stranded approvals.
 - `/admin/workflows/logs`: workflow execution logs when system health reports schedule or execution failures.
 
-System health accepts admins. Super admins see platform-wide evidence; company admins see company-scoped reports where supported. Maintenance script execution is an operations control and should only be used by authorized platform operators.
+System health accepts admins. Super admins see platform-wide evidence; company admins see company-scoped reports where supported. Maintenance script listing, detail, and execution require super-admin access because scripts are platform repair controls.
 
 ## What System Health Shows
 
@@ -58,7 +58,7 @@ Treat the downloaded JSON as operational evidence. It can include ids and exampl
 
 ## Maintenance Scripts
 
-Maintenance scripts are allowlisted actions, not arbitrary commands. The current registry includes `inventory-rollup-rebuild`, which recalculates admin overview inventory and MRR metrics from current companies, users, and plans.
+Maintenance scripts are super-admin-only allowlisted actions, not arbitrary commands. The current registry includes `inventory-rollup-rebuild`, which recalculates admin overview inventory and MRR metrics from current companies, users, and plans.
 
 The script list shows:
 

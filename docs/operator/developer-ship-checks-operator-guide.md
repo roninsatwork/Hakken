@@ -39,7 +39,7 @@ This is not a customer self-serve launch flow. It is a governed handoff between 
 - Smoke evals: at least one successful smoke eval exists.
 - Release gate: required fixtures are passing and no release-gate warning is present.
 - Model config: the agent resolves to a usable model configuration.
-- Snapshot comparison: prompt, tools, rules, memory, model, and policy changes are understandable.
+- Snapshot comparison: prompt, tools, rules, memory, model, and policy changes are understandable. If enabled skills changed, inspect the agent skill bindings directly because the current release diff stores skill snapshot data but does not yet show a dedicated skill comparison area.
 - Rollback plan: the operator knows what to do if the release behaves badly.
 
 ## Activation Windows

@@ -50,6 +50,8 @@ Delete removes the movement record and attempts to delete associated storage-bac
 
 `movements/[id]/play/page.tsx` is a fixed full-screen studio. It loads the movement and frames, initializes MediaPipe, starts in an avatar selector lobby, and then renders instructor and player avatars in `MovementMatchScene`.
 
+The selectable lobby roster comes from `src/lib/constants/avatars.ts`. It currently points to the shipped VRM files under `/models/` and is consumed by the frozen movement match session hook. Documentation updates may describe the roster, but changing the roster or avatar behavior is movement-demo implementation work and remains frozen unless the user explicitly reopens it.
+
 The instructor avatar is driven by recorded frames through `useMovementInstructorPlayback`. The player avatar is driven by live landmarks through `useMovementPlayerTracking`. `useMovementTrackingCalibration` manages player calibration, and `useMovementMatchScoring` updates final score, HUD score, sync, feedback, and completion state.
 
 Query parameters change behavior:

@@ -14,6 +14,8 @@ For task-level launch plan work, see [App Kit Launch Plans](./app-kit-launch-pla
 - `/admin/app-kits/plans/[id]` is an alias for the same launch plan detail page.
 - `/admin/releases` shows agent release readiness and recent release candidates.
 - `/admin/run-observatory` shows recent agent run health, cost, model, failure, and tool evidence.
+- `/admin/agents/[id]/settings` shows the latest release state and release actions for one agent.
+- `/admin/agents/[id]/evals` shows release-gate fixtures, eval suites, and release candidate comparison for one agent.
 
 These are platform administration screens. They are not normal end-user workspace screens.
 
@@ -48,6 +50,8 @@ The releases page focuses on global agents. It summarizes each agent as draft bl
 Recent release candidates move through pending sign-off, approved, activated, rolled back, or cancelled states. A release candidate stores release notes, rollback plan, owner email, optional activation window, readiness snapshot, agent version snapshot, approval or cancellation comments, and rollback reason where applicable.
 
 Release candidates can only be created for global agents that pass readiness. Activation rechecks readiness and the activation window. Rollback restores the previous live snapshot when one exists; otherwise the agent is deactivated and should be reviewed before another candidate is created.
+
+Operators can also review release state from an individual agent's settings page and inspect release-gate evidence from the agent's evals page. The agent settings page is useful for one-agent launch work, while the release page remains the cross-agent ship-check surface.
 
 ## Run Observatory
 

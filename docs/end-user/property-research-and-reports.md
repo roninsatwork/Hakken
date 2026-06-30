@@ -2,7 +2,7 @@
 
 This guide explains the property research and board-reporting features in Sonae. It is for client admins, operators, sales leaders, support teams, and anyone who needs to understand what users can do from the product screens. It describes the implemented product behavior only.
 
-The feature area has two connected parts. The first part helps teams collect property listings from Rightmove, review the saved listings, inspect individual property details, and monitor extraction jobs. The second part shows the latest generated sales board report, built from uploaded sales pipeline data and rendered as a visual executive dashboard. Both parts are company-aware: users normally see the data for their own company workspace, while super admins can have broader visibility depending on their active context.
+The feature area has two connected parts. The first part helps teams collect property listings from Rightmove, review the saved listings, inspect individual property details, and monitor extraction jobs. The second part shows the latest generated sales board report, built from uploaded sales pipeline data and rendered as a visual executive dashboard. Both parts are company-aware: users normally see the data for their own company workspace, while super admins can have broader visibility depending on their active context. New Rightmove extraction jobs are recorded against the signed-in user's stored company, and later property reads use the active workspace context.
 
 ## Where To Find It
 
@@ -39,6 +39,8 @@ There are three status groups:
 - Failed means the external run failed, was aborted, or timed out.
 
 Pending jobs have a Sync Status control. The page also checks pending runs automatically about every 30 seconds while it is open. Syncing asks the extraction service for the latest run status. If the run has succeeded, Sonae imports the extracted dataset into the property database. If it has not succeeded yet, Sonae keeps the job pending or marks it failed when the external service reports a terminal failure.
+
+Manual sync is still company-scoped. A normal company user can sync only a run that belongs to their active company workspace. If a run is no longer visible to the current workspace, or a user is in the wrong company context, the sync action can fail instead of importing data. Super admins can have broader sync access when they are working globally.
 
 If the Logs page is empty, no extraction jobs visible to your current workspace have been dispatched yet. Start from the Search page, submit a Rightmove URL, then return to Logs to follow the run.
 
@@ -78,7 +80,7 @@ The Export to Board button downloads a PNG image of the report dashboard. The fi
 
 ## Permissions And Company Boundaries
 
-Properties are company-scoped. A company admin or user sees property records and extraction runs for their active company. A super admin with no active company context can see records across companies in some property views. If a super admin is operating inside a company context, behavior can be scoped to that active company.
+Properties are company-scoped. A company admin or user sees property records and extraction runs for their active company. A super admin with no active company context can see records across companies in some property views. If a super admin is operating inside a company context, behavior can be scoped to that active company. Starting a new Rightmove extraction is slightly different from reading existing rows: the run record is attached to the signed-in user's stored company account, so operators should confirm the intended company before dispatching a scrape from an admin account.
 
 Board reports require admin-level access. Company admins see the latest report for their company. Super admins see the latest report available globally. Standard users should not rely on access to executive reports unless their role and workspace configuration explicitly allow it.
 

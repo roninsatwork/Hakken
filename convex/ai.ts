@@ -22,6 +22,107 @@ import {
 } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 
+const CHAT_CONTENT_MAX_LENGTH = 10000;
+const TRANSCRIPTION_AUDIO_MAX_BYTES = 10 * 1024 * 1024;
+const TRANSCRIPTION_RATE_LIMIT_PER_MINUTE = 6;
+const NODE_CONFIG_PROMPT_MAX_LENGTH = 4000;
+const NODE_CONFIG_NODE_TYPE_MAX_LENGTH = 80;
+const NODE_CONFIG_AVAILABLE_NODES_MAX_COUNT = 100;
+const NODE_CONFIG_NODE_FIELD_MAX_LENGTH = 120;
+const NODE_CONFIG_CONTEXT_MAX_LENGTH = 12000;
+const NODE_CONFIG_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const NODE_CONFIG_RATE_LIMIT_MAX_REQUESTS = 12;
+const AI_ACTION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+const allowedTranscriptionMimeTypes = new Set([
+  "audio/aac",
+  "audio/flac",
+  "audio/m4a",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/wav",
+  "audio/webm",
+  "audio/x-m4a",
+  "audio/x-wav",
+]);
+
+function normalizeMimeType(value: string) {
+  return value.split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+export function getBase64DecodedByteLength(value: string) {
+  const normalized = value.replace(/\s/g, "");
+  if (!normalized) return 0;
+  const padding = normalized.endsWith("==") ? 2 : normalized.endsWith("=") ? 1 : 0;
+  return Math.floor((normalized.length * 3) / 4) - padding;
+}
+
+export function assertValidTranscriptionPayload(args: { audioBase64: string; mimeType: string }) {
+  const mimeType = normalizeMimeType(args.mimeType);
+  const audioBase64 = args.audioBase64.replace(/\s/g, "");
+  if (!allowedTranscriptionMimeTypes.has(mimeType)) {
+    throw new Error("Unsupported audio MIME type.");
+  }
+
+  if (!audioBase64) {
+    throw new Error("Audio payload is required.");
+  }
+
+  if (!/^[A-Za-z0-9+/=]+$/.test(audioBase64)) {
+    throw new Error("Invalid audio payload encoding.");
+  }
+
+  if (getBase64DecodedByteLength(audioBase64) > TRANSCRIPTION_AUDIO_MAX_BYTES) {
+    throw new Error("Audio payload cannot exceed 10MB.");
+  }
+
+  return { audioBase64, mimeType };
+}
+
+export function buildNodeConfigContext(args: {
+  prompt: string;
+  nodeType: string;
+  availableNodes: Array<{ id: string; type: string; label?: string }>;
+}) {
+  const prompt = args.prompt.trim();
+  const nodeType = args.nodeType.trim();
+
+  if (!prompt) throw new Error("Prompt is required.");
+  if (prompt.length > NODE_CONFIG_PROMPT_MAX_LENGTH) {
+    throw new Error(`Prompt cannot exceed ${NODE_CONFIG_PROMPT_MAX_LENGTH} characters.`);
+  }
+  if (!nodeType) throw new Error("Node type is required.");
+  if (nodeType.length > NODE_CONFIG_NODE_TYPE_MAX_LENGTH) {
+    throw new Error(`Node type cannot exceed ${NODE_CONFIG_NODE_TYPE_MAX_LENGTH} characters.`);
+  }
+  if (args.availableNodes.length > NODE_CONFIG_AVAILABLE_NODES_MAX_COUNT) {
+    throw new Error(`Available node context cannot exceed ${NODE_CONFIG_AVAILABLE_NODES_MAX_COUNT} nodes.`);
+  }
+
+  const nodesContext = args.availableNodes.map((node) => {
+    const id = node.id.trim();
+    const type = node.type.trim();
+    const label = node.label?.trim() || "Unnamed";
+    if (!id || !type) throw new Error("Available nodes must include an id and type.");
+    if (
+      id.length > NODE_CONFIG_NODE_FIELD_MAX_LENGTH ||
+      type.length > NODE_CONFIG_NODE_FIELD_MAX_LENGTH ||
+      label.length > NODE_CONFIG_NODE_FIELD_MAX_LENGTH
+    ) {
+      throw new Error(`Available node fields cannot exceed ${NODE_CONFIG_NODE_FIELD_MAX_LENGTH} characters.`);
+    }
+    return `- ID: ${id} (Type: ${type}, Label: ${label})`;
+  }).join("\n");
+
+  if (nodesContext.length > NODE_CONFIG_CONTEXT_MAX_LENGTH) {
+    throw new Error(`Available node context cannot exceed ${NODE_CONFIG_CONTEXT_MAX_LENGTH} characters.`);
+  }
+
+  return { prompt, nodeType, nodesContext };
+}
+
 export const generateSonaeResponse = internalAction({
   args: {
     threadId: v.id("threads"),
@@ -32,7 +133,7 @@ export const generateSonaeResponse = internalAction({
   },
   handler: async (ctx, args) => {
     // 🛡️ SECURITY: Denial of Wallet Prevention (Enforce 10k character limit ~ 2500 tokens)
-    if (args.content.length > 10000) {
+    if (args.content.length > CHAT_CONTENT_MAX_LENGTH) {
        throw new Error("Payload Too Large: Input exceeds maximum system context window.");
     }
 
@@ -261,7 +362,15 @@ export const transcribeAudio = action({
     mimeType: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireActionUser(ctx, "Unauthenticated request");
+    const { userId, user } = await requireActionUser(ctx, "Unauthenticated request");
+    const { audioBase64, mimeType } = assertValidTranscriptionPayload(args);
+    await ctx.runMutation(internal.aiActionRequests.reserve, {
+      actorId: userId,
+      ...(user.companyId ? { companyId: user.companyId } : {}),
+      actionName: "transcribeAudio",
+      windowMs: AI_ACTION_RATE_LIMIT_WINDOW_MS,
+      maxRequests: TRANSCRIPTION_RATE_LIMIT_PER_MINUTE,
+    });
 
     const ai = createVertexGenAIClient({ location: "us-central1" }); // Enforce central routing for stable multimodal models
 
@@ -275,7 +384,7 @@ export const transcribeAudio = action({
             model: providerModelId,
             contents: [
                 { text: "Transcribe the following audio exactly. Output ONLY the raw transcription text without any prefix, markdown, or commentary." },
-                { inlineData: { mimeType: args.mimeType, data: args.audioBase64 } }
+                { inlineData: { mimeType, data: audioBase64 } }
             ]
         }, {
             operation: "transcribeAudio",
@@ -333,7 +442,15 @@ export const generateNodeConfig = action({
     }))
   },
   handler: async (ctx, args) => {
-    await requireActionAdmin(ctx, "Unauthorized: Only administrators can configure workflow nodes.");
+    const { userId, user } = await requireActionAdmin(ctx, "Unauthorized: Only administrators can configure workflow nodes.");
+    const { prompt, nodeType, nodesContext } = buildNodeConfigContext(args);
+    await ctx.runMutation(internal.aiActionRequests.reserve, {
+      actorId: userId,
+      ...(user.companyId ? { companyId: user.companyId } : {}),
+      actionName: "generateNodeConfig",
+      windowMs: NODE_CONFIG_RATE_LIMIT_WINDOW_MS,
+      maxRequests: NODE_CONFIG_RATE_LIMIT_MAX_REQUESTS,
+    });
 
     const ai = createVertexGenAIClient();
 
@@ -343,14 +460,12 @@ export const generateNodeConfig = action({
       });
       const providerModelId = getGoogleVertexProviderModelId(modelConfig, "workflow validation");
       
-      const nodesContext = args.availableNodes.map(n => `- ID: ${n.id} (Type: ${n.type}, Label: ${n.label || 'Unnamed'})`).join("\n");
-      
       const response = await generateVertexContentWithRetry(ai, {
         model: providerModelId,
-        contents: `User Prompt: "${args.prompt}"`,
+        contents: `User Prompt: "${prompt}"`,
         config: {
           systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
-The user wants to configure an isolated logic node of type: ${args.nodeType}.
+The user wants to configure an isolated logic node of type: ${nodeType}.
 
 Available upstream node context in the graph (You MUST use these explicit IDs when mathematically binding variables):
 ---

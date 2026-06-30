@@ -4,6 +4,10 @@ Platform operations settings cover API keys, webhook delivery logs, maintenance 
 
 ## Product Surface
 
+- `src/app/(dashboard)/admin/settings/page.tsx` renders the main system settings workspace for identity, appearance, security, audit, options, white-label readiness, and purges.
+- `src/app/(dashboard)/admin/settings/_components/settingsTabs.ts` defines the supported tab ids: `identity`, `appearance`, `security`, `audit`, `options`, and `purges`.
+- `src/app/(dashboard)/admin/settings/_components/PurgesSettingsSection.tsx` renders unified purge configuration, manual purge confirmation, cancellation, and recent purge history.
+- `src/app/(dashboard)/admin/settings/analytics/page.tsx` manages the global analytics tracking id and renders seven-day analytics data-health checks.
 - `src/app/(dashboard)/admin/settings/api-keys/page.tsx` manages tenant-scoped API keys.
 - `src/app/(dashboard)/admin/settings/webhook-deliveries/page.tsx` lists callback delivery attempts and summaries.
 - `src/app/(dashboard)/admin/settings/scripts/page.tsx` lists allowlisted maintenance scripts.
@@ -14,6 +18,20 @@ Platform operations settings cover API keys, webhook delivery logs, maintenance 
 - `src/app/(dashboard)/admin/audit-logs/[id]/page.tsx` renders one audit log record from the settings audit feed.
 
 Shared admin table components and `ADMIN_PAGE_SIZE` are used for API keys, webhook deliveries, and scripts. Keep the 15-row admin pagination convention.
+
+## System Settings Shell
+
+`admin/settings/page.tsx` coordinates several global settings modules:
+
+- `api.settings.get`, `api.settings.update`, and `api.settings.generateUploadUrl` for platform identity, logos, appearance, email sender values, theme tokens, and diagnostic routing.
+- `api.settings.getWhiteLabelReadiness`, module preset, navigation profile, custom-domain checklist, handoff summary, and packaging checklist queries for white-label packaging evidence.
+- `api.system.getPiiConfig` and `api.system.updatePiiConfig` for PII masking configuration.
+- `api.auditLogs.getConfig`, `api.auditLogs.updateConfig`, and `api.auditLogs.getRecentLogs` for the older audit retention configuration and audit feed.
+- `api.purges.*` through `PurgesSettingsSection` for the unified purge engine.
+
+Only `identity`, `appearance`, `security`, `options`, and `purges` save state from this page. The audit tab is a read-only feed. Preserve that distinction when adding settings tabs so read-only evidence views do not accidentally write stale form state.
+
+Logo uploads use the `adminImage` frontend policy and `settings.generateUploadUrl`; backend validation still happens when settings are saved. Settings updates write `UPDATE_SYSTEM_PREFERENCES` audit logs from `convex/settings.ts`, while PII and audit config updates write their own audit entries from `convex/system.ts` and `convex/auditLogs.ts`.
 
 ## API Keys
 
@@ -47,6 +65,8 @@ The detailed script registry, execution, audit, history, and extension contract 
 
 `convex/purges.ts` implements the unified purge engine for agent logs, workflow logs, user logins, chat history, and audit logs. It supports super-admin configuration, manual runs, scheduled runs, recursive deletion, cancellation, purge history, and audit evidence. `convex/auditLogs.ts` also contains a separate older audit-log purge scheduler.
 
+The settings UI exposes unified purge state through `PurgesSettingsSection`. It reads `api.purges.getPipelineConfig` and `api.purges.getRecentPurges`, updates the entire pipeline config map through `api.purges.updatePipelineConfig`, triggers manual runs through `api.purges.runManualPurge`, and cancels active runs through `api.purges.cancelPurge`. The UI paginates recent purge history with `ADMIN_PAGE_SIZE`.
+
 The detailed retention contract, pipeline behavior, batch limits, cancellation semantics, and audit-only purge caveat are documented in [Data Retention And Purges](./data-retention-and-purges.md).
 
 ## System Health
@@ -62,6 +82,8 @@ The detailed health-report shape, scoping behavior, threshold rules, platform al
 ## Analytics Rollups
 
 `convex/analyticsCron.ts` generates daily `analyticsDailySnapshots` for global, company, and user usage. `convex/analytics.ts` combines historical snapshots with today's live messages and agent transactions for admin dashboards. The analytics settings page also surfaces snapshot coverage and message dimension health.
+
+`admin/settings/analytics/page.tsx` reads `api.system.getAnalyticsId`, writes `api.system.updateAnalyticsId`, and reads `api.analyticsCron.getAnalyticsDataHealthForAdmin` with a seven-day window. It treats the tracking id and data-health report separately: saving a GTM/GA id updates frontend analytics mounting, while health signals report snapshot coverage, duplicate groups, missing or mismatched message dimensions, missing threads, and live counts.
 
 The detailed rollup schema, snapshot generation flow, attribution rules, cost calculation, data-health checks, message-dimension backfill, and historical seeding behavior are documented in [Analytics Rollups](./analytics-rollups.md).
 

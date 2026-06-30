@@ -28,7 +28,7 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 ## Coverage Note
 
-The documentation set is useful but not complete. Current audience indexes track known documentation gaps under their `Documentation Still Needed` sections. Treat broad guides as starting points, not proof that every implemented route, Convex module, workflow, or operator procedure has complete standalone coverage.
+The latest implementation audits found no concrete unlinked documentation file, missing app-route mention, unmentioned Convex source module, empty document, or broken local Markdown link. Future documentation upkeep should still treat broad guides and newly changed implementation areas as active audit targets, because coverage can drift as routes, Convex modules, workflows, scripts, and operator procedures change.
 
 ### Plans
 
@@ -55,6 +55,7 @@ The documentation set is useful but not complete. Current audience indexes track
 - [Movement Demo Whole Body Tracking Plan](./plans/active/movement-demo-whole-body-tracking-plan.md)
 - [Platform Scale Hardening Plan](./plans/active/platform-scale-hardening-plan.md)
 - [Post Scale Hardening Plan](./plans/active/post-scale-hardening-plan.md)
+- [Posture Studio Pre-Demo Polish Plan](./plans/active/posture-studio-pre-demo-polish-plan.md)
 - [Roadmap And Debt](./plans/active/roadmap-and-debt.md)
 - [Starter Platform Expansion Plan](./plans/active/starter-platform-expansion-plan.md)
 - [System Health Alerts Plan](./plans/active/system-health-alerts-plan.md)
@@ -116,6 +117,7 @@ The documentation set is useful but not complete. Current audience indexes track
 - [New Agentic App Setup Checklist](./developer/new-agentic-app-setup-checklist.md)
 - [Starter App Template Checklist](./developer/starter-app-template-checklist.md)
 - [Movement Tracking](./developer/movement-tracking.md)
+- [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)
 - [Movement Demo Retargeting Approach](./developer/movement-demo-retargeting-approach.md)
 
 ### Operator
@@ -123,6 +125,7 @@ The documentation set is useful but not complete. Current audience indexes track
 - [Operator Index](./operator/index.md)
 - [Developer Ship Checks Operator Guide](./operator/developer-ship-checks-operator-guide.md)
 - [Local Demo Seed Runbook](./operator/local-demo-seed-runbook.md)
+- [Local Test Auth Runbook](./operator/local-test-auth-runbook.md)
 - [White-Label Packaging Operator Guide](./operator/white-label-packaging-operator-guide.md)
 - [Vertical App Packaging Checklist](./operator/vertical-app-packaging-checklist.md)
 - [Movement Demo Pitch Runbook](./operator/movement-demo-pitch-runbook.md)

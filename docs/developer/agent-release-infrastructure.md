@@ -96,7 +96,7 @@ Do not add side effects to scheduled activation that bypass manual release revie
 
 Release snapshot comparison is built from the `agentVersions` hashes and summarized for the release center and Agent Studio.
 
-Tracked comparison areas are:
+Tracked comparison areas currently rendered by release snapshot comparison are:
 
 - Prompt and schemas
 - Tools
@@ -105,9 +105,11 @@ Tracked comparison areas are:
 - Model config
 - Policy
 
+`agentVersions` also stores `skillSetHash` and skill snapshot content for enabled skill bindings, but `convex/releases.ts` does not yet include `skillSetHash` in `versionHashComparisons` or detail summaries. Treat skill comparison as implementation debt: reviewers should inspect agent skill bindings directly when skills are part of a candidate until the release diff adds a dedicated skill area.
+
 When no previous live snapshot exists, the comparison reports an initial release snapshot. When a previous activated or rolled-back release exists for the same agent, the comparison uses the most recent eligible baseline created before the current release and compares the tracked hash fields. The detail builders summarize prompt/schema content, tool handler mappings, active memory counts, rule names/triggers, model configuration, and approval/internet/trigger policy.
 
-If agent snapshots gain new safety-critical fields, update `agentVersioningService`, the hash fields, `versionHashComparisons`, detail summaries, release tests, and this guide. Otherwise operators may miss meaningful changes between candidates.
+If agent snapshots gain new safety-critical fields, or if an existing stored hash such as `skillSetHash` should become visible in release diffs, update `agentVersioningService`, the hash fields, `versionHashComparisons`, detail summaries, release tests, and this guide. Otherwise operators may miss meaningful changes between candidates.
 
 ## Rollback
 

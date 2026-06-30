@@ -21,6 +21,7 @@ export default function WidgetIframePage() {
   
   // Widget State
   const [threadId, setThreadId] = useState<Id<"threads"> | null>(null);
+  const [widgetAccessToken, setWidgetAccessToken] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -34,7 +35,7 @@ export default function WidgetIframePage() {
 
   const messages = useQuery(
     api.chat.getMessages,
-    threadId ? { threadId } : "skip"
+    threadId && widgetAccessToken ? { threadId, widgetAccessToken } : "skip"
   );
 
   const prevMessagesCount = useRef(0);
@@ -157,13 +158,20 @@ export default function WidgetIframePage() {
        }
 
        const existingThreadKey = `sonae_widget_${widgetId}_thread`;
+       const existingTokenKey = `sonae_widget_${widgetId}_token`;
        const storedThreadId = localStorage.getItem(existingThreadKey) as Id<"threads"> | null;
+       const storedAccessToken = localStorage.getItem(existingTokenKey);
        
-       if (storedThreadId) {
+       if (storedThreadId && storedAccessToken) {
            setThreadId(storedThreadId);
+           setWidgetAccessToken(storedAccessToken);
            setHasPassedGateway(true);
            setIsInitializing(false);
        } else {
+           if (storedThreadId || storedAccessToken) {
+               localStorage.removeItem(existingThreadKey);
+               localStorage.removeItem(existingTokenKey);
+           }
            // Decide if gateway is needed
            if (!widget.requireName && !widget.requireEmail) {
                setHasPassedGateway(true);
@@ -182,16 +190,21 @@ export default function WidgetIframePage() {
     
     try {
         let activeThreadId = threadId;
+        let activeAccessToken = widgetAccessToken;
 
         // Create thread if it doesn't exist
-        if (!activeThreadId) {
-           const newThreadId = await createThread({ 
+        if (!activeThreadId || !activeAccessToken) {
+           const createdThread = await createThread({
                widgetId: widget._id, 
                sourceUrl: document.referrer || window.location.href 
            });
+           const newThreadId = createdThread.threadId;
            setThreadId(newThreadId);
+           setWidgetAccessToken(createdThread.accessToken);
            activeThreadId = newThreadId;
+           activeAccessToken = createdThread.accessToken;
            localStorage.setItem(`sonae_widget_${widgetId}_thread`, newThreadId);
+           localStorage.setItem(`sonae_widget_${widgetId}_token`, createdThread.accessToken);
         }
 
         // Apply Gateway System Mask
@@ -206,7 +219,8 @@ export default function WidgetIframePage() {
         await sendMessageQuery({
             threadId: activeThreadId,
             content: finalContent,
-            dynamicAgentId: widget.agentId
+            dynamicAgentId: widget.agentId,
+            widgetAccessToken: activeAccessToken,
         });
 
     } catch (e) {
@@ -219,7 +233,9 @@ export default function WidgetIframePage() {
 
   const handleReset = () => {
      localStorage.removeItem(`sonae_widget_${widgetId}_thread`);
+     localStorage.removeItem(`sonae_widget_${widgetId}_token`);
      setThreadId(null);
+     setWidgetAccessToken(null);
      
      // Reset gateway state if rules dictate
      if (widget?.requireName || widget?.requireEmail) {

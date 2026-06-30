@@ -23,6 +23,15 @@ function constantTimeEqual(a: string, b: string) {
 
 const PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH = 20_000;
 
+function workflowInputTooLargeResponse() {
+  return new Response(JSON.stringify({
+    error: `Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} characters.`,
+  }), {
+    status: 413,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -252,6 +261,9 @@ export const createPublicWorkflowRunInternal = internalMutation({
     if (!workflow || !workflow.isActive || workflow.triggerType !== "WEBHOOK") {
       throw new Error("Workflow not found or not configured for public triggers.");
     }
+    if (workflow.companyId !== args.companyId) {
+      throw new Error("Workflow not found or not configured for public triggers.");
+    }
 
     const initialInput = args.initialInput?.trim();
     if (initialInput && initialInput.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
@@ -324,10 +336,20 @@ export const handleWebhook = httpAction(async (ctx, request) => {
        return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing webhook secret" }), { status: 401 });
     }
 
+    const contentLengthHeader = request.headers.get("content-length");
+    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : undefined;
+    if (contentLength !== undefined && Number.isFinite(contentLength) && contentLength > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
+      return workflowInputTooLargeResponse();
+    }
+
     const payload = await request.text();
+    if (payload.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
+      return workflowInputTooLargeResponse();
+    }
     
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
       workflowId: workflow._id,
+      companyId: workflow.companyId,
       triggerType: "WEBHOOK",
       startedBy: workflow.createdBy, // Run as creator
     });

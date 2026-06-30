@@ -7,6 +7,7 @@ For broader platform settings, see [Platform Operations Settings](./platform-ope
 ## Where To Find It
 
 - `/admin/settings/plans`: plan catalog management for super admins.
+- `/admin/companies`: company creation and edit modal with plan assignment.
 - `/admin/companies/[id]/overview`: company profile and plan assignment.
 - `/app/profile`: signed-in user's plan and AI messaging usage.
 - `/app/settings`: company-level usage and cost signals.
@@ -41,7 +42,7 @@ Deletion is blocked when the plan is assigned to companies. Remove or change com
 
 ## Assign Plans To Companies
 
-Company plan assignment is managed from the company overview route. A company plan affects the company-level message pool and the plan status shown to users in that company.
+Company plan assignment is managed from the company list create/edit modal and from the company overview route. Both paths update the same company plan field. A company plan affects the company-level message pool and the plan status shown to users in that company.
 
 Before changing a company plan:
 
@@ -59,11 +60,15 @@ The backend supports user-level plan overrides. When a user has an override, the
 
 This is useful for special cases, but it can confuse support if it is not documented. When a user's usage does not match the company plan, check whether a custom user override is present.
 
+If a user record still points at a plan override that no longer exists, the profile plan status falls back to `System Default` instead of showing the company plan. Treat that as a data-cleanup signal rather than a commercial plan change.
+
 ## Profile Usage
 
 The profile page shows the signed-in user's current plan name, monthly reset note, and AI message usage progress when a finite message limit exists.
 
-If a finite plan reaches its message limit, non-critical AI interactions can pause until the next billing cycle. This is a product quota signal, not an authentication problem.
+If a finite plan reaches its message limit, the assistant chat send path records the user's attempted message and returns a soft quota-block assistant reply until the next billing cycle or a plan change. This is a product quota signal, not an authentication problem.
+
+The profile page may describe the exhausted state as AI interactions being paused. In the current implementation, the enforced monthly counter is the assistant chat send path. Other AI-backed features can still have their own provider, validation, payload, public API, workflow, widget, or action rate limits, so treat the profile warning as a plan-usage signal rather than proof that every AI subsystem is blocked by the plan counter.
 
 When a user reports that AI interactions are unavailable, check:
 
@@ -72,6 +77,8 @@ When a user reports that AI interactions are unavailable, check:
 - messages used this period
 - reset timing
 - whether the user is in the expected company
+
+Plan quotas currently meter assistant chat messages. Other AI-backed workflows can have separate validation, provider, payload, public API, widget, or rate-limit failures, so do not assume every AI error is caused by the monthly plan counter.
 
 ## Billing Cycle Reset
 

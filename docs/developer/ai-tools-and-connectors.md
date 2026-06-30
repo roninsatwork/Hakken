@@ -11,7 +11,7 @@ Admin routes:
 - `src/app/(dashboard)/admin/ai/tools/page.tsx` renders the connector marketplace, installed connector controls, and paginated tool catalog.
 - `src/app/(dashboard)/admin/ai/tools/new/page.tsx` creates Sonae action tools.
 - `src/app/(dashboard)/admin/ai/tools/[id]/page.tsx` edits tool contracts.
-- `src/app/(dashboard)/admin/ai/tools/mcp/new/page.tsx` creates custom connector records.
+- `src/app/(dashboard)/admin/ai/tools/mcp/new/page.tsx` currently creates a generic external-action `aiTools` record for a remote MCP-style endpoint. It does not yet install a real connector record or discover remote MCP tools.
 - `src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx` manages connector install details, secret references, enabled tool mappings, OAuth state, and test logs.
 
 Agent tool binding UI is part of agent administration and consumes the same `aiTools` and `agentTools` backend contracts.
@@ -22,7 +22,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
-- `getConnectorInstallDetails`, `updateConnectorInstall`, `beginConnectorOAuth`, and `testConnectorConnection` manage connector state.
+- `getConnectorInstallDetails`, `updateConnectorInstall`, `beginConnectorOAuth`, `completeConnectorOAuth`, `disconnectConnectorOAuth`, and `testConnectorConnection` manage connector state.
 - `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Sonae action tools.
 - `getAgentTools` supports agent tool binding reads.
 
@@ -54,6 +54,10 @@ Relevant schema areas include:
 - `agentToolCalls`: run-time tool call evidence for agent executions.
 
 Connector installs can be global or tenant-restricted. Tenant-restricted connector installs carry a company id. Global connector installs must not carry a company id.
+
+The `/admin/ai/tools/mcp/new` route is not backed by a dedicated MCP connector table or discovery job yet. It calls `api.aiTools.createTool` with a `handlerMapping` shaped as `mcp.proxy.{name}`, `SUPER_ADMIN` required role, `EXTERNAL` side-effect level, and confirmation required. Because there is no registered handler for these generated mappings today, runtime execution fails through the unknown/unimplemented handler path unless a concrete handler is added later.
+
+The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Sonae-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
 
 ## Tool Contract Validation
 
@@ -89,7 +93,7 @@ Current registered handler mappings include:
 - `slack.message.send`: connector stub.
 - `google_drive.search`: connector stub.
 
-Stub handlers return a normalized not-implemented result. Do not document a stub as a live external integration. When implementing a connector for real, add a concrete handler, preserve tenant checks, validate arguments, and add tests.
+Stub handlers return a normalized not-implemented result. Other generated built-in connector mappings, including Gmail, Calendar, Outlook, Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify mappings, currently have connector definitions but no registered runtime handler. Those mappings fail through `Unknown or unimplemented tool handler mapping.` if an agent run reaches execution. Do not document a catalog scaffold as a live external integration. When implementing a connector for real, add a concrete handler, register it in `REGISTERED_TOOL_HANDLERS`, preserve tenant checks, validate arguments, and add tests.
 
 ## Connector Secret References
 
@@ -111,6 +115,10 @@ If a future connector needs real secret storage, add a proper secret-management 
 8. creates, updates, or deactivates generated `aiTools`
 
 Generated connector tools inherit required role, side-effect level, confirmation policy, schemas, and secret ref keys from their definitions. If a generated mapping is disabled, the existing generated tool is deactivated rather than deleted.
+
+`updateConnectorInstall` can change configured secret refs, enabled mappings, active state, and, for super admins, tenant assignment and tenant availability. It resets connector test status to `UNTESTED` and resyncs generated tool activity after changes.
+
+OAuth connector state is scaffolded inside Sonae rather than delegated to a live provider callback. `beginConnectorOAuth` creates a pending `toolConnectorOAuthConnections` row and returns an internal placeholder authorization URL. `completeConnectorOAuth` validates the pending state, account reference, token reference, and required scopes before marking the connection connected. `disconnectConnectorOAuth` marks recent pending or connected rows disconnected and clears connector OAuth refs. Reference values are still validated as references, not raw secrets.
 
 ## Audit And Diagnostics
 

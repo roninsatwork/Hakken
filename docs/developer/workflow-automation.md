@@ -16,9 +16,11 @@ Workflow administration is under the admin route group:
 - `src/app/(dashboard)/admin/workflows/logs/page.tsx` lists recent workflow execution records.
 - `src/app/(dashboard)/admin/workflows/logs/[id]/page.tsx` shows one execution, its node steps, final state JSON, and approval-resume controls for paused approval steps.
 
-The visual node components live in `src/ui/components/workflows/`. `WorkflowSidebar.tsx` is the drag source for node types. `ConfigDrawer.tsx` edits trigger, API action, database, logic, iterator, merge, wait, approval, email, and generic mapping fields. `AgentEditorModal.tsx` configures inline agent nodes and can promote non-global agents to global agents. `types.ts` defines the client-side node data shape used by the designer.
+The visual node components live in `src/ui/components/workflows/`. `src/ui/components/workflows/WorkflowSidebar.tsx` is the drag source for node types. `src/ui/components/workflows/ConfigDrawer.tsx` edits trigger, API action, database, logic, iterator, merge, wait, approval, email, and generic mapping fields. `src/ui/components/workflows/AgentEditorModal.tsx` configures inline agent nodes and can promote non-global agents to global agents. `src/ui/components/workflows/AgentNode.tsx` renders workflow agent nodes with live model labels and schema field chips. `src/ui/components/workflows/types.ts` defines the client-side node data shape used by the designer.
 
 Schedules have an additional builder split between `src/app/(dashboard)/admin/workflows/schedules/_components/ScheduleBuilder.tsx` and `src/app/(dashboard)/admin/workflows/schedules/_lib/scheduleConfig.ts`. The builder serializes schedule choices into a versioned JSON `intervalStr`, while the backend service still supports legacy strings and legacy JSON schedule contracts.
+
+`convex/seedWorkflows.ts` contains an internal `seedAcmeWorkflow` mutation for creating the ACME demonstration workflow with inline agents and a simple React Flow graph. Treat it as a development/demo seed helper, not a customer-facing workflow template system. If the seeded graph changes, keep model ids, company assumptions, audit action metadata, and the workflow runtime documentation aligned.
 
 ## Data Model
 
@@ -31,12 +33,15 @@ The core schema is in `convex/schema.ts`.
 - `triggerType` is `MANUAL`, `WEBHOOK`, or `SCHEDULE`.
 - `nodes` and `edges` are stringified React Flow arrays.
 - `createdAt`, `updatedAt`, and `createdBy` track ownership and audit context.
+- `companyId` scopes public webhook execution to the tenant that owns the webhook entry point. Public trigger helpers reject cross-company workflow ids with the same not-found/not-configured error used for missing or inactive workflows.
 - `webhookSecret` is generated when a workflow is configured for webhook triggering.
+
+`aiActionRequests` stores rate-limit reservations for provider-backed helper actions such as workflow node config generation. Rows include actor, optional company, action name, and request time. The workflow helper uses the `generateNodeConfig` action name.
 
 `workflowExecutions` stores run-level state:
 
 - `workflowId` is optional because the same log table also records agent schedule executions.
-- `companyId` may be present for tenant-scoped public webhook executions.
+- `companyId` is present for tenant-scoped public webhook executions created through the public trigger path and is used by execution logs and company-scoped observability.
 - `agentId` and `agentRunId` connect schedule-driven agent runs to the execution log.
 - `status` is `RUNNING`, `SUCCESS`, or `FAILED`.
 - `triggerType` records the entry point, such as `MANUAL`, `SCHEDULE`, or `WEBHOOK`.
@@ -65,7 +70,7 @@ Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts
 
 Database nodes have a separate runtime guard in `convex/workflowEngine.ts`. The runtime loads the workflow creator and treats a creator with `SUPER_ADMIN` as unrestricted for database operations. If the creator is not a super admin, database operations are limited to an allowlist and force or verify the creator's company id. Non-super-admin database selects must use supported indexed query contracts or a document id that belongs to the creator's company. Inserts and updates force the creator company id and reject attempts to cross company boundaries. This matters even though the public UI currently limits workflow authoring to super admins, because runtime paths and tests cover tenant boundary behavior defensively.
 
-Public webhook execution is exposed through internal/public trigger paths rather than the admin UI alone. `convex/workflows.ts` has `createPublicWorkflowRunInternal`, which creates a tenant-scoped webhook execution only for active workflows whose `triggerType` is `WEBHOOK`. It trims and limits public initial input to 20,000 characters. The HTTP action `handleWebhook` reads `workflowId` from the query string, requires an active webhook workflow, and verifies `x-sonae-secret` against the stored `webhookSecret` using constant-time comparison. It intentionally does not accept the secret in the URL.
+Public webhook execution is exposed through internal/public trigger paths rather than the admin UI alone. `convex/workflows.ts` has `createPublicWorkflowRunInternal`, which creates a tenant-scoped webhook execution only for active workflows whose `triggerType` is `WEBHOOK` and whose `workflow.companyId` matches the supplied public trigger company id. Company mismatches are reported as the same not-found/not-configured failure as missing, inactive, or non-webhook workflows. The mutation trims and limits public initial input to 20,000 characters. The HTTP action `handleWebhook` reads `workflowId` from the query string, requires an active webhook workflow, and verifies `x-sonae-secret` against the stored `webhookSecret` using constant-time comparison. It intentionally does not accept the secret in the URL. `handleWebhook` also rejects oversized payloads with 413 before execution, first by checking a numeric `content-length` header when present and then by checking the actual request text length.
 
 ## Designer Behavior
 
@@ -76,6 +81,8 @@ The designer initializes React Flow state by parsing `workflow.nodes` and `workf
 `updateWorkflow` validates graph JSON with `convex/utils/workflowTypes.ts`. If saved nodes include a trigger node whose data says `SCHEDULE`, the mutation creates or updates one schedule row linked by `workflowId`; the interval comes from `_scheduleInterval` and defaults to `daily`. If the trigger is changed away from `SCHEDULE`, any linked workflow schedule is deleted. If the workflow is configured as `WEBHOOK`, a `webhookSecret` is generated if one does not already exist. Workflow create, update, and delete mutations each write audit logs with action types `CREATE_WORKFLOW`, `UPDATE_WORKFLOW`, and `DELETE_WORKFLOW`.
 
 Node configuration is mixed maturity. Agent nodes are feature-rich: they create inline agents when needed, update model selection, system prompt, schema fields, reasoning settings, internet access, temperature, and graph input mapping. API action nodes support method, URL, headers, and body templates. Logic nodes route by configured rules and branch ids. Iterator nodes fan out an array. Merge nodes wait for all upstream branches by default or can accept the first successful branch. Wait nodes delay downstream scheduling. Approval nodes mark the step as needing approval. Email nodes build a message and send through Resend when configured. Database nodes support insert, update, delete, and indexed select contracts against selected tables. Some generic node mapping fields can be generated by `api.ai.generateNodeConfig`.
+
+`api.ai.generateNodeConfig` requires an authenticated admin, trims and validates the prompt and node type, caps prompts at 4,000 characters, caps available graph context at 100 nodes, caps individual node context fields at 120 characters, and caps assembled node context at 12,000 characters. It reserves an `aiActionRequests` row before provider execution and currently allows 12 generation attempts per actor in a five-minute window. The action resolves the `workflow` model use case without passing a company id, so generated mapping help uses the global workflow default or platform fallback rather than a tenant-specific model override. Keep these guards in front of provider calls when changing workflow mapping generation.
 
 ## Runtime Flow
 
@@ -116,9 +123,11 @@ The schedule-list force-run button calls `api.scheduler.manualRunSchedule`. For 
 Relevant tests include:
 
 - `convex/workflows.test.ts` for workflow authorization, webhook secret generation, lifecycle audit behavior, graph validation, runtime initialization, iterator fan-out, merge behavior, approval resume, database operation tenancy, and public webhook execution.
+- `convex/ai.test.ts` for generated node-config prompt/context guardrails and AI action rate limiting.
 - `convex/workflowRuntime.test.ts` and `convex/workflowRuntimeService.test.ts` for runtime node behavior and helper output.
 - `convex/workflowScheduleService.test.ts` for legacy and v2 schedule calculations.
 - `convex/scheduler.test.ts` for schedule authorization, CRUD, bounded lists, force run behavior, due agent schedules, and due workflow schedule dispatch.
+- `src/quality-drift.test.ts` for drift checks that include demo seed files such as `convex/seedWorkflows.ts`.
 - `src/app/(dashboard)/admin/workflows/page.test.tsx` and `src/app/(dashboard)/admin/workflows/schedules/page.test.tsx` for the admin list and schedule list interactions.
 - `src/app/(dashboard)/admin/workflows/schedules/_lib/scheduleConfig.test.ts` for schedule draft serialization and hydration.
 - `src/ui/components/workflows/WorkflowComponents.test.tsx` for workflow UI components.

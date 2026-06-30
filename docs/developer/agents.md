@@ -6,18 +6,18 @@ Agents are Sonae's governed AI worker implementation. The current system covers 
 
 The admin routes are under `src/app/(dashboard)/admin/agents/`:
 
-- `page.tsx` lists agents, searches with paginated Convex results, starts the builder, creates agents from templates, creates custom agents, and deletes agents.
-- `[id]/layout.tsx` renders the agent detail shell and tabs. It also exposes a `Launch Run` action that calls `api.scheduler.manualRunSchedule` with the agent id.
-- `[id]/page.tsx` shows transaction summary metrics and recent transactions.
-- `[id]/runs/page.tsx` shows run analytics, run lists, run details, replay, cancellation, feedback, reflections, memory candidate generation, eval creation, eval suite execution, and improvement suggestions.
-- `[id]/evals/page.tsx` manages eval fixtures, smoke evals, suite presets, release candidate comparison, and release gate settings.
-- `[id]/settings/page.tsx` manages name, description, avatar upload, model mode, reasoning effort, internet access, activation, smoke eval checks, and release candidate actions.
-- `[id]/skills/page.tsx` attaches, upgrades, enables, disables, and removes skills for one agent.
-- `[id]/knowledge/page.tsx`, `[id]/system-prompt/page.tsx`, `[id]/rules/**`, `[id]/integrations/page.tsx`, and `[id]/schemas/page.tsx` configure the agent's context, governance, tools, and IO contracts.
-- `[id]/memory/page.tsx` reviews memories, memory quality, memory candidates, reflections, and improvement suggestions.
-- `[id]/logs/page.tsx` and `[id]/logs/[logId]/page.tsx` show agent logs.
-- `skills/page.tsx` and `skills/[id]/page.tsx` manage the reusable skill catalog.
-- `approvals/page.tsx` exposes pending `agentRunApprovals`.
+- `src/app/(dashboard)/admin/agents/page.tsx` lists agents, searches with paginated Convex results, starts the builder, creates agents from templates, creates custom agents, and deletes agents.
+- `src/app/(dashboard)/admin/agents/[id]/layout.tsx` renders the agent detail shell and tabs. It also exposes a `Launch Run` action that calls `api.scheduler.manualRunSchedule` with the agent id.
+- `src/app/(dashboard)/admin/agents/[id]/page.tsx` shows transaction summary metrics and recent transactions.
+- `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx` shows run analytics, run lists, run details, replay, cancellation, feedback, reflections, memory candidate generation, eval creation, eval suite execution, and improvement suggestions.
+- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages eval fixtures, smoke evals, suite presets, release candidate comparison, and release gate settings.
+- `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` manages name, description, avatar upload, model mode, reasoning effort, internet access, activation, smoke eval checks, and release candidate actions.
+- `src/app/(dashboard)/admin/agents/[id]/skills/page.tsx` attaches, upgrades, enables, disables, and removes skills for one agent.
+- `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/integrations/page.tsx`, and `src/app/(dashboard)/admin/agents/[id]/schemas/page.tsx` configure the agent's context, governance, tools, and IO contracts.
+- `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews memories, memory quality, memory candidates, reflections, and improvement suggestions.
+- `src/app/(dashboard)/admin/agents/[id]/logs/page.tsx` and `src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx` show agent logs.
+- `src/app/(dashboard)/admin/agents/skills/page.tsx` and `src/app/(dashboard)/admin/agents/skills/[id]/page.tsx` manage the reusable skill catalog.
+- `src/app/(dashboard)/admin/agents/approvals/page.tsx` exposes pending `agentRunApprovals`.
 
 The prompt sandbox lives at `src/app/(dashboard)/app/agentic-testing/page.tsx`. It selects an agent or auto-routes through `api.orchestrator.routeAgentIntent`, creates a chat thread, and sends a message with `dynamicAgentId` when an agent is selected or routed.
 
@@ -41,7 +41,7 @@ Related systems include `convex/aiModels.ts`, `convex/aiModelService.ts`, `conve
 
 Agent-related schema lives in `convex/schema.ts`.
 
-`agents` stores the configurable worker record. Important fields include name, description, avatar, model id, model selection mode, thinking mode, reasoning effort, internet access, active state, temperature, human approval flag, trigger type, prompt/rule/knowledge ids, schemas, workflow linkage, and release-gate configuration.
+`agents` stores the configurable worker record. Important fields include name, description, optional company scope, avatar, model id, model selection mode, thinking mode, reasoning effort, internet access, active state, temperature, human approval flag, trigger type, prompt/rule/knowledge ids, schemas, workflow linkage, and release-gate configuration.
 
 `agentRuns` stores each durable run. It records the agent, optional agent version, thread, workflow, schedule, trigger type, objective, status, company/user scope, resolved provider/model data, budgets, token and cost totals, timing, errors, final output, and replay metadata.
 
@@ -59,7 +59,7 @@ Core agent CRUD in `convex/agents.ts` is super-admin-only through `requireSuperA
 
 Operational modules mix super-admin and company-scoped admin access. `agentRuns`, `agentEvalFixtures`, `agentMemories`, `agentMemoryCandidates`, `agentImprovementSuggestions`, `agentVersions`, `agentTransactions`, and `agentLogs` use `requireAdmin` plus `assertAdminCanAccessCompany` or role-specific filters where records carry a `companyId`. Standard admins without a company id are rejected. Super admins can inspect platform-wide records where the query permits it.
 
-Be careful when adding new agent queries. If the result can include run, tool, approval, memory, eval, or log data, preserve the existing company scope pattern. Do not expose cross-company records through agent id alone. `agentRuns.buildToolCallDetail` only exposes raw arguments to super admins; keep that boundary when adding UI fields around tool call evidence.
+Be careful when adding new agent queries. If the result can include run, tool, approval, memory, eval, or log data, preserve the existing company scope pattern. Do not expose cross-company records through agent id alone, and do not treat a company-scoped agent as callable from another tenant's public trigger path. `agentRuns.buildToolCallDetail` only exposes raw arguments to super admins; keep that boundary when adding UI fields around tool call evidence.
 
 ## Creation, Templates, And Readiness
 
@@ -69,7 +69,7 @@ The agent builder in `admin/agents/page.tsx` collects objective, audience, appro
 
 `getAgentReadiness` builds readiness evidence used by settings and eval pages. Activation is guarded in `updateAgent`: setting `isActive` to true is blocked unless there is at least one successful smoke eval, the latest smoke eval succeeded, critical release-gate fixtures are not blocking, release-gate policy is configured, and enabled skills are not missing required tool mappings or high-risk skill smoke evidence.
 
-Model changes must go through stored model configuration. Inherit mode resolves the current default for the agent or workflow use case. Override mode calls `assertModelOverrideAllowed` before storing the target model. Avoid hardcoded provider model literals in runtime paths.
+Model changes must go through stored model configuration. Inherit mode resolves the current default for the agent or workflow use case. Override mode calls `assertModelOverrideAllowed` before storing the target model. Current agent runtime execution still requires resolved models to be Google Vertex-compatible before provider calls, even though the catalog and defaults are stored provider-neutrally. Avoid hardcoded provider model literals in runtime paths, and do not treat agent execution as fully provider-agnostic until the runtime uses the shared provider adapter layer.
 
 ## Runtime, Approvals, And Observability
 

@@ -1,12 +1,19 @@
 # AI Provider And Tool Extension Guide
 
-Read this before changing AI model provider selection, provider adapters, the AI tool catalog, connector installs, OAuth connector state, or runtime tool execution. The current implementation deliberately separates provider-neutral runtime code from provider-specific clients and separates tool metadata from tool execution.
+Read this before changing AI model provider selection, provider adapters, the AI tool catalog, connector installs, OAuth connector state, or runtime tool execution. The current implementation has a provider-neutral model catalog and shared provider adapter layer for some text-generation paths, but several production runtime paths still call Google Vertex-specific helpers after model resolution. Tool metadata is separated from tool execution.
 
 This guide is grounded in:
 
 - `convex/aiModelService.ts`
 - `convex/aiModels.ts`
+- `convex/aiModelsActions.ts`
+- `convex/aiRuntimeTypes.ts`
+- `convex/aiProviderRegistry.ts`
+- `convex/googleProviderAdapter.ts`
+- `convex/openaiProviderService.ts`
+- `convex/anthropicProviderService.ts`
 - `convex/vertexProviderService.ts`
+- `convex/providerHttpService.ts`
 - `convex/aiProviderRetryService.ts`
 - `convex/aiTools.ts`
 - `convex/toolConnectorDefinitions.ts`
@@ -33,7 +40,33 @@ The model resolution flow is:
 
 `convex/aiModelService.ts` currently defines default use cases for chat, fast chat, reasoning, agents, workflows, reports, routing, title generation, transcription, and embeddings. Provider metadata is resolved through `providerKey` and `providerModelId`. The existing Google Vertex adapter still supports legacy Google model ids by defaulting missing provider metadata to the Google provider, but new code should preserve explicit provider metadata.
 
-`convex/vertexProviderService.ts` is the provider-specific boundary for Google Vertex. It builds the Google client from environment credentials, normalizes escaped private keys, and wraps generate and embedding calls with `withProviderRetry` from `convex/aiProviderRetryService.ts`.
+`convex/aiProviderRegistry.ts` is the shared text-generation adapter boundary for provider-neutral calls. It currently routes Google, OpenAI, and Anthropic generation requests through provider adapters. The shared request and response contracts live in `convex/aiRuntimeTypes.ts`.
+
+`convex/googleProviderAdapter.ts` adapts the shared generation contract to Google Vertex. `convex/vertexProviderService.ts` remains the lower-level Google client and retry boundary: it builds the Google client from environment credentials, normalizes escaped private keys, and wraps generate and embedding calls with `withProviderRetry` from `convex/aiProviderRetryService.ts`.
+
+`convex/openaiProviderService.ts` adapts shared text-generation calls to the OpenAI Responses API and lists OpenAI models from `/v1/models`. It accepts `OPENAI_API_KEY`, `OPEN_AI_API_KEY`, or `OPENAI_KEY`, but the error message names `OPENAI_API_KEY` as the expected credential. Its runtime adapter currently accepts text-only content.
+
+`convex/anthropicProviderService.ts` adapts shared text-generation calls to Anthropic Messages and lists models from Anthropic's models endpoint. It requires `ANTHROPIC_API_KEY`. Its runtime adapter currently accepts text-only content.
+
+Current runtime caveats:
+
+- Assistant chat response generation and thread-title generation use `generateTextWithResolvedModel`.
+- Assistant RAG search, knowledge ingestion, embeddings, voice transcription, workflow node-config generation, agent runtime, workflow agent nodes, swarm actions, report generation, router/orchestrator selection, and model-graded eval actions still use Google Vertex helpers directly or require `getGoogleVertexProviderModelId`.
+- Embedding paths intentionally require Google Vertex-compatible 768-dimensional embeddings until the vector schema and existing data expectations change.
+
+When documenting provider support, distinguish "catalog/provider can be configured" from "this runtime path can execute through that provider today."
+
+## Provider Catalog Sync And Health
+
+Provider administration actions live in `convex/aiModelsActions.ts` and require super-admin access.
+
+Google Vertex catalog sync currently seeds a curated production model list instead of relying on a live Vertex model index. The curated list includes Google text and multimodal model rows plus the `text-embedding-004` embedding row. Sync also backfills legacy Google model rows so provider metadata is explicit.
+
+OpenAI catalog sync first tries to read the live `/v1/models` catalogue. If live sync fails, it can seed a curated text-generation catalogue and mark provider health as degraded or error depending on the failure. The curated OpenAI model list is a model-administration convenience; it does not prove every seeded model can execute under the current API key until the provider connection and selected runtime path are tested.
+
+Anthropic catalog sync reads the live model catalogue and stores text-generation rows from the response. Unlike OpenAI sync, it does not currently have a curated fallback catalogue.
+
+Provider connection tests update provider health through `internalUpdateProviderHealth`. A successful test marks the provider healthy, sets `syncStatus` to `connection-ok`, and currently enables the provider. A failed test records an error status and `connection-error` message without proving any model default is safe to use.
 
 When adding another provider:
 
@@ -43,7 +76,9 @@ When adding another provider:
 4. Pass provider-neutral prompts, content, generation config, and tool declarations into the adapter.
 5. Preserve `providerKey` in analytics and cost attribution so dashboards can distinguish configured providers from legacy or unknown calls.
 
-Do not construct provider SDK clients directly inside product features, agent runtime code, workflow runtime code, or one-off actions. Those paths should depend on model resolution and adapter helpers.
+New runtime work should avoid constructing provider SDK clients directly inside product features, agent runtime code, workflow runtime code, or one-off actions. Existing Vertex-specific paths are documented implementation debt; when they are touched, prefer moving them toward model resolution plus adapter helpers instead of spreading more direct SDK calls.
+
+Adapter support is not identical across providers. Google generation accepts text and inline media parts through the Google adapter. OpenAI and Anthropic generation currently call `assertTextOnlyContents`, so they should not be used for multimodal content until their adapters explicitly support the required content shapes and tests cover them.
 
 ## Connector Catalog
 

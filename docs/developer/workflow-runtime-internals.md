@@ -11,6 +11,7 @@ Core runtime code lives in these files:
 - `convex/workflowRuntime.ts` contains Node runtime actions, node-type dispatch, downstream scheduling, email delivery, agent execution, and approval resumption.
 - `convex/workflowEngine.ts` contains execution initialization, step finalization, downstream readiness checks, iterator fan-out, merge behavior, database operation enforcement, and the due schedule dispatcher.
 - `convex/workflowRuntimeService.ts` contains pure runtime helpers for config parsing, template resolution, action request building, node outputs, wait decisions, approval halts, iterator outputs, and runtime error formatting.
+- `convex/utils/templateParser.ts` contains the shared `resolveTemplate` helper used by workflow runtime service when resolving mapping templates, API action config, database inputs, email fields, logic rules, wait delays, iterator targets, and code-node input templates.
 - `convex/workflowExecutions.ts` contains execution and step helper mutations and queries, including pending-step claiming.
 - `convex/scheduler.ts` contains schedule CRUD, agent schedule force-runs, workflow schedule force-run simulation, and execution log queries for the admin pages.
 - `convex/workflowScheduleService.ts` calculates legacy and v2 schedule run times.
@@ -47,7 +48,7 @@ Action callers can use `runManualSync` in `convex/workflows.ts`; it requires act
 
 Due schedule dispatch is handled by `internal.workflowEngine.scheduleDispatcher`, which is registered from `convex/crons.ts` to run every minute. The dispatcher queries active schedules whose `nextRunAt` is due, up to the bounded dispatch limit. Workflow schedules only execute the graph when the workflow exists, is active, and has `triggerType` set to `SCHEDULE`. Agent schedules queue agent runs and link them to workflow execution logs instead of invoking the workflow graph runtime.
 
-Public webhooks enter through `convex/webhooks.ts`. The HTTP action reads the `workflowId` query parameter, requires the workflow to be active and configured as `WEBHOOK`, verifies the `x-sonae-secret` header against the stored secret, creates a public webhook execution through `createPublicWorkflowRunInternal`, and schedules `startWorkflow` with the request body as initial input. The secret is not accepted in the URL.
+Public webhooks enter through `convex/webhooks.ts`. The HTTP action reads the `workflowId` query parameter, requires the workflow to be active and configured as `WEBHOOK`, verifies the `x-sonae-secret` header against the stored secret, creates a public webhook execution through `createPublicWorkflowRunInternal`, and schedules `startWorkflow` with the request body as initial input. The internal creation path also requires the workflow's stored `companyId` to match the supplied public trigger company id. The secret is not accepted in the URL. Oversized webhook input is rejected with 413 before execution when either the numeric `content-length` header or the actual request text exceeds the 20,000-character public input limit.
 
 The schedule-list force-run action in `api.scheduler.manualRunSchedule` is not a graph execution path for workflows. For workflow targets, it creates an execution and schedules `internal.scheduler.completeSimulation`. For agent targets, it queues and runs the agent path. Use this distinction when debugging customer reports about force-run behavior.
 
@@ -89,6 +90,10 @@ The runtime recognizes these node behaviors:
 | Unknown type | Bypasses the node and records the node type plus resolved input. |
 
 Node config parsing and defaulting belong in `workflowRuntimeService.ts`. Keep new runtime node behavior split the same way: pure config and output helpers in the service file, Convex side effects in runtime actions or engine mutations.
+
+Workflow agent nodes inherit the agent runtime model caveat: `runTriggeredAgentObjective` resolves the `workflow` model use case through stored configuration, then requires a Google Vertex provider model id before executing the agent. A workflow default that resolves to a non-Vertex provider is not currently enough for graph agent execution.
+
+Template interpolation is intentionally simple. `resolveTemplate` replaces `{{ path.to.value }}` strings from the current runtime payload, supports array-index paths such as `items[0]`, converts objects to JSON strings when a string template needs them, and recursively resolves arrays and objects. Missing values resolve to an empty string in string templates. Do not treat this helper as a sandboxed expression language; add explicit parser support and tests before accepting operators, filters, arbitrary code, or unbounded path behavior.
 
 ## Finalization And Downstream Scheduling
 

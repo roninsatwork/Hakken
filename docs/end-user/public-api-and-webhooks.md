@@ -26,11 +26,15 @@ Authorization: Bearer sonae_...
 Current public endpoints are:
 
 - `GET /api/public/v1/ping`: validates a key with `run:read` and returns company, key prefix, scopes, and rate-limit information.
-- `GET /api/public/v1/run-status?runId=...`: validates `run:read` and returns the status for a run that belongs to the key's company.
-- `POST /api/public/v1/agent-runs`: validates `agent:run` and creates a public agent run from `agentId` and `objective`.
-- `POST /api/public/v1/workflow-runs`: validates `workflow:run` and creates a public workflow execution from `workflowId` and optional `initialInput`.
+- `GET /api/public/v1/run-status?runId=...`: validates `run:read` and returns the visible run summary for a run that belongs to the key's company, including status, trigger type, timing, token/cost fields when available, output/error previews, and counts for steps, approvals, and tool calls.
+- `POST /api/public/v1/agent-runs`: validates `agent:run` and creates a public agent run from `agentId` and `objective`. The objective is trimmed and must stay within 4,000 characters. Successful responses include the queued run id, status, and a status URL for polling.
+- `POST /api/public/v1/workflow-runs`: validates `workflow:run` and creates a public workflow execution from `workflowId` and optional `initialInput`. Object input is stringified before execution, and the final input must stay within 20,000 characters.
 
 Successful run-trigger requests return `202 Accepted`. Invalid JSON, missing required fields, inaccessible runs, revoked keys, missing scopes, expired keys, and rate-limited requests return structured JSON errors.
+
+Public run triggers can only target records owned by the API key's company. A key cannot trigger another company's agent or webhook workflow, even if the caller knows an id. Cross-company targets are reported like missing or inactive records so integrations should treat them as configuration errors, not as evidence that the id exists elsewhere.
+
+Workflow run triggers require the target workflow to be active and configured as `WEBHOOK`. Use the workflow builder's direct webhook endpoint when an external system needs the workflow-specific `x-sonae-secret` flow; use the public API endpoint when the integration should authenticate with a tenant API key and `workflow:run` scope.
 
 ## Rate Limits And Audit Trail
 

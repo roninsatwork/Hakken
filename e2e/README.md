@@ -47,12 +47,13 @@ Authenticated coverage:
 - AI model Active and Inactive filter behavior.
 - Connector listing with deterministic tool metadata.
 - User management search and edit dialog controls.
-- Company widget edit, publish, and integration snippet copy behavior.
-- Workflow create/detail, schedule manual dispatch, and workflow log visibility.
+- Company widget edit, publish, and integration snippet copy behavior in `e2e/admin/workflow-widget-journeys.spec.ts`.
+- Workflow create/detail, schedule manual dispatch, and workflow log visibility in `e2e/admin/workflow-widget-journeys.spec.ts`.
 - Role-based admin access behavior.
 - Dashboard export flow.
-- End-user assistant and profile flows.
-- Movement library, capture shell, detail viewer, and play avatar lobby with deterministic movement fixture data.
+- End-user assistant and profile flows, including `e2e/user-chat-flow.spec.ts` and `e2e/user-settings-flow.spec.ts`.
+- Movement route smoke checks in `e2e/movement-demo-smoke.spec.ts`.
+- Movement library, capture shell, detail viewer, play avatar lobby, and guided debug preview with deterministic movement fixture data in `e2e/movement-demo-authenticated.spec.ts`.
 
 The browser suite is expected to run with no expected skips.
 
@@ -79,7 +80,9 @@ Run the focused real-auth suite with:
 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run test:e2e:real-auth
 ```
 
-The focused smoke tests sign in dynamically through `/local-test-auth` at test start. For tests that need a reusable Playwright storage state, start the app locally and run:
+The focused smoke tests in `e2e/local-real-auth-smoke.spec.ts` sign in dynamically through `/local-test-auth` at test start. They do not require pre-generated storage states.
+
+For tests that need a reusable Playwright storage state, start the app locally and run:
 
 ```bash
 LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run dev -- -p 3100

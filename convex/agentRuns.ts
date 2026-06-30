@@ -1517,6 +1517,9 @@ export const createPublicAgentRunInternal = internalMutation({
 
     const agent = await ctx.db.get(args.agentId);
     if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
+    if (agent.companyId !== args.companyId) {
+      throw new Error("Agent not found or inactive.");
+    }
 
     const runId = await ctx.db.insert("agentRuns", {
       agentId: args.agentId,

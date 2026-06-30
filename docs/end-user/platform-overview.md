@@ -30,7 +30,19 @@ Super admins manage the whole platform. They can manage companies, users, super-
 
 ### Dashboard
 
-The user dashboard acts as the main entry point after login. It greets the user, introduces the platform, and guides them toward the assistant experience.
+The user dashboard at `/app` acts as the main entry point after login. It is an authenticated product overview rather than an operational report. It introduces Sonae's platform depth, highlights core capabilities, and routes users toward the assistant or relevant reporting/cost surfaces.
+
+The current dashboard includes:
+
+- a primary call to open the assistant
+- feature cards for model choice, private knowledge, workflows, widget governance, visibility, and cost control
+- platform-depth sections covering model catalogues, AI safety, tenant privacy, automated checks, observability, costs, workflows, and widgets
+- hosting-positioning cards for Google Cloud, AWS, and Azure customer conversations
+- assurance and governance sections explaining automated checks, tenant separation, roles, sensitive data handling, approved AI actions, audit history, and platform health
+- use-case cards for SaaS portals, internal AI workspaces, and AI automation products
+- an explanatory modal behind the "See what is included" action
+
+For signed-in super admins, the app dashboard is also a convenience handoff point: the frontend redirects them to `/admin` once per browser session. This redirect is not an authorization boundary; admin access is still enforced by the admin layout and backend checks.
 
 ### Ask Sonae Assistant
 
@@ -77,7 +89,7 @@ Users have a profile area for account-level information and settings.
 
 ### Admin Dashboard
 
-The admin dashboard gives platform-level visibility into usage and performance. It includes analytics charts and metrics for activity, AI costs, users, companies, provider distribution, and other operational data.
+The admin dashboard gives platform-level visibility into usage and performance. It includes analytics charts and metrics for activity, AI costs, users, companies, provider distribution, and other operational data. Provider distribution is currently strongest for live raw-data attribution; longer historical analytics windows rely more heavily on model distribution, costs, usage, and leaderboard snapshots.
 
 ### Company Management
 
@@ -266,6 +278,8 @@ Sonae is built with:
 - Convex document storage for the database.
 - Provider-backed AI execution through Convex actions.
 - Google Cloud Run for production deployment.
+
+The dashboard also presents Google Cloud, AWS, and Azure as customer-facing hosting-positioning options. Those cards are product positioning copy for handoff and sales conversations; the current repository deployment documentation still treats Google Cloud Run as the implemented production deployment path unless a separate hosting migration is built and documented.
 
 ## Temporary Or Diagnostic Areas
 

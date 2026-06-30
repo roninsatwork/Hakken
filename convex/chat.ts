@@ -8,6 +8,7 @@ import {
   assertCanAccessThread,
   assertWithinMessageRateLimit,
   canAccessThread,
+  isAnonymousWidgetThread,
   incrementChatQuota,
   isChatQuotaExceeded,
   loadPiiConfig,
@@ -53,13 +54,13 @@ export const getThreads = query({
 });
 
 export const getMessages = query({
-  args: { threadId: v.id("threads") },
+  args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return null;
 
-    if (!(await canAccessThread(ctx, thread, current))) return null;
+    if (!(await canAccessThread(ctx, thread, current, args.widgetAccessToken))) return null;
 
     return await ctx.db
       .query("messages")
@@ -129,6 +130,7 @@ export const sendMessage = mutation({
     thinkingLevel: v.optional(v.string()),
     dynamicAgentId: v.optional(v.union(v.id("agents"), v.null())),
     fileIds: v.optional(v.array(v.id("_storage"))),
+    widgetAccessToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.content.length > 10000) {
@@ -142,7 +144,7 @@ export const sendMessage = mutation({
       throw new Error("Thread not found");
     }
 
-    await assertCanAccessThread(ctx, thread, current);
+    await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
     await validateChatAttachments(ctx, args.fileIds);
@@ -210,6 +212,9 @@ export const sendMessage = mutation({
 
     // Determine if we need to hot-swap the agent mid-conversation
     const targetAgentId = resolveTargetAgentId(thread.agentId, args.dynamicAgentId);
+    if (isAnonymousWidgetThread(thread) && args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
+      throw new Error("Unauthorized: Widget conversations cannot switch agents");
+    }
     if (args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
         await ctx.db.patch(args.threadId, { agentId: targetAgentId });
     }

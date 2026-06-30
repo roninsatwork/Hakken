@@ -5,6 +5,39 @@ import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
 import { ApifyClient } from "apify-client";
 import { validateSafeUrl } from "./utils/security";
+import type { ActionCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+
+type ApifyRun = Doc<"apifyRuns">;
+
+async function requireApifyRunAccess(ctx: ActionCtx, runId: string) {
+  const user = await ctx.runQuery(api.users.getMe);
+  if (!user) throw new Error("Unauthenticated");
+
+  const run: ApifyRun | null = await ctx.runQuery(internal.webhooks.getRunByRunIdInternal, { runId });
+  if (!run) throw new Error("Run not found");
+
+  if (user.role !== "SUPER_ADMIN") {
+    const activeCompanyId = user.impersonatingCompanyId || user.companyId;
+    if (!activeCompanyId || run.companyId !== activeCompanyId) {
+      throw new Error("Unauthorized");
+    }
+  }
+
+  return { user, run };
+}
+
+async function syncApifyRunStatus(runId: string) {
+  const apifyToken = process.env.APIFY_API_TOKEN;
+  if (!apifyToken) throw new Error("Apify token not configured");
+
+  const client = new ApifyClient({ token: apifyToken });
+  const run = await client.run(runId).get();
+
+  if (!run) throw new Error("Run not found on Apify");
+
+  return { client, run };
+}
 
 export const startRightmoveScrape = action({
   args: {
@@ -93,7 +126,7 @@ export const pollRunStatus = internalAction({
 
     // If finished, sync the data
     if (run.status === "SUCCEEDED" || run.status === "FAILED" || run.status === "ABORTED" || run.status === "TIMED-OUT") {
-      await ctx.runAction(api.apify.syncRunStatus, { runId: args.runId });
+      await ctx.runAction(internal.apify.syncRunStatusInternal, { runId: args.runId });
       return;
     }
 
@@ -130,39 +163,50 @@ export const fetchDatasetAndStore = internalAction({
 export const syncRunStatus = action({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
-    const apifyToken = process.env.APIFY_API_TOKEN;
-    if (!apifyToken) throw new Error("Apify token not configured");
-    
-    const client = new ApifyClient({ token: apifyToken });
-    const run = await client.run(args.runId).get();
-    
-    if (!run) throw new Error("Run not found on Apify");
-
-    // If it's still running, just update the status to PENDING
-    if (run.status !== "SUCCEEDED") {
-      await ctx.runMutation(internal.webhooks.updateRunStatus, {
-        runId: args.runId,
-        status: run.status,
-      });
-      return run.status;
-    }
-    
-    const dataset = await client.dataset(run.defaultDatasetId).listItems();
-    
-    await ctx.runMutation(internal.webhooks.storeRightmoveData, {
-      runId: args.runId,
-      status: "SUCCEEDED",
-      items: dataset.items.map((item) => JSON.stringify(item)),
-    });
-    
-    return "SUCCEEDED";
+    await requireApifyRunAccess(ctx, args.runId);
+    return await syncRunStatusForKnownRun(ctx, args.runId);
   }
 });
+
+export const syncRunStatusInternal = internalAction({
+  args: { runId: v.string() },
+  handler: async (ctx, args) => {
+    return await syncRunStatusForKnownRun(ctx, args.runId);
+  },
+});
+
+async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
+  const { client, run } = await syncApifyRunStatus(runId);
+
+  // If it's still running, just update the status to PENDING
+  if (run.status !== "SUCCEEDED") {
+    await ctx.runMutation(internal.webhooks.updateRunStatus, {
+      runId,
+      status: run.status,
+    });
+    return run.status;
+  }
+
+  const dataset = await client.dataset(run.defaultDatasetId).listItems();
+
+  await ctx.runMutation(internal.webhooks.storeRightmoveData, {
+    runId,
+    status: "SUCCEEDED",
+    items: dataset.items.map((item) => JSON.stringify(item)),
+  });
+
+  return "SUCCEEDED";
+}
 
 export const debugDatasetItem = action({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
+    const { user } = await requireApifyRunAccess(ctx, args.runId);
+    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+
     const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken) throw new Error("Apify token not configured");
+
     const client = new ApifyClient({ token: apifyToken });
     const run = await client.run(args.runId).get();
     

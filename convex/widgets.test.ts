@@ -227,7 +227,7 @@ describe("Widget Authorization", () => {
   test("anonymous widget thread and upload flow enforces origin, thread mapping, quota, and file policy", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { companyId, creatorId, widgetId, inactiveWidgetId } = await t.run(async (ctx) => {
+    const { companyId, creatorId, widgetId, inactiveWidgetId, agentId, otherAgentId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Widget Corp", createdAt: Date.now() });
       const creatorId = await ctx.db.insert("users", {
         email: "creator@test.com",
@@ -235,8 +235,25 @@ describe("Widget Authorization", () => {
         companyId,
         createdAt: Date.now(),
       });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Widget Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const otherAgentId = await ctx.db.insert("agents", {
+        name: "Other Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
       const widgetId = await ctx.db.insert("widgets", {
         companyId,
+        agentId,
         name: "Website Bot",
         allowedDomains: ["example.com"],
         isActive: true,
@@ -252,7 +269,7 @@ describe("Widget Authorization", () => {
         createdAt: Date.now(),
       });
 
-      return { companyId, creatorId, widgetId, inactiveWidgetId };
+      return { companyId, creatorId, widgetId, inactiveWidgetId, agentId, otherAgentId };
     });
 
     await expect(
@@ -268,13 +285,38 @@ describe("Widget Authorization", () => {
       })
     ).rejects.toThrow("Unauthorized: Source origin is not authorized for this widget.");
 
-    const threadId = await t.mutation(api.widgets.createWidgetThread, {
+    const createdThread = await t.mutation(api.widgets.createWidgetThread, {
       widgetId,
       sourceUrl: "https://support.example.com/help",
     });
+    const { threadId, accessToken } = createdThread;
+    expect(accessToken).toEqual(expect.any(String));
+    await expect(t.query(api.chat.getMessages, { threadId })).resolves.toBeNull();
+    await expect(t.query(api.chat.getMessages, { threadId, widgetAccessToken: "wrong-token" })).resolves.toBeNull();
+    await expect(t.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "Injected visitor message",
+      widgetAccessToken: "wrong-token",
+    })).rejects.toThrow("Unauthorized: Invalid widget session");
+    await expect(t.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "Switch me",
+      dynamicAgentId: otherAgentId,
+      widgetAccessToken: accessToken,
+    })).rejects.toThrow("Unauthorized: Widget conversations cannot switch agents");
+    await expect(t.mutation(api.chat.sendMessage, {
+      threadId,
+      content: "Legitimate visitor message",
+      dynamicAgentId: agentId,
+      widgetAccessToken: accessToken,
+    })).resolves.toBe(true);
+    await expect(t.query(api.chat.getMessages, { threadId, widgetAccessToken: accessToken })).resolves.toMatchObject([
+      { role: "user", content: "Legitimate visitor message" },
+    ]);
     const otherThreadId = await t.run(async (ctx) =>
       ctx.db.insert("threads", {
         widgetId: inactiveWidgetId,
+        widgetAccessTokenHash: "inactive-token-hash",
         title: "Other",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -290,14 +332,20 @@ describe("Widget Authorization", () => {
       return storageId;
     });
 
-    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId: inactiveWidgetId, threadId })).rejects.toThrow(
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId: inactiveWidgetId, threadId, widgetAccessToken: accessToken })).rejects.toThrow(
       "Invalid or inactive Widget"
     );
-    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId: otherThreadId })).rejects.toThrow(
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId: otherThreadId, widgetAccessToken: accessToken })).rejects.toThrow(
       "Invalid thread mapping for target widget"
     );
-    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId })).resolves.toContain("http");
-    await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId })).resolves.toEqual({
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: "wrong-token" })).rejects.toThrow(
+      "Unauthorized: Invalid widget session"
+    );
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: accessToken })).resolves.toContain("http");
+    await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: "wrong-token" })).rejects.toThrow(
+      "Unauthorized: Invalid widget session"
+    );
+    await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: accessToken })).resolves.toEqual({
       success: true,
       storageId,
     });
@@ -314,7 +362,7 @@ describe("Widget Authorization", () => {
       }
     });
 
-    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId })).rejects.toThrow(
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: accessToken })).rejects.toThrow(
       "Upload quota exceeded for this conversation thread"
     );
 
@@ -326,6 +374,7 @@ describe("Widget Authorization", () => {
     expect(thread).toMatchObject({
       companyId,
       widgetId,
+      widgetAccessTokenHash: expect.any(String),
       sourceUrl: "https://support.example.com/help",
       title: "Widget Interaction",
     });

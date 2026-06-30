@@ -36,10 +36,6 @@ End-user docs are customer-friendly explanations of the Sonae platform, its feat
 - [Workflow Automation](./workflow-automation.md)
 - [Property Research And Board Reports](./property-research-and-reports.md)
 
-## Documentation Still Needed
+## Coverage Status
 
-The current library covers the main implemented areas, but several customer-facing or operator-facing workflows are still bundled into broad guides or overview pages instead of having dedicated, complete user guides.
-
-Priority gaps:
-
-No high-priority end-user documentation gaps remain from the latest implementation audit. Continue auditing for stale or newly added product surfaces on future runs.
+The latest implementation audit found no high-priority end-user documentation gaps for the currently implemented customer-facing surfaces. Continue auditing this index when navigation, routes, admin surfaces, workflows, widgets, or operator-facing experiences change.

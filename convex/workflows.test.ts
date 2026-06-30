@@ -170,14 +170,16 @@ describe("OWASP: Broken Access Control - Workflows", () => {
   test("public workflow trigger creates tenant-scoped webhook executions only for active webhook workflows", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId } = await t.run(async (ctx) => {
+    const { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId, otherCompanyWorkflowId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Public Workflow Tenant", createdAt: Date.now() });
+      const otherCompanyId = await ctx.db.insert("companies", { name: "Other Public Workflow Tenant", createdAt: Date.now() });
       const creatorId = await ctx.db.insert("users", {
         email: "workflow-owner@example.com",
         role: "SUPER_ADMIN",
       });
       const webhookWorkflowId = await ctx.db.insert("workflows", {
         name: "Public Webhook Workflow",
+        companyId,
         isActive: true,
         triggerType: "WEBHOOK",
         nodes: "[]",
@@ -188,6 +190,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       });
       const manualWorkflowId = await ctx.db.insert("workflows", {
         name: "Manual Workflow",
+        companyId,
         isActive: true,
         triggerType: "MANUAL",
         nodes: "[]",
@@ -198,6 +201,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       });
       const inactiveWorkflowId = await ctx.db.insert("workflows", {
         name: "Inactive Webhook Workflow",
+        companyId,
         isActive: false,
         triggerType: "WEBHOOK",
         nodes: "[]",
@@ -206,8 +210,19 @@ describe("OWASP: Broken Access Control - Workflows", () => {
         updatedAt: Date.now(),
         createdBy: creatorId,
       });
+      const otherCompanyWorkflowId = await ctx.db.insert("workflows", {
+        name: "Other Company Webhook Workflow",
+        companyId: otherCompanyId,
+        isActive: true,
+        triggerType: "WEBHOOK",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
 
-      return { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId };
+      return { companyId, creatorId, webhookWorkflowId, manualWorkflowId, inactiveWorkflowId, otherCompanyWorkflowId };
     });
 
     const created = await t.mutation(internal.workflows.createPublicWorkflowRunInternal, {
@@ -237,6 +252,51 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       companyId,
       initialInput: "{}",
     })).rejects.toThrow("Workflow not found or not configured for public triggers");
+
+    await expect(t.mutation(internal.workflows.createPublicWorkflowRunInternal, {
+      workflowId: otherCompanyWorkflowId,
+      companyId,
+      initialInput: "{}",
+    })).rejects.toThrow("Workflow not found or not configured for public triggers");
+  });
+
+  test("direct workflow webhook rejects oversized payloads before creating executions", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { workflowId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Webhook Tenant", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "workflow-owner@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Direct Webhook Workflow",
+        companyId,
+        isActive: true,
+        triggerType: "WEBHOOK",
+        webhookSecret: "webhook-secret",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+      });
+      return { workflowId };
+    });
+
+    const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
+      method: "POST",
+      headers: { "x-sonae-secret": "webhook-secret" },
+      body: "x".repeat(20_001),
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: "Workflow input cannot exceed 20000 characters.",
+    });
+
+    const executions = await t.run(async (ctx) => await ctx.db.query("workflowExecutions").collect());
+    expect(executions).toEqual([]);
   });
 
   test("Super admins can page and search workflows without loading the full table", async () => {

@@ -48,9 +48,11 @@ Models can be filtered by active or inactive status, provider, capability, and s
 
 The defaults tab sets platform defaults by use case. For example, chat, agents, workflows, embeddings, and transcription can each resolve to different default models. Company model defaults can override platform defaults for a tenant. If a company default is cleared, that company falls back to the global default for the same use case.
 
+Some provider-backed helper actions also use these configured defaults. Voice transcription uses the global transcription path, and workflow node configuration uses the global workflow model setting. These helper actions validate input and throttle rapid repeated requests before calling a provider, so a user who repeatedly records audio or asks the workflow builder to generate node mappings may see a temporary "too many requests" style error.
+
 Opening a model detail page lets an operator set a friendly name and pricing values. Friendly names are shown in user-facing selectors. Pricing values feed analytics and estimated cost displays. Treat pricing as operational reporting data, not invoice-grade billing unless the surrounding billing process explicitly validates it.
 
-Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, and transcription behavior. After changing defaults or provider state, test a normal assistant prompt and any affected agent or workflow path.
+Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, and transcription behavior. Current agent and workflow-agent execution paths still require Google Vertex-compatible resolved models, even though the model catalog can list other providers for supported surfaces. After changing defaults or provider state, test a normal assistant prompt and any affected agent or workflow path.
 
 ## Prompts And Rules
 
@@ -62,7 +64,7 @@ Use rules for targeted guidance that should be easier to review and change than 
 
 ## Knowledge Management
 
-Global knowledge and company knowledge use the same knowledge manager. Knowledge can be added from websites, uploaded files, or manually entered text. Supported file validation is handled before upload, and the backend extracts text, chunks it, embeds it, and stores retrieval-ready chunks. The manager shows document status, quality indicators, repair actions, retry controls, document inspection, and retrieval testing.
+Global knowledge and company knowledge use the same knowledge manager. Knowledge can be added from websites, uploaded files, or manually entered text. Supported file validation is handled before upload, and the backend extracts text, chunks it, embeds it, and stores retrieval-ready chunks. For persisted knowledge, use PDF, CSV, Word `.docx`, or plain text for reliable extraction; Excel files currently pass shared upload validation but do not have dedicated spreadsheet extraction in the knowledge ingestion action. The manager shows document status, quality indicators, repair actions, retry controls, document inspection, and retrieval testing.
 
 Website ingestion starts by mapping a URL, then queueing selected URLs. File ingestion stores the uploaded document and processes it asynchronously. Manual text knowledge is useful for short curated facts or procedures that do not need a separate file.
 

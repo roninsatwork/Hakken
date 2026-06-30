@@ -55,11 +55,13 @@ The default rate limit is 60 requests per minute. The maximum accepted rate limi
 `convex/publicApi.ts` exposes JSON HTTP handlers:
 
 - `handlePublicApiPing` requires `run:read` and returns authenticated key metadata.
-- `handlePublicRunStatus` requires `run:read`, requires a `runId` query parameter, and reads a company-scoped run status via `internal.agentRuns.getPublicRunStatusInternal`.
-- `handlePublicAgentRunTrigger` requires `agent:run`, parses JSON, requires `agentId` and `objective`, and creates a company-scoped agent run through `internal.agentRuns.createPublicAgentRunInternal`.
-- `handlePublicWorkflowRunTrigger` requires `workflow:run`, parses JSON, requires `workflowId`, stringifies object `initialInput`, and creates a company-scoped workflow run through `internal.workflows.createPublicWorkflowRunInternal`.
+- `handlePublicRunStatus` requires `run:read`, requires a `runId` query parameter, and reads a company-scoped run status via `internal.agentRuns.getPublicRunStatusInternal`. The returned run payload is a bounded summary with run identity, status, trigger type, timing, token/cost fields, output/error previews, replay mode, and counts for steps, approvals, and tool calls.
+- `handlePublicAgentRunTrigger` requires `agent:run`, parses JSON, requires `agentId` and `objective`, and creates a company-scoped agent run through `internal.agentRuns.createPublicAgentRunInternal`. The internal helper trims the objective and rejects values over 4,000 characters. Successful responses include `runId`, `status`, and a relative `statusUrl` for polling the public run-status endpoint.
+- `handlePublicWorkflowRunTrigger` requires `workflow:run`, parses JSON, requires `workflowId`, stringifies object `initialInput`, and creates a company-scoped workflow run through `internal.workflows.createPublicWorkflowRunInternal`. The internal helper trims input and rejects values over 20,000 characters.
 
 Handlers return `{ ok: false, error }` with appropriate HTTP status codes for auth, scope, rate-limit, parse, and validation failures. Successful run triggers return `202`.
+
+Public trigger targets are tenant-bound. Agent run creation rejects missing, inactive, or cross-company agents through the same not-found/inactive error path. Workflow run creation rejects missing, inactive, non-webhook, or cross-company workflows through the same not-found/not-configured error path. Preserve those indistinguishable failure messages so public callers cannot use an API key from one company to probe records that belong to another company.
 
 ## Webhook Delivery Model
 
@@ -94,11 +96,13 @@ Retry delay starts at 60 seconds and caps at 15 minutes. The default maximum att
 Current coverage includes:
 
 - `convex/apiKeys.test.ts` for key creation, tenant scoping, scope enforcement, revocation, digest authentication, and rate limiting
+- `convex/agentRuns.test.ts` for public agent trigger creation, version snapshot attachment, and cross-company agent rejection
+- `convex/workflows.test.ts` for public workflow trigger creation, webhook company scoping, and direct workflow webhook payload limits
 - `convex/webhookDeliveries.test.ts` for listing, summaries, status transitions, validation, dispatch success, retry scheduling, and abandonment
 - `src/app/(dashboard)/admin/settings/api-keys/page.test.tsx` for API key UI behavior
 - `src/app/(dashboard)/admin/settings/webhook-deliveries/page.test.tsx` for delivery monitor rendering
 
-When changing public endpoints, update authentication tests and handler tests together. When changing delivery status semantics, update both the Convex delivery tests and the admin page expectations.
+When changing public endpoints, update authentication tests, run-trigger tests, and handler tests together. When changing delivery status semantics, update both the Convex delivery tests and the admin page expectations.
 
 ## Maintenance Notes
 

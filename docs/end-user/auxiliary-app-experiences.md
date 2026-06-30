@@ -42,6 +42,8 @@ The sandbox lets a user:
 
 When `Any (Auto-Route)` is selected, Sonae first evaluates the prompt against available agents. If a strong match is found, the message runs against that agent. If no strong match is found, the message falls back to the global assistant behavior.
 
+Auto-routing depends on the platform's configured router model and currently uses the Google Vertex routing path behind the scenes. If auto-route returns no match or fails, the sandbox falls back to the global assistant rather than blocking the prompt.
+
 The sandbox writes normal chat thread and message records. Its purpose is not to hide activity from the system; it is to keep test interactions separate from standard user assistant workflows.
 
 ## Permissions And Visibility

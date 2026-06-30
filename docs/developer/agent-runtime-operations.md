@@ -28,9 +28,13 @@ Shared operational UI should keep using admin pagination, in-app modals, inline 
 - `replayRun` and `cancelRun` for run operations.
 - internal creation and update helpers used by chat, schedules, workflows, webhooks, and events.
 
+Internal run creation through `createRunInternal` attaches an agent version snapshot before inserting the queued run. Public trigger creation through `createPublicAgentRunInternal` does the same after trimming and validating the objective. The public target agent must exist, be active, and have `agent.companyId` equal to the supplied public trigger company id. A company id mismatch is intentionally reported as the same "not found or inactive" failure as inactive or missing agents so public callers cannot distinguish cross-tenant records.
+
 Run statuses are `QUEUED`, `RUNNING`, `PENDING_APPROVAL`, `SUCCESS`, `FAILED`, and `CANCELLED`. Step kinds include observe, plan, model, tool call, tool result, approval request, replan, and final.
 
 `buildRunTimeline` joins steps, tool calls, and approvals into a UI-safe timeline. `buildToolCallDetail` exposes raw arguments only to super admins; non-super-admin users receive redacted previews where available. Preserve that boundary when adding fields.
+
+`updateRunStatusInternal` treats cancellation as terminal precedence. Once a run is `CANCELLED`, later attempts to write another status are ignored unless they also write `CANCELLED`. Terminal status updates patch related `agentMemoryUsage` rows with the final outcome, so memory-quality and learning views can tell whether retrieved memories appeared in successful, failed, or cancelled executions.
 
 ## Runtime Budgets
 
@@ -45,13 +49,25 @@ Run statuses are `QUEUED`, `RUNNING`, `PENDING_APPROVAL`, `SUCCESS`, `FAILED`, a
 
 It also centralizes stop checks and stop messages for tool-call, runtime, token, and cost budgets. Runtime changes should keep budget checks deterministic and testable.
 
+`runAgentObjective` can receive chat attachment `fileIds` from `api.chat.sendMessage`. The chat mutation validates stored upload metadata before scheduling the agent runtime. The runtime then parses supported document blobs through `convex/utils/fileParser.ts`, appends extracted text as untrusted context for the current prompt, caps each parsed document to 50,000 characters, and caps the final prompt plus attachment context to 10,000 characters before provider execution. Do not treat attached document text as system instructions or bypass chat upload validation when adding new agent entry points.
+
+## Model Resolution Caveat
+
+Agent runtime paths resolve model configuration from stored `aiModels` and `aiModelDefaults`, but the active execution calls still require Google Vertex-compatible models before provider execution. `runAgentObjective`, `runTriggeredAgentObjective`, and `executeAgentNode` call `getGoogleVertexProviderModelId` after model resolution and then use Vertex generation helpers. This means provider-neutral catalog entries can be configured and recorded, but these runtime paths will fail if the resolved agent or workflow model is not backed by Google Vertex until provider-adapter execution is extended for agent runtime.
+
+Keep this distinction visible when changing model defaults, replay behavior, workflow agent nodes, or provider support. Do not document agent runtime as fully provider-agnostic until these paths use the shared provider registry or equivalent adapter layer.
+
 ## Tool Calls And Approvals
 
 Tool execution policy is defined in `convex/aiToolExecutionService.ts`, while run-level evidence lives in `agentToolCalls` and `agentRunApprovals`.
 
 When a tool needs confirmation, the run moves to `PENDING_APPROVAL`. `decideApproval` checks admin access to the run company, records reviewer metadata, updates the approval and tool-call rows, and moves the run according to the decision.
 
+Approving an approval moves the linked tool call back to `PENDING`, records `confirmationGrantedAt`, returns the run to `RUNNING`, and schedules `internal.agentRuntime.resumeApprovedToolCall`. Rejecting an approval marks the tool call `DENIED`, inserts a failed final step, marks the run `FAILED`, and records the final output and error. Cancelling an approval marks the tool call `CANCELLED`, inserts a skipped final step, marks the run `CANCELLED`, and sets `cancelledAt`. Rejection and cancellation also update memory-usage outcomes for the run.
+
 Approval decisions are not just UI actions. They are part of the durable run record and may become eval evidence, reflection context, or release readiness evidence.
+
+Replay and cancellation are also audited run operations. Failed or cancelled runs can be replayed in `CURRENT_ACTIVE` mode, which creates or uses a current version snapshot, or `SAME_VERSION` mode when the source run already has a version snapshot. Cancellation is available only for queued, running, or pending-approval runs; it cancels pending approvals, cancels pending or approval-required tool calls, appends a skipped final step, marks the run `CANCELLED`, sets `cancelledAt`, updates memory usage, and records a `CANCEL_AGENT_RUN` audit log. Replay records `REPLAY_AGENT_RUN` with source run id, source status, and replay mode.
 
 ## Feedback And Learning Artifacts
 
@@ -94,7 +110,7 @@ Release candidate comparison in `agentEvalFixtures.ts` checks fixture freshness 
 
 Operational modules usually require `requireAdmin` and then enforce company access with `assertAdminCanAccessCompany`. Super admins can inspect broader platform records where the query supports it. Company admins must not see cross-tenant runs, tool calls, approvals, memories, evals, logs, or improvement artifacts.
 
-Do not authorize by agent id alone. Agent records are global, but run and review artifacts often carry company scope. Use the record's company id for access checks.
+Do not authorize by agent id alone. Agent records may be global or company-scoped, and run and review artifacts often carry company scope. Use the record's company id for access checks, and preserve company-id equality checks for public trigger paths.
 
 Raw tool arguments are sensitive. Keep raw argument access super-admin-only unless there is a deliberate product and security change.
 

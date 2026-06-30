@@ -18,7 +18,16 @@ Global AI routes:
 - `src/app/(dashboard)/admin/ai/models/[id]/page.tsx` edits a model friendly name and pricing configuration.
 - `src/app/(dashboard)/admin/ai/tools/page.tsx`, `tools/new/page.tsx`, `tools/[id]/page.tsx`, `tools/mcp/new/page.tsx`, and `tools/connectors/[id]/page.tsx` manage tools and connectors.
 
-Company AI routes include `src/app/(dashboard)/admin/companies/[id]/ai/**`, `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx`. They use the same backend tables but pass a company id and apply company-scoped authorization.
+Company AI routes use the same backend tables but pass a company id and apply company-scoped authorization:
+
+- `src/app/(dashboard)/admin/companies/[id]/ai/layout.tsx` renders the company AI section shell.
+- `src/app/(dashboard)/admin/companies/[id]/ai/page.tsx` is the company AI landing surface.
+- `src/app/(dashboard)/admin/companies/[id]/ai/models/page.tsx` manages company model defaults.
+- `src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx` edits the company prompt.
+- `src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx`, `src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx`, and `src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx` manage company-scoped AI rules.
+- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx` render company knowledge management.
+- `src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/page.tsx` and `src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx` expose company chat-log review paths.
+- `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the company widget.
 
 The shared knowledge UI lives in `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx`. It is reused for global, company, and agent knowledge.
 
@@ -36,6 +45,7 @@ AI administration touches these schema areas in `convex/schema.ts`:
 - `aiTools` and `agentTools` store global tool definitions and agent bindings.
 - `widgets` stores global and company embeddable widget configuration.
 - `threads` and `messages` store chat, widget, and agent conversation messages with company/user/agent/widget analytics dimensions.
+- `aiActionRequests` stores lightweight reservations for provider-backed helper actions such as voice transcription and workflow node configuration generation. These rows support per-actor rate limits before provider calls are made.
 - `analyticsDailySnapshots` and message metadata support cost and usage reporting.
 
 Keep sparse scope fields meaningful. A global knowledge document has no company id, agent id, or thread id. A company knowledge document has a company id. Agent knowledge can have an agent id and, for admin-scoped writes, may also carry company scope. Thread knowledge has a thread id.
@@ -80,17 +90,25 @@ The runtime guardrail is that model tool requests are not execution authority. T
 
 `convex/widgets.ts` implements global and company widgets. Global widget reads and writes require super-admin access. Company widget reads and writes require admin access to the company. `saveWidget` validates scope, stores appearance/gateway/integration settings, and writes audit logs. Logo uploads use the admin image upload policy.
 
-The public route `src/app/w/[widgetId]/page.tsx` reads active widget configuration, validates referrer/allowed domains in the browser, optionally gates by visitor name/email, creates widget threads through `api.widgets.createWidgetThread`, and sends messages through normal chat mutation paths. It posts widget popup configuration to the parent only when the referrer is allowed. The sandbox route `src/app/sandbox/[widgetId]/page.tsx` injects `/embed.js` with the widget id into a simulated host page.
+The public route `src/app/w/[widgetId]/page.tsx` reads active widget configuration, validates referrer/allowed domains in the browser, optionally gates by visitor name/email, creates widget threads through `api.widgets.createWidgetThread`, and sends messages through normal chat mutation paths with the widget access token returned for that thread. It posts widget popup configuration to the parent only when the referrer is allowed. The sandbox route `src/app/sandbox/[widgetId]/page.tsx` injects `/embed.js` with the widget id into a simulated host page.
 
 Client-side domain checks are helpful for the iframe experience, but sensitive widget behavior must remain backend-scoped by widget id, company id, and active state. Avoid adding public widget mutations that trust host page data without backend validation.
 
 ## Costs And Chat Logs
 
-Global AI costs use `api.analytics.getGlobalAnalytics`, which requires super-admin access. The cost screen displays timeline, aggregates, provider/model distribution, and leaderboards. Company metrics use company-scoped analytics access in `convex/analytics.ts`.
+Global AI costs use `api.analytics.getGlobalAnalytics`, which requires super-admin access. The cost screen displays timeline, aggregates, provider/model distribution, and leaderboards. Company metrics use company-scoped analytics access in `convex/analytics.ts`. Historical analytics snapshots store model metrics but not provider totals, so provider distribution is currently live-overlay attribution rather than a complete historical provider rollup.
 
 Global chat logs use `convex/chatAdmin.ts`. Global paginated thread reads require super-admin access. Company thread reads allow super admins and admins who can read the company. `getAdminThreadMessages` requires admin access and enforces company access for non-super-admins before returning up to 500 messages.
 
 Chat transcript copy is built in the browser through `src/lib/chatTranscript.ts`. Treat transcripts as sensitive data because they can include user prompts, assistant responses, uploaded-file references, and business context.
+
+## Provider-Backed Helper Actions
+
+Some AI actions are helper utilities rather than normal chat turns. Voice transcription calls `api.ai.transcribeAudio`; workflow node mapping calls `api.ai.generateNodeConfig`. Both actions validate payload shape and size before reaching a provider, reserve an `aiActionRequests` row for the actor, and reject rapid repeated calls with a 429-style error.
+
+`convex/aiActionRequests.ts` owns the reservation mutation. It queries the most recent rows by actor and action name, delegates the window check to `convex/aiActionRequestService.ts`, and inserts a new reservation only after the caller is still inside the allowed window. The current implementation does not prune old request rows during reservation, so cleanup or retention should be handled deliberately if request volume grows. The helper service is intentionally small and pure so rate-limit behavior can be tested without invoking provider actions.
+
+Transcription is authenticated-user accessible, accepts only supported audio MIME types, rejects malformed base64, and caps decoded audio at 10MB. Node configuration generation requires an administrator, trims and bounds prompt, node type, and graph context, then resolves its model through the global workflow model configuration. Both helper paths currently require Google Vertex-compatible resolved models before provider calls. Keep new provider-backed helper actions behind the same pattern: authenticate first, validate bounded input, reserve the action request, then call the provider through configured model services.
 
 ## Authorization And Audit Expectations
 
@@ -108,6 +126,7 @@ Focused tests include:
 - `convex/aiTools.test.ts`, `convex/aiToolReadTools.test.ts`, `convex/aiToolWriteTools.test.ts`, and `convex/aiToolExecutionService.test.ts`.
 - `convex/widgets.test.ts`, `src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx`, and widget config component tests.
 - `convex/analytics.test.ts`, cost component tests under `src/app/(dashboard)/admin/ai/costs/_components/`, and chat admin tests where present.
+- `convex/ai.test.ts` for provider-backed helper action input guardrails and `convex/aiActionRequestService.ts` rate-limit behavior.
 - UI tests under `src/app/(dashboard)/admin/ai/**`.
 
 For documentation-only changes, run `git diff --check`. Before merging code changes in this area, follow the full repo gate:

@@ -6,6 +6,7 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 
 - [Developer Ship Checks Operator Guide](./developer-ship-checks-operator-guide.md)
 - [Local Demo Seed Runbook](./local-demo-seed-runbook.md)
+- [Local Test Auth Runbook](./local-test-auth-runbook.md)
 - [White-Label Packaging Operator Guide](./white-label-packaging-operator-guide.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)
 

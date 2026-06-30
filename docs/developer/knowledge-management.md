@@ -56,13 +56,15 @@ Standard users cannot upload admin knowledge documents. Thread knowledge is narr
 
 ## Ingestion Pipeline
 
-File and manual text ingestion schedules `internal.knowledgeActions.ingestDocument`. The action reads stored file content or manual text, extracts text for supported formats, chunks the text, resolves the active embedding model through stored AI model defaults, embeds chunks with Vertex, and saves chunk batches through `internal.knowledge.saveChunksInternal`.
+File and manual text ingestion schedules `internal.knowledgeActions.ingestDocument`. The action reads stored file content or manual text, extracts PDFs with `pdf-extraction`, extracts Word `.docx` files with `mammoth`, and otherwise falls back to UTF-8 text decoding before chunking. CSV and plain text work through that text fallback. Although the shared upload policy currently accepts Excel MIME types, admin and thread knowledge ingestion does not yet use the richer Excel parser from `convex/utils/fileParser.ts`; do not promise reliable spreadsheet extraction for persisted knowledge until that implementation is added. After text extraction, `convex/utils/knowledgeActionsService.ts` normalizes whitespace and chunks content with the current 1,000-character target and 200-character overlap, adjusting overlap safely when a caller supplies smaller chunk sizes. Ingestion then resolves the active embedding model through stored AI model defaults, embeds chunks with Vertex, and saves chunk batches through `internal.knowledge.saveChunksInternal`.
 
-Website ingestion uses Firecrawl:
+Website ingestion uses Firecrawl and the shared URL safety helper in `convex/utils/security.ts`:
 
-- `mapWebsite` requires an action-admin identity, validates the URL against SSRF protections, and calls Firecrawl map with a cap of 500 links.
+- `mapWebsite` requires an action-admin identity, validates the URL with `validateSafeUrl`, and calls Firecrawl map with a cap of 500 links.
 - `queueWebsiteUrls` validates URLs, creates pending URL documents, and schedules `processWebsiteQueue`.
 - `processWebsiteQueue` scrapes one pending URL at a time, handles Firecrawl 429 responses by requeueing, embeds scraped markdown, and schedules the next queue check.
+
+`validateSafeUrl` is also reused by external URL actions outside knowledge ingestion. It allows only HTTP and HTTPS URLs, rejects malformed URLs, blocks localhost and known cloud metadata hosts, blocks private IPv4 ranges including loopback, link-local, carrier-grade NAT, and RFC1918 ranges, blocks private or loopback IPv6 forms, and rejects IPv4-mapped IPv6 plus non-standard numeric, hexadecimal, and octal IP representations. Preserve that shared helper rather than recreating narrower URL filters in feature code.
 
 The embedding path records provider key, logical model id, provider model id, and dimensions so quality checks can detect model drift later.
 

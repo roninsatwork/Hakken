@@ -15,18 +15,32 @@ const defaultPiiConfig: PiiConfig = {
   maskNinos: true,
 };
 
-function isAnonymousWidgetThread(thread: Doc<"threads">) {
+export function isAnonymousWidgetThread(thread: Doc<"threads">) {
   return Boolean(thread.widgetId && !thread.userId);
+}
+
+export async function digestWidgetAccessToken(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function isWidgetAccessTokenValid(thread: Doc<"threads">, token: string | undefined) {
+  if (!thread.widgetAccessTokenHash || !token) return false;
+  return await digestWidgetAccessToken(token.trim()) === thread.widgetAccessTokenHash;
 }
 
 export async function canAccessThread(
   ctx: DbCtx,
   thread: Doc<"threads">,
-  current: { userId: Id<"users"> } | null
+  current: { userId: Id<"users"> } | null,
+  widgetAccessToken?: string
 ) {
   if (isAnonymousWidgetThread(thread)) {
     const widget = thread.widgetId ? await ctx.db.get(thread.widgetId) : null;
-    return Boolean(widget?.isActive);
+    return Boolean(widget?.isActive && (await isWidgetAccessTokenValid(thread, widgetAccessToken)));
   }
 
   return Boolean(current && thread.userId === current.userId);
@@ -36,11 +50,15 @@ export async function assertCanAccessThread(
   ctx: DbCtx,
   thread: Doc<"threads">,
   current: { userId: Id<"users"> } | null,
+  widgetAccessToken?: string,
   inactiveWidgetMessage = "Unauthorized: Widget is inactive"
 ) {
   if (isAnonymousWidgetThread(thread)) {
     const widget = thread.widgetId ? await ctx.db.get(thread.widgetId) : null;
     if (!widget?.isActive) throw new Error(inactiveWidgetMessage);
+    if (!(await isWidgetAccessTokenValid(thread, widgetAccessToken))) {
+      throw new Error("Unauthorized: Invalid widget session");
+    }
     return;
   }
 

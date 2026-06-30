@@ -264,6 +264,19 @@ export default defineSchema({
     .index("by_api_key_requested", ["apiKeyId", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
 
+  aiActionRequests: defineTable({
+    actorId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
+    actionName: v.union(
+      v.literal("transcribeAudio"),
+      v.literal("generateNodeConfig")
+    ),
+    requestedAt: v.number(),
+  })
+    .index("by_actor_action_requested", ["actorId", "actionName", "requestedAt"])
+    .index("by_company_action_requested", ["companyId", "actionName", "requestedAt"])
+    .index("by_requested", ["requestedAt"]),
+
   webhookDeliveries: defineTable({
     companyId: v.id("companies"),
     eventType: v.string(),
@@ -1019,6 +1032,7 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")), // Sandbox tracking
     widgetId: v.optional(v.id("widgets")), // To link threads directly to a widget
+    widgetAccessTokenHash: v.optional(v.string()),
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     createdAt: v.number(),
@@ -1081,6 +1095,7 @@ export default defineSchema({
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
     isActive: v.boolean(),
     // Inline Sandbox Configuration
+    companyId: v.optional(v.id("companies")),
     isGlobal: v.optional(v.boolean()),
     workflowId: v.optional(v.id("workflows")),
     createdAt: v.number(),
@@ -1263,6 +1278,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     createdBy: v.id("users"),
+    companyId: v.optional(v.id("companies")),
     webhookSecret: v.optional(v.string()),
   })
     .index("by_name", ["name"])

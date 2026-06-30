@@ -9,6 +9,8 @@ Launch operations connect app template catalog records, launch plans, draft agen
 - `src/app/(dashboard)/admin/launch/plans/[id]/page.tsx` renders launch plan detail, readiness summaries, developer tasks, workspace actions, connector readiness, draft resources, and archive/materialize actions.
 - `src/app/(dashboard)/admin/app-kits/plans/[id]/page.tsx` re-exports the launch plan detail page.
 - `src/app/(dashboard)/admin/releases/page.tsx` renders agent release readiness and recent release candidates.
+- `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` embeds latest release state, snapshot comparison, and release actions in Agent Studio.
+- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` renders release-gate fixtures, eval suite presets, and release candidate comparison for one agent.
 - `src/app/(dashboard)/admin/run-observatory/page.tsx` renders recent agent run evidence from `api.agentRuns.getRunObservatory`.
 
 Launch and release mutations are super-admin-only. The run observatory accepts admins, but standard admins must have a company id and receive company-scoped data.
@@ -61,7 +63,9 @@ When extending materialization, preserve idempotency, inactive defaults, audit l
 
 `approveReleaseCandidate` rechecks readiness and moves a pending candidate to `APPROVED`. `activateReleaseCandidate` rechecks readiness, enforces activation windows, activates the agent, updates the release, and writes audit evidence. `activateDueReleaseCandidates` is an internal mutation that activates approved candidates whose activation window has opened. `cancelReleaseCandidate` cancels pending or approved candidates. `rollbackRelease` only applies to activated releases; it restores the previous live snapshot when available or deactivates the agent if no previous snapshot exists.
 
-Release snapshot comparisons are based on agent version hashes for prompt and schemas, tools, memory, rules, model config, and policy. Preserve these comparison areas when changing snapshot structure so operators can understand what changed between candidates.
+Agent version snapshots store prompt and schemas, tools, skills, memory, rules, model config, and policy hashes. The current release snapshot comparison UI uses the implemented `versionHashComparisons` list in `convex/releases.ts`, which compares prompt and schemas, tools, memory, rules, model config, and policy. Although `agentVersions.skillSetHash` is stored, skill changes are not yet surfaced as a named comparison area. Preserve the existing comparison areas when changing snapshot structure, and add skill comparison explicitly before telling operators that skill changes appear in release diffs.
+
+Agent Studio surfaces reuse the same release backend. The settings page reads `getLatestReleaseForAgent` and can activate, cancel, or roll back the latest release where the lifecycle allows it. The evals page reads `getReleaseCandidateComparison` so reviewers can compare release-gate fixtures against latest and previous eval checkpoints before sign-off.
 
 ## Run Observatory
 

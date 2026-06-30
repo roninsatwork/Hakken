@@ -65,12 +65,11 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 The movement demo is frozen unless the user explicitly asks to reopen it or a required gate is broken.
 
 - [Movement Tracking](./movement-tracking.md)
+- [Movement Demo Client Recovery Plan](./movement-demo-client-recovery-plan.md)
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
 
-## Documentation Still Needed
+## Coverage Status
 
-The current library covers the main implemented systems, but many implementation areas are still documented only inside broad guides. Future documentation upkeep should treat these as active gaps, not as complete coverage.
+The latest implementation audits found no concrete unmentioned app route, non-generated Convex source module, shared frontend module, route-adjacent component, config/i18n file, schema table, durable documentation file, empty document, or broken local Markdown link.
 
-Priority gaps:
-
-No high-priority developer documentation gaps remain from the latest implementation audit. Continue auditing for stale, thin, newly added, renamed, or removed implementation areas on future runs.
+Future documentation upkeep should still treat newly changed implementation areas and active plans as audit targets. Coverage can drift when routes, Convex modules, workflows, scripts, settings, or operator procedures change.

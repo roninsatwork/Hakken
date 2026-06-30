@@ -15,11 +15,20 @@ If a user cannot open the routes below, first check their role, company assignme
 Use these admin routes:
 
 - `/admin/agents`: search agents, create agents, and delete agents.
-- `/admin/agents/[id]`: review usage, token, cost, and transaction summaries for one agent.
+- `/admin/agents/[id]`: review usage, token, cost, and transaction summaries for one agent, or launch a manual scheduled run from the agent shell.
+- `/admin/agents/[id]/settings`: edit identity, avatar, model mode, reasoning effort, internet access, activation, smoke checks, and release candidate actions.
+- `/admin/agents/[id]/knowledge`: manage the agent's tenant-scoped knowledge library.
+- `/admin/agents/[id]/system-prompt`: edit the agent's system prompt.
+- `/admin/agents/[id]/rules`: list, add, and edit agent governance rules.
+- `/admin/agents/[id]/integrations`: configure tool and integration mappings.
 - `/admin/agents/[id]/schemas`: edit input and output schemas.
 - `/admin/agents/[id]/skills`: attach reusable skills to one agent.
+- `/admin/agents/[id]/runs`: review run evidence, feedback, replay, cancellation, memory candidates, eval creation, and improvement suggestions.
+- `/admin/agents/[id]/evals`: manage eval fixtures, smoke evals, suite presets, release gates, and skill coverage.
+- `/admin/agents/[id]/memory`: review active memories, memory quality, candidates, reflections, and suggestions.
 - `/admin/agents/[id]/logs`: inspect agent trace history.
 - `/admin/agents/[id]/logs/[logId]`: inspect one trace.
+- `/admin/agents/approvals`: review pending tool-call approvals across agents.
 - `/admin/agents/skills`: manage the reusable skill catalog.
 - `/admin/agents/skills/[id]`: edit, clone, archive, export, and review rollout for one skill.
 

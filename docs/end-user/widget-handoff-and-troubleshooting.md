@@ -36,10 +36,11 @@ Allowed domains decide where the public widget may create conversations.
 
 Current behavior:
 
-- an empty allowlist allows broad public use
-- `*` allows all origins
+- `*` allows all origins and should be reserved for deliberate broad testing
+- concrete hostnames allow exact hosts and subdomains
 - exact host matches are accepted
 - subdomains of allowlisted hosts are accepted
+- an empty allowlist can still let the iframe render public configuration, but it does not authorize backend conversation creation
 - invalid or unauthorized source URLs are rejected by the backend
 - blocked backend attempts are recorded as `BLOCKED_WIDGET_ACCESS` audit events
 
@@ -57,7 +58,7 @@ Check:
 - branding and logo render correctly
 - name and email gates appear only when expected
 - conversation starters send the expected first message
-- the reset action clears the browser's widget thread
+- the reset action clears the browser's widget session
 - sound behavior is acceptable
 
 If the sandbox fails, fix the widget configuration before involving the customer's website.
@@ -76,17 +77,17 @@ If the customer has a strict content security policy, they may need to allow the
 
 ## Visitor Conversation Behavior
 
-Visitors can open the widget, pass name/email gates when enabled, use conversation starters, send messages, and continue the same browser conversation through local storage.
+Visitors can open the widget, pass name/email gates when enabled, use conversation starters, send messages, and continue the same browser conversation through the browser's widget session.
 
-Widget threads are stored with the widget id and source URL. Returning visitors on the same browser can continue the stored widget thread until they reset it or clear browser storage.
+Widget threads are stored with the widget id and source URL. Returning visitors on the same browser can continue the stored widget thread while the browser still has the widget session credential. If the browser has only part of the saved widget session, the iframe clears that partial state and starts a fresh thread. Resetting the widget or clearing site storage should remove the local session and start a new thread.
 
 If a widget has a linked agent, visitor messages run with that agent context. If no agent is linked, the widget still creates a chat thread but does not force a dynamic agent id.
 
 ## Attachments
 
-Anonymous widget uploads are restricted. The widget must be active, the target thread must belong to the widget, and each widget thread has a cap on attachment-bearing messages. Uploaded files are validated before finalization.
+Anonymous widget uploads are restricted. The widget must be active, the target thread must belong to the widget, the browser must present the matching widget session credential, and each widget thread has a cap on attachment-bearing messages. Uploaded files are validated before finalization.
 
-If a visitor cannot upload, check whether the widget is active, the thread belongs to the widget, the quota has been reached, and the file type/size matches the widget attachment policy.
+If a visitor cannot upload, check whether the widget is active, the thread belongs to the widget, the browser session is still valid, the quota has been reached, and the file type/size matches the widget attachment policy.
 
 ## Troubleshooting A Widget That Does Not Load
 
@@ -95,7 +96,7 @@ Check in this order:
 1. Confirm the widget id in the snippet matches the saved widget.
 2. Confirm the widget is active.
 3. Test `/sandbox/[widgetId]`.
-4. Confirm the production host matches the allowed domains.
+4. Confirm the production host matches the allowed domains. If testing broadly, confirm `*` is configured explicitly.
 5. Check the browser console for blocked scripts, blocked frames, or content security policy errors.
 6. Confirm the Sonae host is reachable from the customer page.
 7. Check audit logs for `BLOCKED_WIDGET_ACCESS`.
@@ -113,7 +114,7 @@ If the widget talks like the wrong agent, check the linked agent and whether the
 
 If conversations are missing from company chat logs, confirm the widget is company-scoped, the source host is allowed, and the conversation actually created a thread.
 
-If a customer reports repeated old context, ask them to use the widget reset action or clear site storage, then start a new thread.
+If a customer reports repeated old context, ask them to use the widget reset action or clear site storage, then start a new thread. If messages fail after a browser restore or storage migration, reset the widget session so the iframe can create a fresh thread and credential.
 
 ## Support Handoff Notes
 

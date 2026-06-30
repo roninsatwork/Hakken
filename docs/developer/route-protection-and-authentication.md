@@ -1,8 +1,8 @@
 # Route Protection And Authentication Developer Guide
 
-Route protection and authentication in Sonae are implemented through Convex Auth providers, client-side layout guards, deterministic test-auth helpers, and backend Convex authorization checks. There is currently no root `middleware.ts`; route access is enforced by app layouts and by every sensitive query, mutation, and action.
+Route protection and authentication in Sonae are implemented through Convex Auth providers, client-side layout guards, deterministic test-auth helpers, Next.js route aliases/security headers, and backend Convex authorization checks. There is currently no root `middleware.ts`; route access is enforced by app layouts and by every sensitive query, mutation, and action.
 
-Read this before changing `convex/auth.ts`, `convex/authUserProvisioning.ts`, `convex/authEvents.ts`, `convex/authz.ts`, `convex/actionAuth.ts`, `convex/localTestAuth.ts`, `src/app/login/page.tsx`, dashboard layouts, admin layouts, or E2E auth helpers. For support diagnostics events, see [Auth Diagnostics](./auth-diagnostics.md). For user and invite lifecycle rules, see [Company And User Management](./company-user-management.md).
+Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserProvisioning.ts`, `convex/authEvents.ts`, `convex/authz.ts`, `convex/actionAuth.ts`, `convex/localTestAuth.ts`, `src/app/login/page.tsx`, dashboard layouts, admin layouts, or E2E auth helpers. For support diagnostics events, see [Auth Diagnostics](./auth-diagnostics.md). For user and invite lifecycle rules, see [Company And User Management](./company-user-management.md).
 
 ## Authentication Providers
 
@@ -158,7 +158,28 @@ Current implemented redirects include:
 - `/admin/companies/[id]/directory` redirects to `/admin/companies/[id]/directory/users`.
 - `/admin/companies/[id]/ai` redirects to `/admin/companies/[id]/ai/knowledge`.
 
+`next.config.ts` also keeps legacy company-admin URLs working with temporary redirects:
+
+- `/admin/companies/:id/users` -> `/admin/companies/:id/directory/users`
+- `/admin/companies/:id/invites` -> `/admin/companies/:id/directory/invites`
+- `/admin/companies/:id/knowledge` -> `/admin/companies/:id/ai/knowledge`
+- `/admin/companies/:id/prompt` -> `/admin/companies/:id/ai/prompt`
+- `/admin/companies/:id/system-prompt` -> `/admin/companies/:id/ai/prompt`
+- `/admin/companies/:id/rules/new` -> `/admin/companies/:id/ai/rules/new`
+- `/admin/companies/:id/rules/:ruleId` -> `/admin/companies/:id/ai/rules/:ruleId`
+- `/admin/companies/:id/rules` -> `/admin/companies/:id/ai/rules`
+- `/admin/companies/:id/models` -> `/admin/companies/:id/ai/models`
+- `/admin/companies/:id/chat-logs` -> `/admin/companies/:id/ai/chat-logs`
+
 These redirects shape navigation. They do not replace backend authorization checks.
+
+## Security Headers
+
+`next.config.ts` applies `next-secure-headers` to `/`, `/login`, `/admin/:path*`, `/app/:path*`, `/sandbox/:path*`, `/w/:path*`, and `/embed.js`.
+
+The default header set is report-only CSP with same-origin frame ancestors. It is used by the public landing/login, admin, app, and sandbox routes. The widget iframe route `/w/:path*` and the embed script `/embed.js` use an embed header set with frame guard disabled and `frameAncestors: ["*"]` so customer sites can host the widget. Treat this as intentional widget behavior, not a general relaxation for dashboard routes.
+
+Both header sets currently allow self plus HTTPS scripts, inline/eval scripts, inline styles, data/blob/HTTPS images, HTTPS and websocket connections, and HTTPS frames. Because the CSP is report-only, do not describe it as an enforced runtime block until `reportOnly` is removed. If widget embedding, sandbox behavior, or dashboard CSP posture changes, update this guide, [Embedded Widgets](./embedded-widgets.md), and the customer handoff docs together.
 
 ## Access Boundary Rules
 

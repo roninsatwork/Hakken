@@ -18,8 +18,10 @@ Follow these steps to set up the Sonae development environment on your local mac
 
 2.  **Install Dependencies**:
     ```bash
+    nvm use
     npm ci
     ```
+    Run `npm ci` before trusting local checks. The repository's `predev`, `pretest`, `prebuild`, and `preconvex:dev` hooks run `npm run verify:env`, which verifies Node `22.13.0` and installed direct dependency versions against `package-lock.json`.
 
 3.  **Environment Variables**:
     Create a `.env.local` file in the root directory. You can use `.env.example` as a template.
@@ -34,7 +36,9 @@ Follow these steps to set up the Sonae development environment on your local mac
     npm run verify:env
     npm run setup:validate
     ```
-    The first command checks Node and installed dependency versions against `package-lock.json`. The setup validator checks local Convex configuration, auth/provider readiness, and optional ingestion credentials without printing secret values.
+    `npm run verify:env` is backed by `scripts/verify-local-environment.mjs`. It checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot make local verification look healthier than CI.
+
+    `npm run setup:validate` is backed by `scripts/validate-setup.mjs`. It checks local Convex configuration, auth/provider readiness, and optional ingestion credentials without printing secret values.
 
 5.  **Run Development Servers**:
     You need to run both the Next.js dev server and the Convex backend.
@@ -48,13 +52,30 @@ Follow these steps to set up the Sonae development environment on your local mac
       npm run convex:dev
       ```
 
+## Local Test Auth
+
+For deterministic local E2E sessions, use the local test-auth helpers only in an explicitly configured local environment:
+
+```bash
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run convex:dev
+LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth npm run auth:local:seed
+LOCAL_TEST_AUTH_ENABLED=1 npm run dev
+LOCAL_TEST_AUTH_SECRET=sonae-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3000 npm run auth:local:state
+```
+
+The `/local-test-auth` route also needs `LOCAL_TEST_AUTH_ENABLED=1` in the Next.js process; the backend provider and seed/authorize functions need it in the Convex process. The generated storage states live under `e2e/.auth/` and should not be committed. For details, read [Local Test Auth Runbook](../operator/local-test-auth-runbook.md).
+
 ## Running Tests
 
-Sonae uses a dual-environment testing strategy (Vitest).
+Sonae uses Vitest for unit/integration tests and Playwright for browser tests.
 
-- **UI Tests**:
+- **Unit and integration tests**:
   ```bash
   npm run test:run
+  ```
+- **Browser tests**:
+  ```bash
+  npm run test:e2e
   ```
 - **Full Local Check**:
   ```bash
@@ -64,6 +85,22 @@ Sonae uses a dual-environment testing strategy (Vitest).
   ```bash
   npm run build
   ```
+- **Coverage**:
+  ```bash
+  npm run test:coverage
+  npm run coverage:check
+  ```
+  Coverage is configured in `vitest.config.ts`. The coverage run includes `src/**/*.{ts,tsx}` and `convex/**/*.ts`, excludes generated files, test files, config files, `src/e2e/**`, and seed/cron entry points, and writes text, HTML, and JSON-summary reports under `coverage/`. Thresholds are read from `coverage-thresholds.json`; `npm run coverage:check` uses the generated `coverage/coverage-summary.json` and the same threshold file so local and CI checks fail on the same floor.
+
+Before asking to merge or push implementation changes, follow the repo gate from `AGENTS.md`:
+
+```bash
+npm run verify:env
+npm run lint:all
+npm run check
+npm run build
+git diff --check
+```
 
 ## 💡 Quick Tips
 

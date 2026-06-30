@@ -80,7 +80,7 @@ Agent creation, template creation, agent list access, and core agent updates are
 
 Raw tool arguments are more sensitive than summarized run evidence. The run detail backend only exposes raw tool arguments to super admins. Company-scoped admins receive scoped views where applicable.
 
-Model choices are resolved from configured AI model settings. Users should not assume that a raw provider model name entered somewhere will always be used; model defaults, active model status, and allowed override rules affect runtime selection.
+Model choices are resolved from configured AI model settings. Users should not assume that a raw provider model name entered somewhere will always be used; model defaults, active model status, and allowed override rules affect runtime selection. Current agent execution also requires the resolved model to be compatible with the Google Vertex runtime path, so enabling another provider in the catalog does not by itself make that provider usable for live agent runs.
 
 ## Practical Guidance
 

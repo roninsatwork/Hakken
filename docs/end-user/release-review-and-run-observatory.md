@@ -43,7 +43,7 @@ Create a candidate only after readiness passes. If readiness is blocked, fix the
 
 ## Snapshot Comparison
 
-Release review includes a snapshot comparison against the previous live release where one exists. The comparison highlights changed and unchanged areas such as prompt and schemas, tools, skills, memory, rules, model configuration, and policy.
+Release review includes a snapshot comparison against the previous live release where one exists. The current comparison highlights changed and unchanged areas such as prompt and schemas, tools, memory, rules, model configuration, and policy. Skill snapshot data is stored with agent versions, but skill changes are not yet shown as a dedicated comparison area in the release diff, so inspect skill bindings directly when a candidate changes enabled skills.
 
 Use snapshot comparison to focus review. A release with prompt, tool, or policy changes deserves more scrutiny than a candidate where only release notes changed.
 

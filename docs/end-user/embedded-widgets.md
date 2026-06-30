@@ -29,7 +29,9 @@ Company widgets can also be associated with a company agent. When an agent is li
 
 ## Domain Allowlist
 
-Allowed domains decide where the widget may create a conversation. If the allowlist is empty, the public iframe is allowed broadly. If entries are present, the widget accepts the exact host or subdomains of each configured host. A `*` entry allows all origins.
+Allowed domains decide where the widget may create a conversation. To allow broad internal testing, configure `*` explicitly. For production, add the customer hostnames that should be allowed. The backend accepts exact hosts and subdomains of configured hosts and rejects unauthorized source URLs.
+
+An empty allowlist is not a production-ready allow-all setting for conversation creation. The iframe may still load enough public configuration to render, but the backend thread creation guard requires `*` or a matching configured domain before a visitor can start chatting.
 
 The browser iframe also checks the host page referrer before sending popup configuration back to the parent page. The backend repeats the origin check when creating the anonymous widget thread. Blocked backend attempts are recorded in audit logs with `BLOCKED_WIDGET_ACCESS`.
 
@@ -56,21 +58,22 @@ Inside the widget iframe:
 - name and email gates appear before the first message when required
 - the first visitor message includes gateway metadata when name or email was collected
 - conversation starters can send the first message
-- threads are stored in browser local storage under a widget-specific key so returning visitors can continue the same browser conversation
+- the browser keeps a widget-specific session so returning visitors can continue the same browser conversation
+- if the saved browser session is incomplete or invalid, the widget clears the local session and creates a fresh conversation
 - visitors can reset the local widget thread from the iframe
 
-Widget conversations are stored as chat threads with the widget id and source URL. Company operators can review company chat logs and identify widget-originated conversations.
+Widget conversations are stored as chat threads with the widget id and source URL. The anonymous browser session also needs its widget thread credential to continue reading or sending messages in that thread, so a copied thread id alone is not enough to reopen a visitor conversation. Company operators can review company chat logs and identify widget-originated conversations.
 
 ## Uploads
 
-The backend includes upload support for anonymous widget threads. Uploads are only accepted for an active widget and a thread that belongs to that widget. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.
+The backend includes upload support for anonymous widget threads. Uploads are only accepted for an active widget, a thread that belongs to that widget, and a matching widget session credential. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.
 
 ## Operational Notes
 
 Use the sandbox before distributing an embed snippet. Confirm that:
 
 - the widget is active
-- the allowlist includes the target host
+- the allowlist includes the target host, or `*` is intentionally set for broad internal testing
 - branding and greeting match the customer handoff
 - name and email gates match the support process
 - linked agents and knowledge have been reviewed

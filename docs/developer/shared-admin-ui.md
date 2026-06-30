@@ -8,16 +8,16 @@ Read this before changing `src/app/(dashboard)/admin/_components/**`, `src/app/(
 
 Core admin components live under `src/app/(dashboard)/admin/_components/`:
 
-- `AdminTable.tsx`: search bar, table shell, header rows/cells, loading row, empty row, row action wrapper, icon action button, pagination footer, and load-more footer.
-- `AdminConfirmationModal.tsx`: destructive confirmation wrapper around `SonaeModal`.
-- `AdminModalForm.tsx`: modal form field, error, action, input, and textarea helpers.
-- `AdminDetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
-- `AdminDetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
-- `AdminPageHeader.tsx`: list-page title/description/action header and primary action button.
-- `AdminRouteSubmenu.tsx`: sticky left submenu for nested route groups.
-- `AdminRulesTable.tsx`: shared AI rule table used by global and company rule screens.
-- `AiRuleSafetyWarning.tsx`: prompt/rule safety warning classifier and panel.
-- `AdminSaveControls.tsx`: save button, inline error, animated success/error feedback, and feedback pill.
+- `src/app/(dashboard)/admin/_components/AdminTable.tsx`: search bar, table shell, header rows/cells, loading row, empty row, row action wrapper, icon action button, pagination footer, and load-more footer.
+- `src/app/(dashboard)/admin/_components/AdminConfirmationModal.tsx`: destructive confirmation wrapper around `SonaeModal`.
+- `src/app/(dashboard)/admin/_components/AdminModalForm.tsx`: modal form field, error, action, input, and textarea helpers.
+- `src/app/(dashboard)/admin/_components/AdminDetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
+- `src/app/(dashboard)/admin/_components/AdminDetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
+- `src/app/(dashboard)/admin/_components/AdminPageHeader.tsx`: list-page title/description/action header and primary action button.
+- `src/app/(dashboard)/admin/_components/AdminRouteSubmenu.tsx`: sticky left submenu for nested route groups.
+- `src/app/(dashboard)/admin/_components/AdminRulesTable.tsx`: shared AI rule table used by global and company rule screens.
+- `src/app/(dashboard)/admin/_components/AiRuleSafetyWarning.tsx`: prompt/rule safety warning classifier and panel.
+- `src/app/(dashboard)/admin/_components/AdminSaveControls.tsx`: save button, inline error, animated success/error feedback, and feedback pill.
 
 Supporting shared UI lives outside the admin folder:
 
@@ -25,6 +25,8 @@ Supporting shared UI lives outside the admin folder:
 - `src/ui/components/feedback/SonaeModal.tsx`
 - `src/ui/components/feedback/SonaeEmptyState.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.tsx`
+
+Shared backend helpers for admin-style listing behavior live in `convex/adminQueryService.ts`. They are used by Convex modules such as `chatAdminService.ts`, `aiModels.ts`, `aiRules.ts`, and `agentLogs.ts` when data has to be collected or enriched before filtering and pagination.
 
 ## Tables And Search
 
@@ -55,6 +57,8 @@ When building new tables, prefer table semantics instead of div grids for dense 
 - `totalPages`
 
 `normalizeAdminSearchTerm` trims and lowercases search input. `matchesAdminSearchTerm` searches across nullable values and treats a blank search as a match.
+
+Backend modules that cannot rely directly on a Convex search index should use `normalizeSearchTerm`, `includesSearchTerm`, and `paginateItems` from `convex/adminQueryService.ts` rather than reimplementing slightly different search or slicing behavior. These helpers do not replace indexed queries for large datasets; use them for bounded admin lists after the module has already enforced authorization and collected the intended candidate set.
 
 Use `AdminPaginationFooter` for offset-style pages. It clamps stale page values, shows `Showing start-end of total`, and disables previous/next controls at bounds or while loading.
 
@@ -118,7 +122,7 @@ Keep empty-state copy localized when it is user-visible. Existing docs and tests
 
 ## Settings Sections
 
-Settings pages use `SettingBlock` and `ColorInput` from `src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx`.
+Settings pages use `SettingBlock` and `ColorInput` from `src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx`. Shared settings form types live in `src/app/(dashboard)/admin/settings/_components/types.ts`.
 
 `SettingBlock` provides a glass card, title, subtitle, and animated entrance. Use it for grouped settings sections on `/admin/settings`, not for normal page layout sections.
 
@@ -183,6 +187,7 @@ Focused tests include:
 - `src/app/(dashboard)/admin/_components/AiRuleSafetyWarning.test.tsx`
 - `src/app/(dashboard)/admin/_components/AdminSaveControls.test.tsx`
 - `src/app/(dashboard)/admin/_lib/pagination.test.ts`
+- `convex/adminQueryService.test.ts`
 - `src/ui/components/feedback/SonaeModal.test.tsx`
 - `src/ui/components/feedback/SonaeEmptyState.test.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.test.tsx`
