@@ -122,6 +122,16 @@ type DeveloperTaskSummary = {
   nextTaskStatus?: DeveloperTask["status"];
 };
 
+type MaintenanceChecklistItem = {
+  key: string;
+  title: string;
+  status: "BLOCKED" | "PENDING" | "READY";
+  detail: string;
+  owner: string;
+  actionLabel: string;
+  actionHref?: string;
+};
+
 type WorkspaceSetupAction = {
   key: "brand" | "invitePolicy" | "modelDefaults" | "planAssignment";
   title: string;
@@ -605,7 +615,7 @@ function PublishSurfacePlanSection({ plan, actions }: { plan?: PublishSurfacePla
 
 function DeveloperTaskMap({ summary, tasks }: { summary?: DeveloperTaskSummary; tasks?: DeveloperTask[] }) {
   return (
-    <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
+    <section id="developer-task-map" className="scroll-mt-24 border border-border-dim bg-card/60 rounded-[8px] p-4">
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
         <div>
           <h2 className="text-[15px] font-semibold text-foreground">Developer Task Map</h2>
@@ -668,6 +678,192 @@ function DeveloperTaskMap({ summary, tasks }: { summary?: DeveloperTaskSummary; 
         }) : (
           <p className="text-[12px] text-muted">No developer tasks generated.</p>
         )}
+      </div>
+    </section>
+  );
+}
+
+function BuildPlanMaintenanceChecklist({
+  payload,
+  linkedWorkspace,
+  createdResources,
+  readinessSummary,
+  developerTaskSummary,
+}: {
+  payload: LaunchPlanPayload;
+  linkedWorkspace: LaunchWorkspaceSummary | null;
+  createdResources: CreatedLaunchResources | null;
+  readinessSummary?: LaunchPlanReadinessSummary;
+  developerTaskSummary?: DeveloperTaskSummary;
+}) {
+  const workspaceKnowledgeHref = linkedWorkspace ? `/admin/companies/${linkedWorkspace.id}/knowledge` : undefined;
+  const firstAdminInput = payload.workspaceSetup?.invitePolicy?.savedInputs?.find((input) => input.toLowerCase().includes("admin"));
+  const connectorReady = readinessSummary && readinessSummary.connectorTotalCount > 0 && readinessSummary.connectorReadyCount === readinessSummary.connectorTotalCount;
+  const connectorStarted = readinessSummary && readinessSummary.connectorReadyCount > 0;
+  const developerBlocked = (developerTaskSummary?.blockedCount ?? 0) > 0;
+  const developerPending = (developerTaskSummary?.pendingCount ?? 0) > 0;
+
+  const items: MaintenanceChecklistItem[] = [
+    {
+      key: "workspace",
+      title: "Workspace",
+      status: linkedWorkspace ? "READY" : "BLOCKED",
+      detail: linkedWorkspace ? `${linkedWorkspace.name} is linked to this build plan.` : "Create or link the tenant workspace before tenant-specific setup can continue.",
+      owner: "Platform operator",
+      actionLabel: linkedWorkspace ? "Open workspace" : "Go to workspace actions",
+      actionHref: linkedWorkspace ? `/admin/companies/${linkedWorkspace.id}` : "#workspace-actions",
+    },
+    {
+      key: "access",
+      title: "First admin",
+      status: linkedWorkspace ? "PENDING" : "BLOCKED",
+      detail: firstAdminInput ?? "Capture and invite one accountable tenant admin after the workspace exists.",
+      owner: "Workspace owner",
+      actionLabel: linkedWorkspace ? "Open invites" : "Go to workspace actions",
+      actionHref: linkedWorkspace ? `/admin/companies/${linkedWorkspace.id}/directory/invites` : "#workspace-actions",
+    },
+    {
+      key: "connectors",
+      title: "Integrations",
+      status: connectorReady ? "READY" : connectorStarted ? "PENDING" : "BLOCKED",
+      detail: readinessSummary
+        ? `${readinessSummary.connectorReadyCount}/${readinessSummary.connectorTotalCount} recommended integrations are ready.`
+        : "Review recommended integrations before connector-backed behavior is tested.",
+      owner: "Integration owner",
+      actionLabel: "Open Marketplace",
+      actionHref: "/admin/ai/tools",
+    },
+    {
+      key: "knowledge",
+      title: "Knowledge",
+      status: payload.knowledgeImport?.savedInputs?.length ? "PENDING" : "BLOCKED",
+      detail: payload.knowledgeImport?.savedInputs?.join(" · ") || "Identify approved documents, URLs, policies, and knowledge owners.",
+      owner: "Knowledge owner",
+      actionLabel: linkedWorkspace ? "Open workspace knowledge" : "Go to workspace actions",
+      actionHref: workspaceKnowledgeHref ?? "#workspace-actions",
+    },
+    {
+      key: "resources",
+      title: "Draft resources",
+      status: createdResources ? "READY" : "BLOCKED",
+      detail: createdResources ? "Draft agents, workflows, and eval fixtures have been created." : "Create draft agents, workflows, and eval fixtures from this plan.",
+      owner: "Platform operator",
+      actionLabel: createdResources ? "Review created resources" : "Go to draft resource action",
+      actionHref: createdResources ? "#created-draft-resources" : "#create-draft-resources",
+    },
+    {
+      key: "review",
+      title: "Agent and workflow review",
+      status: createdResources ? "PENDING" : "BLOCKED",
+      detail: createdResources ? "Review inactive draft agents, workflow triggers, approvals, and eval coverage before activation." : "Create draft resources before reviewing generated agents and workflows.",
+      owner: "AI operator",
+      actionLabel: createdResources ? "Review agents" : "Go to draft resource action",
+      actionHref: createdResources ? "/admin/agents" : "#create-draft-resources",
+    },
+    {
+      key: "developer",
+      title: "Developer work",
+      status: developerBlocked ? "BLOCKED" : developerPending ? "PENDING" : "READY",
+      detail: developerTaskSummary
+        ? `${developerTaskSummary.blockedCount} blocked, ${developerTaskSummary.pendingCount} pending, ${developerTaskSummary.readyCount} ready developer tasks.`
+        : "Review product-specific code pointers, data mappings, and extension points.",
+      owner: "Developer",
+      actionLabel: "Review task map",
+      actionHref: "#developer-task-map",
+    },
+    {
+      key: "release",
+      title: "Release review",
+      status: readinessSummary?.status === "READY_FOR_REVIEW" ? "READY" : "BLOCKED",
+      detail: readinessSummary?.status === "READY_FOR_REVIEW"
+        ? "The draft plan is ready for release review."
+        : "Complete workspace, resource, connector, knowledge, eval, and developer checks before release review.",
+      owner: "Release owner",
+      actionLabel: "Open ship checks",
+      actionHref: "/admin/releases",
+    },
+  ];
+
+  const counts = items.reduce(
+    (totals, item) => {
+      totals[item.status] += 1;
+      return totals;
+    },
+    { BLOCKED: 0, PENDING: 0, READY: 0 },
+  );
+  const recommendedItem = items.find((item) => item.status === "BLOCKED") ?? items.find((item) => item.status === "PENDING") ?? items.find((item) => item.status === "READY");
+
+  return (
+    <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
+      <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+        <div>
+          <h2 className="text-[15px] font-semibold text-foreground">Setup And Maintenance Checklist</h2>
+          <p className="text-[12px] text-secondary mt-1 max-w-3xl">
+            Track the draft plan from setup through release readiness. These statuses are derived from the build plan, linked workspace, connector readiness, created resources, and developer task map.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 min-w-full xl:min-w-[360px]">
+          <div className="rounded-[8px] border border-rose-500/20 bg-rose-500/10 p-3">
+            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-rose-500">Blocked</div>
+            <div className="text-[18px] font-semibold text-foreground mt-1">{counts.BLOCKED}</div>
+          </div>
+          <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 p-3">
+            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-amber-500">Pending</div>
+            <div className="text-[18px] font-semibold text-foreground mt-1">{counts.PENDING}</div>
+          </div>
+          <div className="rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 p-3">
+            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-emerald-500">Ready</div>
+            <div className="text-[18px] font-semibold text-foreground mt-1">{counts.READY}</div>
+          </div>
+        </div>
+      </div>
+      {recommendedItem ? (
+        <div className="mt-4 rounded-[8px] border border-brand/20 bg-brand/5 px-4 py-3">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-brand">Recommended next step</div>
+              <h3 className="text-[15px] font-semibold text-foreground mt-1">{recommendedItem.title}</h3>
+              <p className="text-[12px] text-secondary leading-relaxed mt-1 max-w-3xl">{recommendedItem.detail}</p>
+              <p className="text-[11px] text-muted mt-2">Owner: {recommendedItem.owner}</p>
+            </div>
+            {recommendedItem.actionHref ? (
+              <Link href={recommendedItem.actionHref} className="inline-flex items-center justify-center rounded-[8px] bg-foreground px-3 py-2 text-[12px] font-medium text-background hover:opacity-90">
+                {recommendedItem.actionLabel}
+              </Link>
+            ) : (
+              <span className="inline-flex items-center justify-center rounded-[8px] border border-border-dim px-3 py-2 text-[12px] font-medium text-secondary">
+                {recommendedItem.actionLabel}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+        {items.map((item) => {
+          const Icon = taskIcon[item.status];
+          return (
+            <div key={item.key} className="rounded-[8px] border border-border-dim bg-background/30 px-3 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-[13px] font-semibold text-foreground">{item.title}</h3>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-muted mt-1">{item.owner}</p>
+                </div>
+                <span className={`inline-flex items-center gap-1 rounded-[6px] border px-2 py-0.5 text-[10px] font-bold tracking-[0.12em] uppercase flex-shrink-0 ${taskStatusClassName[item.status]}`}>
+                  <Icon className="w-3 h-3" />
+                  {item.status}
+                </span>
+              </div>
+              <p className="text-[12px] text-secondary mt-2 leading-relaxed">{item.detail}</p>
+              {item.actionHref ? (
+                <Link href={item.actionHref} className="inline-flex mt-3 text-[12px] font-medium text-brand hover:underline">
+                  {item.actionLabel}
+                </Link>
+              ) : (
+                <div className="mt-3 text-[12px] font-medium text-muted">{item.actionLabel}</div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -835,6 +1031,7 @@ export default function LaunchPlanDetailPage() {
             Archive
           </button>
           <button
+            id="create-draft-resources"
             type="button"
             onClick={handleMaterialize}
             disabled={isMaterializing || details.plan.status !== "DRAFT"}
@@ -847,6 +1044,14 @@ export default function LaunchPlanDetailPage() {
       </header>
 
       {error ? <p className="text-[12px] text-rose-500">{error}</p> : null}
+
+      <BuildPlanMaintenanceChecklist
+        payload={payload}
+        linkedWorkspace={linkedWorkspace}
+        createdResources={createdResources}
+        readinessSummary={readinessSummary}
+        developerTaskSummary={developerTaskSummary}
+      />
 
       {readinessSummary ? (
         <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
@@ -962,7 +1167,7 @@ export default function LaunchPlanDetailPage() {
       <DeveloperTaskMap summary={developerTaskSummary} tasks={developerTasks} />
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="border border-border-dim bg-card/60 rounded-[8px] p-4">
+        <div id="workspace-actions" className="scroll-mt-24 border border-border-dim bg-card/60 rounded-[8px] p-4">
           <span className="text-[10px] font-mono tracking-[0.16em] uppercase text-muted">Template</span>
           <p className="text-[14px] font-semibold text-foreground mt-2">{details.plan.templateName}</p>
           <p className="text-[12px] text-secondary mt-1">{details.plan.category}</p>
@@ -1024,7 +1229,7 @@ export default function LaunchPlanDetailPage() {
       </section>
 
       {details.plan.notes ? (
-        <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
+        <section id="created-draft-resources" className="scroll-mt-24 border border-border-dim bg-card/60 rounded-[8px] p-4">
           <h2 className="text-[14px] font-semibold text-foreground">Developer Notes</h2>
           <p className="text-[13px] text-secondary mt-2 leading-relaxed">{details.plan.notes}</p>
         </section>

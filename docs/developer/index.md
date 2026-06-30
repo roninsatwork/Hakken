@@ -34,6 +34,7 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Embedded Widgets](./embedded-widgets.md)
 - [Knowledge Management](./knowledge-management.md)
 - [App Kit And Launch Plan Implementation](./app-kit-launch-plan-implementation.md)
+- [App Kits Interface Simplification Plan](./app-kits-interface-simplification-plan.md)
 - [Agent Release Infrastructure](./agent-release-infrastructure.md)
 - [Launch, Releases, And Observability](./launch-releases-and-observability.md)
 - [Maintenance Scripts](./maintenance-scripts.md)

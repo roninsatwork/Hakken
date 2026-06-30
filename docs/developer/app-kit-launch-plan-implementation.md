@@ -1,6 +1,6 @@
 # App Kit And Launch Plan Implementation
 
-This guide documents the implementation behind Sonae's app kit catalog and launch plan materialization flow. It complements [Launch, Releases, And Observability](./launch-releases-and-observability.md), which covers the broader launch operations area including releases and run observability.
+This guide documents the implementation behind Sonae's app kit catalog and launch plan materialization flow. It complements [Launch, Releases, And Observability](./launch-releases-and-observability.md), which covers the broader launch operations area including releases and run observability. For the planned catalog/detail interface split, see [App Kits Interface Simplification Plan](./app-kits-interface-simplification-plan.md).
 
 The current implementation is a super-admin-only preparation system. App kits are static code-backed starter definitions. Operators can sync those templates into a persistent catalog registry, create durable launch plans, link or create a tenant workspace, and materialize inactive draft agents, workflows, and eval fixtures. The system does not automatically ship a customer app, activate agents, connect tools, publish widgets, or complete release review.
 
@@ -8,9 +8,12 @@ The current implementation is a super-admin-only preparation system. App kits ar
 
 The app kit launch flow is exposed through these routes:
 
-- `src/app/(dashboard)/admin/launch/page.tsx` renders the app kit gallery, catalog registry controls, setup intent fields, and recent launch plans.
-- `src/app/(dashboard)/admin/app-kits/page.tsx` re-exports the launch gallery.
-- `src/app/(dashboard)/admin/launch/plans/[id]/page.tsx` renders launch plan detail, workspace actions, materialization actions, connector readiness, developer tasks, setup plans, and surface implementation actions.
+- `src/app/(dashboard)/admin/app-kits/page.tsx` renders the focused App Kits catalog.
+- `src/app/(dashboard)/admin/app-kits/[templateId]/page.tsx` renders a dedicated app kit detail and registry review screen.
+- `src/app/(dashboard)/admin/app-kits/[templateId]/setup/page.tsx` renders the guided setup wizard that creates a draft build plan.
+- `src/app/(dashboard)/admin/app-kits/plans/[id]/page.tsx` re-exports the launch plan detail route.
+- `src/app/(dashboard)/admin/launch/page.tsx` re-exports the App Kits catalog for legacy navigation.
+- `src/app/(dashboard)/admin/launch/plans/[id]/page.tsx` renders launch plan detail, workspace actions, materialization actions, connector readiness, developer tasks, setup plans, derived maintenance checklist, and surface implementation actions.
 - `src/app/(dashboard)/admin/app-kits/plans/[id]/page.tsx` re-exports the launch plan detail page.
 
 The core backend module is `convex/appTemplates.ts`. Related implementation areas are:
@@ -94,7 +97,7 @@ The safety defaults are intentionally conservative:
 - external actions require approval
 - release gates are required
 
-Setup overrides come from the launch gallery form. They capture product name, brand accent, first admin email, invite policy notes, model use cases, target plan name, connector owner, selected connectors, connector notes, knowledge owner, starter knowledge sources, knowledge notes, surface owner, selected publish targets, and publish notes. List values are trimmed, deduplicated, and only persisted when non-empty.
+Setup overrides come from the app kit setup wizard. They capture product name, brand accent, first admin email, invite policy notes, model use cases, target plan name, connector owner, selected connectors, connector notes, knowledge owner, starter knowledge sources, knowledge notes, surface owner, selected publish targets, and publish notes. List values are trimmed, deduplicated, and only persisted when non-empty.
 
 ## Plan Detail Assembly
 
@@ -214,7 +217,7 @@ When changing workspace creation:
 Focused tests include:
 
 - `convex/appTemplates.test.ts` for template metadata, gallery auth, registry sync, launch plan persistence, setup overrides, connector readiness, workspace linking, materialization, and authorization.
-- `src/app/(dashboard)/admin/launch/page.test.tsx` for launch gallery behavior.
+- `src/app/(dashboard)/admin/launch/page.test.tsx` for App Kits catalog, detail, setup wizard, and registry behavior.
 - `src/app/(dashboard)/admin/launch/plans/[id]/page.test.tsx` for plan detail behavior.
 
 For documentation-only edits, run `git diff --check` and a Markdown local-link check. Before merging implementation changes in this area, run the full gate from `AGENTS.md`:

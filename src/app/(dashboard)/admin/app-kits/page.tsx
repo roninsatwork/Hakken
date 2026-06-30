@@ -1,1 +1,3 @@
-export { default } from "../launch/page";
+import { AppKitsCatalogPage } from "./AppKitsClient";
+
+export default AppKitsCatalogPage;

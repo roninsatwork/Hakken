@@ -366,6 +366,20 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getAllByText("Zendesk").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ready").length).toBeGreaterThan(0);
     expect(screen.getByText("Missing")).toBeInTheDocument();
+    expect(screen.getByText("Setup And Maintenance Checklist")).toBeInTheDocument();
+    expect(screen.getByText("Track the draft plan from setup through release readiness. These statuses are derived from the build plan, linked workspace, connector readiness, created resources, and developer task map.")).toBeInTheDocument();
+    expect(screen.getByText("Recommended next step")).toBeInTheDocument();
+    expect(screen.getAllByText("Platform operator").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Create or link the tenant workspace before tenant-specific setup can continue.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Go to workspace actions").some((link) => link.getAttribute("href") === "#workspace-actions")).toBe(true);
+    expect(screen.getByText("First admin")).toBeInTheDocument();
+    expect(screen.getByText("Workspace owner")).toBeInTheDocument();
+    expect(screen.getByText("1/2 recommended integrations are ready.")).toBeInTheDocument();
+    expect(screen.getByText("Knowledge owner")).toBeInTheDocument();
+    expect(screen.getByText("Draft resources")).toBeInTheDocument();
+    expect(screen.getAllByText("Go to draft resource action").some((link) => link.getAttribute("href") === "#create-draft-resources")).toBe(true);
+    expect(screen.getByText("Release review")).toBeInTheDocument();
+    expect(screen.getByText("Open ship checks")).toHaveAttribute("href", "/admin/releases");
     expect(screen.getByText("Build Plan Readiness")).toBeInTheDocument();
     expect(screen.getAllByText("0/1")).toHaveLength(2);
     expect(screen.getByText("Draft resources have not been created.")).toBeInTheDocument();
@@ -381,6 +395,7 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getByText("Ticket handlers")).toBeInTheDocument();
     expect(screen.getAllByText("convex/aiToolExecutionService.ts").length).toBeGreaterThan(0);
     expect(screen.getByText("Developer Task Map")).toBeInTheDocument();
+    expect(screen.getByText("Review task map")).toHaveAttribute("href", "#developer-task-map");
     expect(screen.getByText("Workspace Setup Plan")).toBeInTheDocument();
     expect(screen.getByText("Guided setup actions")).toBeInTheDocument();
     expect(screen.getByText("Apply brand and profile intent")).toBeInTheDocument();
@@ -435,8 +450,8 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getByText("Review code pointers below")).toBeInTheDocument();
     expect(screen.getByText("Next Recommended Task")).toBeInTheDocument();
     expect(screen.getByText("Brand: Confirm workspace brand")).toBeInTheDocument();
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pending").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ready").length).toBeGreaterThan(0);
   });
 
@@ -456,7 +471,7 @@ describe("LaunchPlanDetailPage", () => {
     materializeLaunchPlan.mockResolvedValue({ agentIds: ["agent_1"], workflowIds: ["workflow_1"], fixtureIds: ["fixture_1"], sourceRunIds: ["run_1"] });
     render(<LaunchPlanDetailPage />);
 
-    fireEvent.click(screen.getByText("Create draft resources"));
+    fireEvent.click(screen.getByRole("button", { name: /Create draft resources/i }));
 
     await waitFor(() => {
       expect(materializeLaunchPlan).toHaveBeenCalledWith({ planId: "plan_1" });

@@ -4,9 +4,11 @@ Launch operations connect app template catalog records, launch plans, draft agen
 
 ## Product Surface
 
-- `src/app/(dashboard)/admin/launch/page.tsx` renders the app kit gallery, catalog registry controls, setup form, and recent launch plans.
-- `src/app/(dashboard)/admin/app-kits/page.tsx` re-exports the launch page.
-- `src/app/(dashboard)/admin/launch/plans/[id]/page.tsx` renders launch plan detail, readiness summaries, developer tasks, workspace actions, connector readiness, draft resources, and archive/materialize actions.
+- `src/app/(dashboard)/admin/app-kits/page.tsx` renders the focused App Kits catalog.
+- `src/app/(dashboard)/admin/app-kits/[templateId]/page.tsx` renders the app kit detail, registry review, and setup entry point.
+- `src/app/(dashboard)/admin/app-kits/[templateId]/setup/page.tsx` renders the guided setup wizard that creates a draft build plan.
+- `src/app/(dashboard)/admin/launch/page.tsx` re-exports the App Kits catalog for legacy navigation.
+- `src/app/(dashboard)/admin/launch/plans/[id]/page.tsx` renders launch plan detail, readiness summaries, maintenance checklist, developer tasks, workspace actions, connector readiness, draft resources, and archive/materialize actions.
 - `src/app/(dashboard)/admin/app-kits/plans/[id]/page.tsx` re-exports the launch plan detail page.
 - `src/app/(dashboard)/admin/releases/page.tsx` renders agent release readiness and recent release candidates.
 - `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` embeds latest release state, snapshot comparison, and release actions in Agent Studio.
