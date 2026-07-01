@@ -206,6 +206,30 @@ export const getPaginatedCompanyThreads = query({
   },
 });
 
+export const getCompanyThreadById = query({
+  args: {
+    companyId: v.id("companies"),
+    threadId: v.id("threads"),
+  },
+  handler: async (ctx, args) => {
+    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated Request");
+    if (!canReadCompanyThreads(admin, args.companyId)) {
+      throw new Error("Unauthorized");
+    }
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.companyId !== args.companyId) {
+      throw new Error("Thread not found");
+    }
+
+    const user = thread.userId ? await ctx.db.get(thread.userId) : null;
+    return {
+      ...thread,
+      user: getThreadUserSummary(user, "Widget Visitor"),
+    };
+  },
+});
+
 // Secure API endpoint to fetch the raw timeline for any specific thread ID
 export const getAdminThreadMessages = query({
   args: { threadId: v.id("threads") },

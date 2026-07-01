@@ -3,6 +3,7 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
+import Link from "next/link";
 import { useMutation, useAction, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -44,6 +45,7 @@ type KnowledgeManagerProps = {
   header: ReactNode;
   emptyDocumentDescription: string;
   deleteDocumentDescription: (title: string | undefined) => ReactNode;
+  getInspectDocumentHref?: (documentId: Id<"knowledgeDocuments">) => string;
 };
 
 type KnowledgeTab = "Website" | "File" | "Text";
@@ -62,6 +64,7 @@ export function KnowledgeManager({
   header,
   emptyDocumentDescription,
   deleteDocumentDescription,
+  getInspectDocumentHref,
 }: KnowledgeManagerProps) {
   const scopeArgs = buildScopeArgs(scope);
   const {
@@ -73,6 +76,7 @@ export function KnowledgeManager({
     scopeArgs,
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
+  const websiteDocuments = useQuery(api.knowledge.getWebsiteDocuments, scopeArgs);
   const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
@@ -100,6 +104,7 @@ export function KnowledgeManager({
   const [mappedUrls, setMappedUrls] = useState<string[]>([]);
   const [isQueueing, setIsQueueing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [websiteGroupSearchTerms, setWebsiteGroupSearchTerms] = useState<Record<string, string>>({});
   const [refreshingRoots, setRefreshingRoots] = useState<Record<string, boolean>>({});
   const [rootToDelete, setRootToDelete] = useState<string | null>(null);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
@@ -315,11 +320,50 @@ export function KnowledgeManager({
     }
   };
 
-  const websiteGroups = useMemo(() => groupWebsiteDocuments(documents), [documents]);
+  const loadedWebsiteDocuments = useMemo(() => websiteDocuments ?? [], [websiteDocuments]);
+  const isLoadingWebsiteDocuments = websiteDocuments === undefined;
+  const websiteGroups = useMemo(() => groupWebsiteDocuments(loadedWebsiteDocuments), [loadedWebsiteDocuments]);
   const documentFiles = useMemo(() => documents.filter((document) => document.format !== "url"), [documents]);
 
   const toggleGroup = (root: string) => {
     setExpandedGroups((prev) => ({ ...prev, [root]: !prev[root] }));
+  };
+
+  const renderInspectAction = (
+    documentId: Id<"knowledgeDocuments">,
+    document: Doc<"knowledgeDocuments"> | undefined,
+    className: string,
+    label?: string,
+  ) => {
+    const content = (
+      <>
+        <Eye className="w-4 h-4" />
+        {label}
+      </>
+    );
+    const href = getInspectDocumentHref?.(documentId);
+
+    if (href) {
+      return (
+        <Link href={href} className={className} title="Inspect chunks">
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (document) setDocumentToInspect(document);
+        }}
+        disabled={!document}
+        className={className}
+        title="Inspect chunks"
+      >
+        {content}
+      </button>
+    );
   };
 
   return (
@@ -441,17 +485,11 @@ export function KnowledgeManager({
                             score {match.score} * {match.embeddingDimensions} dimensions
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const document = documents.find((entry) => entry._id === match.documentId);
-                            if (document) setDocumentToInspect(document);
-                          }}
-                          className="p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors shrink-0"
-                          title="Inspect chunks"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        {renderInspectAction(
+                          match.documentId,
+                          documents.find((entry) => entry._id === match.documentId),
+                          "p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors shrink-0 disabled:opacity-40",
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {match.matchedTerms.map((term) => (
@@ -489,7 +527,7 @@ export function KnowledgeManager({
                 className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-200 text-[12px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
               >
                 {isBulkRepairing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
-                Repair flagged
+                Repair all flagged
               </button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -514,17 +552,12 @@ export function KnowledgeManager({
                       </div>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const document = documents.find((entry) => entry._id === item.documentId);
-                      if (document) setDocumentToInspect(document);
-                    }}
-                    className="px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-300 text-[12px] font-semibold flex items-center gap-2 shrink-0"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Inspect
-                  </button>
+                  {renderInspectAction(
+                    item.documentId,
+                    documents.find((entry) => entry._id === item.documentId),
+                    "px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-300 text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
+                    "Inspect",
+                  )}
                   <button
                     type="button"
                     onClick={() => handleRetryDocument(item.documentId)}
@@ -636,10 +669,40 @@ export function KnowledgeManager({
             </div>
 
             <div className="flex flex-col gap-4">
-              <h3 className="text-[11px] font-bold tracking-widest text-secondary uppercase">Trained</h3>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-[11px] font-bold tracking-widest text-secondary uppercase">Trained</h3>
+                <p className="text-[12px] text-muted">
+                  Website pages are grouped by domain. Search filters the pages stored for this website source.
+                </p>
+              </div>
 
-              {Object.entries(websiteGroups).map(([root, docs]) => {
+              {isLoadingWebsiteDocuments && (
+                <div className="py-12 flex justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-brand" />
+                </div>
+              )}
+
+              {!isLoadingWebsiteDocuments && Object.keys(websiteGroups).length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center border border-border-dim/50 border-dashed rounded-[16px] bg-foreground/[0.02]">
+                  <Globe className="w-9 h-9 text-brand mb-4 opacity-80" />
+                  <h3 className="text-sm font-medium text-foreground mb-1">No Website Pages Trained</h3>
+                  <p className="text-[13px] text-secondary max-w-sm">
+                    Add a website URL above to map pages and queue them for knowledge training.
+                  </p>
+                </div>
+              )}
+
+              {!isLoadingWebsiteDocuments && Object.entries(websiteGroups).map(([root, docs]) => {
                 const isExpanded = expandedGroups[root];
+                const searchTerm = websiteGroupSearchTerms[root] ?? "";
+                const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+                const visibleDocs = normalizedSearchTerm
+                  ? docs.filter((document) =>
+                      [document.sourceUrl, document.title]
+                        .filter((value): value is string => Boolean(value))
+                        .some((value) => value.toLowerCase().includes(normalizedSearchTerm))
+                    )
+                  : docs;
                 const totalDocs = docs.length;
                 const readyDocs = docs.filter((document) => document.status === "ready").length;
                 const progressPct = totalDocs > 0 ? Math.round((readyDocs / totalDocs) * 100) : 0;
@@ -656,7 +719,7 @@ export function KnowledgeManager({
                             <div className="w-24 h-1.5 bg-border-dim rounded-full overflow-hidden">
                               <div className="h-full bg-brand transition-all duration-500 ease-in-out" style={{ width: `${progressPct}%` }} />
                             </div>
-                            <span className="font-mono tracking-wide">{readyDocs}/{totalDocs} Ready ({progressPct}%)</span>
+                            <span className="font-mono tracking-wide">{readyDocs} ready / {totalDocs} stored ({progressPct}%)</span>
                           </div>
                         </div>
                       </div>
@@ -677,7 +740,7 @@ export function KnowledgeManager({
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <button onClick={() => toggleGroup(root)} className="ml-2 flex items-center gap-1 bg-brand/10 text-brand px-3 py-1 rounded-md text-[13px] font-medium hover:bg-brand/20 transition-colors">
-                          {totalDocs} {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {totalDocs} pages {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -685,10 +748,30 @@ export function KnowledgeManager({
                       <div className="flex flex-col border-t border-border-dim bg-background">
                         <div className="px-4 py-3 flex items-center gap-2 border-b border-border-dim/50">
                           <Search className="w-4 h-4 text-muted" />
-                          <input type="text" placeholder="Search" className="bg-transparent border-none outline-none text-[13px] w-full" />
+                          <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(event) =>
+                              setWebsiteGroupSearchTerms((prev) => ({
+                                ...prev,
+                                [root]: event.target.value,
+                              }))
+                            }
+                            placeholder="Search stored pages"
+                            className="bg-transparent border-none outline-none text-[13px] w-full"
+                          />
                         </div>
-                        <div className="p-2 text-[12px] font-medium text-secondary">List of trained pages</div>
-                        {docs.map((document) => (
+                        <div className="p-2 text-[12px] font-medium text-secondary">
+                          {normalizedSearchTerm
+                            ? `${visibleDocs.length} matching stored page${visibleDocs.length === 1 ? "" : "s"}`
+                            : "List of trained pages"}
+                        </div>
+                        {visibleDocs.length === 0 && (
+                          <div className="px-4 py-8 text-[13px] text-secondary border-t border-border-dim/20">
+                            No stored pages match this search.
+                          </div>
+                        )}
+                        {visibleDocs.map((document) => (
                           <div key={document._id} className="flex items-center justify-between py-2.5 px-4 hover:bg-foreground/[0.02] border-t border-border-dim/20 group">
                             <a href={document.sourceUrl} target="_blank" rel="noreferrer" className="text-[13px] text-brand hover:underline truncate mr-4">
                               {document.sourceUrl}
@@ -697,13 +780,11 @@ export function KnowledgeManager({
                               {document.status === "pending" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm">Pending</span>}
                               {document.status === "processing" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
                               {document.status === "failed" && <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Failed</span>}
-                              <button
-                                onClick={() => setDocumentToInspect(document)}
-                                className="text-secondary hover:text-brand transition-colors opacity-50 group-hover:opacity-100"
-                                title="Inspect chunks"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                              {renderInspectAction(
+                                document._id,
+                                document,
+                                "text-secondary hover:text-brand transition-colors opacity-50 group-hover:opacity-100",
+                              )}
                               {document.status === "failed" && (
                                 <button
                                   onClick={() => handleRetryDocument(document._id)}
@@ -790,13 +871,11 @@ export function KnowledgeManager({
                         </div>
                       )}
 
-                      <button
-                        onClick={() => setDocumentToInspect(document)}
-                        className="p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Inspect chunks"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      {renderInspectAction(
+                        document._id,
+                        document,
+                        "p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors opacity-0 group-hover:opacity-100",
+                      )}
 
                       {document.status === "failed" && (
                         <button
@@ -831,7 +910,9 @@ export function KnowledgeManager({
           onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
           labels={{
             empty: "No knowledge documents loaded",
-            showing: (count) => `Showing ${count} knowledge documents`,
+            showing: (count) => qualitySummary
+              ? `Showing ${count} loaded of ${qualitySummary.totals.documents.toLocaleString()} total knowledge documents`
+              : `Showing ${count} loaded knowledge documents`,
             loadMore: "Load more documents",
             loading: "Loading documents...",
           }}

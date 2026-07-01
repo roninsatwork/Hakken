@@ -287,6 +287,72 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     expect(firstPage.page[0]._id).not.toBe(firstDocumentId);
   });
 
+  test("admins can list scoped website documents independently from paginated inventory", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, companyBId, adminAId, websiteIds } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+      const adminBId = await ctx.db.insert("users", {
+        email: "admin-b@test.com",
+        role: "ADMIN",
+        companyId: companyBId,
+        createdAt: Date.now(),
+      });
+      const websiteIds = [];
+      for (let index = 0; index < 20; index++) {
+        websiteIds.push(await ctx.db.insert("knowledgeDocuments", {
+          title: `Hub ${index}`,
+          sourceUrl: `https://example.com/hub/article-${index}`,
+          companyId: companyAId,
+          status: index === 0 ? "ready" : "pending",
+          createdBy: adminAId,
+          format: "url",
+          createdAt: Date.now() + index,
+        }));
+      }
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "Company A File",
+        textContent: "File",
+        companyId: companyAId,
+        status: "ready",
+        createdBy: adminAId,
+        format: "text/plain",
+        createdAt: Date.now() + 30,
+      });
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "Company B Website",
+        sourceUrl: "https://example.com/hub/other-company",
+        companyId: companyBId,
+        status: "ready",
+        createdBy: adminBId,
+        format: "url",
+        createdAt: Date.now() + 40,
+      });
+
+      return { companyAId, companyBId, adminAId, websiteIds };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+
+    const firstInventoryPage = await adminAClient.query(api.knowledge.getPaginatedDocuments, {
+      companyId: companyAId,
+      paginationOpts: { numItems: 15, cursor: null },
+    });
+    const websiteDocuments = await adminAClient.query(api.knowledge.getWebsiteDocuments, { companyId: companyAId });
+
+    expect(firstInventoryPage.page).toHaveLength(15);
+    expect(websiteDocuments.map((doc) => doc._id).sort()).toEqual(websiteIds.sort());
+    expect(websiteDocuments.every((doc) => doc.format === "url" && doc.companyId === companyAId)).toBe(true);
+    await expect(adminAClient.query(api.knowledge.getWebsiteDocuments, { companyId: companyBId })).rejects.toThrow("Unauthorized");
+  });
+
   test("admins can inspect scoped knowledge quality and chunk previews", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -725,6 +791,48 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     expect(state.healthy?.status).toBe("ready");
     expect(state.otherTenant?.status).toBe("failed");
     expect(state.auditLogs.map((log) => log.actionType)).toEqual(["BULK_REPAIR_KNOWLEDGE_DOCUMENTS"]);
+  });
+
+  test("bulk repair covers the full scoped flagged set instead of one 25 item batch", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAId, adminAId, failedIds } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const adminAId = await ctx.db.insert("users", {
+        email: "admin-a@test.com",
+        role: "ADMIN",
+        companyId: companyAId,
+        createdAt: Date.now(),
+      });
+      const failedIds = [];
+
+      for (let index = 0; index < 30; index++) {
+        failedIds.push(await ctx.db.insert("knowledgeDocuments", {
+          title: `Failed ${index}`,
+          textContent: `Retry failed import ${index}`,
+          companyId: companyAId,
+          status: "failed",
+          lastIngestionError: "Embedding failed",
+          createdBy: adminAId,
+          format: "text/plain",
+          createdAt: Date.now() + index,
+        }));
+      }
+
+      return { companyAId, adminAId, failedIds };
+    });
+
+    const adminAClient = t.withIdentity({ subject: adminAId });
+
+    const result = await adminAClient.mutation(api.knowledge.repairFlaggedDocuments, { companyId: companyAId });
+    expect(result.inspectedCount).toBe(30);
+    expect(result.repairedCount).toBe(30);
+    expect(result.repaired.map((entry) => entry.documentId).sort()).toEqual(failedIds.sort());
+
+    const repairedDocuments = await t.run(async (ctx) => Promise.all(failedIds.map((id) => ctx.db.get(id))));
+    expect(repairedDocuments.every((document) =>
+      document?.status === "processing" && document.lastIngestionError === undefined
+    )).toBe(true);
   });
 
   test("agent-scoped reads are company-isolated for admins and complete for super admins", async () => {

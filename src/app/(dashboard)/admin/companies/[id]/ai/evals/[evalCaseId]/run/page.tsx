@@ -1,0 +1,171 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { ClipboardCheck, Loader2, Play } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import {
+  AdminModalFormError,
+  AdminModalFormField,
+  adminModalInputClassName,
+  adminModalTextareaClassName,
+} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import {
+  CompanyAiFormActions,
+  CompanyAiFormPageHeader,
+  getSafeCompanyAiReturnTo,
+} from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
+
+const DEFAULT_RUN_FORM = {
+  answer: "",
+  evidenceJson: "",
+  resolvedModelId: "",
+  resolvedUseCase: "chat",
+  judgeNotes: "",
+};
+
+function formatPercent(value: number | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0%";
+  return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+}
+
+export default function RunCompanyEvalPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const companyId = params.id as Id<"companies">;
+  const evalCaseId = params.evalCaseId as Id<"companyEvalCases">;
+  const fallbackHref = `/admin/companies/${companyId}/ai/evals`;
+  const backHref = getSafeCompanyAiReturnTo(searchParams.get("returnTo"), companyId, fallbackHref);
+  const evalCase = useQuery(api.companyEvals.getCaseById, { evalCaseId });
+  const runCase = useMutation(api.companyEvals.runCase);
+
+  const [runForm, setRunForm] = useState(DEFAULT_RUN_FORM);
+  const [runError, setRunError] = useState("");
+  const [runFeedback, setRunFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRunCase = async (event: FormEvent) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setRunError("");
+    setRunFeedback("");
+    try {
+      const result = await runCase({
+        evalCaseId,
+        answer: runForm.answer,
+        evidenceJson: runForm.evidenceJson || undefined,
+        resolvedModelId: runForm.resolvedModelId || undefined,
+        resolvedUseCase: runForm.resolvedUseCase || undefined,
+        judgeNotes: runForm.judgeNotes || undefined,
+      });
+      if (result.status === "FAILED") {
+        setRunFeedback(`Run recorded as failed at ${formatPercent(result.score)}. Stay here to adjust evidence or go back to the eval list.`);
+        return;
+      }
+      router.push(backHref);
+    } catch (error) {
+      setRunError(error instanceof Error ? error.message : "Eval run could not be recorded.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (evalCase === undefined) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-6 pb-12">
+      <CompanyAiFormPageHeader
+        backHref={backHref}
+        title="Run Eval"
+        description="Record answer and runtime evidence on a full page so deterministic checks are easy to review."
+        icon={<Play className="h-6 w-6 text-brand" />}
+      />
+
+      <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
+        <div className="flex items-start gap-3">
+          <ClipboardCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+          <div>
+            <h2 className="text-[14px] font-semibold text-foreground">{evalCase.name}</h2>
+            <p className="mt-2 text-[12px] leading-relaxed text-secondary">{evalCase.prompt}</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted">{evalCase.expectedBehavior}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted">
+              <span>{evalCase.category}</span>
+              <span>{evalCase.severity}</span>
+              <span>{evalCase.targetSurface}</span>
+              {evalCase.expectedModelUseCase && <span>model: {evalCase.expectedModelUseCase}</span>}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <form onSubmit={handleRunCase} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
+        <div className="flex flex-col gap-5">
+          <AdminModalFormError>{runError}</AdminModalFormError>
+          {runFeedback && (
+            <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-100">
+              {runFeedback}
+            </div>
+          )}
+          <AdminModalFormField label="Answer">
+            <textarea
+              required
+              className={`${adminModalTextareaClassName} min-h-[240px]`}
+              value={runForm.answer}
+              onChange={(event) => setRunForm((current) => ({ ...current, answer: event.target.value }))}
+              placeholder="Answer produced by the company AI."
+            />
+          </AdminModalFormField>
+          <AdminModalFormField label="Evidence JSON" hint="sourceIds, memoryIds, skillIds">
+            <textarea
+              className={`${adminModalTextareaClassName} min-h-[190px] font-mono`}
+              value={runForm.evidenceJson}
+              onChange={(event) => setRunForm((current) => ({ ...current, evidenceJson: event.target.value }))}
+              placeholder={'{"sourceIds":[],"memoryIds":[],"skillIds":[]}'}
+            />
+          </AdminModalFormField>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <AdminModalFormField label="Resolved model">
+              <input
+                className={adminModalInputClassName}
+                value={runForm.resolvedModelId}
+                onChange={(event) => setRunForm((current) => ({ ...current, resolvedModelId: event.target.value }))}
+                placeholder="model-id"
+              />
+            </AdminModalFormField>
+            <AdminModalFormField label="Resolved use case">
+              <input
+                className={adminModalInputClassName}
+                value={runForm.resolvedUseCase}
+                onChange={(event) => setRunForm((current) => ({ ...current, resolvedUseCase: event.target.value }))}
+                placeholder="chat"
+              />
+            </AdminModalFormField>
+          </div>
+          <AdminModalFormField label="Judge notes" hint="Optional">
+            <textarea
+              className={`${adminModalTextareaClassName} min-h-[180px]`}
+              value={runForm.judgeNotes}
+              onChange={(event) => setRunForm((current) => ({ ...current, judgeNotes: event.target.value }))}
+              placeholder="Manual notes until LLM judge is wired."
+            />
+          </AdminModalFormField>
+          <CompanyAiFormActions
+            backHref={backHref}
+            submitLabel={isSubmitting ? "Running..." : "Record run"}
+            isSubmitting={isSubmitting}
+          />
+        </div>
+      </form>
+    </div>
+  );
+}
+

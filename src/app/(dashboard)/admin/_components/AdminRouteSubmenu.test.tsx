@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 
 describe("AdminRouteSubmenu", () => {
   const items = [
+    { label: "Overview", href: "/admin/companies/company-1/ai" },
     { label: "Knowledge", href: "/admin/companies/company-1/ai/knowledge" },
     { label: "AI Rules", href: "/admin/companies/company-1/ai/rules" },
   ];
@@ -19,6 +20,7 @@ describe("AdminRouteSubmenu", () => {
     render(<AdminRouteSubmenu label="AI sections" items={items} />);
 
     expect(screen.getByRole("link", { name: "Knowledge" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("link", { name: "Overview" })).not.toHaveClass("bg-brand");
     expect(screen.getByRole("link", { name: "AI Rules" })).not.toHaveClass("bg-brand");
   });
 
@@ -28,6 +30,16 @@ describe("AdminRouteSubmenu", () => {
     render(<AdminRouteSubmenu label="AI sections" items={items} />);
 
     expect(screen.getByRole("link", { name: "AI Rules" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("link", { name: "Overview" })).not.toHaveClass("bg-brand");
     expect(screen.getByRole("link", { name: "Knowledge" })).not.toHaveClass("bg-brand");
+  });
+
+  it("uses the deepest route match when a parent overview route is also present", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/companies/company-1/ai/knowledge/document-1");
+
+    render(<AdminRouteSubmenu label="AI sections" items={items} />);
+
+    expect(screen.getByRole("link", { name: "Knowledge" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("link", { name: "Overview" })).not.toHaveClass("bg-brand");
   });
 });

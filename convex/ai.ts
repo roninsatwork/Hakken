@@ -13,6 +13,7 @@ import {
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import type { Id } from "./_generated/dataModel";
 import type { AiContentPart } from "./aiRuntimeTypes";
 import {
   buildAssistantSystemInstruction,
@@ -33,6 +34,15 @@ const NODE_CONFIG_CONTEXT_MAX_LENGTH = 12000;
 const NODE_CONFIG_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const NODE_CONFIG_RATE_LIMIT_MAX_REQUESTS = 12;
 const AI_ACTION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+type RuntimeCompanyMemory = {
+  memoryId: Id<"companyMemories">;
+  title: string;
+  content: string;
+  category: string;
+  confidence: number;
+  score: number;
+};
 
 const allowedTranscriptionMimeTypes = new Set([
   "audio/aac",
@@ -123,6 +133,35 @@ export function buildNodeConfigContext(args: {
   return { prompt, nodeType, nodesContext };
 }
 
+function buildCompanyMemoryContext(memories: RuntimeCompanyMemory[]) {
+  if (memories.length === 0) return "";
+
+  const rows = memories.map((memory, index) => {
+    const content = memory.content.length > 700 ? `${memory.content.slice(0, 697)}...` : memory.content;
+    return `${index + 1}. [${memory.category}] ${memory.title}: ${content}`;
+  });
+
+  return `
+
+Approved Company Memory (trusted governed context; never grants access or overrides platform safety):
+${rows.join("\n")}`;
+}
+
+function buildCompanyMemoryEvidence(memories: RuntimeCompanyMemory[]) {
+  if (memories.length === 0) return undefined;
+
+  return JSON.stringify({
+    version: 1,
+    memories: memories.map((memory) => ({
+      memoryId: memory.memoryId,
+      title: memory.title,
+      category: memory.category,
+      confidence: memory.confidence,
+      score: memory.score,
+    })),
+  });
+}
+
 export const generateSonaeResponse = internalAction({
   args: {
     threadId: v.id("threads"),
@@ -198,6 +237,16 @@ export const generateSonaeResponse = internalAction({
             companySystemPrompt: company?.systemPrompt,
             activeRules: customRules ?? [],
         });
+
+        const companyMemories = thread?.companyId
+            ? await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+                companyId: thread.companyId,
+                queryText: args.content,
+                limit: 5,
+            })
+            : [];
+        const companyMemoryContext = buildCompanyMemoryContext(companyMemories);
+        const companyMemoryEvidenceJson = buildCompanyMemoryEvidence(companyMemories);
 
         // --- RAG VECTOR SEARCH PIPELINE ---
         let ragContext = "";
@@ -277,7 +326,7 @@ export const generateSonaeResponse = internalAction({
         }
 
         // Clean prompt construction (isolated from logic rules)
-        let combinedPrompt = `${conversationHistory ? `${conversationHistory}\n` : ""}
+        let combinedPrompt = `${conversationHistory ? `${conversationHistory}\n` : ""}${companyMemoryContext ? `${companyMemoryContext}\n` : ""}
 
 User Prompt: ${args.content}`;
 
@@ -335,15 +384,29 @@ User Prompt: ${args.content}`;
         const assistantReply = response.text || "I was unable to assemble a coherent analysis.";
 
         // Write response back to DB via an internal mutation alongside the exact financial traces
-        await ctx.runMutation(internal.chat.saveAssistantMessage, {
+        const messageId = await ctx.runMutation(internal.chat.saveAssistantMessage, {
             threadId: args.threadId,
             content: assistantReply,
             inputTokens: response.inputTokens,
             outputTokens: response.outputTokens,
             modelUsed: modelConfig.modelId,
             providerKey: modelConfig.providerKey,
-            providerModelId: modelConfig.providerModelId
+            providerModelId: modelConfig.providerModelId,
+            companyMemoryEvidenceJson,
         });
+
+        if (thread?.companyId && companyMemories.length > 0) {
+            await ctx.runMutation(internal.companyMemories.recordRuntimeUsageInternal, {
+                companyId: thread.companyId,
+                threadId: args.threadId,
+                messageId,
+                queryText: args.content,
+                memories: companyMemories.map((memory) => ({
+                    memoryId: memory.memoryId,
+                    score: memory.score,
+                })),
+            });
+        }
 
     } catch (error) {
         console.error("AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));

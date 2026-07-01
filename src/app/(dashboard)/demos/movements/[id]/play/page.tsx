@@ -130,35 +130,17 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     playerLiveLmRef,
     advanceInstructorFrame,
   });
-  const hasStartedGuidedPreviewRef = useRef(false);
+  const startSelectedMatch = React.useCallback(() => {
+    startMatch();
 
-  useEffect(() => {
-    if (
-      !isGuidedPreviewRoute ||
-      hasStartedGuidedPreviewRef.current ||
-      !movement ||
-      isFramesLoading ||
-      loadedFrames.length === 0
-    ) {
-      return;
-    }
+    if (!isGuidedPreviewRoute) return;
 
-    if (isLobby) {
-      startMatch();
-      return;
-    }
-
-    hasStartedGuidedPreviewRef.current = true;
     skipCalibration();
     resetInstructorPlayback();
     resetScoring();
     setIsPlaying(true);
   }, [
-    isFramesLoading,
     isGuidedPreviewRoute,
-    isLobby,
-    loadedFrames.length,
-    movement,
     resetInstructorPlayback,
     resetScoring,
     setIsPlaying,
@@ -193,7 +175,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         setPlayerAvatarUrl={setPlayerAvatarUrl}
         instructorAvatarUrl={instructorAvatarUrl}
         setInstructorAvatarUrl={setInstructorAvatarUrl}
-        onStart={startMatch}
+        onStart={startSelectedMatch}
       />
     );
   }

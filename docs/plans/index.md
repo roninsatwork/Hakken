@@ -16,6 +16,8 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Auth Login Hardening Plan](./active/auth-login-hardening-plan.md)
 - [Code Quality 95 Plan](./active/code-quality-95-plan.md)
 - [Code Quality Refactor Plan](./active/code-quality-refactor-plan.md)
+- [Company AI Modal To Screen Plan](./active/company-ai-modal-to-screen-plan.md)
+- [Company AI Upgrade Plan](./active/company-ai-upgrade-plan.md)
 - [Company Workspace AI Navigation Plan](./active/company-workspace-ai-navigation-plan.md)
 - [Comprehensive Test Coverage Plan](./active/comprehensive-test-coverage-plan.md)
 - [Final Scale Readiness Plan](./active/final-scale-readiness-plan.md)

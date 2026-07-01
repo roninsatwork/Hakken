@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,12 +14,15 @@ import {
   Bot,
   User as UserIcon,
   Copy,
-  Check
+  Check,
+  BrainCircuit,
+  ClipboardCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
@@ -26,6 +30,7 @@ import { buildChatTranscript } from "@/src/lib/chatTranscript";
 export default function CompanyChatLogsDashboard() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
+  const aiChatLogsHref = `/admin/companies/${companyId}/ai/chat-logs`;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<Id<"threads"> | null>(null);
@@ -46,6 +51,10 @@ export default function CompanyChatLogsDashboard() {
     api.chatAdmin.getAdminThreadMessages,
     selectedThreadId ? { threadId: selectedThreadId } : "skip"
   );
+  const getLatestMessageByRole = (role: "user" | "assistant") => {
+    const matchingMessages = (messages ?? []).filter((message) => message.role === role);
+    return matchingMessages.length > 0 ? matchingMessages[matchingMessages.length - 1] : undefined;
+  };
 
   const handleCopyChat = async () => {
     if (!messages || messages.length === 0) return;
@@ -75,6 +84,20 @@ export default function CompanyChatLogsDashboard() {
     }
   };
 
+  const latestAssistantMessage = getLatestMessageByRole("assistant");
+  const memoryCandidateHref = selectedThreadId
+    ? `${aiChatLogsHref}/${selectedThreadId}/memory-candidate/new?${new URLSearchParams({
+      ...(latestAssistantMessage ? { messageId: latestAssistantMessage._id } : {}),
+      returnTo: aiChatLogsHref,
+    }).toString()}`
+    : aiChatLogsHref;
+  const evalCaseHref = selectedThreadId
+    ? `${aiChatLogsHref}/${selectedThreadId}/evals/new?${new URLSearchParams({
+      ...(latestAssistantMessage ? { messageId: latestAssistantMessage._id } : {}),
+      returnTo: aiChatLogsHref,
+    }).toString()}`
+    : aiChatLogsHref;
+
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] w-full antialiased overflow-hidden pb-4">
       {/* Header Block */}
@@ -91,15 +114,32 @@ export default function CompanyChatLogsDashboard() {
 
         {/* Right Aligned Header Actions */}
         {selectedThreadId && messages && messages.length > 0 && (
-          <button
-            onClick={handleCopyChat}
-            className="flex items-center gap-2 px-4 py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border-dim rounded-[12px] transition-colors text-secondary hover:text-foreground shadow-sm shrink-0"
-          >
-            {isCopied ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
-            <span className="text-[13px] font-semibold tracking-wide">
-              {isCopied ? "Copied" : "Copy Chat Transcript"}
-            </span>
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              href={memoryCandidateHref}
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand/10 hover:bg-brand/15 border border-brand/20 rounded-[12px] transition-colors text-brand shadow-sm shrink-0"
+            >
+              <BrainCircuit className="w-4 h-4 shrink-0" />
+              <span className="text-[13px] font-semibold tracking-wide">Memory candidate</span>
+            </Link>
+            <Link
+              href={evalCaseHref}
+              className="flex items-center gap-2 px-4 py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border-dim rounded-[12px] transition-colors text-secondary hover:text-foreground shadow-sm shrink-0"
+            >
+              <ClipboardCheck className="w-4 h-4 shrink-0 text-brand" />
+              <span className="text-[13px] font-semibold tracking-wide">Create eval</span>
+            </Link>
+            <button
+              type="button"
+              onClick={handleCopyChat}
+              className="flex items-center gap-2 px-4 py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border-dim rounded-[12px] transition-colors text-secondary hover:text-foreground shadow-sm shrink-0"
+            >
+              {isCopied ? <Check className="w-4 h-4 text-emerald-500 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
+              <span className="text-[13px] font-semibold tracking-wide">
+                {isCopied ? "Copied" : "Copy transcript"}
+              </span>
+            </button>
+          </div>
         )}
       </header>
 
@@ -309,6 +349,7 @@ export default function CompanyChatLogsDashboard() {
                         >
                           {isUser ? message.content : <SonaeMarkdown content={message.content} />}
                         </div>
+                        {!isUser && <CompanyMemoryEvidence evidenceJson={message.companyMemoryEvidenceJson} />}
                       </motion.div>
                     )
                   })

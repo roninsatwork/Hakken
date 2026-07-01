@@ -263,11 +263,12 @@ export const saveAssistantMessage = internalMutation({
     modelUsed: v.optional(v.string()),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
+    companyMemoryEvidenceJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db.get(args.threadId);
 
-    await ctx.db.insert("messages", {
+    return await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
       content: args.content,
@@ -277,6 +278,7 @@ export const saveAssistantMessage = internalMutation({
       modelUsed: args.modelUsed,
       providerKey: args.providerKey,
       providerModelId: args.providerModelId,
+      companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
       ...getThreadMessageDimensions(thread),
     });
   },

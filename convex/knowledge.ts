@@ -25,7 +25,7 @@ const KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT = 150;
 const KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT = 20;
 const KNOWLEDGE_RETRIEVAL_RESULT_LIMIT = 8;
 const KNOWLEDGE_HISTORY_LIMIT = 8;
-const KNOWLEDGE_BULK_REPAIR_LIMIT = 25;
+const KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT = 1000;
 const STALE_INGESTION_MS = 15 * 60 * 1000;
 const KNOWLEDGE_COVERAGE_TERM_LIMIT = 6;
 const KNOWLEDGE_COVERAGE_CHUNK_SAMPLE_LIMIT = 8;
@@ -369,8 +369,13 @@ async function assertCanRepairKnowledgeDocument(
   return { userId, user };
 }
 
-async function requeueKnowledgeDocument(ctx: MutationCtx, document: Doc<"knowledgeDocuments">) {
+async function requeueKnowledgeDocument(
+  ctx: MutationCtx,
+  document: Doc<"knowledgeDocuments">,
+  options: { scheduleWebsiteQueue?: boolean } = {}
+) {
   const nextStatus = document.format === "url" ? "pending" : "processing";
+  const scheduleWebsiteQueue = options.scheduleWebsiteQueue ?? true;
 
   await ctx.db.patch(document._id, {
     status: nextStatus,
@@ -380,7 +385,9 @@ async function requeueKnowledgeDocument(ctx: MutationCtx, document: Doc<"knowled
   await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: document._id });
 
   if (document.format === "url") {
-    await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+    if (scheduleWebsiteQueue) {
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+    }
   } else {
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
       documentId: document._id,
@@ -514,6 +521,66 @@ export const getPaginatedDocuments = query({
       ))
       .order("desc")
       .paginate(args.paginationOpts);
+  },
+});
+
+export const getWebsiteDocuments = query({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+
+    if (args.agentId) {
+      if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized");
+      }
+
+      if (user.role === "ADMIN") {
+        const activeCompanyId = getActiveCompanyId(user);
+        if (!activeCompanyId) return [];
+
+        return await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_agent_format", (q) => q.eq("agentId", args.agentId).eq("format", "url"))
+          .filter((q) => q.eq(q.field("companyId"), activeCompanyId))
+          .order("desc")
+          .take(KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT);
+      }
+
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .withIndex("by_agent_format", (q) => q.eq("agentId", args.agentId).eq("format", "url"))
+        .order("desc")
+        .take(KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT);
+    }
+
+    if (!args.companyId) {
+      if (user.role !== "SUPER_ADMIN") {
+        throw new Error("Unauthorized access to global knowledge base");
+      }
+
+      return await ctx.db
+        .query("knowledgeDocuments")
+        .withIndex("by_global_format", (q) => q.eq("companyId", undefined).eq("agentId", undefined).eq("threadId", undefined).eq("format", "url"))
+        .order("desc")
+        .take(KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT);
+    }
+
+    if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
+      throw new Error("Unauthorized access to company knowledge base");
+    }
+
+    return await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_company_format", (q) => q.eq("companyId", args.companyId).eq("format", "url"))
+      .filter((q) => q.and(
+        q.eq(q.field("agentId"), undefined),
+        q.eq(q.field("threadId"), undefined)
+      ))
+      .order("desc")
+      .take(KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT);
   },
 });
 
@@ -956,9 +1023,10 @@ export const repairFlaggedDocuments = mutation({
     };
 
     const repaired = [];
+    let repairedWebsiteDocuments = 0;
     const now = Date.now();
     for (const document of documents) {
-      if (document.threadId || repaired.length >= KNOWLEDGE_BULK_REPAIR_LIMIT) continue;
+      if (document.threadId) continue;
       const chunkCount = await getKnowledgeDocumentChunkCount(ctx, document._id);
       const embeddingDrift = summarizeEmbeddingDrift({
         document,
@@ -967,13 +1035,18 @@ export const repairFlaggedDocuments = mutation({
       const flag = getKnowledgeDocumentQualityFlag({ document, chunkCount, now, embeddingDrift });
       if (!flag) continue;
 
-      const status = await requeueKnowledgeDocument(ctx, document);
+      const status = await requeueKnowledgeDocument(ctx, document, { scheduleWebsiteQueue: false });
+      if (document.format === "url") repairedWebsiteDocuments += 1;
       repaired.push({
         documentId: document._id,
         title: document.title,
         flag,
         status,
       });
+    }
+
+    if (repairedWebsiteDocuments > 0) {
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
     }
 
     if (repaired.length > 0) {
@@ -985,6 +1058,7 @@ export const repairFlaggedDocuments = mutation({
         timestamp: Date.now(),
         metadata: JSON.stringify({
           count: repaired.length,
+          inspectedCount: documents.length,
           documentIds: repaired.map((entry) => entry.documentId),
           flags: repaired.map((entry) => entry.flag),
         }),
@@ -992,6 +1066,7 @@ export const repairFlaggedDocuments = mutation({
     }
 
     return {
+      inspectedCount: documents.length,
       repairedCount: repaired.length,
       repaired,
     };

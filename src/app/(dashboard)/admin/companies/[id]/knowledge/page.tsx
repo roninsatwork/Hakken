@@ -20,6 +20,7 @@ export default function CompanyKnowledgeBasePage() {
         </div>
       )}
       emptyDocumentDescription="Upload PDF or DOCX files so the AI can securely learn about this company."
+      getInspectDocumentHref={(documentId) => `/admin/companies/${companyId}/ai/knowledge/${documentId}`}
       deleteDocumentDescription={(title) => (
         <>
           Are you sure you want to remove <strong>{title}</strong> from this workspace&apos;s memory?

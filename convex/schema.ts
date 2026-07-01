@@ -953,6 +953,267 @@ export default defineSchema({
     .index("by_agent_used", ["agentId", "usedAt"])
     .index("by_company_used", ["companyId", "usedAt"]),
 
+  companyMemories: defineTable({
+    companyId: v.id("companies"),
+    title: v.string(),
+    content: v.string(),
+    normalizedContent: v.string(),
+    category: v.string(),
+    status: v.union(
+      v.literal("APPROVED"),
+      v.literal("ARCHIVED")
+    ),
+    confidence: v.number(),
+    sourceType: v.union(
+      v.literal("MANUAL"),
+      v.literal("CHAT"),
+      v.literal("WIDGET"),
+      v.literal("KNOWLEDGE"),
+      v.literal("EVAL"),
+      v.literal("AGENT_RUN"),
+      v.literal("WORKFLOW_RUN")
+    ),
+    sourceIdsJson: v.optional(v.string()),
+    rejectedFingerprint: v.optional(v.string()),
+    createdBy: v.id("users"),
+    approvedBy: v.optional(v.id("users")),
+    archivedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    approvedAt: v.optional(v.number()),
+    archivedAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    usageCount: v.number(),
+  })
+    .index("by_company_updated", ["companyId", "updatedAt"])
+    .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
+    .index("by_company_category_status", ["companyId", "category", "status"])
+    .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"]),
+
+  companyMemoryCandidates: defineTable({
+    companyId: v.id("companies"),
+    title: v.optional(v.string()),
+    content: v.string(),
+    normalizedContent: v.string(),
+    category: v.string(),
+    sourceType: v.union(
+      v.literal("MANUAL"),
+      v.literal("CHAT"),
+      v.literal("WIDGET"),
+      v.literal("KNOWLEDGE"),
+      v.literal("EVAL"),
+      v.literal("AGENT_RUN"),
+      v.literal("WORKFLOW_RUN")
+    ),
+    sourceIdsJson: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    confidence: v.number(),
+    status: v.union(
+      v.literal("PROPOSED"),
+      v.literal("APPROVED"),
+      v.literal("REJECTED")
+    ),
+    rejectedFingerprint: v.optional(v.string()),
+    createdBy: v.id("users"),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
+    appliedMemoryId: v.optional(v.id("companyMemories")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_status_created", ["companyId", "status", "createdAt"])
+    .index("by_company_source", ["companyId", "sourceType", "createdAt"])
+    .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"]),
+
+  companyMemoryUsage: defineTable({
+    memoryId: v.id("companyMemories"),
+    companyId: v.id("companies"),
+    threadId: v.id("threads"),
+    messageId: v.optional(v.id("messages")),
+    queryText: v.string(),
+    score: v.number(),
+    usedAt: v.number(),
+  })
+    .index("by_memory_used", ["memoryId", "usedAt"])
+    .index("by_company_used", ["companyId", "usedAt"])
+    .index("by_thread_used", ["threadId", "usedAt"]),
+
+  companySkills: defineTable({
+    companyId: v.id("companies"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    status: v.union(
+      v.literal("DRAFT"),
+      v.literal("ACTIVE"),
+      v.literal("ARCHIVED")
+    ),
+    riskLevel: v.union(
+      v.literal("LOW"),
+      v.literal("MEDIUM"),
+      v.literal("HIGH")
+    ),
+    instruction: v.string(),
+    inputContractJson: v.optional(v.string()),
+    outputContractJson: v.optional(v.string()),
+    requiredToolsJson: v.optional(v.string()),
+    approvalPolicyJson: v.optional(v.string()),
+    recommendedKnowledgeJson: v.optional(v.string()),
+    versionLabel: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    archivedBy: v.optional(v.id("users")),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
+    .index("by_company_category_status", ["companyId", "category", "status"])
+    .searchIndex("search_name", {
+      searchField: "name",
+      filterFields: ["companyId", "status"],
+    }),
+
+  companySkillBindings: defineTable({
+    companyId: v.id("companies"),
+    skillId: v.id("companySkills"),
+    surfaceType: v.union(
+      v.literal("COMPANY_CHAT"),
+      v.literal("WIDGET"),
+      v.literal("AGENT"),
+      v.literal("WORKFLOW"),
+      v.literal("APP_KIT")
+    ),
+    surfaceId: v.optional(v.string()),
+    isEnabled: v.boolean(),
+    assignedBy: v.id("users"),
+    assignedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_surface_enabled", ["companyId", "surfaceType", "isEnabled"])
+    .index("by_company_skill_enabled", ["companyId", "skillId", "isEnabled"])
+    .index("by_company_skill_surface", ["companyId", "skillId", "surfaceType"]),
+
+  companyAiDriftEvents: defineTable({
+    companyId: v.id("companies"),
+    sourceType: v.union(
+      v.literal("KNOWLEDGE"),
+      v.literal("MEMORY"),
+      v.literal("SKILL"),
+      v.literal("EVAL"),
+      v.literal("RULE"),
+      v.literal("MODEL"),
+      v.literal("WIDGET"),
+      v.literal("PROMPT")
+    ),
+    sourceId: v.optional(v.string()),
+    reason: v.string(),
+    affectedEvalCategoriesJson: v.optional(v.string()),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    resolvedBy: v.optional(v.id("users")),
+    resolvedAt: v.optional(v.number()),
+    resolvedRunId: v.optional(v.id("companyEvalRuns")),
+  })
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_source_created", ["companyId", "sourceType", "createdAt"])
+    .index("by_company_resolved_created", ["companyId", "resolvedAt", "createdAt"]),
+
+  companyReadinessSnapshots: defineTable({
+    companyId: v.id("companies"),
+    state: v.union(
+      v.literal("READY"),
+      v.literal("NEEDS_REVIEW"),
+      v.literal("NOT_READY"),
+      v.literal("DRIFTED")
+    ),
+    score: v.number(),
+    blockers: v.number(),
+    warnings: v.number(),
+    driftEventCount: v.number(),
+    evalPassRate: v.number(),
+    summaryJson: v.string(),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_company_created", ["companyId", "createdAt"]),
+
+  companyEvalCases: defineTable({
+    companyId: v.id("companies"),
+    name: v.string(),
+    category: v.union(
+      v.literal("KNOWLEDGE_RETRIEVAL"),
+      v.literal("MEMORY_USAGE"),
+      v.literal("RULE_COMPLIANCE"),
+      v.literal("BRAND_TONE"),
+      v.literal("SKILL_ROUTING"),
+      v.literal("MODEL_ROUTING"),
+      v.literal("NO_HALLUCINATION"),
+      v.literal("TENANT_ISOLATION"),
+      v.literal("WIDGET_READINESS"),
+      v.literal("AGENT_INHERITANCE")
+    ),
+    severity: v.union(
+      v.literal("BLOCKER"),
+      v.literal("WARNING"),
+      v.literal("ADVISORY")
+    ),
+    targetSurface: v.union(
+      v.literal("COMPANY_CHAT"),
+      v.literal("WIDGET"),
+      v.literal("AGENT"),
+      v.literal("WORKFLOW"),
+      v.literal("APP_KIT")
+    ),
+    targetId: v.optional(v.string()),
+    prompt: v.string(),
+    fixtureContextJson: v.optional(v.string()),
+    expectedBehavior: v.string(),
+    requiredSourcesJson: v.optional(v.string()),
+    requiredMemoriesJson: v.optional(v.string()),
+    requiredSkillsJson: v.optional(v.string()),
+    forbiddenClaimsJson: v.optional(v.string()),
+    expectedModelUseCase: v.optional(v.string()),
+    expectedOutputFormat: v.optional(v.string()),
+    judgeRubric: v.optional(v.string()),
+    status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
+    lastRunId: v.optional(v.id("companyEvalRuns")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    archivedBy: v.optional(v.id("users")),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
+    .index("by_company_category_status", ["companyId", "category", "status"])
+    .index("by_company_surface", ["companyId", "targetSurface"]),
+
+  companyEvalRuns: defineTable({
+    companyId: v.id("companies"),
+    evalCaseId: v.id("companyEvalCases"),
+    status: v.union(
+      v.literal("PASSED"),
+      v.literal("FAILED"),
+      v.literal("NEEDS_REVIEW")
+    ),
+    score: v.number(),
+    answer: v.string(),
+    evidenceJson: v.optional(v.string()),
+    deterministicResultsJson: v.string(),
+    resolvedModelId: v.optional(v.string()),
+    resolvedUseCase: v.optional(v.string()),
+    tokenUsageJson: v.optional(v.string()),
+    costJson: v.optional(v.string()),
+    judgeNotes: v.optional(v.string()),
+    startedAt: v.number(),
+    completedAt: v.number(),
+    createdBy: v.id("users"),
+  })
+    .index("by_company_completed", ["companyId", "completedAt"])
+    .index("by_case_completed", ["evalCaseId", "completedAt"])
+    .index("by_company_status_completed", ["companyId", "status", "completedAt"]),
+
   // AI Rule Engine (Triggers & Logic Processing)
   aiRules: defineTable({
     companyId: v.optional(v.id("companies")),
@@ -1053,6 +1314,7 @@ export default defineSchema({
     modelUsed: v.optional(v.string()),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
+    companyMemoryEvidenceJson: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
     agentId: v.optional(v.id("agents")),

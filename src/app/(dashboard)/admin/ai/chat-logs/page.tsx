@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
@@ -294,6 +295,7 @@ export default function ChatLogsDashboard() {
                         >
                           {isUser ? message.content : <SonaeMarkdown content={message.content} />}
                         </div>
+                        {!isUser && <CompanyMemoryEvidence evidenceJson={message.companyMemoryEvidenceJson} />}
                       </motion.div>
                     )
                   })

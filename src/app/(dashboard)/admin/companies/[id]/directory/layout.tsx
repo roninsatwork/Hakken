@@ -15,7 +15,7 @@ export default async function CompanyDirectoryLayout({ children, params }: Compa
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full">
+    <div className="flex flex-col lg:flex-row lg:items-start gap-6 w-full">
       <AdminRouteSubmenu label="Directory workspace sections" items={items} />
       <div className="flex-1 min-w-0">{children}</div>
     </div>

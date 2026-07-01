@@ -13,20 +13,22 @@ type AdminRouteSubmenuProps = {
   label: string;
 };
 
-function isActiveSubmenuItem(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+function getActiveSubmenuHref(pathname: string, items: AdminRouteSubmenuItem[]) {
+  const matches = items.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  return matches.sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
 
 export function AdminRouteSubmenu({ items, label }: AdminRouteSubmenuProps) {
   const pathname = usePathname();
+  const activeHref = getActiveSubmenuHref(pathname, items);
 
   return (
     <nav
       aria-label={label}
-      className="w-full lg:w-[220px] shrink-0 sticky top-6 bg-sidebar/40 border border-border-dim shadow-sm backdrop-blur-xl rounded-[16px] overflow-hidden flex flex-col pt-2 pb-2"
+      className="w-full self-start lg:w-[220px] shrink-0 sticky top-6 bg-sidebar/40 border border-border-dim shadow-sm backdrop-blur-xl rounded-[16px] overflow-hidden flex flex-col pt-2 pb-2"
     >
       {items.map((item) => {
-        const isActive = isActiveSubmenuItem(pathname, item.href);
+        const isActive = activeHref === item.href;
 
         return (
           <Link
