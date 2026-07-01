@@ -42,6 +42,15 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByRole("heading", { name: "Coach", exact: true })).toBeVisible();
   });
 
+  test("guided preview route keeps avatar selection before practice starts", async ({ page }) => {
+    await gotoWithoutServerCrash(page, `/demos/movements/${movementId}/play?guidedPreview=1`);
+    await skipWhenRedirectedToLogin(page, "Movement guided preview smoke requires the super-admin storage state.");
+
+    await expect(page.getByText("Private posture studio")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Select Coach & Student" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Begin Practice" })).toBeVisible();
+  });
+
   test("guided debug preview enters recorded playback with scrub controls", async ({ page }) => {
     await gotoWithoutServerCrash(
       page,

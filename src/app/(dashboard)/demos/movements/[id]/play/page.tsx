@@ -41,6 +41,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const movementId = unwrappedParams.id as Id<"movements">;
   const isDebugTracking = searchParams.get("debugTracking") === "1";
   const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
+  const shouldAutoStartGuidedPreview = isGuidedPreviewRoute && isDebugTracking;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
@@ -151,7 +152,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     if (
-      !isGuidedPreviewRoute ||
+      !shouldAutoStartGuidedPreview ||
       hasStartedGuidedPreviewRef.current ||
       !isLobby ||
       !movement ||
@@ -165,10 +166,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     startSelectedMatch();
   }, [
     isFramesLoading,
-    isGuidedPreviewRoute,
     isLobby,
     loadedFrames.length,
     movement,
+    shouldAutoStartGuidedPreview,
     startSelectedMatch,
   ]);
 
