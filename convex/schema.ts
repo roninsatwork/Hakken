@@ -1836,10 +1836,32 @@ export default defineSchema({
     durationMs: v.optional(v.number()),
     captureFps: v.optional(v.number()),
     schemaVersion: v.optional(v.number()),
+    spineGoal: v.optional(v.union(
+      v.literal("neutralStack"),
+      v.literal("hipHinge"),
+      v.literal("rollDown"),
+      v.literal("thoracicRotation"),
+      v.literal("sideBend"),
+      v.literal("extension"),
+      v.literal("squatWithStack")
+    )),
+    primaryCue: v.optional(v.string()),
+    bodyFocus: v.optional(v.array(v.union(
+      v.literal("neck"),
+      v.literal("shoulders"),
+      v.literal("ribcage"),
+      v.literal("pelvis"),
+      v.literal("hips"),
+      v.literal("feet")
+    ))),
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"])
-    .searchIndex("search_title", { searchField: "title" }),
+    .index("by_spineGoal_createdAt", ["spineGoal", "createdAt"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["spineGoal"],
+    }),
 
   mockStorageMetadata: defineTable({
     storageId: v.string(),

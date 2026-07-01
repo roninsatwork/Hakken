@@ -1,10 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, ChevronDown, Play, Sparkles, Trash2 } from "lucide-react";
+import { Activity, ChevronDown, ClipboardList, Play, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
+import { getMovementSpineGoalLabel } from "../_lib/movementSpineIntent";
 
 type MovementLibraryTableProps = {
   movements: Doc<"movements">[];
@@ -14,11 +16,53 @@ type MovementLibraryTableProps = {
   searchTerm: string;
   itemsPerPage: number;
   onLoadMore: (numItems: number) => void;
-  onGuidedPreview: (movement: Doc<"movements">) => void;
   onPlay: (movement: Doc<"movements">) => void;
   onView: (movement: Doc<"movements">) => void;
   onDelete: (movement: Doc<"movements">) => void;
 };
+
+type MovementActionButtonProps = {
+  label: string;
+  tooltip: string;
+  icon: ReactNode;
+  tone?: "primary" | "neutral" | "danger";
+  onClick: () => void;
+};
+
+function MovementActionButton({
+  label,
+  tooltip,
+  icon,
+  tone = "neutral",
+  onClick,
+}: MovementActionButtonProps) {
+  const toneClass =
+    tone === "primary"
+      ? "bg-brand/15 text-brand hover:bg-brand/20"
+      : tone === "danger"
+        ? "text-secondary hover:bg-red-500/10 hover:text-red-500"
+        : "text-secondary hover:bg-foreground/5 hover:text-foreground";
+
+  return (
+    <span className="group/action relative inline-flex">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={tooltip}
+        className={`p-2 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${toneClass}`}
+      >
+        {icon}
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-[#111018] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-xl group-hover/action:block group-focus-within/action:block"
+      >
+        {tooltip}
+      </span>
+    </span>
+  );
+}
 
 export default function MovementLibraryTable({
   movements,
@@ -28,7 +72,6 @@ export default function MovementLibraryTable({
   searchTerm,
   itemsPerPage,
   onLoadMore,
-  onGuidedPreview,
   onPlay,
   onView,
   onDelete,
@@ -88,7 +131,9 @@ export default function MovementLibraryTable({
                             <span className="font-medium text-[13px] text-foreground block leading-tight">
                               {routineTitle}
                             </span>
-                            <span className="text-[12px] text-secondary">Guided posture routine</span>
+                            <span className="text-[12px] text-secondary">
+                              {getMovementSpineGoalLabel(movement.spineGoal)}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -103,39 +148,27 @@ export default function MovementLibraryTable({
                         {new Date(movement.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => onGuidedPreview(movement)}
-                            className="p-2 rounded-full hover:bg-brand/10 text-brand transition-colors"
-                            title="Guided Preview"
-                            aria-label={`Guided preview ${routineTitle}`}
-                          >
-                            <Sparkles className="w-4 h-4" />
-                          </button>
-                          <button
+                        <div className="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                          <MovementActionButton
+                            label={`Start practice ${routineTitle}`}
+                            tooltip="Start live practice"
                             onClick={() => onPlay(movement)}
-                            className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors"
-                            title="Live Practice"
-                            aria-label={`Play ${routineTitle}`}
-                          >
-                            <Play className="w-4 h-4" />
-                          </button>
-                          <button
+                            icon={<Play className="w-4 h-4" />}
+                            tone="primary"
+                          />
+                          <MovementActionButton
+                            label={`Review routine ${routineTitle}`}
+                            tooltip="Review recording"
                             onClick={() => onView(movement)}
-                            className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors"
-                            title="Review Routine"
-                            aria-label={`View ${routineTitle}`}
-                          >
-                            <Activity className="w-4 h-4" />
-                          </button>
-                          <button
+                            icon={<ClipboardList className="w-4 h-4" />}
+                          />
+                          <MovementActionButton
+                            label={`Delete routine ${routineTitle}`}
+                            tooltip="Delete routine"
                             onClick={() => onDelete(movement)}
-                            className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors"
-                            title="Delete"
-                            aria-label={`Delete ${routineTitle}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            icon={<Trash2 className="w-4 h-4" />}
+                            tone="danger"
+                          />
                         </div>
                       </td>
                       </motion.tr>

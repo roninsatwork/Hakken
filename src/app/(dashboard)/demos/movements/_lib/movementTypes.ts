@@ -1,5 +1,22 @@
 export type MovementDifficulty = "Beginner" | "Intermediate" | "Advanced";
 
+export type MovementSpineGoal =
+  | "neutralStack"
+  | "hipHinge"
+  | "rollDown"
+  | "thoracicRotation"
+  | "sideBend"
+  | "extension"
+  | "squatWithStack";
+
+export type MovementBodyFocus =
+  | "neck"
+  | "shoulders"
+  | "ribcage"
+  | "pelvis"
+  | "hips"
+  | "feet";
+
 export type MovementDataFormat =
   | "legacy-inline-json"
   | "legacy-storage-json"

@@ -6,6 +6,11 @@ import {
   buildMovementCalibration,
   type MovementCalibration,
 } from "../_lib/movementTrackingCalibration";
+import {
+  averageMovementRetargetSourceModels,
+  buildMovementRetargetSourceModel,
+  type MovementRetargetSourceModel,
+} from "../_lib/movementRetargeting";
 import { getVrmMotionLandmarks, type VrmMotionRef } from "../_lib/vrmRigging";
 
 type UseMovementTrackingCalibrationInput = {
@@ -28,6 +33,8 @@ export function useMovementTrackingCalibration({
   const [calibrationSampleCount, setCalibrationSampleCount] = useState(0);
   const [calibrationCountdownSeconds, setCalibrationCountdownSeconds] = useState(0);
   const [isCalibrationSkipped, setIsCalibrationSkipped] = useState(false);
+  const [retargetSourceModel, setRetargetSourceModel] =
+    useState<MovementRetargetSourceModel | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   const cancelCalibration = useCallback(() => {
@@ -51,9 +58,11 @@ export function useMovementTrackingCalibration({
     setCalibrationProgress(0);
     setCalibrationSampleCount(0);
     setCalibrationCountdownSeconds(Math.ceil(CALIBRATION_COUNTDOWN_MS / 1000));
+    setRetargetSourceModel(null);
 
     const startedAt = performance.now();
     const samples: MovementCalibration[] = [];
+    const retargetSamples: MovementRetargetSourceModel[] = [];
 
     const sample = () => {
       const elapsedFromStartMs = performance.now() - startedAt;
@@ -84,6 +93,14 @@ export function useMovementTrackingCalibration({
         setCalibrationSampleCount(samples.length);
       }
 
+      const retargetSample = buildMovementRetargetSourceModel({
+        poseLandmarks,
+        now: Date.now(),
+      });
+      if (retargetSample) {
+        retargetSamples.push(retargetSample);
+      }
+
       const elapsedMs = elapsedFromStartMs - CALIBRATION_COUNTDOWN_MS;
       setCalibrationProgress(Math.min(100, Math.round((elapsedMs / CALIBRATION_DURATION_MS) * 100)));
 
@@ -97,16 +114,29 @@ export function useMovementTrackingCalibration({
       setCalibrationCountdownSeconds(0);
       setCalibrationProgress(100);
 
-      if (samples.length < MIN_CALIBRATION_SAMPLES) {
+      if (
+        samples.length < MIN_CALIBRATION_SAMPLES ||
+        retargetSamples.length < MIN_CALIBRATION_SAMPLES
+      ) {
         setCalibration(null);
+        setRetargetSourceModel(null);
         setCalibrationStatus("Needs stronger tracking");
         return;
       }
 
       const averagedCalibration = averageMovementCalibrations(samples);
+      const averagedRetargetSourceModel = averageMovementRetargetSourceModels(retargetSamples);
+      if (!averagedCalibration || !averagedRetargetSourceModel) {
+        setCalibration(null);
+        setRetargetSourceModel(null);
+        setCalibrationStatus("Needs stronger tracking");
+        return;
+      }
+
       setCalibration(averagedCalibration);
+      setRetargetSourceModel(averagedRetargetSourceModel);
       setIsCalibrationSkipped(false);
-      setCalibrationStatus(averagedCalibration ? "Calibrated" : "Needs stronger tracking");
+      setCalibrationStatus("Calibrated");
     };
 
     animationFrameRef.current = requestAnimationFrame(sample);
@@ -115,6 +145,7 @@ export function useMovementTrackingCalibration({
   const resetCalibration = useCallback(() => {
     cancelCalibration();
     setCalibration(null);
+    setRetargetSourceModel(null);
     setIsCalibrationSkipped(false);
     setCalibrationStatus("Calibration needed");
     setCalibrationProgress(0);
@@ -125,6 +156,7 @@ export function useMovementTrackingCalibration({
   const skipCalibration = useCallback(() => {
     cancelCalibration();
     setCalibration(null);
+    setRetargetSourceModel(null);
     setIsCalibrationSkipped(true);
     setCalibrationStatus("Skipped calibration");
     setCalibrationProgress(0);
@@ -136,6 +168,7 @@ export function useMovementTrackingCalibration({
 
   return {
     calibration,
+    retargetSourceModel,
     isCalibrated: Boolean(calibration),
     isCalibrationSkipped,
     isCalibrating,

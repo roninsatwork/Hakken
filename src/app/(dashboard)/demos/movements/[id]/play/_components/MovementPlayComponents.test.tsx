@@ -91,6 +91,8 @@ describe("movement play components", () => {
       <MovementCompletionDialog
         isOpen
         finalScore={420}
+        finalSpineScore={82}
+        finalSpineCue="Keep tall spine as the knees bend."
         onExitMatch={onExitMatch}
         onRematch={onRematch}
       />,
@@ -98,6 +100,9 @@ describe("movement play components", () => {
 
     expect(screen.getByText("Practice Complete")).toBeInTheDocument();
     expect(screen.getByText("420")).toBeInTheDocument();
+    expect(screen.getByText("Best Spine")).toBeInTheDocument();
+    expect(screen.getByText("82%")).toBeInTheDocument();
+    expect(screen.getByText("Keep tall spine as the knees bend.")).toBeInTheDocument();
 
     rerender(
       <MovementCompletionDialog
@@ -230,6 +235,8 @@ describe("movement play components", () => {
         difficulty="Beginner"
         hudScore={120}
         hudSync={84}
+        hudSpine={76}
+        hudSpineCue="Stack head over hips."
         isPlaying={false}
         isVisionReady={false}
         isTrackingCalibrated={false}
@@ -248,6 +255,8 @@ describe("movement play components", () => {
     expect(screen.getByText("Roll Down")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("84%")).toBeInTheDocument();
+    expect(screen.getByText("76%")).toBeInTheDocument();
+    expect(screen.getByText("Stack head over hips.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
 
     fireEvent.click(screen.getByText("Retry Vision"));

@@ -46,6 +46,7 @@ export default defineConfig({
         /admin\/routes\.spec\.ts/,
         /admin\/tables\.spec\.ts/,
         /movement-demo-authenticated\.spec\.ts/,
+        /movement-avatar-proof\.eval\.spec\.ts/,
         /admin-roles\.spec\.ts/,
         /exports\.spec\.ts/,
       ],

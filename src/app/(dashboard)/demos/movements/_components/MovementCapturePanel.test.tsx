@@ -26,6 +26,7 @@ const baseProps = {
   isPoseReady: false,
   frameCount: 0,
   trackingQuality: 0,
+  spineQuality: 0,
   onCameraError: vi.fn(),
   onRetryVision: vi.fn(),
   onToggleRecording: vi.fn(),
@@ -45,12 +46,14 @@ describe("MovementCapturePanel", () => {
         {...baseProps}
         frameCount={4}
         trackingQuality={72}
+        spineQuality={81}
       />,
     );
 
     expect(screen.getByText("Preparing posture model...")).toBeInTheDocument();
     expect(screen.getByText("Moments 4")).toBeInTheDocument();
     expect(screen.getByText("Alignment 72%")).toBeInTheDocument();
+    expect(screen.getByText("Spine 81%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start posture capture" })).toBeDisabled();
   });
 

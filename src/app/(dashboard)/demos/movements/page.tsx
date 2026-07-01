@@ -10,9 +10,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MovementDeleteDialog from "./_components/MovementDeleteDialog";
 import MovementLibraryTable from "./_components/MovementLibraryTable";
+import { MOVEMENT_SPINE_GOAL_OPTIONS } from "./_lib/movementSpineIntent";
+import type { MovementSpineGoal } from "./_lib/movementTypes";
 
 export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [spineGoalFilter, setSpineGoalFilter] = useState<MovementSpineGoal | "all">("all");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState<Doc<"movements"> | null>(null);
   const router = useRouter();
@@ -91,17 +94,44 @@ export default function MovementsLibraryPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSpineGoalFilter("all")}
+          className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
+            spineGoalFilter === "all"
+              ? "border-[#f6ccbe]/50 bg-[#f6ccbe]/15 text-[#f6ccbe]"
+              : "border-border-dim bg-sidebar/40 text-secondary hover:text-foreground"
+          }`}
+        >
+          All spine goals
+        </button>
+        {MOVEMENT_SPINE_GOAL_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setSpineGoalFilter(option.value)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
+              spineGoalFilter === option.value
+                ? "border-[#f6ccbe]/50 bg-[#f6ccbe]/15 text-[#f6ccbe]"
+                : "border-border-dim bg-sidebar/40 text-secondary hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <MovementLibraryTable
-        movements={movements ?? []}
+        movements={(movements ?? []).filter((movement) =>
+          spineGoalFilter === "all" ? true : movement.spineGoal === spineGoalFilter
+        )}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         canLoadMore={canLoadMore}
         searchTerm={searchTerm}
         itemsPerPage={itemsPerPage}
         onLoadMore={loadMore}
-        onGuidedPreview={(movement) =>
-          router.push(`/demos/movements/${movement._id}/play?guidedPreview=1`)
-        }
         onPlay={(movement) => router.push(`/demos/movements/${movement._id}/play`)}
         onView={(movement) => router.push(`/demos/movements/${movement._id}`)}
         onDelete={confirmDelete}

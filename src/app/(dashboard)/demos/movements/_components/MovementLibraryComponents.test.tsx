@@ -24,7 +24,6 @@ describe("movement library components", () => {
       searchTerm: "",
       itemsPerPage: 15,
       onLoadMore: vi.fn(),
-      onGuidedPreview: vi.fn(),
       onPlay: vi.fn(),
       onView: vi.fn(),
       onDelete: vi.fn(),
@@ -43,7 +42,6 @@ describe("movement library components", () => {
   it("wires movement row actions and pagination", () => {
     const movement = makeMovement();
     const onLoadMore = vi.fn();
-    const onGuidedPreview = vi.fn();
     const onPlay = vi.fn();
     const onView = vi.fn();
     const onDelete = vi.fn();
@@ -57,7 +55,6 @@ describe("movement library components", () => {
         searchTerm=""
         itemsPerPage={15}
         onLoadMore={onLoadMore}
-        onGuidedPreview={onGuidedPreview}
         onPlay={onPlay}
         onView={onView}
         onDelete={onDelete}
@@ -66,15 +63,17 @@ describe("movement library components", () => {
 
     expect(screen.getByText("Roll Down")).toBeInTheDocument();
     expect(screen.getByText("Beginner")).toBeInTheDocument();
+    expect(screen.getByText("Spine awareness")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByTitle("Start live practice")).toBeInTheDocument();
+    expect(screen.getByTitle("Review recording")).toBeInTheDocument();
+    expect(screen.getByTitle("Delete routine")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Guided preview Roll Down" }));
-    fireEvent.click(screen.getByRole("button", { name: "Play Roll Down" }));
-    fireEvent.click(screen.getByRole("button", { name: "View Roll Down" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete Roll Down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start practice Roll Down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review routine Roll Down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete routine Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
 
-    expect(onGuidedPreview).toHaveBeenCalledWith(movement);
     expect(onPlay).toHaveBeenCalledWith(movement);
     expect(onView).toHaveBeenCalledWith(movement);
     expect(onDelete).toHaveBeenCalledWith(movement);

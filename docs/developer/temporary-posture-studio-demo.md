@@ -16,6 +16,7 @@ Read `docs/developer/movement-demo-retargeting-approach.md` before changing avat
 - `src/app/(dashboard)/demos/movement-capture/page.tsx` records routines.
 - `src/app/(dashboard)/demos/movements/[id]/page.tsx` renders routine details.
 - `src/app/(dashboard)/demos/movements/[id]/play/page.tsx` renders the full-screen practice studio.
+- `src/app/(dashboard)/demos/movements/squat-proof/page.tsx` renders deterministic synthetic webcam-to-avatar proof poses for regression evaluation.
 
 The main components and hooks live under `src/app/(dashboard)/demos/movements/_components`, `_hooks`, and `_lib`, plus play-specific components under `src/app/(dashboard)/demos/movements/[id]/play/_components`.
 
@@ -58,6 +59,7 @@ Query parameters change behavior:
 
 - `guidedPreview=1` skips calibration, resets playback/scoring, and starts playback automatically once frames are loaded.
 - `debugTracking=1` enables source skeleton overlays, retarget debug state, and `MovementDebugFrameScrubber`.
+- `/demos/movements/squat-proof?mode=...` selects a synthetic proof pose such as `standing`, `side-bend`, `hands-front`, `squat`, `left-leg-raise`, or `right-leg-raise`.
 
 ## Retargeting And Debug Boundaries
 
@@ -82,3 +84,11 @@ For documentation-only changes, run `git diff --check`. For any reopened impleme
 - Guided preview route.
 - Live practice calibration and scoring.
 - `debugTracking=1` source skeleton overlays and exact frame scrubber.
+
+For avatar body-motion work, also run:
+
+```bash
+npm run eval:movement-avatar
+```
+
+The eval feeds synthetic skeleton poses into the live player avatar path, checks debug ownership for squat and leg raises, and compares screenshot silhouettes so visually identical avatar modes fail before manual review.

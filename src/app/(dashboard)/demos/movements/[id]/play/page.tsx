@@ -30,10 +30,19 @@ import { useMovementFrames } from "../../_hooks/useMovementFrames";
 import { useMovementPlayerTracking } from "../../_hooks/useMovementPlayerTracking";
 import { useMovementTrackingCalibration } from "../../_hooks/useMovementTrackingCalibration";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
+import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
+import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
 import type { VrmMotionFrame } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
+
+function toMovementSpineGoal(value: unknown): MovementSpineGoal | null {
+  if (typeof value !== "string") return null;
+  return MOVEMENT_SPINE_GOAL_OPTIONS.some((option) => option.value === value)
+    ? (value as MovementSpineGoal)
+    : null;
+}
 
 export default function MatchPlayPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -92,6 +101,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     calibrationProgress,
     calibrationSampleCount,
     calibrationCountdownSeconds,
+    retargetSourceModel: playerRetargetSourceModel,
     startCalibration,
     resetCalibration,
     skipCalibration,
@@ -116,12 +126,17 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetInstructorPlayback,
     setInstructorFrame,
   } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
+  const spineGoal = toMovementSpineGoal(movement?.spineGoal);
   const {
     finalScore,
+    finalSpineScore,
+    finalSpineCue,
     feedbackMsg,
     isComplete,
     hudScore,
     hudSync,
+    hudSpine,
+    hudSpineCue,
     syncRef,
     resetScoring,
   } = useMovementMatchScoring({
@@ -130,6 +145,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     setIsPlaying,
     playerLiveLmRef,
     advanceInstructorFrame,
+    spineGoal,
   });
   const hasStartedGuidedPreviewRef = useRef(false);
   const startSelectedMatch = React.useCallback(() => {
@@ -238,6 +254,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           isPlaying={isPlaying}
           trackingCalibration={calibration}
           trackingDebugRef={trackingDebugRef}
+          retargetSourceModel={playerRetargetSourceModel}
           vrmUrl={playerAvatarUrl}
           name={playerAvatarName}
         />
@@ -258,6 +275,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         difficulty={movement.difficulty || "Beginner"}
         hudScore={hudScore}
         hudSync={hudSync}
+        hudSpine={hudSpine}
+        hudSpineCue={hudSpineCue}
         isPlaying={isPlaying}
         isVisionReady={isVisionReady}
         isTrackingCalibrated={isTrackingReady}
@@ -337,6 +356,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementCompletionDialog
         isOpen={isComplete}
         finalScore={finalScore}
+        finalSpineScore={finalSpineScore}
+        finalSpineCue={finalSpineCue}
         isPreviewMode={isCalibrationSkipped}
         onExitMatch={() =>
           resetMatch({ returnToLobby: true, resetInstructorPlayback, resetScoring })

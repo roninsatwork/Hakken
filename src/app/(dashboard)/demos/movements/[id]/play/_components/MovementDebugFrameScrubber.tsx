@@ -151,7 +151,12 @@ export default function MovementDebugFrameScrubber({
             <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
               Peak Squat
             </div>
-            <div>{formatPeak(recordingAnalysis.peakSquat, (frame) => frame.squatDepth)}</div>
+            <div>
+              {formatPeak(recordingAnalysis.peakSquat, (frame) => frame.squatDepth)}
+              {recordingAnalysis.peakSquat
+                ? ` body${recordingAnalysis.peakSquat.balancedPlantedSquatDepth.toFixed(2)}`
+                : ""}
+            </div>
           </div>
           <div>
             <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">

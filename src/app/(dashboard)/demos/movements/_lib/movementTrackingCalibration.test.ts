@@ -276,7 +276,7 @@ describe("movementTrackingCalibration", () => {
     expect(intent.rightKneeRaise).toBe(0);
   });
 
-  it("reads a squat from a symmetric knee bend when hip drop is not available", () => {
+  it("does not turn raised knees without body drop into a squat", () => {
     const neutralPose = withCorePose();
     const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
     const squatPose = withCorePose();
@@ -288,10 +288,29 @@ describe("movementTrackingCalibration", () => {
       calibration,
     });
 
-    expect(intent.label).toBe("squat");
-    expect(intent.squatDepth).toBeGreaterThan(0.6);
+    expect(intent.label).not.toBe("squat");
+    expect(intent.squatDepth).toBe(0);
     expect(intent.leftKneeRaise).toBeGreaterThan(0.35);
     expect(intent.rightKneeRaise).toBeGreaterThan(0.35);
+  });
+
+  it("reads a live squat from knee angle before calibration is available", () => {
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, x: 0.4, y: 0.58 };
+    squatPose[24] = { ...squatPose[24]!, x: 0.6, y: 0.58 };
+    squatPose[25] = { ...squatPose[25]!, x: 0.35, y: 0.74 };
+    squatPose[26] = { ...squatPose[26]!, x: 0.65, y: 0.74 };
+    squatPose[27] = { ...squatPose[27]!, x: 0.45, y: 0.9 };
+    squatPose[28] = { ...squatPose[28]!, x: 0.55, y: 0.9 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: squatPose,
+      calibration: null,
+    });
+
+    expect(intent.label).toBe("squat");
+    expect(intent.squatSignals.kneeBend).toBeGreaterThan(0.25);
+    expect(intent.squatDepth).toBeGreaterThan(0.25);
   });
 
   it("boosts squat depth from torso and head lowering when knees also bend", () => {

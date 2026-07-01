@@ -12,6 +12,7 @@ env:
   REPO: sonae-repo
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+jobs:
   deploy:
     runs-on: ubuntu-latest
 
@@ -32,9 +33,31 @@ env:
         uses: actions/setup-node@v4
         with:
           node-version: '22.13.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Workaround NPM Optional Dependency Bug
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+
+      - name: Run production audit
+        run: npm audit --audit-level=high
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Run unit and integration tests
+        run: npm run test:run
+
+      - name: Run production build
+        run: npm run build
           
       - name: Sync Backend Schema to Convex Production
-        run: npm ci && npx convex deploy
+        run: npx convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 

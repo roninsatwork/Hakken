@@ -7,6 +7,7 @@ test.describe("Movement Demo: Route Smoke", () => {
     "/demos/movement-capture",
     "/demos/movements/movement_smoke_id",
     "/demos/movements/movement_smoke_id/play",
+    "/demos/movements/squat-proof",
   ];
 
   for (const route of movementRoutes) {

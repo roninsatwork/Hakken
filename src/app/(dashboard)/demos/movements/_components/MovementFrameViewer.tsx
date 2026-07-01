@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
+import { getFrameLandmarks } from "../_lib/movementFrameCodec";
+import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
 import type { MovementFrame } from "../_lib/movementTypes";
 
 type MovementFrameViewerProps = {
@@ -77,6 +79,10 @@ export default function MovementFrameViewer({
 
   const hasFrames = frames.length > 0;
   const safeFrameIndex = hasFrames ? Math.min(currentFrameIndex, frames.length - 1) : 0;
+  const currentSpineModel = useMemo(() => {
+    if (!hasFrames) return null;
+    return buildMovementSpineModel(getFrameLandmarks(frames[safeFrameIndex]));
+  }, [frames, hasFrames, safeFrameIndex]);
   const toggleLabel = isPlaying ? "Pause Visualizer" : "Play Sequence";
 
   return (
@@ -136,6 +142,11 @@ export default function MovementFrameViewer({
           <span className="text-xs text-muted-foreground font-mono min-w-[72px] text-right">
             {safeFrameIndex} / {frames.length}
           </span>
+          {currentSpineModel && (
+            <span className="hidden min-w-[150px] text-right text-xs font-bold uppercase tracking-wide text-[#a8d5ba] sm:block">
+              Spine {currentSpineModel.neutralStackScore}%
+            </span>
+          )}
         </div>
       )}
 

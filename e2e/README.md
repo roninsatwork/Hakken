@@ -54,8 +54,19 @@ Authenticated coverage:
 - End-user assistant and profile flows, including `e2e/user-chat-flow.spec.ts` and `e2e/user-settings-flow.spec.ts`.
 - Movement route smoke checks in `e2e/movement-demo-smoke.spec.ts`.
 - Movement library, capture shell, detail viewer, play avatar lobby, and guided debug preview with deterministic movement fixture data in `e2e/movement-demo-authenticated.spec.ts`.
+- Movement avatar proof evals in `e2e/movement-avatar-proof.eval.spec.ts`. These use deterministic synthetic webcam skeleton poses to drive the live player avatar path, assert the debug ownership labels for standing, side bend, hands-front, squat, and left/right leg raises, check that the player-avatar region contains visible rendered pixels, compare posture silhouettes against standing, and attach screenshots plus visual metrics to the Playwright report.
 
 The browser suite is expected to run with no expected skips.
+
+## Movement Avatar Eval
+
+Run the focused avatar-following eval with:
+
+```bash
+npm run eval:movement-avatar
+```
+
+This starts the normal Playwright app server, creates deterministic auth storage state, opens `/demos/movements/squat-proof`, and feeds synthetic skeleton poses through the same `VrmAvatar` player path used during practice. The eval fails when squat and leg-raise ownership drift, when spine ownership regresses, when the proof route stops rendering the avatar canvas, when the captured screenshot does not contain enough visible player-avatar pixels in the right-side proof region, or when squat/leg-raise screenshots become visually indistinguishable from standing. Screenshots and computed visual metrics are stored as Playwright attachments under `test-results/` and surfaced in the HTML report.
 
 ## Local Real Auth Lane
 

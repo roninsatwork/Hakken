@@ -175,6 +175,31 @@ function buildSegments(poseLandmarks: TrackingLandmark[], scale: number) {
   }, {});
 }
 
+function average(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function averageVector(vectors: MovementRetargetVector[]): MovementRetargetVector {
+  return {
+    x: average(vectors.map((vector) => vector.x)),
+    y: average(vectors.map((vector) => vector.y)),
+    z: average(vectors.map((vector) => vector.z)),
+  };
+}
+
+function averageSegment(
+  segments: MovementRetargetSegment[],
+): MovementRetargetSegment | null {
+  if (segments.length === 0) return null;
+
+  return {
+    confidence: average(segments.map((segment) => segment.confidence)),
+    direction: normalizeVector(averageVector(segments.map((segment) => segment.direction))),
+    length: average(segments.map((segment) => segment.length)),
+  };
+}
+
 function getRawKneeLift({
   hipCenterY,
   knee,
@@ -229,6 +254,40 @@ export function buildMovementRetargetSourceModel({
     segments: buildSegments(poseLandmarks, centers.torsoHeight),
     shoulderCenter: centers.shoulderCenter,
     torsoHeight: centers.torsoHeight,
+  };
+}
+
+export function averageMovementRetargetSourceModels(
+  models: MovementRetargetSourceModel[],
+): MovementRetargetSourceModel | null {
+  if (models.length === 0) return null;
+
+  const averagedSegments = SEGMENT_NAMES.reduce<MovementRetargetSourceModel["segments"]>(
+    (segments, name) => {
+      const segment = averageSegment(
+        models
+          .map((model) => model.segments[name])
+          .filter((segment): segment is MovementRetargetSegment => Boolean(segment)),
+      );
+
+      if (segment) segments[name] = segment;
+      return segments;
+    },
+    {},
+  );
+
+  return {
+    calibratedAt: models[models.length - 1]?.calibratedAt ?? Date.now(),
+    floorY: average(models.map((model) => model.floorY)),
+    hipCenter: averageVector(models.map((model) => model.hipCenter)),
+    neutralKneeLift: {
+      left: average(models.map((model) => model.neutralKneeLift.left)),
+      right: average(models.map((model) => model.neutralKneeLift.right)),
+    },
+    quality: average(models.map((model) => model.quality)),
+    segments: averagedSegments,
+    shoulderCenter: averageVector(models.map((model) => model.shoulderCenter)),
+    torsoHeight: average(models.map((model) => model.torsoHeight)),
   };
 }
 
@@ -333,4 +392,10 @@ export function solveMovementRetargetFrame({
     segments,
     squatDepth,
   };
+}
+
+export function getBalancedPlantedSquatDepth(frame: MovementRetargetFrame) {
+  if (!frame.contacts.leftFoot || !frame.contacts.rightFoot) return 0;
+  if (Math.abs(frame.kneeLift.left - frame.kneeLift.right) >= 0.2) return 0;
+  return frame.squatDepth;
 }

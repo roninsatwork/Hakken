@@ -16,6 +16,7 @@ type MovementCapturePanelProps = {
   isPoseReady: boolean;
   frameCount: number;
   trackingQuality: number;
+  spineQuality: number;
   onCameraError: () => void;
   onRetryVision: () => void;
   onToggleRecording: () => void;
@@ -32,6 +33,7 @@ export default function MovementCapturePanel({
   isPoseReady,
   frameCount,
   trackingQuality,
+  spineQuality,
   onCameraError,
   onRetryVision,
   onToggleRecording,
@@ -93,6 +95,11 @@ export default function MovementCapturePanel({
         <div className="rounded-full border border-white/10 bg-black/50 px-4 py-2 backdrop-blur-md">
           <Typography className="text-xs font-bold uppercase tracking-wide text-white/80">
             Alignment {trackingQuality}%
+          </Typography>
+        </div>
+        <div className="rounded-full border border-white/10 bg-black/50 px-4 py-2 backdrop-blur-md">
+          <Typography className="text-xs font-bold uppercase tracking-wide text-white/80">
+            Spine {spineQuality}%
           </Typography>
         </div>
       </div>

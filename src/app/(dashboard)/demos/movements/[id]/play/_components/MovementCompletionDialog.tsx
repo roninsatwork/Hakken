@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 type MovementCompletionDialogProps = {
   isOpen: boolean;
   finalScore: number;
+  finalSpineScore?: number;
+  finalSpineCue?: string;
   isPreviewMode?: boolean;
   onExitMatch: () => void;
   onRematch: () => void;
@@ -13,6 +15,8 @@ type MovementCompletionDialogProps = {
 export default function MovementCompletionDialog({
   isOpen,
   finalScore,
+  finalSpineScore = 0,
+  finalSpineCue = "Review the spine guide and try one calmer pass.",
   isPreviewMode = false,
   onExitMatch,
   onRematch,
@@ -60,6 +64,19 @@ export default function MovementCompletionDialog({
                     Alignment Result
                   </span>
                   <span className="text-5xl font-black tracking-tight text-[#f6ccbe]">{finalScore}</span>
+                  <div className="mt-8 grid w-full grid-cols-[96px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left">
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/[0.48]">
+                        Best Spine
+                      </span>
+                      <span className="mt-1 block text-2xl font-black text-[#a8d5ba]">
+                        {finalSpineScore}%
+                      </span>
+                    </div>
+                    <p className="self-center text-sm leading-6 text-white/60">
+                      {finalSpineCue}
+                    </p>
+                  </div>
                 </>
               )}
             </div>

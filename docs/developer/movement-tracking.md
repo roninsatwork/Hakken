@@ -6,6 +6,7 @@ Related documents:
 
 - [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md) describes the product surface, routes, storage model, and verification commands.
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md) records the intended direction if avatar body motion is explicitly reopened.
+- [Posture Studio Skeleton Observability Plan](../plans/active/posture-studio-skeleton-observability-plan.md) defines the next diagnostic layer for classifying raw tracking, normalized skeleton, retargeting, and avatar failures without repeated manual testing.
 
 ## Implemented Surface
 
@@ -21,8 +22,11 @@ The route set is:
 - `/demos/movements` for the saved movement library.
 - `/demos/movements/[id]` for review and frame inspection.
 - `/demos/movements/[id]/play` for guided practice and player matching.
+- `/demos/movements/squat-proof` for deterministic synthetic webcam-to-player-avatar proof.
 
 The play route accepts `guidedPreview=1` for guided-preview mode and `debugTracking=1` for the tracking debug overlays and frame scrubber. The route combines saved instructor frames, live player vision output, calibration state, match scoring, and avatar rendering in `src/app/(dashboard)/demos/movements/[id]/play/page.tsx`.
+
+The proof route accepts `mode=standing`, `mode=side-bend`, `mode=hands-front`, `mode=squat`, `mode=far-squat`, `mode=left-leg-raise`, `mode=far-left-leg-raise`, `mode=right-leg-raise`, or `mode=far-right-leg-raise`. It feeds controlled synthetic skeleton and hand landmarks into the same live player `VrmAvatar` path used during practice, shows the source skeleton beside the player avatar, and exposes compact debug labels for spine, arm-depth, and ownership state. The far modes keep clear whole-body movement geometry while lowering lower-body confidence to catch distance-related regressions where the player avatar used to stand upright when the user stepped back to fit their full body in the webcam frame.
 
 ## Capture And Storage Flow
 
@@ -93,9 +97,19 @@ When recordings do not include `worldLandmarks`, the 2D fallback must keep the s
 
 The implementation has focused tests for the movement helpers:
 
+- `src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBody.test.ts`
+- `src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerDrive.test.ts`
 - `src/app/(dashboard)/demos/movements/_lib/movementRetargeting.test.ts`
 - `src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration.test.ts`
 - `src/app/(dashboard)/demos/movements/_lib/movementAvatarProfiles.test.ts`
 - `src/app/(dashboard)/demos/movements/_lib/saveMovementRecording.test.ts`
+
+The browser eval for avatar body-motion regressions is:
+
+```bash
+npm run eval:movement-avatar
+```
+
+That command runs `e2e/movement-avatar-proof.eval.spec.ts` against `/demos/movements/squat-proof`. It asserts the expected debug owners, verifies the right-side player-avatar region contains visible rendered pixels, compares squat, far-camera squat, leg-raise, and far-camera leg-raise silhouettes against standing, and attaches screenshots plus visual metrics to the Playwright report.
 
 When documentation-only automation audits this area, source reads are allowed but source edits are not. If the current behaviour needs product or code changes, report that the user must explicitly reopen the movement demo rather than changing the frozen files from this automation.

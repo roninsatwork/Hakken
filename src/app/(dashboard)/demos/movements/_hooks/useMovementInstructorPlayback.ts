@@ -9,6 +9,7 @@ import {
 } from "../_lib/vrmRigging";
 import {
   buildMovementRetargetSourceModel,
+  getBalancedPlantedSquatDepth,
   solveMovementRetargetFrame,
   type MovementRetargetSourceModel,
 } from "../_lib/movementRetargeting";
@@ -54,6 +55,7 @@ type InstructorPlaybackAdvance = {
 };
 
 export type MovementInstructorRetargetFrameAnalysis = {
+  balancedPlantedSquatDepth: number;
   frameIndex: number;
   hipDrop: number;
   leftFootContact: boolean;
@@ -153,6 +155,7 @@ function toRetargetFrameAnalysis(
   });
 
   return {
+    balancedPlantedSquatDepth: getBalancedPlantedSquatDepth(retargetFrame),
     frameIndex,
     hipDrop: retargetFrame.hipDrop,
     leftFootContact: retargetFrame.contacts.leftFoot,

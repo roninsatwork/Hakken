@@ -13,6 +13,7 @@ import type Webcam from "react-webcam";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import { resolveHandSideByWrist } from "../_lib/handMatching";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
+import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
 import type { MovementHandSide } from "../_lib/movementTypes";
 
 type HandCapture = {
@@ -38,9 +39,11 @@ type UseMovementCaptureInput = {
   isVisionReady: boolean;
 };
 
-const FULL_BODY_VISIBILITY_THRESHOLD = 0.55;
+export const MOVEMENT_CAPTURE_RECORDING_VISIBILITY_THRESHOLD = 0.4;
+const MOVEMENT_CAPTURE_HIP_VISIBILITY_THRESHOLD = 0.35;
+const MOVEMENT_CAPTURE_KNEE_VISIBILITY_THRESHOLD = 0.25;
 
-function getFullBodyVisibility(landmarks: NormalizedLandmark[]) {
+export function getMovementCaptureFullBodyVisibility(landmarks: NormalizedLandmark[]) {
   const leftShoulder = landmarks[11];
   const rightShoulder = landmarks[12];
   const leftHip = landmarks[23];
@@ -63,6 +66,21 @@ function getFullBodyVisibility(landmarks: NormalizedLandmark[]) {
   );
 }
 
+export function shouldRecordMovementCaptureFrame(landmarks: NormalizedLandmark[]) {
+  const leftHip = landmarks[23];
+  const rightHip = landmarks[24];
+  const leftKnee = landmarks[25];
+  const rightKnee = landmarks[26];
+  const hipVisibility = ((leftHip?.visibility ?? 0) + (rightHip?.visibility ?? 0)) / 2;
+  const kneeVisibility = ((leftKnee?.visibility ?? 0) + (rightKnee?.visibility ?? 0)) / 2;
+
+  return (
+    getMovementCaptureFullBodyVisibility(landmarks) >= MOVEMENT_CAPTURE_RECORDING_VISIBILITY_THRESHOLD &&
+    hipVisibility >= MOVEMENT_CAPTURE_HIP_VISIBILITY_THRESHOLD &&
+    kneeVisibility >= MOVEMENT_CAPTURE_KNEE_VISIBILITY_THRESHOLD
+  );
+}
+
 export function useMovementCapture({
   webcamRef,
   canvasRef,
@@ -74,6 +92,7 @@ export function useMovementCapture({
   const [isRecording, setIsRecording] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
   const [trackingQuality, setTrackingQuality] = useState(0);
+  const [spineQuality, setSpineQuality] = useState(0);
   const isRecordingRef = useRef(false);
   const recordedFramesRef = useRef<MovementCaptureFrame[]>([]);
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
@@ -118,10 +137,13 @@ export function useMovementCapture({
             const smoothedLandmarks = poseFilterRef.current.filter(poseResults.landmarks[0], startTimeMs);
             const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
             const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
-            const fullBodyVisibility = getFullBodyVisibility(smoothedLandmarks);
+            const fullBodyVisibility = getMovementCaptureFullBodyVisibility(smoothedLandmarks);
+            const spineModel = buildMovementSpineModel(smoothedLandmarks);
             setTrackingQuality(Math.round(fullBodyVisibility * 100));
+            setSpineQuality(spineModel?.neutralStackScore ?? 0);
+            drawMovementSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
 
-            if (fullBodyVisibility >= FULL_BODY_VISIBILITY_THRESHOLD) {
+            if (shouldRecordMovementCaptureFrame(smoothedLandmarks)) {
               const currentData: MovementCaptureFrame = {
                 timestamp: startTimeMs,
                 landmarks: smoothedLandmarks,
@@ -168,11 +190,10 @@ export function useMovementCapture({
                 recordedFramesRef.current.push(currentData);
                 setFrameCount(recordedFramesRef.current.length);
               }
-
-              drawMovementSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
             }
           } else {
             setTrackingQuality(0);
+            setSpineQuality(0);
           }
         }
       }
@@ -210,6 +231,7 @@ export function useMovementCapture({
     isRecording,
     frameCount,
     trackingQuality,
+    spineQuality,
     startRecording,
     stopRecording,
     getRecordedFrames,

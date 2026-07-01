@@ -10,6 +10,9 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
 
     await expect(page.getByRole("heading", { name: "Posture Studio Library" })).toBeVisible();
     await expect(page.getByText("E2E Roll Down")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Roll down", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Roll down", exact: true }).click();
+    await expect(page.getByText("E2E Roll Down")).toBeVisible();
     await expect(page.getByRole("link", { name: "New Routine" })).toBeVisible();
   });
 
@@ -60,6 +63,8 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
 
     await expect(page.getByText("Debug Scrub")).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole("spinbutton", { name: "Debug frame number" })).toBeVisible();
+    await expect(page.getByText("Peak Squat")).toBeVisible();
+    await expect(page.getByText(/body\d+\.\d+/)).toBeVisible();
     await expect(page.getByText("Coach Diagnostics")).toBeVisible();
   });
 });

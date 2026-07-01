@@ -87,6 +87,9 @@ describe("Movements API Authentication Hardening", () => {
       durationMs: 1000,
       captureFps: 30,
       schemaVersion: 1,
+      spineGoal: "neutralStack",
+      primaryCue: "Stack head over hips.",
+      bodyFocus: ["neck", "pelvis"],
     });
     expect(movementId).toBeDefined();
 
@@ -99,6 +102,9 @@ describe("Movements API Authentication Hardening", () => {
     const fetched = await authedClient.query(api.movements.get, { id: movementId });
     expect(fetched?.title).toBe("Hundred");
     expect(fetched?.poseDataFormat).toBe("legacy-inline-json");
+    expect(fetched?.spineGoal).toBe("neutralStack");
+    expect(fetched?.primaryCue).toBe("Stack head over hips.");
+    expect(fetched?.bodyFocus).toEqual(["neck", "pelvis"]);
     expect(fetched?.createdBy).toBe(normalUserId);
 
     // 5. Remove should delete it
@@ -123,11 +129,13 @@ describe("Movements API Authentication Hardening", () => {
       title: "Morning Hundred",
       difficulty: "Beginner",
       poseData: "[]",
+      spineGoal: "neutralStack",
     });
     await authedClient.mutation(api.movements.create, {
       title: "Evening Roll Up",
       difficulty: "Intermediate",
       poseData: "[]",
+      spineGoal: "rollDown",
     });
 
     const firstPage = await authedClient.query(api.movements.getPaginated, {
@@ -141,5 +149,18 @@ describe("Movements API Authentication Hardening", () => {
       searchTerm: "Roll",
     });
     expect(searchPage.page.map((movement) => movement.title)).toEqual(["Evening Roll Up"]);
+
+    const filteredPage = await authedClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 15, cursor: null },
+      spineGoal: "neutralStack",
+    });
+    expect(filteredPage.page.map((movement) => movement.title)).toEqual(["Morning Hundred"]);
+
+    const searchAndFilterPage = await authedClient.query(api.movements.getPaginated, {
+      paginationOpts: { numItems: 15, cursor: null },
+      searchTerm: "Roll",
+      spineGoal: "rollDown",
+    });
+    expect(searchAndFilterPage.page.map((movement) => movement.title)).toEqual(["Evening Roll Up"]);
   });
 });

@@ -12,6 +12,8 @@ type MovementHudProps = {
   difficulty: string;
   hudScore: number;
   hudSync: number;
+  hudSpine?: number;
+  hudSpineCue?: string;
   isPlaying: boolean;
   isVisionReady: boolean;
   isTrackingCalibrated: boolean;
@@ -37,6 +39,8 @@ export default function MovementHud({
   difficulty,
   hudScore,
   hudSync,
+  hudSpine = 0,
+  hudSpineCue = "Waiting for spine tracking.",
   isPlaying,
   isVisionReady,
   isTrackingCalibrated,
@@ -143,6 +147,11 @@ export default function MovementHud({
               <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
                 {readinessLabel}
               </span>
+              {hudSpine > 0 && (
+                <span className="mt-1 max-w-[300px] truncate text-[11px] font-bold text-[#d7eef4]">
+                  {hudSpineCue}
+                </span>
+              )}
               {visionError && (
                 <button
                   type="button"
@@ -191,6 +200,11 @@ export default function MovementHud({
           <div className="flex flex-col">
             <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#a8d5ba]">Posture Sync</Typography>
             <Typography className="text-4xl font-black text-white">{hudSync}%</Typography>
+          </div>
+          <div className="h-10 w-px bg-white/15" />
+          <div className="flex flex-col">
+            <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#f6ccbe]">Spine</Typography>
+            <Typography className="text-4xl font-black text-white">{hudSpine}%</Typography>
           </div>
         </div>
       </div>

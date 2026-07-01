@@ -15,6 +15,11 @@ import {
   type ScoreHandsPayload,
   type ScoreLandmark,
 } from "../_lib/movementScoring";
+import {
+  buildMovementSpineModel,
+  compareMovementSpineModels,
+} from "../_lib/movementSpineMetrics";
+import type { MovementSpineGoal } from "../_lib/movementTypes";
 
 type FeedbackMessage = { text: string; id: number } | null;
 
@@ -29,6 +34,7 @@ type UseMovementMatchScoringInput = {
   setIsPlaying: (isPlaying: boolean) => void;
   playerLiveLmRef: RefObject<VrmMotionPayload | null>;
   advanceInstructorFrame: () => InstructorPlaybackAdvance;
+  spineGoal?: MovementSpineGoal | null;
 };
 
 const PLAYER_MOTION_SCORE_THRESHOLD = 0.012;
@@ -40,15 +46,21 @@ export function useMovementMatchScoring({
   setIsPlaying,
   playerLiveLmRef,
   advanceInstructorFrame,
+  spineGoal = null,
 }: UseMovementMatchScoringInput) {
   const [finalScore, setFinalScore] = useState(0);
   const [feedbackMsg, setFeedbackMsg] = useState<FeedbackMessage>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [hudScore, setHudScore] = useState(0);
   const [hudSync, setHudSync] = useState(0);
+  const [hudSpine, setHudSpine] = useState(0);
+  const [hudSpineCue, setHudSpineCue] = useState("Waiting for spine tracking.");
+  const [finalSpineScore, setFinalSpineScore] = useState(0);
+  const [finalSpineCue, setFinalSpineCue] = useState("Review the spine guide and try one calmer pass.");
   const scoreRef = useRef(0);
   const comboRef = useRef(0);
   const syncRef = useRef(0);
+  const bestSpineRef = useRef({ cue: "Review the spine guide and try one calmer pass.", score: 0 });
   const lastHudUpdateRef = useRef(0);
   const lastPlayerLandmarksRef = useRef<ScoreLandmark[] | null>(null);
   const lastScoreUpdateRef = useRef(0);
@@ -76,6 +88,8 @@ export function useMovementMatchScoring({
       if (playback.status === "complete") {
         if (isPlaying) {
           setFinalScore(scoreRef.current);
+          setFinalSpineScore(bestSpineRef.current.score);
+          setFinalSpineCue(bestSpineRef.current.cue);
           setHudScore(scoreRef.current);
           setHudSync(Math.round(syncRef.current));
           setIsPlaying(false);
@@ -116,6 +130,14 @@ export function useMovementMatchScoring({
         });
 
         syncRef.current = syncResult.sync;
+        const spineMatch = compareMovementSpineModels(
+          buildMovementSpineModel(playerLandmarks),
+          buildMovementSpineModel(instructorLandmarks as ScoreLandmark[]),
+          spineGoal,
+        );
+        if (spineMatch.score > bestSpineRef.current.score) {
+          bestSpineRef.current = spineMatch;
+        }
 
         const now = performance.now();
         const shouldUpdateScore = now - lastScoreUpdateRef.current >= SCORE_UPDATE_INTERVAL_MS;
@@ -147,6 +169,8 @@ export function useMovementMatchScoring({
           lastHudUpdateRef.current = now;
           setHudScore(scoreRef.current);
           setHudSync(Math.round(syncResult.sync));
+          setHudSpine(spineMatch.score);
+          setHudSpineCue(spineMatch.cue);
         }
       }
     };
@@ -156,27 +180,39 @@ export function useMovementMatchScoring({
       active = false;
       cancelAnimationFrame(animationFrameId);
     };
-  }, [advanceInstructorFrame, isPlaying, isScoringEnabled, playerLiveLmRef, setIsPlaying]);
+  }, [advanceInstructorFrame, isPlaying, isScoringEnabled, playerLiveLmRef, setIsPlaying, spineGoal]);
 
   const resetScoring = useCallback(() => {
     setIsComplete(false);
     scoreRef.current = 0;
     comboRef.current = 0;
     syncRef.current = 0;
+    bestSpineRef.current = {
+      cue: "Review the spine guide and try one calmer pass.",
+      score: 0,
+    };
     lastPlayerLandmarksRef.current = null;
     lastScoreUpdateRef.current = 0;
     setFinalScore(0);
+    setFinalSpineScore(0);
+    setFinalSpineCue("Review the spine guide and try one calmer pass.");
     setHudScore(0);
     setHudSync(0);
+    setHudSpine(0);
+    setHudSpineCue("Waiting for spine tracking.");
     setFeedbackMsg(null);
   }, []);
 
   return {
     finalScore,
+    finalSpineScore,
+    finalSpineCue,
     feedbackMsg,
     isComplete,
     hudScore,
     hudSync,
+    hudSpine,
+    hudSpineCue,
     syncRef,
     resetScoring,
   };

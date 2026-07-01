@@ -71,6 +71,9 @@ describe("saveMovementRecording", () => {
     await saveMovementRecording({
       title: "  Morning flow  ",
       difficulty: "Intermediate",
+      spineGoal: "hipHinge",
+      primaryCue: "  Keep ribs over hips  ",
+      bodyFocus: ["ribcage", "pelvis"],
       frames: makeFrames(6),
       generateUploadUrl: vi.fn(async () => "https://upload.example"),
       createMovement,
@@ -90,6 +93,9 @@ describe("saveMovementRecording", () => {
       durationMs: 165,
       captureFps: 30,
       schemaVersion: 1,
+      spineGoal: "hipHinge",
+      primaryCue: "Keep ribs over hips",
+      bodyFocus: ["ribcage", "pelvis"],
     }));
   });
 

@@ -16,6 +16,25 @@ const movementDataFormatValidator = v.union(
   v.literal("storage-json-v1")
 );
 
+const movementSpineGoalValidator = v.union(
+  v.literal("neutralStack"),
+  v.literal("hipHinge"),
+  v.literal("rollDown"),
+  v.literal("thoracicRotation"),
+  v.literal("sideBend"),
+  v.literal("extension"),
+  v.literal("squatWithStack")
+);
+
+const movementBodyFocusValidator = v.union(
+  v.literal("neck"),
+  v.literal("shoulders"),
+  v.literal("ribcage"),
+  v.literal("pelvis"),
+  v.literal("hips"),
+  v.literal("feet")
+);
+
 function isInlinePoseData(value: string) {
   const trimmed = value.trim();
   return trimmed.startsWith("[") || trimmed.startsWith("{");
@@ -38,6 +57,7 @@ export const getPaginated = query({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
+    spineGoal: v.optional(movementSpineGoalValidator),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -48,8 +68,17 @@ export const getPaginated = query({
     return searchTerm
       ? await ctx.db
         .query("movements")
-        .withSearchIndex("search_title", (q) => q.search("title", searchTerm))
+        .withSearchIndex("search_title", (q) => {
+          const searched = q.search("title", searchTerm);
+          return args.spineGoal ? searched.eq("spineGoal", args.spineGoal) : searched;
+        })
         .paginate(args.paginationOpts)
+      : args.spineGoal
+        ? await ctx.db
+          .query("movements")
+          .withIndex("by_spineGoal_createdAt", (q) => q.eq("spineGoal", args.spineGoal))
+          .order("desc")
+          .paginate(args.paginationOpts)
       : await ctx.db
         .query("movements")
         .withIndex("by_createdAt")
@@ -79,6 +108,9 @@ export const create = mutation({
     durationMs: v.optional(v.number()),
     captureFps: v.optional(v.number()),
     schemaVersion: v.optional(v.number()),
+    spineGoal: v.optional(movementSpineGoalValidator),
+    primaryCue: v.optional(v.string()),
+    bodyFocus: v.optional(v.array(movementBodyFocusValidator)),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -94,6 +126,9 @@ export const create = mutation({
       durationMs: args.durationMs,
       captureFps: args.captureFps,
       schemaVersion: args.schemaVersion,
+      spineGoal: args.spineGoal,
+      primaryCue: args.primaryCue,
+      bodyFocus: args.bodyFocus,
       createdBy: userId,
       createdAt: Date.now(),
     });

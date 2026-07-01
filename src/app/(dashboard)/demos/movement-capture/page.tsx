@@ -16,7 +16,11 @@ import {
   MIN_MOVEMENT_CAPTURE_FRAMES,
   saveMovementRecording,
 } from "../movements/_lib/saveMovementRecording";
-import type { MovementDifficulty } from "../movements/_lib/movementTypes";
+import type {
+  MovementBodyFocus,
+  MovementDifficulty,
+  MovementSpineGoal,
+} from "../movements/_lib/movementTypes";
 
 export default function MovementCapturePage() {
   const webcamRef = useRef<Webcam>(null);
@@ -36,6 +40,7 @@ export default function MovementCapturePage() {
     isRecording,
     frameCount,
     trackingQuality,
+    spineQuality,
     startRecording,
     stopRecording,
     getRecordedFrames,
@@ -50,6 +55,9 @@ export default function MovementCapturePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState<MovementDifficulty>("Beginner");
+  const [spineGoal, setSpineGoal] = useState<MovementSpineGoal>("neutralStack");
+  const [primaryCue, setPrimaryCue] = useState("");
+  const [bodyFocus, setBodyFocus] = useState<MovementBodyFocus[]>(["ribcage", "pelvis"]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -80,6 +88,9 @@ export default function MovementCapturePage() {
       await saveMovementRecording({
         title,
         difficulty,
+        spineGoal,
+        primaryCue,
+        bodyFocus,
         frames: recordedFrames,
         generateUploadUrl,
         createMovement,
@@ -117,6 +128,7 @@ export default function MovementCapturePage() {
           isPoseReady={Boolean(poseLandmarker)}
           frameCount={frameCount}
           trackingQuality={trackingQuality}
+          spineQuality={spineQuality}
           onCameraError={() => setCameraError(true)}
           onRetryVision={retryVision}
           onToggleRecording={toggleRecording}
@@ -127,12 +139,18 @@ export default function MovementCapturePage() {
         isOpen={showSaveModal}
         title={title}
         difficulty={difficulty}
+        spineGoal={spineGoal}
+        primaryCue={primaryCue}
+        bodyFocus={bodyFocus}
         frameCount={frameCount}
         isSaving={isSaving}
         saveError={saveError}
         onClose={() => setShowSaveModal(false)}
         onTitleChange={setTitle}
         onDifficultyChange={setDifficulty}
+        onSpineGoalChange={setSpineGoal}
+        onPrimaryCueChange={setPrimaryCue}
+        onBodyFocusChange={setBodyFocus}
         onSave={handleSave}
       />
     </>

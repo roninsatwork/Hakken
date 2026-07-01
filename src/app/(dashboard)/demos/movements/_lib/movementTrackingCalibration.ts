@@ -201,6 +201,18 @@ function distance2D(a: TrackingLandmark, b: TrackingLandmark) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function angleAtJoint(a: TrackingLandmark, joint: TrackingLandmark, b: TrackingLandmark) {
+  const ax = a.x - joint.x;
+  const ay = a.y - joint.y;
+  const bx = b.x - joint.x;
+  const by = b.y - joint.y;
+  const aLength = Math.hypot(ax, ay);
+  const bLength = Math.hypot(bx, by);
+  if (aLength < 0.0001 || bLength < 0.0001) return Math.PI;
+
+  return Math.acos(clamp((ax * bx + ay * by) / (aLength * bLength), -1, 1));
+}
+
 function estimatePoseHeadCenter(poseLandmarks: TrackingLandmark[]) {
   const nose = poseLandmarks[0];
   const leftEar = poseLandmarks[7];
@@ -586,15 +598,60 @@ export function getMovementLowerBodyIntent({
   const leftAnkle = poseLandmarks[27];
   const rightAnkle = poseLandmarks[28];
 
-  if (!calibration || !leftHip || !rightHip || !leftKnee || !rightKnee) {
+  const estimateUncalibratedSquat = (): MovementLowerBodyIntent => {
+    if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+      return {
+        squatDepth: 0,
+        leftKneeRaise: 0,
+        rightKneeRaise: 0,
+        squatSignals: EMPTY_SQUAT_SIGNALS,
+        confidence: 0,
+        label: "neutral",
+      };
+    }
+
+    const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
+    const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
+    const ankleConfidence = average([visibility(leftAnkle), visibility(rightAnkle)]);
+    const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
+    if (confidence < 0.35) {
+      return {
+        squatDepth: 0,
+        leftKneeRaise: 0,
+        rightKneeRaise: 0,
+        squatSignals: EMPTY_SQUAT_SIGNALS,
+        confidence,
+        label: "neutral",
+      };
+    }
+
+    const leftKneeAngle = angleAtJoint(leftHip, leftKnee, leftAnkle);
+    const rightKneeAngle = angleAtJoint(rightHip, rightKnee, rightAnkle);
+    const kneeAngleDifference = Math.abs(leftKneeAngle - rightKneeAngle);
+    const averageKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+    const kneeBendDepth = kneeAngleDifference < 0.5
+      ? clamp((2.62 - averageKneeAngle) / 1.2, 0, 1)
+      : 0;
+    const squatDepth = kneeBendDepth;
+    const label = squatDepth > 0.18 ? "squat" : "neutral";
+
     return {
-      squatDepth: 0,
+      squatDepth: label === "squat" ? squatDepth : 0,
       leftKneeRaise: 0,
       rightKneeRaise: 0,
-      squatSignals: EMPTY_SQUAT_SIGNALS,
-      confidence: 0,
-      label: "neutral",
+      squatSignals: {
+        hipDrop: 0,
+        kneeBend: kneeBendDepth,
+        torsoDrop: 0,
+        headDrop: 0,
+      },
+      confidence,
+      label,
     };
+  };
+
+  if (!calibration || !leftHip || !rightHip || !leftKnee || !rightKnee) {
+    return estimateUncalibratedSquat();
   }
 
   const hips = midpoint(leftHip, rightHip);
@@ -605,14 +662,7 @@ export function getMovementLowerBodyIntent({
   const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
 
   if (confidence < 0.35 || calibration.quality < 0.45) {
-    return {
-      squatDepth: 0,
-      leftKneeRaise: 0,
-      rightKneeRaise: 0,
-      squatSignals: EMPTY_SQUAT_SIGNALS,
-      confidence,
-      label: "neutral",
-    };
+    return estimateUncalibratedSquat();
   }
 
   const hipDrop = hips.y - calibration.hipCenter.y;
@@ -636,14 +686,15 @@ export function getMovementLowerBodyIntent({
     ? clamp((kneeRaiseThreshold - rightKnee.y) / kneeRaiseWindow, 0, 1)
     : 0;
   const strongestKneeRaise = Math.max(leftKneeRaise, rightKneeRaise);
-  const weakestKneeRaise = Math.min(leftKneeRaise, rightKneeRaise);
   const kneeRaiseDifference = Math.abs(leftKneeRaise - rightKneeRaise);
-  const bothKneesRaisedTogether = weakestKneeRaise > 0.22;
   const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
-  const symmetricKneeBend = kneeRaiseDifference < 0.16 && weakestKneeRaise > 0.32
-    ? weakestKneeRaise
+  const leftKneeAngle = leftAnkle ? angleAtJoint(leftHip, leftKnee, leftAnkle) : Math.PI;
+  const rightKneeAngle = rightAnkle ? angleAtJoint(rightHip, rightKnee, rightAnkle) : Math.PI;
+  const kneeAngleDifference = Math.abs(leftKneeAngle - rightKneeAngle);
+  const averageKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+  const kneeBendDepth = kneeAngleDifference < 0.5
+    ? clamp((2.62 - averageKneeAngle) / 1.2, 0, 1)
     : 0;
-  const kneeBendDepth = clamp((symmetricKneeBend - 0.24) / 0.28, 0, 1);
   const squatSignals = {
     hipDrop: rawSquatDepth,
     kneeBend: kneeBendDepth,
@@ -654,9 +705,9 @@ export function getMovementLowerBodyIntent({
   const postureDropDepth = Math.max(torsoDropDepth, headDropDepth);
   const hasSquatLegEvidence =
     rawSquatDepth > 0.12 ||
-    kneeBendDepth > 0.18;
+    (kneeBendDepth > 0.22 && postureDropDepth > 0.18);
   const compositeSquatDepth = clamp(
-    lowerBodySquatEvidence * 0.78 +
+    lowerBodySquatEvidence * 0.82 +
       (hasSquatLegEvidence ? postureDropDepth * 0.42 : 0),
     0,
     1,
@@ -669,7 +720,7 @@ export function getMovementLowerBodyIntent({
       )
     : 0;
   const label =
-    squatDepth > 0.22 && (strongestKneeRaise < 0.42 || bothKneesRaisedTogether || !clearSingleKneeRaise)
+    squatDepth > 0.22 && !clearSingleKneeRaise
       ? "squat"
       : clearSingleKneeRaise
         ? leftKneeRaise > rightKneeRaise

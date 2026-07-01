@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useMemo, useState, use } from "react";
 import Header from "@/src/ui/components/layout/Header";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -13,6 +13,12 @@ import { useMovementFrames } from "../_hooks/useMovementFrames";
 import MovementDeleteDialog from "../_components/MovementDeleteDialog";
 import MovementFrameViewer from "../_components/MovementFrameViewer";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
+import {
+  getMovementBodyFocusLabel,
+  getMovementSpineGoalDescription,
+  getMovementSpineGoalLabel,
+} from "../_lib/movementSpineIntent";
+import { analyzeMovementSpineFrames } from "../_lib/movementSpineReview";
 
 export default function MovementDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -25,6 +31,16 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const { frames, fps, format, isLoading, error, reload } = useMovementFrames(movement);
   const routineTitle = getStudioRoutineTitle(movement?.title);
+  const spineGoalLabel = getMovementSpineGoalLabel(movement?.spineGoal);
+  const spineGoalDescription = getMovementSpineGoalDescription(movement?.spineGoal);
+  const bodyFocus = movement?.bodyFocus ?? [];
+  const spineReview = useMemo(() => analyzeMovementSpineFrames(frames), [frames]);
+  const spineReviewMoments = [
+    spineReview.bestStack,
+    spineReview.deepestBend,
+    spineReview.largestRotation,
+    spineReview.largestAsymmetry,
+  ].filter((moment): moment is NonNullable<typeof moment> => Boolean(moment));
 
   const confirmDelete = () => {
     setDeleteModalOpen(true);
@@ -86,6 +102,19 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
           <Typography className="text-muted-foreground text-sm mt-1">
             Recorded on {new Date(movement.createdAt).toLocaleDateString()} at {new Date(movement.createdAt).toLocaleTimeString()}
           </Typography>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="rounded-full border border-[#f6ccbe]/25 bg-[#f6ccbe]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#f6ccbe]">
+              {spineGoalLabel}
+            </span>
+            {bodyFocus.map((focus) => (
+              <span
+                key={focus}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-secondary"
+              >
+                {getMovementBodyFocusLabel(focus)}
+              </span>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-3 pt-3">
             <Link
               href={`/demos/movements/${movement._id}/play?guidedPreview=1`}
@@ -150,7 +179,80 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                       </Typography>
                     </div>
                   </div>
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <div className="flex flex-col">
+                      <Typography className="text-sm font-medium text-foreground block">Spine Goal</Typography>
+                      <Typography className="text-xs text-muted-foreground mt-0.5 block">
+                        {spineGoalDescription}
+                      </Typography>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <div className="flex flex-col">
+                      <Typography className="text-sm font-medium text-foreground block">Instructor Cue</Typography>
+                      <Typography className="text-xs text-muted-foreground mt-0.5 block">
+                        {movement.primaryCue?.trim() || "Use the spine guide to keep the routine calm and organized."}
+                      </Typography>
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <div className="border-t border-border-dim pt-6">
+                <Typography className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">
+                  Spine Review
+                </Typography>
+                {spineReview.trackedFrameCount > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        <Typography className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Avg stack
+                        </Typography>
+                        <Typography className="mt-1 text-2xl font-black text-[#f6ccbe]">
+                          {spineReview.averageStackScore}%
+                        </Typography>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        <Typography className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Symmetry
+                        </Typography>
+                        <Typography className="mt-1 text-2xl font-black text-[#a8d5ba]">
+                          {spineReview.averageSymmetryScore}%
+                        </Typography>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {spineReviewMoments.map((moment) => (
+                        <div
+                          key={moment.label}
+                          className="rounded-2xl border border-white/10 bg-[#07070b]/60 p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <Typography className="text-xs font-bold text-foreground">
+                              {moment.label}
+                            </Typography>
+                            <span className="rounded-full bg-[#f6ccbe]/10 px-2 py-1 text-[10px] font-bold text-[#f6ccbe]">
+                              Frame {moment.frameIndex}
+                            </span>
+                          </div>
+                          <Typography className="mt-1 text-sm font-black text-white">
+                            {moment.valueLabel}
+                          </Typography>
+                          <Typography className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {moment.cue}
+                          </Typography>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Typography className="text-xs leading-5 text-muted-foreground">
+                    Spine review appears after the recording frames finish loading.
+                  </Typography>
+                )}
               </div>
 
               <div className="border-t border-border-dim pt-6">

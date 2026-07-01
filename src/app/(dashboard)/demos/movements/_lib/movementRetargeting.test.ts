@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  averageMovementRetargetSourceModels,
   buildMovementRetargetSourceModel,
+  getBalancedPlantedSquatDepth,
   solveMovementRetargetFrame,
 } from "./movementRetargeting";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
@@ -54,6 +56,29 @@ describe("movementRetargeting", () => {
     expect(calibration?.segments.rightShin?.confidence).toBeGreaterThan(0.7);
   });
 
+  it("averages neutral source models for calibration-stable lower-body retargeting", () => {
+    const first = buildMovementRetargetSourceModel({
+      now: 100,
+      poseLandmarks: withCorePose(),
+    });
+    const secondPose = withCorePose();
+    secondPose[23] = { ...secondPose[23]!, y: 0.69 };
+    secondPose[24] = { ...secondPose[24]!, y: 0.69 };
+    const second = buildMovementRetargetSourceModel({
+      now: 200,
+      poseLandmarks: secondPose,
+    });
+
+    const averaged = averageMovementRetargetSourceModels([first!, second!]);
+
+    expect(averaged).toMatchObject({
+      calibratedAt: 200,
+      quality: expect.any(Number),
+    });
+    expect(averaged?.hipCenter.y).toBeCloseTo(0.685);
+    expect(averaged?.segments.leftThigh?.direction.y).toBeGreaterThan(0.9);
+  });
+
   it("rejects a crouched frame as a neutral source body model", () => {
     const pose = withCorePose();
     pose[23] = { ...pose[23]!, y: 0.88 };
@@ -81,6 +106,7 @@ describe("movementRetargeting", () => {
     expect(frame.contacts.leftFoot).toBe(true);
     expect(frame.contacts.rightFoot).toBe(true);
     expect(frame.debug.solvedSegments).toContain("leftThigh");
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(frame.squatDepth);
   });
 
   it("does not turn mild hip drift into a committed squat", () => {
@@ -116,5 +142,32 @@ describe("movementRetargeting", () => {
     expect(frame.contacts.leftFoot).toBe(false);
     expect(frame.contacts.rightFoot).toBe(true);
     expect(frame.squatDepth).toBe(0);
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
+  });
+
+  it("does not apply planted squat presentation to uneven knee movement", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, y: 0.8 };
+    squatPose[24] = { ...squatPose[24]!, y: 0.8 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.73 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.73 };
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: squatPose,
+    });
+    const unevenFrame = {
+      ...frame,
+      kneeLift: {
+        left: 0.62,
+        right: 0.08,
+      },
+    };
+
+    expect(frame.contacts.leftFoot).toBe(true);
+    expect(frame.contacts.rightFoot).toBe(true);
+    expect(frame.squatDepth).toBeGreaterThan(0.5);
+    expect(getBalancedPlantedSquatDepth(unevenFrame)).toBe(0);
   });
 });

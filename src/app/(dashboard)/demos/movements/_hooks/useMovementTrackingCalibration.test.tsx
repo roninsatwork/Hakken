@@ -77,6 +77,8 @@ describe("useMovementTrackingCalibration", () => {
     expect(result.current.calibrationProgress).toBe(100);
     expect(result.current.calibrationSampleCount).toBeGreaterThanOrEqual(12);
     expect(result.current.calibration?.quality).toBeGreaterThan(0.8);
+    expect(result.current.retargetSourceModel?.quality).toBeGreaterThan(0.8);
+    expect(result.current.retargetSourceModel?.segments.leftThigh?.confidence).toBeGreaterThan(0.7);
   });
 
   it("rejects calibration when tracking confidence is weak", () => {
@@ -93,6 +95,7 @@ describe("useMovementTrackingCalibration", () => {
 
     expect(result.current.isCalibrated).toBe(false);
     expect(result.current.calibrationStatus).toBe("Needs stronger tracking");
+    expect(result.current.retargetSourceModel).toBeNull();
     expect(result.current.calibrationProgress).toBe(100);
     expect(result.current.calibrationSampleCount).toBe(0);
   });
@@ -127,6 +130,7 @@ describe("useMovementTrackingCalibration", () => {
     expect(result.current.isCalibrated).toBe(false);
     expect(result.current.isCalibrationSkipped).toBe(true);
     expect(result.current.calibrationStatus).toBe("Skipped calibration");
+    expect(result.current.retargetSourceModel).toBeNull();
 
     act(() => result.current.resetCalibration());
 

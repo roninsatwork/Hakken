@@ -93,9 +93,48 @@ describe("buildInstructorRetargetSourceModel", () => {
     const analysis = buildInstructorRetargetAnalysis(frames, sourceModel);
 
     expect(analysis.peakSquat?.frameIndex).toBe(1);
+    expect(analysis.peakSquat?.balancedPlantedSquatDepth).toBeGreaterThan(0.5);
     expect(analysis.peakSingleKneeLift?.frameIndex).toBe(2);
+    expect(analysis.peakSingleKneeLift?.balancedPlantedSquatDepth).toBe(0);
     expect(analysis.peakRightKneeLift?.rightKneeLift).toBeGreaterThan(0.6);
     expect(analysis.peakLeftKneeLift?.leftKneeLift).toBeLessThan(0.2);
+  });
+
+  it("drives planted full-body squat only on the recorded squat frame", () => {
+    const uprightPose = withCorePose();
+    const fullBodySquatPose = withCorePose();
+    fullBodySquatPose[23] = { ...fullBodySquatPose[23]!, y: 0.82 };
+    fullBodySquatPose[24] = { ...fullBodySquatPose[24]!, y: 0.82 };
+    fullBodySquatPose[25] = { ...fullBodySquatPose[25]!, y: 0.74 };
+    fullBodySquatPose[26] = { ...fullBodySquatPose[26]!, y: 0.74 };
+
+    const leftKneeLiftPose = withCorePose();
+    leftKneeLiftPose[25] = { ...leftKneeLiftPose[25]!, y: 0.54 };
+    leftKneeLiftPose[27] = { ...leftKneeLiftPose[27]!, y: 0.68 };
+    leftKneeLiftPose[29] = { ...leftKneeLiftPose[29]!, y: 0.7 };
+    leftKneeLiftPose[31] = { ...leftKneeLiftPose[31]!, y: 0.7 };
+
+    const rightKneeLiftPose = withCorePose();
+    rightKneeLiftPose[26] = { ...rightKneeLiftPose[26]!, y: 0.54 };
+    rightKneeLiftPose[28] = { ...rightKneeLiftPose[28]!, y: 0.68 };
+    rightKneeLiftPose[30] = { ...rightKneeLiftPose[30]!, y: 0.7 };
+    rightKneeLiftPose[32] = { ...rightKneeLiftPose[32]!, y: 0.7 };
+
+    const frames = [
+      { landmarks: uprightPose },
+      { landmarks: fullBodySquatPose },
+      { landmarks: leftKneeLiftPose },
+      { landmarks: rightKneeLiftPose },
+    ] satisfies MovementInstructorMotionFrame[];
+    const sourceModel = buildInstructorRetargetSourceModel(frames);
+    const analysis = buildInstructorRetargetAnalysis(frames, sourceModel);
+
+    expect(analysis.peakSquat?.frameIndex).toBe(1);
+    expect(analysis.peakSquat?.balancedPlantedSquatDepth).toBeGreaterThan(0.75);
+    expect(analysis.peakSingleKneeLift?.frameIndex).not.toBe(1);
+    expect(analysis.peakSingleKneeLift?.balancedPlantedSquatDepth).toBe(0);
+    expect(analysis.peakLeftKneeLift?.balancedPlantedSquatDepth).toBe(0);
+    expect(analysis.peakRightKneeLift?.balancedPlantedSquatDepth).toBe(0);
   });
 
   it("ignores weak startup frames when choosing peak squat", () => {

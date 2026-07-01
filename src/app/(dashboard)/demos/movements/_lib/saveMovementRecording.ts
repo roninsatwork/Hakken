@@ -1,6 +1,11 @@
 import type { Id } from "@/convex/_generated/dataModel";
 import { buildMovementFrameEnvelope } from "./movementFrameCodec";
-import type { MovementDifficulty, MovementFrame } from "./movementTypes";
+import type {
+  MovementBodyFocus,
+  MovementDifficulty,
+  MovementFrame,
+  MovementSpineGoal,
+} from "./movementTypes";
 
 export const MIN_MOVEMENT_CAPTURE_FRAMES = 5;
 
@@ -14,11 +19,17 @@ type MovementCreateInput = {
   durationMs: number;
   captureFps: number;
   schemaVersion: number;
+  spineGoal?: MovementSpineGoal;
+  primaryCue?: string;
+  bodyFocus?: MovementBodyFocus[];
 };
 
 type SaveMovementRecordingInput = {
   title: string;
   difficulty: MovementDifficulty;
+  spineGoal?: MovementSpineGoal;
+  primaryCue?: string;
+  bodyFocus?: MovementBodyFocus[];
   frames: MovementFrame[];
   generateUploadUrl: () => Promise<string>;
   createMovement: (input: MovementCreateInput) => Promise<unknown>;
@@ -53,6 +64,9 @@ export function getMovementRecordingDurationMs(frames: MovementFrame[]) {
 export async function saveMovementRecording({
   title,
   difficulty,
+  spineGoal,
+  primaryCue,
+  bodyFocus,
   frames,
   generateUploadUrl,
   createMovement,
@@ -81,6 +95,7 @@ export async function saveMovementRecording({
 
   const storageId = parseStorageId(await uploadResponse.json());
   const durationMs = getMovementRecordingDurationMs(frames);
+  const trimmedCue = primaryCue?.trim();
 
   return await createMovement({
     title: trimmedTitle,
@@ -92,5 +107,8 @@ export async function saveMovementRecording({
     durationMs,
     captureFps: payload.fps ?? 30,
     schemaVersion: payload.schemaVersion ?? 1,
+    spineGoal,
+    primaryCue: trimmedCue || undefined,
+    bodyFocus: bodyFocus && bodyFocus.length > 0 ? bodyFocus : undefined,
   });
 }
