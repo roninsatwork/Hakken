@@ -130,6 +130,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     playerLiveLmRef,
     advanceInstructorFrame,
   });
+  const hasStartedGuidedPreviewRef = useRef(false);
   const startSelectedMatch = React.useCallback(() => {
     startMatch();
 
@@ -146,6 +147,29 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     setIsPlaying,
     skipCalibration,
     startMatch,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isGuidedPreviewRoute ||
+      hasStartedGuidedPreviewRef.current ||
+      !isLobby ||
+      !movement ||
+      isFramesLoading ||
+      loadedFrames.length === 0
+    ) {
+      return;
+    }
+
+    hasStartedGuidedPreviewRef.current = true;
+    startSelectedMatch();
+  }, [
+    isFramesLoading,
+    isGuidedPreviewRoute,
+    isLobby,
+    loadedFrames.length,
+    movement,
+    startSelectedMatch,
   ]);
 
   useEffect(() => {
