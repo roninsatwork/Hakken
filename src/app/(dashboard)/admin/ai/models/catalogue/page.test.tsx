@@ -5,6 +5,7 @@ import AIModelCataloguePage from "./page";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/admin/ai/models/catalogue"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
   useRouter: vi.fn(() => ({
     push: vi.fn(),
   })),

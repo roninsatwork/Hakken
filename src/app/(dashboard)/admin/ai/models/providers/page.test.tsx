@@ -6,6 +6,7 @@ import AIModelProvidersPage from "./page";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/admin/ai/models/providers"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const providers = [

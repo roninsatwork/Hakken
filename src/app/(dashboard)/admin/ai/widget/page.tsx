@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import { AppWindow, Loader2, Save } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { WidgetAppearanceSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection";
-import { WidgetConfigTabs } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs";
 import { WidgetConversationStartersSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection";
 import { WidgetEmptyState } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState";
 import { WidgetGreetingSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection";
@@ -21,16 +21,26 @@ import {
   canAddConversationStarter,
   getWidgetLogoPreviewUrl,
   parseAllowedDomains,
+  WIDGET_CONFIG_TABS,
 } from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
+function getWidgetSectionSlug(tab: WidgetConfigTab) {
+  return tab.toLowerCase().replaceAll(" ", "-");
+}
+
+function getWidgetActiveTab(section: string | null): WidgetConfigTab {
+  return WIDGET_CONFIG_TABS.find((tab) => getWidgetSectionSlug(tab) === section) ?? "Appearance";
+}
+
 export default function GlobalWidgetPage() {
+  const searchParams = useSearchParams();
   const widget = useQuery(api.widgets.getPrimaryGlobalWidget);
   const saveWidget = useMutation(api.widgets.saveWidget);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
-  const [activeTab, setActiveTab] = useState<WidgetConfigTab>("Appearance");
+  const activeTab = getWidgetActiveTab(searchParams.get("section"));
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hostOrigin, setHostOrigin] = useState("");
@@ -235,9 +245,7 @@ export default function GlobalWidgetPage() {
           title="No Global Protocol Connected"
         />
       ) : (
-        <div className="flex flex-col gap-6 items-start relative mt-4 2xl:flex-row 2xl:gap-8">
-          <WidgetConfigTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
+        <div className="flex flex-col gap-6 items-start relative mt-4">
           <div className="flex-1 w-full min-w-0 flex flex-col gap-8">
             {activeTab === "Appearance" && (
               <WidgetAppearanceSection

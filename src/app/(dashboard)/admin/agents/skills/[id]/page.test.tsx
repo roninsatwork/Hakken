@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentSkillDetailPage from "./page";
+import AgentSkillDetailPage, { AgentSkillDetail } from "./page";
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
@@ -289,6 +289,12 @@ describe("AgentSkillDetailPage rollout review", () => {
     });
     expect(await screen.findByText("Skill cloned as a draft. Review it before attaching agents.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open clone" })).toHaveAttribute("href", "/admin/agents/skills/skill_clone");
+  });
+
+  it("keeps detail navigation inside a custom base path", async () => {
+    render(<AgentSkillDetail basePath="/admin/ai/skills" />);
+
+    expect(await screen.findByRole("link", { name: /Back to skills/ })).toHaveAttribute("href", "/admin/ai/skills");
   });
 
   it("downloads the exported skill bundle", () => {

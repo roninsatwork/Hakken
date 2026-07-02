@@ -57,7 +57,11 @@ function textareaClassName(minHeight = "min-h-28") {
   return `${minHeight} rounded-[8px] border border-border-dim bg-card p-3 text-[12px] text-foreground font-mono leading-relaxed outline-none focus:border-brand/50`;
 }
 
-export default function AgentSkillDetailPage() {
+type AgentSkillDetailPageProps = {
+  basePath?: string;
+};
+
+export function AgentSkillDetail({ basePath = "/admin/agents/skills" }: AgentSkillDetailPageProps) {
   const params = useParams();
   const skillId = params.id as Id<"agentSkills">;
   const detail = useQuery(api.agentSkills.getSkill, { skillId });
@@ -200,7 +204,7 @@ export default function AgentSkillDetailPage() {
     <form onSubmit={submit} className="flex flex-col gap-5 pb-12">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <Link href="/admin/agents/skills" className="text-[12px] text-secondary hover:text-foreground flex items-center gap-1 mb-3">
+          <Link href={basePath} className="text-[12px] text-secondary hover:text-foreground flex items-center gap-1 mb-3">
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to skills
           </Link>
@@ -257,7 +261,7 @@ export default function AgentSkillDetailPage() {
         }`}>
           {feedback.message}
           {clonedSkillId && (
-            <Link href={`/admin/agents/skills/${clonedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
+            <Link href={`${basePath}/${clonedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
               Open clone
             </Link>
           )}
@@ -522,4 +526,8 @@ export default function AgentSkillDetailPage() {
       </section>
     </form>
   );
+}
+
+export default function AgentSkillDetailPage() {
+  return <AgentSkillDetail />;
 }

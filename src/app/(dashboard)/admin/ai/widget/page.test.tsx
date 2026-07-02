@@ -3,30 +3,25 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { useSearchParams } from "next/navigation";
 import GlobalWidgetPage from "./page";
 
 vi.mock("../_components/AiWorkspaceNav", () => ({
   AiWorkspaceNav: () => <nav aria-label="AI workspace">AI workspace nav</nav>,
 }));
 
-vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs", () => ({
-  WidgetConfigTabs: ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) => (
-    <nav aria-label="Widget tabs">
-      {["Appearance", "Welcome Screen", "Conversation Starters", "Greeting", "Integration"].map((tab) => (
-        <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => onTabChange(tab)}>
-          {tab}
-        </button>
-      ))}
-    </nav>
-  ),
+vi.mock("next/navigation", () => ({
+  useSearchParams: vi.fn(),
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection", () => ({
   WidgetAppearanceSection: ({ name, setName }: { name: string; setName: (value: string) => void }) => (
-    <label>
-      Bot name
-      <input value={name} onChange={(event) => setName(event.target.value)} />
-    </label>
+    <section aria-label="Appearance controls">
+      <label>
+        Bot name
+        <input value={name} onChange={(event) => setName(event.target.value)} />
+      </label>
+    </section>
   ),
 }));
 
@@ -52,7 +47,7 @@ vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState", 
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSection", () => ({
   WidgetIntegrationSection: ({ codeSnippet, copied, onCopy }: { codeSnippet: string; copied: boolean; onCopy: () => void }) => (
-    <section>
+    <section aria-label="Integration controls">
       <code>{codeSnippet}</code>
       <button type="button" onClick={onCopy}>{copied ? "Copied" : "Copy"}</button>
     </section>
@@ -60,15 +55,15 @@ vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSe
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetWelcomeSection", () => ({
-  WidgetWelcomeSection: () => <section>Welcome controls</section>,
+  WidgetWelcomeSection: () => <section aria-label="Welcome controls">Welcome controls</section>,
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection", () => ({
-  WidgetConversationStartersSection: () => <section>Starter controls</section>,
+  WidgetConversationStartersSection: () => <section aria-label="Starter controls">Starter controls</section>,
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection", () => ({
-  WidgetGreetingSection: () => <section>Greeting controls</section>,
+  WidgetGreetingSection: () => <section aria-label="Greeting controls">Greeting controls</section>,
 }));
 
 const widget = {
@@ -101,10 +96,15 @@ describe("GlobalWidgetPage", () => {
   const saveWidget = vi.fn();
   const generateUploadUrl = vi.fn();
   const writeText = vi.fn();
+  const navigationState = { section: "" };
 
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(navigator, { clipboard: { writeText } });
+    navigationState.section = "";
+    vi.mocked(useSearchParams).mockImplementation(() => (
+      new URLSearchParams(navigationState.section ? `section=${navigationState.section}` : "") as never
+    ));
     vi.mocked(useQuery).mockReturnValue(widget);
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
@@ -142,9 +142,11 @@ describe("GlobalWidgetPage", () => {
   });
 
   it("builds and copies the integration snippet for the global widget", async () => {
+    navigationState.section = "integration";
     render(<GlobalWidgetPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Integration" }));
+    expect(screen.queryByRole("navigation", { name: "Widget tabs" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Widget section/i })).not.toBeInTheDocument();
     expect(screen.getByText(/global_widget_1/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
@@ -152,5 +154,33 @@ describe("GlobalWidgetPage", () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("global_widget_1"));
     });
+  });
+
+  it.each([
+    ["", "Appearance controls"],
+    ["welcome-screen", "Welcome controls"],
+    ["conversation-starters", "Starter controls"],
+    ["greeting", "Greeting controls"],
+    ["integration", "Integration controls"],
+  ])("selects the %s widget section from the URL query", (section, accessibleName) => {
+    navigationState.section = section;
+    render(<GlobalWidgetPage />);
+
+    expect(screen.getByRole("region", { name: accessibleName })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Widget section/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps widget section content full-width instead of restoring the old side rail", () => {
+    navigationState.section = "integration";
+    const { container } = render(<GlobalWidgetPage />);
+
+    const integrationPanel = screen.getByRole("region", { name: "Integration controls" });
+    const contentColumn = integrationPanel.parentElement;
+    const layoutWrapper = contentColumn?.parentElement;
+
+    expect(contentColumn).toHaveClass("flex-1", "w-full", "min-w-0");
+    expect(layoutWrapper).toHaveClass("flex", "flex-col");
+    expect(layoutWrapper).not.toHaveClass("2xl:flex-row");
+    expect(container.querySelector("[aria-label^='Widget section']")).not.toBeInTheDocument();
   });
 });

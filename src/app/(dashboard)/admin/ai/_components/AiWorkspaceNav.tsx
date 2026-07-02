@@ -2,17 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   BrainCircuit,
   Check,
   ChevronDown,
+  Code2,
   Cpu,
   Database,
+  FileText,
   List,
+  ListPlus,
   MessageSquareCode,
   MessageSquareText,
+  Monitor,
+  Palette,
   ShieldCheck,
   TerminalSquare,
 } from "lucide-react";
@@ -81,6 +86,46 @@ const modelItems = [
   },
 ];
 
+function getWidgetSectionHref(section: string) {
+  return `/admin/ai/widget?section=${section}`;
+}
+
+const widgetItems = [
+  {
+    label: "Appearance",
+    href: "/admin/ai/widget",
+    icon: Palette,
+    matches: (pathname: string, searchParams: URLSearchParams) => (
+      pathname === "/admin/ai/widget"
+      && (!searchParams.get("section") || searchParams.get("section") === "appearance")
+    ),
+  },
+  {
+    label: "Welcome Screen",
+    href: getWidgetSectionHref("welcome-screen"),
+    icon: Monitor,
+    query: { section: "welcome-screen" },
+  },
+  {
+    label: "Conversation Starters",
+    href: getWidgetSectionHref("conversation-starters"),
+    icon: ListPlus,
+    query: { section: "conversation-starters" },
+  },
+  {
+    label: "Greeting",
+    href: getWidgetSectionHref("greeting"),
+    icon: MessageSquareText,
+    query: { section: "greeting" },
+  },
+  {
+    label: "Integration",
+    href: getWidgetSectionHref("integration"),
+    icon: Code2,
+    query: { section: "integration" },
+  },
+];
+
 const workspaceTabs = [
   {
     label: "Running Costs",
@@ -101,6 +146,12 @@ const workspaceTabs = [
     ),
   },
   {
+    label: "Skill Center",
+    href: "/admin/ai/skills",
+    icon: FileText,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/skills"),
+  },
+  {
     label: "Widget",
     href: "/admin/ai/widget",
     icon: MessageSquareCode,
@@ -114,22 +165,47 @@ const workspaceTabs = [
   },
 ];
 
+function hasMatchingQuery(searchParams: URLSearchParams, query?: Record<string, string>) {
+  if (!query) return true;
+
+  return Object.entries(query).every(([key, value]) => searchParams.get(key) === value);
+}
+
+function isWidgetItemActive(
+  pathname: string,
+  searchParams: URLSearchParams,
+  item: typeof widgetItems[number]
+) {
+  if ("matches" in item && item.matches) return item.matches(pathname, searchParams);
+
+  return pathname === "/admin/ai/widget" && hasMatchingQuery(searchParams, item.query);
+}
+
 export function AiWorkspaceNav() {
   const pathname = usePathname() || "/admin/ai";
+  const readonlySearchParams = useSearchParams();
+  const searchParams = new URLSearchParams(readonlySearchParams?.toString());
   const [isGovernanceOpen, setIsGovernanceOpen] = useState(false);
+  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isModelsOpen, setIsModelsOpen] = useState(false);
   const governanceRef = useRef<HTMLDivElement>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
   const modelsRef = useRef<HTMLDivElement>(null);
   const activeGovernanceItem = governanceItems.find((item) => item.matches(pathname));
   const isGovernanceActive = Boolean(activeGovernanceItem);
+  const activeWidgetItem = widgetItems.find((item) => isWidgetItemActive(pathname, searchParams, item));
+  const isWidgetActive = Boolean(activeWidgetItem);
   const isModelsActive = pathname.startsWith("/admin/ai/models");
 
   useEffect(() => {
-    if (!isGovernanceOpen && !isModelsOpen) return;
+    if (!isGovernanceOpen && !isWidgetOpen && !isModelsOpen) return;
 
     function handlePointerDown(event: PointerEvent) {
       if (governanceRef.current && !governanceRef.current.contains(event.target as Node)) {
         setIsGovernanceOpen(false);
+      }
+      if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
+        setIsWidgetOpen(false);
       }
       if (modelsRef.current && !modelsRef.current.contains(event.target as Node)) {
         setIsModelsOpen(false);
@@ -139,6 +215,7 @@ export function AiWorkspaceNav() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsGovernanceOpen(false);
+        setIsWidgetOpen(false);
         setIsModelsOpen(false);
       }
     }
@@ -150,7 +227,7 @@ export function AiWorkspaceNav() {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isGovernanceOpen, isModelsOpen]);
+  }, [isGovernanceOpen, isWidgetOpen, isModelsOpen]);
 
   return (
     <nav
@@ -170,6 +247,7 @@ export function AiWorkspaceNav() {
                   aria-expanded={isGovernanceOpen}
                   aria-haspopup="menu"
                   onClick={() => {
+                    setIsWidgetOpen(false);
                     setIsModelsOpen(false);
                     setIsGovernanceOpen((current) => !current);
                   }}
@@ -220,7 +298,63 @@ export function AiWorkspaceNav() {
               </div>
             )}
 
-            {tab.label === "Models" ? (
+            {tab.label === "Widget" ? (
+              <div ref={widgetRef} className="relative shrink-0">
+                <button
+                  type="button"
+                  aria-expanded={isWidgetOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setIsGovernanceOpen(false);
+                    setIsModelsOpen(false);
+                    setIsWidgetOpen((current) => !current);
+                  }}
+                  className={cn(
+                    "flex h-11 shrink-0 items-center gap-2 rounded-t-[8px] border-b-2 px-4 text-[13px] font-medium transition-colors whitespace-nowrap",
+                    isWidgetActive
+                      ? "border-brand bg-brand/5 text-brand"
+                      : "border-transparent text-secondary hover:border-foreground/30 hover:text-foreground"
+                  )}
+                >
+                  <MessageSquareCode className="h-4 w-4" />
+                  <span>Widget</span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isWidgetOpen && "rotate-180")} />
+                </button>
+
+                {isWidgetOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full z-40 mt-2 w-[260px] overflow-hidden rounded-[10px] border border-border-dim bg-card shadow-2xl"
+                  >
+                    {widgetItems.map((item) => {
+                      const ItemIcon = item.icon;
+                      const isItemActive = isWidgetItemActive(pathname, searchParams, item);
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          role="menuitem"
+                          onClick={() => setIsWidgetOpen(false)}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[14px] font-medium transition-colors",
+                            isItemActive
+                              ? "bg-brand text-white"
+                              : "text-secondary hover:bg-foreground/5 hover:text-foreground"
+                          )}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <ItemIcon className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                          {isItemActive && <Check className="h-4 w-4 shrink-0" />}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : tab.label === "Models" ? (
               <div ref={modelsRef} className="relative shrink-0">
                 <button
                   type="button"
@@ -228,6 +362,7 @@ export function AiWorkspaceNav() {
                   aria-haspopup="menu"
                   onClick={() => {
                     setIsGovernanceOpen(false);
+                    setIsWidgetOpen(false);
                     setIsModelsOpen((current) => !current);
                   }}
                   className={cn(

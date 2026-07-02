@@ -134,6 +134,16 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "Connectors" })).not.toBeInTheDocument();
   });
 
+  it("does not show the global skill center in the Agents sidebar menu", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+
+    render(<SidebarNavigation />);
+
+    expect(screen.getByRole("button", { name: "Agents" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage Agents" })).toHaveAttribute("href", "/admin/agents");
+    expect(screen.queryByRole("link", { name: "Agent Skills" })).not.toBeInTheDocument();
+  });
+
   it("does not reopen the global AI submenu while viewing company AI pages", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/ai/chat-logs");
 

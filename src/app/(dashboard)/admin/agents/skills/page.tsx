@@ -215,7 +215,11 @@ async function readFileText(file: File) {
   });
 }
 
-export default function AgentSkillsCatalogPage() {
+type AgentSkillsCatalogPageProps = {
+  basePath?: string;
+};
+
+export function AgentSkillsCatalog({ basePath = "/admin/agents/skills" }: AgentSkillsCatalogPageProps) {
   const createSkill = useMutation(api.agentSkills.createSkill);
   const importSkillBundle = useMutation(api.agentSkills.importSkillBundle);
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
@@ -385,10 +389,10 @@ export default function AgentSkillsCatalogPage() {
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight text-foreground flex items-center gap-2">
             <BrainCircuit className="w-6 h-6 text-brand" />
-            Agent skills
+            Skill Center
           </h1>
           <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            Reusable, eval-backed capability packages that can be attached to agents.
+            Central management for reusable SKILL.md files and eval-backed capability packages.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -444,7 +448,7 @@ export default function AgentSkillsCatalogPage() {
         }`}>
           {feedback || error}
           {importedSkillId && (
-            <Link href={`/admin/agents/skills/${importedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
+            <Link href={`${basePath}/${importedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
               Open imported skill
             </Link>
           )}
@@ -498,7 +502,7 @@ export default function AgentSkillsCatalogPage() {
               }) => (
                 <Link
                   key={row.skillId}
-                  href={`/admin/agents/skills/${row.skillId}`}
+                  href={`${basePath}/${row.skillId}`}
                   className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 hover:border-brand/40 transition-colors flex flex-col gap-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -548,7 +552,7 @@ export default function AgentSkillsCatalogPage() {
           skills.map((skill) => (
             <Link
               key={skill._id}
-              href={`/admin/agents/skills/${skill._id}`}
+              href={`${basePath}/${skill._id}`}
               className="border border-border-dim rounded-[8px] bg-card px-4 py-4 hover:border-brand/40 transition-colors flex flex-col gap-3"
             >
               <div className="flex items-start justify-between gap-4">
@@ -811,4 +815,8 @@ export default function AgentSkillsCatalogPage() {
       </SonaeModal>
     </div>
   );
+}
+
+export default function AgentSkillsCatalogPage() {
+  return <AgentSkillsCatalog />;
 }

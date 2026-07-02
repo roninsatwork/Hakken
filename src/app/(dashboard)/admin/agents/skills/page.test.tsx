@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentSkillsCatalogPage from "./page";
+import AgentSkillsCatalogPage, { AgentSkillsCatalog } from "./page";
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
@@ -148,7 +148,7 @@ describe("AgentSkillsCatalogPage", () => {
 
     render(<AgentSkillsCatalogPage />);
 
-    expect(screen.getByText("Agent skills")).toBeInTheDocument();
+    expect(screen.getByText("Skill Center")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Import SKILL.md/ })).toBeInTheDocument();
     expect(screen.getByText("Skill rollout health")).toBeInTheDocument();
     expect(screen.getByText("Enabled agents")).toBeInTheDocument();
@@ -170,6 +170,12 @@ describe("AgentSkillsCatalogPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(loadMore).toHaveBeenCalledWith(15);
+  });
+
+  it("keeps catalog links inside a custom base path", () => {
+    render(<AgentSkillsCatalog basePath="/admin/ai/skills" />);
+
+    expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
   });
 
   it("imports a SKILL.md file as a reviewed draft", async () => {

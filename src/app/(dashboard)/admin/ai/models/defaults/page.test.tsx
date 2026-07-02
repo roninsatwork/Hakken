@@ -6,6 +6,7 @@ import AIModelDefaultsPage from "./page";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(() => "/admin/ai/models/defaults"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const models = [

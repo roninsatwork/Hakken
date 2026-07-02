@@ -105,6 +105,14 @@ describe("Header route labels", () => {
     expect(screen.queryByText("Platform Management")).not.toBeInTheDocument();
   });
 
+  it("shows the Global AI skill center label", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/ai/skills");
+
+    render(<Header />);
+
+    expect(screen.getByLabelText("Artificial Intelligence / Skill Center")).toBeInTheDocument();
+  });
+
   it("shows app subsection labels for non-admin routes", () => {
     vi.mocked(usePathname).mockReturnValue("/app/properties/search");
 

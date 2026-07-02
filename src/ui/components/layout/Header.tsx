@@ -47,6 +47,7 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   if (pathname.startsWith("/admin/ai/knowledge") || pathname.startsWith("/admin/ai/global-knowledge")) {
     return [t("ai"), t("globalKnowledge")];
   }
+  if (pathname.startsWith("/admin/ai/skills")) return [t("ai"), "Skill Center"];
   if (pathname.startsWith("/admin/ai/models")) return [t("ai"), t("models")];
   if (pathname.startsWith("/admin/ai/tools")) return [t("ai"), "Tools"];
   if (pathname.startsWith("/admin/ai/widget")) return [t("ai"), "Widget"];

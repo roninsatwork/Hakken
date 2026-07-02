@@ -1,27 +1,32 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 import { AiWorkspaceNav } from "./AiWorkspaceNav";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 describe("AiWorkspaceNav", () => {
   it("renders grouped governance navigation with direct AI workspace links", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/ai/usage/costs");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(<AiWorkspaceNav />);
 
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
+    expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
     expect(screen.getByRole("button", { name: "Governance" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Widget" })).toHaveAttribute("href", "/admin/ai/widget");
+    expect(screen.getByRole("button", { name: "Widget" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Models" })).toBeInTheDocument();
 
     expect(screen.queryByRole("link", { name: "Rules" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "System Prompt" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Global Knowledge" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Appearance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Integration" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Providers" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Model Catalogue" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Defaults" })).not.toBeInTheDocument();
@@ -32,9 +37,18 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/governance/system-prompt");
     expect(screen.getByRole("menuitem", { name: "Global Knowledge" })).toHaveAttribute("href", "/admin/ai/knowledge");
 
-    fireEvent.click(screen.getByRole("button", { name: "Models" }));
+    fireEvent.click(screen.getByRole("button", { name: "Widget" }));
 
     expect(screen.queryByRole("menuitem", { name: "Rules" })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Appearance" })).toHaveAttribute("href", "/admin/ai/widget");
+    expect(screen.getByRole("menuitem", { name: "Welcome Screen" })).toHaveAttribute("href", "/admin/ai/widget?section=welcome-screen");
+    expect(screen.getByRole("menuitem", { name: "Conversation Starters" })).toHaveAttribute("href", "/admin/ai/widget?section=conversation-starters");
+    expect(screen.getByRole("menuitem", { name: "Greeting" })).toHaveAttribute("href", "/admin/ai/widget?section=greeting");
+    expect(screen.getByRole("menuitem", { name: "Integration" })).toHaveAttribute("href", "/admin/ai/widget?section=integration");
+
+    fireEvent.click(screen.getByRole("button", { name: "Models" }));
+
+    expect(screen.queryByRole("menuitem", { name: "Integration" })).not.toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Providers" })).toHaveAttribute("href", "/admin/ai/models/providers");
     expect(screen.getByRole("menuitem", { name: "Model Catalogue" })).toHaveAttribute("href", "/admin/ai/models/catalogue");
     expect(screen.getByRole("menuitem", { name: "Defaults" })).toHaveAttribute("href", "/admin/ai/models/defaults");
@@ -46,8 +60,18 @@ describe("AiWorkspaceNav", () => {
     expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument();
   });
 
+  it("marks the Global AI skill center as active", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/ai/skills/skill_1");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
+
+    render(<AiWorkspaceNav />);
+
+    expect(screen.getByRole("link", { name: "Skill Center" })).toHaveClass("border-brand");
+  });
+
   it("marks legacy and canonical governance routes as active", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/ai/system-prompt");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(<AiWorkspaceNav />);
 
@@ -61,6 +85,7 @@ describe("AiWorkspaceNav", () => {
 
   it("marks model child and detail routes as active", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/ai/models/model_1");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(<AiWorkspaceNav />);
 
@@ -74,6 +99,7 @@ describe("AiWorkspaceNav", () => {
 
   it("does not mark model section routes as catalogue detail routes", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/ai/models/defaults");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(<AiWorkspaceNav />);
 
@@ -82,5 +108,20 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("menuitem", { name: "Defaults" })).toHaveClass("bg-brand");
     expect(screen.getByRole("menuitem", { name: "Model Catalogue" })).not.toHaveClass("bg-brand");
     expect(screen.getByRole("menuitem", { name: "Providers" })).not.toHaveClass("bg-brand");
+  });
+
+  it("marks widget query-string sections as active", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/ai/widget");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("section=integration") as never);
+
+    render(<AiWorkspaceNav />);
+
+    const trigger = screen.getByRole("button", { name: "Widget" });
+    expect(trigger).toHaveClass("border-brand");
+
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole("menuitem", { name: "Integration" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("menuitem", { name: "Appearance" })).not.toHaveClass("bg-brand");
   });
 });
