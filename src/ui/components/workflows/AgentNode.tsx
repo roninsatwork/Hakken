@@ -13,6 +13,8 @@ export type AgentNodeData = {
   avatar?: string;
   modelId?: string;
   _agentId?: Id<"agents">;
+  _skillIds?: Array<Id<"agentSkills">>;
+  _skillNames?: string[];
   inputSchema?: string;
   outputSchema?: string;
 };
@@ -29,11 +31,16 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
   };
 
   const agent = useQuery(api.agents.get, data._agentId ? { id: data._agentId } : "skip");
+  const skillBindings = useQuery(api.agentSkills.getForAgent, data._agentId ? { agentId: data._agentId } : "skip");
   
   // Use live agent config if available, otherwise trust the local canvas snapshot
   const liveModelId = agent ? agent.modelId : data.modelId;
   const modelConfig = allModels.find(m => m.modelId?.toLowerCase().trim() === liveModelId?.toLowerCase().trim());
   const displayModelName = modelConfig ? (modelConfig.friendlyName || modelConfig.displayName || liveModelId) : formatFallback(liveModelId);
+  const skillNames = data._skillNames?.length
+    ? data._skillNames
+    : skillBindings?.filter((row) => row.binding.isEnabled).map((row) => row.skill.name) ?? [];
+  const skillCount = skillNames.length || data._skillIds?.length || 0;
 
   // Parse schemas to show properties visually if available
   let inputProps: string[] = [];
@@ -120,6 +127,28 @@ export const AgentNode = memo(({ data, isConnectable, selected }: NodeProps<Agen
               {t('noSchema')}
             </div>
           )}
+          {skillNames.length ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-medium text-secondary uppercase tracking-widest">Skills</span>
+              <div className="flex flex-wrap gap-1">
+                {skillNames.slice(0, 3).map((name) => (
+                  <span key={name} className="px-1.5 py-0.5 rounded-[4px] bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-300">
+                    {name}
+                  </span>
+                ))}
+                {skillNames.length > 3 ? (
+                  <span className="px-1.5 py-0.5 rounded-[4px] bg-background border border-border-dim text-[10px] font-mono text-muted">
+                    +{skillNames.length - 3}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : skillCount ? (
+            <div className="flex items-center justify-between rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-mono text-emerald-300">
+              <span>Skills</span>
+              <span>{skillCount}</span>
+            </div>
+          ) : null}
         </div>
       </div>
 

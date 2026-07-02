@@ -10,6 +10,7 @@ const SKILL_BINDING_LIMIT = 100;
 const TOOL_LOOKUP_LIMIT = 500;
 const SKILL_TEXT_LIMIT = 8000;
 const SKILL_JSON_LIMIT = 24000;
+const SKILL_MARKDOWN_LIMIT = 24000;
 const STARTER_SKILL_CATEGORY = "STARTER";
 const SKILL_BUNDLE_FORMAT = "sonae.agentSkillBundle.v1";
 
@@ -69,6 +70,30 @@ type StarterSkillDefinition = {
   requiredToolMappings?: string[];
   recommendedToolMappings?: string[];
   suggestedEvalFixtures: SuggestedEvalFixture[];
+};
+
+type ParsedMarkdownSection = {
+  title: string;
+  normalizedTitle: string;
+  body: string;
+};
+
+type MarkdownSkillDraft = {
+  sourceFilename?: string;
+  sourceHash: string;
+  name: string;
+  description?: string;
+  category: string;
+  riskLevel: SkillRiskLevel;
+  instruction: string;
+  requiredToolMappingsJson: string;
+  recommendedToolMappingsJson: string;
+  suggestedEvalFixturesJson: string;
+  validation: {
+    errors: string[];
+    warnings: string[];
+    suggestions: string[];
+  };
 };
 
 const starterSkillDefinitions: StarterSkillDefinition[] = [
@@ -496,6 +521,210 @@ function buildSkillPatchFromBundle(bundleJson: string, nameOverride?: string) {
   });
 }
 
+function normalizeHeadingTitle(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function parseSimpleFrontmatter(markdown: string) {
+  const normalized = markdown.replace(/\r\n?/g, "\n");
+  if (!normalized.startsWith("---\n")) {
+    return { frontmatter: {} as Record<string, string>, body: normalized };
+  }
+  const endIndex = normalized.indexOf("\n---", 4);
+  if (endIndex === -1) {
+    return { frontmatter: {} as Record<string, string>, body: normalized };
+  }
+  const frontmatterText = normalized.slice(4, endIndex);
+  const frontmatter: Record<string, string> = {};
+  for (const line of frontmatterText.split("\n")) {
+    const match = /^([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(.+)$/.exec(line.trim());
+    if (!match) continue;
+    frontmatter[match[1].trim().toLowerCase()] = match[2].trim().replace(/^["']|["']$/g, "");
+  }
+  return {
+    frontmatter,
+    body: normalized.slice(endIndex + 4).replace(/^\n+/, ""),
+  };
+}
+
+function splitMarkdownSections(markdown: string) {
+  const sections: ParsedMarkdownSection[] = [];
+  const headingMatches = Array.from(markdown.matchAll(/^#{1,6}\s+(.+)$/gm));
+  if (headingMatches.length === 0) return sections;
+
+  for (let index = 0; index < headingMatches.length; index += 1) {
+    const match = headingMatches[index];
+    const next = headingMatches[index + 1];
+    const title = match[1].trim().replace(/\s+#+$/, "");
+    const start = (match.index ?? 0) + match[0].length;
+    const end = next?.index ?? markdown.length;
+    sections.push({
+      title,
+      normalizedTitle: normalizeHeadingTitle(title),
+      body: markdown.slice(start, end).trim(),
+    });
+  }
+  return sections;
+}
+
+function findSection(sections: ParsedMarkdownSection[], patterns: string[]) {
+  return sections.find((section) => patterns.some((pattern) => section.normalizedTitle.includes(pattern)));
+}
+
+function findSections(sections: ParsedMarkdownSection[], patterns: string[]) {
+  return sections.filter((section) => patterns.some((pattern) => section.normalizedTitle.includes(pattern)));
+}
+
+function stripMarkdownNoise(value: string) {
+  return value
+    .replace(/```[\s\S]*?```/g, (block) => block.replace(/```[a-zA-Z0-9_-]*\n?|\n?```/g, ""))
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*> ?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .trim();
+}
+
+function getOpeningParagraph(markdown: string) {
+  const withoutHeading = markdown.replace(/^#\s+.+$/m, "").trim();
+  const beforeNextHeading = withoutHeading.split(/\n#{1,6}\s+/)[0]?.trim() ?? "";
+  const paragraphs = beforeNextHeading.split(/\n\s*\n/).map((entry) => stripMarkdownNoise(entry)).filter(Boolean);
+  return paragraphs.find((paragraph) => paragraph.length > 0 && paragraph.length <= 500);
+}
+
+function getMarkdownTitle(markdown: string) {
+  const match = /^#\s+(.+)$/m.exec(markdown);
+  return match?.[1].trim().replace(/\s+#+$/, "");
+}
+
+function getFrontmatterRisk(value: string | undefined) {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" ? normalized : undefined;
+}
+
+function inferRiskLevel(markdown: string, frontmatterRisk?: SkillRiskLevel): SkillRiskLevel {
+  if (frontmatterRisk) return frontmatterRisk;
+  const lower = markdown.toLowerCase();
+  if (/\b(delete|destructive|payment|send email|send message|external system|write access|approval required|requires approval|human approval|side effect)\b/.test(lower)) {
+    return "HIGH";
+  }
+  if (/\b(tool|connector|api|webhook|upload|download|customer|client|compliance|legal|risk)\b/.test(lower)) {
+    return "MEDIUM";
+  }
+  return "LOW";
+}
+
+function extractToolHints(sections: ParsedMarkdownSection[]) {
+  const requiredSections = findSections(sections, ["required tool", "required connector", "required mcp", "dependencies"]);
+  const recommendedSections = findSections(sections, ["tool", "connector", "mcp"]);
+  const required = extractToolNames(requiredSections.map((section) => section.body).join("\n"));
+  const recommended = extractToolNames(recommendedSections
+    .filter((section) => !requiredSections.includes(section))
+    .map((section) => section.body)
+    .join("\n"));
+  return {
+    required,
+    recommended: recommended.filter((mapping) => !required.includes(mapping)),
+  };
+}
+
+function extractToolNames(value: string) {
+  if (!value.trim()) return [];
+  const candidates = new Set<string>();
+  for (const match of value.matchAll(/`([^`]+)`/g)) {
+    const candidate = match[1].trim();
+    if (candidate) candidates.add(candidate);
+  }
+  for (const line of value.split("\n")) {
+    const normalized = stripMarkdownNoise(line).trim();
+    if (!normalized || normalized.length > 120) continue;
+    const firstToken = normalized.split(/\s+-\s+|\s+--\s+|:\s+|\s+\(/)[0]?.trim();
+    if (firstToken && /^[a-zA-Z0-9_.:/-]{3,}$/.test(firstToken)) candidates.add(firstToken);
+  }
+  return Array.from(candidates)
+    .map((candidate) => candidate.trim())
+    .filter((candidate) => candidate.length <= 120)
+    .slice(0, 50);
+}
+
+function buildInstructionFromMarkdown(markdown: string, sections: ParsedMarkdownSection[]) {
+  const instructionPatterns = ["instruction", "workflow", "process", "steps", "how to use", "behavior", "guidance", "rules"];
+  const excludedPatterns = ["example", "eval", "test", "tool", "connector", "mcp", "dependency", "setup", "install"];
+  const directSections = findSections(sections, instructionPatterns);
+  const sourceSections = directSections.length > 0
+    ? directSections
+    : sections.filter((section) => !excludedPatterns.some((pattern) => section.normalizedTitle.includes(pattern)));
+  const source = sourceSections.length > 0
+    ? sourceSections.map((section) => `## ${section.title}\n${section.body}`).join("\n\n")
+    : markdown.replace(/^#\s+.+$/m, "").trim();
+  return stripMarkdownNoise(source).slice(0, SKILL_TEXT_LIMIT).trim();
+}
+
+function buildEvalFixturesFromMarkdown(name: string, sections: ParsedMarkdownSection[]) {
+  const exampleSection = findSection(sections, ["example", "eval", "test"]);
+  if (!exampleSection?.body.trim()) return [];
+  return [{
+    type: "HAPPY_PATH",
+    objective: `Validate the imported ${name} skill against its documented examples.`,
+    expectedFinalOutputRubric: "The response should follow the imported skill instructions, preserve stated constraints, and produce the behavior demonstrated by the source examples.",
+    tags: ["imported", "skill-md"],
+  }];
+}
+
+function parseSkillMarkdown(markdown: string, filename?: string): MarkdownSkillDraft {
+  const trimmedMarkdown = markdown.trim();
+  if (!trimmedMarkdown) throw new Error("SKILL.md content is required.");
+  if (trimmedMarkdown.length > SKILL_MARKDOWN_LIMIT) {
+    throw new Error(`SKILL.md content cannot exceed ${SKILL_MARKDOWN_LIMIT} characters.`);
+  }
+  const { frontmatter, body } = parseSimpleFrontmatter(trimmedMarkdown);
+  const sections = splitMarkdownSections(body);
+  const name = frontmatter.name || getMarkdownTitle(body) || "";
+  const descriptionSection = findSection(sections, ["description", "summary", "overview"]);
+  const description = frontmatter.description
+    || (descriptionSection ? stripMarkdownNoise(descriptionSection.body).split(/\n\s*\n/)[0]?.trim() : undefined)
+    || getOpeningParagraph(body);
+  const toolHints = extractToolHints(sections);
+  const riskLevel = inferRiskLevel(body, getFrontmatterRisk(frontmatter.risklevel || frontmatter.risk_level || frontmatter.risk));
+  const instruction = buildInstructionFromMarkdown(body, sections);
+  const category = normalizeCategory(frontmatter.category || "IMPORTED");
+  const suggestedEvalFixtures = buildEvalFixturesFromMarkdown(name || "skill", sections);
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const suggestions: string[] = [];
+
+  if (!name.trim()) errors.push("Missing skill name. Add a frontmatter name or first-level heading.");
+  if (!instruction.trim()) errors.push("Missing durable skill instruction content.");
+  if (!description) warnings.push("No description was found. Add a short description before publishing.");
+  if (suggestedEvalFixtures.length === 0) {
+    warnings.push("No examples or eval fixtures were found.");
+    suggestions.push("Add at least two starter eval fixtures before marking the skill production-ready.");
+  }
+  if (riskLevel === "HIGH" && !/\b(approval|required approval|human approval|pause|confirm)\b/i.test(body)) {
+    warnings.push("High-risk language was detected without explicit approval guidance.");
+    suggestions.push("Add approval handoff language for side-effecting actions.");
+  }
+  if (/\b(acme|client id|customer id|tenant|company secret|api key|password)\b/i.test(body)) {
+    warnings.push("The source may contain tenant-specific or sensitive facts.");
+    suggestions.push("Move tenant facts and secrets into scoped knowledge or settings instead of shared skill instructions.");
+  }
+
+  return {
+    sourceFilename: filename,
+    sourceHash: hashString(trimmedMarkdown),
+    name,
+    description,
+    category,
+    riskLevel,
+    instruction,
+    requiredToolMappingsJson: stableStringify(toolHints.required),
+    recommendedToolMappingsJson: stableStringify(toolHints.recommended),
+    suggestedEvalFixturesJson: stableStringify(suggestedEvalFixtures),
+    validation: { errors, warnings, suggestions },
+  };
+}
+
 function truncateLearningText(value: string | undefined, limit = 180) {
   const normalized = (value || "").trim().replace(/\s+/g, " ");
   return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
@@ -595,6 +824,53 @@ async function getActiveToolMappings(ctx: Pick<QueryCtx, "db"> | Pick<MutationCt
       .map((tool) => [tool.handlerMapping, tool])
   );
 }
+
+async function addMarkdownImportCatalogWarnings(ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">, draft: MarkdownSkillDraft) {
+  const [skills, activeTools] = await Promise.all([
+    ctx.db
+      .query("agentSkills")
+      .withIndex("by_category_created")
+      .order("desc")
+      .take(SKILL_CATALOG_LIMIT),
+    getActiveToolMappings(ctx),
+  ]);
+  const duplicateSkill = skills.find((skill) => skill.name.trim().toLowerCase() === draft.name.trim().toLowerCase());
+  const requiredMappings = parseStringArray(draft.requiredToolMappingsJson);
+  const recommendedMappings = parseStringArray(draft.recommendedToolMappingsJson);
+  const unresolvedMappings = [...requiredMappings, ...recommendedMappings].filter((mapping) => !activeTools.has(mapping));
+  const warnings = [...draft.validation.warnings];
+  const suggestions = [...draft.validation.suggestions];
+
+  if (duplicateSkill) {
+    warnings.push(`A skill named "${duplicateSkill.name}" already exists.`);
+    suggestions.push("Review whether this should be a new draft, a clone, or an update to the existing skill.");
+  }
+  if (unresolvedMappings.length > 0) {
+    warnings.push(`Some tool hints do not match active Sonae tool mappings: ${unresolvedMappings.slice(0, 6).join(", ")}.`);
+    suggestions.push("Map imported tool names to active AI tool handler mappings before production use.");
+  }
+
+  return {
+    ...draft,
+    validation: {
+      ...draft.validation,
+      warnings: Array.from(new Set(warnings)),
+      suggestions: Array.from(new Set(suggestions)),
+    },
+  };
+}
+
+export const previewSkillMarkdownImport = mutation({
+  args: {
+    markdown: v.string(),
+    filename: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const draft = parseSkillMarkdown(args.markdown, args.filename);
+    return await addMarkdownImportCatalogWarnings(ctx, draft);
+  },
+});
 
 async function getBindingToolReadiness(ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">, skill: Doc<"agentSkills">) {
   const requiredToolMappings = parseStringArray(skill.requiredToolMappingsJson);
@@ -1413,6 +1689,68 @@ export const importSkillBundle = mutation({
         name: patch.name,
         status: "DRAFT",
         riskLevel: patch.riskLevel,
+        skillVersionId,
+      }),
+    });
+    return { skillId, skillVersionId };
+  },
+});
+
+export const importSkillMarkdown = mutation({
+  args: {
+    sourceFilename: v.optional(v.string()),
+    sourceHash: v.optional(v.string()),
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    riskLevel: skillRiskLevelValidator,
+    instruction: v.string(),
+    requiredToolMappingsJson: v.optional(v.string()),
+    recommendedToolMappingsJson: v.optional(v.string()),
+    suggestedEvalFixturesJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const patch = buildSkillPatch({
+      name: args.name,
+      description: args.description,
+      category: args.category ?? "IMPORTED",
+      status: "DRAFT",
+      riskLevel: args.riskLevel,
+      instruction: args.instruction,
+      requiredToolMappingsJson: args.requiredToolMappingsJson,
+      recommendedToolMappingsJson: args.recommendedToolMappingsJson,
+      suggestedEvalFixturesJson: args.suggestedEvalFixturesJson,
+    });
+    const now = Date.now();
+    const skillId = await ctx.db.insert("agentSkills", {
+      name: patch.name!,
+      description: patch.description,
+      category: patch.category!,
+      status: "DRAFT",
+      riskLevel: patch.riskLevel!,
+      instruction: patch.instruction!,
+      requiredToolMappingsJson: patch.requiredToolMappingsJson,
+      recommendedToolMappingsJson: patch.recommendedToolMappingsJson,
+      suggestedEvalFixturesJson: patch.suggestedEvalFixturesJson,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, skillId);
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "IMPORT_AGENT_SKILL_MARKDOWN",
+      entityId: skillId,
+      entityType: "agentSkills",
+      timestamp: now,
+      metadata: JSON.stringify({
+        name: patch.name,
+        status: "DRAFT",
+        riskLevel: patch.riskLevel,
+        category: patch.category,
+        sourceFilename: args.sourceFilename,
+        sourceHash: args.sourceHash,
         skillVersionId,
       }),
     });

@@ -6,6 +6,65 @@ import schema from "./schema";
 const paginationOpts = { numItems: 10, cursor: null };
 
 describe("Company Skills", () => {
+  test("imports active global skills into company draft skills", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId, globalSkillId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Import Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin-import@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      const globalSkillId = await ctx.db.insert("agentSkills", {
+        name: "Research Briefing",
+        description: "Turn broad questions into sourced briefings.",
+        category: "RESEARCH",
+        status: "ACTIVE",
+        riskLevel: "MEDIUM",
+        instruction: "Separate facts, judgments, and open questions.",
+        requiredToolMappingsJson: JSON.stringify(["knowledge.search"]),
+        createdBy: adminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { adminId, companyId, globalSkillId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const importable = await adminClient.query(api.companySkills.getImportableGlobalSkills, { companyId });
+    expect(importable.map((skill) => skill._id)).toContain(globalSkillId);
+
+    const imported = await adminClient.mutation(api.companySkills.importGlobalSkill, {
+      companyId,
+      skillId: globalSkillId,
+    });
+    const importedState = await t.run(async (ctx) => {
+      const skill = await ctx.db.get(imported.skillId);
+      const auditLog = await ctx.db
+        .query("auditLogs")
+        .filter((q) => q.eq(q.field("entityId"), imported.skillId))
+        .first();
+      return { skill, auditLog };
+    });
+
+    expect(importedState.skill).toMatchObject({
+      companyId,
+      name: "Research Briefing",
+      category: "RESEARCH",
+      status: "DRAFT",
+      riskLevel: "MEDIUM",
+      instruction: "Separate facts, judgments, and open questions.",
+      requiredToolsJson: "[\"knowledge.search\"]",
+      versionLabel: "Imported draft",
+    });
+    expect(importedState.auditLog).toMatchObject({
+      actionType: "IMPORT_GLOBAL_SKILL_TO_COMPANY",
+      entityType: "companySkills",
+      companyId,
+    });
+  });
+
   test("creates, binds, summarizes, updates, previews, and archives company skills", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

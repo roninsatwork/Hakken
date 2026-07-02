@@ -6,6 +6,7 @@ import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import { buildGlobalAgentRecord } from "./agentService";
 import { getAgentTemplateById, type AgentTemplateId } from "./agentTemplates";
 import { seedFixturesForTemplate } from "./agentEvalFixtures";
+import { ensureAgentSkillVersionSnapshot } from "./agentSkills";
 import { buildCompanyRecord } from "./companyService";
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 
@@ -28,6 +29,7 @@ export type AppTemplate = {
   riskProfile: "LOW" | "MEDIUM" | "HIGH";
   primaryUsers: string[];
   recommendedConnectorKeys: string[];
+  recommendedSkills: string[];
   agents: string[];
   knowledgeScopes: string[];
   workflows: string[];
@@ -58,6 +60,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Support leads", "Support agents", "Customer success"],
     recommendedConnectorKeys: ["zendesk", "gmail", "slack", "sonae-knowledge"],
+    recommendedSkills: ["Document Extraction", "Approval Handoff", "Client Follow-up"],
     agents: ["Support Triage Agent", "Reply Drafting Agent", "Escalation Classifier"],
     knowledgeScopes: ["Help center", "Refund policy", "Escalation SOP", "Product known issues"],
     workflows: ["New ticket triage", "High-risk escalation", "Daily support digest"],
@@ -75,6 +78,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["CSMs", "Account managers", "Leadership"],
     recommendedConnectorKeys: ["hubspot", "salesforce", "notion", "gmail", "sonae-knowledge"],
+    recommendedSkills: ["Research Briefing", "Risk Monitoring", "Client Follow-up"],
     agents: ["Account Briefing Agent", "Risk Signal Analyst"],
     knowledgeScopes: ["Account notes", "Success playbooks", "Product usage summaries", "Support history"],
     workflows: ["Weekly QBR prep", "Renewal risk alert", "Post-meeting follow-up draft"],
@@ -92,6 +96,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Sales reps", "BDRs", "Sales leadership"],
     recommendedConnectorKeys: ["hubspot", "salesforce", "gmail", "google-drive", "sonae-knowledge"],
+    recommendedSkills: ["Research Briefing", "Data Enrichment", "Approval Handoff"],
     agents: ["Prospect Research Agent", "Qualification Agent", "Outreach Draft Agent"],
     knowledgeScopes: ["ICP", "Case studies", "Pricing rules", "Competitor notes"],
     workflows: ["Inbound lead qualification", "Target account brief", "Outbound draft review"],
@@ -109,6 +114,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "HIGH",
     primaryUsers: ["Sales engineers", "Proposal teams", "Legal reviewers"],
     recommendedConnectorKeys: ["google-drive", "notion", "github", "sonae-knowledge"],
+    recommendedSkills: ["Document Extraction", "Research Briefing", "Approval Handoff"],
     agents: ["RFP Answer Agent", "Evidence Gap Reviewer"],
     knowledgeScopes: ["Security docs", "Product docs", "Case studies", "Legal boilerplate"],
     workflows: ["RFP response draft", "Evidence gap review", "Final approval pack"],
@@ -126,6 +132,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "LOW",
     primaryUsers: ["Employees", "Operations", "HR", "IT"],
     recommendedConnectorKeys: ["sonae-knowledge", "notion", "google-drive", "slack"],
+    recommendedSkills: ["Research Briefing", "Document Extraction"],
     agents: ["Knowledge Assistant", "Low Confidence Router"],
     knowledgeScopes: ["Policies", "SOPs", "FAQs", "Internal docs"],
     workflows: ["Unanswered question review", "Weekly knowledge gap digest"],
@@ -143,6 +150,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Executives", "CSMs", "Sales", "Operations"],
     recommendedConnectorKeys: ["google-calendar", "gmail", "microsoft-outlook", "hubspot", "sonae-knowledge"],
+    recommendedSkills: ["Research Briefing", "Client Follow-up", "Approval Handoff"],
     agents: ["Meeting Brief Agent", "Follow-up Draft Agent"],
     knowledgeScopes: ["Account notes", "Meeting templates", "Follow-up guidelines"],
     workflows: ["Morning meeting brief", "Post-meeting follow-up draft"],
@@ -160,6 +168,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "HIGH",
     primaryUsers: ["Compliance teams", "Legal", "Operations leaders"],
     recommendedConnectorKeys: ["sonae-knowledge", "google-drive", "notion", "jira"],
+    recommendedSkills: ["Document Extraction", "Risk Monitoring", "Approval Handoff"],
     agents: ["Compliance Reviewer", "Policy Evidence Agent"],
     knowledgeScopes: ["Policies", "Regulatory guidance", "Approval matrix", "Audit controls"],
     workflows: ["Policy review request", "High-risk exception escalation", "Audit evidence pack"],
@@ -177,6 +186,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "HIGH",
     primaryUsers: ["Finance", "Support", "Customer success"],
     recommendedConnectorKeys: ["stripe", "hubspot", "gmail", "sonae-knowledge"],
+    recommendedSkills: ["Document Extraction", "Risk Monitoring", "Approval Handoff"],
     agents: ["Billing Question Analyst", "Invoice Response Draft Agent"],
     knowledgeScopes: ["Billing policy", "Refund policy", "Plan rules", "Invoice templates"],
     workflows: ["Billing question triage", "Refund exception escalation", "Overdue invoice digest"],
@@ -194,6 +204,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Product managers", "Support leads", "Engineering"],
     recommendedConnectorKeys: ["zendesk", "linear", "jira", "github", "slack"],
+    recommendedSkills: ["Data Enrichment", "Research Briefing", "Risk Monitoring"],
     agents: ["Feedback Clustering Agent", "Bug Triage Agent"],
     knowledgeScopes: ["Roadmap", "Known issues", "Product principles", "Customer segments"],
     workflows: ["Weekly feedback digest", "Bug escalation", "Roadmap evidence pack"],
@@ -211,6 +222,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Product marketing", "Engineering", "Customer success"],
     recommendedConnectorKeys: ["github", "linear", "jira", "notion"],
+    recommendedSkills: ["Research Briefing", "Document Extraction", "Approval Handoff"],
     agents: ["Release Summary Agent", "Customer Copy Reviewer"],
     knowledgeScopes: ["Release style guide", "Product positioning", "Known limitations"],
     workflows: ["Weekly release note draft", "Customer impact review"],
@@ -228,6 +240,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Property teams", "Sales teams", "Analysts"],
     recommendedConnectorKeys: ["http-rest", "google-drive", "airtable", "sonae-knowledge"],
+    recommendedSkills: ["Research Briefing", "Data Enrichment", "Risk Monitoring"],
     agents: ["Property Research Agent", "Lead Quality Analyst"],
     knowledgeScopes: ["Research criteria", "Area notes", "Compliance rules", "Lead scoring policy"],
     workflows: ["New lead research", "Daily opportunity digest", "Missing data review"],
@@ -245,6 +258,7 @@ const APP_TEMPLATES: BaseAppTemplate[] = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Developer support", "Solutions engineers", "Platform teams"],
     recommendedConnectorKeys: ["github", "notion", "zendesk", "sonae-knowledge"],
+    recommendedSkills: ["Research Briefing", "Document Extraction", "Client Follow-up"],
     agents: ["API Docs Agent", "Integration Troubleshooter"],
     knowledgeScopes: ["API docs", "SDK examples", "Known issues", "Integration guides"],
     workflows: ["Integration support triage", "Doc gap digest", "Known issue escalation"],
@@ -551,6 +565,7 @@ export function createCatalogSourceJson(template: AppTemplate) {
     tagline: template.tagline,
     riskProfile: template.riskProfile,
     recommendedConnectorKeys: template.recommendedConnectorKeys,
+    recommendedSkills: template.recommendedSkills,
     agents: template.agents,
     knowledgeScopes: template.knowledgeScopes,
     workflows: template.workflows,
@@ -587,6 +602,7 @@ type CreatedLaunchResources = {
   workflowIds: Id<"workflows">[];
   fixtureIds: Id<"agentEvalFixtures">[];
   sourceRunIds: Id<"agentRuns">[];
+  skillBindingIds?: Id<"agentSkillBindings">[];
 };
 
 type CreatedLaunchResourceDetails = {
@@ -602,7 +618,15 @@ type CreatedLaunchResourceDetails = {
     isActive: boolean;
     triggerType: "MANUAL" | "WEBHOOK" | "SCHEDULE";
   }>;
+  skillBindings: Array<{
+    id: Id<"agentSkillBindings">;
+    agentId: Id<"agents">;
+    skillId: Id<"agentSkills">;
+    skillName: string;
+    isEnabled: boolean;
+  }>;
   evalFixtureCount: number;
+  skillBindingCount: number;
   missingResourceCount: number;
 };
 
@@ -1392,6 +1416,7 @@ function createLaunchPlanPayload(template: AppTemplate, targetCompanyName?: stri
     recommendedConnectorKeys: connectorKeys,
     draftResources: {
       agents: template.agents,
+      recommendedSkills: template.recommendedSkills,
       knowledgeScopes: template.knowledgeScopes,
       workflows: template.workflows,
       evalFixtures: template.evalFixtures,
@@ -1586,11 +1611,17 @@ export const getLaunchPlanDetails = query({
     }
     let createdResourceDetails: CreatedLaunchResourceDetails | null = null;
     if (createdResources) {
-      const [agents, workflows, fixtures] = await Promise.all([
+      const [agents, workflows, fixtures, skillBindings] = await Promise.all([
         Promise.all(createdResources.agentIds.map((id) => ctx.db.get(id))),
         Promise.all(createdResources.workflowIds.map((id) => ctx.db.get(id))),
         Promise.all(createdResources.fixtureIds.map((id) => ctx.db.get(id))),
+        Promise.all((createdResources.skillBindingIds ?? []).map((id) => ctx.db.get(id))),
       ]);
+      const skills = await Promise.all(skillBindings.flatMap((binding) => binding ? [ctx.db.get(binding.skillId)] : []));
+      const skillNameById = new Map<string, string>();
+      for (const skill of skills) {
+        if (skill) skillNameById.set(skill._id, skill.name);
+      }
       const fixtureCountByAgent = new Map<string, number>();
       let missingResourceCount = 0;
       for (const fixture of fixtures) {
@@ -1625,7 +1656,21 @@ export const getLaunchPlanDetails = query({
             triggerType: workflow.triggerType,
           }];
         }),
+        skillBindings: skillBindings.flatMap((binding) => {
+          if (!binding) {
+            missingResourceCount += 1;
+            return [];
+          }
+          return [{
+            id: binding._id,
+            agentId: binding.agentId,
+            skillId: binding.skillId,
+            skillName: skillNameById.get(binding.skillId) ?? "Unknown skill",
+            isEnabled: binding.isEnabled,
+          }];
+        }),
         evalFixtureCount: fixtures.filter(Boolean).length,
+        skillBindingCount: skillBindings.filter(Boolean).length,
         missingResourceCount,
       };
     }
@@ -1751,9 +1796,21 @@ export const materializeLaunchPlan = mutation({
       workflowIds: [],
       fixtureIds: [],
       sourceRunIds: [],
+      skillBindingIds: [],
     };
     const archetype = getAgentTemplateById(APP_TEMPLATE_AGENT_ARCHETYPE[template.id] ?? "internal-knowledge-assistant");
     if (!archetype) throw new Error("Agent archetype not found.");
+
+    const recommendedSkillNames = new Set(template.recommendedSkills.map((name) => name.trim().toLowerCase()));
+    const activeSkills = await ctx.db
+      .query("agentSkills")
+      .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
+      .take(500);
+    const recommendedSkills = activeSkills.filter((skill) => recommendedSkillNames.has(skill.name.trim().toLowerCase()));
+    const recommendedSkillVersions = await Promise.all(recommendedSkills.map(async (skill) => ({
+      skill,
+      skillVersionId: await ensureAgentSkillVersionSnapshot(ctx, skill._id),
+    })));
 
     for (const agentName of template.agents) {
       const agentId = await ctx.db.insert("agents", buildGlobalAgentRecord({
@@ -1778,6 +1835,20 @@ export const materializeLaunchPlan = mutation({
       });
       createdResources.sourceRunIds.push(seededFixtures.sourceRunId);
       createdResources.fixtureIds.push(...seededFixtures.fixtureIds);
+
+      for (const { skill, skillVersionId } of recommendedSkillVersions) {
+        const bindingId = await ctx.db.insert("agentSkillBindings", {
+          agentId,
+          skillId: skill._id,
+          skillVersionId,
+          companyId: undefined,
+          isEnabled: true,
+          assignedBy: userId,
+          assignedAt: now,
+          updatedAt: now,
+        });
+        createdResources.skillBindingIds?.push(bindingId);
+      }
     }
 
     for (const workflowName of template.workflows) {
@@ -1813,6 +1884,7 @@ export const materializeLaunchPlan = mutation({
         agentCount: createdResources.agentIds.length,
         workflowCount: createdResources.workflowIds.length,
         fixtureCount: createdResources.fixtureIds.length,
+        skillBindingCount: createdResources.skillBindingIds?.length ?? 0,
       }),
       timestamp: now,
     });

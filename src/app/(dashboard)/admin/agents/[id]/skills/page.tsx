@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { AlertTriangle, BrainCircuit, CheckCircle2, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, BrainCircuit, CheckCircle2, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type BindingRow = {
@@ -70,6 +70,8 @@ export default function AgentSkillsPage() {
   const unbindSkill = useMutation(api.agentSkills.unbindSkillFromAgent);
   const [seedEvalFixtures, setSeedEvalFixtures] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [skillSearchTerm, setSkillSearchTerm] = useState("");
+  const [selectedSkillId, setSelectedSkillId] = useState<Id<"agentSkills"> | null>(null);
   const [removeTarget, setRemoveTarget] = useState<BindingRow | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
 
@@ -78,6 +80,17 @@ export default function AgentSkillsPage() {
     [bindings]
   );
   const availableSkills = (skills ?? []).filter((skill) => !attachedSkillIds.has(skill._id));
+  const filteredAvailableSkills = availableSkills.filter((skill) => {
+    const search = skillSearchTerm.trim().toLowerCase();
+    if (!search) return true;
+    return [
+      skill.name,
+      skill.description,
+      skill.category,
+      skill.riskLevel,
+    ].some((value) => value?.toLowerCase().includes(search));
+  });
+  const selectedSkill = filteredAvailableSkills.find((skill) => skill._id === selectedSkillId) ?? filteredAvailableSkills[0] ?? null;
   const isLoading = bindings === undefined || skills === undefined;
 
   const runMutation = async (id: string, action: () => Promise<unknown>, successMessage: string) => {
@@ -99,6 +112,8 @@ export default function AgentSkillsPage() {
       () => bindSkill({ agentId, skillId, seedEvalFixtures }),
       "Skill attached. The next agent version will include its current snapshot."
     );
+    setSelectedSkillId(null);
+    setSkillSearchTerm("");
   };
 
   const toggle = async (binding: Doc<"agentSkillBindings">) => {
@@ -283,7 +298,12 @@ export default function AgentSkillsPage() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[14px] font-semibold text-foreground">Available active skills</h2>
+          <div>
+            <h2 className="text-[14px] font-semibold text-foreground">Select from skill library</h2>
+            <p className="text-[12px] text-secondary mt-1">
+              Choose from approved active skills in the central library. Draft and archived skills stay out of this picker.
+            </p>
+          </div>
           <span className="text-[11px] font-mono text-muted">{availableSkills.length} available</span>
         </div>
         {availableSkills.length === 0 ? (
@@ -291,32 +311,96 @@ export default function AgentSkillsPage() {
             No unattached active skills are available.
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {availableSkills.map((skill) => (
-              <article key={skill._id} className="rounded-[8px] border border-border-dim bg-card p-4 flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-[15px] font-semibold text-foreground truncate">{skill.name}</h3>
-                      <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{skill.category}</span>
-                    </div>
-                    <p className="text-[12px] text-secondary mt-1 line-clamp-2">{skill.description || "No description provided."}</p>
-                  </div>
-                  <ShieldCheck className="w-4 h-4 text-brand shrink-0" />
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
+            <div className="rounded-[8px] border border-border-dim bg-card overflow-hidden">
+              <div className="p-3 border-b border-border-dim">
+                <label className="relative block">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                  <input
+                    value={skillSearchTerm}
+                    onChange={(event) => {
+                      setSkillSearchTerm(event.target.value);
+                      setSelectedSkillId(null);
+                    }}
+                    placeholder="Search active skills"
+                    className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-black/15 text-[13px] text-foreground outline-none focus:border-brand/50"
+                  />
+                </label>
+              </div>
+              {filteredAvailableSkills.length === 0 ? (
+                <div className="p-8 text-center text-[13px] text-secondary">
+                  No active skills match this search.
                 </div>
-                <div className="flex justify-end">
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto divide-y divide-border-dim">
+                  {filteredAvailableSkills.map((skill) => {
+                    const isSelected = selectedSkill?._id === skill._id;
+                    return (
+                      <button
+                        key={skill._id}
+                        type="button"
+                        onClick={() => setSelectedSkillId(skill._id)}
+                        className={`w-full text-left px-4 py-3 flex items-start justify-between gap-4 transition-colors ${
+                          isSelected ? "bg-brand/10" : "hover:bg-hover"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] font-semibold text-foreground truncate">{skill.name}</span>
+                            <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{skill.category}</span>
+                          </span>
+                          <span className="block text-[12px] text-secondary mt-1 line-clamp-2">{skill.description || "No description provided."}</span>
+                        </span>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border shrink-0 ${riskTone(skill.riskLevel)}`}>
+                          {skill.riskLevel.toLowerCase()}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <aside className="rounded-[8px] border border-border-dim bg-card p-4 min-h-[260px]">
+              {selectedSkill ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-[16px] font-semibold text-foreground truncate">{selectedSkill.name}</h3>
+                      <p className="text-[12px] text-secondary mt-1">{selectedSkill.description || "No description provided."}</p>
+                    </div>
+                    <ShieldCheck className="w-4 h-4 text-brand shrink-0" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-foreground/5 text-secondary">
+                      {selectedSkill.category}
+                    </span>
+                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${riskTone(selectedSkill.riskLevel)}`}>
+                      {selectedSkill.riskLevel.toLowerCase()} risk
+                    </span>
+                  </div>
+                  <div className="rounded-[8px] border border-border-dim bg-black/15 p-3">
+                    <div className="text-[10px] uppercase tracking-widest font-mono text-muted">Instruction preview</div>
+                    <p className="mt-2 text-[12px] leading-relaxed text-secondary line-clamp-6">
+                      {selectedSkill.instruction}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => attach(skill._id)}
-                    disabled={busyId === skill._id}
-                    className="h-9 px-3 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                    onClick={() => attach(selectedSkill._id)}
+                    disabled={busyId === selectedSkill._id}
+                    className="h-10 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {busyId === skill._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                    Attach
+                    {busyId === selectedSkill._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    Attach selected skill
                   </button>
                 </div>
-              </article>
-            ))}
+              ) : (
+                <div className="h-full min-h-[220px] flex items-center justify-center text-center text-[13px] text-secondary">
+                  Select an active skill to preview its instructions before attaching it.
+                </div>
+              )}
+            </aside>
           </div>
         )}
       </section>

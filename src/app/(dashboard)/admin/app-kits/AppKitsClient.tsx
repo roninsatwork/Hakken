@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,6 +34,7 @@ type Template = {
   riskProfile: RiskProfile;
   primaryUsers: string[];
   recommendedConnectorKeys: string[];
+  recommendedSkills: string[];
   agents: string[];
   knowledgeScopes: string[];
   workflows: string[];
@@ -62,6 +63,8 @@ type LaunchPlan = {
   notes?: string;
   createdAt: number;
 };
+
+type AgentSkill = Doc<"agentSkills">;
 
 type CatalogRegistryItem = {
   templateId: string;
@@ -181,6 +184,50 @@ function SectionList({ title, items, icon = "check" }: { title: string; items: s
   );
 }
 
+function SkillRecommendationList({ title, items, activeSkills }: { title: string; items: string[]; activeSkills: AgentSkill[] }) {
+  const activeSkillByName = new Map(activeSkills.map((skill) => [skill.name.trim().toLowerCase(), skill]));
+
+  return (
+    <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
+      <h2 className="text-[13px] font-semibold text-foreground">{title}</h2>
+      <div className="flex flex-col gap-2 mt-3">
+        {items.map((item) => {
+          const activeSkill = activeSkillByName.get(item.trim().toLowerCase());
+          const content = (
+            <>
+              <BrainIcon />
+              <span className="min-w-0">
+                <span className="block text-[12px] text-secondary leading-relaxed">{item}</span>
+                <span className="block text-[10px] font-mono uppercase tracking-widest text-muted">
+                  {activeSkill ? `${activeSkill.riskLevel.toLowerCase()} risk · active library skill` : "review library match"}
+                </span>
+              </span>
+            </>
+          );
+
+          return activeSkill ? (
+            <Link
+              key={item}
+              href={`/admin/agents/skills/${activeSkill._id}`}
+              className="flex items-start gap-2 rounded-[8px] border border-border-dim bg-background/30 px-3 py-2 hover:border-brand/40"
+            >
+              {content}
+            </Link>
+          ) : (
+            <div key={item} className="flex items-start gap-2 rounded-[8px] border border-border-dim bg-background/30 px-3 py-2">
+              {content}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function BrainIcon() {
+  return <Bot className="w-3.5 h-3.5 text-brand mt-0.5 flex-shrink-0" />;
+}
+
 function FieldLabel({ children }: { children: string }) {
   return <label className="text-[11px] font-medium text-secondary">{children}</label>;
 }
@@ -234,7 +281,8 @@ function useAppKitData() {
   const templates = useQuery(api.appTemplates.getAppTemplateGallery) as Template[] | undefined;
   const recentPlans = useQuery(api.appTemplates.getRecentLaunchPlans) as LaunchPlan[] | undefined;
   const catalogRegistry = useQuery(api.appTemplates.getAppTemplateCatalogRegistry) as CatalogRegistryItem[] | undefined;
-  return { templates, recentPlans, catalogRegistry };
+  const activeSkills = useQuery(api.agentSkills.getActiveSkills, {}) as AgentSkill[] | undefined;
+  return { templates, recentPlans, catalogRegistry, activeSkills };
 }
 
 function getRegistryStatus(item: CatalogRegistryItem | undefined) {
@@ -403,6 +451,7 @@ export function AppKitsCatalogPage() {
         template.category,
         ...template.primaryUsers,
         ...template.recommendedConnectorKeys,
+        ...template.recommendedSkills,
         ...template.agents,
         ...template.workflows,
         ...template.knowledgeScopes,
@@ -543,7 +592,7 @@ export function AppKitsCatalogPage() {
                 <div>
                   <div className="text-[10px] font-mono uppercase text-muted">Creates</div>
                   <p className="text-[11px] text-secondary leading-relaxed mt-1">
-                    {template.agents.length} agents, {template.workflows.length} workflows, {template.evalFixtures.length} evals
+                    {template.agents.length} agents, {template.recommendedSkills.length} skills, {template.workflows.length} workflows
                   </p>
                 </div>
                 <div>
@@ -618,7 +667,7 @@ export function AppKitDetailPage({ params }: { params: Promise<{ templateId: str
 }
 
 export function AppKitDetailContent({ templateId }: { templateId: string }) {
-  const { templates, catalogRegistry } = useAppKitData();
+  const { templates, catalogRegistry, activeSkills } = useAppKitData();
   const syncCatalogRegistry = useMutation(api.appTemplates.syncAppTemplateCatalogRegistry);
   const updateCatalogItem = useMutation(api.appTemplates.updateAppTemplateCatalogItem);
   const [catalogLifecycleStatus, setCatalogLifecycleStatus] = useState<LifecycleStatus>("ACTIVE");
@@ -776,6 +825,7 @@ export function AppKitDetailContent({ templateId }: { templateId: string }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SectionList title="Agents" items={selectedTemplate.agents} />
+            <SkillRecommendationList title="Recommended skills" items={selectedTemplate.recommendedSkills} activeSkills={activeSkills ?? []} />
             <SectionList title="Workflows" items={selectedTemplate.workflows} />
             <SectionList title="Knowledge areas" items={selectedTemplate.knowledgeScopes} />
             <SectionList title="Test cases before launch" items={selectedTemplate.evalFixtures} />
@@ -917,7 +967,7 @@ export function AppKitSetupPage({ params }: { params: Promise<{ templateId: stri
 
 export function AppKitSetupContent({ templateId }: { templateId: string }) {
   const router = useRouter();
-  const { templates } = useAppKitData();
+  const { templates, activeSkills } = useAppKitData();
   const createLaunchPlan = useMutation(api.appTemplates.createLaunchPlan);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [targetCompanyName, setTargetCompanyName] = useState("");
@@ -1225,6 +1275,7 @@ export function AppKitSetupContent({ templateId }: { templateId: string }) {
             {activeStep.key === "resources" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SectionList title="Draft agents" items={selectedTemplate.agents} />
+                <SkillRecommendationList title="Recommended skills" items={selectedTemplate.recommendedSkills} activeSkills={activeSkills ?? []} />
                 <SectionList title="Draft workflows" items={selectedTemplate.workflows} />
                 <SectionList title="Dashboard cards" items={selectedTemplate.dashboardCards} />
                 <div className="border border-border-dim bg-background/30 rounded-[8px] p-4">

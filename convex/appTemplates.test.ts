@@ -14,6 +14,8 @@ describe("app template catalogue", () => {
     expect(ids.size).toBe(templates.length);
     expect(categories.size).toBeGreaterThanOrEqual(6);
     expect(templates.some((template) => template.recommendedConnectorKeys.includes("gmail"))).toBe(true);
+    expect(templates.every((template) => template.recommendedSkills.length > 0)).toBe(true);
+    expect(templates.some((template) => template.recommendedSkills.includes("Approval Handoff"))).toBe(true);
     expect(templates.every((template) => template.agents.length > 0)).toBe(true);
     expect(templates.every((template) => template.evalFixtures.length > 0)).toBe(true);
     expect(templates.every((template) => template.readinessChecks.length > 0)).toBe(true);
@@ -36,6 +38,7 @@ describe("app template catalogue", () => {
     const supportTemplate = templates.find((template) => template.id === "support-desk-ai");
 
     expect(supportTemplate?.developerFollowUps.length).toBeGreaterThan(0);
+    expect(supportTemplate?.recommendedSkills).toEqual(expect.arrayContaining(["Document Extraction", "Approval Handoff"]));
     expect(supportTemplate?.extensionPoints).toContain("Support tool handlers");
     expect(supportTemplate?.implementationPointers.some((pointer) => pointer.filePath === "convex/aiToolExecutionService.ts")).toBe(true);
   });
@@ -243,6 +246,7 @@ describe("app template catalogue", () => {
       templateId: "support-desk-ai",
       draftResources: {
         agents: expect.arrayContaining(["Support Triage Agent"]),
+        recommendedSkills: expect.arrayContaining(["Document Extraction", "Approval Handoff"]),
       },
     });
     expect(connectorReadiness.find((connector) => connector.key === "sonae-knowledge")).toMatchObject({
@@ -386,6 +390,7 @@ describe("app template catalogue", () => {
     const planId = await superAdminClient.mutation(api.appTemplates.createLaunchPlan, {
       templateId: "internal-knowledge-portal",
     });
+    await superAdminClient.mutation(api.agentSkills.seedStarterSkills, {});
 
     const resources = await superAdminClient.mutation(api.appTemplates.materializeLaunchPlan, { planId });
     const details = await superAdminClient.query(api.appTemplates.getLaunchPlanDetails, { planId });
@@ -393,11 +398,14 @@ describe("app template catalogue", () => {
       const agents = await Promise.all(resources.agentIds.map((id) => ctx.db.get(id)));
       const workflows = await Promise.all(resources.workflowIds.map((id) => ctx.db.get(id)));
       const fixtures = await Promise.all(resources.fixtureIds.map((id) => ctx.db.get(id)));
-      return { agents, workflows, fixtures };
+      const skillBindings = await Promise.all((resources.skillBindingIds ?? []).map((id) => ctx.db.get(id)));
+      const skills = await Promise.all(skillBindings.flatMap((binding) => binding ? [ctx.db.get(binding.skillId)] : []));
+      return { agents, workflows, fixtures, skillBindings, skills };
     });
 
     expect(details?.plan.status).toBe("MATERIALIZED");
     expect(details?.createdResources?.agentIds).toEqual(resources.agentIds);
+    expect(details?.createdResources?.skillBindingIds).toEqual(resources.skillBindingIds);
     expect(details?.readinessSummary).toMatchObject({
       status: "IN_PROGRESS",
       plannedAgentCount: 2,
@@ -408,9 +416,14 @@ describe("app template catalogue", () => {
     expect(resources.agentIds.length).toBeGreaterThan(0);
     expect(resources.workflowIds.length).toBeGreaterThan(0);
     expect(resources.fixtureIds.length).toBeGreaterThan(0);
+    expect(resources.skillBindingIds).toHaveLength(4);
     expect(state.agents.every((agent) => agent?.isActive === false)).toBe(true);
     expect(state.workflows.every((workflow) => workflow?.isActive === false)).toBe(true);
     expect(state.fixtures.every((fixture) => fixture?.status === "ACTIVE")).toBe(true);
+    expect(state.skillBindings).toHaveLength(4);
+    expect(state.skillBindings.every((binding) => binding?.isEnabled === true)).toBe(true);
+    expect(new Set(state.skills.map((skill) => skill?.name))).toEqual(new Set(["Research Briefing", "Document Extraction"]));
+    expect(details?.createdResourceDetails?.skillBindingCount).toBe(4);
 
     await expect(superAdminClient.mutation(api.appTemplates.materializeLaunchPlan, { planId })).resolves.toEqual(resources);
   });

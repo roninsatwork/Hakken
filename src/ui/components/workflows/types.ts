@@ -82,6 +82,8 @@ export type WorkflowCanvasNodeData = {
   inputSchema?: string;
   outputSchema?: string;
   _agentId?: Id<"agents">;
+  _skillIds?: Array<Id<"agentSkills">>;
+  _skillNames?: string[];
   isInline?: boolean;
   _inputMapping?: string | Record<string, unknown>;
   _inputTemplate?: string;

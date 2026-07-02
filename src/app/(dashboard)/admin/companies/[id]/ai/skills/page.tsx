@@ -8,8 +8,10 @@ import {
   Archive,
   BrainCircuit,
   Cable,
+  Library,
   Loader2,
   Plus,
+  Search,
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
@@ -27,6 +29,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type CompanySkill = Doc<"companySkills">;
+type GlobalSkill = Doc<"agentSkills">;
 type CompanySkillBinding = Doc<"companySkillBindings">;
 type SkillStatus = CompanySkill["status"];
 type SkillRisk = CompanySkill["riskLevel"];
@@ -93,7 +96,9 @@ export default function CompanyAiSkillsPage() {
   const companyId = params.id as Id<"companies">;
   const aiHref = `/admin/companies/${companyId}/ai`;
   const summary = useQuery(api.companySkills.getSummary, { companyId });
+  const importableGlobalSkills = useQuery(api.companySkills.getImportableGlobalSkills, { companyId });
   const setBinding = useMutation(api.companySkills.setBinding);
+  const importGlobalSkill = useMutation(api.companySkills.importGlobalSkill);
   const archiveSkill = useMutation(api.companySkills.archiveSkill);
 
   const [statusFilter, setStatusFilter] = useState<SkillStatus>("ACTIVE");
@@ -105,9 +110,25 @@ export default function CompanyAiSkillsPage() {
   const [bindingTarget, setBindingTarget] = useState<CompanySkill | null>(null);
   const [bindingForm, setBindingForm] = useState(DEFAULT_BINDING_FORM);
   const [bindingError, setBindingError] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [globalSkillSearchTerm, setGlobalSkillSearchTerm] = useState("");
+  const [selectedGlobalSkillId, setSelectedGlobalSkillId] = useState<Id<"agentSkills"> | null>(null);
+  const [importError, setImportError] = useState("");
   const [expandedSkillId, setExpandedSkillId] = useState<Id<"companySkills"> | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<CompanySkill | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const filteredGlobalSkills = (importableGlobalSkills ?? []).filter((skill: GlobalSkill) => {
+    const search = globalSkillSearchTerm.trim().toLowerCase();
+    if (!search) return true;
+    return [
+      skill.name,
+      skill.description,
+      skill.category,
+      skill.riskLevel,
+    ].some((value) => value?.toLowerCase().includes(search));
+  });
+  const selectedGlobalSkill = filteredGlobalSkills.find((skill: GlobalSkill) => skill._id === selectedGlobalSkillId) ?? filteredGlobalSkills[0] ?? null;
 
   const bindings = useQuery(
     api.companySkills.getBindingsForSkill,
@@ -148,6 +169,27 @@ export default function CompanyAiSkillsPage() {
     }
   };
 
+  const handleImportGlobalSkill = async () => {
+    if (!selectedGlobalSkill) return;
+    setIsSubmitting(true);
+    setImportError("");
+    try {
+      const result = await importGlobalSkill({
+        companyId,
+        skillId: selectedGlobalSkill._id,
+      });
+      setStatusFilter("DRAFT");
+      setExpandedSkillId(result.skillId);
+      setIsImportOpen(false);
+      setGlobalSkillSearchTerm("");
+      setSelectedGlobalSkillId(null);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Global skill could not be imported.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <header className="flex flex-col gap-4">
@@ -161,13 +203,28 @@ export default function CompanyAiSkillsPage() {
               Govern reusable company capabilities, tool requirements, approval policy, and surface availability.
             </p>
           </div>
-          <Link
-            href={`${aiHref}/skills/new?returnTo=${encodeURIComponent(`${aiHref}/skills`)}`}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
-          >
-            <Plus className="h-4 w-4" />
-            New skill
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsImportOpen(true);
+                setImportError("");
+                setGlobalSkillSearchTerm("");
+                setSelectedGlobalSkillId(null);
+              }}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
+            >
+              <Library className="h-4 w-4" />
+              Import from global library
+            </button>
+            <Link
+              href={`${aiHref}/skills/new?returnTo=${encodeURIComponent(`${aiHref}/skills`)}`}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-4 text-[13px] font-semibold text-secondary transition-colors hover:text-foreground"
+            >
+              <Plus className="h-4 w-4 text-brand" />
+              New skill
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-6">
@@ -325,6 +382,103 @@ export default function CompanyAiSkillsPage() {
           onLoadMore={() => skills.loadMore(ADMIN_PAGE_SIZE)}
         />
       </section>
+
+      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import From Global Library" size="lg">
+        <div className="flex flex-col gap-5">
+          <AdminModalFormError>{importError}</AdminModalFormError>
+          <p className="text-[13px] leading-relaxed text-secondary">
+            Import an approved global skill as a company draft. Review company-specific tools, approvals, and bindings before activating it.
+          </p>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-[8px] border border-border-dim bg-background/50 overflow-hidden">
+              <div className="border-b border-border-dim p-3">
+                <label className="relative block">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  <input
+                    className="h-10 w-full rounded-[8px] border border-border-dim bg-card pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+                    value={globalSkillSearchTerm}
+                    onChange={(event) => {
+                      setGlobalSkillSearchTerm(event.target.value);
+                      setSelectedGlobalSkillId(null);
+                    }}
+                    placeholder="Search global skills"
+                  />
+                </label>
+              </div>
+              {importableGlobalSkills === undefined ? (
+                <div className="px-4 py-12 text-center">
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
+                </div>
+              ) : filteredGlobalSkills.length === 0 ? (
+                <div className="px-4 py-12 text-center text-[13px] text-muted">No active global skills match this search.</div>
+              ) : (
+                <div className="max-h-[360px] divide-y divide-border-dim overflow-y-auto">
+                  {filteredGlobalSkills.map((skill: GlobalSkill) => {
+                    const isSelected = selectedGlobalSkill?._id === skill._id;
+                    return (
+                      <button
+                        key={skill._id}
+                        type="button"
+                        onClick={() => setSelectedGlobalSkillId(skill._id)}
+                        className={`flex w-full items-start justify-between gap-4 px-4 py-3 text-left transition-colors ${
+                          isSelected ? "bg-brand/10" : "hover:bg-foreground/5"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] font-semibold text-foreground">{skill.name}</span>
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-muted">{skill.category}</span>
+                          </span>
+                          <span className="mt-1 line-clamp-2 block text-[12px] text-secondary">{skill.description || "No description provided."}</span>
+                        </span>
+                        <span className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-mono uppercase tracking-widest ${getRiskClasses(skill.riskLevel)}`}>
+                          {skill.riskLevel.toLowerCase()}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <aside className="rounded-[8px] border border-border-dim bg-background/50 p-4">
+              {selectedGlobalSkill ? (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h3 className="text-[16px] font-semibold text-foreground">{selectedGlobalSkill.name}</h3>
+                    <p className="mt-1 text-[12px] leading-relaxed text-secondary">{selectedGlobalSkill.description || "No description provided."}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-md border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-secondary">
+                      {selectedGlobalSkill.category}
+                    </span>
+                    <span className={`rounded-md border px-2 py-1 text-[10px] font-mono uppercase tracking-widest ${getRiskClasses(selectedGlobalSkill.riskLevel)}`}>
+                      {selectedGlobalSkill.riskLevel.toLowerCase()} risk
+                    </span>
+                  </div>
+                  <div className="rounded-[8px] border border-border-dim bg-card p-3">
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Instruction preview</div>
+                    <p className="mt-2 line-clamp-6 text-[12px] leading-relaxed text-secondary">{selectedGlobalSkill.instruction}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleImportGlobalSkill}
+                    disabled={isSubmitting}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+                  >
+                    {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Library className="h-3.5 w-3.5" />}
+                    Import draft
+                  </button>
+                </div>
+              ) : (
+                <div className="flex min-h-[240px] items-center justify-center text-center text-[13px] text-secondary">
+                  Select an active global skill to preview it before import.
+                </div>
+              )}
+            </aside>
+          </div>
+        </div>
+      </SonaeModal>
 
       <SonaeModal isOpen={Boolean(bindingTarget)} onClose={() => setBindingTarget(null)} title="Bind Skill" size="md">
         <form onSubmit={handleSetBinding} className="flex flex-col gap-5">

@@ -83,6 +83,54 @@ Required tools are readiness gates, not permissions. Attaching a skill does not 
 
 Use required tools when the skill cannot honestly perform its job without the tool. Use recommended tools when the skill can still produce a plan, draft, or review without the tool.
 
+## Importable `SKILL.md`
+
+The Agent Skills catalog can import a single Markdown skill file as a draft. The importer is deterministic and looks for stable headings rather than free-form model interpretation.
+
+Recommended shape:
+
+```markdown
+---
+name: Risk Monitoring
+description: Monitor material risk signals and escalate changes with evidence.
+category: RISK
+risk: HIGH
+---
+
+# Risk Monitoring
+
+## Instructions
+
+When this skill is active, evaluate incoming signals against severity, credibility, recency, and client relevance.
+Pause for human approval before side-effecting escalations.
+
+## Required Tools
+
+- risk.events.search
+- notifications.approval.request
+
+## Recommended Tools
+
+- knowledge.documents.search
+
+## Examples
+
+- Assess whether a new adverse event should be escalated.
+- Reject a weakly sourced rumor that does not meet the threshold.
+```
+
+Importer behavior:
+
+- `name`, `description`, `category`, and `risk` frontmatter are preferred when present.
+- The first `# Heading` can become the name when frontmatter is absent.
+- `Instructions`, `Workflow`, `Steps`, `Behavior`, `Guidance`, or `Rules` sections become durable runtime instruction text.
+- `Required Tools`, `Required Connectors`, `Required MCP`, or `Dependencies` sections become required tool mappings.
+- Other tool, connector, or MCP sections become recommended tool mappings.
+- Example, eval, or test sections seed starter eval fixture guidance.
+- Imported skills are always saved as `DRAFT` and should be reviewed before activation.
+
+The import review compares parsed tool names with active Sonae `aiTools.handlerMapping` values. Use the active mapping controls in the review step to replace aliases or external tool names with real handler mappings before rollout.
+
 ## Versioning And Rollout
 
 Saving a skill creates a new immutable skill version when the snapshot changes.

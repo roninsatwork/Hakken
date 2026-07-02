@@ -2,16 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { ClipboardCheck, Loader2, Play } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { CompanySkillCheckboxPicker } from "@/src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker";
 import {
   AdminModalFormError,
   AdminModalFormField,
   adminModalInputClassName,
   adminModalTextareaClassName,
 } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -31,6 +33,21 @@ function formatPercent(value: number | undefined) {
   return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
 }
 
+function buildEvidenceJson(evidenceJson: string, selectedSkillIds: Array<Id<"companySkills">>) {
+  const trimmedEvidence = evidenceJson.trim();
+  const evidence = trimmedEvidence ? JSON.parse(trimmedEvidence) : {};
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+    throw new Error("Evidence JSON must be a JSON object.");
+  }
+
+  const existingSkillIds = Array.isArray((evidence as { skillIds?: unknown }).skillIds)
+    ? (evidence as { skillIds: unknown[] }).skillIds.filter((skillId): skillId is string => typeof skillId === "string")
+    : [];
+  const skillIds = Array.from(new Set([...existingSkillIds, ...selectedSkillIds]));
+  const mergedEvidence = skillIds.length > 0 ? { ...evidence, skillIds } : evidence;
+  return Object.keys(mergedEvidence).length > 0 ? JSON.stringify(mergedEvidence) : undefined;
+}
+
 export default function RunCompanyEvalPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,11 +58,25 @@ export default function RunCompanyEvalPage() {
   const backHref = getSafeCompanyAiReturnTo(searchParams.get("returnTo"), companyId, fallbackHref);
   const evalCase = useQuery(api.companyEvals.getCaseById, { evalCaseId });
   const runCase = useMutation(api.companyEvals.runCase);
+  const activeSkills = usePaginatedQuery(
+    api.companySkills.getSkillsForCompany,
+    { companyId, status: "ACTIVE" },
+    { initialNumItems: ADMIN_PAGE_SIZE }
+  );
 
   const [runForm, setRunForm] = useState(DEFAULT_RUN_FORM);
+  const [evidenceSkillIds, setEvidenceSkillIds] = useState<Array<Id<"companySkills">>>([]);
   const [runError, setRunError] = useState("");
   const [runFeedback, setRunFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toggleEvidenceSkill = (skillId: Id<"companySkills">) => {
+    setEvidenceSkillIds((current) =>
+      current.includes(skillId)
+        ? current.filter((id) => id !== skillId)
+        : [...current, skillId]
+    );
+  };
 
   const handleRunCase = async (event: FormEvent) => {
     event.preventDefault();
@@ -53,10 +84,11 @@ export default function RunCompanyEvalPage() {
     setRunError("");
     setRunFeedback("");
     try {
+      const evidenceJson = buildEvidenceJson(runForm.evidenceJson, evidenceSkillIds);
       const result = await runCase({
         evalCaseId,
         answer: runForm.answer,
-        evidenceJson: runForm.evidenceJson || undefined,
+        evidenceJson,
         resolvedModelId: runForm.resolvedModelId || undefined,
         resolvedUseCase: runForm.resolvedUseCase || undefined,
         judgeNotes: runForm.judgeNotes || undefined,
@@ -124,12 +156,22 @@ export default function RunCompanyEvalPage() {
               placeholder="Answer produced by the company AI."
             />
           </AdminModalFormField>
-          <AdminModalFormField label="Evidence JSON" hint="sourceIds, memoryIds, skillIds">
+          <AdminModalFormField label="Evidence JSON" hint="sourceIds and memoryIds; selected skills are added automatically">
             <textarea
               className={`${adminModalTextareaClassName} min-h-[190px] font-mono`}
               value={runForm.evidenceJson}
               onChange={(event) => setRunForm((current) => ({ ...current, evidenceJson: event.target.value }))}
-              placeholder={'{"sourceIds":[],"memoryIds":[],"skillIds":[]}'}
+              placeholder={'{"sourceIds":[],"memoryIds":[]}'}
+            />
+          </AdminModalFormField>
+          <AdminModalFormField label="Skill evidence" hint={`${evidenceSkillIds.length} selected from active company skills`}>
+            <CompanySkillCheckboxPicker
+              skills={activeSkills.results}
+              selectedSkillIds={evidenceSkillIds}
+              status={activeSkills.status}
+              emptyMessage="No active company skills are available to attach as evidence."
+              onToggleSkill={toggleEvidenceSkill}
+              onLoadMore={() => activeSkills.loadMore(ADMIN_PAGE_SIZE)}
             />
           </AdminModalFormField>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -168,4 +210,3 @@ export default function RunCompanyEvalPage() {
     </div>
   );
 }
-

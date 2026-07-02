@@ -37,6 +37,7 @@ const templates = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Support leads"],
     recommendedConnectorKeys: ["zendesk", "gmail"],
+    recommendedSkills: ["Document Extraction", "Approval Handoff"],
     agents: ["Support Triage Agent"],
     knowledgeScopes: ["Help center"],
     workflows: ["New ticket triage"],
@@ -63,6 +64,7 @@ const templates = [
     riskProfile: "MEDIUM",
     primaryUsers: ["Sales reps"],
     recommendedConnectorKeys: ["hubspot"],
+    recommendedSkills: ["Research Briefing"],
     agents: ["Prospect Research Agent"],
     knowledgeScopes: ["ICP"],
     workflows: ["Target account brief"],
@@ -92,6 +94,33 @@ const launchPlans = [
     targetCompanyName: "Acme Support",
     notes: "Initial plan",
     createdAt: Date.UTC(2026, 5, 16),
+  },
+];
+
+const activeSkills = [
+  {
+    _id: "skill_approval",
+    name: "Approval Handoff",
+    description: "Pause risky actions before side effects.",
+    category: "STARTER",
+    status: "ACTIVE",
+    riskLevel: "HIGH",
+    instruction: "Ask for approval before side effects.",
+    createdBy: "user_1",
+    createdAt: Date.UTC(2026, 5, 16),
+    updatedAt: Date.UTC(2026, 5, 16),
+  },
+  {
+    _id: "skill_extraction",
+    name: "Document Extraction",
+    description: "Extract facts with provenance.",
+    category: "STARTER",
+    status: "ACTIVE",
+    riskLevel: "MEDIUM",
+    instruction: "Extract supported facts only.",
+    createdBy: "user_1",
+    createdAt: Date.UTC(2026, 5, 16),
+    updatedAt: Date.UTC(2026, 5, 16),
   },
 ];
 
@@ -149,6 +178,9 @@ describe("LaunchPage", () => {
       if (functionName === "appTemplates:getAppTemplateCatalogRegistry") {
         return catalogRegistry as unknown as ReturnType<typeof useQuery>;
       }
+      if (functionName === "agentSkills:getActiveSkills") {
+        return activeSkills as unknown as ReturnType<typeof useQuery>;
+      }
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
     vi.mocked(useMutation).mockImplementation((mutationFn) => {
@@ -180,7 +212,8 @@ describe("LaunchPage", () => {
     expect(screen.getAllByText("Best for")).toHaveLength(2);
     expect(screen.getByText("Support leads")).toBeInTheDocument();
     expect(screen.getByText("Zendesk, Gmail · Help center")).toBeInTheDocument();
-    expect(screen.getAllByText("1 agents, 1 workflows, 1 evals")).toHaveLength(2);
+    expect(screen.getAllByText("1 agents, 2 skills, 1 workflows")).toHaveLength(1);
+    expect(screen.getAllByText("1 agents, 1 skills, 1 workflows")).toHaveLength(1);
     expect(screen.getByText("Draft-only resources · Saved · synced")).toBeInTheDocument();
     expect(screen.getAllByText("Review kit")).toHaveLength(2);
     expect(screen.queryByText("Draft Build Plan")).not.toBeInTheDocument();
@@ -200,6 +233,7 @@ describe("LaunchPage", () => {
     expect(screen.getByText("ACTIVE · synced")).toBeInTheDocument();
     expect(screen.getByDisplayValue("catalog@example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Ready for support starters.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Approval Handoff/ })).toHaveAttribute("href", "/admin/agents/skills/skill_approval");
     expect(screen.getByText("Developer work still needed")).toBeInTheDocument();
     expect(screen.getByText("Map ticket fields to Zendesk.")).toBeInTheDocument();
     expect(screen.getByText("Where this can be customized")).toBeInTheDocument();

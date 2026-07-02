@@ -18,6 +18,7 @@ type LaunchPlanPayload = {
   recommendedConnectorKeys?: string[];
   draftResources?: {
     agents?: string[];
+    recommendedSkills?: string[];
     knowledgeScopes?: string[];
     workflows?: string[];
     evalFixtures?: string[];
@@ -50,6 +51,7 @@ type CreatedLaunchResources = {
   workflowIds: Id<"workflows">[];
   fixtureIds: Id<"agentEvalFixtures">[];
   sourceRunIds: Id<"agentRuns">[];
+  skillBindingIds?: Id<"agentSkillBindings">[];
 };
 
 type CreatedLaunchResourceDetails = {
@@ -65,7 +67,15 @@ type CreatedLaunchResourceDetails = {
     isActive: boolean;
     triggerType: "MANUAL" | "WEBHOOK" | "SCHEDULE";
   }>;
+  skillBindings: Array<{
+    id: Id<"agentSkillBindings">;
+    agentId: Id<"agents">;
+    skillId: Id<"agentSkills">;
+    skillName: string;
+    isEnabled: boolean;
+  }>;
   evalFixtureCount: number;
+  skillBindingCount: number;
   missingResourceCount: number;
 };
 
@@ -746,7 +756,7 @@ function BuildPlanMaintenanceChecklist({
       key: "resources",
       title: "Draft resources",
       status: createdResources ? "READY" : "BLOCKED",
-      detail: createdResources ? "Draft agents, workflows, and eval fixtures have been created." : "Create draft agents, workflows, and eval fixtures from this plan.",
+      detail: createdResources ? "Draft agents, workflows, eval fixtures, and matching skill attachments have been created." : "Create draft agents, workflows, eval fixtures, and matching skill attachments from this plan.",
       owner: "Platform operator",
       actionLabel: createdResources ? "Review created resources" : "Go to draft resource action",
       actionHref: createdResources ? "#created-draft-resources" : "#create-draft-resources",
@@ -1237,6 +1247,7 @@ export default function LaunchPlanDetailPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         <PlanSection title="Draft Agents" items={draftResources.agents} />
+        <PlanSection title="Recommended Skills" items={draftResources.recommendedSkills} />
         <PlanSection title="Knowledge Scopes" items={draftResources.knowledgeScopes} />
         <PlanSection title="Workflows" items={draftResources.workflows} />
         <PlanSection title="Release Evals" items={draftResources.evalFixtures} />
@@ -1302,7 +1313,7 @@ export default function LaunchPlanDetailPage() {
               {createdResourceDetails.missingResourceCount} linked resource{createdResourceDetails.missingResourceCount === 1 ? "" : "s"} could not be found.
             </p>
           ) : null}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
             <div className="border border-border-dim rounded-[8px] p-3">
               <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-muted">Agents</div>
               <div className="flex flex-col gap-2 mt-3">
@@ -1336,6 +1347,19 @@ export default function LaunchPlanDetailPage() {
               <p className="text-[22px] font-semibold text-foreground mt-2">{createdResourceDetails?.evalFixtureCount ?? createdResources.fixtureIds.length}</p>
               <p className="text-[12px] text-secondary mt-1">Seeded as active smoke-test fixtures on inactive draft agents.</p>
             </div>
+            <div className="border border-border-dim rounded-[8px] p-3">
+              <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-muted">Skill Attachments</div>
+              <p className="text-[22px] font-semibold text-foreground mt-2">{createdResourceDetails?.skillBindingCount ?? createdResources.skillBindingIds?.length ?? 0}</p>
+              <div className="flex flex-col gap-2 mt-2">
+                {(createdResourceDetails?.skillBindings ?? []).slice(0, 4).map((binding) => (
+                  <Link key={binding.id} href={`/admin/agents/skills/${binding.skillId}`} className="group flex items-center justify-between gap-3 text-[12px]">
+                    <span className="text-brand group-hover:underline truncate">{binding.skillName}</span>
+                    <span className="text-muted flex-shrink-0">{binding.isEnabled ? "enabled" : "paused"}</span>
+                  </Link>
+                ))}
+              </div>
+              <p className="text-[12px] text-secondary mt-2">Pinned from matching active central skills.</p>
+            </div>
           </div>
         </section>
       ) : null}
@@ -1346,7 +1370,7 @@ export default function LaunchPlanDetailPage() {
           Next Creation Step
         </h2>
         <p className="text-[13px] text-secondary mt-2 max-w-3xl">
-          Draft agents and workflows can now be created from this plan. Connector installation, knowledge upload, dashboard cards, widgets, and release-gate activation remain deliberate follow-up steps.
+          Draft agents, workflows, eval fixtures, and matching skill attachments can now be created from this plan. Connector installation, knowledge upload, dashboard cards, widgets, and release-gate activation remain deliberate follow-up steps.
         </p>
         <div className="flex flex-wrap gap-2 mt-4">
           {linkedWorkspace ? (

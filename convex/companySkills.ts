@@ -279,6 +279,20 @@ export const getSkillsForCompany = query({
   },
 });
 
+export const getImportableGlobalSkills = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    await requireCompanyAccess(ctx, args.companyId);
+    return await ctx.db
+      .query("agentSkills")
+      .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
+      .order("desc")
+      .take(250);
+  },
+});
+
 export const getBindingsForSkill = query({
   args: {
     skillId: v.id("companySkills"),
@@ -351,6 +365,86 @@ export const createSkill = mutation({
     });
 
     return skillId;
+  },
+});
+
+export const importGlobalSkill = mutation({
+  args: {
+    companyId: v.id("companies"),
+    skillId: v.id("agentSkills"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireCompanyAccess(ctx, args.companyId);
+    const globalSkill = await ctx.db.get(args.skillId);
+    if (!globalSkill || globalSkill.status !== "ACTIVE") {
+      throw new Error("Only active global skills can be imported.");
+    }
+    const existingCompanySkills = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(1000);
+    const existingDrafts = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "DRAFT"))
+      .take(1000);
+    const existingNames = new Set([...existingCompanySkills, ...existingDrafts].map((skill) => skill.name.trim().toLowerCase()));
+    const importedName = existingNames.has(globalSkill.name.trim().toLowerCase())
+      ? `${globalSkill.name} Copy`
+      : globalSkill.name;
+    const now = Date.now();
+    const patch = buildSkillPatch({
+      name: importedName,
+      description: globalSkill.description,
+      category: globalSkill.category,
+      status: "DRAFT",
+      riskLevel: globalSkill.riskLevel,
+      instruction: globalSkill.instruction,
+      requiredToolsJson: globalSkill.requiredToolMappingsJson,
+      recommendedKnowledgeJson: globalSkill.recommendedKnowledgeJson,
+      versionLabel: "Imported draft",
+    });
+    const companySkillId = await ctx.db.insert("companySkills", {
+      companyId: args.companyId,
+      name: patch.name ?? importedName,
+      description: patch.description,
+      category: patch.category ?? globalSkill.category,
+      status: "DRAFT",
+      riskLevel: patch.riskLevel ?? globalSkill.riskLevel,
+      instruction: patch.instruction ?? globalSkill.instruction,
+      requiredToolsJson: patch.requiredToolsJson,
+      recommendedKnowledgeJson: patch.recommendedKnowledgeJson,
+      versionLabel: patch.versionLabel,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "IMPORT_GLOBAL_SKILL_TO_COMPANY",
+      entityId: companySkillId,
+      entityType: "companySkills",
+      companyId: args.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        globalSkillId: args.skillId,
+        globalSkillName: globalSkill.name,
+        status: "DRAFT",
+        riskLevel: globalSkill.riskLevel,
+        category: patch.category,
+      }),
+    });
+    await recordCompanyAiDriftEvent(ctx, {
+      companyId: args.companyId,
+      sourceType: "SKILL",
+      sourceId: companySkillId,
+      reason: "Company skill was imported from the global skill library.",
+      affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
+      createdBy: userId,
+      createdAt: now,
+    });
+
+    return { skillId: companySkillId };
   },
 });
 

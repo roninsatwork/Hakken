@@ -5,6 +5,102 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 describe("agent skills", () => {
+  test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const now = Date.now();
+      await ctx.db.insert("aiTools", {
+        name: "Invoice Reader",
+        description: "Reads invoice source documents.",
+        handlerMapping: "finance.invoice.read",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        isActive: true,
+        createdAt: now,
+        createdBy: adminId,
+      });
+      await ctx.db.insert("aiTools", {
+        name: "Slack Notify",
+        description: "Sends governed Slack notifications.",
+        handlerMapping: "slack.notify",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        isActive: true,
+        createdAt: now,
+        createdBy: adminId,
+      });
+      await ctx.db.insert("agentSkills", {
+        name: "Invoice Ops",
+        description: "Existing duplicate skill.",
+        category: "FINANCE",
+        status: "ACTIVE",
+        riskLevel: "HIGH",
+        instruction: "Existing instruction.",
+        createdBy: adminId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return adminId;
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+      filename: "invoice-skill.md",
+      markdown: [
+        "---",
+        "name: \"Invoice Ops\"",
+        "category: finance",
+        "risk_level: high",
+        "---",
+        "# Invoice Ops",
+        "",
+        "Extract invoice facts, reconcile totals, and prepare operator-ready exception notes.",
+        "",
+        "## Workflow",
+        "",
+        "Read the invoice source, identify supplier, due date, tax, and total amount.",
+        "Before any external write or notification, pause for human approval and show the exact action.",
+        "",
+        "## Dependencies",
+        "",
+        "- `finance.invoice.read`",
+        "",
+        "## Connectors",
+        "",
+        "- `slack.notify`",
+        "",
+        "## Examples",
+        "",
+        "- Given a two-line invoice, return supplier, due date, net amount, tax, and total.",
+      ].join("\n"),
+    });
+
+    expect(preview).toMatchObject({
+      sourceFilename: "invoice-skill.md",
+      name: "Invoice Ops",
+      description: "Extract invoice facts, reconcile totals, and prepare operator-ready exception notes.",
+      category: "FINANCE",
+      riskLevel: "HIGH",
+      requiredToolMappingsJson: "[\"finance.invoice.read\"]",
+      recommendedToolMappingsJson: "[\"slack.notify\"]",
+      validation: {
+        errors: [],
+      },
+    });
+    expect(preview.instruction).toContain("Workflow");
+    expect(preview.instruction).toContain("pause for human approval");
+    expect(JSON.parse(preview.suggestedEvalFixturesJson)).toHaveLength(1);
+    expect(preview.validation.warnings).toContain("A skill named \"Invoice Ops\" already exists.");
+    expect(preview.validation.warnings).not.toContain("High-risk language was detected without explicit approval guidance.");
+    expect(preview.validation.warnings.some((warning) => warning.includes("Some tool hints do not match active Sonae tool mappings"))).toBe(false);
+  });
+
   test("starter skills seed idempotently, bind to agents, seed evals, and gate high-risk activation", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -257,6 +353,99 @@ describe("agent skills", () => {
     expect(importState.importedBindings).toHaveLength(0);
     expect(importState.auditLog).toMatchObject({
       actionType: "IMPORT_AGENT_SKILL_BUNDLE",
+      entityType: "agentSkills",
+    });
+
+    const markdownPreview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+      filename: "SKILL.md",
+      markdown: [
+        "---",
+        "name: Browser QA",
+        "description: Verify browser workflows before shipping.",
+        "category: qa",
+        "riskLevel: medium",
+        "---",
+        "# Browser QA",
+        "",
+        "## Instructions",
+        "",
+        "Use browser checks to verify local UI behavior and report visible regressions.",
+        "",
+        "## Required tools",
+        "",
+        "- `browser.open`",
+      ].join("\n"),
+    });
+    expect(markdownPreview).toMatchObject({
+      sourceFilename: "SKILL.md",
+      name: "Browser QA",
+      description: "Verify browser workflows before shipping.",
+      category: "QA",
+      riskLevel: "MEDIUM",
+      instruction: "Instructions\nUse browser checks to verify local UI behavior and report visible regressions.",
+      requiredToolMappingsJson: "[\"browser.open\"]",
+      validation: {
+        errors: [],
+      },
+    });
+    expect(markdownPreview.validation.warnings).toContain("No examples or eval fixtures were found.");
+
+    const riskyMarkdownPreview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+      filename: "risky.SKILL.md",
+      markdown: [
+        "# Client Dispatch",
+        "",
+        "Dispatch client messages and delete old ACME records using the api key from the tenant note.",
+        "",
+        "## Required tools",
+        "",
+        "- `client.dispatch.send`",
+      ].join("\n"),
+    });
+    expect(riskyMarkdownPreview).toMatchObject({
+      name: "Client Dispatch",
+      riskLevel: "HIGH",
+      requiredToolMappingsJson: "[\"client.dispatch.send\"]",
+    });
+    expect(riskyMarkdownPreview.validation.warnings).toContain("High-risk language was detected without explicit approval guidance.");
+    expect(riskyMarkdownPreview.validation.warnings).toContain("The source may contain tenant-specific or sensitive facts.");
+    expect(riskyMarkdownPreview.validation.warnings).toContain("Some tool hints do not match active Sonae tool mappings: client.dispatch.send.");
+    expect(riskyMarkdownPreview.validation.suggestions).toContain("Add approval handoff language for side-effecting actions.");
+
+    const markdownImport = await client.mutation(api.agentSkills.importSkillMarkdown, {
+      sourceFilename: markdownPreview.sourceFilename,
+      sourceHash: markdownPreview.sourceHash,
+      name: markdownPreview.name,
+      description: markdownPreview.description,
+      category: markdownPreview.category,
+      riskLevel: markdownPreview.riskLevel,
+      instruction: markdownPreview.instruction,
+      requiredToolMappingsJson: markdownPreview.requiredToolMappingsJson,
+      recommendedToolMappingsJson: markdownPreview.recommendedToolMappingsJson,
+      suggestedEvalFixturesJson: markdownPreview.suggestedEvalFixturesJson,
+    });
+    const markdownImportState = await t.run(async (ctx) => {
+      const importedSkill = await ctx.db.get(markdownImport.skillId);
+      const importedVersion = await ctx.db.get(markdownImport.skillVersionId);
+      const auditLog = await ctx.db
+        .query("auditLogs")
+        .filter((q) => q.eq(q.field("entityId"), markdownImport.skillId))
+        .first();
+      return { importedSkill, importedVersion, auditLog };
+    });
+    expect(markdownImportState.importedSkill).toMatchObject({
+      name: "Browser QA",
+      status: "DRAFT",
+      category: "QA",
+      riskLevel: "MEDIUM",
+      requiredToolMappingsJson: "[\"browser.open\"]",
+    });
+    expect(markdownImportState.importedVersion).toMatchObject({
+      skillId: markdownImport.skillId,
+      versionNumber: 1,
+    });
+    expect(markdownImportState.auditLog).toMatchObject({
+      actionType: "IMPORT_AGENT_SKILL_MARKDOWN",
       entityType: "agentSkills",
     });
 

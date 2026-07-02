@@ -75,9 +75,38 @@ const analytics = {
   }],
 };
 
+const tools = [
+  {
+    _id: "tool_browser_open",
+    name: "Open browser",
+    description: "Open a browser page.",
+    type: "MCP",
+    handlerMapping: "browser.open",
+    inputSchemaJson: "{}",
+    isActive: true,
+    createdBy: "user_1",
+    createdAt: Date.UTC(2026, 5, 18),
+    updatedAt: Date.UTC(2026, 5, 18),
+  },
+  {
+    _id: "tool_browser_screenshot",
+    name: "Browser screenshot",
+    description: "Capture a browser screenshot.",
+    type: "MCP",
+    handlerMapping: "browser.screenshot",
+    inputSchemaJson: "{}",
+    isActive: true,
+    createdBy: "user_1",
+    createdAt: Date.UTC(2026, 5, 18),
+    updatedAt: Date.UTC(2026, 5, 18),
+  },
+];
+
 describe("AgentSkillsCatalogPage", () => {
   const createSkill = vi.fn();
   const importSkillBundle = vi.fn();
+  const previewSkillMarkdownImport = vi.fn();
+  const importSkillMarkdown = vi.fn();
   const seedStarterSkills = vi.fn();
   const loadMore = vi.fn();
 
@@ -88,7 +117,14 @@ describe("AgentSkillsCatalogPage", () => {
       status: "CanLoadMore",
       loadMore,
     } as unknown as ReturnType<typeof usePaginatedQuery>);
-    vi.mocked(useQuery).mockReturnValue(analytics as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockImplementation((...args) => {
+      const [queryFn] = args;
+      const functionName = getFunctionName(queryFn);
+      if (functionName === "aiTools:getTools") {
+        return tools as unknown as ReturnType<typeof useQuery>;
+      }
+      return analytics as unknown as ReturnType<typeof useQuery>;
+    });
     vi.mocked(useMutation).mockImplementation((mutationFn) => {
       const functionName = getFunctionName(mutationFn);
       if (functionName === "agentSkills:seedStarterSkills") {
@@ -96,6 +132,12 @@ describe("AgentSkillsCatalogPage", () => {
       }
       if (functionName === "agentSkills:importSkillBundle") {
         return importSkillBundle as unknown as ReturnType<typeof useMutation>;
+      }
+      if (functionName === "agentSkills:previewSkillMarkdownImport") {
+        return previewSkillMarkdownImport as unknown as ReturnType<typeof useMutation>;
+      }
+      if (functionName === "agentSkills:importSkillMarkdown") {
+        return importSkillMarkdown as unknown as ReturnType<typeof useMutation>;
       }
       return createSkill as unknown as ReturnType<typeof useMutation>;
     });
@@ -107,6 +149,7 @@ describe("AgentSkillsCatalogPage", () => {
     render(<AgentSkillsCatalogPage />);
 
     expect(screen.getByText("Agent skills")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Import SKILL.md/ })).toBeInTheDocument();
     expect(screen.getByText("Skill rollout health")).toBeInTheDocument();
     expect(screen.getByText("Enabled agents")).toBeInTheDocument();
     expect(screen.getByText("Outdated")).toBeInTheDocument();
@@ -127,6 +170,76 @@ describe("AgentSkillsCatalogPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(loadMore).toHaveBeenCalledWith(15);
+  });
+
+  it("imports a SKILL.md file as a reviewed draft", async () => {
+    previewSkillMarkdownImport.mockResolvedValue({
+      sourceFilename: "SKILL.md",
+      sourceHash: "skillhash",
+      name: "Browser QA",
+      description: "Verify browser workflows.",
+      category: "QA",
+      riskLevel: "MEDIUM",
+      instruction: "Use browser checks to verify local UI behavior.",
+      requiredToolMappingsJson: "[\"browser.open\"]",
+      recommendedToolMappingsJson: "[]",
+      suggestedEvalFixturesJson: "[]",
+      validation: {
+        errors: [],
+        warnings: ["No examples or eval fixtures were found."],
+        suggestions: ["Add at least two starter eval fixtures before marking the skill production-ready."],
+      },
+    });
+    importSkillMarkdown.mockResolvedValue({ skillId: "skill_markdown", skillVersionId: "skill_markdown_version_1" });
+    const file = new File(["# Browser QA\n\nVerify browser workflows."], "SKILL.md", { type: "text/markdown" });
+    Object.defineProperty(file, "text", {
+      value: vi.fn().mockResolvedValue("# Browser QA\n\nVerify browser workflows."),
+    });
+
+    render(<AgentSkillsCatalogPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Import SKILL.md/ }));
+    fireEvent.change(screen.getByLabelText("SKILL.md file"), { target: { files: [file] } });
+    expect(await screen.findByText("Selected file:")).toBeInTheDocument();
+    const parseButton = screen.getByRole("button", { name: "Parse file" });
+    await waitFor(() => {
+      expect(parseButton).not.toBeDisabled();
+    });
+    fireEvent.click(parseButton);
+
+    await waitFor(() => {
+      expect(previewSkillMarkdownImport).toHaveBeenCalledWith({
+        markdown: "# Browser QA\n\nVerify browser workflows.",
+        filename: "SKILL.md",
+      });
+    });
+    expect(await screen.findByDisplayValue("Browser QA")).toBeInTheDocument();
+    expect(screen.getByText("No examples or eval fixtures were found.")).toBeInTheDocument();
+    expect(screen.getByText("Production readiness")).toBeInTheDocument();
+    expect(screen.getByText("All imported mappings match active tools.")).toBeInTheDocument();
+    expect(screen.getByText("No starter fixtures.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "browser.open" })).toHaveLength(2);
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Browser QA Review" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "browser.screenshot" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await waitFor(() => {
+      expect(importSkillMarkdown).toHaveBeenCalledWith({
+        sourceFilename: "SKILL.md",
+        sourceHash: "skillhash",
+        name: "Browser QA Review",
+        description: "Verify browser workflows.",
+        category: "QA",
+        riskLevel: "MEDIUM",
+        instruction: "Use browser checks to verify local UI behavior.",
+        requiredToolMappingsJson: "[\"browser.open\"]",
+        recommendedToolMappingsJson: "[\"browser.screenshot\"]",
+        suggestedEvalFixturesJson: "[]",
+      });
+    });
+    expect(await screen.findByText("SKILL.md imported as a draft.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/agents/skills/skill_markdown");
   });
 
   it("creates a skill from the catalog modal", async () => {

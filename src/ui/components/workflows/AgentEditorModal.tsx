@@ -28,6 +28,7 @@ type AgentEditorFormData = {
   _inputTemplate: string;
   _inputFields: string;
   _outputFields: string;
+  selectedSkillIds: Array<Id<"agentSkills">>;
 };
 
 type JsonSchemaObject = {
@@ -69,6 +70,10 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
   const agentId = node?.data?._agentId;
   const agent = useQuery(api.agents.get, agentId ? { id: agentId } : "skip");
+  const activeSkillsData = useQuery(api.agentSkills.getActiveSkills);
+  const activeSkills = useMemo(() => activeSkillsData ?? [], [activeSkillsData]);
+  const existingSkillBindingsData = useQuery(api.agentSkills.getForAgent, agentId ? { agentId } : "skip");
+  const existingSkillBindings = useMemo(() => existingSkillBindingsData ?? [], [existingSkillBindingsData]);
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "workflow" });
   const activeModels = useMemo(() => activeModelsData ?? [], [activeModelsData]);
   const defaultModelId = useMemo(() => activeModels.find((m) => m.isDefault)?.modelId || "", [activeModels]);
@@ -77,6 +82,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
   const updateAgent = useMutation(api.agents.updateAgent);
   const createInlineAgent = useMutation(api.agents.createInlineAgent);
   const promoteToGlobal = useMutation(api.agents.promoteToGlobal);
+  const bindSkillToAgent = useMutation(api.agentSkills.bindSkillToAgent);
+  const unbindSkillFromAgent = useMutation(api.agentSkills.unbindSkillFromAgent);
 
   const [formData, setFormData] = useState<AgentEditorFormData>({
     name: "",
@@ -94,6 +101,7 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     _inputTemplate: "",
     _inputFields: "",
     _outputFields: "",
+    selectedSkillIds: [],
   });
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'IDENTITY' | 'MAPPING'>('MAPPING');
@@ -107,6 +115,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
 
   useEffect(() => {
     if (agent && node) {
+      const bindingSkillIds = existingSkillBindings.map((row) => row.skill._id);
+      const nodeSkillIds = node.data?._skillIds ?? [];
       setFormData({
         name: agent.name || "",
         systemPrompt: agent.systemPrompt || "",
@@ -123,9 +133,10 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         _inputTemplate: node.data?._inputTemplate || "",
         _inputFields: agent.inputSchema ? deriveCSVFromSchema(agent.inputSchema) : "",
         _outputFields: agent.outputSchema ? deriveCSVFromSchema(agent.outputSchema) : "",
+        selectedSkillIds: Array.from(new Set([...bindingSkillIds, ...nodeSkillIds])),
       });
     }
-  }, [agent, defaultModelId, node]);
+  }, [agent, defaultModelId, existingSkillBindings, node]);
 
   const deriveCSVFromSchema = (schemaStr: string) => {
     try {
@@ -140,6 +151,22 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     const properties: Record<string, { type: "string" }> = {};
     fields.forEach(f => properties[f] = { type: "string" });
     return JSON.stringify({ type: "object", properties }, null, 2);
+  };
+
+  const selectedSkillNames = useMemo(() => {
+    const nameById = new Map<string, string>();
+    for (const skill of activeSkills) nameById.set(skill._id, skill.name);
+    for (const row of existingSkillBindings) nameById.set(row.skill._id, row.skill.name);
+    return formData.selectedSkillIds.map((skillId) => nameById.get(skillId)).filter((name): name is string => Boolean(name));
+  }, [activeSkills, existingSkillBindings, formData.selectedSkillIds]);
+
+  const toggleSkill = (skillId: Id<"agentSkills">) => {
+    setFormData((current) => ({
+      ...current,
+      selectedSkillIds: current.selectedSkillIds.includes(skillId)
+        ? current.selectedSkillIds.filter((id) => id !== skillId)
+        : [...current.selectedSkillIds, skillId],
+    }));
   };
 
   const handleAutoConfigure = async () => {
@@ -207,6 +234,21 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         temperature: parseFloat(String(formData.temperature)),
       });
 
+      for (const skillId of formData.selectedSkillIds) {
+        await bindSkillToAgent({
+          agentId: targetAgentId,
+          skillId,
+          isEnabled: true,
+          seedEvalFixtures: false,
+        });
+      }
+      const selectedSkillIdSet = new Set(formData.selectedSkillIds);
+      for (const row of existingSkillBindings) {
+        if (!selectedSkillIdSet.has(row.skill._id)) {
+          await unbindSkillFromAgent({ bindingId: row.binding._id });
+        }
+      }
+
       let parsedMapping = formData._inputMapping;
       if (parsedMapping) {
         try { parsedMapping = JSON.parse(parsedMapping); } catch {}
@@ -222,6 +264,8 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         _agentId: targetAgentId,
         _inputMapping: parsedMapping,
         _inputTemplate: formData._inputTemplate,
+        _skillIds: formData.selectedSkillIds,
+        _skillNames: selectedSkillNames,
       });
 
       onClose();
@@ -418,6 +462,53 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
                       <span className="text-[11px] text-muted leading-tight">{t('search.hint')}</span>
                     </div>
                   </label>
+                </div>
+
+                <div className="flex flex-col gap-3 p-4 border border-border-dim bg-background/50 rounded-[12px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <BrainCircuit className="w-3.5 h-3.5" /> Central skills
+                      </span>
+                      <span className="text-[11px] text-muted leading-tight">{formData.selectedSkillIds.length} selected from active library skills.</span>
+                    </div>
+                  </div>
+                  <div className="max-h-[220px] overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
+                    {activeSkills.length === 0 ? (
+                      <p className="rounded-[8px] border border-border-dim bg-card/60 px-3 py-2 text-[12px] text-secondary">
+                        No active central skills are available yet.
+                      </p>
+                    ) : activeSkills.map((skill) => {
+                      const isSelected = formData.selectedSkillIds.includes(skill._id);
+                      return (
+                        <label
+                          key={skill._id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-[8px] border px-3 py-2 transition-colors ${
+                            isSelected
+                              ? "border-brand/40 bg-brand/10"
+                              : "border-border-dim bg-card/60 hover:border-border"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSkill(skill._id)}
+                            className="mt-0.5 h-4 w-4 rounded border-border-dim accent-brand"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="text-[12px] font-semibold text-foreground">{skill.name}</span>
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-muted">{skill.riskLevel.toLowerCase()} risk</span>
+                            </span>
+                            <span className="mt-0.5 block line-clamp-2 text-[11px] text-secondary">{skill.description || "No description provided."}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[11px] text-muted leading-tight">
+                    Saving binds selected skills to this agent with current version snapshots. Tool permissions are still controlled separately.
+                  </span>
                 </div>
 
                 <div className="flex flex-col gap-2 p-4 border border-border-dim bg-background/50 rounded-[12px]">

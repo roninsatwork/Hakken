@@ -47,4 +47,5 @@ Active plans are still useful as sources of truth for current or future implemen
 Completed plans are retained for context and verification history. They should not be treated as active implementation instructions unless reopened deliberately.
 
 - [Current Cleanup Checklist](./completed/current-cleanup-checklist.md)
+- [Central Skill Library Import Plan](./completed/central-skill-library-import-plan.md)
 - [Housework Upgrade Checklist](./completed/housework-upgrade-checklist.md)

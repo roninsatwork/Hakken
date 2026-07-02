@@ -2,16 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { ClipboardCheck } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { CompanySkillCheckboxPicker } from "@/src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker";
 import {
   AdminModalFormError,
   AdminModalFormField,
   adminModalInputClassName,
   adminModalTextareaClassName,
 } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -60,7 +62,6 @@ const DEFAULT_CASE_FORM = {
   forbiddenClaimsJson: "",
   requiredSourcesJson: "",
   requiredMemoriesJson: "",
-  requiredSkillsJson: "",
   expectedModelUseCase: "chat",
   judgeRubric: "",
 };
@@ -73,10 +74,24 @@ export default function NewCompanyEvalPage() {
   const fallbackHref = `/admin/companies/${companyId}/ai/evals`;
   const backHref = getSafeCompanyAiReturnTo(searchParams.get("returnTo"), companyId, fallbackHref);
   const createCase = useMutation(api.companyEvals.createCase);
+  const activeSkills = usePaginatedQuery(
+    api.companySkills.getSkillsForCompany,
+    { companyId, status: "ACTIVE" },
+    { initialNumItems: ADMIN_PAGE_SIZE }
+  );
 
   const [caseForm, setCaseForm] = useState(DEFAULT_CASE_FORM);
+  const [requiredSkillIds, setRequiredSkillIds] = useState<Array<Id<"companySkills">>>([]);
   const [caseError, setCaseError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toggleRequiredSkill = (skillId: Id<"companySkills">) => {
+    setRequiredSkillIds((current) =>
+      current.includes(skillId)
+        ? current.filter((id) => id !== skillId)
+        : [...current, skillId]
+    );
+  };
 
   const handleCreateCase = async (event: FormEvent) => {
     event.preventDefault();
@@ -94,7 +109,7 @@ export default function NewCompanyEvalPage() {
         forbiddenClaimsJson: caseForm.forbiddenClaimsJson || undefined,
         requiredSourcesJson: caseForm.requiredSourcesJson || undefined,
         requiredMemoriesJson: caseForm.requiredMemoriesJson || undefined,
-        requiredSkillsJson: caseForm.requiredSkillsJson || undefined,
+        requiredSkillsJson: requiredSkillIds.length > 0 ? JSON.stringify(requiredSkillIds) : undefined,
         expectedModelUseCase: caseForm.expectedModelUseCase || undefined,
         judgeRubric: caseForm.judgeRubric || undefined,
       });
@@ -207,12 +222,14 @@ export default function NewCompanyEvalPage() {
               />
             </AdminModalFormField>
           </div>
-          <AdminModalFormField label="Required skills" hint="JSON string array">
-            <textarea
-              className={`${adminModalTextareaClassName} min-h-[150px] font-mono`}
-              value={caseForm.requiredSkillsJson}
-              onChange={(event) => setCaseForm((current) => ({ ...current, requiredSkillsJson: event.target.value }))}
-              placeholder={'["skill-id"]'}
+          <AdminModalFormField label="Required skills" hint={`${requiredSkillIds.length} selected from active company skills`}>
+            <CompanySkillCheckboxPicker
+              skills={activeSkills.results}
+              selectedSkillIds={requiredSkillIds}
+              status={activeSkills.status}
+              emptyMessage="No active company skills are available. Create or import a company skill first."
+              onToggleSkill={toggleRequiredSkill}
+              onLoadMore={() => activeSkills.loadMore(ADMIN_PAGE_SIZE)}
             />
           </AdminModalFormField>
           <AdminModalFormField label="Judge rubric" hint="Optional, qualitative judge planned">
@@ -233,4 +250,3 @@ export default function NewCompanyEvalPage() {
     </div>
   );
 }
-

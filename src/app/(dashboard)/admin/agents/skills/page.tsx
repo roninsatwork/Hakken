@@ -6,12 +6,31 @@ import Link from "next/link";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { BarChart3, BrainCircuit, Loader2, Plus, Search, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
+import { BarChart3, BrainCircuit, FileText, Loader2, Plus, Search, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 
 type SkillStatus = Doc<"agentSkills">["status"];
 type SkillRisk = Doc<"agentSkills">["riskLevel"];
+type AiTool = Doc<"aiTools">;
+
+type MarkdownImportDraft = {
+  sourceFilename?: string;
+  sourceHash: string;
+  name: string;
+  description?: string;
+  category: string;
+  riskLevel: SkillRisk;
+  instruction: string;
+  requiredToolMappingsJson: string;
+  recommendedToolMappingsJson: string;
+  suggestedEvalFixturesJson: string;
+  validation: {
+    errors: string[];
+    warnings: string[];
+    suggestions: string[];
+  };
+};
 
 const emptyForm = {
   name: "",
@@ -41,17 +60,187 @@ function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
 }
 
+function parseJsonStringArray(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatJsonStringArray(values: string[]) {
+  return JSON.stringify(Array.from(new Set(values)));
+}
+
+function toggleJsonStringArrayValue(value: string, entry: string) {
+  const entries = parseJsonStringArray(value);
+  return formatJsonStringArray(entries.includes(entry)
+    ? entries.filter((item) => item !== entry)
+    : [...entries, entry]);
+}
+
+function hasJsonStringArrayValue(value: string, entry: string) {
+  return parseJsonStringArray(value).includes(entry);
+}
+
+function hasEvalFixtures(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasApprovalGuidance(draft: MarkdownImportDraft) {
+  return draft.riskLevel !== "HIGH" || /\b(approval|required approval|human approval|pause|confirm|do not proceed)\b/i.test(draft.instruction);
+}
+
+function hasTenantSpecificSignals(draft: MarkdownImportDraft) {
+  return /\b(acme|client id|customer id|company secret|api key|password)\b/i.test(`${draft.instruction}\n${draft.description ?? ""}`);
+}
+
+function getUnresolvedMappings(draft: MarkdownImportDraft, activeToolMappings: string[]) {
+  const active = new Set(activeToolMappings);
+  return [
+    ...parseJsonStringArray(draft.requiredToolMappingsJson),
+    ...parseJsonStringArray(draft.recommendedToolMappingsJson),
+  ].filter((mapping) => !active.has(mapping));
+}
+
+type ToolMappingPickerProps = {
+  mappings: string[];
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function ToolMappingPicker({ mappings, value, onChange }: ToolMappingPickerProps) {
+  if (mappings.length === 0) {
+    return (
+      <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[11px] text-muted">
+        No active tool mappings are available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[8px] border border-border-dim bg-black/15 p-2">
+      <div className="mb-2 text-[10px] font-mono uppercase tracking-widest text-muted">Active mappings</div>
+      <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+        {mappings.map((mapping) => {
+          const isSelected = hasJsonStringArrayValue(value, mapping);
+          return (
+            <button
+              key={mapping}
+              type="button"
+              onClick={() => onChange(toggleJsonStringArrayValue(value, mapping))}
+              className={`rounded-[8px] border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
+                isSelected
+                  ? "border-brand/40 bg-brand/15 text-brand"
+                  : "border-border-dim bg-background/40 text-secondary hover:text-foreground"
+              }`}
+            >
+              {mapping}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type MarkdownReadinessPanelProps = {
+  draft: MarkdownImportDraft;
+  activeToolMappings: string[];
+};
+
+function MarkdownReadinessPanel({ draft, activeToolMappings }: MarkdownReadinessPanelProps) {
+  const unresolvedMappings = getUnresolvedMappings(draft, activeToolMappings);
+  const readinessRows = [
+    {
+      label: "Tool mappings",
+      ready: unresolvedMappings.length === 0,
+      detail: unresolvedMappings.length === 0 ? "All imported mappings match active tools." : `${unresolvedMappings.length} unresolved`,
+    },
+    {
+      label: "Approval",
+      ready: hasApprovalGuidance(draft),
+      detail: hasApprovalGuidance(draft) ? "Approval guidance present or not required." : "High-risk skill needs approval guidance.",
+    },
+    {
+      label: "Eval fixtures",
+      ready: hasEvalFixtures(draft.suggestedEvalFixturesJson),
+      detail: hasEvalFixtures(draft.suggestedEvalFixturesJson) ? "Starter fixtures included." : "No starter fixtures.",
+    },
+    {
+      label: "Shared scope",
+      ready: !hasTenantSpecificSignals(draft),
+      detail: hasTenantSpecificSignals(draft) ? "Review for tenant-specific facts." : "No obvious sensitive tenant facts.",
+    },
+  ];
+
+  return (
+    <div className="rounded-[8px] border border-border-dim bg-black/15 p-3">
+      <div className="mb-3 text-[11px] font-semibold text-foreground">Production readiness</div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {readinessRows.map((row) => (
+          <div key={row.label} className="rounded-[8px] border border-border-dim bg-background/40 px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-medium text-secondary">{row.label}</span>
+              <span className={`rounded-[8px] border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
+                row.ready ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+              }`}
+              >
+                {row.ready ? "ready" : "review"}
+              </span>
+            </div>
+            <div className="mt-1 text-[11px] text-muted">{row.detail}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+async function readFileText(file: File) {
+  if (typeof file.text === "function") return await file.text();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("File could not be read."));
+    reader.readAsText(file);
+  });
+}
+
 export default function AgentSkillsCatalogPage() {
   const createSkill = useMutation(api.agentSkills.createSkill);
   const importSkillBundle = useMutation(api.agentSkills.importSkillBundle);
+  const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
+  const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
   const seedStarterSkills = useMutation(api.agentSkills.seedStarterSkills);
   const analytics = useQuery(api.agentSkills.getSkillCatalogAnalytics, {});
+  const toolCatalog = useQuery(api.aiTools.getTools, {});
+  const activeToolMappings = Array.isArray(toolCatalog)
+    ? toolCatalog
+      .filter((tool: AiTool) => tool.isActive !== false)
+      .map((tool: AiTool) => tool.handlerMapping)
+      .filter(Boolean)
+    : [];
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isMarkdownOpen, setIsMarkdownOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [bundleJson, setBundleJson] = useState("");
+  const [markdownFile, setMarkdownFile] = useState<File | null>(null);
+  const [markdownSourceText, setMarkdownSourceText] = useState("");
+  const [markdownDraft, setMarkdownDraft] = useState<MarkdownImportDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isParsingMarkdown, setIsParsingMarkdown] = useState(false);
+  const [isSavingMarkdown, setIsSavingMarkdown] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [error, setError] = useState("");
@@ -125,6 +314,71 @@ export default function AgentSkillsCatalogPage() {
     }
   };
 
+  const resetMarkdownImport = () => {
+    setMarkdownFile(null);
+    setMarkdownSourceText("");
+    setMarkdownDraft(null);
+    setError("");
+  };
+
+  const parseMarkdown = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!markdownFile) {
+      setError("Choose a SKILL.md file to import.");
+      return;
+    }
+    if (!markdownSourceText.trim()) {
+      setError("The selected SKILL.md file is empty.");
+      return;
+    }
+    setIsParsingMarkdown(true);
+    setError("");
+    setFeedback("");
+    setImportedSkillId(null);
+    try {
+      const draft = await previewSkillMarkdownImport({
+        markdown: markdownSourceText,
+        filename: markdownFile.name,
+      }) as MarkdownImportDraft;
+      setMarkdownDraft(draft);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "SKILL.md could not be parsed.");
+    } finally {
+      setIsParsingMarkdown(false);
+    }
+  };
+
+  const saveMarkdownDraft = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!markdownDraft) return;
+    setIsSavingMarkdown(true);
+    setError("");
+    setFeedback("");
+    setImportedSkillId(null);
+    try {
+      const result = await importSkillMarkdown({
+        sourceFilename: markdownDraft.sourceFilename,
+        sourceHash: markdownDraft.sourceHash,
+        name: markdownDraft.name,
+        description: markdownDraft.description || undefined,
+        category: markdownDraft.category,
+        riskLevel: markdownDraft.riskLevel,
+        instruction: markdownDraft.instruction,
+        requiredToolMappingsJson: markdownDraft.requiredToolMappingsJson,
+        recommendedToolMappingsJson: markdownDraft.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: markdownDraft.suggestedEvalFixturesJson,
+      });
+      setImportedSkillId(result.skillId);
+      setIsMarkdownOpen(false);
+      resetMarkdownImport();
+      setFeedback("SKILL.md imported as a draft.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "SKILL.md could not be imported.");
+    } finally {
+      setIsSavingMarkdown(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 h-full pb-12">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -138,6 +392,18 @@ export default function AgentSkillsCatalogPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsMarkdownOpen(true);
+              resetMarkdownImport();
+              setFeedback("");
+            }}
+            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <FileText className="w-4 h-4" />
+            Import SKILL.md
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -162,9 +428,9 @@ export default function AgentSkillsCatalogPage() {
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
-            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+            className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-brand" />
             New skill
           </button>
         </div>
@@ -372,6 +638,154 @@ export default function AgentSkillsCatalogPage() {
             </button>
           </div>
         </form>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={isMarkdownOpen}
+        onClose={() => {
+          setIsMarkdownOpen(false);
+          resetMarkdownImport();
+        }}
+        title="Import SKILL.md"
+        size="lg"
+      >
+        {!markdownDraft ? (
+          <form onSubmit={parseMarkdown} className="flex flex-col gap-4 px-1 pb-2">
+            {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
+            <label className="flex flex-col gap-2 text-[12px] text-secondary">
+              SKILL.md file
+              <input
+                type="file"
+                accept=".md,text/markdown,text/plain"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  setMarkdownFile(file);
+                  setMarkdownSourceText("");
+                  setError("");
+                  if (!file) return;
+                  try {
+                    setMarkdownSourceText(await readFileText(file));
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "File could not be read.");
+                  }
+                }}
+                className="rounded-[8px] border border-dashed border-border-dim bg-card p-4 text-[13px] text-foreground file:mr-3 file:rounded-[8px] file:border-0 file:bg-brand file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-white"
+              />
+            </label>
+            {markdownFile && (
+              <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[12px] text-secondary">
+                Selected file: <span className="font-mono text-foreground">{markdownFile.name}</span>
+              </div>
+            )}
+            <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[12px] text-secondary">
+              The import creates a draft skill. Review the parsed fields before publishing or attaching it to agents.
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
+              <button type="submit" disabled={isParsingMarkdown || !markdownSourceText.trim()} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
+                {isParsingMarkdown && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Parse file
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={saveMarkdownDraft} className="flex flex-col gap-4 px-1 pb-2">
+            {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
+            {markdownDraft.validation.errors.length > 0 && (
+              <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">
+                <div className="font-semibold mb-1">Blocking issues</div>
+                <ul className="list-disc pl-4 space-y-1">
+                  {markdownDraft.validation.errors.map((message) => <li key={message}>{message}</li>)}
+                </ul>
+              </div>
+            )}
+            {markdownDraft.validation.warnings.length > 0 && (
+              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 p-3 text-[12px] text-amber-300">
+                <div className="font-semibold mb-1">Warnings</div>
+                <ul className="list-disc pl-4 space-y-1">
+                  {markdownDraft.validation.warnings.map((message) => <li key={message}>{message}</li>)}
+                </ul>
+              </div>
+            )}
+            {markdownDraft.validation.suggestions.length > 0 && (
+              <div className="rounded-[8px] border border-sky-500/20 bg-sky-500/10 p-3 text-[12px] text-sky-300">
+                <div className="font-semibold mb-1">Suggestions</div>
+                <ul className="list-disc pl-4 space-y-1">
+                  {markdownDraft.validation.suggestions.map((message) => <li key={message}>{message}</li>)}
+                </ul>
+              </div>
+            )}
+            <MarkdownReadinessPanel draft={markdownDraft} activeToolMappings={activeToolMappings} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Name
+                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.name} onChange={(event) => setMarkdownDraft({ ...markdownDraft, name: event.target.value })} required />
+              </label>
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Category
+                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.category} onChange={(event) => setMarkdownDraft({ ...markdownDraft, category: event.target.value })} />
+              </label>
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Status
+                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-muted" value="DRAFT" disabled readOnly />
+              </label>
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Risk
+                <select className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.riskLevel} onChange={(event) => setMarkdownDraft({ ...markdownDraft, riskLevel: event.target.value as SkillRisk })}>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-[12px] text-secondary">
+              Description
+              <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.description ?? ""} onChange={(event) => setMarkdownDraft({ ...markdownDraft, description: event.target.value })} />
+            </label>
+            <label className="flex flex-col gap-1 text-[12px] text-secondary">
+              Instruction
+              <textarea className="min-h-40 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.instruction} onChange={(event) => setMarkdownDraft({ ...markdownDraft, instruction: event.target.value })} required />
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Required tool mappings JSON
+                <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.requiredToolMappingsJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, requiredToolMappingsJson: event.target.value })} />
+                <ToolMappingPicker
+                  mappings={activeToolMappings}
+                  value={markdownDraft.requiredToolMappingsJson}
+                  onChange={(value) => setMarkdownDraft({ ...markdownDraft, requiredToolMappingsJson: value })}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
+                Recommended tool mappings JSON
+                <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.recommendedToolMappingsJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, recommendedToolMappingsJson: event.target.value })} />
+                <ToolMappingPicker
+                  mappings={activeToolMappings}
+                  value={markdownDraft.recommendedToolMappingsJson}
+                  onChange={(value) => setMarkdownDraft({ ...markdownDraft, recommendedToolMappingsJson: value })}
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-[12px] text-secondary">
+              Suggested eval fixtures JSON
+              <textarea className="min-h-24 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.suggestedEvalFixturesJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, suggestedEvalFixturesJson: event.target.value })} />
+            </label>
+            <div className="flex justify-between gap-2">
+              <button type="button" onClick={() => setMarkdownDraft(null)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Choose another file</button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
+                <button
+                  type="submit"
+                  disabled={isSavingMarkdown || markdownDraft.validation.errors.length > 0}
+                  className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSavingMarkdown && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save draft
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
       </SonaeModal>
 
       <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import skill bundle" size="lg">

@@ -223,6 +223,7 @@ const details = {
     recommendedConnectorKeys: ["zendesk", "gmail"],
     draftResources: {
       agents: ["Support Triage Agent"],
+      recommendedSkills: ["Document Extraction", "Approval Handoff"],
       knowledgeScopes: ["Help center"],
       workflows: ["New ticket triage"],
       evalFixtures: ["Refund promise blocked"],
@@ -363,6 +364,7 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getAllByText("Acme Support").length).toBeGreaterThan(0);
     expect(screen.getByText("Support Desk AI")).toBeInTheDocument();
     expect(screen.getByText("Support Triage Agent")).toBeInTheDocument();
+    expect(screen.getByText("Approval Handoff")).toBeInTheDocument();
     expect(screen.getAllByText("Zendesk").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ready").length).toBeGreaterThan(0);
     expect(screen.getByText("Missing")).toBeInTheDocument();
@@ -522,11 +524,17 @@ describe("LaunchPlanDetailPage", () => {
             workflowIds: ["workflow_1"],
             fixtureIds: ["fixture_1", "fixture_2"],
             sourceRunIds: ["run_1"],
+            skillBindingIds: ["binding_1", "binding_2"],
           },
           createdResourceDetails: {
             agents: [{ id: "agent_1", name: "Support Triage Agent", isActive: false, fixtureCount: 2 }],
             workflows: [{ id: "workflow_1", name: "New ticket triage", isActive: false, triggerType: "MANUAL" }],
+            skillBindings: [
+              { id: "binding_1", agentId: "agent_1", skillId: "skill_1", skillName: "Document Extraction", isEnabled: true },
+              { id: "binding_2", agentId: "agent_1", skillId: "skill_2", skillName: "Approval Handoff", isEnabled: true },
+            ],
             evalFixtureCount: 2,
+            skillBindingCount: 2,
             missingResourceCount: 0,
           },
           linkedWorkspace: {
@@ -544,6 +552,9 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getAllByText("Acme Support")[1]).toHaveAttribute("href", "/admin/companies/company_1");
     expect(screen.getAllByText("Support Triage Agent")[1].closest("a")).toHaveAttribute("href", "/admin/agents/agent_1");
     expect(screen.getAllByText("New ticket triage")[1].closest("a")).toHaveAttribute("href", "/admin/workflows/workflow_1");
+    expect(screen.getByText("Skill Attachments")).toBeInTheDocument();
+    expect(screen.getAllByText("Document Extraction").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/agents/skills/skill_1");
+    expect(screen.getAllByText("Approval Handoff").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/agents/skills/skill_2");
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
   });
 });

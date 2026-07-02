@@ -135,8 +135,12 @@ describe("AgentSkillsPage", () => {
     expect(screen.getByText("1 required tool mapping(s) are missing.")).toBeInTheDocument();
     expect(screen.getByText("1 skill fixture(s), smoke evidence is stale.")).toBeInTheDocument();
     expect(screen.getByText("risk.monitor.feed")).toBeInTheDocument();
-    expect(screen.getByText("Client Follow-up")).toBeInTheDocument();
+    expect(screen.getByText("Select from skill library")).toBeInTheDocument();
+    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
     expect(screen.getByText("1 available")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search active skills")).toBeInTheDocument();
+    expect(screen.getByText("Instruction preview")).toBeInTheDocument();
+    expect(screen.getByText("Use concrete next steps.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Update to v3" }));
     await waitFor(() => {
@@ -151,7 +155,10 @@ describe("AgentSkillsPage", () => {
       expect(setBindingEnabled).toHaveBeenCalledWith({ bindingId: "binding_risk", isEnabled: false });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Attach/ }));
+    fireEvent.change(screen.getByPlaceholderText("Search active skills"), { target: { value: "follow" } });
+    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /Attach selected skill/ }));
     await waitFor(() => {
       expect(bindSkill).toHaveBeenCalledWith({
         agentId: "agent_1",
