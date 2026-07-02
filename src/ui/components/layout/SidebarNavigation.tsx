@@ -185,7 +185,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows');
+  const isAgentsActive = pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows');
 
   return {
     workspace: true,
@@ -314,16 +314,6 @@ export default function SidebarNavigation() {
 
                     {isSuperAdmin && (
                       <NavItem
-                        icon={Rocket}
-                        label={t('launch')}
-                        href="/admin/app-kits"
-                        isActive={activeItem === 'App Kits' || pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')}
-                        onClick={() => setActiveItem('App Kits')}
-                      />
-                    )}
-
-                    {isSuperAdmin && (
-                      <NavItem
                         icon={Building2}
                         label={t('companies')}
                         isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
@@ -371,6 +361,16 @@ export default function SidebarNavigation() {
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
+                    )}
+
+                    {isSuperAdmin && (
+                      <NavItem
+                        icon={Rocket}
+                        label={t('launch')}
+                        href="/admin/app-kits"
+                        isActive={activeItem === 'App Kits' || pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')}
+                        onClick={() => setActiveItem('App Kits')}
+                      />
                     )}
 
                     {isSuperAdmin && (

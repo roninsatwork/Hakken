@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { useSearchParams } from "next/navigation";
 import LaunchPage from "./page";
 import { AppKitDetailContent, AppKitSetupContent } from "../app-kits/AppKitsClient";
 
@@ -25,6 +26,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: routerPush,
   }),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const templates = [
@@ -166,6 +168,7 @@ describe("LaunchPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     routerPush.mockClear();
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
     vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
       void args;
       const functionName = getFunctionName(queryFn);
@@ -195,15 +198,16 @@ describe("LaunchPage", () => {
     });
   });
 
-  it("renders a focused app kit catalog and recent draft plans", () => {
+  it("renders a focused app kit catalog with secondary views", () => {
     render(<LaunchPage />);
 
     expect(screen.getByText("App Kits")).toBeInTheDocument();
-    expect(screen.getByText("Guided launch path")).toBeInTheDocument();
-    expect(screen.getByText("Start with a safe draft, then review before release.")).toBeInTheDocument();
-    expect(screen.getByText("Choose a starter")).toBeInTheDocument();
-    expect(screen.getByText("Run setup")).toBeInTheDocument();
-    expect(screen.getByText("Create drafts")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Browse Kits/i })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /Draft Plans/i })).toHaveAttribute("href", "/admin/app-kits?view=plans");
+    expect(screen.getByRole("link", { name: /Launch Guide/i })).toHaveAttribute("href", "/admin/app-kits?view=guide");
+    expect(screen.getByRole("link", { name: /Registry/i })).toHaveAttribute("href", "/admin/app-kits?view=registry");
+    expect(screen.queryByText("Guided launch path")).not.toBeInTheDocument();
+    expect(screen.queryByText("Recent Build Plans")).not.toBeInTheDocument();
     const supportKitLink = screen
       .getAllByRole("link", { name: /Support Desk AI/i })
       .find((link) => link.getAttribute("href") === "/admin/app-kits/support-desk-ai");
@@ -220,7 +224,46 @@ describe("LaunchPage", () => {
     expect(screen.queryByText("Catalogue Registry")).not.toBeInTheDocument();
     expect(screen.getByText("Draft-only resources · Not saved")).toBeInTheDocument();
     expect(screen.getByText("1/2 saved")).toBeInTheDocument();
+    expect(screen.queryByText("Acme Support")).not.toBeInTheDocument();
+  });
+
+  it("renders recent draft plans in the draft plans view", () => {
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("view=plans") as never);
+
+    render(<LaunchPage />);
+
+    expect(screen.getByRole("link", { name: /Draft Plans/i })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Recent Build Plans")).toBeInTheDocument();
     expect(screen.getByText("Acme Support")).toBeInTheDocument();
+    expect(screen.queryByText("Support leads")).not.toBeInTheDocument();
+  });
+
+  it("renders launch guidance in the launch guide view", () => {
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("view=guide") as never);
+
+    render(<LaunchPage />);
+
+    expect(screen.getByRole("link", { name: /Launch Guide/i })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Guided launch path")).toBeInTheDocument();
+    expect(screen.getByText("Start with a safe draft, then review before release.")).toBeInTheDocument();
+    expect(screen.getByText("Choose a starter")).toBeInTheDocument();
+    expect(screen.getByText("Run setup")).toBeInTheDocument();
+    expect(screen.getByText("Create drafts")).toBeInTheDocument();
+    expect(screen.queryByText("Support leads")).not.toBeInTheDocument();
+  });
+
+  it("renders catalog sync status in the registry view", () => {
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("view=registry") as never);
+
+    render(<LaunchPage />);
+
+    expect(screen.getByRole("link", { name: /Registry/i })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Catalog Registry")).toBeInTheDocument();
+    expect(screen.getByText("Internal persistence and sync status for app kit metadata. Edit individual registry records from each kit detail page.")).toBeInTheDocument();
+    expect(screen.getByText("Owner: catalog@example.com")).toBeInTheDocument();
+    expect(screen.getByText("ACTIVE · synced")).toBeInTheDocument();
+    expect(screen.getByText("Not saved")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Search templates, connectors, agents, or use cases...")).not.toBeInTheDocument();
   });
 
   it("renders app kit detail content", async () => {

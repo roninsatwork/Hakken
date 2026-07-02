@@ -2,15 +2,17 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Bot,
   CheckCircle2,
+  ClipboardList,
   Gauge,
   Layers3,
   Loader2,
@@ -83,6 +85,7 @@ type CatalogRegistryItem = {
 };
 
 type SetupStep = "use-case" | "workspace" | "integrations" | "knowledge" | "resources" | "safety" | "review";
+type CatalogView = "browse" | "plans" | "guide" | "registry";
 
 const riskClassName = {
   LOW: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
@@ -148,6 +151,18 @@ const catalogIntroSteps = [
     summary: "Generate inactive build resources for review before anything customer-facing is enabled.",
   },
 ];
+
+const catalogViews: Array<{ key: CatalogView; label: string; href: string; icon: typeof Rocket }> = [
+  { key: "browse", label: "Browse Kits", href: "/admin/app-kits", icon: Rocket },
+  { key: "plans", label: "Draft Plans", href: "/admin/app-kits?view=plans", icon: ClipboardList },
+  { key: "guide", label: "Launch Guide", href: "/admin/app-kits?view=guide", icon: BookOpen },
+  { key: "registry", label: "Registry", href: "/admin/app-kits?view=registry", icon: Layers3 },
+];
+
+function getCatalogView(value: string | null): CatalogView {
+  if (value === "plans" || value === "guide" || value === "registry") return value;
+  return "browse";
+}
 
 function normalizeConnectorName(key: string) {
   return key
@@ -418,6 +433,8 @@ function createSetupOverrides({
 
 export function AppKitsCatalogPage() {
   const { templates, recentPlans, catalogRegistry } = useAppKitData();
+  const searchParams = useSearchParams();
+  const activeCatalogView = getCatalogView(searchParams?.get("view") ?? null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeRisk, setActiveRisk] = useState<"ALL" | RiskProfile>("ALL");
@@ -438,6 +455,16 @@ export function AppKitsCatalogPage() {
       staleCount: items.filter((item) => item.registry && !item.isSynced).length,
     };
   }, [catalogRegistry]);
+
+  const registryLifecycleSummary = useMemo(() => {
+    const items = catalogRegistry ?? [];
+    return {
+      activeCount: items.filter((item) => item.registry?.lifecycleStatus === "ACTIVE").length,
+      needsReviewCount: items.filter((item) => item.registry?.lifecycleStatus === "NEEDS_REVIEW").length,
+      archivedCount: items.filter((item) => item.registry?.lifecycleStatus === "ARCHIVED").length,
+      unsavedCount: (templates ?? []).filter((template) => !registryByTemplateId.get(template.id)?.registry).length,
+    };
+  }, [catalogRegistry, registryByTemplateId, templates]);
 
   const filteredTemplates = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -472,191 +499,290 @@ export function AppKitsCatalogPage() {
       <AdminPageHeader
         icon={<Rocket className="w-6 h-6 text-brand" />}
         title="App Kits"
-        description="Browse developer-ready app starters, compare scope and risk, then open a kit to review registry, launch plan, connectors, evals, and follow-up work."
+        description="Find a starter kit, review what it creates, then run setup when the scope is right."
       />
 
-      <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.6fr)] gap-4">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand">Guided launch path</span>
-            <h2 className="text-[16px] font-semibold text-foreground mt-2">Start with a safe draft, then review before release.</h2>
-            <p className="text-[12px] text-secondary leading-relaxed mt-2">
-              App Kits are reusable blueprints for common AI products. Each kit turns setup answers into a draft build plan, then the plan can create inactive agents, workflows, knowledge links, evals, and launch tasks.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {catalogIntroSteps.map((step, index) => (
-              <div key={step.label} className="border border-border-dim bg-background/30 rounded-[8px] p-3">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-[6px] bg-brand/10 text-[11px] font-bold text-brand border border-brand/20">
-                    {index + 1}
-                  </span>
-                  <h3 className="text-[12px] font-semibold text-foreground">{step.label}</h3>
-                </div>
-                <p className="text-[11px] text-secondary leading-relaxed mt-2">{step.summary}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <nav className="flex items-center gap-1 border-b border-border-dim/50 pb-px overflow-x-auto custom-scrollbar" aria-label="App kit views">
+        {catalogViews.map((view) => {
+          const Icon = view.icon;
+          const isActive = activeCatalogView === view.key;
 
-      <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-4">
-          <div className="w-full flex items-center gap-2 px-4 py-3 bg-background/30 border border-border-dim rounded-[10px]">
-            <Search className="w-4 h-4 text-muted" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search templates, connectors, agents, or use cases..."
-              className="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"
-            />
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-secondary">
-            <span>{templates.length} kits</span>
-            <span>{categories.length - 1} categories</span>
-            <span>{registrySummary.persistedCount}/{templates.length} saved</span>
-            {registrySummary.staleCount > 0 ? <span className="text-amber-500">{registrySummary.staleCount} need sync</span> : null}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2 mt-4">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setActiveCategory(category)}
-              className={`px-3 py-1.5 rounded-[8px] border text-[12px] transition-colors ${
-                activeCategory === category
-                  ? "border-brand/40 bg-brand/10 text-foreground"
-                  : "border-border-dim bg-background/30 text-secondary hover:text-foreground"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-2 mt-3">
-          {(["ALL", "LOW", "MEDIUM", "HIGH"] as const).map((risk) => (
-            <button
-              key={risk}
-              type="button"
-              onClick={() => setActiveRisk(risk)}
-              className={`px-3 py-1.5 rounded-[8px] border text-[12px] transition-colors ${
-                activeRisk === risk
-                  ? "border-foreground/30 bg-foreground/10 text-foreground"
-                  : "border-border-dim bg-background/30 text-secondary hover:text-foreground"
-              }`}
-            >
-              {risk === "ALL" ? "All risk" : risk.charAt(0) + risk.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {filteredTemplates.map((template) => {
-          const registryItem = registryByTemplateId.get(template.id);
           return (
             <Link
-              key={template.id}
-              href={`/admin/app-kits/${template.id}`}
-              className="group border border-border-dim rounded-[8px] p-4 bg-card/50 hover:border-brand/40 focus-visible:border-brand/50 focus-visible:outline-none transition-colors"
+              key={view.key}
+              href={view.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex h-11 shrink-0 items-center gap-2 rounded-t-[8px] border-b-2 px-4 text-[13px] font-medium transition-colors whitespace-nowrap ${
+                isActive
+                  ? "border-brand bg-brand/5 text-brand"
+                  : "border-transparent text-secondary hover:border-foreground/30 hover:text-foreground"
+              }`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase text-brand bg-brand/10 border border-brand/20 rounded-[6px] px-2 py-0.5">
-                      {template.category}
-                    </span>
-                    <span className={`text-[10px] font-bold uppercase rounded-[6px] border px-2 py-0.5 ${riskClassName[template.riskProfile]}`}>
-                      {template.riskProfile}
-                    </span>
-                  </div>
-                  <h2 className="text-[15px] font-semibold text-foreground mt-3 group-hover:text-brand transition-colors">{template.name}</h2>
-                  <p className="text-[12px] text-secondary mt-1 leading-relaxed">{template.tagline}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted group-hover:text-brand flex-shrink-0 transition-colors" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                <div>
-                  <div className="text-[10px] font-mono uppercase text-muted">Best for</div>
-                  <p className="text-[11px] text-secondary leading-relaxed mt-1">{formatListPreview(template.primaryUsers, "Teams validating an AI workflow")}</p>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono uppercase text-muted">Needs</div>
-                  <p className="text-[11px] text-secondary leading-relaxed mt-1">
-                    {formatListPreview(template.recommendedConnectorKeys.map(normalizeConnectorName), "Connector ownership")} · {formatListPreview(template.knowledgeScopes, "Knowledge sources", 1)}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono uppercase text-muted">Creates</div>
-                  <p className="text-[11px] text-secondary leading-relaxed mt-1">
-                    {template.agents.length} agents, {template.recommendedSkills.length} skills, {template.workflows.length} workflows
-                  </p>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono uppercase text-muted">Safety</div>
-                  <p className="text-[11px] text-secondary leading-relaxed mt-1">Draft-only resources · {getRegistryStatus(registryItem)}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-border-dim">
-                <span className="text-[11px] text-muted">Setup creates a reviewable build plan first.</span>
-                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-brand whitespace-nowrap">
-                  Review kit
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
+              <Icon className="h-4 w-4" />
+              {view.label}
             </Link>
           );
         })}
-        {filteredTemplates.length === 0 ? (
-          <div className="lg:col-span-2 border border-dashed border-border-dim rounded-[8px] py-12 text-center text-[13px] text-muted">
-            No app kits match the current filters.
-          </div>
-        ) : null}
-      </section>
+      </nav>
 
-      <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[15px] font-semibold text-foreground">Recent Build Plans</h2>
-            <p className="text-[12px] text-secondary mt-1">Saved drafts remain developer checkpoints before creating companies, agents, workflows, knowledge, widgets, or custom surfaces.</p>
-          </div>
-          <span className="text-[11px] font-mono text-muted">{visibleRecentPlans.length} drafts</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
-          {recentPlans === undefined ? (
-            <div className="md:col-span-2 xl:col-span-4 border border-dashed border-border-dim rounded-[8px] py-8 text-center">
-              <Loader2 className="w-4 h-4 animate-spin text-muted mx-auto" />
-              <p className="text-[13px] text-muted mt-2">Loading recent build plans...</p>
+      {activeCatalogView === "browse" ? (
+        <>
+          <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-4">
+              <div className="w-full flex items-center gap-2 px-4 py-3 bg-background/30 border border-border-dim rounded-[10px]">
+                <Search className="w-4 h-4 text-muted" />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search templates, connectors, agents, or use cases..."
+                  className="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"
+                />
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-secondary">
+                <span>{templates.length} kits</span>
+                <span>{categories.length - 1} categories</span>
+                <span>{registrySummary.persistedCount}/{templates.length} saved</span>
+                {registrySummary.staleCount > 0 ? <span className="text-amber-500">{registrySummary.staleCount} need sync</span> : null}
+              </div>
             </div>
-          ) : visibleRecentPlans.length > 0 ? visibleRecentPlans.map((plan) => (
-            <Link key={plan._id} href={`/admin/app-kits/plans/${plan._id}`} className="block border border-border-dim rounded-[8px] p-3 bg-background/40 hover:border-brand/40 transition-colors">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase text-brand">{plan.category}</span>
-                  <h3 className="text-[13px] font-semibold text-foreground mt-1 truncate">{plan.targetCompanyName || plan.templateName}</h3>
-                  <p className="text-[11px] text-secondary mt-1 truncate">{plan.templateName}</p>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-3 py-1.5 rounded-[8px] border text-[12px] transition-colors ${
+                    activeCategory === category
+                      ? "border-brand/40 bg-brand/10 text-foreground"
+                      : "border-border-dim bg-background/30 text-secondary hover:text-foreground"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {(["ALL", "LOW", "MEDIUM", "HIGH"] as const).map((risk) => (
+                <button
+                  key={risk}
+                  type="button"
+                  onClick={() => setActiveRisk(risk)}
+                  className={`px-3 py-1.5 rounded-[8px] border text-[12px] transition-colors ${
+                    activeRisk === risk
+                      ? "border-foreground/30 bg-foreground/10 text-foreground"
+                      : "border-border-dim bg-background/30 text-secondary hover:text-foreground"
+                  }`}
+                >
+                  {risk === "ALL" ? "All risk" : risk.charAt(0) + risk.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {filteredTemplates.map((template) => {
+              const registryItem = registryByTemplateId.get(template.id);
+              return (
+                <Link
+                  key={template.id}
+                  href={`/admin/app-kits/${template.id}`}
+                  className="group border border-border-dim rounded-[8px] p-4 bg-card/50 hover:border-brand/40 focus-visible:border-brand/50 focus-visible:outline-none transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase text-brand bg-brand/10 border border-brand/20 rounded-[6px] px-2 py-0.5">
+                          {template.category}
+                        </span>
+                        <span className={`text-[10px] font-bold uppercase rounded-[6px] border px-2 py-0.5 ${riskClassName[template.riskProfile]}`}>
+                          {template.riskProfile}
+                        </span>
+                      </div>
+                      <h2 className="text-[15px] font-semibold text-foreground mt-3 group-hover:text-brand transition-colors">{template.name}</h2>
+                      <p className="text-[12px] text-secondary mt-1 leading-relaxed">{template.tagline}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted group-hover:text-brand flex-shrink-0 transition-colors" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-muted">Best for</div>
+                      <p className="text-[11px] text-secondary leading-relaxed mt-1">{formatListPreview(template.primaryUsers, "Teams validating an AI workflow")}</p>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-muted">Needs</div>
+                      <p className="text-[11px] text-secondary leading-relaxed mt-1">
+                        {formatListPreview(template.recommendedConnectorKeys.map(normalizeConnectorName), "Connector ownership")} · {formatListPreview(template.knowledgeScopes, "Knowledge sources", 1)}
+                      </p>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-muted">Creates</div>
+                      <p className="text-[11px] text-secondary leading-relaxed mt-1">
+                        {template.agents.length} agents, {template.recommendedSkills.length} skills, {template.workflows.length} workflows
+                      </p>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-muted">Safety</div>
+                      <p className="text-[11px] text-secondary leading-relaxed mt-1">Draft-only resources · {getRegistryStatus(registryItem)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-border-dim">
+                    <span className="text-[11px] text-muted">Setup creates a reviewable build plan first.</span>
+                    <span className="inline-flex items-center gap-1 text-[12px] font-medium text-brand whitespace-nowrap">
+                      Review kit
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+            {filteredTemplates.length === 0 ? (
+              <div className="lg:col-span-2 border border-dashed border-border-dim rounded-[8px] py-12 text-center text-[13px] text-muted">
+                No app kits match the current filters.
+              </div>
+            ) : null}
+          </section>
+        </>
+      ) : null}
+
+      {activeCatalogView === "plans" ? (
+        <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-foreground">Recent Build Plans</h2>
+              <p className="text-[12px] text-secondary mt-1">Saved drafts remain developer checkpoints before creating companies, agents, workflows, knowledge, widgets, or custom surfaces.</p>
+            </div>
+            <span className="text-[11px] font-mono text-muted">{visibleRecentPlans.length} drafts</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+            {recentPlans === undefined ? (
+              <div className="md:col-span-2 xl:col-span-4 border border-dashed border-border-dim rounded-[8px] py-8 text-center">
+                <Loader2 className="w-4 h-4 animate-spin text-muted mx-auto" />
+                <p className="text-[13px] text-muted mt-2">Loading recent build plans...</p>
+              </div>
+            ) : visibleRecentPlans.length > 0 ? visibleRecentPlans.map((plan) => (
+              <Link key={plan._id} href={`/admin/app-kits/plans/${plan._id}`} className="block border border-border-dim rounded-[8px] p-3 bg-background/40 hover:border-brand/40 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase text-brand">{plan.category}</span>
+                    <h3 className="text-[13px] font-semibold text-foreground mt-1 truncate">{plan.targetCompanyName || plan.templateName}</h3>
+                    <p className="text-[11px] text-secondary mt-1 truncate">{plan.templateName}</p>
+                  </div>
+                  <span className={`text-[9px] font-bold uppercase rounded-[6px] border px-2 py-0.5 ${riskClassName[plan.riskProfile]}`}>
+                    {plan.riskProfile}
+                  </span>
                 </div>
-                <span className={`text-[9px] font-bold uppercase rounded-[6px] border px-2 py-0.5 ${riskClassName[plan.riskProfile]}`}>
-                  {plan.riskProfile}
-                </span>
+                {plan.notes ? <p className="text-[11px] text-muted mt-3 line-clamp-2">{plan.notes}</p> : null}
+                <div className="flex items-center justify-between mt-3 text-[10px] text-muted">
+                  <span>{plan.status}</span>
+                  <span>{new Date(plan.createdAt).toLocaleDateString()}</span>
+                </div>
+              </Link>
+            )) : (
+              <div className="md:col-span-2 xl:col-span-4 border border-dashed border-border-dim rounded-[8px] py-8 text-center text-[13px] text-muted">
+                No draft build plans saved yet.
               </div>
-              {plan.notes ? <p className="text-[11px] text-muted mt-3 line-clamp-2">{plan.notes}</p> : null}
-              <div className="flex items-center justify-between mt-3 text-[10px] text-muted">
-                <span>{plan.status}</span>
-                <span>{new Date(plan.createdAt).toLocaleDateString()}</span>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {activeCatalogView === "guide" ? (
+        <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.6fr)] gap-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand">Guided launch path</span>
+              <h2 className="text-[16px] font-semibold text-foreground mt-2">Start with a safe draft, then review before release.</h2>
+              <p className="text-[12px] text-secondary leading-relaxed mt-2">
+                App Kits are reusable blueprints for common AI products. Each kit turns setup answers into a draft build plan before any customer-facing resource is enabled.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {catalogIntroSteps.map((step, index) => (
+                <div key={step.label} className="border border-border-dim bg-background/30 rounded-[8px] p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-[6px] bg-brand/10 text-[11px] font-bold text-brand border border-brand/20">
+                      {index + 1}
+                    </span>
+                    <h3 className="text-[12px] font-semibold text-foreground">{step.label}</h3>
+                  </div>
+                  <p className="text-[11px] text-secondary leading-relaxed mt-2">{step.summary}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {activeCatalogView === "registry" ? (
+        <section className="border border-border-dim bg-card/50 rounded-[8px] p-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-[15px] font-semibold text-foreground">Catalog Registry</h2>
+            <p className="text-[12px] text-secondary">
+              Internal persistence and sync status for app kit metadata. Edit individual registry records from each kit detail page.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mt-4">
+            {[
+              { label: "Saved", value: registrySummary.persistedCount },
+              { label: "Needs sync", value: registrySummary.staleCount },
+              { label: "Active", value: registryLifecycleSummary.activeCount },
+              { label: "Needs review", value: registryLifecycleSummary.needsReviewCount },
+              { label: "Archived", value: registryLifecycleSummary.archivedCount },
+              { label: "Unsaved", value: registryLifecycleSummary.unsavedCount },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[8px] border border-border-dim bg-background/30 px-3 py-3">
+                <div className="text-[10px] font-mono uppercase text-muted">{item.label}</div>
+                <div className="text-[20px] font-semibold text-foreground mt-1">{item.value}</div>
               </div>
-            </Link>
-          )) : (
-            <div className="md:col-span-2 xl:col-span-4 border border-dashed border-border-dim rounded-[8px] py-8 text-center text-[13px] text-muted">
-              No draft build plans saved yet.
+            ))}
+          </div>
+
+          {catalogRegistry === undefined ? (
+            <div className="border border-dashed border-border-dim rounded-[8px] py-8 text-center mt-4">
+              <Loader2 className="w-4 h-4 animate-spin text-muted mx-auto" />
+              <p className="text-[13px] text-muted mt-2">Loading catalog registry...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
+              {templates.map((template) => {
+                const item = registryByTemplateId.get(template.id);
+                return (
+                  <Link
+                    key={template.id}
+                    href={`/admin/app-kits/${template.id}`}
+                    className="group rounded-[8px] border border-border-dim bg-background/30 p-3 transition-colors hover:border-brand/40"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase text-brand">{template.category}</span>
+                          <span className={`text-[9px] font-bold uppercase rounded-[6px] border px-2 py-0.5 ${riskClassName[template.riskProfile]}`}>
+                            {template.riskProfile}
+                          </span>
+                        </div>
+                        <h3 className="text-[13px] font-semibold text-foreground mt-1 group-hover:text-brand">{template.name}</h3>
+                        <p className="text-[11px] text-secondary mt-1">
+                          {item?.registry
+                            ? `${item.registry.lifecycleStatus.replaceAll("_", " ")} · ${item.isSynced ? "synced" : "needs sync"}`
+                            : "Not saved"}
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted group-hover:text-brand flex-shrink-0 transition-colors" />
+                    </div>
+                    {item?.registry?.ownerEmail ? (
+                      <p className="text-[11px] text-muted mt-3 truncate">Owner: {item.registry.ownerEmail}</p>
+                    ) : null}
+                  </Link>
+                );
+              })}
             </div>
           )}
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

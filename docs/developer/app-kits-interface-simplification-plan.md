@@ -224,7 +224,7 @@ Scope:
 
 ### Phase 2: Catalog Tabs
 
-Status: not started.
+Status: complete for the first pass.
 
 Scope:
 
@@ -247,9 +247,11 @@ Likely supporting files:
 
 Only touch the shared tab component if the catalog can reuse it cleanly.
 
+Implementation note: the first pass keeps the tab styling local to `AppKitsCatalogPage` while matching the `AdminDetailTabs` visual language. The catalog now uses query-backed views for browse, plans, guide, and registry.
+
 ### Phase 3: Registry View
 
-Status: optional first-pass follow-up.
+Status: complete for the first pass.
 
 Scope:
 
@@ -257,11 +259,11 @@ Scope:
 - Keep item-level registry editing on kit detail pages.
 - Add a stale-sync summary when `registrySummary.staleCount > 0`.
 
-Defer this phase if it requires new backend shape.
+Implementation note: the first pass uses existing `catalogRegistry` query results only. It summarizes saved, sync, lifecycle, archived, and unsaved counts, then links each kit to its detail page for item-level editing.
 
 ### Phase 4: Polish And Regression Coverage
 
-Status: not started.
+Status: focused coverage complete for the first pass.
 
 Scope:
 
@@ -271,6 +273,8 @@ Scope:
 - Verify unknown `view` falls back to browse.
 - Verify card links still navigate to detail and plan routes.
 - Check desktop and laptop widths for tab and toolbar wrapping.
+
+Implementation note: focused tests cover the default browse view, `view=plans`, `view=guide`, and `view=registry`. Manual visual review should still happen before a wider release.
 
 ## Acceptance Criteria
 
