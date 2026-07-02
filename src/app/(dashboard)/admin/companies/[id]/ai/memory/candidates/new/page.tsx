@@ -53,7 +53,7 @@ export default function NewCompanyMemoryCandidatePage() {
       });
       router.push(backHref);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Company memory candidate could not be saved.");
+      setSubmitError(error instanceof Error ? error.message : "Memory suggestion could not be saved.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,8 +63,8 @@ export default function NewCompanyMemoryCandidatePage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <CompanyAiFormPageHeader
         backHref={backHref}
-        title="Add Memory Candidate"
-        description="Propose company context for review without squeezing long evidence or reasoning into a modal."
+        title="Suggest Memory"
+        description="Propose company context for review. It will not become trusted memory until someone approves it."
         icon={<Clock className="h-6 w-6 text-brand" />}
       />
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
@@ -73,7 +73,7 @@ export default function NewCompanyMemoryCandidatePage() {
           <CompanyMemoryFormFields formData={formData} setFormData={setFormData} showReason titleHint="Optional" />
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Saving..." : "Create candidate"}
+            submitLabel={isSubmitting ? "Saving..." : "Save suggestion"}
             isSubmitting={isSubmitting}
           />
         </div>
@@ -81,4 +81,3 @@ export default function NewCompanyMemoryCandidatePage() {
     </div>
   );
 }
-

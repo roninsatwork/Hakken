@@ -25,6 +25,7 @@ describe("movement library components", () => {
       itemsPerPage: 15,
       onLoadMore: vi.fn(),
       onPlay: vi.fn(),
+      onDebugAutoBaseline: vi.fn(),
       onView: vi.fn(),
       onDelete: vi.fn(),
     };
@@ -43,6 +44,7 @@ describe("movement library components", () => {
     const movement = makeMovement();
     const onLoadMore = vi.fn();
     const onPlay = vi.fn();
+    const onDebugAutoBaseline = vi.fn();
     const onView = vi.fn();
     const onDelete = vi.fn();
 
@@ -56,6 +58,7 @@ describe("movement library components", () => {
         itemsPerPage={15}
         onLoadMore={onLoadMore}
         onPlay={onPlay}
+        onDebugAutoBaseline={onDebugAutoBaseline}
         onView={onView}
         onDelete={onDelete}
       />,
@@ -66,15 +69,18 @@ describe("movement library components", () => {
     expect(screen.getByText("Spine awareness")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByTitle("Start live practice")).toBeInTheDocument();
+    expect(screen.getByTitle("Debug auto baseline")).toBeInTheDocument();
     expect(screen.getByTitle("Review recording")).toBeInTheDocument();
     expect(screen.getByTitle("Delete routine")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Start practice Roll Down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Debug auto baseline Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Review routine Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete routine Roll Down" }));
     fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
 
     expect(onPlay).toHaveBeenCalledWith(movement);
+    expect(onDebugAutoBaseline).toHaveBeenCalledWith(movement);
     expect(onView).toHaveBeenCalledWith(movement);
     expect(onDelete).toHaveBeenCalledWith(movement);
     expect(onLoadMore).toHaveBeenCalledWith(15);

@@ -11,6 +11,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { CompanyAiSectionNav } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiSectionNav";
 import useDebounce from "@/src/hooks/useDebounce";
 
 export default function CompanyAiRulesPage() {
@@ -78,6 +79,8 @@ export default function CompanyAiRulesPage() {
           <span>Create Rule</span>
         </Link>
       </header>
+
+      <CompanyAiSectionNav />
       
       <AdminSearchBar value={searchTerm} onChange={handleSearchChange} placeholder="Search triggers or instructions..." />
       

@@ -40,6 +40,7 @@ const evalTargetSurfaceValidator = v.union(
 );
 
 const evalStatusValidator = v.union(v.literal("ACTIVE"), v.literal("ARCHIVED"));
+const evalBatchModeValidator = v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN"));
 
 type DeterministicResult = {
   key: string;
@@ -194,6 +195,104 @@ function getRunScore(results: DeterministicResult[]) {
   return results.filter((result) => result.passed).length / results.length;
 }
 
+function getAutomaticAnswer(evalCase: Doc<"companyEvalCases">) {
+  return [
+    `Automatic deterministic run for eval: ${evalCase.name}.`,
+    `Prompt: ${evalCase.prompt}`,
+    `Expected behavior: ${evalCase.expectedBehavior}`,
+    "This run records configured checks only. Manual answer quality or LLM judging can be added from the individual run screen.",
+  ].join("\n\n");
+}
+
+function getAutomaticEvidenceJson(evalCase: Doc<"companyEvalCases">) {
+  const fixtureContextJson = normalizeOptionalText(evalCase.fixtureContextJson, JSON_FIELD_MAX_CHARS);
+  if (!fixtureContextJson) return undefined;
+
+  try {
+    const parsed = JSON.parse(fixtureContextJson) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const payload = parsed as EvidencePayload;
+      return JSON.stringify({
+        sourceIds: Array.isArray(payload.sourceIds) ? payload.sourceIds : [],
+        memoryIds: Array.isArray(payload.memoryIds) ? payload.memoryIds : [],
+        skillIds: Array.isArray(payload.skillIds) ? payload.skillIds : [],
+      });
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+async function insertCompanyEvalRun(ctx: MutationCtx, args: {
+  answer: string;
+  costJson?: string;
+  evalCase: Doc<"companyEvalCases">;
+  evidenceJson?: string;
+  judgeNotes?: string;
+  resolvedModelId?: string;
+  resolvedUseCase?: string;
+  tokenUsageJson?: string;
+  userId: Id<"users">;
+}) {
+  const now = Date.now();
+  const answer = normalizeText(args.answer, "Answer", ANSWER_MAX_CHARS);
+  const evidenceJson = normalizeOptionalText(args.evidenceJson, JSON_FIELD_MAX_CHARS);
+  const resolvedUseCase = normalizeOptionalText(args.resolvedUseCase, CASE_NAME_MAX_CHARS);
+  const deterministicResults = buildDeterministicResults({
+    evalCase: args.evalCase,
+    answer,
+    evidenceJson,
+    resolvedUseCase,
+  });
+  const status = getRunStatus(deterministicResults);
+  const score = getRunScore(deterministicResults);
+
+  const runId = await ctx.db.insert("companyEvalRuns", {
+    companyId: args.evalCase.companyId,
+    evalCaseId: args.evalCase._id,
+    status,
+    score,
+    answer,
+    evidenceJson,
+    deterministicResultsJson: JSON.stringify(deterministicResults),
+    resolvedModelId: normalizeOptionalText(args.resolvedModelId, CASE_NAME_MAX_CHARS),
+    resolvedUseCase,
+    tokenUsageJson: normalizeOptionalText(args.tokenUsageJson, JSON_FIELD_MAX_CHARS),
+    costJson: normalizeOptionalText(args.costJson, JSON_FIELD_MAX_CHARS),
+    judgeNotes: normalizeOptionalText(args.judgeNotes, EXPECTED_BEHAVIOR_MAX_CHARS),
+    startedAt: now,
+    completedAt: now,
+    createdBy: args.userId,
+  });
+
+  await ctx.db.patch(args.evalCase._id, {
+    lastRunId: runId,
+    updatedAt: now,
+  });
+
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "RUN_COMPANY_EVAL_CASE",
+    entityId: runId,
+    entityType: "companyEvalRuns",
+    companyId: args.evalCase.companyId,
+    timestamp: now,
+    metadata: JSON.stringify({ evalCaseId: args.evalCase._id, status, score }),
+  });
+  const resolvedDriftCount = status === "PASSED"
+    ? await resolveCompanyAiDriftEvents(ctx, {
+      companyId: args.evalCase.companyId,
+      resolvedBy: args.userId,
+      resolvedRunId: runId,
+      resolvedAt: now,
+    })
+    : 0;
+
+  return { runId, status, score, deterministicResults, resolvedDriftCount };
+}
+
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
   const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
   const company = await ctx.db.get(companyId);
@@ -229,6 +328,8 @@ export const getSummary = query({
       .map(([, run]) => run);
     const passedRuns = latestRuns.filter((run) => run.status === "PASSED").length;
     const failedRuns = latestRuns.filter((run) => run.status === "FAILED").length;
+    const needsReviewRuns = latestRuns.filter((run) => run.status === "NEEDS_REVIEW").length;
+    const notRunCases = activeCases.length - latestRuns.length;
     const blockerCases = activeCases.filter((evalCase) => evalCase.severity === "BLOCKER");
     const blockerFailures = blockerCases.filter((evalCase) => latestRunByCase.get(evalCase._id)?.status === "FAILED").length;
     const blockerNotRun = blockerCases.filter((evalCase) => !latestRunByCase.has(evalCase._id)).length;
@@ -239,7 +340,9 @@ export const getSummary = query({
       latestRuns: latestRuns.length,
       passedRuns,
       failedRuns,
-      needsReviewRuns: latestRuns.filter((run) => run.status === "NEEDS_REVIEW").length,
+      needsReviewRuns,
+      notRunCases,
+      failedOrNotRunCases: failedRuns + needsReviewRuns + notRunCases,
       blockerFailures,
       blockerNotRun,
       passRate: latestRuns.length > 0 ? passedRuns / latestRuns.length : 0,
@@ -298,6 +401,36 @@ export const getRunsForCase = query({
       .withIndex("by_case_completed", (q) => q.eq("evalCaseId", args.evalCaseId))
       .order("desc")
       .take(15);
+  },
+});
+
+export const getLatestRunsForCompany = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    await requireCompanyAccess(ctx, args.companyId);
+
+    const activeCases = await ctx.db
+      .query("companyEvalCases")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(1000);
+    const activeCaseIds = new Set(activeCases.map((evalCase) => evalCase._id));
+    const recentRuns = await ctx.db
+      .query("companyEvalRuns")
+      .withIndex("by_company_completed", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .take(1000);
+    const latestRuns: Doc<"companyEvalRuns">[] = [];
+    const seenCaseIds = new Set<Id<"companyEvalCases">>();
+
+    for (const run of recentRuns) {
+      if (!activeCaseIds.has(run.evalCaseId) || seenCaseIds.has(run.evalCaseId)) continue;
+      seenCaseIds.add(run.evalCaseId);
+      latestRuns.push(run);
+    }
+
+    return latestRuns;
   },
 });
 
@@ -434,59 +567,99 @@ export const runCase = mutation({
     const evalCase = await ctx.db.get(args.evalCaseId);
     if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
     const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
-    const now = Date.now();
-    const answer = normalizeText(args.answer, "Answer", ANSWER_MAX_CHARS);
-    const evidenceJson = normalizeOptionalText(args.evidenceJson, JSON_FIELD_MAX_CHARS);
-    const deterministicResults = buildDeterministicResults({
+    return await insertCompanyEvalRun(ctx, {
       evalCase,
-      answer,
-      evidenceJson,
-      resolvedUseCase: normalizeOptionalText(args.resolvedUseCase, CASE_NAME_MAX_CHARS),
+      answer: args.answer,
+      evidenceJson: args.evidenceJson,
+      resolvedModelId: args.resolvedModelId,
+      resolvedUseCase: args.resolvedUseCase,
+      tokenUsageJson: args.tokenUsageJson,
+      costJson: args.costJson,
+      judgeNotes: args.judgeNotes,
+      userId,
     });
-    const status = getRunStatus(deterministicResults);
-    const score = getRunScore(deterministicResults);
+  },
+});
 
-    const runId = await ctx.db.insert("companyEvalRuns", {
-      companyId: evalCase.companyId,
-      evalCaseId: args.evalCaseId,
-      status,
-      score,
-      answer,
-      evidenceJson,
-      deterministicResultsJson: JSON.stringify(deterministicResults),
-      resolvedModelId: normalizeOptionalText(args.resolvedModelId, CASE_NAME_MAX_CHARS),
-      resolvedUseCase: normalizeOptionalText(args.resolvedUseCase, CASE_NAME_MAX_CHARS),
-      tokenUsageJson: normalizeOptionalText(args.tokenUsageJson, JSON_FIELD_MAX_CHARS),
-      costJson: normalizeOptionalText(args.costJson, JSON_FIELD_MAX_CHARS),
-      judgeNotes: normalizeOptionalText(args.judgeNotes, EXPECTED_BEHAVIOR_MAX_CHARS),
-      startedAt: now,
-      completedAt: now,
-      createdBy: userId,
+export const runBatch = mutation({
+  args: {
+    companyId: v.id("companies"),
+    mode: evalBatchModeValidator,
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireCompanyAccess(ctx, args.companyId);
+    const activeCases = await ctx.db
+      .query("companyEvalCases")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(100);
+    const recentRuns = await ctx.db
+      .query("companyEvalRuns")
+      .withIndex("by_company_completed", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .take(1000);
+    const latestRunByCase = new Map<Id<"companyEvalCases">, Doc<"companyEvalRuns">>();
+
+    for (const run of recentRuns) {
+      if (!latestRunByCase.has(run.evalCaseId)) latestRunByCase.set(run.evalCaseId, run);
+    }
+
+    const selectedCases = activeCases.filter((evalCase) => {
+      if (args.mode === "ALL") return true;
+      const latestRun = latestRunByCase.get(evalCase._id);
+      return !latestRun || latestRun.status !== "PASSED";
     });
 
-    await ctx.db.patch(args.evalCaseId, {
-      lastRunId: runId,
-      updatedAt: now,
-    });
+    const results = [];
+    let passed = 0;
+    let failed = 0;
+    let needsReview = 0;
+    let resolvedDriftCount = 0;
+
+    for (const evalCase of selectedCases) {
+      const result = await insertCompanyEvalRun(ctx, {
+        evalCase,
+        answer: getAutomaticAnswer(evalCase),
+        evidenceJson: getAutomaticEvidenceJson(evalCase),
+        resolvedUseCase: evalCase.expectedModelUseCase,
+        judgeNotes: "Automatic batch run. Deterministic checks were recorded from configured eval requirements; use the individual run screen for manual answer evidence.",
+        userId,
+      });
+
+      if (result.status === "PASSED") passed += 1;
+      if (result.status === "FAILED") failed += 1;
+      if (result.status === "NEEDS_REVIEW") needsReview += 1;
+      resolvedDriftCount += result.resolvedDriftCount;
+      results.push({
+        evalCaseId: evalCase._id,
+        runId: result.runId,
+        status: result.status,
+        score: result.score,
+      });
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: userId,
-      actionType: "RUN_COMPANY_EVAL_CASE",
-      entityId: runId,
+      actionType: "RUN_COMPANY_EVAL_BATCH",
       entityType: "companyEvalRuns",
-      companyId: evalCase.companyId,
-      timestamp: now,
-      metadata: JSON.stringify({ evalCaseId: args.evalCaseId, status, score }),
+      companyId: args.companyId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({
+        mode: args.mode,
+        selected: selectedCases.length,
+        passed,
+        failed,
+        needsReview,
+      }),
     });
-    const resolvedDriftCount = status === "PASSED"
-      ? await resolveCompanyAiDriftEvents(ctx, {
-        companyId: evalCase.companyId,
-        resolvedBy: userId,
-        resolvedRunId: runId,
-        resolvedAt: now,
-      })
-      : 0;
 
-    return { runId, status, score, deterministicResults, resolvedDriftCount };
+    return {
+      mode: args.mode,
+      selected: selectedCases.length,
+      passed,
+      failed,
+      needsReview,
+      resolvedDriftCount,
+      results,
+    };
   },
 });

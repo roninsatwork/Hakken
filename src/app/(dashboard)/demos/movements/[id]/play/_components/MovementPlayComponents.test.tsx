@@ -159,6 +159,7 @@ describe("movement play components", () => {
 
     expect(screen.getByText("Posture Check-In")).toBeInTheDocument();
     expect(screen.getByText("0 posture moments")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Debug Auto Baseline" })).not.toBeInTheDocument();
     expect(onCalibrate).toHaveBeenCalledTimes(1);
     expect(onSkipCalibration).toHaveBeenCalledTimes(1);
 
@@ -177,6 +178,29 @@ describe("movement play components", () => {
     );
 
     expect(screen.queryByText("Posture Check-In")).not.toBeInTheDocument();
+  });
+
+  it("shows the debug auto-baseline trigger only when the debug callback is provided", () => {
+    const onStartDebugAutoBaseline = vi.fn();
+
+    render(
+      <MovementCalibrationOverlay
+        isCalibrated={false}
+        isCalibrating={false}
+        isVisionReady
+        calibrationStatus="Calibration needed"
+        calibrationProgress={0}
+        calibrationSampleCount={0}
+        calibrationCountdownSeconds={0}
+        onCalibrate={vi.fn()}
+        onSkipCalibration={vi.fn()}
+        onStartDebugAutoBaseline={onStartDebugAutoBaseline}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Debug Auto Baseline" }));
+
+    expect(onStartDebugAutoBaseline).toHaveBeenCalledTimes(1);
   });
 
   it("explains weak calibration and allows continuing for manual tuning", () => {
@@ -525,6 +549,39 @@ describe("movement play components", () => {
     expect(onPlayingChange).toHaveBeenCalledWith(false);
   });
 
+  it("rewinds debug playback when resumed from the final frame", () => {
+    vi.useFakeTimers();
+
+    const frameIndexRef: React.MutableRefObject<number> = { current: 11 };
+    const onFrameChange = vi.fn((frameIndex: number) => {
+      frameIndexRef.current = frameIndex;
+    });
+    const onPlayingChange = vi.fn();
+
+    render(
+      <MovementDebugFrameScrubber
+        frameCount={12}
+        frameIndexRef={frameIndexRef}
+        isEnabled
+        isPlaying={false}
+        onFrameChange={onFrameChange}
+        onPlayingChange={onPlayingChange}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(screen.getByDisplayValue("12")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume debug playback" }));
+
+    expect(onFrameChange).toHaveBeenCalledWith(0);
+    expect(onPlayingChange).toHaveBeenCalledWith(true);
+    expect(screen.getByDisplayValue("1")).toBeInTheDocument();
+  });
+
   it("renders compact tracking diagnostics and stale warnings", () => {
     vi.useFakeTimers();
 
@@ -554,6 +611,7 @@ describe("movement play components", () => {
           rightFoot: 0.86,
         },
         fallbacks: {
+          baseline: "manual-calibration",
           head: "face",
           leftArm: "pose",
           rightArm: "hand",
@@ -603,6 +661,8 @@ describe("movement play components", () => {
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(screen.getByText("Age 1.5s")).toBeInTheDocument();
+    expect(screen.getByText("Cal 0.92")).toBeInTheDocument();
+    expect(screen.getByText("manual-calibration")).toBeInTheDocument();
     expect(screen.getByText("Tune: Restart camera tracking")).toBeInTheDocument();
     expect(screen.getByText("VIPE_Hero__1793.vrm")).toBeInTheDocument();
     expect(screen.getByText("Tracking data is stale")).toBeInTheDocument();
@@ -612,5 +672,55 @@ describe("movement play components", () => {
     expect(screen.getByText("0.66 / 0.51")).toBeInTheDocument();
     expect(screen.getByText("0.34 / 0.33")).toBeInTheDocument();
     expect(screen.getByText("0.85 c0.02 d0.04")).toBeInTheDocument();
+  });
+
+  it("shows debug calibration quality when the avatar is using an automatic baseline", () => {
+    vi.useFakeTimers();
+
+    const debugRef: React.MutableRefObject<MovementTrackingDebugState | null> = {
+      current: {
+        updatedAt: 0,
+        headRaw: { pitch: 0, yaw: 0, roll: 0, confidence: 0.9, source: "pose" },
+        headApplied: { pitch: 0, yaw: 0, roll: 0, confidence: 0.9, source: "pose" },
+        bodyConfidence: {
+          torso: 0.9,
+          leftWrist: 0.1,
+          leftHand: 0,
+          rightWrist: 0.1,
+          rightHand: 0,
+          leftFoot: 0.1,
+          rightFoot: 0.1,
+        },
+        fallbacks: {
+          baseline: "upper-body-auto-baseline",
+          head: "pose-auto",
+          leftArm: "relaxed-arm",
+          rightArm: "relaxed-arm",
+          leftKnee: "neutral-stance",
+          rightKnee: "neutral-stance",
+          leftFoot: "neutral-stance",
+          rightFoot: "neutral-stance",
+          floor: "fixed-floor",
+          owners: "head player-calibrated; torso player-spine-neutral; lower neutral; feet neutral",
+        },
+        calibrationQuality: 0.57,
+      },
+    };
+
+    render(
+      <MovementTrackingDebugOverlay
+        calibration={null}
+        debugRef={debugRef}
+        isEnabled
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(screen.getByText("Cal 0.57")).toBeInTheDocument();
+    expect(screen.getByText("upper-body-auto-baseline")).toBeInTheDocument();
+    expect(screen.queryByText("Cal none")).not.toBeInTheDocument();
   });
 });

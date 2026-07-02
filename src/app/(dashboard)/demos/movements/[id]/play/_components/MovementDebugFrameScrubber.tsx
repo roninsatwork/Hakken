@@ -59,6 +59,23 @@ export default function MovementDebugFrameScrubber({
     jumpToFrame(nextFrame - 1);
   };
 
+  const toggleDebugPlayback = () => {
+    if (isPlaying) {
+      onPlayingChange(false);
+      return;
+    }
+
+    if (frameIndex >= maxFrameIndex) {
+      onFrameChange(0);
+      setFrameIndex(0);
+      if (frameInputRef.current) {
+        frameInputRef.current.value = "1";
+      }
+    }
+
+    onPlayingChange(true);
+  };
+
   const formatPeak = (
     frame: MovementInstructorRetargetAnalysis["peakSquat"],
     score: (frame: NonNullable<MovementInstructorRetargetAnalysis["peakSquat"]>) => number,
@@ -120,7 +137,7 @@ export default function MovementDebugFrameScrubber({
             type="button"
             aria-label={isPlaying ? "Pause debug playback" : "Resume debug playback"}
             className="grid h-10 w-10 place-items-center rounded-full bg-[#f7efe7] text-[#121016] transition hover:bg-white"
-            onClick={() => onPlayingChange(!isPlaying)}
+            onClick={toggleDebugPlayback}
           >
             {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
           </button>

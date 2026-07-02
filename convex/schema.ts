@@ -1863,6 +1863,24 @@ export default defineSchema({
       filterFields: ["spineGoal"],
     }),
 
+  movementDebugSessions: defineTable({
+    movementId: v.id("movements"),
+    trigger: v.union(
+      v.literal("debug-auto-baseline"),
+      v.literal("manual-debug-save")
+    ),
+    sampleCount: v.number(),
+    durationMs: v.number(),
+    startedAt: v.number(),
+    endedAt: v.number(),
+    baselineSummary: v.string(),
+    warningSummary: v.string(),
+    samplesJson: v.string(),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"])
+    .index("by_movement_createdAt", ["movementId", "createdAt"]),
+
   mockStorageMetadata: defineTable({
     storageId: v.string(),
     size: v.number(),

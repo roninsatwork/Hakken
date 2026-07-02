@@ -1,14 +1,22 @@
 # Company Workspace AI Navigation Consolidation Plan
 
-This plan documents the proposed navigation change for company workspaces: reduce the top tab bar length by grouping company-specific AI pages under a single `AI` tab with a third-level submenu.
+This plan documents the proposed navigation change for company workspaces: reduce the top tab bar length by grouping company-specific AI pages under a single `AI` tab.
 
 This is a planning document only. Do not implement this work unless the user explicitly asks to move from planning into coding.
+
+Important update, 2026-07-02:
+
+- The original version of this plan recommended a third-level left submenu that matched the `Widget` pattern.
+- That left submenu is no longer the recommended laptop experience because it steals too much width on a 13-inch MacBook Pro.
+- A long horizontal AI tab row is also rejected because it can run off screen.
+- Use [Company Admin Laptop UX Upgrade Plan](./company-admin-laptop-ux-upgrade-plan.md) as the current source of truth for laptop-width AI navigation.
+- The current direction is a compact AI section switcher on laptop-sized screens, with an optional left submenu only on genuinely wide desktop layouts.
 
 ## Goal
 
 The company workspace tab bar has become too long. The AI-related pages currently sit as separate top-level tabs, which makes the workspace harder to scan and leaves less room for future sections.
 
-Replace the current top-level AI-related tabs with one top-level `AI` tab, then move the AI pages into a submenu that follows the existing `Widget` page pattern.
+Replace the current top-level AI-related tabs with one top-level `AI` tab. The child AI pages should be reachable through a compact section switcher on laptop-sized screens, not through a long horizontal row or a laptop-width left rail.
 
 ## Current Top-Level Tabs
 
@@ -42,7 +50,19 @@ This keeps the workspace sections shorter and easier to scan while preserving ac
 
 ## Proposed AI Submenu
 
-When `AI` is active, show a third-level submenu similar to the existing `Widget` submenu.
+When `AI` is active, show child navigation in a way that preserves working width on laptop screens.
+
+Current laptop recommendation:
+
+```text
+AI section: Memory v
+```
+
+Opening the switcher reveals the child pages.
+
+Wide desktop may optionally keep a left submenu, but only when the content area remains comfortable.
+
+Legacy submenu order:
 
 Recommended submenu order:
 
@@ -125,15 +145,16 @@ This preserves browser bookmarks, direct links, and any internal navigation path
 
 ## Visual And Interaction Pattern
 
-Reuse the `Widget` page structure as the target pattern:
+Use the compact switcher as the target laptop pattern:
 
 - Keep the top-level company workspace tab bar visible.
-- Show a third-level left submenu when the parent tab has subsections.
-- Use the existing active submenu styling.
-- Keep page content in the main panel to the right of the submenu.
-- Avoid creating a new navigation pattern for AI.
+- Show the current AI section in a compact selector.
+- Open a menu for switching AI sections.
+- Keep page content full width below the selector.
+- Do not show a long horizontal AI row.
+- Do not show a laptop-width AI left rail.
 
-This change should feel like the existing `Widget` section gained a sibling section called `AI`.
+On wide desktop only, a left submenu can be considered as an enhancement if it does not squeeze primary content.
 
 ## Page Content Scope
 
@@ -236,20 +257,22 @@ Acceptance:
 - `AI` is active for every AI child page.
 - Clicking `AI` opens the default AI child page.
 
-### Phase 3: Add AI Third-Level Submenu
+### Phase 3: Add Responsive AI Child Navigation
 
 Tasks:
 
-- Reuse or extract the existing `Widget` submenu pattern.
-- Add AI submenu items in the agreed order.
-- Ensure the active submenu item follows the current route.
-- Keep layout, spacing, and active states visually aligned with `Widget`.
+- Add a compact AI section switcher for laptop-sized screens.
+- Add AI child items in the agreed order.
+- Ensure the active child item follows the current route.
+- Keep page content full width below the switcher.
+- Only show a left submenu on wide desktop if the content area remains comfortable.
 
 Acceptance:
 
-- `AI` and `Widget` use the same submenu behavior.
-- There is no duplicate or inconsistent submenu styling.
-- The AI submenu works at desktop and responsive widths.
+- Laptop screens do not use a left AI submenu.
+- Laptop screens do not use a long horizontal AI tab row.
+- The current AI section remains obvious.
+- Child navigation works at laptop and wide desktop widths.
 
 ### Phase 4: Move Routes With Compatibility Redirects
 
@@ -274,7 +297,7 @@ Tasks:
 - Confirm company scoping still applies in all queries and mutations.
 - Confirm active states for top tab and submenu.
 - Confirm the top tab bar no longer crowds at common desktop widths.
-- Confirm the AI submenu does not overlap or wrap awkwardly.
+- Confirm AI child navigation does not overlap, wrap awkwardly, or steal laptop working width.
 
 Acceptance:
 
@@ -301,7 +324,8 @@ If local browser verification is practical, manually check:
 - direct navigation to every legacy route,
 - active state on every AI child page,
 - top tab bar spacing,
-- third-level submenu alignment against the `Widget` section,
+- compact AI section switcher behavior,
+- wide desktop AI child navigation behavior, if present,
 - role-specific access for company-scoped AI pages.
 
 ## Out Of Scope
@@ -330,7 +354,7 @@ These decisions should be confirmed before implementation:
 The consolidation is complete when:
 
 - The company workspace top tab bar shows `AI` instead of separate `Knowledge`, `Prompt`, `AI Rules`, `AI Models`, and `Chat Logs` tabs.
-- The AI child pages appear in a third-level submenu matching the `Widget` pattern.
+- The AI child pages appear in compact child navigation on laptop-sized screens.
 - `AI` remains active while any AI child page is active.
 - Old routes redirect to the new nested routes.
 - Existing page functionality is unchanged.

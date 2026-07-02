@@ -33,8 +33,8 @@ export function WidgetPreviewPanel({
   themePlaceholder,
 }: WidgetPreviewPanelProps) {
   return (
-    <div className="w-full lg:w-[380px] shrink-0 sticky top-6 self-start flex flex-col gap-4">
-      <div className="aspect-[3/4] bg-[#f8f9fc] rounded-[24px] border border-border-dim shadow-inner relative overflow-hidden flex flex-col items-end justify-end p-6">
+    <div className="flex w-full shrink-0 flex-col gap-4 self-start 2xl:sticky 2xl:top-6 2xl:w-[380px]">
+      <div className="relative mx-auto flex aspect-[3/4] w-full max-w-[380px] flex-col items-end justify-end overflow-hidden rounded-[24px] border border-border-dim bg-[#f8f9fc] p-6 shadow-inner 2xl:max-w-none">
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-black/5 pointer-events-none" />
 
         <div className="w-[320px] flex flex-col items-end gap-3 transform scale-90 origin-bottom-right drop-shadow-2xl relative">

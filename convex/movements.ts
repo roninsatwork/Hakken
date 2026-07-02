@@ -35,6 +35,11 @@ const movementBodyFocusValidator = v.union(
   v.literal("feet")
 );
 
+const movementDebugTriggerValidator = v.union(
+  v.literal("debug-auto-baseline"),
+  v.literal("manual-debug-save")
+);
+
 function isInlinePoseData(value: string) {
   const trimmed = value.trim();
   return trimmed.startsWith("[") || trimmed.startsWith("{");
@@ -173,5 +178,70 @@ export const getFileUrl = query({
     if (!userId) throw new Error("Unauthorized");
 
     return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+export const saveDebugTrackingSession = mutation({
+  args: {
+    movementId: v.id("movements"),
+    trigger: movementDebugTriggerValidator,
+    sampleCount: v.number(),
+    durationMs: v.number(),
+    startedAt: v.number(),
+    endedAt: v.number(),
+    baselineSummary: v.string(),
+    warningSummary: v.string(),
+    samplesJson: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const movement = await ctx.db.get(args.movementId);
+    if (!movement) throw new Error("Movement not found");
+
+    return await ctx.db.insert("movementDebugSessions", {
+      movementId: args.movementId,
+      trigger: args.trigger,
+      sampleCount: args.sampleCount,
+      durationMs: args.durationMs,
+      startedAt: args.startedAt,
+      endedAt: args.endedAt,
+      baselineSummary: args.baselineSummary,
+      warningSummary: args.warningSummary,
+      samplesJson: args.samplesJson,
+      createdBy: userId,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listDebugTrackingSessions = query({
+  args: {
+    movementId: v.optional(v.id("movements")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const limit = Math.max(1, Math.min(args.limit ?? 10, 50));
+    const sessions = args.movementId
+      ? await ctx.db
+        .query("movementDebugSessions")
+        .withIndex("by_movement_createdAt", (q) => q.eq("movementId", args.movementId!))
+        .order("desc")
+        .take(limit)
+      : await ctx.db
+        .query("movementDebugSessions")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .take(limit);
+
+    return sessions.map((session) => ({
+      ...session,
+      samplesJson: undefined,
+      samplesPreview: session.samplesJson.slice(0, 800),
+    }));
   },
 });

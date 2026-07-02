@@ -394,6 +394,67 @@ export function buildMovementCalibration({
   };
 }
 
+export function buildUpperBodyMovementAutoCalibration({
+  poseLandmarks,
+  faceLandmarks,
+  now = Date.now(),
+}: {
+  poseLandmarks: TrackingLandmark[];
+  faceLandmarks?: TrackingLandmark[] | null;
+  now?: number;
+}): MovementCalibration | null {
+  if (poseLandmarks.length < 33) return null;
+
+  const leftShoulder = poseLandmarks[11];
+  const rightShoulder = poseLandmarks[12];
+  const leftHip = poseLandmarks[23];
+  const rightHip = poseLandmarks[24];
+
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return null;
+
+  const bodyConfidence = getMovementBodyConfidence(poseLandmarks);
+  const upperBodyQuality = average([bodyConfidence.head, bodyConfidence.torso]);
+  if (bodyConfidence.torso < MIN_CALIBRATION_QUALITY || bodyConfidence.head < 0.35) return null;
+  if (upperBodyQuality < MIN_CALIBRATION_QUALITY) return null;
+
+  const shoulders = midpoint(leftShoulder, rightShoulder);
+  const hips = midpoint(leftHip, rightHip);
+  const headCenter = estimatePoseHeadCenter(poseLandmarks);
+  const headScale = estimateHeadScale({ poseLandmarks, faceLandmarks });
+  const torsoHeight = distance2D(shoulders, hips);
+  const stackOffset = Math.abs(shoulders.x - hips.x) / Math.max(torsoHeight, 0.12);
+  const shoulderTilt = Math.abs(rightShoulder.y - leftShoulder.y);
+  const hipTilt = Math.abs(rightHip.y - leftHip.y);
+  if (torsoHeight < 0.12 || stackOffset > 0.42 || shoulderTilt > 0.08 || hipTilt > 0.08) {
+    return null;
+  }
+
+  const visibleFloorLandmarks = [
+    poseLandmarks[27],
+    poseLandmarks[28],
+    poseLandmarks[31],
+    poseLandmarks[32],
+  ].filter((landmark): landmark is TrackingLandmark => Boolean(landmark && visibility(landmark) >= 0.3));
+  const floorY = visibleFloorLandmarks.length > 0
+    ? Math.max(...visibleFloorLandmarks.map((landmark) => landmark.y))
+    : hips.y + Math.max(torsoHeight, 0.12) * 1.45;
+
+  return {
+    calibratedAt: now,
+    headNeutral: estimateMovementHeadAngles({ poseLandmarks, faceLandmarks }),
+    headCenter: headCenter
+      ? { x: headCenter.x, y: headCenter.y, z: headCenter.z }
+      : undefined,
+    headScale,
+    hipCenter: hips,
+    shoulderCenter: shoulders,
+    shoulderWidth: distance2D(leftShoulder, rightShoulder),
+    torsoHeight,
+    floorY,
+    quality: clamp(upperBodyQuality, 0, 1),
+  };
+}
+
 export function buildUprightMovementAutoCalibration({
   poseLandmarks,
   faceLandmarks,

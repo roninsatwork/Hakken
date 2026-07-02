@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, ChevronDown, ClipboardList, Play, Trash2 } from "lucide-react";
+import { Activity, Bug, ChevronDown, ClipboardList, Play, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
@@ -17,6 +17,7 @@ type MovementLibraryTableProps = {
   itemsPerPage: number;
   onLoadMore: (numItems: number) => void;
   onPlay: (movement: Doc<"movements">) => void;
+  onDebugAutoBaseline: (movement: Doc<"movements">) => void;
   onView: (movement: Doc<"movements">) => void;
   onDelete: (movement: Doc<"movements">) => void;
 };
@@ -25,7 +26,7 @@ type MovementActionButtonProps = {
   label: string;
   tooltip: string;
   icon: ReactNode;
-  tone?: "primary" | "neutral" | "danger";
+  tone?: "primary" | "debug" | "neutral" | "danger";
   onClick: () => void;
 };
 
@@ -39,6 +40,8 @@ function MovementActionButton({
   const toneClass =
     tone === "primary"
       ? "bg-brand/15 text-brand hover:bg-brand/20"
+      : tone === "debug"
+        ? "bg-[#a8d5ba]/10 text-[#a8d5ba] hover:bg-[#a8d5ba]/15 hover:text-white"
       : tone === "danger"
         ? "text-secondary hover:bg-red-500/10 hover:text-red-500"
         : "text-secondary hover:bg-foreground/5 hover:text-foreground";
@@ -73,6 +76,7 @@ export default function MovementLibraryTable({
   itemsPerPage,
   onLoadMore,
   onPlay,
+  onDebugAutoBaseline,
   onView,
   onDelete,
 }: MovementLibraryTableProps) {
@@ -155,6 +159,13 @@ export default function MovementLibraryTable({
                             onClick={() => onPlay(movement)}
                             icon={<Play className="w-4 h-4" />}
                             tone="primary"
+                          />
+                          <MovementActionButton
+                            label={`Debug auto baseline ${routineTitle}`}
+                            tooltip="Debug auto baseline"
+                            onClick={() => onDebugAutoBaseline(movement)}
+                            icon={<Bug className="w-4 h-4" />}
+                            tone="debug"
                           />
                           <MovementActionButton
                             label={`Review routine ${routineTitle}`}

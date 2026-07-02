@@ -21,7 +21,9 @@ type ProofMode =
   | "right-leg-raise"
   | "side-bend"
   | "squat"
-  | "standing";
+  | "standing"
+  | "upper-body-auto"
+  | "upper-body-auto-rejected";
 
 const PROOF_MODES: ProofMode[] = [
   "standing",
@@ -33,6 +35,8 @@ const PROOF_MODES: ProofMode[] = [
   "far-left-leg-raise",
   "right-leg-raise",
   "far-right-leg-raise",
+  "upper-body-auto",
+  "upper-body-auto-rejected",
 ];
 
 const PROOF_LABELS: Record<ProofMode, string> = {
@@ -45,6 +49,8 @@ const PROOF_LABELS: Record<ProofMode, string> = {
   "side-bend": "Side bend",
   squat: "Squat",
   standing: "Standing",
+  "upper-body-auto": "Upper-body auto baseline",
+  "upper-body-auto-rejected": "Upper-body auto rejected",
 };
 
 function landmark(x: number, y: number, z = 0, visibility = 0.92): VrmPoseLandmark {
@@ -55,6 +61,8 @@ function getBaseProofMode(mode: ProofMode): ProofMode {
   if (mode === "far-squat") return "squat";
   if (mode === "far-left-leg-raise") return "left-leg-raise";
   if (mode === "far-right-leg-raise") return "right-leg-raise";
+  if (mode === "upper-body-auto") return "standing";
+  if (mode === "upper-body-auto-rejected") return "side-bend";
   return mode;
 }
 
@@ -175,6 +183,13 @@ function makeProofPose(mode: ProofMode): VrmPoseLandmark[] {
     });
   }
 
+  if (mode === "upper-body-auto" || mode === "upper-body-auto-rejected") {
+    return pose.map((point, index) => {
+      const lowerBodyPoint = index >= 25 && index <= 32;
+      return lowerBodyPoint ? { ...point, visibility: 0.1 } : point;
+    });
+  }
+
   return pose;
 }
 
@@ -221,6 +236,7 @@ export default function MovementSquatProofPage() {
   const neutralPose = makeProofPose("standing");
   const trackingCalibration = buildMovementCalibration({ poseLandmarks: neutralPose });
   const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose });
+  const usesExplicitCalibration = mode !== "upper-body-auto" && mode !== "upper-body-auto-rejected";
   const livePoseRef = useRef<VrmMotionPayload>({
     landmarks: makeProofPose(mode),
     hands: makeProofHands(mode),
@@ -259,7 +275,7 @@ export default function MovementSquatProofPage() {
           positionOffset={[4.2, 0, 0]}
           isPlayer
           isPlaying
-          trackingCalibration={trackingCalibration}
+          trackingCalibration={usesExplicitCalibration ? trackingCalibration : null}
           trackingDebugRef={trackingDebugRef}
           retargetSourceModel={retargetSourceModel}
           vrmUrl="/models/VIPE_Hero__949.vrm"
@@ -296,6 +312,7 @@ export default function MovementSquatProofPage() {
         </div>
         <div className="mt-4 space-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#a8d5ba]">
           <p data-testid="proof-current-mode">Current proof state: {PROOF_LABELS[mode]}</p>
+          <p data-testid="proof-debug-baseline">Baseline: {debugState?.fallbacks.baseline ?? "pending"}</p>
           <p data-testid="proof-debug-spine">Spine: {debugState?.fallbacks.spine ?? "pending"}</p>
           <p data-testid="proof-debug-arm-depth">Arms: {debugState?.fallbacks.armDepth ?? "pending"}</p>
           <p data-testid="proof-debug-owners">Owners: {debugState?.fallbacks.owners ?? "pending"}</p>

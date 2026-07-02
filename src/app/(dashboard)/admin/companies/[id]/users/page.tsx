@@ -25,6 +25,7 @@ import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { CompanyDirectorySectionNav } from "../directory/_components/CompanyDirectorySectionNav";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
@@ -178,35 +179,38 @@ export default function CompanyUsersPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Users className="w-6 h-6 text-brand" />
-            Workspace Directory
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">Manage users strictly assigned to this tenant isolation.</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {isSuperAdmin && (
-            <button 
-              onClick={() => { setSubmitError(""); setIsAssignModalOpen(true); }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-sidebar border border-border-dim hover:bg-foreground/5 text-foreground font-medium transition-all shadow-sm"
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <Users className="w-6 h-6 text-brand" />
+              Workspace Directory
+            </h1>
+            <p className="text-[13px] text-secondary mt-1">Manage users strictly assigned to this tenant isolation.</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <button
+                onClick={() => { setSubmitError(""); setIsAssignModalOpen(true); }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-sidebar border border-border-dim hover:bg-foreground/5 text-foreground font-medium transition-all shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t("addSystemAdmin")}</span>
+              </button>
+            )}
+            <Link
+              href={`/admin/companies/${companyId}/directory/invites`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
             >
               <Plus className="w-4 h-4" />
-              <span>{t("addSystemAdmin")}</span>
-            </button>
-          )}
-          <Link 
-            href={`/admin/companies/${companyId}/directory/invites`}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Invite User</span>
-          </Link>
+              <span>Invite User</span>
+            </Link>
+          </div>
         </div>
-      </div>
+
+        <CompanyDirectorySectionNav />
+      </header>
 
       {/* Control Bar */}
       <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">

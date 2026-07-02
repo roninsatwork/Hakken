@@ -27,6 +27,7 @@ import {
 import {
   applyHeadCalibration,
   averageMovementCalibrations,
+  buildUpperBodyMovementAutoCalibration,
   buildUprightMovementAutoCalibration,
   estimateMovementHeadAngles,
   getCalibratedFloorCorrection,
@@ -182,6 +183,7 @@ export default function VrmAvatar({
   const baseHipsPositionRef = useRef<THREE.Vector3 | null>(null);
   const baseBonePositionRef = useRef<Record<string, THREE.Vector3>>({});
   const autoCalibrationRef = useRef<MovementCalibration | null>(null);
+  const autoCalibrationKindRef = useRef<"full-body" | "upper-body" | null>(null);
   const autoCalibrationSamplesRef = useRef<MovementCalibration[]>([]);
   const retargetAvatarRestRef = useRef<RetargetAvatarRestMap>({});
   const retargetSourceModelRef = useRef<MovementRetargetSourceModel | null>(null);
@@ -211,6 +213,7 @@ export default function VrmAvatar({
       baseHipsPositionRef.current = null;
       baseBonePositionRef.current = {};
       autoCalibrationRef.current = null;
+      autoCalibrationKindRef.current = null;
       autoCalibrationSamplesRef.current = [];
       retargetAvatarRestRef.current = buildAvatarRetargetRestMap(loadedVrm);
       retargetSourceModelRef.current = null;
@@ -482,15 +485,24 @@ export default function VrmAvatar({
       const bodyConfidence = getMovementBodyConfidence(imageLms, rigHands);
       if (trackingCalibration) {
         autoCalibrationRef.current = null;
+        autoCalibrationKindRef.current = null;
         autoCalibrationSamplesRef.current = [];
       }
 
       if (isPlayer && !trackingCalibration && !autoCalibrationRef.current) {
-        const autoCalibrationSample = buildUprightMovementAutoCalibration({
+        const fullBodyAutoCalibrationSample = buildUprightMovementAutoCalibration({
           poseLandmarks: imageLms,
           faceLandmarks: payload?.faceLandmarks,
           now: Date.now(),
         });
+        const upperBodyAutoCalibrationSample =
+          fullBodyAutoCalibrationSample ??
+          buildUpperBodyMovementAutoCalibration({
+            poseLandmarks: imageLms,
+            faceLandmarks: payload?.faceLandmarks,
+            now: Date.now(),
+          });
+        const autoCalibrationSample = fullBodyAutoCalibrationSample ?? upperBodyAutoCalibrationSample;
 
         if (autoCalibrationSample) {
           autoCalibrationSamplesRef.current = [
@@ -500,9 +512,15 @@ export default function VrmAvatar({
 
           if (autoCalibrationSamplesRef.current.length >= 6) {
             autoCalibrationRef.current = averageMovementCalibrations(autoCalibrationSamplesRef.current);
+            autoCalibrationKindRef.current = fullBodyAutoCalibrationSample
+              ? "full-body"
+              : "upper-body";
           }
         } else {
           autoCalibrationSamplesRef.current = autoCalibrationSamplesRef.current.slice(-3);
+          if (autoCalibrationSamplesRef.current.length === 0) {
+            autoCalibrationKindRef.current = null;
+          }
         }
       }
 
@@ -1272,6 +1290,11 @@ export default function VrmAvatar({
               headApplied: appliedHead,
               bodyConfidence,
               fallbacks: {
+                baseline: trackingCalibration
+                  ? "manual-calibration"
+                  : activeCalibration
+                    ? `${autoCalibrationKindRef.current ?? "auto"}-auto-baseline`
+                    : "none",
                 head: trackingCalibration
                   ? (rawHead.confidence > 0.25 ? rawHead.source : "last-good")
                   : activeCalibration

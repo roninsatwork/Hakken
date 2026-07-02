@@ -62,6 +62,7 @@ export default function MovementTrackingDebugOverlay({
   const retarget = debugState?.retarget;
   const healthSummary = getMovementTrackingHealthSummary(debugState, { now: debugNow });
   const healthToneClass = getHealthToneClass(healthSummary.level);
+  const calibrationQuality = calibration?.quality ?? debugState?.calibrationQuality;
   const confidenceRows = [
     ["Torso", confidence?.torso],
     ["L arm", Math.max(confidence?.leftWrist ?? 0, confidence?.leftHand ?? 0)],
@@ -92,7 +93,7 @@ export default function MovementTrackingDebugOverlay({
           </div>
           <div className="text-right font-mono text-[11px] opacity-80">
             <div>Age {formatAge(debugState?.updatedAt, debugNow)}</div>
-            <div>Cal {calibration ? calibration.quality.toFixed(2) : "none"}</div>
+            <div>Cal {calibrationQuality !== undefined ? calibrationQuality.toFixed(2) : "none"}</div>
           </div>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
@@ -135,6 +136,8 @@ export default function MovementTrackingDebugOverlay({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-2 font-mono text-[11px] text-white/60">
+        <span>Baseline</span>
+        <span>{debugState?.fallbacks.baseline ?? "waiting"}</span>
         <span>Head</span>
         <span>{debugState?.fallbacks.head ?? "waiting"}</span>
         <span>Head motion</span>

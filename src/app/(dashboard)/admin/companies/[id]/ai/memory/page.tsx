@@ -29,6 +29,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { CompanyAiSectionNav } from "../_components/CompanyAiSectionNav";
 
 type CompanyMemory = Doc<"companyMemories">;
 type CompanyMemoryCandidate = Doc<"companyMemoryCandidates">;
@@ -84,10 +85,11 @@ export default function CompanyAiMemoryPage() {
 
   const metrics = useMemo(() => [
     { label: "Approved", value: summary?.approved ?? 0 },
-    { label: "Needs review", value: summary?.proposed ?? 0 },
+    { label: "Suggested", value: summary?.proposed ?? 0 },
     { label: "Archived", value: summary?.archived ?? 0 },
     { label: "Rejected", value: summary?.rejected ?? 0 },
   ], [summary]);
+  const hasSuggestedMemories = (summary?.proposed ?? candidates.results.length) > 0;
 
   const handleApproveCandidate = async (candidateId: Id<"companyMemoryCandidates">) => {
     setReviewingId(candidateId);
@@ -121,6 +123,66 @@ export default function CompanyAiMemoryPage() {
     }
   };
 
+  const renderSuggestedMemoriesSection = () => (
+    <div className="overflow-hidden rounded-[8px] border border-border-dim bg-sidebar/30">
+      <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
+        <div>
+          <h2 className="text-[14px] font-semibold text-foreground">Suggested memories</h2>
+          <p className="mt-0.5 text-[12px] text-secondary">Proposed memories are not trusted AI context until approved.</p>
+        </div>
+        {isCandidateLoading && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
+      </div>
+      <div className="divide-y divide-border-dim">
+        {isCandidateLoading ? (
+          <div className="px-4 py-10 text-center text-secondary">
+            <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
+          </div>
+        ) : candidates.results.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[13px] text-muted">
+            No suggested memories waiting. Suggestions appear here before they become trusted AI memory.
+          </div>
+        ) : candidates.results.map((candidate) => (
+          <div key={candidate._id} className="px-4 py-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <MemoryBadge className={getCategoryClasses(candidate.category)}>{candidate.category}</MemoryBadge>
+              <MemoryBadge>{formatPercent(candidate.confidence)}</MemoryBadge>
+              <MemoryBadge>{candidate.sourceType}</MemoryBadge>
+            </div>
+            {candidate.title && <h3 className="mt-3 text-[13px] font-semibold text-foreground">{candidate.title}</h3>}
+            <p className="mt-2 text-[12px] leading-relaxed text-secondary">{candidate.content}</p>
+            {candidate.reason && <p className="mt-2 text-[11px] leading-relaxed text-muted">{candidate.reason}</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleApproveCandidate(candidate._id)}
+                disabled={reviewingId === candidate._id}
+                className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-50"
+              >
+                {reviewingId === candidate._id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Approve memory
+              </button>
+              <button
+                type="button"
+                onClick={() => setRejectTarget(candidate)}
+                disabled={reviewingId === candidate._id}
+                className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 text-[12px] font-semibold text-red-300 transition-colors hover:bg-red-500/15 disabled:opacity-50"
+              >
+                <X className="h-3.5 w-3.5" />
+                Reject suggestion
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <AdminLoadMoreFooter
+        visibleCount={candidates.results.length}
+        canLoadMore={candidates.status === "CanLoadMore"}
+        isLoading={candidates.status === "LoadingMore"}
+        onLoadMore={() => candidates.loadMore(ADMIN_PAGE_SIZE)}
+      />
+    </div>
+  );
+
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <header className="flex flex-col gap-4">
@@ -131,7 +193,7 @@ export default function CompanyAiMemoryPage() {
               Company Memory
             </h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Approved company facts, preferences, tone notes, and public boundaries. Runtime injection lands in the next slice.
+              Trusted company facts, preferences, tone notes, and public boundaries for the AI workspace.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -140,19 +202,21 @@ export default function CompanyAiMemoryPage() {
               className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
               <Clock className="h-4 w-4" />
-              Add candidate
+              Suggest memory
             </Link>
             <Link
               href={`${aiHref}/memory/new?returnTo=${encodeURIComponent(`${aiHref}/memory`)}`}
               className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
             >
               <Plus className="h-4 w-4" />
-              Add memory
+              Add approved memory
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <CompanyAiSectionNav />
+
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {metrics.map((metric) => (
             <div key={metric.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-4">
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted">{metric.label}</div>
@@ -164,12 +228,28 @@ export default function CompanyAiMemoryPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 xl:grid-cols-[1fr_0.85fr] gap-4">
+      <section className="rounded-[8px] border border-blue-500/20 bg-blue-500/10 p-4">
+        <div className="flex items-start gap-3">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
+          <div className="grid grid-cols-1 gap-3 text-[12px] leading-relaxed text-blue-100 md:grid-cols-2">
+            <p>
+              <span className="font-semibold text-blue-50">Approved memory</span> is trusted company context for the AI workspace.
+            </p>
+            <p>
+              <span className="font-semibold text-blue-50">Suggested memory</span> waits here until someone approves or rejects it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        {hasSuggestedMemories && renderSuggestedMemoriesSection()}
+
         <div className="rounded-[8px] border border-border-dim bg-sidebar/30 overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
             <div>
-              <h2 className="text-[14px] font-semibold text-foreground">Approved Memory</h2>
-              <p className="mt-0.5 text-[12px] text-secondary">Durable company context ready for future runtime use.</p>
+              <h2 className="text-[14px] font-semibold text-foreground">Approved memory</h2>
+              <p className="mt-0.5 text-[12px] text-secondary">Trusted company context approved for future AI use.</p>
             </div>
             {isMemoryLoading && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
           </div>
@@ -179,7 +259,9 @@ export default function CompanyAiMemoryPage() {
                 <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
               </div>
             ) : memories.results.length === 0 ? (
-              <div className="px-4 py-10 text-center text-[13px] text-muted">No approved company memories yet.</div>
+              <div className="px-4 py-10 text-center text-[13px] text-muted">
+                No approved memory yet. Approved memory is trusted company context for future AI answers.
+              </div>
             ) : memories.results.map((memory) => (
               <div key={memory._id} className="group px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
@@ -220,70 +302,7 @@ export default function CompanyAiMemoryPage() {
           />
         </div>
 
-        <div className="rounded-[8px] border border-border-dim bg-sidebar/30 overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
-            <div>
-              <h2 className="text-[14px] font-semibold text-foreground">Review Queue</h2>
-              <p className="mt-0.5 text-[12px] text-secondary">Proposed memories need approval before they become durable context.</p>
-            </div>
-            {isCandidateLoading && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
-          </div>
-          <div className="divide-y divide-border-dim">
-            {isCandidateLoading ? (
-              <div className="px-4 py-10 text-center text-secondary">
-                <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
-              </div>
-            ) : candidates.results.length === 0 ? (
-              <div className="px-4 py-10 text-center text-[13px] text-muted">No memory candidates waiting.</div>
-            ) : candidates.results.map((candidate) => (
-              <div key={candidate._id} className="px-4 py-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <MemoryBadge className={getCategoryClasses(candidate.category)}>{candidate.category}</MemoryBadge>
-                  <MemoryBadge>{formatPercent(candidate.confidence)}</MemoryBadge>
-                  <MemoryBadge>{candidate.sourceType}</MemoryBadge>
-                </div>
-                {candidate.title && <h3 className="mt-3 text-[13px] font-semibold text-foreground">{candidate.title}</h3>}
-                <p className="mt-2 text-[12px] leading-relaxed text-secondary">{candidate.content}</p>
-                {candidate.reason && <p className="mt-2 text-[11px] leading-relaxed text-muted">{candidate.reason}</p>}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleApproveCandidate(candidate._id)}
-                    disabled={reviewingId === candidate._id}
-                    className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-50"
-                  >
-                    {reviewingId === candidate._id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRejectTarget(candidate)}
-                    disabled={reviewingId === candidate._id}
-                    className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 text-[12px] font-semibold text-red-300 transition-colors hover:bg-red-500/15 disabled:opacity-50"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <AdminLoadMoreFooter
-            visibleCount={candidates.results.length}
-            canLoadMore={candidates.status === "CanLoadMore"}
-            isLoading={candidates.status === "LoadingMore"}
-            onLoadMore={() => candidates.loadMore(ADMIN_PAGE_SIZE)}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-[8px] border border-blue-500/20 bg-blue-500/10 p-4">
-        <div className="flex items-start gap-3">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
-          <p className="text-[12px] leading-relaxed text-blue-100">
-            Company memory is governed configuration. It is stored and reviewable now; runtime retrieval, usage evidence, and agent inheritance remain planned for the next memory slice.
-          </p>
-        </div>
+        {!hasSuggestedMemories && renderSuggestedMemoriesSection()}
       </section>
 
       <SonaeModal
@@ -321,12 +340,12 @@ export default function CompanyAiMemoryPage() {
       <SonaeModal
         isOpen={Boolean(rejectTarget)}
         onClose={() => setRejectTarget(null)}
-        title="Reject Candidate"
+        title="Reject Suggested Memory"
         size="sm"
       >
         <div className="flex flex-col gap-5">
           <p className="text-[13px] leading-relaxed text-secondary">
-            Rejected candidates store a fingerprint so the same suggestion is blocked if it is proposed again.
+            Rejected suggestions store a fingerprint so the same memory is blocked if it is proposed again.
           </p>
           <AdminModalFormField label="Reason" hint="Optional">
             <textarea
@@ -351,7 +370,7 @@ export default function CompanyAiMemoryPage() {
               className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
             >
               {reviewingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-              Reject
+              Reject suggestion
             </button>
           </div>
         </div>

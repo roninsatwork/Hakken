@@ -59,7 +59,7 @@ Query parameters change behavior:
 
 - `guidedPreview=1` skips calibration, resets playback/scoring, and starts playback automatically once frames are loaded.
 - `debugTracking=1` enables source skeleton overlays, retarget debug state, and `MovementDebugFrameScrubber`.
-- `/demos/movements/squat-proof?mode=...` selects a synthetic proof pose such as `standing`, `side-bend`, `hands-front`, `squat`, `left-leg-raise`, or `right-leg-raise`.
+- `/demos/movements/squat-proof?mode=...` selects a synthetic proof pose such as `standing`, `side-bend`, `hands-front`, `squat`, `left-leg-raise`, `right-leg-raise`, `upper-body-auto`, or `upper-body-auto-rejected`.
 
 ## Retargeting And Debug Boundaries
 
@@ -91,4 +91,4 @@ For avatar body-motion work, also run:
 npm run eval:movement-avatar
 ```
 
-The eval feeds synthetic skeleton poses into the live player avatar path, checks debug ownership for squat and leg raises, and compares screenshot silhouettes so visually identical avatar modes fail before manual review.
+The eval feeds synthetic skeleton poses into the live player avatar path, checks debug baseline/ownership for manual calibration, accepted upper-body auto-baseline, rejected moving auto-baseline, squat, and leg raises, and compares screenshot silhouettes so visually identical avatar modes fail before manual review.

@@ -136,15 +136,18 @@ Capture findings in `docs/operator/movement-demo-live-rehearsal-notes-template.m
 
 1. Open the live route with `?debugTracking=1`.
 2. Complete Posture Check-In with the presenter framed head to feet.
-3. Confirm head source is face, not pose, when the presenter faces the camera.
-4. Confirm left and right arm fallbacks do not stay on "relaxed-arm" during slow arm raises.
-5. Confirm knees and feet do not stay on synthetic/upper-body fallbacks when the full body is visible.
-6. Rehearse the safe sequence once at 50% speed and once at meeting speed.
-7. Move the head gently left/right and forward/back; confirm the head-motion diagnostics label changes from `neutral`.
-8. Rehearse a controlled mini squat and confirm the lower-body diagnostics label reads `squat`.
-9. Rehearse left and right knee lifts and confirm the lower-body diagnostics label reads `left-knee-raise` or `right-knee-raise`.
-10. If the arms or legs look awkward, record which fallback labels appear in the debug overlay at that moment.
-11. Remove `?debugTracking=1` before the client-facing run.
+3. Confirm the Baseline row reads `manual-calibration` after a full Posture Check-In.
+4. To test the automatic baseline without changing the client-facing flow, use the library row action `Debug auto baseline`, or reload the debug route, click `Begin Practice`, then click `Debug Auto Baseline` on the Posture Check-In overlay. The library row action auto-saves live tracking diagnostics in short chunks; there is no separate save step for this debug evidence.
+5. If lower-body framing is weak, confirm the Baseline row may read `upper-body-auto-baseline` while the lower body stays neutral rather than twisting from partial feet.
+6. Confirm head source is face, not pose, when the presenter faces the camera.
+7. Confirm left and right arm fallbacks do not stay on "relaxed-arm" during slow arm raises.
+8. Confirm knees and feet do not stay on synthetic/upper-body fallbacks when the full body is visible.
+9. Rehearse the safe sequence once at 50% speed and once at meeting speed.
+10. Move the head gently left/right and forward/back; confirm the head-motion diagnostics label changes from `neutral`.
+11. Rehearse a controlled mini squat and confirm the lower-body diagnostics label reads `squat`.
+12. Rehearse left and right knee lifts and confirm the lower-body diagnostics label reads `left-knee-raise` or `right-knee-raise`.
+13. If the arms or legs look awkward, record which fallback labels appear in the debug overlay at that moment.
+14. Remove `?debugTracking=1` before the client-facing run.
 
 Presenter accept criteria for live mode:
 

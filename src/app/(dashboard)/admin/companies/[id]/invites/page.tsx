@@ -12,6 +12,7 @@ import {
   AdminFeedbackPill,
   AdminSaveAction,
 } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { CompanyDirectorySectionNav } from "../directory/_components/CompanyDirectorySectionNav";
 
 export default function InviteUsersPage() {
   const params = useParams();
@@ -95,9 +96,8 @@ export default function InviteUsersPage() {
 
   return (
     <div className="w-full h-full flex flex-col gap-8 pb-20">
-        
-        {/* Header */}
-        <div className="flex flex-col gap-2 border-b border-border-dim/50 pb-6">
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <h1 className="text-[24px] font-bold tracking-tight text-foreground flex items-center gap-3">
             <Mail className="w-6 h-6 text-brand" />
             Workspace Invitations
@@ -107,8 +107,11 @@ export default function InviteUsersPage() {
           </p>
         </div>
 
-        {/* Master Workflow Form */}
-        <form onSubmit={handleSendInvite} className="flex flex-col gap-12 relative z-10 pt-4">
+        <CompanyDirectorySectionNav />
+      </header>
+
+      {/* Master Workflow Form */}
+      <form onSubmit={handleSendInvite} className="flex flex-col gap-12 relative z-10 border-t border-border-dim/50 pt-8">
           
           {/* STEP 1: TARGETING */}
           <div className="flex flex-col gap-6">

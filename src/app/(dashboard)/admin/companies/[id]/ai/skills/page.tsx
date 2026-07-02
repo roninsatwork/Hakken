@@ -25,6 +25,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { CompanyAiSectionNav } from "../_components/CompanyAiSectionNav";
 
 type CompanySkill = Doc<"companySkills">;
 type CompanySkillBinding = Doc<"companySkillBindings">;
@@ -170,7 +171,9 @@ export default function CompanyAiSkillsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <CompanyAiSectionNav />
+
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-6">
           {[
             { label: "Active", value: summary?.activeSkills ?? 0 },
             { label: "Drafts", value: summary?.draftSkills ?? 0 },

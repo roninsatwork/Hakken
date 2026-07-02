@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { CompanyAiSectionNav } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiSectionNav";
 
 type DefaultModelSummary = {
   modelId: string;
@@ -102,6 +103,8 @@ export default function CompanyModelDefaultsPage() {
           Set optional company-specific model defaults by use case. Rows left on inherit will use the platform default.
         </p>
       </header>
+
+      <CompanyAiSectionNav />
 
       {message && (
         <div className={`rounded-[12px] border px-4 py-3 text-[13px] font-medium ${

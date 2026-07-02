@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WidgetAppearanceSection } from "./WidgetAppearanceSection";
 import { WidgetConfigTabs } from "./WidgetConfigTabs";
 import { WidgetConversationStartersSection } from "./WidgetConversationStartersSection";
@@ -19,6 +19,26 @@ vi.mock("next/image", () => ({
 }));
 
 describe("widget configuration sections", () => {
+  function mockWideLayout(matches: boolean) {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  }
+
+  beforeEach(() => {
+    mockWideLayout(true);
+  });
+
   it("renders tab navigation and reports selected tabs", () => {
     const onTabChange = vi.fn();
 
@@ -27,6 +47,22 @@ describe("widget configuration sections", () => {
     fireEvent.click(screen.getByRole("button", { name: "Integration" }));
 
     expect(screen.getByRole("button", { name: "Appearance" })).toHaveClass("bg-brand");
+    expect(onTabChange).toHaveBeenCalledWith("Integration");
+  });
+
+  it("uses a compact widget section switcher below wide desktop", () => {
+    mockWideLayout(false);
+    const onTabChange = vi.fn();
+
+    render(<WidgetConfigTabs activeTab="Appearance" onTabChange={onTabChange} />);
+
+    const trigger = screen.getByRole("button", { name: "Widget section: Appearance" });
+    expect(trigger).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Integration" })).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Integration" }));
+
     expect(onTabChange).toHaveBeenCalledWith("Integration");
   });
 

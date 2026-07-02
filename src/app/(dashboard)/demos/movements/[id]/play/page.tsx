@@ -7,7 +7,7 @@
 import React, { useEffect, useRef, use, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import AvatarSelectorLobby from "./_components/AvatarSelectorLobby";
@@ -27,15 +27,109 @@ import { useMovementMatchScoring } from "../../_hooks/useMovementMatchScoring";
 import { useMovementMatchSession } from "../../_hooks/useMovementMatchSession";
 import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
-import { useMovementPlayerTracking } from "../../_hooks/useMovementPlayerTracking";
+import {
+  useMovementPlayerTracking,
+  type MovementPlayerMotionPayload,
+} from "../../_hooks/useMovementPlayerTracking";
 import { useMovementTrackingCalibration } from "../../_hooks/useMovementTrackingCalibration";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
-import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
+import {
+  getMovementTrackingHealthSummary,
+  type MovementTrackingDebugState,
+} from "../../_lib/movementTrackingCalibration";
 import type { VrmMotionFrame } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
+
+type DebugTrackingSample = {
+  capturedAt: number;
+  updatedAt?: number;
+  baseline: string;
+  tracking: {
+    poseCount: number;
+    worldPoseCount: number;
+    faceCount: number;
+    leftHandCount: number;
+    rightHandCount: number;
+    pose?: CompactLandmark[];
+    worldPose?: CompactLandmark[];
+    face?: CompactLandmark[];
+    leftHand?: CompactLandmark[];
+    rightHand?: CompactLandmark[];
+  };
+  health: {
+    score: number;
+    label: string;
+    primaryAction: string;
+    warnings: string[];
+  };
+  calibrationQuality?: number;
+  bodyConfidence?: MovementTrackingDebugState["bodyConfidence"];
+  fallbacks: MovementTrackingDebugState["fallbacks"];
+  retarget?: MovementTrackingDebugState["retarget"];
+  headRaw?: MovementTrackingDebugState["headRaw"];
+  headApplied?: MovementTrackingDebugState["headApplied"];
+};
+
+type CompactLandmark = {
+  x: number;
+  y: number;
+  z?: number;
+  v?: number;
+};
+
+function compactNumber(value: number | undefined, fallback = 0) {
+  return Number((value ?? fallback).toFixed(4));
+}
+
+function compactLandmarks(landmarks: MovementPlayerMotionPayload["landmarks"] | null | undefined) {
+  return (landmarks ?? []).map((landmark) => ({
+    x: compactNumber(landmark.x),
+    y: compactNumber(landmark.y),
+    z: landmark.z === undefined ? undefined : compactNumber(landmark.z),
+    v: landmark.visibility === undefined ? undefined : compactNumber(landmark.visibility),
+  }));
+}
+
+function compactTrackingPayload(payload: MovementPlayerMotionPayload | null) {
+  const pose = compactLandmarks(payload?.landmarks);
+  const worldPose = compactLandmarks(payload?.worldLandmarks);
+  const face = compactLandmarks(payload?.faceLandmarks);
+  const leftHand = compactLandmarks(payload?.hands?.left?.landmarks);
+  const rightHand = compactLandmarks(payload?.hands?.right?.landmarks);
+
+  return {
+    poseCount: pose.length,
+    worldPoseCount: worldPose.length,
+    faceCount: face.length,
+    leftHandCount: leftHand.length,
+    rightHandCount: rightHand.length,
+    pose: pose.length > 0 ? pose : undefined,
+    worldPose: worldPose.length > 0 ? worldPose : undefined,
+    face: face.length > 0 ? face : undefined,
+    leftHand: leftHand.length > 0 ? leftHand : undefined,
+    rightHand: rightHand.length > 0 ? rightHand : undefined,
+  };
+}
+
+function summarizeSampleLabels(
+  samples: DebugTrackingSample[],
+  selector: (sample: DebugTrackingSample) => string | undefined,
+) {
+  const counts = new Map<string, number>();
+  for (const sample of samples) {
+    const value = selector(sample);
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => `${label}:${count}`)
+    .join(", ");
+}
 
 function toMovementSpineGoal(value: unknown): MovementSpineGoal | null {
   if (typeof value !== "string") return null;
@@ -50,11 +144,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const movementId = unwrappedParams.id as Id<"movements">;
   const isDebugTracking = searchParams.get("debugTracking") === "1";
   const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
+  const isDebugAutoBaselineRoute = isDebugTracking && searchParams.get("debugAutoBaseline") === "1";
   const shouldAutoStartGuidedPreview = isGuidedPreviewRoute && isDebugTracking;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
   const movement = useQuery(api.movements.get, { id: movementId });
+  const saveDebugTrackingSession = useMutation(api.movements.saveDebugTrackingSession);
   const { frames: loadedFrames, isLoading: isFramesLoading } = useMovementFrames(movement);
 
   const webcamRef = useRef<Webcam>(null);
@@ -148,6 +244,22 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     spineGoal,
   });
   const hasStartedGuidedPreviewRef = useRef(false);
+  const debugTrackingSamplesRef = useRef<DebugTrackingSample[]>([]);
+  const debugTrackingChunkStartedAtRef = useRef<number | null>(null);
+  const isSavingDebugTrackingRef = useRef(false);
+  const startDebugAutoBaseline = React.useCallback(() => {
+    startMatch();
+    skipCalibration();
+    resetInstructorPlayback();
+    resetScoring();
+    setIsPlaying(true);
+  }, [
+    resetInstructorPlayback,
+    resetScoring,
+    setIsPlaying,
+    skipCalibration,
+    startMatch,
+  ]);
   const startSelectedMatch = React.useCallback(() => {
     startMatch();
 
@@ -168,7 +280,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     if (
-      !shouldAutoStartGuidedPreview ||
+      (!shouldAutoStartGuidedPreview && !isDebugAutoBaselineRoute) ||
       hasStartedGuidedPreviewRef.current ||
       !isLobby ||
       !movement ||
@@ -179,14 +291,103 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     }
 
     hasStartedGuidedPreviewRef.current = true;
-    startSelectedMatch();
+    if (isDebugAutoBaselineRoute) {
+      startDebugAutoBaseline();
+    } else {
+      startSelectedMatch();
+    }
   }, [
     isFramesLoading,
+    isDebugAutoBaselineRoute,
     isLobby,
     loadedFrames.length,
     movement,
     shouldAutoStartGuidedPreview,
+    startDebugAutoBaseline,
     startSelectedMatch,
+  ]);
+
+  useEffect(() => {
+    if (!isDebugAutoBaselineRoute || isLobby) return undefined;
+
+    const captureSample = () => {
+      const debugState = trackingDebugRef.current;
+      const trackingPayload = playerLiveLmRef.current;
+      const now = performance.now();
+      if (!debugState && !trackingPayload) return;
+      if (debugTrackingChunkStartedAtRef.current === null) {
+        debugTrackingChunkStartedAtRef.current = Date.now();
+      }
+
+      const health = getMovementTrackingHealthSummary(debugState, { now });
+      debugTrackingSamplesRef.current.push({
+        capturedAt: Date.now(),
+        updatedAt: debugState?.updatedAt,
+        baseline: debugState?.fallbacks.baseline ?? "waiting",
+        tracking: compactTrackingPayload(trackingPayload),
+        health: {
+          score: health.score,
+          label: health.label,
+          primaryAction: health.primaryAction,
+          warnings: health.warnings,
+        },
+        calibrationQuality: debugState?.calibrationQuality,
+        bodyConfidence: debugState?.bodyConfidence,
+        fallbacks: debugState?.fallbacks ?? { baseline: "waiting" },
+        retarget: debugState?.retarget,
+        headRaw: debugState?.headRaw,
+        headApplied: debugState?.headApplied,
+      });
+    };
+
+    const flushSamples = async () => {
+      if (isSavingDebugTrackingRef.current) return;
+
+      const samples = debugTrackingSamplesRef.current;
+      if (samples.length < 4) return;
+
+      const chunk = samples.slice(0, 40);
+      const startedAt = debugTrackingChunkStartedAtRef.current ?? chunk[0]?.capturedAt ?? Date.now();
+      const endedAt = chunk[chunk.length - 1]?.capturedAt ?? Date.now();
+      debugTrackingSamplesRef.current = samples.slice(chunk.length);
+      debugTrackingChunkStartedAtRef.current = debugTrackingSamplesRef.current[0]?.capturedAt ?? null;
+      isSavingDebugTrackingRef.current = true;
+
+      try {
+        await saveDebugTrackingSession({
+          movementId,
+          trigger: "debug-auto-baseline",
+          sampleCount: chunk.length,
+          durationMs: Math.max(0, endedAt - startedAt),
+          startedAt,
+          endedAt,
+          baselineSummary: summarizeSampleLabels(chunk, (sample) => sample.baseline) || "none",
+          warningSummary: summarizeSampleLabels(chunk, (sample) => sample.health.warnings[0]) || "none",
+          samplesJson: JSON.stringify(chunk),
+        });
+      } finally {
+        isSavingDebugTrackingRef.current = false;
+      }
+    };
+
+    const sampleIntervalId = window.setInterval(captureSample, 500);
+    const flushIntervalId = window.setInterval(() => {
+      void flushSamples();
+    }, 2000);
+
+    captureSample();
+
+    return () => {
+      window.clearInterval(sampleIntervalId);
+      window.clearInterval(flushIntervalId);
+      void flushSamples();
+    };
+  }, [
+    isDebugAutoBaselineRoute,
+    isLobby,
+    movementId,
+    playerLiveLmRef,
+    saveDebugTrackingSession,
   ]);
 
   useEffect(() => {
@@ -334,6 +535,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         calibrationCountdownSeconds={calibrationCountdownSeconds}
         onCalibrate={startCalibration}
         onSkipCalibration={skipCalibration}
+        onStartDebugAutoBaseline={isDebugTracking ? startDebugAutoBaseline : undefined}
       />
 
       <MovementTrackingDebugOverlay

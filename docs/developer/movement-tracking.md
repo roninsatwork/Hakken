@@ -26,7 +26,7 @@ The route set is:
 
 The play route accepts `guidedPreview=1` for guided-preview mode and `debugTracking=1` for the tracking debug overlays and frame scrubber. The route combines saved instructor frames, live player vision output, calibration state, match scoring, and avatar rendering in `src/app/(dashboard)/demos/movements/[id]/play/page.tsx`.
 
-The proof route accepts `mode=standing`, `mode=side-bend`, `mode=hands-front`, `mode=squat`, `mode=far-squat`, `mode=left-leg-raise`, `mode=far-left-leg-raise`, `mode=right-leg-raise`, or `mode=far-right-leg-raise`. It feeds controlled synthetic skeleton and hand landmarks into the same live player `VrmAvatar` path used during practice, shows the source skeleton beside the player avatar, and exposes compact debug labels for spine, arm-depth, and ownership state. The far modes keep clear whole-body movement geometry while lowering lower-body confidence to catch distance-related regressions where the player avatar used to stand upright when the user stepped back to fit their full body in the webcam frame.
+The proof route accepts `mode=standing`, `mode=side-bend`, `mode=hands-front`, `mode=squat`, `mode=far-squat`, `mode=left-leg-raise`, `mode=far-left-leg-raise`, `mode=right-leg-raise`, `mode=far-right-leg-raise`, `mode=upper-body-auto`, or `mode=upper-body-auto-rejected`. It feeds controlled synthetic skeleton and hand landmarks into the same live player `VrmAvatar` path used during practice, shows the source skeleton beside the player avatar, and exposes compact debug labels for baseline, spine, arm-depth, and ownership state. The far modes keep clear whole-body movement geometry while lowering lower-body confidence to catch distance-related regressions where the player avatar used to stand upright when the user stepped back to fit their full body in the webcam frame. The upper-body auto modes prove that a neutral upper body can establish an `upper-body-auto-baseline` when feet are weak, while an active side bend is rejected as `Baseline: none`.
 
 ## Capture And Storage Flow
 
@@ -59,6 +59,8 @@ Instructor retarget analysis is derived from `movementRetargeting`:
 `useMovementTrackingCalibration` manages neutral-stance calibration for the player. It requires vision readiness, runs a three-second countdown, samples for about 1.6 seconds, and requires at least 12 valid samples before accepting a calibration. Operators can reset or skip calibration; skipped calibration leaves the avatar on fallback behaviour rather than a stored neutral model.
 
 `movementTrackingCalibration` builds and averages calibration samples. The calibration model records body centers, floor estimate, head neutral, limb visibility, floor correction, lower-body intent, and debug warnings. Current lower-body labels include neutral, squat, single-knee raise, and mixed lower-body states. These labels are diagnostics for the current implementation, not a license to drive future body animation primarily from canned pose labels.
+
+When explicit calibration is unavailable, the live player avatar may establish a guarded automatic baseline. It prefers full-body upright calibration, then falls back to an upper-body baseline only when head, shoulders, and hips are confident and the torso is close to neutral. The debug overlay reports this as `manual-calibration`, `full-body-auto-baseline`, `upper-body-auto-baseline`, or `none`.
 
 The same module summarizes tracking health into actionable warnings such as missing calibration, weak calibration, floor fallback, low foot confidence, held last-good foot pose, and left/right foot confidence imbalance.
 
@@ -110,6 +112,6 @@ The browser eval for avatar body-motion regressions is:
 npm run eval:movement-avatar
 ```
 
-That command runs `e2e/movement-avatar-proof.eval.spec.ts` against `/demos/movements/squat-proof`. It asserts the expected debug owners, verifies the right-side player-avatar region contains visible rendered pixels, compares squat, far-camera squat, leg-raise, and far-camera leg-raise silhouettes against standing, and attaches screenshots plus visual metrics to the Playwright report.
+That command runs `e2e/movement-avatar-proof.eval.spec.ts` against `/demos/movements/squat-proof`. It asserts the expected debug baseline labels and owners, verifies the right-side player-avatar region contains visible rendered pixels, compares squat, far-camera squat, leg-raise, and far-camera leg-raise silhouettes against standing, and attaches screenshots plus visual metrics to the Playwright report.
 
 When documentation-only automation audits this area, source reads are allowed but source edits are not. If the current behaviour needs product or code changes, report that the user must explicitly reopen the movement demo rather than changing the frozen files from this automation.

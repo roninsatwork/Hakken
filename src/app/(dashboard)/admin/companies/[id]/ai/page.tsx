@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import {
   Activity,
-  AlertTriangle,
   ArrowRight,
   BrainCircuit,
+  ChevronDown,
   ClipboardCheck,
   Cpu,
   Database,
@@ -26,6 +26,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { CompanyAiSectionNav } from "./_components/CompanyAiSectionNav";
 
 type ReadinessTone = "ready" | "review" | "blocked" | "planned";
 
@@ -60,6 +61,15 @@ type LearningSuggestion = {
   title: string;
   detail: string;
   target: SuggestionTarget;
+};
+
+type PriorityReason = {
+  title: string;
+  description: string;
+  href?: string;
+  action?: string;
+  tone: ReadinessTone;
+  icon: typeof Database;
 };
 
 const REQUIRED_MODEL_USE_CASES = ["chat", "agent", "workflow", "report", "router", "title", "embedding"];
@@ -128,50 +138,139 @@ function truncatePreviewText(value: string | undefined, fallback: string) {
   return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 }
 
-function ReadinessCard({ item }: { item: ReadinessItem }) {
+function getReasonPriority(item: ReadinessItem) {
+  const rankByTitle: Record<string, number> = {
+    Evals: 10,
+    Drift: 20,
+    Instructions: 30,
+    Memory: 40,
+    Skills: 50,
+    Widget: 60,
+    "Model Routing": 70,
+    Knowledge: 80,
+    Activity: 90,
+  };
+  const toneRank = item.tone === "blocked" ? 0 : item.tone === "review" ? 100 : 200;
+  return toneRank + (rankByTitle[item.title] ?? 99);
+}
+
+function getReasonTitle(item: ReadinessItem) {
+  if (item.title === "Instructions") return "Prompt needs review";
+  if (item.title === "Model Routing") return "Model routing is incomplete";
+  if (item.title === "Evals") return item.tone === "blocked" ? "Blocking eval evidence" : "Eval evidence needs review";
+  if (item.title === "Drift") return "Readiness evidence is stale";
+  if (item.title === "Memory") return "Memory needs review";
+  if (item.title === "Skills") return "Skills need review";
+  if (item.title === "Widget") return "Widget needs review";
+  if (item.title === "Knowledge") return "Knowledge needs review";
+  return `${item.title} needs review`;
+}
+
+function getHealthGroup(item: ReadinessItem) {
+  if (item.tone === "blocked") return "needsWork";
+  if (item.tone === "ready") return "healthy";
+  if (item.title === "Activity" || item.title === "Skills") return "quiet";
+  return "needsWork";
+}
+
+function getStatusLabel(tone: ReadinessTone) {
+  if (tone === "blocked") return "Not ready";
+  if (tone === "review") return "Needs review";
+  if (tone === "planned") return "Planned";
+  return "Ready";
+}
+
+function HealthRow({ item }: { item: ReadinessItem }) {
   const Icon = item.icon;
-  const footerLabel = item.action || (item.tone === "planned" ? "Planned layer" : undefined);
   const content = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-border-dim bg-background/50 text-brand">
-          <Icon className="h-4 w-4" />
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-border-dim bg-background/50 text-brand">
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-semibold text-foreground">{item.title}</h3>
+          <p className="mt-0.5 truncate text-[11px] leading-relaxed text-secondary">{item.description}</p>
         </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${getToneClasses(item.tone)}`}>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getToneClasses(item.tone)}`}>
           {item.value}
         </span>
+        <span className="hidden min-w-[82px] text-right text-[11px] font-semibold text-secondary sm:inline">
+          {getStatusLabel(item.tone)}
+        </span>
+        {item.href && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />}
       </div>
-      <div className="mt-4 min-w-0">
-        <h3 className="text-[14px] font-semibold text-foreground">{item.title}</h3>
-        <p className="mt-1 text-[12px] leading-relaxed text-secondary">{item.description}</p>
-      </div>
-      {footerLabel && (
-        <div className="mt-auto pt-4">
-          <div className={`inline-flex h-8 items-center gap-2 rounded-[8px] border px-3 text-[12px] font-semibold transition-colors ${
-            item.href
-              ? "border-brand/20 bg-brand/10 text-brand group-hover:border-brand/40 group-hover:bg-brand/15"
-              : "border-border-dim bg-background/50 text-muted"
-          }`}>
-            <span>{footerLabel}</span>
-            {item.href && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}
-          </div>
-        </div>
-      )}
     </>
   );
 
   if (!item.href) {
     return (
-      <div className="flex min-h-[220px] flex-col rounded-[8px] border border-border-dim bg-sidebar/30 p-4">
+      <div className="flex items-center justify-between gap-3 rounded-[8px] border border-border-dim bg-background/50 px-3 py-2.5">
         {content}
       </div>
     );
   }
 
   return (
-    <Link href={item.href} className="group flex min-h-[220px] flex-col rounded-[8px] border border-border-dim bg-sidebar/30 p-4 transition-colors hover:border-brand/30 hover:bg-brand/5">
+    <Link href={item.href} className="group flex items-center justify-between gap-3 rounded-[8px] border border-border-dim bg-background/50 px-3 py-2.5 transition-colors hover:border-brand/30 hover:bg-brand/5">
       {content}
     </Link>
+  );
+}
+
+function HealthGroupSection({ title, items }: { title: string; items: ReadinessItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">{title}</h2>
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {items.map((item) => (
+          <HealthRow key={item.title} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EvidencePanel({
+  children,
+  defaultOpen = false,
+  icon: Icon,
+  summary,
+  title,
+}: {
+  children: ReactNode;
+  defaultOpen?: boolean;
+  icon: typeof Database;
+  summary: string;
+  title: string;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <details
+      className="group rounded-[8px] border border-border-dim bg-sidebar/30"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
+      open={isOpen}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-border-dim bg-background/50 text-brand">
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[13px] font-semibold text-foreground">{title}</span>
+            <span className="mt-0.5 block truncate text-[11px] leading-relaxed text-secondary">{summary}</span>
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-border-dim px-4 py-4">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -496,6 +595,32 @@ export default function CompanyAiOverviewPage() {
   const readinessLabel = readinessSummary
     ? getReadinessStateLabel(readinessSummary.state)
     : getReadinessLabel(readinessScore, readinessBlockers, readinessWarnings);
+  const readinessTone: ReadinessTone = readinessBlockers > 0
+    ? "blocked"
+    : readinessWarnings > 0 || (readinessSummary?.drift.unresolvedCount ?? 0) > 0
+      ? "review"
+      : "ready";
+  const readinessSummaryText = readinessTone === "blocked"
+    ? "Resolve the blocker areas before treating this company AI as production-ready."
+    : readinessTone === "review"
+      ? "The AI can run, but the items below need attention before this setup should be treated as fully ready."
+      : "This company AI has the core evidence needed for the current readiness gate.";
+  const priorityReasons = useMemo<PriorityReason[]>(() => readinessItems
+    .filter((item) => item.tone === "blocked" || item.tone === "review")
+    .sort((a, b) => getReasonPriority(a) - getReasonPriority(b))
+    .slice(0, 3)
+    .map((item) => ({
+      title: getReasonTitle(item),
+      description: item.description,
+      href: item.href,
+      action: item.action,
+      tone: item.tone,
+      icon: item.icon,
+    })), [readinessItems]);
+  const nextBestAction = priorityReasons.find((reason) => reason.href) ?? null;
+  const needsWorkItems = readinessItems.filter((item) => getHealthGroup(item) === "needsWork");
+  const healthyItems = readinessItems.filter((item) => getHealthGroup(item) === "healthy");
+  const quietItems = readinessItems.filter((item) => getHealthGroup(item) === "quiet");
 
   const handleRecordSnapshot = async () => {
     setIsRecordingSnapshot(true);
@@ -519,69 +644,138 @@ export default function CompanyAiOverviewPage() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-12">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              <Sparkles className="h-6 w-6 text-brand" />
-              Company AI Overview
-            </h1>
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Readiness control room for {company?.name || "this company"} across knowledge, instructions, model routing, widget exposure, and the next company AI layers.
-            </p>
-          </div>
-          <div className={`rounded-[8px] border px-4 py-3 ${readinessBlockers > 0 ? "border-red-500/20 bg-red-500/10" : readinessWarnings > 0 ? "border-amber-500/20 bg-amber-500/10" : "border-emerald-500/20 bg-emerald-500/10"}`}>
-            <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
-              <div className="flex items-center gap-3">
-                <Gauge className="h-5 w-5 shrink-0 text-brand" />
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted">Readiness</div>
-                  <div className="text-[24px] font-semibold text-foreground">{formatPercent(readinessScore)}</div>
-                </div>
-              </div>
-              <span className="inline-flex h-8 shrink-0 items-center rounded-[8px] border border-border-dim bg-background/60 px-3 text-[10px] font-bold uppercase tracking-widest text-secondary whitespace-nowrap">
+    <div className="flex w-full flex-col gap-5 pb-12">
+      <header>
+        <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
+          <Sparkles className="h-6 w-6 text-brand" />
+          Company AI
+        </h1>
+        <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
+          Readiness for {company?.name || "this company"} across instructions, evidence, model routing, widget exposure, memory, skills, and evals.
+        </p>
+      </header>
+
+      <CompanyAiSectionNav />
+
+      <section className={`rounded-[8px] border p-5 ${
+        readinessTone === "blocked"
+          ? "border-red-500/20 bg-red-500/10"
+          : readinessTone === "review"
+            ? "border-amber-500/20 bg-amber-500/10"
+            : "border-emerald-500/20 bg-emerald-500/10"
+      }`}>
+        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[0.85fr_1.15fr]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`inline-flex items-center rounded-[8px] border px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest ${getToneClasses(readinessTone)}`}>
                 {readinessLabel}
               </span>
+              <span className="inline-flex items-center gap-2 text-[13px] text-secondary">
+                <Gauge className="h-4 w-4 text-brand" />
+                Readiness
+              </span>
+            </div>
+            <div className="mt-4 text-[46px] font-semibold leading-none tracking-tight text-foreground">
+              {formatPercent(readinessScore)}
+            </div>
+            <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-secondary">
+              {readinessSummaryText}
+            </p>
+          </div>
+
+          <div className="rounded-[8px] border border-border-dim bg-background/50 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-[14px] font-semibold text-foreground">Why this state</h2>
+                <p className="mt-1 text-[12px] leading-relaxed text-secondary">
+                  {priorityReasons.length > 0 ? "Fix these first." : "No readiness issues are currently waiting."}
+                </p>
+              </div>
+              {nextBestAction?.href && (
+                <Link href={nextBestAction.href} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90">
+                  <span>{nextBestAction.action || "Open section"}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              {priorityReasons.length === 0 ? (
+                <div className="flex items-center gap-3 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-3 text-[12px] text-emerald-200">
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span>All tracked readiness areas are currently clear.</span>
+                </div>
+              ) : priorityReasons.map((reason) => {
+                const Icon = reason.icon;
+                const row = (
+                  <>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-border-dim bg-background/50 text-brand">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13px] font-semibold text-foreground">{reason.title}</span>
+                        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getToneClasses(reason.tone)}`}>
+                          {getStatusLabel(reason.tone)}
+                        </span>
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-relaxed text-secondary">{reason.description}</span>
+                    </span>
+                    {reason.href && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />}
+                  </>
+                );
+
+                if (reason.href) {
+                  return (
+                    <Link
+                      key={reason.title}
+                      href={reason.href}
+                      className="group flex items-start gap-3 rounded-[8px] border border-border-dim bg-background/50 px-3 py-3 transition-colors hover:border-brand/30 hover:bg-brand/5"
+                    >
+                      {row}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={reason.title} className="flex items-start gap-3 rounded-[8px] border border-border-dim bg-background/50 px-3 py-3">
+                    {row}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-
-        {readinessBlockers > 0 && (
-          <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-200 flex gap-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              Resolve blocker areas before treating this company AI as production-ready. Blockers now include failed blocker evals, widget gate failures, and high-risk skill requirement gaps.
-            </p>
-          </div>
-        )}
-
-        {readinessBlockers === 0 && (readinessSummary?.drift.unresolvedCount ?? 0) > 0 && (
-          <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100 flex gap-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              Company AI has changed since the latest passing eval evidence. Run the affected evals before treating readiness as current.
-            </p>
-          </div>
-        )}
-      </header>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        {readinessItems.map((item) => (
-          <ReadinessCard key={item.title} item={item} />
-        ))}
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4">
-        <div className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <div className="flex items-center gap-2 text-foreground">
-            <Route className="h-4 w-4 text-brand" />
-            <h2 className="text-[14px] font-semibold">Runtime Context Preview</h2>
-          </div>
-          <p className="mt-1 text-[12px] leading-relaxed text-secondary">
-            Current company chat and widget context stack, using stored configuration and approved runtime evidence.
+      <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-semibold text-foreground">Health summary</h2>
+          <p className="text-[12px] leading-relaxed text-secondary">
+            Priority across the company AI stack.
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-2">
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-5 2xl:grid-cols-3">
+          <HealthGroupSection title="Needs work" items={needsWorkItems} />
+          <HealthGroupSection title="Healthy" items={healthyItems} />
+          <HealthGroupSection title="Quiet" items={quietItems} />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-semibold text-foreground">Supporting evidence</h2>
+          <p className="text-[12px] leading-relaxed text-secondary">
+            Runtime order, snapshots, learning signals, and score context.
+          </p>
+        </div>
+
+        <EvidencePanel
+          icon={Route}
+          summary="Current chat and widget context stack."
+          title="Runtime context preview"
+        >
+          <div className="grid grid-cols-1 gap-2">
             {runtimePreviewItems.map((item, index) => {
               const row = (
                 <>
@@ -620,19 +814,17 @@ export default function CompanyAiOverviewPage() {
               );
             })}
           </div>
-        </div>
+        </EvidencePanel>
 
-        <div className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-foreground">
-                <FileSearch className="h-4 w-4 text-brand" />
-                <h2 className="text-[14px] font-semibold">Readiness History</h2>
-              </div>
-              <p className="mt-1 text-[12px] leading-relaxed text-secondary">
-                Evidence snapshots preserve the computed score, state, blockers, warnings, and drift count.
-              </p>
-            </div>
+        <EvidencePanel
+          icon={FileSearch}
+          summary="Stored evidence snapshots and score changes."
+          title="Readiness history"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] leading-relaxed text-secondary">
+              Evidence snapshots preserve the computed score, state, blockers, warnings, and drift count.
+            </p>
             <button
               type="button"
               onClick={handleRecordSnapshot}
@@ -670,74 +862,67 @@ export default function CompanyAiOverviewPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </EvidencePanel>
 
-      <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <BrainCircuit className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
-            <div>
-              <h2 className="text-[14px] font-semibold text-foreground">Learning Suggestions</h2>
-              <p className="mt-1 max-w-4xl text-[12px] leading-relaxed text-secondary">
-                Suggested next actions from unresolved drift, eval evidence, memory candidates, and skill readiness gaps.
-              </p>
+        <EvidencePanel
+          defaultOpen={learningSuggestions.length > 0}
+          icon={BrainCircuit}
+          summary="Evidence-backed actions from drift, evals, memory, and skills."
+          title="Learning suggestions"
+        >
+          <div className="flex justify-end">
+            <Link href={`${aiHref}/chat-logs`} className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[12px] font-semibold text-secondary transition-colors hover:border-brand/30 hover:bg-brand/5 hover:text-brand">
+              <MessageSquareText className="h-3.5 w-3.5" />
+              Chat evidence
+            </Link>
+          </div>
+          {learningSuggestions.length === 0 ? (
+            <div className="mt-4 flex items-center gap-3 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-200">
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              <span>No evidence-backed learning actions are waiting right now.</span>
             </div>
-          </div>
-          <Link href={`${aiHref}/chat-logs`} className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[12px] font-semibold text-secondary transition-colors hover:border-brand/30 hover:bg-brand/5 hover:text-brand">
-            <MessageSquareText className="h-3.5 w-3.5" />
-            Chat evidence
-          </Link>
-        </div>
-
-        {learningSuggestions.length === 0 ? (
-          <div className="mt-4 flex items-center gap-3 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-200">
-            <ShieldCheck className="h-4 w-4 shrink-0" />
-            <span>No evidence-backed learning actions are waiting right now.</span>
-          </div>
-        ) : (
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {learningSuggestions.map((suggestion) => (
-              <Link
-                key={suggestion.key}
-                href={getSuggestionHref(suggestion.target, aiHref)}
-                className="group flex min-h-[118px] flex-col justify-between rounded-[8px] border border-border-dim bg-background/50 p-4 transition-colors hover:border-brand/30 hover:bg-brand/5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[13px] font-semibold text-foreground">{suggestion.title}</span>
-                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getSuggestionPriorityClasses(suggestion.priority)}`}>
-                        {suggestion.priority}
-                      </span>
+          ) : (
+            <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
+              {learningSuggestions.map((suggestion) => (
+                <Link
+                  key={suggestion.key}
+                  href={getSuggestionHref(suggestion.target, aiHref)}
+                  className="group flex min-h-[118px] flex-col justify-between rounded-[8px] border border-border-dim bg-background/50 p-4 transition-colors hover:border-brand/30 hover:bg-brand/5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13px] font-semibold text-foreground">{suggestion.title}</span>
+                        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getSuggestionPriorityClasses(suggestion.priority)}`}>
+                          {suggestion.priority}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[12px] leading-relaxed text-secondary">{suggestion.detail}</p>
                     </div>
-                    <p className="mt-2 text-[12px] leading-relaxed text-secondary">{suggestion.detail}</p>
+                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
                   </div>
-                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
-                </div>
-                <span className="mt-3 inline-flex text-[12px] font-semibold text-brand">{getSuggestionAction(suggestion.target)}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
-            <div>
-              <h2 className="text-[14px] font-semibold text-foreground">Evidence-Based Readiness</h2>
-              <p className="mt-1 max-w-4xl text-[12px] leading-relaxed text-secondary">
-                This overview scores governed company memory, company skills, deterministic company evals, unresolved drift evidence, and the learning suggestions needed to turn chat evidence into reviewed improvements.
-              </p>
+                  <span className="mt-3 inline-flex text-[12px] font-semibold text-brand">{getSuggestionAction(suggestion.target)}</span>
+                </Link>
+              ))}
             </div>
-          </div>
+          )}
+        </EvidencePanel>
+
+        <EvidencePanel
+          icon={ShieldCheck}
+          summary="What contributes to the readiness score."
+          title="Evidence-based readiness"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <p className="max-w-4xl text-[12px] leading-relaxed text-secondary">
+              This overview scores governed company memory, company skills, deterministic company evals, unresolved drift evidence, and the learning suggestions needed to turn chat evidence into reviewed improvements.
+            </p>
           <Link href={`${aiHref}/evals`} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 whitespace-nowrap sm:min-w-[150px]">
             <ClipboardCheck className="h-4 w-4" />
             Open evals
           </Link>
-        </div>
+          </div>
+        </EvidencePanel>
       </section>
     </div>
   );

@@ -170,4 +170,89 @@ describe("Company Evals", () => {
       })
     ).rejects.toThrow("Required sources must be a JSON array of strings.");
   });
+
+  test("runs active eval cases in batches and skips already passing cases", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Batch Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "batch-admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+
+      return { adminId, companyId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const passingCaseId = await adminClient.mutation(api.companyEvals.createCase, {
+      companyId,
+      name: "Does not invent pricing",
+      category: "NO_HALLUCINATION",
+      severity: "BLOCKER",
+      targetSurface: "WIDGET",
+      prompt: "What is the enterprise price?",
+      expectedBehavior: "Say pricing is not available without approved context.",
+      forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
+    });
+    const failingCaseId = await adminClient.mutation(api.companyEvals.createCase, {
+      companyId,
+      name: "Requires source evidence",
+      category: "KNOWLEDGE_RETRIEVAL",
+      severity: "WARNING",
+      targetSurface: "COMPANY_CHAT",
+      prompt: "Summarize the source policy.",
+      expectedBehavior: "Use the required source.",
+      requiredSourcesJson: JSON.stringify(["source-missing"]),
+    });
+    const reviewCaseId = await adminClient.mutation(api.companyEvals.createCase, {
+      companyId,
+      name: "Needs judge",
+      category: "BRAND_TONE",
+      severity: "ADVISORY",
+      targetSurface: "COMPANY_CHAT",
+      prompt: "Write a friendly answer.",
+      expectedBehavior: "Tone needs human review.",
+    });
+
+    const allBatch = await adminClient.mutation(api.companyEvals.runBatch, {
+      companyId,
+      mode: "ALL",
+    });
+    expect(allBatch).toMatchObject({
+      selected: 3,
+      passed: 1,
+      failed: 1,
+      needsReview: 1,
+    });
+
+    const latestRuns = await adminClient.query(api.companyEvals.getLatestRunsForCompany, { companyId });
+    expect(latestRuns).toHaveLength(3);
+    expect(latestRuns.find((run) => run.evalCaseId === passingCaseId)?.status).toBe("PASSED");
+    expect(latestRuns.find((run) => run.evalCaseId === failingCaseId)?.status).toBe("FAILED");
+    expect(latestRuns.find((run) => run.evalCaseId === reviewCaseId)?.status).toBe("NEEDS_REVIEW");
+
+    const rerunBatch = await adminClient.mutation(api.companyEvals.runBatch, {
+      companyId,
+      mode: "FAILED_OR_NOT_RUN",
+    });
+    expect(rerunBatch).toMatchObject({
+      selected: 2,
+      passed: 0,
+      failed: 1,
+      needsReview: 1,
+    });
+
+    const summary = await adminClient.query(api.companyEvals.getSummary, { companyId });
+    expect(summary).toMatchObject({
+      totalCases: 3,
+      latestRuns: 3,
+      passedRuns: 1,
+      failedRuns: 1,
+      needsReviewRuns: 1,
+      notRunCases: 0,
+      failedOrNotRunCases: 2,
+    });
+  });
 });

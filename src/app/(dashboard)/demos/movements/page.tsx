@@ -133,6 +133,9 @@ export default function MovementsLibraryPage() {
         itemsPerPage={itemsPerPage}
         onLoadMore={loadMore}
         onPlay={(movement) => router.push(`/demos/movements/${movement._id}/play`)}
+        onDebugAutoBaseline={(movement) =>
+          router.push(`/demos/movements/${movement._id}/play?debugTracking=1&debugAutoBaseline=1`)
+        }
         onView={(movement) => router.push(`/demos/movements/${movement._id}`)}
         onDelete={confirmDelete}
       />

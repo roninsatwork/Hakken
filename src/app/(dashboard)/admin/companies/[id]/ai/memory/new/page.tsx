@@ -62,8 +62,8 @@ export default function NewCompanyMemoryPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <CompanyAiFormPageHeader
         backHref={backHref}
-        title="Add Memory"
-        description="Create approved company context on a full screen with enough room for careful wording."
+        title="Add Approved Memory"
+        description="Create trusted company context directly. Use this when the memory does not need a separate review step."
         icon={<BrainCircuit className="h-6 w-6 text-brand" />}
       />
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
@@ -72,7 +72,7 @@ export default function NewCompanyMemoryPage() {
           <CompanyMemoryFormFields formData={formData} setFormData={setFormData} titleHint="Optional" />
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Saving..." : "Create memory"}
+            submitLabel={isSubmitting ? "Saving..." : "Create approved memory"}
             isSubmitting={isSubmitting}
           />
         </div>
@@ -80,4 +80,3 @@ export default function NewCompanyMemoryPage() {
     </div>
   );
 }
-

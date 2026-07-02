@@ -12,6 +12,7 @@ type MovementCalibrationOverlayProps = {
   calibrationCountdownSeconds: number;
   onCalibrate: () => void;
   onSkipCalibration: () => void;
+  onStartDebugAutoBaseline?: () => void;
 };
 
 export default function MovementCalibrationOverlay({
@@ -24,6 +25,7 @@ export default function MovementCalibrationOverlay({
   calibrationCountdownSeconds,
   onCalibrate,
   onSkipCalibration,
+  onStartDebugAutoBaseline,
 }: MovementCalibrationOverlayProps) {
   if (isCalibrated && !isCalibrating) return null;
 
@@ -75,6 +77,16 @@ export default function MovementCalibrationOverlay({
       >
         Start Guided Preview
       </button>
+      {onStartDebugAutoBaseline ? (
+        <button
+          type="button"
+          onClick={onStartDebugAutoBaseline}
+          disabled={isCalibrating}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-[#a8d5ba]/30 bg-[#a8d5ba]/10 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#a8d5ba] transition hover:bg-[#a8d5ba]/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Debug Auto Baseline
+        </button>
+      ) : null}
     </div>
   );
 }

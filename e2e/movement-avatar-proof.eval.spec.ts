@@ -11,11 +11,14 @@ type AvatarProofMode =
   | "right-leg-raise"
   | "side-bend"
   | "squat"
-  | "standing";
+  | "standing"
+  | "upper-body-auto"
+  | "upper-body-auto-rejected";
 
 type AvatarProofCase = {
   mode: AvatarProofMode;
   label: string;
+  baselinePattern: RegExp;
   ownerPattern: RegExp;
   spinePattern: RegExp;
 };
@@ -49,56 +52,79 @@ const proofCases: AvatarProofCase[] = [
   {
     mode: "standing",
     label: "Standing",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-retarget/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "side-bend",
     label: "Side bend",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /torso player-spine-model/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
     mode: "hands-front",
     label: "Hands front",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /torso player-spine-neutral/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "squat",
     label: "Squat",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-stable-squat/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
     mode: "far-squat",
     label: "Far squat",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-stable-squat/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
     mode: "left-leg-raise",
     label: "Left leg raise",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-left-leg-raise/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "far-left-leg-raise",
     label: "Far left leg raise",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-left-leg-raise/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
     mode: "right-leg-raise",
     label: "Right leg raise",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-right-leg-raise/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "far-right-leg-raise",
     label: "Far right leg raise",
+    baselinePattern: /Baseline: manual-calibration/i,
     ownerPattern: /lower player-right-leg-raise/i,
     spinePattern: /Spine: player-spine-model/i,
+  },
+  {
+    mode: "upper-body-auto",
+    label: "Upper-body auto baseline",
+    baselinePattern: /Baseline: upper-body-auto-baseline/i,
+    ownerPattern: /torso player-spine-neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "upper-body-auto-rejected",
+    label: "Upper-body auto rejected",
+    baselinePattern: /Baseline: none/i,
+    ownerPattern: /torso neutral/i,
+    spinePattern: /Spine: player-spine-held/i,
   },
 ];
 
@@ -342,6 +368,9 @@ test.describe("Movement Avatar Proof Eval", () => {
     }, testInfo) => {
       await openAvatarProofMode(page, proofCase);
 
+      await expect(page.getByTestId("proof-debug-baseline")).toHaveText(
+        proofCase.baselinePattern,
+      );
       await expect(page.getByTestId("proof-debug-spine")).toHaveText(proofCase.spinePattern);
       await expect(page.getByTestId("proof-debug-arm-depth")).toHaveText(
         /Arms: player-2d-safe-arms/i,

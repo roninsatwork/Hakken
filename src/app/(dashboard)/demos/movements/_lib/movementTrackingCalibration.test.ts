@@ -3,6 +3,7 @@ import {
   applyHeadCalibration,
   averageMovementCalibrations,
   buildMovementCalibration,
+  buildUpperBodyMovementAutoCalibration,
   buildUprightMovementAutoCalibration,
   estimateMovementHeadAngles,
   getCalibratedFloorCorrection,
@@ -84,6 +85,48 @@ describe("movementTrackingCalibration", () => {
       hipCenter: { y: 0.68 },
       floorY: 0.97,
     });
+  });
+
+  it("builds an upper-body automatic baseline when feet are too weak for full-body calibration", () => {
+    const pose = withCorePose();
+    [25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+      pose[index] = { ...pose[index]!, visibility: 0.1 };
+    });
+
+    expect(buildUprightMovementAutoCalibration({ poseLandmarks: pose })).toBeNull();
+
+    const calibration = buildUpperBodyMovementAutoCalibration({ poseLandmarks: pose, now: 4321 });
+
+    expect(calibration).toMatchObject({
+      calibratedAt: 4321,
+      hipCenter: { y: 0.68 },
+      shoulderCenter: { y: 0.44 },
+    });
+    expect(calibration?.quality).toBeGreaterThan(0.8);
+    expect(calibration?.floorY).toBeGreaterThan(calibration?.hipCenter.y ?? 0);
+  });
+
+  it("rejects upper-body automatic baseline when torso tracking is weak", () => {
+    const pose = withCorePose();
+    [11, 12, 23, 24].forEach((index) => {
+      pose[index] = { ...pose[index]!, visibility: 0.1 };
+    });
+
+    expect(buildUpperBodyMovementAutoCalibration({ poseLandmarks: pose })).toBeNull();
+  });
+
+  it("rejects upper-body automatic baseline from an active side bend", () => {
+    const pose = withCorePose();
+    [25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+      pose[index] = { ...pose[index]!, visibility: 0.1 };
+    });
+    pose[0] = { ...pose[0]!, x: 0.66 };
+    pose[7] = { ...pose[7]!, x: 0.62 };
+    pose[8] = { ...pose[8]!, x: 0.7 };
+    pose[11] = { ...pose[11]!, x: 0.54 };
+    pose[12] = { ...pose[12]!, x: 0.76 };
+
+    expect(buildUpperBodyMovementAutoCalibration({ poseLandmarks: pose })).toBeNull();
   });
 
   it("does not auto-baseline from a deep squat frame", () => {

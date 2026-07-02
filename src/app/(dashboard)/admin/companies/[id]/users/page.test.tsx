@@ -37,6 +37,7 @@ vi.mock("next/navigation", () => ({
   useParams: vi.fn(() => ({
     id: "company123",
   })),
+  usePathname: vi.fn(() => "/admin/companies/company123/directory/users"),
 }));
 
 // Mock next-intl
@@ -91,6 +92,19 @@ describe("CompanyUsersPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
     mockLoadMore = vi.fn();
     currentMockUser = mockCurrentUser;
     currentMockCompanies = mockCompanies;
@@ -171,5 +185,17 @@ describe("CompanyUsersPage", () => {
     render(<CompanyUsersPage />);
     
     expect(screen.queryByText("Load More Users")).not.toBeInTheDocument();
+  });
+
+  it("keeps the directory section selector below the page title", () => {
+    render(<CompanyUsersPage />);
+
+    const title = screen.getByRole("heading", { level: 1, name: "Workspace Directory" });
+    const selector = screen.getByRole("button", { name: "Directory section: Directory" });
+    const header = title.closest("header");
+
+    expect(header).not.toBeNull();
+    expect(header).toContainElement(selector);
+    expect(title.compareDocumentPosition(selector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

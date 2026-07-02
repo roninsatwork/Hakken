@@ -52,7 +52,10 @@ Record the result beside each item as `PASS`, `FAIL`, or `N/A`.
 | Detail | Telemetry shows frame count, duration, and storage/data format. |  |  |
 | Play | Opening the saved movement play route reaches the avatar lobby. |  |  |
 | Play Debug | Reopen the play route with `?debugTracking=1`; the tracking debug overlay appears only in this debug URL. |  |  |
+| Play Debug | The Posture Check-In overlay shows `Debug Auto Baseline` only in the debug URL, and pressing it starts the automatic baseline path without using the client-facing guided preview button. |  |  |
+| Play Debug | Starting from the library `Debug auto baseline` action auto-saves diagnostic tracking chunks; no separate save button is required for live camera/avatar tracking evidence. |  |  |
 | Play Debug | The debug overlay is readable during motion: readiness, status, age, primary tuning action, key confidences, fallbacks, and health warnings remain visible. |  |  |
+| Play Debug | The Baseline row reports `manual-calibration` after a full posture check-in, `upper-body-auto-baseline` when only a neutral upper body is reliable, or `none` when no safe baseline exists. |  |  |
 | Play Debug | Missing or weak calibration appears as `Run calibration` or `Recalibrate neutral stance` before limb tuning. |  |  |
 | Play Debug | If the avatar looks down, sideways, or tilted while the user is neutral, head clamp warnings point to pitch, yaw, or roll offset tuning. |  |  |
 | Play Debug | If one arm feels limp or delayed, the overlay identifies weak endpoints, last-good holding, or left/right arm confidence imbalance. |  |  |

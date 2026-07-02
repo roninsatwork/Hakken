@@ -232,7 +232,7 @@ export default function CompanyWidgetPage() {
       ) : !widget ? (
         <WidgetEmptyState isSaving={isSaving} onInitialize={handleCreateOrUpdate} />
       ) : (
-        <div className="flex flex-col lg:flex-row gap-8 items-start relative mt-4">
+        <div className="flex flex-col gap-6 items-start relative mt-4 2xl:flex-row 2xl:gap-8">
           <WidgetConfigTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <div className="flex-1 w-full min-w-0 flex flex-col gap-8">

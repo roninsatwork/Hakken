@@ -5,13 +5,16 @@ import Link from "next/link";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import {
+  AlertTriangle,
   Archive,
   CheckCircle2,
   ClipboardCheck,
   FlaskConical,
+  Info,
   Loader2,
   Play,
   Plus,
+  RotateCcw,
   XCircle,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -20,10 +23,12 @@ import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/Adm
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { CompanyAiSectionNav } from "../_components/CompanyAiSectionNav";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 type CompanyEvalRun = Doc<"companyEvalRuns">;
 type EvalSeverity = CompanyEvalCase["severity"];
+type BatchMode = "ALL" | "FAILED_OR_NOT_RUN";
 
 type DeterministicResult = {
   label: string;
@@ -67,7 +72,9 @@ export default function CompanyAiEvalsPage() {
   const companyId = params.id as Id<"companies">;
   const aiHref = `/admin/companies/${companyId}/ai`;
   const summary = useQuery(api.companyEvals.getSummary, { companyId });
+  const latestRuns = useQuery(api.companyEvals.getLatestRunsForCompany, { companyId });
   const archiveCase = useMutation(api.companyEvals.archiveCase);
+  const runBatch = useMutation(api.companyEvals.runBatch);
   const cases = usePaginatedQuery(
     api.companyEvals.getCasesForCompany,
     { companyId, status: "ACTIVE" },
@@ -76,6 +83,9 @@ export default function CompanyAiEvalsPage() {
 
   const [archiveTarget, setArchiveTarget] = useState<CompanyEvalCase | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [runningBatchMode, setRunningBatchMode] = useState<BatchMode | null>(null);
+  const [batchFeedback, setBatchFeedback] = useState("");
+  const [batchError, setBatchError] = useState("");
   const [expandedCaseId, setExpandedCaseId] = useState<Id<"companyEvalCases"> | null>(null);
 
   const activeRuns = useQuery(
@@ -95,29 +105,45 @@ export default function CompanyAiEvalsPage() {
     }
   };
 
+  const handleRunBatch = async (mode: BatchMode) => {
+    setRunningBatchMode(mode);
+    setBatchFeedback("");
+    setBatchError("");
+    try {
+      const result = await runBatch({ companyId, mode });
+      if (result.selected === 0) {
+        setBatchFeedback("No evals needed a batch run. Everything active already has passing evidence.");
+        return;
+      }
+      setBatchFeedback(
+        `Ran ${result.selected} eval${result.selected === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.needsReview} need review.`
+      );
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Eval batch could not be run.");
+    } finally {
+      setRunningBatchMode(null);
+    }
+  };
+
+  const isBatchRunning = runningBatchMode !== null;
+  const hasActiveCases = (summary?.totalCases ?? 0) > 0;
+
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <header className="flex flex-col gap-4">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              <ClipboardCheck className="h-6 w-6 text-brand" />
-              Company Evals
-            </h1>
-            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Define readiness tests for company chat, widget behavior, memory usage, model routing, and public answer boundaries.
-            </p>
-          </div>
-          <Link
-            href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
-          >
-            <Plus className="h-4 w-4" />
-            New eval
-          </Link>
+        <div>
+          <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
+            <ClipboardCheck className="h-6 w-6 text-brand" />
+            Company Evals
+          </h1>
+          <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
+            Define readiness tests for company chat, widget behavior, memory usage, model routing, and public answer boundaries.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <CompanyAiSectionNav />
+
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-5">
           {[
             { label: "Cases", value: summary?.totalCases ?? 0 },
             { label: "Blockers", value: summary?.blockerCases ?? 0 },
@@ -135,13 +161,67 @@ export default function CompanyAiEvalsPage() {
         </div>
       </header>
 
+      <section className="rounded-[8px] border border-blue-500/20 bg-blue-500/10 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
+          <div className="text-[12px] leading-relaxed text-blue-100">
+            <h2 className="text-[13px] font-semibold text-blue-50">How eval runs work</h2>
+            <p className="mt-1">
+              Batch runs record deterministic proof for each selected eval. They check configured requirements such as forbidden claims, required sources, required memories, required skills, and expected model use case. Cases with no configured checks are marked as needing review.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {(batchFeedback || batchError) && (
+        <section className={`rounded-[8px] border px-4 py-3 text-[13px] ${
+          batchError ? "border-red-500/20 bg-red-500/10 text-red-200" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+        }`}>
+          <div className="flex items-start gap-3">
+            {batchError ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
+            <p>{batchError || batchFeedback}</p>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-[8px] border border-border-dim bg-sidebar/30 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
+        <div className="flex flex-col gap-3 border-b border-border-dim px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <h2 className="text-[14px] font-semibold text-foreground">Active Eval Cases</h2>
-            <p className="mt-0.5 text-[12px] text-secondary">Manual deterministic runs first; LLM judging comes after the proof model is stable.</p>
+            <p className="mt-0.5 text-[12px] text-secondary">Run one eval for manual evidence, or run a batch to refresh readiness evidence quickly.</p>
           </div>
-          {cases.status === "LoadingFirstPage" && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
+          <div className="flex flex-wrap gap-2">
+            {(cases.status === "LoadingFirstPage" || latestRuns === undefined) && (
+              <div className="flex h-9 items-center px-2">
+                <Loader2 className="h-4 w-4 animate-spin text-brand" />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => handleRunBatch("FAILED_OR_NOT_RUN")}
+              disabled={isBatchRunning || !hasActiveCases || (summary?.failedOrNotRunCases ?? 0) === 0}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {runningBatchMode === "FAILED_OR_NOT_RUN" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Run failed/not run
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRunBatch("ALL")}
+              disabled={isBatchRunning || !hasActiveCases}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {runningBatchMode === "ALL" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run all
+            </button>
+            <Link
+              href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
+            >
+              <Plus className="h-4 w-4" />
+              New eval
+            </Link>
+          </div>
         </div>
 
         <div className="divide-y divide-border-dim">
@@ -152,7 +232,7 @@ export default function CompanyAiEvalsPage() {
           ) : cases.results.length === 0 ? (
             <div className="px-4 py-12 text-center text-[13px] text-muted">No active company evals yet.</div>
           ) : cases.results.map((evalCase) => {
-            const latestRun = evalCase.lastRunId && activeRuns ? getLatestRun(activeRuns, evalCase._id) : undefined;
+            const latestRun = getLatestRun(latestRuns, evalCase._id);
             const isExpanded = expandedCaseId === evalCase._id;
             const runResults = isExpanded ? parseRunResults(activeRuns?.[0]) : [];
 
