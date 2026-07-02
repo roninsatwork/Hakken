@@ -23,6 +23,7 @@ import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/C
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 export default function ChatLogsDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -101,6 +102,8 @@ export default function ChatLogsDashboard() {
           </button>
         )}
       </header>
+
+      <AiWorkspaceNav />
 
       {/* Split Pane Architecture */}
       <div className="flex flex-1 gap-6 min-h-0 relative">

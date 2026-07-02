@@ -24,6 +24,7 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Company Workspace AI Navigation Plan](./active/company-workspace-ai-navigation-plan.md)
 - [Comprehensive Test Coverage Plan](./active/comprehensive-test-coverage-plan.md)
 - [Final Scale Readiness Plan](./active/final-scale-readiness-plan.md)
+- [Global AI Navigation Consolidation Plan](./active/global-ai-navigation-consolidation-plan.md)
 - [Large Page Decomposition Plan](./active/large-page-decomposition-plan.md)
 - [Local Real Auth E2E Plan](./active/local-real-auth-e2e-plan.md)
 - [Model Provider Agnostic Plan](./active/model-provider-agnostic-plan.md)

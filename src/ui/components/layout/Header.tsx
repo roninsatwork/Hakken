@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Bot,
+  Building2,
+  Gamepad2,
   LayoutDashboard,
+  LineChart,
   User,
   Settings,
   LogOut,
@@ -19,25 +23,87 @@ import Link from "next/link";
 import { useUI } from "@/src/context/UIContext";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 interface HeaderProps {
   onOpenModal?: () => void;
 }
 
+type HeaderTranslator = (key: string) => string;
+
+function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
+  if (pathname.startsWith("/admin/ai/usage/costs") || pathname.startsWith("/admin/ai/costs")) {
+    return [t("ai"), t("runningCosts")];
+  }
+  if (pathname.startsWith("/admin/ai/usage/chat-logs") || pathname.startsWith("/admin/ai/chat-logs")) {
+    return [t("ai"), t("chatLogs")];
+  }
+  if (pathname.startsWith("/admin/ai/governance/rules") || pathname.startsWith("/admin/ai/rules")) {
+    return [t("ai"), t("rules")];
+  }
+  if (pathname.startsWith("/admin/ai/governance/system-prompt") || pathname.startsWith("/admin/ai/system-prompt")) {
+    return [t("ai"), t("systemPrompt")];
+  }
+  if (pathname.startsWith("/admin/ai/knowledge") || pathname.startsWith("/admin/ai/global-knowledge")) {
+    return [t("ai"), t("globalKnowledge")];
+  }
+  if (pathname.startsWith("/admin/ai/models")) return [t("ai"), t("models")];
+  if (pathname.startsWith("/admin/ai/tools")) return [t("ai"), "Tools"];
+  if (pathname.startsWith("/admin/ai/widget")) return [t("ai"), "Widget"];
+  if (pathname.startsWith("/admin/ai")) return [t("ai"), t("manageAi")];
+  if (pathname.startsWith("/admin/companies")) return [t("companies")];
+  if (pathname.startsWith("/admin/app-kits") || pathname.startsWith("/admin/launch")) return [t("launch")];
+  if (pathname.startsWith("/admin/agents")) return [t("agents")];
+  if (pathname.startsWith("/admin/workflows")) return [t("workflows")];
+  if (pathname.startsWith("/admin/settings/scripts") || pathname.startsWith("/admin/settings/system-health")) return [t("maintenance")];
+  if (pathname.startsWith("/admin/settings")) return [t("settings")];
+  if (pathname.startsWith("/admin/super-admins")) return [t("systemAdmins")];
+  return [t("admin")];
+}
+
+function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformName: string, dashboardLabel: string) {
+  if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
+  if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
+  if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
+  if (pathname.startsWith("/app/properties/logs")) return [t("properties"), "Logs"];
+  if (pathname.startsWith("/app/properties")) return [t("properties")];
+  if (pathname.startsWith("/app/reports")) return ["Reports"];
+  if (pathname.startsWith("/app/settings/team")) return ["Organization", "Team Members"];
+  if (pathname.startsWith("/app/settings")) return ["Organization"];
+  if (pathname.startsWith("/app/arcade/ronins-run")) return ["Arcade", "Ronin's Run"];
+  if (pathname.startsWith("/demos")) return ["Posture Studio"];
+  return [dashboardLabel];
+}
+
 export default function Header({ onOpenModal }: HeaderProps) {
   void onOpenModal;
-  const t = useTranslations('header');
   const tc = useTranslations('common');
+  const sidebarT = useTranslations('sidebar');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { isSidebarOpen, setIsSidebarOpen } = useUI();
   const pathname = usePathname();
   const { signOut } = useAuthActions();
   const isAdmin = pathname.startsWith('/admin');
+  const settings = useSystemSettings();
 
   const user = useQuery(api.users.getMe);
   const recordLogin = useMutation(api.users.recordLogin);
   const recordLogout = useMutation(api.users.recordLogout);
   const profileRef = useRef<HTMLDivElement>(null);
+  const headerSegments = isAdmin
+    ? getAdminHeaderSegments(pathname, sidebarT)
+    : getAppHeaderSegments(pathname, sidebarT, settings.platformName, tc("dashboard"));
+  const HeaderIcon = isAdmin && pathname.startsWith("/admin/ai")
+    ? Bot
+    : pathname.startsWith("/admin/companies") || pathname.startsWith("/app/properties")
+      ? Building2
+      : pathname.startsWith("/app/reports")
+        ? LineChart
+        : pathname.startsWith("/app/arcade") || pathname.startsWith("/demos")
+          ? Gamepad2
+          : isAdmin
+            ? ShieldCheck
+            : LayoutDashboard;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -103,18 +169,16 @@ export default function Header({ onOpenModal }: HeaderProps) {
           )}
         </AnimatePresence>
 
-        <div className="flex items-center gap-2 text-foreground font-medium">
-          {isAdmin ? (
-            <>
-              <ShieldCheck className="w-[18px] h-[18px] opacity-80" />
-              <span>{t('adminOverview')}</span>
-            </>
-          ) : (
-            <>
-              <LayoutDashboard className="w-[18px] h-[18px] opacity-80" />
-              <span>{tc('dashboard')}</span>
-            </>
-          )}
+        <div className="flex items-center gap-2 text-foreground font-medium" aria-label={headerSegments.join(" / ")}>
+          <HeaderIcon className="w-[18px] h-[18px] opacity-80" />
+          <div className="flex min-w-0 items-center gap-2">
+            {headerSegments.map((segment, index) => (
+              <span key={`${segment}-${index}`} className="flex min-w-0 items-center gap-2">
+                {index > 0 && <span aria-hidden="true" className="text-muted">/</span>}
+                <span className={index === headerSegments.length - 1 ? "truncate" : "text-secondary"}>{segment}</span>
+              </span>
+            ))}
+          </div>
         </div>
 
       </nav>

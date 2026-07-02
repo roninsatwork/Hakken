@@ -18,6 +18,7 @@ import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTab
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 export default function RulesDashboard() {
   const t = useTranslations("ai.rules");
@@ -76,13 +77,15 @@ export default function RulesDashboard() {
         </div>
 
         <Link
-          href="/admin/ai/rules/new"
+          href="/admin/ai/governance/rules/new"
           className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>{t("addRule")}</span>
         </Link>
       </header>
+
+      <AiWorkspaceNav />
 
       <AdminSearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
 
@@ -96,8 +99,8 @@ export default function RulesDashboard() {
         totalCount={totalCount}
         pageSize={pageSize}
         onPageChange={setPage}
-        getRowHref={(rule) => `/admin/ai/rules/${rule._id}`}
-        getEditHref={(rule) => `/admin/ai/rules/${rule._id}`}
+        getRowHref={(rule) => `/admin/ai/governance/rules/${rule._id}`}
+        getEditHref={(rule) => `/admin/ai/governance/rules/${rule._id}`}
         onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
         onDelete={(rule) => setDeleteId(rule._id)}
         labels={{

@@ -13,6 +13,7 @@ import { AICostsHeader } from "./_components/AICostsHeader";
 import { AICostsMetricGrid } from "./_components/AICostsMetricGrid";
 import { AICostTimelineChart } from "./_components/AICostTimelineChart";
 import type { AICostsData, TimeframeOption } from "./_components/types";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 export default function AICostsDashboard() {
   const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
@@ -46,6 +47,7 @@ export default function AICostsDashboard() {
         timeframe={timeframe}
         title={t("title")}
       />
+      <AiWorkspaceNav />
 
       {data === undefined ? (
         <div className="w-full h-[400px] flex items-center justify-center p-20">

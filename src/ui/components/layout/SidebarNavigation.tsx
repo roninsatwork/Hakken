@@ -157,13 +157,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
   if (pathname.startsWith('/admin/users')) return 'Manage Users';
-  if (pathname.startsWith('/admin/ai/system-prompt')) return 'System Prompt';
-  if (pathname.startsWith('/admin/ai/global-knowledge')) return 'Global Knowledge';
-  if (pathname.startsWith('/admin/ai/widget')) return 'Widget';
-  if (pathname.startsWith('/admin/ai/models')) return 'Models';
-  if (pathname.startsWith('/admin/ai/chat-logs')) return 'Chat Logs';
-  if (pathname.startsWith('/admin/ai/tools')) return 'Connectors';
-  if (pathname.startsWith('/admin/ai/costs')) return 'Running Costs';
+  if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
   if (pathname.startsWith('/admin/agents/approvals')) return 'Agent Approvals';
   if (pathname.startsWith('/admin/agents/skills')) return 'Agent Skills';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
@@ -171,7 +165,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
   if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
-  if (pathname.startsWith('/admin/ai/rules')) return 'Rules';
   if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
   if (pathname.startsWith('/admin/settings/webhook-deliveries')) return 'Webhook Deliveries';
@@ -194,7 +187,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/run-observatory') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows') || pathname.startsWith('/admin/ai/tools');
+  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/run-observatory') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows');
 
   return {
     workspace: true,
@@ -202,7 +195,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     clients: false,
     companies: pathname.startsWith('/admin/companies'),
     superAdmins: pathname.startsWith('/admin/super-admins'),
-    ai: true,
+    ai: pathname.startsWith('/admin/ai'),
     agents: isAgentsActive,
     workflows: false,
     users: false,
@@ -346,24 +339,13 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={Bot}
                       label={t('ai')}
-                      isActive={activeItem === 'Artificial Intelligence' || activeItem === 'System Prompt' || activeItem === 'Global Knowledge' || activeItem === 'Widget' || activeItem === 'Models' || activeItem === 'Rules' || activeItem === 'Chat Logs' || activeItem === 'Running Costs'}
+                      isActive={activeItem === 'Artificial Intelligence' || pathname.startsWith('/admin/ai')}
                       onClick={() => setActiveItem('Artificial Intelligence')}
                       hasChildren
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label={t('runningCosts')} href="/admin/ai/costs" isActive={activeItem === 'Running Costs' || pathname.startsWith('/admin/ai/costs')} onClick={() => setActiveItem('Running Costs')} />
-
-                      {isSuperAdmin && (
-                        <>
-                          <SubNavItem label={t('chatLogs')} href="/admin/ai/chat-logs" isActive={activeItem === 'Chat Logs' || pathname.startsWith('/admin/ai/chat-logs')} onClick={() => setActiveItem('Chat Logs')} />
-                          <SubNavItem label={t('rules')} href="/admin/ai/rules" isActive={activeItem === 'Rules' || pathname.startsWith('/admin/ai/rules')} onClick={() => setActiveItem('Rules')} />
-                          <SubNavItem label={t('systemPrompt')} href="/admin/ai/system-prompt" isActive={activeItem === 'System Prompt' || pathname === '/admin/ai/system-prompt'} onClick={() => setActiveItem('System Prompt')} />
-                          <SubNavItem label={t('globalKnowledge')} href="/admin/ai/global-knowledge" isActive={activeItem === 'Global Knowledge' || pathname.startsWith('/admin/ai/global-knowledge')} onClick={() => setActiveItem('Global Knowledge')} />
-                          <SubNavItem label="Widget" href="/admin/ai/widget" isActive={activeItem === 'Widget' || pathname.startsWith('/admin/ai/widget')} onClick={() => setActiveItem('Widget')} />
-                          <SubNavItem label={t('models')} href="/admin/ai/models" isActive={activeItem === 'Models' || pathname.startsWith('/admin/ai/models')} onClick={() => setActiveItem('Models')} />
-                        </>
-                      )}
+                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname.startsWith('/admin/ai')} onClick={() => setActiveItem('Artificial Intelligence')} />
                     </NavItem>
 
                     {isSuperAdmin && (
@@ -377,7 +359,6 @@ export default function SidebarNavigation() {
                           activeItem === 'Release Center' ||
                           activeItem === 'Run Observatory' ||
                           activeItem === 'Manage Agents' || 
-                          activeItem === 'Connectors' || 
                           activeItem === 'Workflows' || 
                           activeItem === 'Manage Workflows' || 
                           activeItem === 'Schedules' || 
@@ -393,7 +374,6 @@ export default function SidebarNavigation() {
                         <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
                         <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals') && !pathname.startsWith('/admin/agents/skills')} onClick={() => setActiveItem('Manage Agents')} />
-                        <SubNavItem label={t('connectors')} href="/admin/ai/tools" isActive={activeItem === 'Connectors' || pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Connectors')} />
                         
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />

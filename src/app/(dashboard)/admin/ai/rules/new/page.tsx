@@ -32,7 +32,7 @@ export default function NewRulePage() {
         priority,
         isActive: true,
       });
-      router.push("/admin/ai/rules");
+      router.push("/admin/ai/governance/rules");
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);
@@ -57,7 +57,7 @@ export default function NewRulePage() {
     <div className="flex flex-col gap-6 w-full pb-12">
       <header className="flex flex-col gap-1">
         <Link 
-          href="/admin/ai/rules"
+          href="/admin/ai/governance/rules"
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

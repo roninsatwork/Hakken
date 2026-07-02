@@ -476,7 +476,7 @@ export default function SystemHealthPage() {
             <Link className="text-brand hover:underline" href="/admin/workflows/schedules">Schedules</Link>
             <Link className="text-brand hover:underline" href="/admin/agents/approvals">Agent approvals</Link>
             <Link className="text-brand hover:underline" href="/admin/agents">Agents</Link>
-            <Link className="text-brand hover:underline" href="/admin/ai/costs">AI costs</Link>
+            <Link className="text-brand hover:underline" href="/admin/ai/usage/costs">AI costs</Link>
             <Link className="text-brand hover:underline" href="/admin/settings/analytics">Analytics data health</Link>
           </div>
         </section>

@@ -18,6 +18,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 type ModelStatusFilter = "active" | "inactive";
 type SyncProviderKey = "google" | "openai" | "anthropic";
@@ -290,6 +291,7 @@ export default function AIModelsPage() {
           </p>
         </div>
       </div>
+      <AiWorkspaceNav />
       <AdminSaveError>{syncError}</AdminSaveError>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">

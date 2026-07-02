@@ -425,7 +425,7 @@ function KnowledgeImportPlanSection({ plan, workspaceId }: { plan?: KnowledgeImp
           <p className="text-[12px] text-secondary mt-1 max-w-2xl">{plan.summary}</p>
         </div>
         <Link
-          href={workspaceId ? `/admin/companies/${workspaceId}/knowledge` : "/admin/ai/global-knowledge"}
+          href={workspaceId ? `/admin/companies/${workspaceId}/knowledge` : "/admin/ai/knowledge"}
           className="text-[12px] font-medium text-brand hover:underline"
         >
           {workspaceId ? "Open workspace knowledge" : "Open global knowledge"}

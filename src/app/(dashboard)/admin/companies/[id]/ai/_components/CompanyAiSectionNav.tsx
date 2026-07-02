@@ -24,7 +24,7 @@ export function CompanyAiSectionNav() {
       compactLabel="AI section"
       label="AI workspace sections"
       items={items}
-      mode="compactOnly"
+      mode="compactAlways"
     />
   );
 }

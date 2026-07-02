@@ -327,6 +327,8 @@
         "companies": "Companies",
         "manageCompanies": "Manage Companies",
         "ai": "Artificial Intelligence",
+        "manageAi": "Manage AI",
+        "manageGlobalAi": "Manage Global AI",
         "runningCosts": "Running Costs",
         "chatLogs": "Chat Logs",
         "rules": "Rules",

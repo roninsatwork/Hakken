@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePaginatedQuery, useQuery } from "convex/react";
@@ -32,10 +32,12 @@ export default function CompanyChatLogsDashboard() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const aiChatLogsHref = `/admin/companies/${companyId}/ai/chat-logs`;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<Id<"threads"> | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [availableHeight, setAvailableHeight] = useState<number | null>(null);
 
   const itemsPerPage = ADMIN_PAGE_SIZE;
 
@@ -52,6 +54,19 @@ export default function CompanyChatLogsDashboard() {
     api.chatAdmin.getAdminThreadMessages,
     selectedThreadId ? { threadId: selectedThreadId } : "skip"
   );
+
+  useEffect(() => {
+    const updateAvailableHeight = () => {
+      if (!containerRef.current) return;
+      const { top } = containerRef.current.getBoundingClientRect();
+      setAvailableHeight(Math.max(1, window.innerHeight - top - 24));
+    };
+
+    updateAvailableHeight();
+    window.addEventListener("resize", updateAvailableHeight);
+    return () => window.removeEventListener("resize", updateAvailableHeight);
+  }, []);
+
   const getLatestMessageByRole = (role: "user" | "assistant") => {
     const matchingMessages = (messages ?? []).filter((message) => message.role === role);
     return matchingMessages.length > 0 ? matchingMessages[matchingMessages.length - 1] : undefined;
@@ -100,7 +115,12 @@ export default function CompanyChatLogsDashboard() {
     : aiChatLogsHref;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] w-full antialiased overflow-hidden pb-4">
+    <div
+      ref={containerRef}
+      data-testid="company-chat-logs-shell"
+      className="flex w-full flex-col overflow-hidden antialiased"
+      style={availableHeight ? { height: availableHeight, maxHeight: availableHeight } : undefined}
+    >
       {/* Header Block */}
       <header className="flex items-start justify-between w-full mb-6 shrink-0">
         <div className="flex flex-col gap-2">

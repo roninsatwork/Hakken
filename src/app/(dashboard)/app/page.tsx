@@ -311,7 +311,7 @@ export default function Home() {
               </p>
             </div>
             <button
-              onClick={() => router.push(user?.role === "SUPER_ADMIN" ? "/admin/ai/costs" : "/app/reports")}
+              onClick={() => router.push(user?.role === "SUPER_ADMIN" ? "/admin/ai/usage/costs" : "/app/reports")}
               className="mt-auto inline-flex items-center gap-2.5 justify-center w-fit bg-foreground/[0.04] hover:bg-foreground/[0.08] text-foreground border border-border-dim/85 text-[14px] font-medium tracking-[0.08em] px-5 py-3 rounded-full transition-all duration-300"
             >
               <span>{t("benefits.action")}</span>

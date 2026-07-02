@@ -12,6 +12,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 
 export default function SystemPromptPage() {
@@ -105,6 +106,8 @@ export default function SystemPromptPage() {
           </button>
         </div>
       </header>
+
+      <AiWorkspaceNav />
 
       <AdminSaveFeedback
         status={saveStatus}

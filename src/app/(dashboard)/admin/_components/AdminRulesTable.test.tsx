@@ -28,8 +28,8 @@ function renderTable(overrides: Partial<Parameters<typeof AdminRulesTable>[0]> =
     totalCount: 1,
     pageSize: 15,
     onPageChange: vi.fn(),
-    getRowHref: (rule: AdminRuleTableRow) => `/admin/ai/rules/${rule._id}`,
-    getEditHref: (rule: AdminRuleTableRow) => `/admin/ai/rules/${rule._id}`,
+    getRowHref: (rule: AdminRuleTableRow) => `/admin/ai/governance/rules/${rule._id}`,
+    getEditHref: (rule: AdminRuleTableRow) => `/admin/ai/governance/rules/${rule._id}`,
     onToggleActive: vi.fn(),
     onDelete: vi.fn(),
     labels: {
@@ -57,7 +57,7 @@ describe("AdminRulesTable", () => {
 
     fireEvent.click(screen.getByText("Escalate support risk"));
 
-    expect(push).toHaveBeenCalledWith("/admin/ai/rules/rule_1");
+    expect(push).toHaveBeenCalledWith("/admin/ai/governance/rules/rule_1");
   });
 
   it("uses shared action callbacks without navigating", () => {

@@ -14,7 +14,7 @@ type AdminRouteSubmenuProps = {
   compactLabel?: string;
   items: AdminRouteSubmenuItem[];
   label: string;
-  mode?: "auto" | "compactOnly" | "wideOnly";
+  mode?: "auto" | "compactAlways" | "compactOnly" | "wideOnly";
 };
 
 function getActiveSubmenuHref(pathname: string, items: AdminRouteSubmenuItem[]) {
@@ -51,7 +51,7 @@ export function AdminRouteSubmenu({ compactLabel, items, label, mode = "auto" }:
   const activeHref = getActiveSubmenuHref(pathname, items);
   const activeItem = items.find((item) => item.href === activeHref) ?? items[0];
   const selectorLabel = compactLabel ?? label;
-  const shouldRenderCompact = mode === "compactOnly" || (mode === "auto" && !isWideLayout);
+  const shouldRenderCompact = mode === "compactAlways" || mode === "compactOnly" || (mode === "auto" && !isWideLayout);
   const shouldRenderWide = mode === "wideOnly" || (mode === "auto" && isWideLayout);
 
   useEffect(() => {

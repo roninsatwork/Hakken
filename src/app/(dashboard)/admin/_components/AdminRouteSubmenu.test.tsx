@@ -78,4 +78,14 @@ describe("AdminRouteSubmenu", () => {
     expect(screen.getByRole("link", { name: "Knowledge" })).toHaveClass("bg-brand");
     expect(screen.getByRole("link", { name: "AI Rules" })).toBeInTheDocument();
   });
+
+  it("can force the compact section switcher on wide desktop", () => {
+    mockWideLayout(true);
+    vi.mocked(usePathname).mockReturnValue("/admin/companies/company-1/ai/knowledge");
+
+    render(<AdminRouteSubmenu compactLabel="AI section" label="AI sections" items={items} mode="compactAlways" />);
+
+    expect(screen.getByRole("button", { name: "AI section: Knowledge" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Overview" })).not.toBeInTheDocument();
+  });
 });

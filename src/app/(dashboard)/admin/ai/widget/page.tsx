@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { AppWindow, Plus, Loader2, Save, MessageSquare, Volume2, X, Bell, Bot, UploadCloud } from "lucide-react";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
 type Tab = 'Appearance' | 'Welcome Screen' | 'Conversation Starters' | 'Greeting' | 'Integration';
 
@@ -178,6 +179,7 @@ export default function GlobalWidgetPage() {
               </button>
           )}
 	        </header>
+          <AiWorkspaceNav />
           <AdminSaveError>{feedbackMessage}</AdminSaveError>
 
 	        {widget === undefined ? (

@@ -4,6 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import AIModelsPage from "./page";
 
 vi.mock("next/navigation", () => ({
+  usePathname: vi.fn(() => "/admin/ai/models"),
   useRouter: vi.fn(() => ({
     push: vi.fn(),
   })),
