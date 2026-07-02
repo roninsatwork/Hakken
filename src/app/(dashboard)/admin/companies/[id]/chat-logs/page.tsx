@@ -26,7 +26,6 @@ import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/C
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
-import { CompanyAiSectionNav } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiSectionNav";
 
 export default function CompanyChatLogsDashboard() {
   const params = useParams();
@@ -163,8 +162,6 @@ export default function CompanyChatLogsDashboard() {
           </div>
         )}
       </header>
-
-      <CompanyAiSectionNav />
 
       {/* Split Pane Architecture */}
       <div className="flex flex-1 gap-6 min-h-0 relative">

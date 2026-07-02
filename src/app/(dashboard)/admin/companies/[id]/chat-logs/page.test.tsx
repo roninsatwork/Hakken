@@ -95,6 +95,7 @@ describe("CompanyChatLogsDashboard viewport guardrails", () => {
     render(<CompanyChatLogsDashboard />);
 
     const shell = screen.getByTestId("company-chat-logs-shell");
+    expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(shell).toHaveStyle({ height: "476px", maxHeight: "476px" });

@@ -26,7 +26,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
-import { CompanyAiSectionNav } from "./_components/CompanyAiSectionNav";
 
 type ReadinessTone = "ready" | "review" | "blocked" | "planned";
 
@@ -654,8 +653,6 @@ export default function CompanyAiOverviewPage() {
           Readiness for {company?.name || "this company"} across instructions, evidence, model routing, widget exposure, memory, skills, and evals.
         </p>
       </header>
-
-      <CompanyAiSectionNav />
 
       <section className={`rounded-[8px] border p-5 ${
         readinessTone === "blocked"

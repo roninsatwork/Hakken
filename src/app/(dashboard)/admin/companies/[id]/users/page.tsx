@@ -25,7 +25,6 @@ import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { CompanyDirectorySectionNav } from "../directory/_components/CompanyDirectorySectionNav";
 
 type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
@@ -209,7 +208,6 @@ export default function CompanyUsersPage() {
           </div>
         </div>
 
-        <CompanyDirectorySectionNav />
       </header>
 
       {/* Control Bar */}

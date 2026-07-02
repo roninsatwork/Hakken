@@ -6,8 +6,39 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, ArrowLeft, Users, Activity, BrainCircuit, UserCheck, Loader2, FileText, AppWindow } from "lucide-react";
+import {
+  AppWindow,
+  ArrowLeft,
+  Activity,
+  BrainCircuit,
+  Building2,
+  ClipboardCheck,
+  Code2,
+  Cpu,
+  Database,
+  FileText,
+  Gauge,
+  ListPlus,
+  Loader2,
+  MessageSquareText,
+  Monitor,
+  Palette,
+  Puzzle,
+  ShieldCheck,
+  TerminalSquare,
+  UserCheck,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
+
+function matchesCompanyRoute(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getWidgetSectionHref(companyHref: string, section: string) {
+  return `${companyHref}/widget?section=${section}`;
+}
 
 export default function CompanyDashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -36,12 +67,163 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
     return <div className="p-8 text-red-500">Workspace not found</div>;
   }
 
+  const companyHref = `/admin/companies/${companyId}`;
+  const aiHref = `${companyHref}/ai`;
   const tabs = [
-    { label: 'Dashboard', href: `/admin/companies/${companyId}`, icon: Activity },
-    { label: 'Overview', href: `/admin/companies/${companyId}/overview`, icon: FileText },
-    { label: 'Directory', href: `/admin/companies/${companyId}/directory`, icon: Users },
-    { label: 'AI', href: `/admin/companies/${companyId}/ai`, icon: BrainCircuit },
-    { label: 'Widget', href: `/admin/companies/${companyId}/widget`, icon: AppWindow },
+    { label: "Dashboard", href: companyHref, icon: Activity },
+    { label: "Overview", href: `${companyHref}/overview`, icon: FileText },
+    {
+      label: "Directory",
+      href: `${companyHref}/directory`,
+      icon: Users,
+      matches: (pathname: string) => (
+        matchesCompanyRoute(pathname, `${companyHref}/directory`)
+        || matchesCompanyRoute(pathname, `${companyHref}/users`)
+        || matchesCompanyRoute(pathname, `${companyHref}/invites`)
+      ),
+      dropdownItems: [
+        {
+          label: "Directory",
+          href: `${companyHref}/directory/users`,
+          icon: Users,
+          matches: (pathname: string) => (
+            pathname === `${companyHref}/directory`
+            || matchesCompanyRoute(pathname, `${companyHref}/directory/users`)
+            || matchesCompanyRoute(pathname, `${companyHref}/users`)
+          ),
+        },
+        {
+          label: "Invites",
+          href: `${companyHref}/directory/invites`,
+          icon: UserPlus,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${companyHref}/directory/invites`)
+            || matchesCompanyRoute(pathname, `${companyHref}/invites`)
+          ),
+        },
+      ],
+    },
+    {
+      label: "AI",
+      href: aiHref,
+      icon: BrainCircuit,
+      matches: (pathname: string) => (
+        matchesCompanyRoute(pathname, aiHref)
+        || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
+        || matchesCompanyRoute(pathname, `${companyHref}/system-prompt`)
+        || matchesCompanyRoute(pathname, `${companyHref}/rules`)
+        || matchesCompanyRoute(pathname, `${companyHref}/models`)
+        || matchesCompanyRoute(pathname, `${companyHref}/chat-logs`)
+      ),
+      dropdownItems: [
+        {
+          label: "Overview",
+          href: aiHref,
+          icon: Gauge,
+          matches: (pathname: string) => pathname === aiHref,
+        },
+        {
+          label: "Knowledge",
+          href: `${aiHref}/knowledge`,
+          icon: Database,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
+            || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
+          ),
+        },
+        {
+          label: "Memory",
+          href: `${aiHref}/memory`,
+          icon: BrainCircuit,
+        },
+        {
+          label: "Skills",
+          href: `${aiHref}/skills`,
+          icon: Puzzle,
+        },
+        {
+          label: "Prompt",
+          href: `${aiHref}/prompt`,
+          icon: TerminalSquare,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${aiHref}/prompt`)
+            || matchesCompanyRoute(pathname, `${companyHref}/system-prompt`)
+          ),
+        },
+        {
+          label: "AI Rules",
+          href: `${aiHref}/rules`,
+          icon: ShieldCheck,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${aiHref}/rules`)
+            || matchesCompanyRoute(pathname, `${companyHref}/rules`)
+          ),
+        },
+        {
+          label: "AI Models",
+          href: `${aiHref}/models`,
+          icon: Cpu,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${aiHref}/models`)
+            || matchesCompanyRoute(pathname, `${companyHref}/models`)
+          ),
+        },
+        {
+          label: "Evals",
+          href: `${aiHref}/evals`,
+          icon: ClipboardCheck,
+        },
+        {
+          label: "Chat Logs",
+          href: `${aiHref}/chat-logs`,
+          icon: MessageSquareText,
+          matches: (pathname: string) => (
+            matchesCompanyRoute(pathname, `${aiHref}/chat-logs`)
+            || matchesCompanyRoute(pathname, `${companyHref}/chat-logs`)
+          ),
+        },
+      ],
+    },
+    {
+      label: "Widget",
+      href: `${companyHref}/widget`,
+      icon: AppWindow,
+      dropdownItems: [
+        {
+          label: "Appearance",
+          href: `${companyHref}/widget`,
+          icon: Palette,
+          matches: (pathname: string, searchParams: URLSearchParams) => (
+            pathname === `${companyHref}/widget`
+            && (!searchParams.get("section") || searchParams.get("section") === "appearance")
+          ),
+        },
+        {
+          label: "Welcome Screen",
+          href: getWidgetSectionHref(companyHref, "welcome-screen"),
+          icon: Monitor,
+          query: { section: "welcome-screen" },
+        },
+        {
+          label: "Conversation Starters",
+          href: getWidgetSectionHref(companyHref, "conversation-starters"),
+          icon: ListPlus,
+          query: { section: "conversation-starters" },
+        },
+        {
+          label: "Greeting",
+          href: getWidgetSectionHref(companyHref, "greeting"),
+          icon: MessageSquareText,
+          query: { section: "greeting" },
+        },
+        {
+          label: "Integration",
+          href: getWidgetSectionHref(companyHref, "integration"),
+          icon: Code2,
+          query: { section: "integration" },
+        },
+      ],
+    },
   ];
 
   return (
@@ -52,7 +234,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       title={`${company.name} Workspace`}
       description={company.description || "Manage workspace settings."}
       tabs={tabs}
-      rootHref={`/admin/companies/${companyId}`}
+      rootHref={companyHref}
       actions={
         <>
             {currentUser?.role === "SUPER_ADMIN" && (

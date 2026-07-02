@@ -3,13 +3,22 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import CompanyWidgetPage from "./page";
+import GlobalWidgetPage from "./page";
 
-const navigationState = vi.hoisted(() => ({ section: "" }));
+vi.mock("../_components/AiWorkspaceNav", () => ({
+  AiWorkspaceNav: () => <nav aria-label="AI workspace">AI workspace nav</nav>,
+}));
 
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "company_1" }),
-  useSearchParams: () => new URLSearchParams(navigationState.section ? `section=${navigationState.section}` : ""),
+vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs", () => ({
+  WidgetConfigTabs: ({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) => (
+    <nav aria-label="Widget tabs">
+      {["Appearance", "Welcome Screen", "Conversation Starters", "Greeting", "Integration"].map((tab) => (
+        <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => onTabChange(tab)}>
+          {tab}
+        </button>
+      ))}
+    </nav>
+  ),
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection", () => ({
@@ -26,9 +35,17 @@ vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel"
 }));
 
 vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState", () => ({
-  WidgetEmptyState: ({ isSaving, onInitialize }: { isSaving: boolean; onInitialize: () => void }) => (
+  WidgetEmptyState: ({
+    actionLabel,
+    isSaving,
+    onInitialize,
+  }: {
+    actionLabel: string;
+    isSaving: boolean;
+    onInitialize: () => void;
+  }) => (
     <button type="button" disabled={isSaving} onClick={onInitialize}>
-      Initialize Widget
+      {actionLabel}
     </button>
   ),
 }));
@@ -55,9 +72,9 @@ vi.mock("@/src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSecti
 }));
 
 const widget = {
-  _id: "widget_1",
+  _id: "global_widget_1",
   _creationTime: 1,
-  name: "Existing Bot",
+  name: "Existing Global Bot",
   allowedDomains: ["https://example.com"],
   themeGreeting: "Hello",
   themePrimaryColor: "#123456",
@@ -80,14 +97,13 @@ function getConvexPath(functionReference: unknown) {
   }
 }
 
-describe("CompanyWidgetPage", () => {
+describe("GlobalWidgetPage", () => {
   const saveWidget = vi.fn();
   const generateUploadUrl = vi.fn();
   const writeText = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    navigationState.section = "";
     Object.assign(navigator, { clipboard: { writeText } });
     vi.mocked(useQuery).mockReturnValue(widget);
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
@@ -98,43 +114,43 @@ describe("CompanyWidgetPage", () => {
     saveWidget.mockResolvedValue(undefined);
   });
 
-  it("renders loading, empty initialize, and populated publish states", async () => {
+  it("renders loading, empty initialize, and populated save states", async () => {
     vi.mocked(useQuery).mockReturnValue(undefined);
-    const { container, rerender } = render(<CompanyWidgetPage />);
+    const { container, rerender } = render(<GlobalWidgetPage />);
 
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
 
     vi.mocked(useQuery).mockReturnValue(null);
-    rerender(<CompanyWidgetPage />);
-    fireEvent.click(screen.getByRole("button", { name: "Initialize Widget" }));
+    rerender(<GlobalWidgetPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Initialize Master Widget" }));
 
     await waitFor(() => {
-      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ companyId: "company_1", widgetId: undefined, name: "Website Bot" }));
+      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ isGlobal: true, widgetId: undefined, name: "Sonae Intercept Bot" }));
     });
+    expect(saveWidget.mock.calls.at(-1)?.[0]).not.toHaveProperty("companyId");
 
     vi.mocked(useQuery).mockReturnValue(widget);
-    rerender(<CompanyWidgetPage />);
-    await screen.findByDisplayValue("Existing Bot");
-    expect(screen.queryByRole("button", { name: /Widget section/i })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Bot name"), { target: { value: "Support Bot" } });
-    fireEvent.click(screen.getByRole("button", { name: /Publish Configuration/i }));
+    rerender(<GlobalWidgetPage />);
+    await screen.findByDisplayValue("Existing Global Bot");
+    fireEvent.change(screen.getByLabelText("Bot name"), { target: { value: "Global Support Bot" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save Configuration/i }));
 
     await waitFor(() => {
-      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ companyId: "company_1", widgetId: "widget_1", name: "Support Bot" }));
+      expect(saveWidget).toHaveBeenCalledWith(expect.objectContaining({ isGlobal: true, widgetId: "global_widget_1", name: "Global Support Bot" }));
     });
+    expect(saveWidget.mock.calls.at(-1)?.[0]).not.toHaveProperty("companyId");
   });
 
-  it("builds and copies the integration snippet for the widget", async () => {
-    navigationState.section = "integration";
+  it("builds and copies the integration snippet for the global widget", async () => {
+    render(<GlobalWidgetPage />);
 
-    render(<CompanyWidgetPage />);
-
-    expect(screen.getByText(/widget_1/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Integration" }));
+    expect(screen.getByText(/global_widget_1/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
 
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("widget_1"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("global_widget_1"));
     });
   });
 });

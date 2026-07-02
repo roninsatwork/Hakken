@@ -29,7 +29,6 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { CompanyAiSectionNav } from "../_components/CompanyAiSectionNav";
 
 type CompanyMemory = Doc<"companyMemories">;
 type CompanyMemoryCandidate = Doc<"companyMemoryCandidates">;
@@ -213,8 +212,6 @@ export default function CompanyAiMemoryPage() {
             </Link>
           </div>
         </div>
-
-        <CompanyAiSectionNav />
 
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {metrics.map((metric) => (

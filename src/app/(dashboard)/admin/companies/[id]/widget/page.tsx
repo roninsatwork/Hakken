@@ -3,38 +3,47 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import { AppWindow, Loader2, Save } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery as useConvexQuery, useMutation as useConvexMutation } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
-import { WidgetAppearanceSection } from "./_components/WidgetAppearanceSection";
-import { WidgetConfigTabs } from "./_components/WidgetConfigTabs";
-import { WidgetConversationStartersSection } from "./_components/WidgetConversationStartersSection";
-import { WidgetEmptyState } from "./_components/WidgetEmptyState";
-import { WidgetGreetingSection } from "./_components/WidgetGreetingSection";
-import { WidgetIntegrationSection } from "./_components/WidgetIntegrationSection";
-import { WidgetPreviewPanel } from "./_components/WidgetPreviewPanel";
-import { WidgetWelcomeSection } from "./_components/WidgetWelcomeSection";
-import type { WidgetConfigTab } from "./_components/types";
+import { WidgetAppearanceSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection";
+import { WidgetConversationStartersSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection";
+import { WidgetEmptyState } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState";
+import { WidgetGreetingSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection";
+import { WidgetIntegrationSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSection";
+import { WidgetPreviewPanel } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel";
+import { WidgetWelcomeSection } from "@/src/app/(dashboard)/admin/_features/widget-config/WidgetWelcomeSection";
+import type { WidgetConfigTab } from "@/src/app/(dashboard)/admin/_features/widget-config/types";
 import {
   buildWidgetEmbedSnippet,
   canAddConversationStarter,
   getWidgetLogoPreviewUrl,
   parseAllowedDomains,
-} from "./_components/widgetConfigUtils";
+  WIDGET_CONFIG_TABS,
+} from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
+
+function getWidgetSectionSlug(tab: WidgetConfigTab) {
+  return tab.toLowerCase().replaceAll(" ", "-");
+}
+
+function getWidgetActiveTab(section: string | null): WidgetConfigTab {
+  return WIDGET_CONFIG_TABS.find((tab) => getWidgetSectionSlug(tab) === section) ?? "Appearance";
+}
 
 export default function CompanyWidgetPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const companyId = params.id as Id<"companies">;
 
   const widget = useConvexQuery(api.widgets.getPrimaryWidgetByCompany, { companyId });
   const saveWidget = useConvexMutation(api.widgets.saveWidget);
   const generateUploadUrl = useConvexMutation(api.users.generateUploadUrl);
 
-  const [activeTab, setActiveTab] = useState<WidgetConfigTab>("Appearance");
+  const activeTab = getWidgetActiveTab(searchParams.get("section"));
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hostOrigin, setHostOrigin] = useState("");
@@ -232,9 +241,7 @@ export default function CompanyWidgetPage() {
       ) : !widget ? (
         <WidgetEmptyState isSaving={isSaving} onInitialize={handleCreateOrUpdate} />
       ) : (
-        <div className="flex flex-col gap-6 items-start relative mt-4 2xl:flex-row 2xl:gap-8">
-          <WidgetConfigTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
+        <div className="flex flex-col gap-6 items-start relative mt-4">
           <div className="flex-1 w-full min-w-0 flex flex-col gap-8">
             {activeTab === "Appearance" && (
               <WidgetAppearanceSection

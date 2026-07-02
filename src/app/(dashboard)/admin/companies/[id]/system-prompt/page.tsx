@@ -13,7 +13,6 @@ import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
-import { CompanyAiSectionNav } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiSectionNav";
 
 
 export default function CompanySystemPromptPage() {
@@ -113,8 +112,6 @@ export default function CompanySystemPromptPage() {
           </button>
         </div>
       </header>
-
-      <CompanyAiSectionNav />
 
       <AdminSaveFeedback
         status={saveStatus}

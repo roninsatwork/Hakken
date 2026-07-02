@@ -2,7 +2,6 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WidgetAppearanceSection } from "./WidgetAppearanceSection";
-import { WidgetConfigTabs } from "./WidgetConfigTabs";
 import { WidgetConversationStartersSection } from "./WidgetConversationStartersSection";
 import { WidgetEmptyState } from "./WidgetEmptyState";
 import { WidgetGreetingSection } from "./WidgetGreetingSection";
@@ -37,33 +36,6 @@ describe("widget configuration sections", () => {
 
   beforeEach(() => {
     mockWideLayout(true);
-  });
-
-  it("renders tab navigation and reports selected tabs", () => {
-    const onTabChange = vi.fn();
-
-    render(<WidgetConfigTabs activeTab="Appearance" onTabChange={onTabChange} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Integration" }));
-
-    expect(screen.getByRole("button", { name: "Appearance" })).toHaveClass("bg-brand");
-    expect(onTabChange).toHaveBeenCalledWith("Integration");
-  });
-
-  it("uses a compact widget section switcher below wide desktop", () => {
-    mockWideLayout(false);
-    const onTabChange = vi.fn();
-
-    render(<WidgetConfigTabs activeTab="Appearance" onTabChange={onTabChange} />);
-
-    const trigger = screen.getByRole("button", { name: "Widget section: Appearance" });
-    expect(trigger).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Integration" })).not.toBeInTheDocument();
-
-    fireEvent.click(trigger);
-    fireEvent.click(screen.getByRole("button", { name: "Integration" }));
-
-    expect(onTabChange).toHaveBeenCalledWith("Integration");
   });
 
   it("renders a panel shell around arbitrary controls", () => {

@@ -23,7 +23,6 @@ import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/Adm
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { CompanyAiSectionNav } from "../_components/CompanyAiSectionNav";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 type CompanyEvalRun = Doc<"companyEvalRuns">;
@@ -140,8 +139,6 @@ export default function CompanyAiEvalsPage() {
             Define readiness tests for company chat, widget behavior, memory usage, model routing, and public answer boundaries.
           </p>
         </div>
-
-        <CompanyAiSectionNav />
 
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-5">
           {[

@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Activity, Settings } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AdminDetailLayout } from "./AdminDetailLayout";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 describe("AdminDetailLayout", () => {
@@ -16,6 +17,7 @@ describe("AdminDetailLayout", () => {
 
   it("renders a shared detail header, actions, tabs, and content", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/companies/company-1/settings");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(
       <AdminDetailLayout

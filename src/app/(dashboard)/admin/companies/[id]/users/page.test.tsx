@@ -187,15 +187,13 @@ describe("CompanyUsersPage", () => {
     expect(screen.queryByText("Load More Users")).not.toBeInTheDocument();
   });
 
-  it("keeps the directory section selector below the page title", () => {
+  it("does not render the old directory section selector inside the page", () => {
     render(<CompanyUsersPage />);
 
     const title = screen.getByRole("heading", { level: 1, name: "Workspace Directory" });
-    const selector = screen.getByRole("button", { name: "Directory section: Directory" });
     const header = title.closest("header");
 
     expect(header).not.toBeNull();
-    expect(header).toContainElement(selector);
-    expect(title.compareDocumentPosition(selector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Directory section/i })).not.toBeInTheDocument();
   });
 });

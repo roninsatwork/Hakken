@@ -12,7 +12,6 @@ import {
   AdminFeedbackPill,
   AdminSaveAction,
 } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { CompanyDirectorySectionNav } from "../directory/_components/CompanyDirectorySectionNav";
 
 export default function InviteUsersPage() {
   const params = useParams();
@@ -107,7 +106,6 @@ export default function InviteUsersPage() {
           </p>
         </div>
 
-        <CompanyDirectorySectionNav />
       </header>
 
       {/* Master Workflow Form */}

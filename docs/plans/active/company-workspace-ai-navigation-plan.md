@@ -1,314 +1,205 @@
-# Company Workspace AI Navigation Consolidation Plan
+# Company Workspace Dropdown Navigation Plan
 
-This plan documents the proposed navigation change for company workspaces: reduce the top tab bar length by grouping company-specific AI pages under a single `AI` tab.
+Created: 2026-07-02
+Updated: 2026-07-02
 
-This is a planning document only. Do not implement this work unless the user explicitly asks to move from planning into coding.
+This plan documents the agreed company workspace navigation change: use the same tab-row dropdown pattern now used by global AI `Governance` and `Models`, and remove the in-page third menus from company `Directory`, `AI`, and `Widget` pages.
 
-Important update, 2026-07-02:
+Status: implemented on 2026-07-02. Keep this document as the product and regression-test reference for the company workspace dropdowns.
 
-- The original version of this plan recommended a third-level left submenu that matched the `Widget` pattern.
-- That left submenu is no longer the recommended laptop experience because it steals too much width on a 13-inch MacBook Pro.
-- A long horizontal AI tab row is also rejected because it can run off screen.
-- Use [Company Admin Laptop UX Upgrade Plan](./company-admin-laptop-ux-upgrade-plan.md) as the current source of truth for laptop-width AI navigation.
-- The current direction is a compact AI section switcher on laptop-sized screens, with an optional left submenu only on genuinely wide desktop layouts.
+Related plans:
 
-## Goal
+- [Global AI Navigation Consolidation Plan](./global-ai-navigation-consolidation-plan.md)
+- [Global AI Models Split Navigation Plan](./global-ai-models-split-navigation-plan.md)
+- [Global AI Widget Layout Alignment Plan](./global-ai-widget-layout-alignment-plan.md)
 
-The company workspace tab bar has become too long. The AI-related pages currently sit as separate top-level tabs, which makes the workspace harder to scan and leaves less room for future sections.
+## Product Decision
 
-Replace the current top-level AI-related tabs with one top-level `AI` tab. The child AI pages should be reachable through a compact section switcher on laptop-sized screens, not through a long horizontal row or a laptop-width left rail.
-
-## Current Top-Level Tabs
-
-The current company workspace top navigation includes:
-
-- `Dashboard`
-- `Overview`
-- `Directory`
-- `Invites`
-- `Knowledge`
-- `Prompt`
-- `AI Rules`
-- `AI Models`
-- `Widget`
-- `Chat Logs`
-
-The issue is not the individual pages themselves. The issue is that too many related configuration and monitoring pages are competing at the same navigation level.
-
-## Proposed Top-Level Tabs
-
-The consolidated company workspace top navigation should become:
-
-- `Dashboard`
-- `Overview`
-- `Directory`
-- `Invites`
-- `AI`
-- `Widget`
-
-This keeps the workspace sections shorter and easier to scan while preserving access to the existing AI functionality.
-
-## Proposed AI Submenu
-
-When `AI` is active, show child navigation in a way that preserves working width on laptop screens.
-
-Current laptop recommendation:
+Keep the company workspace tab row short:
 
 ```text
-AI section: Memory v
+Dashboard | Overview | Directory | AI v | Widget
 ```
 
-Opening the switcher reveals the child pages.
+`Directory`, `AI`, and `Widget` should become dropdown triggers, not direct navigation links. Their menus should contain the sections that previously lived in page-level selectors.
 
-Wide desktop may optionally keep a left submenu, but only when the content area remains comfortable.
+Remove the current in-page `Directory Section`, `AI Section`, and `Widget Section` selectors after the tab-row dropdowns are available. The user should choose company workspace sections from one place, not from both the top workspace tabs and a third menu inside the page.
 
-Legacy submenu order:
+## Current Problem
 
-Recommended submenu order:
+Company Directory, AI, and Widget pages previously used two levels of local navigation:
 
-1. `Knowledge`
-2. `Prompt`
-3. `AI Rules`
-4. `AI Models`
-5. `Chat Logs`
+- the company workspace tab row, which already includes `Directory`, `AI`, and `Widget`,
+- the in-page compact selectors rendered by `CompanyDirectorySectionNav`, `CompanyAiSectionNav`, and `WidgetConfigTabs`.
 
-Rationale:
+Those nested selectors were useful while we were avoiding long tab rows, but the new dropdown pattern is clearer and keeps the page content full width. Keeping both patterns would make the company area feel heavier than the new global AI area.
 
-- `Knowledge` is the source material layer.
-- `Prompt` is the primary behavior layer.
-- `AI Rules` is the policy and guardrail layer.
-- `AI Models` is the runtime configuration layer.
-- `Chat Logs` is the monitoring and review layer.
+## Target AI Dropdown
 
-## Navigation Model
+Recommended dropdown items:
 
-`AI` should behave as a parent workspace tab.
-
-When any AI child page is active:
-
-- the top-level `AI` tab is active,
-- the third-level AI submenu is visible,
-- the matching submenu item is active.
-
-Expected active states:
-
-| Route | Top tab | Submenu item |
-| --- | --- | --- |
-| `/admin/companies/:companyId/ai/knowledge` | `AI` | `Knowledge` |
-| `/admin/companies/:companyId/ai/prompt` | `AI` | `Prompt` |
-| `/admin/companies/:companyId/ai/rules` | `AI` | `AI Rules` |
-| `/admin/companies/:companyId/ai/models` | `AI` | `AI Models` |
-| `/admin/companies/:companyId/ai/chat-logs` | `AI` | `Chat Logs` |
-
-Clicking the top-level `AI` tab should route to the default child page.
-
-Recommended default:
-
-```txt
-/admin/companies/:companyId/ai/knowledge
-```
-
-`Knowledge` is the best default because it is the foundation for the rest of the company-level AI configuration.
-
-## Route Plan
-
-Preferred new route shape:
-
-```txt
-/admin/companies/:companyId/ai
-/admin/companies/:companyId/ai/knowledge
-/admin/companies/:companyId/ai/prompt
-/admin/companies/:companyId/ai/rules
-/admin/companies/:companyId/ai/models
-/admin/companies/:companyId/ai/chat-logs
-```
-
-The parent route should redirect to the default AI page:
-
-```txt
-/admin/companies/:companyId/ai -> /admin/companies/:companyId/ai/knowledge
-```
-
-## Legacy Route Redirects
-
-Existing routes should continue to work and redirect to the new nested routes.
-
-| Existing route | New route |
+| Label | Route |
 | --- | --- |
-| `/admin/companies/:companyId/knowledge` | `/admin/companies/:companyId/ai/knowledge` |
-| `/admin/companies/:companyId/prompt` | `/admin/companies/:companyId/ai/prompt` |
-| `/admin/companies/:companyId/rules` | `/admin/companies/:companyId/ai/rules` |
-| `/admin/companies/:companyId/models` | `/admin/companies/:companyId/ai/models` |
-| `/admin/companies/:companyId/chat-logs` | `/admin/companies/:companyId/ai/chat-logs` |
+| `Overview` | `/admin/companies/:companyId/ai` |
+| `Knowledge` | `/admin/companies/:companyId/ai/knowledge` |
+| `Memory` | `/admin/companies/:companyId/ai/memory` |
+| `Skills` | `/admin/companies/:companyId/ai/skills` |
+| `Prompt` | `/admin/companies/:companyId/ai/prompt` |
+| `AI Rules` | `/admin/companies/:companyId/ai/rules` |
+| `AI Models` | `/admin/companies/:companyId/ai/models` |
+| `Evals` | `/admin/companies/:companyId/ai/evals` |
+| `Chat Logs` | `/admin/companies/:companyId/ai/chat-logs` |
 
-This preserves browser bookmarks, direct links, and any internal navigation paths that may still point at the old locations.
+This matches the former `CompanyAiSectionNav` ordering so the implementation changed the navigation pattern without also changing information architecture.
 
-## Visual And Interaction Pattern
+## Target Directory Dropdown
 
-Use the compact switcher as the target laptop pattern:
+Recommended dropdown items:
 
-- Keep the top-level company workspace tab bar visible.
-- Show the current AI section in a compact selector.
-- Open a menu for switching AI sections.
-- Keep page content full width below the selector.
-- Do not show a long horizontal AI row.
-- Do not show a laptop-width AI left rail.
-
-On wide desktop only, a left submenu can be considered as an enhancement if it does not squeeze primary content.
-
-## Page Content Scope
-
-Do not redesign page content as part of this navigation consolidation.
-
-The work should only move where pages live in navigation and routes.
-
-Current page-to-destination mapping:
-
-| Current page | New location |
+| Label | Route |
 | --- | --- |
-| `Knowledge` | `AI > Knowledge` |
-| `Prompt` | `AI > Prompt` |
-| `AI Rules` | `AI > AI Rules` |
-| `AI Models` | `AI > AI Models` |
-| `Chat Logs` | `AI > Chat Logs` |
+| `Directory` | `/admin/companies/:companyId/directory/users` |
+| `Invites` | `/admin/companies/:companyId/directory/invites` |
 
-Existing page behavior, forms, data loading, mutations, table paging, and permissions should remain unchanged.
+## Target Widget Dropdown
 
-## Naming Rules
+Recommended dropdown items:
 
-Use `AI` for the top-level tab.
+| Label | Route |
+| --- | --- |
+| `Appearance` | `/admin/companies/:companyId/widget` |
+| `Welcome Screen` | `/admin/companies/:companyId/widget?section=welcome-screen` |
+| `Conversation Starters` | `/admin/companies/:companyId/widget?section=conversation-starters` |
+| `Greeting` | `/admin/companies/:companyId/widget?section=greeting` |
+| `Integration` | `/admin/companies/:companyId/widget?section=integration` |
 
-Do not use `Artificial Intelligence` in the company workspace tab bar because:
+## Interaction Rules
 
-- the change is partly about reducing horizontal space,
-- the left sidebar already has a broader `Artificial Intelligence` area,
-- `AI` is clear enough in this product context.
+`Directory`, `AI`, and `Widget` should behave like the global AI dropdowns:
 
-Use the existing submenu labels:
+- closed by default,
+- opens from the main company workspace tab row,
+- uses `aria-haspopup="menu"` and `aria-expanded`,
+- closes when a menu item is selected,
+- closes on outside pointer down,
+- closes on `Escape`,
+- shows the parent tab as active for every child route or selected widget section,
+- shows exactly one active dropdown item with the checkmark,
+- preserves full-width content below the tab row.
 
-- `Knowledge`
-- `Prompt`
-- `AI Rules`
-- `AI Models`
-- `Chat Logs`
+Route matching should be explicit enough that nested detail routes do not accidentally mark multiple items active.
 
-Avoid renaming these during the consolidation unless a separate product decision is made.
+## Implementation Plan
 
-## Relationship To Global AI Navigation
+1. Audit current company workspace nav ownership.
+   - `src/app/(dashboard)/admin/companies/[id]/layout.tsx` currently passes tabs into `AdminDetailLayout`.
+   - `AdminDetailLayout` renders `AdminDetailTabs`, which currently supports simple link tabs only.
 
-The left sidebar already contains a broader `Artificial Intelligence` section for platform-level AI administration.
+2. Add dropdown support to the company tab row.
+   - Prefer a small shared extension of `AdminDetailTabs` if the pattern can stay clean.
+   - Otherwise create a company-specific tab nav component in the company workspace area.
+   - Reuse the visual behavior from `AiWorkspaceNav` so the company dropdown feels like global `Governance` and `Models`.
 
-Keep the conceptual split:
+3. Move company child navigation into the top tab row.
+   - Make `Directory`, `AI`, and `Widget` dropdown triggers in the company workspace tabs.
+   - Populate them with the items listed above.
+   - Keep the current route shape.
+   - Use query-backed links for Widget sections.
+   - Do not move page content or data logic.
 
-- left sidebar `Artificial Intelligence`: global or platform AI administration,
-- company workspace `AI`: company-specific AI configuration and company-specific AI observability.
+4. Remove the third menus from company pages.
+   - Remove `CompanyDirectorySectionNav` imports and render calls from directory pages.
+   - Remove `CompanyAiSectionNav` imports and render calls from company AI pages.
+   - Remove company page usage of `WidgetConfigTabs`.
+   - Delete obsolete company-local selector components once there are no usages.
+   - Keep page headings, forms, loading states, permissions, and Convex calls unchanged.
 
-Be careful not to route company workspace pages to global AI pages, and do not use global AI permissions as a shortcut for company workspace access.
+5. Preserve legacy top-level wrappers where they still exist.
+   - Do not break existing direct URLs such as `/admin/companies/:companyId/rules`, `/system-prompt`, `/knowledge`, `/models`, or `/chat-logs`.
+   - If those routes currently wrap or redirect to nested AI pages, keep that compatibility.
 
-## Permissions And Tenant Isolation
+## Test Update Plan
 
-This change must preserve the existing permission model.
+Update tests to match the new style rather than the old in-page selector.
 
-Required behavior:
+Required test changes:
 
-- Users who can currently access company knowledge can still access `AI > Knowledge`.
-- Users who can currently access company prompt settings can still access `AI > Prompt`.
-- Users who can currently access company AI rules can still access `AI > AI Rules`.
-- Users who can currently access company model overrides can still access `AI > AI Models`.
-- Users who can currently access company chat logs can still access `AI > Chat Logs`.
-- Users must not gain access to a page only because it now sits under the `AI` parent.
-- Non-super-admin access must remain scoped by company.
+- Add or update tests for the company workspace tab row to prove `AI` is a dropdown trigger.
+- Add or update tests proving `Directory` and `Widget` are also dropdown triggers.
+- Assert the dropdown is hidden by default.
+- Assert opening `AI` renders all expected child menu items with the correct `href` values.
+- Assert opening `Directory` and `Widget` renders the expected child menu items with the correct `href` values.
+- Assert the parent `AI` tab is active on every company AI route.
+- Assert the parent `Widget` tab is active for query-backed widget sections.
+- Assert only the matching child route displays the checkmark.
+- Assert selecting a menu item closes the dropdown.
+- Assert outside pointer down and `Escape` close the dropdown.
+- Replace `CompanyAiSectionNav.test.tsx` with tests for the new dropdown behavior, or delete it if the component is removed and coverage moves to the new nav tests.
+- Update company page tests so they no longer expect page-level section selectors.
+- Add regression assertions that company pages do not render the old third menus, for example no visible `AI Section`, `Directory Section`, or `Widget Section` compact selector.
 
-The top-level `AI` tab should only be visible if the current user can access at least one AI child page.
+Focused test files updated for this implementation:
 
-## Implementation Phases
+- `src/app/(dashboard)/admin/companies/[id]/layout.tsx`
+- `src/app/(dashboard)/admin/_components/AdminDetailTabs.tsx`
+- `src/app/(dashboard)/admin/_components/AdminDetailTabs.test.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/layout.test.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/ai/evals/page.test.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/chat-logs/page.test.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/users/page.test.tsx`
+- `src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx`
 
-### Phase 1: Audit Existing Navigation And Routes
+Expected focused verification:
 
-Tasks:
+```bash
+npm run check -- src/app/(dashboard)/admin/_components/AdminDetailTabs.test.tsx src/app/(dashboard)/admin/companies/[id]/layout.test.tsx
+npm run check -- src/app/(dashboard)/admin/companies/[id]/ai/evals/page.test.tsx
+npm run check -- src/app/(dashboard)/admin/companies/[id]/chat-logs/page.test.tsx
+npm run check -- src/app/(dashboard)/admin/companies/[id]/users/page.test.tsx src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx
+```
 
-- Find the company workspace top-tab configuration.
-- Find how the current `Widget` third-level submenu is implemented.
-- Identify the page files and components for:
-  - company knowledge,
-  - company prompt,
-  - company AI rules,
-  - company AI models,
-  - company chat logs.
-- Check whether any internal links, breadcrumbs, tests, or redirects reference the current top-level routes.
+If the test runner does not support file arguments for `npm run check`, run the full check instead.
 
-Acceptance:
+## Manual QA Checklist
 
-- The implementation owner knows which files need route wrappers, redirects, navigation updates, and tests.
-- No code has been moved yet.
+Check these routes in the browser:
 
-### Phase 2: Add AI Parent Navigation
+- `/admin/companies/:companyId`
+- `/admin/companies/:companyId/overview`
+- `/admin/companies/:companyId/directory`
+- `/admin/companies/:companyId/ai`
+- `/admin/companies/:companyId/ai/knowledge`
+- `/admin/companies/:companyId/ai/memory`
+- `/admin/companies/:companyId/ai/skills`
+- `/admin/companies/:companyId/ai/prompt`
+- `/admin/companies/:companyId/ai/rules`
+- `/admin/companies/:companyId/ai/models`
+- `/admin/companies/:companyId/ai/evals`
+- `/admin/companies/:companyId/ai/chat-logs`
+- `/admin/companies/:companyId/widget`
 
-Tasks:
+At laptop width, confirm:
 
-- Add `AI` as a top-level company workspace tab.
-- Remove `Knowledge`, `Prompt`, `AI Rules`, `AI Models`, and `Chat Logs` from the top-level company workspace tab list.
-- Set the `AI` top-tab active state for all AI child routes.
-- Make the `AI` tab target the default AI page.
+- the company tab row remains usable,
+- the dropdowns render above page content, tables, search bars, and cards,
+- the old in-page section selectors are gone,
+- page content keeps the full available width,
+- the active dropdown item is obvious.
 
-Acceptance:
+## Out Of Scope
 
-- The top tab bar is shorter.
-- `AI` is active for every AI child page.
-- Clicking `AI` opens the default AI child page.
+Do not include these unless separately requested:
 
-### Phase 3: Add Responsive AI Child Navigation
+- Redesigning company AI page content.
+- Splitting company AI models into provider/catalogue/default screens.
+- Changing global AI navigation.
+- Changing Convex data models or permissions.
+- Changing chat log retention, filters, pagination, or data loading.
+- Refactoring the frozen movement demo areas.
 
-Tasks:
+## Verification Gates
 
-- Add a compact AI section switcher for laptop-sized screens.
-- Add AI child items in the agreed order.
-- Ensure the active child item follows the current route.
-- Keep page content full width below the switcher.
-- Only show a left submenu on wide desktop if the content area remains comfortable.
-
-Acceptance:
-
-- Laptop screens do not use a left AI submenu.
-- Laptop screens do not use a long horizontal AI tab row.
-- The current AI section remains obvious.
-- Child navigation works at laptop and wide desktop widths.
-
-### Phase 4: Move Routes With Compatibility Redirects
-
-Tasks:
-
-- Add new nested AI routes.
-- Reuse the existing page components where possible.
-- Add redirects from old routes to new routes.
-- Update internal links and tests to prefer the new route shape.
-
-Acceptance:
-
-- New routes load the expected existing pages.
-- Old routes redirect cleanly.
-- Bookmarked old URLs still land on the correct content.
-
-### Phase 5: Verify Access, UI State, And Regression Risk
-
-Tasks:
-
-- Confirm permissions for every AI child page.
-- Confirm company scoping still applies in all queries and mutations.
-- Confirm active states for top tab and submenu.
-- Confirm the top tab bar no longer crowds at common desktop widths.
-- Confirm AI child navigation does not overlap, wrap awkwardly, or steal laptop working width.
-
-Acceptance:
-
-- Access behavior is unchanged.
-- Visual state is correct.
-- Navigation is easier to scan.
-- No page content behavior changed.
-
-## Suggested Verification
-
-Before merging the implementation, run the project gates from `AGENTS.md`:
+Before merging or pushing an implementation, run the repo gates from `AGENTS.md`:
 
 ```bash
 npm run verify:env
@@ -318,45 +209,17 @@ npm run build
 git diff --check
 ```
 
-If local browser verification is practical, manually check:
-
-- direct navigation to every new AI route,
-- direct navigation to every legacy route,
-- active state on every AI child page,
-- top tab bar spacing,
-- compact AI section switcher behavior,
-- wide desktop AI child navigation behavior, if present,
-- role-specific access for company-scoped AI pages.
-
-## Out Of Scope
-
-Do not include these unless separately requested:
-
-- Redesigning the AI pages.
-- Renaming `Prompt` to `System Prompt`.
-- Moving global platform AI pages.
-- Changing the left sidebar `Artificial Intelligence` section.
-- Changing company AI permissions.
-- Changing chat log retention, filters, pagination, or data model.
-- Refactoring the frozen movement demo areas.
-
-## Open Product Decisions
-
-These decisions should be confirmed before implementation:
-
-1. Should `AI` default to `Knowledge`, or should it default to the most-used page?
-2. Should `Chat Logs` remain last in the AI submenu, or should it sit nearer the start for support workflows?
-3. Should any breadcrumb or page title copy explicitly say `AI`, for example `AI / Knowledge`, or should only navigation communicate the grouping?
-4. Should the parent `AI` tab be hidden when a user has no accessible AI child pages, or shown disabled with no accessible pages? The recommended answer is hide it.
-
 ## Acceptance Criteria
 
-The consolidation is complete when:
+The implementation is complete when:
 
-- The company workspace top tab bar shows `AI` instead of separate `Knowledge`, `Prompt`, `AI Rules`, `AI Models`, and `Chat Logs` tabs.
-- The AI child pages appear in compact child navigation on laptop-sized screens.
-- `AI` remains active while any AI child page is active.
-- Old routes redirect to the new nested routes.
-- Existing page functionality is unchanged.
-- Existing permissions and tenant isolation are unchanged.
-- The tab bar is visibly shorter and easier to scan.
+- the company workspace tab row shows `Dashboard`, `Overview`, `Directory`, `AI`, and `Widget`,
+- `Directory`, `AI`, and `Widget` open dropdowns using the same visual and interaction pattern as global AI dropdowns,
+- every company AI child page is reachable from that dropdown,
+- every company Directory child page and Widget section is reachable from its dropdown,
+- `AI` remains active on every company AI child route,
+- `Widget` remains active for query-backed widget sections,
+- only one dropdown child item is checked at a time,
+- the old in-page third menus are removed,
+- tests are updated to assert the new dropdown behavior and absence of the old third menu,
+- existing page behavior, permissions, and company scoping remain unchanged.

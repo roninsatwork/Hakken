@@ -76,11 +76,9 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
 
     const title = screen.getByRole("heading", { level: 1, name: "Company Evals" });
     const header = title.closest("header");
-    const sectionSelector = screen.getByRole("button", { name: "AI section: Evals" });
 
     expect(header).not.toBeNull();
-    expect(header).toContainElement(sectionSelector);
-    expect(title.compareDocumentPosition(sectionSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
     expect(within(header as HTMLElement).queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
     expect(within(header as HTMLElement).queryByRole("button", { name: "Run failed/not run" })).not.toBeInTheDocument();
     expect(within(header as HTMLElement).queryByRole("link", { name: "New eval" })).not.toBeInTheDocument();

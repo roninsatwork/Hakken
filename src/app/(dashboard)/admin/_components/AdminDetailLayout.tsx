@@ -31,7 +31,7 @@ export function AdminDetailLayout({
 }: AdminDetailLayoutProps) {
   return (
     <div className={cn("flex flex-col gap-6 w-full h-full pl-2", className)}>
-      <div className={cn("flex flex-col gap-6 relative z-10", headerClassName)}>
+      <div className={cn("flex flex-col gap-6 relative z-50", headerClassName)}>
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             {leading}
@@ -55,7 +55,7 @@ export function AdminDetailLayout({
 
       <div
         className={cn(
-          "relative z-10 flex-1 flex flex-col min-h-0 bg-transparent pt-4",
+          "relative z-0 flex-1 flex flex-col min-h-0 bg-transparent pt-4",
           contentClassName,
         )}
       >
