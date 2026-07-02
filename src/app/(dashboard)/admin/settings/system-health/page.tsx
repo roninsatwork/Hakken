@@ -205,7 +205,7 @@ function buildSignalRows(health: SystemHealth): HealthSignal[] {
       runbook: "Review the tenant plan assignment, current usage, and expected month-end activity before increasing capacity.",
     });
   }
-  add("failedScheduledExecutions", "Failed scheduled executions", health.operations.failedScheduledExecutions, "Open workflow execution logs, fix the failed node or target configuration, then rerun manually.");
+  add("failedScheduledExecutions", "Failed scheduled executions", health.operations.failedScheduledExecutions, "Check the target workflow or agent run, fix the failed node or target configuration, then rerun manually.");
   add("staleScheduledExecutions", "Stale running scheduled executions", health.operations.staleRunningScheduledExecutions, "Inspect Convex action logs and workflow steps; determine whether the run is still processing or stranded.");
   add("overdueSchedules", "Overdue active schedules", health.operations.overdueSchedules, "Check whether workflow-schedule-dispatcher is running, the target exists, and nextRunAt recalculates.");
   add("schedulesMissingNextRun", "Active schedules missing next run", health.operations.schedulesMissingNextRun, "Toggle the schedule or repair schedule config after validating intervalStr.");
@@ -472,7 +472,6 @@ export default function SystemHealthPage() {
         <section className="border border-border-dim bg-card/30 rounded-[10px] p-4 flex flex-col gap-3">
           <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted">Investigation links</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
-            <Link className="text-brand hover:underline" href="/admin/workflows/logs">Workflow execution logs</Link>
             <Link className="text-brand hover:underline" href="/admin/workflows/schedules">Schedules</Link>
             <Link className="text-brand hover:underline" href="/admin/agents/approvals">Agent approvals</Link>
             <Link className="text-brand hover:underline" href="/admin/agents">Agents</Link>

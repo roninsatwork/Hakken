@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import {
@@ -10,7 +9,6 @@ import {
   Cable,
   Library,
   Loader2,
-  Plus,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -94,7 +92,6 @@ function getSurfaceLabel(surface: SkillSurface) {
 export default function CompanyAiSkillsPage() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
-  const aiHref = `/admin/companies/${companyId}/ai`;
   const summary = useQuery(api.companySkills.getSummary, { companyId });
   const importableGlobalSkills = useQuery(api.companySkills.getImportableGlobalSkills, { companyId });
   const setBinding = useMutation(api.companySkills.setBinding);
@@ -178,7 +175,7 @@ export default function CompanyAiSkillsPage() {
         companyId,
         skillId: selectedGlobalSkill._id,
       });
-      setStatusFilter("DRAFT");
+      setStatusFilter("ACTIVE");
       setExpandedSkillId(result.skillId);
       setIsImportOpen(false);
       setGlobalSkillSearchTerm("");
@@ -200,7 +197,7 @@ export default function CompanyAiSkillsPage() {
               Company Skills
             </h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Govern reusable company capabilities, tool requirements, approval policy, and surface availability.
+              Select approved central skills for this company, then govern approval policy and surface availability.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -215,15 +212,8 @@ export default function CompanyAiSkillsPage() {
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
             >
               <Library className="h-4 w-4" />
-              Import from global library
+              Add from Skill Center
             </button>
-            <Link
-              href={`${aiHref}/skills/new?returnTo=${encodeURIComponent(`${aiHref}/skills`)}`}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-4 text-[13px] font-semibold text-secondary transition-colors hover:text-foreground"
-            >
-              <Plus className="h-4 w-4 text-brand" />
-              New skill
-            </Link>
           </div>
         </div>
 
@@ -383,11 +373,11 @@ export default function CompanyAiSkillsPage() {
         />
       </section>
 
-      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import From Global Library" size="lg">
+      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Add From Skill Center" size="lg">
         <div className="flex flex-col gap-5">
           <AdminModalFormError>{importError}</AdminModalFormError>
           <p className="text-[13px] leading-relaxed text-secondary">
-            Import an approved global skill as a company draft. Review company-specific tools, approvals, and bindings before activating it.
+            Add an approved central skill to this company. Create and edit skills only in Skill Center; use this screen for company availability, approvals, and bindings.
           </p>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="rounded-[8px] border border-border-dim bg-background/50 overflow-hidden">
@@ -401,7 +391,7 @@ export default function CompanyAiSkillsPage() {
                       setGlobalSkillSearchTerm(event.target.value);
                       setSelectedGlobalSkillId(null);
                     }}
-                    placeholder="Search global skills"
+                    placeholder="Search central skills"
                   />
                 </label>
               </div>
@@ -410,7 +400,7 @@ export default function CompanyAiSkillsPage() {
                   <Loader2 className="mx-auto h-5 w-5 animate-spin text-brand" />
                 </div>
               ) : filteredGlobalSkills.length === 0 ? (
-                <div className="px-4 py-12 text-center text-[13px] text-muted">No active global skills match this search.</div>
+                <div className="px-4 py-12 text-center text-[13px] text-muted">No active central skills match this search.</div>
               ) : (
                 <div className="max-h-[360px] divide-y divide-border-dim overflow-y-auto">
                   {filteredGlobalSkills.map((skill: GlobalSkill) => {
@@ -467,12 +457,12 @@ export default function CompanyAiSkillsPage() {
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
                   >
                     {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Library className="h-3.5 w-3.5" />}
-                    Import draft
+                    Add skill
                   </button>
                 </div>
               ) : (
                 <div className="flex min-h-[240px] items-center justify-center text-center text-[13px] text-secondary">
-                  Select an active global skill to preview it before import.
+                  Select an active central skill to preview it before adding it.
                 </div>
               )}
             </aside>

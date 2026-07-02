@@ -27,6 +27,7 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Analytics Rollups](./analytics-rollups.md)
 - [Audit Log Service](./audit-log-service.md)
 - [Agents](./agents.md)
+- [Manage Agents Secondary Tabs UX Plan](./manage-agents-secondary-tabs-plan.md)
 - [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md)
 - [Agent Runtime Operations](./agent-runtime-operations.md)
 - [Auth Diagnostics](./auth-diagnostics.md)

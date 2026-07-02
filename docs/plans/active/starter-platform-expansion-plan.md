@@ -298,7 +298,6 @@ Primary areas:
 - `convex/agentRunReflections.ts`
 - `convex/agentEvalFixtures.ts`
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx`
-- `src/app/(dashboard)/admin/workflows/logs/page.tsx`
 
 ### 6. Knowledge Quality Center
 

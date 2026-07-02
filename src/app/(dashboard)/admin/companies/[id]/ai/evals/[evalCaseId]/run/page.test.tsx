@@ -80,7 +80,7 @@ describe("RunCompanyEvalPage", () => {
     });
   });
 
-  it("records eval runs with skill evidence selected from active company skills", async () => {
+  it("records eval runs with skill evidence selected from active central skills available to the company", async () => {
     runCase.mockResolvedValue({ status: "PASSED", score: 1 });
 
     render(<RunCompanyEvalPage />);

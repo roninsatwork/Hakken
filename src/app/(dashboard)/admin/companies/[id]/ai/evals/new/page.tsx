@@ -222,12 +222,12 @@ export default function NewCompanyEvalPage() {
               />
             </AdminModalFormField>
           </div>
-          <AdminModalFormField label="Required skills" hint={`${requiredSkillIds.length} selected from active company skills`}>
+          <AdminModalFormField label="Required skills" hint={`${requiredSkillIds.length} selected from active central skills available to this company`}>
             <CompanySkillCheckboxPicker
               skills={activeSkills.results}
               selectedSkillIds={requiredSkillIds}
               status={activeSkills.status}
-              emptyMessage="No active company skills are available. Create or import a company skill first."
+              emptyMessage="No active central skills are available to this company. Add a skill from Skill Center first."
               onToggleSkill={toggleRequiredSkill}
               onLoadMore={() => activeSkills.loadMore(ADMIN_PAGE_SIZE)}
             />

@@ -191,7 +191,7 @@ function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary |
         <span className="text-[10px] font-mono text-muted">{versionLabel}</span>
       </div>
       <Link
-        href={`/admin/agents/skills/${sourceSkill.skillId}`}
+        href={`/admin/ai/skills/${sourceSkill.skillId}`}
         className="text-[12px] text-foreground hover:text-brand-light font-semibold flex items-center gap-1 w-fit"
       >
         <ExternalLink className="w-3 h-3" />

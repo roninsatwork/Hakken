@@ -75,7 +75,7 @@ describe("NewCompanyEvalPage", () => {
     });
   });
 
-  it("creates eval cases with required skills selected from active company skills", async () => {
+  it("creates eval cases with required skills selected from active central skills available to the company", async () => {
     createCase.mockResolvedValue({ evalCaseId: "eval_1" });
 
     render(<NewCompanyEvalPage />);

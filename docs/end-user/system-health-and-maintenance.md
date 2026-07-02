@@ -11,7 +11,7 @@ For the broader settings map, see [Platform Operations Settings](./platform-oper
 - `/admin/settings/scripts/[scriptId]`: one script's guidance, run action, and history.
 - `/admin/run-observatory`: recent agent run triage when system health points to run failures.
 - `/admin/agents/approvals`: pending approval queue when system health reports stranded approvals.
-- `/admin/workflows/logs`: workflow execution logs when system health reports schedule or execution failures.
+- `/admin/workflows/schedules`: schedule configuration when system health reports schedule drift or execution failures.
 
 System health accepts admins. Super admins see platform-wide evidence; company admins see company-scoped reports where supported. Maintenance script listing, detail, and execution require super-admin access because scripts are platform repair controls.
 
@@ -48,7 +48,7 @@ Start with signals that affect customer behavior:
 4. Budget and high-cost signals.
 5. Analytics data-health drift.
 
-Open the linked operational area before changing configuration. For example, a stale run should be inspected in the run timeline; a provider failure should be compared with provider settings and recent deploys; a schedule warning should be checked in workflow logs and schedule configuration.
+Open the linked operational area before changing configuration. For example, a stale run should be inspected in the run timeline; a provider failure should be compared with provider settings and recent deploys; a schedule warning should be checked against schedule configuration and the target workflow or agent.
 
 ## Download The Health Report
 
@@ -117,6 +117,6 @@ For provider failure clusters, check provider credentials, provider connectivity
 
 For high-cost agents, review run volume, token usage, model choice, retrieval scope, and budget settings before disabling an agent.
 
-For failed scheduled executions, open workflow logs, inspect the failed node or target, repair the configuration, then rerun manually if appropriate.
+For failed scheduled executions, inspect the target workflow or agent run, repair the configuration, then rerun manually if appropriate.
 
 For analytics drift, use analytics settings and the data-health guidance rather than running unrelated maintenance scripts.

@@ -67,8 +67,8 @@ Already present:
 
 - `convex/schema.ts` has `agentSkills`, `agentSkillVersions`, and `agentSkillBindings`.
 - `convex/agentSkills.ts` has catalog queries, CRUD, immutable version snapshots, starter seeding, skill binding, rollout upgrades, analytics, and JSON bundle import/export.
-- `src/app/(dashboard)/admin/agents/skills/page.tsx` is the global skill catalog.
-- `src/app/(dashboard)/admin/agents/skills/[id]/page.tsx` is the skill detail, editor, export, clone, archive, rollout, and learning view.
+- `src/app/(dashboard)/admin/ai/skills/page.tsx` is the global skill catalog.
+- `src/app/(dashboard)/admin/ai/skills/[id]/page.tsx` is the skill detail, editor, export, clone, archive, rollout, and learning view.
 - `src/app/(dashboard)/admin/agents/[id]/skills/page.tsx` attaches skills to agents.
 - `src/app/(dashboard)/admin/companies/[id]/ai/skills/**` provides company AI skill management.
 - Runtime paths already compile enabled skill instructions and include skill evidence in runs, readiness, evals, learning suggestions, and memory candidates.

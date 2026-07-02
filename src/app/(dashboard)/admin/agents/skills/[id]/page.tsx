@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { redirect, useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -61,7 +61,7 @@ type AgentSkillDetailPageProps = {
   basePath?: string;
 };
 
-export function AgentSkillDetail({ basePath = "/admin/agents/skills" }: AgentSkillDetailPageProps) {
+export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDetailPageProps) {
   const params = useParams();
   const skillId = params.id as Id<"agentSkills">;
   const detail = useQuery(api.agentSkills.getSkill, { skillId });
@@ -529,5 +529,6 @@ export function AgentSkillDetail({ basePath = "/admin/agents/skills" }: AgentSki
 }
 
 export default function AgentSkillDetailPage() {
-  return <AgentSkillDetail />;
+  const params = useParams();
+  redirect(`/admin/ai/skills/${params.id}`);
 }

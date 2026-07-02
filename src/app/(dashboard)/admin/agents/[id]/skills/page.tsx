@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { AlertTriangle, BrainCircuit, CheckCircle2, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, BrainCircuit, CheckCircle2, ExternalLink, Library, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type BindingRow = {
@@ -72,6 +73,7 @@ export default function AgentSkillsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState<Id<"agentSkills"> | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<BindingRow | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
 
@@ -91,6 +93,9 @@ export default function AgentSkillsPage() {
     ].some((value) => value?.toLowerCase().includes(search));
   });
   const selectedSkill = filteredAvailableSkills.find((skill) => skill._id === selectedSkillId) ?? filteredAvailableSkills[0] ?? null;
+  const updateCount = (bindings ?? []).filter((row) => row.hasAvailableUpdate).length;
+  const toolGapCount = (bindings ?? []).filter((row) => row.readiness.missingRequiredToolMappings.length > 0).length;
+  const smokeGapCount = (bindings ?? []).filter((row) => !row.evalCoverage.latestPassedRun).length;
   const isLoading = bindings === undefined || skills === undefined;
 
   const runMutation = async (id: string, action: () => Promise<unknown>, successMessage: string) => {
@@ -114,6 +119,7 @@ export default function AgentSkillsPage() {
     );
     setSelectedSkillId(null);
     setSkillSearchTerm("");
+    setIsPickerOpen(false);
   };
 
   const toggle = async (binding: Doc<"agentSkillBindings">) => {
@@ -153,7 +159,8 @@ export default function AgentSkillsPage() {
 
   return (
     <div className="flex flex-col gap-5 pb-12">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight text-foreground flex items-center gap-2">
             <BrainCircuit className="w-6 h-6 text-brand" />
@@ -163,15 +170,43 @@ export default function AgentSkillsPage() {
             Attach reusable capability packages to this agent. Enabled skills are inserted into the runtime system prompt and snapshotted into releases.
           </p>
         </div>
-        <label className="flex items-center gap-2 rounded-[8px] border border-border-dim bg-card px-3 py-2 text-[12px] text-secondary">
-          <input
-            type="checkbox"
-            checked={seedEvalFixtures}
-            onChange={(event) => setSeedEvalFixtures(event.target.checked)}
-            className="h-4 w-4 rounded border-border-dim accent-brand"
-          />
-          Seed suggested evals on attach
-        </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin/ai/skills"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-3 text-[12px] font-semibold text-secondary transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Skill Center
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setIsPickerOpen(true);
+                setSelectedSkillId(null);
+                setSkillSearchTerm("");
+              }}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90"
+            >
+              <Library className="h-3.5 w-3.5" />
+              Add from Skill Center
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {[
+            { label: "Attached", value: bindings.length },
+            { label: "Available", value: availableSkills.length },
+            { label: "Updates", value: updateCount },
+            { label: "Tool gaps", value: toolGapCount },
+            { label: "Smoke gaps", value: smokeGapCount },
+          ].map((metric) => (
+            <div key={metric.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-4">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted">{metric.label}</div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">{metric.value.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
       </header>
 
       {feedback && (
@@ -184,22 +219,43 @@ export default function AgentSkillsPage() {
         </div>
       )}
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[14px] font-semibold text-foreground">Attached skills</h2>
-          <span className="text-[11px] font-mono text-muted">{bindings.length} attached</span>
+      <section className="overflow-hidden rounded-[8px] border border-border-dim bg-sidebar/30">
+        <div className="flex flex-col gap-3 border-b border-border-dim px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-[14px] font-semibold text-foreground">Attached Skill Catalog</h2>
+            <p className="mt-0.5 text-[12px] text-secondary">Attach active Skill Center capabilities to this agent and review rollout readiness.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-9 items-center gap-2 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[12px] text-secondary">
+              <input
+                type="checkbox"
+                checked={seedEvalFixtures}
+                onChange={(event) => setSeedEvalFixtures(event.target.checked)}
+                className="h-4 w-4 rounded border-border-dim accent-brand"
+              />
+              Seed evals
+            </label>
+          </div>
         </div>
         {bindings.length === 0 ? (
-          <div className="rounded-[8px] border border-dashed border-border-dim p-8 text-center text-[13px] text-secondary">
-            This agent does not have skills attached yet.
+          <div className="flex flex-col items-center gap-3 px-4 py-12 text-center text-[13px] text-secondary">
+            <p>This agent does not have skills attached yet.</p>
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90"
+            >
+              <Library className="h-3.5 w-3.5" />
+              Add from Skill Center
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="divide-y divide-border-dim">
             {bindings.map((row) => {
               const missingRequiredCount = row.readiness.missingRequiredToolMappings.length;
               return (
-                <article key={row.binding._id} className="rounded-[8px] border border-border-dim bg-card p-4 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-4">
+                <article key={row.binding._id} className="flex flex-col gap-3 px-4 py-4">
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-[15px] font-semibold text-foreground truncate">{row.skill.name}</h3>
@@ -208,8 +264,32 @@ export default function AgentSkillsPage() {
                         </span>
                       </div>
                       <p className="text-[12px] text-secondary mt-1 line-clamp-2">{row.skill.description || "No description provided."}</p>
+                      <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted">
+                        <span>v{row.version?.versionNumber ?? 0}</span>
+                        <span>{row.binding.isEnabled ? "enabled" : "disabled"}</span>
+                        <span>{row.readiness.requiredToolMappings.length} required tool{row.readiness.requiredToolMappings.length === 1 ? "" : "s"}</span>
+                        <span>{row.evalCoverage.activeFixtureCount} fixture{row.evalCoverage.activeFixtureCount === 1 ? "" : "s"}</span>
+                      </div>
                     </div>
-                    <span className="text-[11px] font-mono text-muted shrink-0">v{row.version?.versionNumber ?? 0}</span>
+                    <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggle(row.binding)}
+                        disabled={busyId === row.binding._id}
+                        className="h-8 rounded-[8px] border border-border-dim px-3 text-[12px] text-secondary hover:text-foreground disabled:opacity-50"
+                      >
+                        {busyId === row.binding._id ? "Saving..." : row.binding.isEnabled ? "Disable" : "Enable"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRemoveTarget(row)}
+                        disabled={busyId === row.binding._id}
+                        className="flex h-8 items-center gap-2 rounded-[8px] border border-red-500/20 px-3 text-[12px] text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                    </div>
                   </div>
 
                   {row.hasAvailableUpdate && row.latestVersion && (
@@ -269,26 +349,6 @@ export default function AgentSkillsPage() {
                       })}
                     </div>
                   )}
-
-                  <div className="flex flex-wrap justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => toggle(row.binding)}
-                      disabled={busyId === row.binding._id}
-                      className="h-9 px-3 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground disabled:opacity-50"
-                    >
-                      {busyId === row.binding._id ? "Saving..." : row.binding.isEnabled ? "Disable" : "Enable"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRemoveTarget(row)}
-                      disabled={busyId === row.binding._id}
-                      className="h-9 px-3 rounded-[8px] border border-red-500/20 text-[12px] text-red-300 hover:bg-red-500/10 disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Remove
-                    </button>
-                  </div>
                 </article>
               );
             })}
@@ -296,23 +356,13 @@ export default function AgentSkillsPage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[14px] font-semibold text-foreground">Select from skill library</h2>
-            <p className="text-[12px] text-secondary mt-1">
-              Choose from approved active skills in the central library. Draft and archived skills stay out of this picker.
-            </p>
-          </div>
-          <span className="text-[11px] font-mono text-muted">{availableSkills.length} available</span>
-        </div>
-        {availableSkills.length === 0 ? (
-          <div className="rounded-[8px] border border-dashed border-border-dim p-8 text-center text-[13px] text-secondary">
-            No unattached active skills are available.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
-            <div className="rounded-[8px] border border-border-dim bg-card overflow-hidden">
+      <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title="Add From Skill Center" size="lg">
+        <div className="flex flex-col gap-5">
+          <p className="text-[13px] leading-relaxed text-secondary">
+            Select an approved active Skill Center capability for this agent. Draft and archived skills stay out of this picker.
+          </p>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="overflow-hidden rounded-[8px] border border-border-dim bg-background/50">
               <div className="p-3 border-b border-border-dim">
                 <label className="relative block">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -327,7 +377,18 @@ export default function AgentSkillsPage() {
                   />
                 </label>
               </div>
-              {filteredAvailableSkills.length === 0 ? (
+              {availableSkills.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-[13px] text-secondary">
+                  <p>No unattached active skills are available.</p>
+                  <Link
+                    href="/admin/ai/skills"
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-3 text-[12px] font-semibold text-foreground transition-colors hover:border-brand/40 hover:text-brand"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open Skill Center
+                  </Link>
+                </div>
+              ) : filteredAvailableSkills.length === 0 ? (
                 <div className="p-8 text-center text-[13px] text-secondary">
                   No active skills match this search.
                 </div>
@@ -361,7 +422,7 @@ export default function AgentSkillsPage() {
               )}
             </div>
 
-            <aside className="rounded-[8px] border border-border-dim bg-card p-4 min-h-[260px]">
+            <aside className="rounded-[8px] border border-border-dim bg-background/50 p-4 min-h-[260px]">
               {selectedSkill ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start justify-between gap-3">
@@ -402,8 +463,8 @@ export default function AgentSkillsPage() {
               )}
             </aside>
           </div>
-        )}
-      </section>
+        </div>
+      </SonaeModal>
 
       <SonaeModal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title="Remove skill" size="sm">
         <div className="flex flex-col gap-5 px-1 pb-2 text-[13px] text-secondary">

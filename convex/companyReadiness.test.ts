@@ -7,7 +7,7 @@ describe("Company AI readiness", () => {
   test("drift appears after company AI changes and passing eval evidence resolves it", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminAId, adminBId, companyAId } = await t.run(async (ctx) => {
+    const { adminAId, adminBId, companyAId, globalSkillId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
       const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
       const adminAId = await ctx.db.insert("users", {
@@ -20,8 +20,19 @@ describe("Company AI readiness", () => {
         role: "ADMIN",
         companyId: companyBId,
       });
+      const globalSkillId = await ctx.db.insert("agentSkills", {
+        name: "Proposal drafting",
+        category: "SALES",
+        status: "ACTIVE",
+        riskLevel: "HIGH",
+        instruction: "Draft proposal sections from approved company context.",
+        requiredToolMappingsJson: JSON.stringify(["crm.proposals.read"]),
+        createdBy: adminAId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-      return { adminAId, adminBId, companyAId };
+      return { adminAId, adminBId, companyAId, globalSkillId };
     });
 
     const adminAClient = t.withIdentity({ subject: adminAId });
@@ -33,13 +44,14 @@ describe("Company AI readiness", () => {
       category: "SALES",
       sourceType: "MANUAL",
     });
-    const skillId = await adminAClient.mutation(api.companySkills.createSkill, {
+    const addedSkill = await adminAClient.mutation(api.companySkills.importGlobalSkill, {
       companyId: companyAId,
-      name: "Proposal drafting",
-      category: "SALES",
-      status: "ACTIVE",
-      riskLevel: "LOW",
-      instruction: "Draft proposal sections from approved company context.",
+      skillId: globalSkillId,
+    });
+    const skillId = addedSkill.skillId;
+    await adminAClient.mutation(api.companySkills.updateSkill, {
+      skillId,
+      approvalPolicyJson: JSON.stringify({ mode: "approval_required", before: ["send"] }),
     });
     await adminAClient.mutation(api.companySkills.setBinding, {
       skillId,
@@ -91,14 +103,12 @@ describe("Company AI readiness", () => {
 
     await adminAClient.mutation(api.companySkills.updateSkill, {
       skillId,
-      riskLevel: "HIGH",
-      requiredToolsJson: "[]",
       approvalPolicyJson: "",
     });
     const blockedSummary = await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId });
     expect(blockedSummary.state).toBe("NOT_READY");
     expect(blockedSummary.skills).toMatchObject({
-      missingToolRequirementSkills: 1,
+      missingToolRequirementSkills: 0,
       highRiskMissingApproval: 1,
     });
   });

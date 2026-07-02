@@ -43,7 +43,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt ?? ""} {...props} />,
+  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={alt ?? ""} {...props} />
+  ),
 }));
 
 vi.mock("framer-motion", () => ({
@@ -102,7 +105,6 @@ const labels: Record<string, string> = {
   systemPrompt: "System Prompt",
   systemSettings: "System Settings",
   webhookDeliveries: "Webhook Deliveries",
-  workflowLogs: "Workflow Logs",
 };
 
 vi.mock("next-intl", () => ({
@@ -142,6 +144,19 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.getByRole("button", { name: "Agents" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Manage Agents" })).toHaveAttribute("href", "/admin/agents");
     expect(screen.queryByRole("link", { name: "Agent Skills" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Workflow Logs" })).not.toBeInTheDocument();
+  });
+
+  it("shows ship checks and run observatory in Maintenance instead of Agents", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/releases");
+
+    render(<SidebarNavigation />);
+
+    expect(screen.getByRole("button", { name: "Maintenance" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Release Center" })).toHaveAttribute("href", "/admin/releases");
+    expect(screen.getByRole("link", { name: "Run Observatory" })).toHaveAttribute("href", "/admin/run-observatory");
+    expect(screen.getByRole("button", { name: "Agents" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Manage Agents" })).not.toBeInTheDocument();
   });
 
   it("does not reopen the global AI submenu while viewing company AI pages", () => {

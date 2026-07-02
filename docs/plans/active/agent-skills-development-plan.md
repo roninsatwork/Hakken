@@ -221,8 +221,8 @@ Acceptance:
 
 Build:
 
-- Add `/admin/agents/skills`.
-- Add `/admin/agents/skills/[id]`.
+- Add `/admin/ai/skills`.
+- Add `/admin/ai/skills/[id]`.
 - Add editor sections for identity, instruction, required tools, recommended tools, recommended knowledge, default rules, and suggested eval fixtures.
 - Use existing admin page, table, modal, and save-control primitives.
 - Add locale keys to `messages/en.json` and `messages/it.json`.
@@ -351,8 +351,8 @@ Acceptance:
 Recommended admin IA:
 
 - `/admin/agents`: agent catalog.
-- `/admin/agents/skills`: skill catalog.
-- `/admin/agents/skills/[id]`: skill detail/editor.
+- `/admin/ai/skills`: skill catalog.
+- `/admin/ai/skills/[id]`: skill detail/editor.
 - `/admin/agents/[id]/skills`: attached skills, missing tools, skill readiness, and eval status.
 - `/admin/agents/[id]/evals`: add skill filters and skill suite runs.
 - `/admin/agents/[id]/runs`: show active skills for each run and skill-attributed learning actions.
@@ -484,7 +484,7 @@ This gives Sonae a visible product layer quickly while preserving the existing g
 Status as of June 21, 2026:
 
 - Phase 1 catalog foundation is implemented with `agentSkills`, `agentSkillVersions`, `agentSkillBindings`, skill snapshots, and generated Convex API types.
-- Phase 2 admin UI is implemented with `/admin/agents/skills`, `/admin/agents/skills/[id]`, and starter skill seeding.
+- Phase 2 admin UI is implemented with `/admin/ai/skills`, `/admin/ai/skills/[id]`, and starter skill seeding.
 - Phase 3 agent binding is implemented with `/admin/agents/[id]/skills`, attach/detach/enable/disable controls, and suggested eval fixture seeding on attach.
 - Phase 4 runtime compilation is implemented for chat-triggered and non-chat-triggered agent runs, including replay snapshot support.
 - Phase 5 readiness is partially implemented: required skill tool mappings block activation, and high-risk skills require passing skill smoke eval evidence before activation.

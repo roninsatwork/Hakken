@@ -345,7 +345,6 @@
         "workflows": "Workflow",
         "manageWorkflows": "Gestisci Workflow",
         "schedules": "Programmazioni",
-        "workflowLogs": "Log dei Workflow",
         "users": "Utenti",
         "manageUsers": "Gestisci Utenti",
         "invitations": "Inviti",
@@ -648,7 +647,6 @@
             },
             "tabs": {
                 "designer": "Designer",
-                "logs": "Log Esecuzione",
                 "schedules": "Programmazioni"
             },
             "designer": {
@@ -725,7 +723,7 @@
                 },
                 "runModal": {
                     "title": "Invio Manuale",
-                    "description": "Il workflow è stato messo in coda per l'esecuzione immediata. Puoi monitorare il progresso nei Log di Esecuzione.",
+                    "description": "Il workflow è stato messo in coda per l'esecuzione immediata.",
                     "acknowledge": "Ho capito"
                 },
                 "alerts": {
@@ -735,46 +733,6 @@
                     "saveAgentFailed": "Impossibile sincronizzare la configurazione dell'agent.",
                     "promoteFailed": "Impossibile promuovere l'agent alla flotta globale.",
                     "dispatchFailed": "Impossibile avviare l'esecuzione manuale."
-                }
-            },
-            "logs": {
-                "title": "Esecuzioni Workflow",
-                "description": "Monitora e debugga i cicli di coordinamento live tra agent.",
-                "searchPlaceholder": "Filtra log per nome, stato o trigger...",
-                "table": {
-                    "status": "Stato",
-                    "workflow": "Workflow",
-                    "trigger": "Trigger",
-                    "timestamp": "Timestamp",
-                    "noLogs": "Nessun log di esecuzione registrato."
-                },
-                "status": {
-                    "success": "Successo",
-                    "failed": "Fallito",
-                    "running": "In esecuzione"
-                },
-                "report": {
-                    "title": "Report Esecuzione",
-                    "description": "Dettagli sull'esecuzione di questo processo.",
-                    "notFound": {
-                        "title": "Log Non Trovato",
-                        "description": "Il log di esecuzione richiesto non è stato trovato.",
-                        "back": "Torna ai Log"
-                    },
-                    "meta": {
-                        "status": "Risultato",
-                        "trigger": "Avviato da",
-                        "target": "Eseguito",
-                        "startedAt": "Iniziato il"
-                    },
-                    "output": {
-                        "title": "Log di Output",
-                        "noOutput": "Nessun dato di output registrato"
-                    },
-                    "feedback": {
-                        "resumeSuccess": "Workflow ripreso. L'elaborazione continuerà a breve.",
-                        "resumeFailed": "Ripresa fallita. Non è stato possibile sbloccare il workflow."
-                    }
                 }
             },
             "schedules": {
@@ -1127,6 +1085,9 @@
                     "dashboard": "Dashboard",
                     "runs": "Esecuzioni",
                     "evals": "Eval",
+                    "context": "Contesto",
+                    "governance": "Governance",
+                    "interfaces": "Interfacce",
                     "settings": "Impostazioni",
                     "skills": "Skill",
                     "knowledge": "Conoscenza",

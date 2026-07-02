@@ -46,7 +46,7 @@ Manual designer runs call `api.workflows.triggerManualRun`. The mutation require
 
 Action callers can use `runManualSync` in `convex/workflows.ts`; it requires action-level super-admin authorization and then follows the same runtime path.
 
-Due schedule dispatch is handled by `internal.workflowEngine.scheduleDispatcher`, which is registered from `convex/crons.ts` to run every minute. The dispatcher queries active schedules whose `nextRunAt` is due, up to the bounded dispatch limit. Workflow schedules only execute the graph when the workflow exists, is active, and has `triggerType` set to `SCHEDULE`. Agent schedules queue agent runs and link them to workflow execution logs instead of invoking the workflow graph runtime.
+Due schedule dispatch is handled by `internal.workflowEngine.scheduleDispatcher`, which is registered from `convex/crons.ts` to run every minute. The dispatcher queries active schedules whose `nextRunAt` is due, up to the bounded dispatch limit. Workflow schedules only execute the graph when the workflow exists, is active, and has `triggerType` set to `SCHEDULE`. Agent schedules queue agent runs and link them to workflow execution records instead of invoking the workflow graph runtime.
 
 Public webhooks enter through `convex/webhooks.ts`. The HTTP action reads the `workflowId` query parameter, requires the workflow to be active and configured as `WEBHOOK`, verifies the `x-sonae-secret` header against the stored secret, creates a public webhook execution through `createPublicWorkflowRunInternal`, and schedules `startWorkflow` with the request body as initial input. The internal creation path also requires the workflow's stored `companyId` to match the supplied public trigger company id. The secret is not accepted in the URL. Oversized webhook input is rejected with 413 before execution when either the numeric `content-length` header or the actual request text exceeds the 20,000-character public input limit.
 
@@ -171,7 +171,7 @@ Keep webhook secrets out of URLs, logs, and docs examples. When debugging, inspe
 
 ## Observability And Debugging
 
-The admin execution log pages read from `workflowExecutions` and `workflowExecutionSteps`. The list is bounded and sorted by newest `startedAt`; the detail view shows steps and execution state JSON.
+Workflow execution evidence is stored in `workflowExecutions` and `workflowExecutionSteps`. The list/detail query helpers are bounded and sorted by newest `startedAt`, but no standalone admin workflow execution log browser is currently exposed.
 
 When diagnosing a runtime issue, check:
 

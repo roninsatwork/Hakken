@@ -1,3 +1,4 @@
+import type React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
@@ -11,6 +12,14 @@ vi.mock("convex/react", () => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "agent_1" }),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 const bindingRows = [{
@@ -129,18 +138,13 @@ describe("AgentSkillsPage", () => {
 
     render(<AgentSkillsPage />);
 
-    expect(screen.getByText("1 attached")).toBeInTheDocument();
+    expect(screen.getByText("Attached Skill Catalog")).toBeInTheDocument();
+    expect(screen.getByText("Available")).toBeInTheDocument();
     expect(screen.getByText("Risk Monitoring")).toBeInTheDocument();
     expect(screen.getByText("New skill version available: v3. Review and upgrade this agent when ready.")).toBeInTheDocument();
     expect(screen.getByText("1 required tool mapping(s) are missing.")).toBeInTheDocument();
     expect(screen.getByText("1 skill fixture(s), smoke evidence is stale.")).toBeInTheDocument();
     expect(screen.getByText("risk.monitor.feed")).toBeInTheDocument();
-    expect(screen.getByText("Select from skill library")).toBeInTheDocument();
-    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
-    expect(screen.getByText("1 available")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Search active skills")).toBeInTheDocument();
-    expect(screen.getByText("Instruction preview")).toBeInTheDocument();
-    expect(screen.getByText("Use concrete next steps.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Update to v3" }));
     await waitFor(() => {
@@ -155,6 +159,13 @@ describe("AgentSkillsPage", () => {
       expect(setBindingEnabled).toHaveBeenCalledWith({ bindingId: "binding_risk", isEnabled: false });
     });
 
+    fireEvent.click(screen.getByRole("button", { name: "Add from Skill Center" }));
+    expect(screen.getByText("Add From Skill Center")).toBeInTheDocument();
+    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
+    expect(screen.getByPlaceholderText("Search active skills")).toBeInTheDocument();
+    expect(screen.getByText("Instruction preview")).toBeInTheDocument();
+    expect(screen.getByText("Use concrete next steps.")).toBeInTheDocument();
+
     fireEvent.change(screen.getByPlaceholderText("Search active skills"), { target: { value: "follow" } });
     expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
 
@@ -166,5 +177,26 @@ describe("AgentSkillsPage", () => {
         seedEvalFixtures: true,
       });
     });
+  });
+
+  it("links to Skill Center when no active central skills are available", () => {
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
+      const functionName = getFunctionName(queryFn);
+      if (functionName === "agentSkills:getForAgent") {
+        return [] as unknown as ReturnType<typeof useQuery>;
+      }
+      if (functionName === "agentSkills:getActiveSkills") {
+        return [] as unknown as ReturnType<typeof useQuery>;
+      }
+      return undefined as unknown as ReturnType<typeof useQuery>;
+    });
+
+    render(<AgentSkillsPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add from Skill Center" })[0]);
+
+    expect(screen.getByText("No unattached active skills are available.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
   });
 });

@@ -208,7 +208,7 @@ function SkillRecommendationList({ title, items, activeSkills }: { title: string
           return activeSkill ? (
             <Link
               key={item}
-              href={`/admin/agents/skills/${activeSkill._id}`}
+              href={`/admin/ai/skills/${activeSkill._id}`}
               className="flex items-start gap-2 rounded-[8px] border border-border-dim bg-background/30 px-3 py-2 hover:border-brand/40"
             >
               {content}

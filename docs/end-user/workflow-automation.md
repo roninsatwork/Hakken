@@ -1,6 +1,6 @@
 # Workflow Automation
 
-Workflow automation is the part of Sonae where super admins build and monitor automated operational flows. A workflow can connect AI agents, external API calls, data lookups, routing rules, delays, approval checkpoints, repeated item processing, merge points, and email sending. Sonae records each run so administrators can review what happened, where a run paused or failed, and what output was produced.
+Workflow automation is the part of Sonae where super admins build and schedule automated operational flows. A workflow can connect AI agents, external API calls, data lookups, routing rules, delays, approval checkpoints, repeated item processing, merge points, and email sending. Sonae records workflow runs in backend execution tables, while agent-owned activity is reviewed from the relevant agent screens.
 
 This guide is written for customer admins, operators, support teams, sales engineers, and client success teams who need to understand what the workflow screens do. In the current product, workflow building and schedule management are super-admin functions. Standard users and company admins do not manage this area. They may see effects of workflows elsewhere in the product, such as records, messages, agent outputs, or emails, but they do not author workflows from these admin screens.
 
@@ -13,8 +13,6 @@ Workflow screens are in the admin area:
 - `/admin/workflows/schedules` opens the schedule list for workflow and agent schedules.
 - `/admin/workflows/schedules/new` creates a schedule.
 - `/admin/workflows/schedules/[id]` edits a schedule.
-- `/admin/workflows/logs` opens the execution log list.
-- `/admin/workflows/logs/[id]` opens one execution report.
 
 The admin navigation may group these screens with other agentic platform tools. Access is role-based: if a person cannot open the admin workflow pages, they likely do not have the required super-admin role.
 
@@ -22,7 +20,7 @@ The admin navigation may group these screens with other agentic platform tools. 
 
 Workflows are useful when a repeated process needs several steps and those steps should be visible, reusable, and auditable. Examples include routing incoming data through an AI agent, calling an external system, checking a condition, waiting before continuing, asking a human to approve a sensitive step, writing or reading selected Sonae data, and sending a final email.
 
-A workflow is not just a single prompt. It is a graph. Each block in the graph is called a node, and lines between nodes decide the order. Some nodes transform data. Some call agents. Some decide which branch should run next. Some pause the flow. The final execution log shows the path that ran and the output state that was collected along the way.
+A workflow is not just a single prompt. It is a graph. Each block in the graph is called a node, and lines between nodes decide the order. Some nodes transform data. Some call agents. Some decide which branch should run next. Some pause the flow. The runtime records path and output state for backend diagnostics.
 
 Because workflows can call external systems and change data, Sonae keeps this feature in the super-admin area. Use it for carefully managed operational automation, not casual one-off chat.
 
@@ -108,21 +106,13 @@ Schedule timing supports recurring and targeted-time modes. Recurring schedules 
 
 The active toggle is important. Active schedules are armed and can run when their next run time arrives. Paused schedules remain saved but should not dispatch. Editing a schedule lets you change the target, cadence, timing, and active state. Deleting a schedule removes the schedule.
 
-The force-run button on the schedule list behaves differently by target type. For agent schedules, it queues a real agent run and links it to the execution log. For workflow schedules, the current force-run action creates an execution log and completes it through a backend heartbeat simulation rather than running the visual workflow graph. To test the real graph manually, open the workflow builder and use manual run. To test the automatic scheduled graph path, use an active schedule with a workflow whose trigger type is `SCHEDULE`.
-
-## Execution Logs
-
-The execution log list shows recent runs. Each row includes status, workflow or target name, trigger type, and start time. Status can be running, success, or failed. The list can be searched by workflow name, status, or trigger type and paginates at 15 rows per page.
-
-Opening a log shows the execution report. The top section summarizes status, trigger, target, and start time. If the run has node steps, the report lists each step in order with its node id and status. Failed steps show an error message. Approval steps show as needing approval and include an approve-and-resume button when the workflow id is available.
-
-The lower section shows the execution state JSON. This is technical, but it is useful when support or implementation teams need to inspect what data moved through the workflow. The copy button copies the formatted state. Be careful sharing this output because it can contain customer data, external API responses, agent outputs, or email content, depending on the workflow.
+The force-run button on the schedule list behaves differently by target type. For agent schedules, it queues a real agent run that can be reviewed from the agent run/log surfaces. For workflow schedules, the current force-run action creates a backend execution record and completes it through a heartbeat simulation rather than running the visual workflow graph. To test the real graph manually, open the workflow builder and use manual run. To test the automatic scheduled graph path, use an active schedule with a workflow whose trigger type is `SCHEDULE`.
 
 ## Permissions, Boundaries, And Practical Guidance
 
-Only super admins manage workflows, schedules, and workflow logs from these screens. This protects tenants from accidental cross-company automation and protects system settings from regular user actions. Backend checks also restrict public webhook triggers to active webhook workflows and require the webhook secret in a request header.
+Only super admins manage workflows and schedules from these screens. This protects tenants from accidental cross-company automation and protects system settings from regular user actions. Backend checks also restrict public webhook triggers to active webhook workflows and require the webhook secret in a request header.
 
-When building workflows, start small. Create the workflow, add a trigger and one or two nodes, save, run manually, and inspect logs. Add data-changing, email, webhook, or external API steps only after the earlier path is behaving as expected. Use clear node labels so execution reports are easier to interpret. Keep secrets out of request bodies and visible labels. Prefer approved, stable external endpoints over temporary test URLs.
+When building workflows, start small. Create the workflow, add a trigger and one or two nodes, save, and run manually. Add data-changing, email, webhook, or external API steps only after the earlier path is behaving as expected. Use clear node labels so backend execution records are easier to interpret if support needs to debug a run. Keep secrets out of request bodies and visible labels. Prefer approved, stable external endpoints over temporary test URLs.
 
 For scheduled operations, confirm both the schedule and the workflow trigger type. A standalone schedule can target a workflow, but the backend dispatcher only runs workflow graph schedules when the workflow exists, is active, and is configured as a scheduled workflow. Paused schedules, inactive workflows, deleted targets, and workflows with the wrong trigger type will not produce the expected automated run.
 

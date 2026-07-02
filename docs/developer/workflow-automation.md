@@ -1,6 +1,6 @@
 # Workflow Automation
 
-Workflow automation is Sonae's super-admin orchestration surface for building, scheduling, triggering, and inspecting graph-based AI and integration runs. It is implemented as an administrative feature, not as a tenant admin or standard user feature. The implementation currently combines a React Flow designer, inline agent configuration, external action nodes, database nodes, schedule records, webhook triggers, execution logs, and a Convex runtime that advances node steps through the graph.
+Workflow automation is Sonae's super-admin orchestration surface for building, scheduling, and triggering graph-based AI and integration runs. It is implemented as an administrative feature, not as a tenant admin or standard user feature. The implementation currently combines a React Flow designer, inline agent configuration, external action nodes, database nodes, schedule records, webhook triggers, backend execution records, and a Convex runtime that advances node steps through the graph.
 
 This document describes the implementation as it exists now. It intentionally does not describe roadmap behavior as live behavior. The most important current caveat is that manual runs launched from the workflow designer use the real graph runtime, due cron dispatch uses the real graph runtime for workflow schedules whose workflow trigger type is `SCHEDULE`, but the schedule-list force-run action for workflow targets currently creates a workflow execution and completes it through a simulated backend heartbeat rather than executing the visual graph. Agent schedule force-runs do queue durable agent runs. For the lower-level execution contracts behind those paths, see [Workflow Runtime Internals](./workflow-runtime-internals.md).
 
@@ -13,8 +13,6 @@ Workflow administration is under the admin route group:
 - `src/app/(dashboard)/admin/workflows/schedules/page.tsx` lists standalone workflow and agent schedules.
 - `src/app/(dashboard)/admin/workflows/schedules/new/page.tsx` creates a standalone schedule.
 - `src/app/(dashboard)/admin/workflows/schedules/[id]/page.tsx` edits a standalone schedule.
-- `src/app/(dashboard)/admin/workflows/logs/page.tsx` lists recent workflow execution records.
-- `src/app/(dashboard)/admin/workflows/logs/[id]/page.tsx` shows one execution, its node steps, final state JSON, and approval-resume controls for paused approval steps.
 
 The visual node components live in `src/ui/components/workflows/`. `src/ui/components/workflows/WorkflowSidebar.tsx` is the drag source for node types. `src/ui/components/workflows/ConfigDrawer.tsx` edits trigger, API action, database, logic, iterator, merge, wait, approval, email, and generic mapping fields. `src/ui/components/workflows/AgentEditorModal.tsx` configures inline agent nodes and can promote non-global agents to global agents. `src/ui/components/workflows/AgentNode.tsx` renders workflow agent nodes with live model labels and schema field chips. `src/ui/components/workflows/types.ts` defines the client-side node data shape used by the designer.
 
@@ -66,7 +64,7 @@ Indexes matter for scale and correctness. Workflows use `by_createdAt` and `sear
 
 ## Authorization And Tenancy
 
-Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts` uses `requireSuperAdmin` for list, paginated list, get, create, update, delete, manual trigger, and webhook-secret read. `convex/scheduler.ts` also uses `requireSuperAdmin` for schedule list, get, create, update, toggle, delete, force run, and execution log queries. `convex/workflowRuntime.ts` uses `requireActionUser` for approval resumption, so an authenticated user can call the action, but the UI route that exposes it is in the admin workflow logs area and passes an existing workflow execution and workflow id.
+Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts` uses `requireSuperAdmin` for list, paginated list, get, create, update, delete, manual trigger, and webhook-secret read. `convex/scheduler.ts` also uses `requireSuperAdmin` for schedule list, get, create, update, toggle, delete, force run, and execution record queries. `convex/workflowRuntime.ts` uses `requireActionUser` for approval resumption, but no standalone admin workflow execution log route is currently exposed.
 
 Database nodes have a separate runtime guard in `convex/workflowEngine.ts`. The runtime loads the workflow creator and treats a creator with `SUPER_ADMIN` as unrestricted for database operations. If the creator is not a super admin, database operations are limited to an allowlist and force or verify the creator's company id. Non-super-admin database selects must use supported indexed query contracts or a document id that belongs to the creator's company. Inserts and updates force the creator company id and reject attempts to cross company boundaries. This matters even though the public UI currently limits workflow authoring to super admins, because runtime paths and tests cover tenant boundary behavior defensively.
 

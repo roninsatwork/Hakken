@@ -14,7 +14,7 @@ Sonae uses three roles: `USER`, `ADMIN`, and `SUPER_ADMIN`. A standard user can 
 
 ## Admin Navigation
 
-When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. App kit and launch areas are grouped under the launch entry. Companies opens company management and company detail screens. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, releases, run observatory, agent management, connectors, workflows, schedules, and workflow logs. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. Maintenance contains system health, scripts, and auth diagnostics. System admins contains super-admin management and super-admin invitations.
+When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. App kit and launch areas are grouped under the launch entry. Companies opens company management and company detail screens. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks, run observatory, system health, scripts, and auth diagnostics. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. System admins contains super-admin management and super-admin invitations.
 
 The normal application sidebar remains different. In `/app`, users see dashboard, assistant, reports, properties, the temporary posture demo, and for company admins an organization section. Diagnostic arcade routes only appear when diagnostic routing is enabled. This distinction matters because customers should not expect every admin function to be available from the regular user dashboard.
 
@@ -64,7 +64,7 @@ Changes to model and prompt configuration can affect users immediately. Test wit
 
 ## Agents, Workflows, Releases, and Connectors
 
-The agents group contains advanced operational tools: approvals, skills, release center, run observatory, agent management, connectors, workflows, schedules, and workflow logs. These areas are for configuring and observing automated or agentic behavior. They are more powerful than normal assistant chat because they can involve tools, approvals, schedules, logs, releases, and runtime steps.
+The agents group contains advanced operational tools: approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks and run observatory. These areas are for configuring and observing automated or agentic behavior. They are more powerful than normal assistant chat because they can involve tools, approvals, schedules, logs, releases, and runtime steps.
 
 Use approvals and logs to understand what automated systems have done or are waiting to do. Use workflow schedules when a workflow should run on a recurring timetable. Use connectors to define external tool access. These areas should be handled by operators who understand the customer workflow and the consequences of automation. See the dedicated agent, AI administration, workflow automation, and launch operations guides before handing these controls to non-technical customer admins.
 

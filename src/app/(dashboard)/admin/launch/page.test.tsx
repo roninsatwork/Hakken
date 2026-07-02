@@ -233,7 +233,7 @@ describe("LaunchPage", () => {
     expect(screen.getByText("ACTIVE · synced")).toBeInTheDocument();
     expect(screen.getByDisplayValue("catalog@example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Ready for support starters.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Approval Handoff/ })).toHaveAttribute("href", "/admin/agents/skills/skill_approval");
+    expect(screen.getByRole("link", { name: /Approval Handoff/ })).toHaveAttribute("href", "/admin/ai/skills/skill_approval");
     expect(screen.getByText("Developer work still needed")).toBeInTheDocument();
     expect(screen.getByText("Map ticket fields to Zendesk.")).toBeInTheDocument();
     expect(screen.getByText("Where this can be customized")).toBeInTheDocument();

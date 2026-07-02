@@ -8,7 +8,6 @@ test.describe("Admin route coverage", () => {
     "/admin/ai/global-knowledge",
     "/admin/workflows",
     "/admin/workflows/schedules",
-    "/admin/workflows/logs",
     "/admin/users",
     "/admin/companies",
     "/admin/agents",

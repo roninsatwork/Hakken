@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentSkillDetailPage, { AgentSkillDetail } from "./page";
+import { AgentSkillDetail } from "./page";
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
@@ -213,7 +213,7 @@ describe("AgentSkillDetailPage rollout review", () => {
   it("shows pinned agents and can bulk upgrade outdated bindings", async () => {
     upgradeSkillBindings.mockResolvedValue({ upgradedCount: 1, skillVersionId: "skill_version_2" });
 
-    render(<AgentSkillDetailPage />);
+    render(<AgentSkillDetail />);
 
     expect(screen.getByText("Agent rollout")).toBeInTheDocument();
     expect(screen.getByText("1 update")).toBeInTheDocument();
@@ -245,7 +245,7 @@ describe("AgentSkillDetailPage rollout review", () => {
     updateSkill.mockResolvedValue({ skillId: "skill_risk", skillVersionId: "skill_version_3" });
     archiveSkill.mockResolvedValue({ skillId: "skill_risk" });
 
-    render(<AgentSkillDetailPage />);
+    render(<AgentSkillDetail />);
 
     await screen.findByDisplayValue("Risk Monitoring");
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Risk Monitoring Plus" } });
@@ -280,7 +280,7 @@ describe("AgentSkillDetailPage rollout review", () => {
   it("clones the skill as a draft from the detail page", async () => {
     cloneSkill.mockResolvedValue({ skillId: "skill_clone", skillVersionId: "skill_clone_version_1" });
 
-    render(<AgentSkillDetailPage />);
+    render(<AgentSkillDetail />);
 
     fireEvent.click(screen.getByRole("button", { name: /Clone/ }));
 
@@ -288,7 +288,7 @@ describe("AgentSkillDetailPage rollout review", () => {
       expect(cloneSkill).toHaveBeenCalledWith({ skillId: "skill_risk" });
     });
     expect(await screen.findByText("Skill cloned as a draft. Review it before attaching agents.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open clone" })).toHaveAttribute("href", "/admin/agents/skills/skill_clone");
+    expect(screen.getByRole("link", { name: "Open clone" })).toHaveAttribute("href", "/admin/ai/skills/skill_clone");
   });
 
   it("keeps detail navigation inside a custom base path", async () => {
@@ -303,7 +303,7 @@ describe("AgentSkillDetailPage rollout review", () => {
     vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
 
-    render(<AgentSkillDetailPage />);
+    render(<AgentSkillDetail />);
 
     fireEvent.click(screen.getByRole("button", { name: /Export/ }));
 

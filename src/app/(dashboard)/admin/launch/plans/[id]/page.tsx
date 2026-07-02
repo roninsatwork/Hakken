@@ -1352,7 +1352,7 @@ export default function LaunchPlanDetailPage() {
               <p className="text-[22px] font-semibold text-foreground mt-2">{createdResourceDetails?.skillBindingCount ?? createdResources.skillBindingIds?.length ?? 0}</p>
               <div className="flex flex-col gap-2 mt-2">
                 {(createdResourceDetails?.skillBindings ?? []).slice(0, 4).map((binding) => (
-                  <Link key={binding.id} href={`/admin/agents/skills/${binding.skillId}`} className="group flex items-center justify-between gap-3 text-[12px]">
+                  <Link key={binding.id} href={`/admin/ai/skills/${binding.skillId}`} className="group flex items-center justify-between gap-3 text-[12px]">
                     <span className="text-brand group-hover:underline truncate">{binding.skillName}</span>
                     <span className="text-muted flex-shrink-0">{binding.isEnabled ? "enabled" : "paused"}</span>
                   </Link>

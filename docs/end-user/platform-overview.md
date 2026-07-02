@@ -212,10 +212,6 @@ The backend includes workflow execution services, runtime helpers, config valida
 
 Admins can schedule workflows and view schedule details. This allows repeatable AI or operational tasks to run automatically.
 
-### Workflow Logs
-
-The platform includes workflow execution logs and detail pages for reviewing execution history, failures, and runtime behavior.
-
 ## Embedded Widget Features
 
 Sonae supports embeddable AI widgets.

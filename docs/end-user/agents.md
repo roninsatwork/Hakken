@@ -21,8 +21,8 @@ Agent administration is under the admin area:
 - `/admin/agents/[id]/integrations` manages tool and integration bindings.
 - `/admin/agents/[id]/schemas` edits input and output schemas.
 - `/admin/agents/[id]/logs` and `/admin/agents/[id]/logs/[logId]` inspect agent logs.
-- `/admin/agents/skills` manages the reusable skill catalog.
-- `/admin/agents/skills/[id]` opens one skill.
+- `/admin/ai/skills` manages the reusable skill catalog.
+- `/admin/ai/skills/[id]` opens one skill.
 - `/admin/agents/approvals` shows paused agent tool calls waiting for an approval decision.
 - `/app/agentic-testing` provides a sandbox for sending prompts to a selected agent or using automatic routing.
 
@@ -66,7 +66,7 @@ Approvals are important for data-changing, external, destructive, or otherwise s
 
 ## Skill Catalog
 
-The skill catalog at `/admin/agents/skills` manages reusable agent capabilities. It shows catalog health, adoption, upgrade lag, validation status, and skills needing attention. Super admins can seed starter skills, create new skills, import skill bundles, export bundles from individual skills, clone skills, archive skills, and review learning analytics.
+The skill catalog at `/admin/ai/skills` manages reusable agent capabilities. It shows catalog health, adoption, upgrade lag, validation status, and skills needing attention. Super admins can seed starter skills, create new skills, import skill bundles, export bundles from individual skills, clone skills, archive skills, and review learning analytics.
 
 A skill can be draft, active, or archived. Only active skills can be attached to agents. Risk level matters: high-risk skills require stronger evidence before they should be relied on, and activation checks can block agents whose enabled high-risk skills do not have current smoke evidence.
 

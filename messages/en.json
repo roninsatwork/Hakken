@@ -345,7 +345,6 @@
         "workflows": "Workflows",
         "manageWorkflows": "Manage Workflows",
         "schedules": "Schedules",
-        "workflowLogs": "Workflow Logs",
         "users": "Users",
         "manageUsers": "Manage Users",
         "invitations": "Invitations",
@@ -629,7 +628,6 @@
             },
             "tabs": {
                 "designer": "Designer",
-                "logs": "Execution Logs",
                 "schedules": "Schedules"
             },
             "designer": {
@@ -706,7 +704,7 @@
                 },
                 "runModal": {
                     "title": "Manual Dispatch",
-                    "description": "The workflow has been queued for immediate execution. You can monitor progress in the Execution Logs.",
+                    "description": "The workflow has been queued for immediate execution.",
                     "acknowledge": "Got it"
                 },
                 "alerts": {
@@ -716,46 +714,6 @@
                     "saveAgentFailed": "Failed to synchronize agent configuration.",
                     "promoteFailed": "Failed to promote agent to global fleet.",
                     "dispatchFailed": "Failed to dispatch manual execution."
-                }
-            },
-            "logs": {
-                "title": "Workflow Executions",
-                "description": "Monitor and debug live agent coordination runs.",
-                "searchPlaceholder": "Filter logs by name, status, or trigger...",
-                "table": {
-                    "status": "Status",
-                    "workflow": "Workflow",
-                    "trigger": "Trigger",
-                    "timestamp": "Timestamp",
-                    "noLogs": "No execution logs recorded."
-                },
-                "status": {
-                    "success": "Success",
-                    "failed": "Failed",
-                    "running": "Running"
-                },
-                "report": {
-                    "title": "Execution Report",
-                    "description": "Details about this execution run.",
-                    "notFound": {
-                        "title": "Log Not Found",
-                        "description": "The requested execution log could not be found.",
-                        "back": "Back to Logs"
-                    },
-                    "meta": {
-                        "status": "Result",
-                        "trigger": "Triggered By",
-                        "target": "Executed",
-                        "startedAt": "Started At"
-                    },
-                    "output": {
-                        "title": "Output Logs",
-                        "noOutput": "No output data recorded"
-                    },
-                    "feedback": {
-                        "resumeSuccess": "Workflow resumed. Processing will continue shortly.",
-                        "resumeFailed": "Resume failed. The workflow could not be unblocked."
-                    }
                 }
             },
             "schedules": {
@@ -1108,6 +1066,9 @@
                     "dashboard": "Dashboard",
                     "runs": "Runs",
                     "evals": "Evals",
+                    "context": "Context",
+                    "governance": "Governance",
+                    "interfaces": "Interfaces",
                     "settings": "Settings",
                     "skills": "Skills",
                     "knowledge": "Knowledge",

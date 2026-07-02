@@ -29,8 +29,8 @@ Use these admin routes:
 - `/admin/agents/[id]/logs`: inspect agent trace history.
 - `/admin/agents/[id]/logs/[logId]`: inspect one trace.
 - `/admin/agents/approvals`: review pending tool-call approvals across agents.
-- `/admin/agents/skills`: manage the reusable skill catalog.
-- `/admin/agents/skills/[id]`: edit, clone, archive, export, and review rollout for one skill.
+- `/admin/ai/skills`: manage the reusable skill catalog.
+- `/admin/ai/skills/[id]`: edit, clone, archive, export, and review rollout for one skill.
 
 ## Create An Agent
 
@@ -77,7 +77,7 @@ When changing schemas, test the agent with realistic examples and review the out
 
 Skills are reusable capability packages. A skill can include instructions, risk level, required tools, recommended tools, recommended knowledge, default rules, and suggested eval fixtures.
 
-Use `/admin/agents/skills` to:
+Use `/admin/ai/skills` to:
 
 - search the skill catalog
 - review catalog analytics and adoption
@@ -85,7 +85,7 @@ Use `/admin/agents/skills` to:
 - create a skill manually
 - import a skill bundle
 
-Use `/admin/agents/skills/[id]` to:
+Use `/admin/ai/skills/[id]` to:
 
 - edit skill content
 - clone a skill

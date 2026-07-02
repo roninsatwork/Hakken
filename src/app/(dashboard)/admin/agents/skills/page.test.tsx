@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import AgentSkillsCatalogPage, { AgentSkillsCatalog } from "./page";
+import { AgentSkillsCatalog } from "./page";
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
@@ -146,7 +146,7 @@ describe("AgentSkillsCatalogPage", () => {
   it("renders skill cards and catalog actions", async () => {
     seedStarterSkills.mockResolvedValue({ createdCount: 2, skippedCount: 4 });
 
-    render(<AgentSkillsCatalogPage />);
+    render(<AgentSkillsCatalog />);
 
     expect(screen.getByText("Skill Center")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Import SKILL.md/ })).toBeInTheDocument();
@@ -160,7 +160,7 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.getAllByText("Approval Handoff")).toHaveLength(2);
     expect(screen.getByText("medium risk")).toBeInTheDocument();
     expect(screen.getByText("high risk")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/agents/skills/skill_research");
+    expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
 
     fireEvent.click(screen.getByRole("button", { name: /Seed starters/ }));
     await waitFor(() => {
@@ -202,7 +202,7 @@ describe("AgentSkillsCatalogPage", () => {
       value: vi.fn().mockResolvedValue("# Browser QA\n\nVerify browser workflows."),
     });
 
-    render(<AgentSkillsCatalogPage />);
+    render(<AgentSkillsCatalog />);
 
     fireEvent.click(screen.getByRole("button", { name: /Import SKILL.md/ }));
     fireEvent.change(screen.getByLabelText("SKILL.md file"), { target: { files: [file] } });
@@ -245,13 +245,13 @@ describe("AgentSkillsCatalogPage", () => {
       });
     });
     expect(await screen.findByText("SKILL.md imported as a draft.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/agents/skills/skill_markdown");
+    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_markdown");
   });
 
   it("creates a skill from the catalog modal", async () => {
     createSkill.mockResolvedValue("skill_new");
 
-    render(<AgentSkillsCatalogPage />);
+    render(<AgentSkillsCatalog />);
 
     fireEvent.click(screen.getByRole("button", { name: /New skill/ }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Client Follow-up" } });
@@ -294,7 +294,7 @@ describe("AgentSkillsCatalogPage", () => {
       },
     });
 
-    render(<AgentSkillsCatalogPage />);
+    render(<AgentSkillsCatalog />);
 
     fireEvent.click(screen.getByRole("button", { name: /Import bundle/ }));
     fireEvent.change(screen.getByLabelText("Bundle JSON"), { target: { value: bundleJson } });
@@ -304,6 +304,6 @@ describe("AgentSkillsCatalogPage", () => {
       expect(importSkillBundle).toHaveBeenCalledWith({ bundleJson });
     });
     expect(await screen.findByText("Skill bundle imported as a draft.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/agents/skills/skill_imported");
+    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_imported");
   });
 });

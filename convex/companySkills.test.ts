@@ -6,7 +6,7 @@ import schema from "./schema";
 const paginationOpts = { numItems: 10, cursor: null };
 
 describe("Company Skills", () => {
-  test("imports active global skills into company draft skills", async () => {
+  test("adds active central skills to company availability", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { adminId, companyId, globalSkillId } = await t.run(async (ctx) => {
@@ -50,25 +50,35 @@ describe("Company Skills", () => {
 
     expect(importedState.skill).toMatchObject({
       companyId,
+      sourceAgentSkillId: globalSkillId,
       name: "Research Briefing",
       category: "RESEARCH",
-      status: "DRAFT",
+      status: "ACTIVE",
       riskLevel: "MEDIUM",
       instruction: "Separate facts, judgments, and open questions.",
       requiredToolsJson: "[\"knowledge.search\"]",
-      versionLabel: "Imported draft",
+      versionLabel: "Central skill",
     });
     expect(importedState.auditLog).toMatchObject({
-      actionType: "IMPORT_GLOBAL_SKILL_TO_COMPANY",
+      actionType: "ADD_CENTRAL_SKILL_TO_COMPANY",
       entityType: "companySkills",
       companyId,
     });
+
+    const importableAfterAdd = await adminClient.query(api.companySkills.getImportableGlobalSkills, { companyId });
+    expect(importableAfterAdd.map((skill) => skill._id)).not.toContain(globalSkillId);
+
+    const duplicateAdd = await adminClient.mutation(api.companySkills.importGlobalSkill, {
+      companyId,
+      skillId: globalSkillId,
+    });
+    expect(duplicateAdd.skillId).toBe(imported.skillId);
   });
 
-  test("creates, binds, summarizes, updates, previews, and archives company skills", async () => {
+  test("binds, summarizes, updates policy, previews, and archives central company skills", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminAId, adminBId, companyAId, companyBId } = await t.run(async (ctx) => {
+    const { adminAId, adminBId, companyAId, companyBId, globalSkillId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
       const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
       const adminAId = await ctx.db.insert("users", {
@@ -81,25 +91,30 @@ describe("Company Skills", () => {
         role: "ADMIN",
         companyId: companyBId,
       });
+      const globalSkillId = await ctx.db.insert("agentSkills", {
+        name: "Proposal drafting",
+        description: "Drafts proposal sections from approved company context.",
+        category: "SALES_ENABLEMENT",
+        status: "ACTIVE",
+        riskLevel: "HIGH",
+        instruction: "Draft proposal content only from approved knowledge and approved company memory.",
+        requiredToolMappingsJson: JSON.stringify(["crm.proposals.read"]),
+        createdBy: adminAId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-      return { adminAId, adminBId, companyAId, companyBId };
+      return { adminAId, adminBId, companyAId, companyBId, globalSkillId };
     });
 
     const adminAClient = t.withIdentity({ subject: adminAId });
     const adminBClient = t.withIdentity({ subject: adminBId });
 
-    const skillId = await adminAClient.mutation(api.companySkills.createSkill, {
+    const addedSkill = await adminAClient.mutation(api.companySkills.importGlobalSkill, {
       companyId: companyAId,
-      name: "Proposal drafting",
-      description: "Drafts proposal sections from approved company context.",
-      category: "sales enablement",
-      status: "ACTIVE",
-      riskLevel: "HIGH",
-      instruction: "Draft proposal content only from approved knowledge and approved company memory.",
-      inputContractJson: JSON.stringify({ required: ["brief"] }),
-      outputContractJson: JSON.stringify({ type: "proposal_section" }),
-      versionLabel: "v1",
+      skillId: globalSkillId,
     });
+    const skillId = addedSkill.skillId;
 
     await expect(
       adminBClient.query(api.companySkills.getSkillsForCompany, {
@@ -133,14 +148,13 @@ describe("Company Skills", () => {
       enabledBindings: 1,
       boundActiveSkills: 1,
       highRiskSkills: 1,
-      missingToolRequirementSkills: 1,
+      missingToolRequirementSkills: 0,
       highRiskMissingApproval: 1,
       readySkills: 0,
     });
 
     await adminAClient.mutation(api.companySkills.updateSkill, {
       skillId,
-      requiredToolsJson: JSON.stringify(["crm.proposals.read"]),
       approvalPolicyJson: JSON.stringify({ mode: "approval_required", before: ["send"] }),
     });
 
@@ -183,7 +197,7 @@ describe("Company Skills", () => {
       ctx.db.query("auditLogs").withIndex("by_company", (q) => q.eq("companyId", companyAId)).order("asc").collect()
     );
     expect(auditLogs.map((log) => log.actionType)).toEqual([
-      "CREATE_COMPANY_SKILL",
+      "ADD_CENTRAL_SKILL_TO_COMPANY",
       "CREATE_COMPANY_SKILL_BINDING",
       "UPDATE_COMPANY_SKILL",
       "ARCHIVE_COMPANY_SKILL",
@@ -191,18 +205,28 @@ describe("Company Skills", () => {
     expect(companyBId).not.toBe(companyAId);
   });
 
-  test("validates JSON contracts and required tools", async () => {
+  test("rejects direct company skill creation and validates company policy JSON", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { adminId, companyId } = await t.run(async (ctx) => {
+    const { adminId, companyId, globalSkillId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Validation Co", createdAt: Date.now() });
       const adminId = await ctx.db.insert("users", {
         email: "admin@example.com",
         role: "ADMIN",
         companyId,
       });
+      const globalSkillId = await ctx.db.insert("agentSkills", {
+        name: "Policy skill",
+        category: "GENERAL",
+        status: "ACTIVE",
+        riskLevel: "MEDIUM",
+        instruction: "Use tools carefully.",
+        createdBy: adminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-      return { adminId, companyId };
+      return { adminId, companyId, globalSkillId };
     });
 
     const adminClient = t.withIdentity({ subject: adminId });
@@ -217,18 +241,17 @@ describe("Company Skills", () => {
         instruction: "Use tools carefully.",
         requiredToolsJson: JSON.stringify({ tool: "crm.read" }),
       })
-    ).rejects.toThrow("Required tools must be a JSON array of strings.");
+    ).rejects.toThrow("Company skills must be added from the central Skill Center.");
 
+    const addedSkill = await adminClient.mutation(api.companySkills.importGlobalSkill, {
+      companyId,
+      skillId: globalSkillId,
+    });
     await expect(
-      adminClient.mutation(api.companySkills.createSkill, {
-        companyId,
-        name: "Bad contract",
-        category: "GENERAL",
-        status: "ACTIVE",
-        riskLevel: "MEDIUM",
-        instruction: "Use tools carefully.",
-        inputContractJson: "{bad",
+      adminClient.mutation(api.companySkills.updateSkill, {
+        skillId: addedSkill.skillId,
+        approvalPolicyJson: "{bad",
       })
-    ).rejects.toThrow("Input contract must be valid JSON.");
+    ).rejects.toThrow("Approval policy must be valid JSON.");
   });
 });

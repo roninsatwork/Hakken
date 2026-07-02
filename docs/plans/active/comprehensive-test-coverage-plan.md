@@ -425,8 +425,8 @@ Progress:
   - AI connector rendering with deterministic connector metadata.
   - admin user search and edit dialog controls.
   - company widget configuration editing, publish state, and integration snippet copy action.
-  - workflow creation, workflow detail rendering, schedules, manual schedule dispatch, and workflow logs.
-- Expanded the e2e Convex React mock so authenticated browser journeys can exercise widget, workflow, schedule, execution-log, AI model, AI tool, and user-management data without live Convex/Auth dependencies.
+  - workflow creation, workflow detail rendering, schedules, and manual schedule dispatch.
+- Expanded the e2e Convex React mock so authenticated browser journeys can exercise widget, workflow, schedule, AI model, AI tool, and user-management data without live Convex/Auth dependencies.
 - Existing route-stability e2e specs collect page errors for high-value routes. Broader global console-error enforcement remains a Phase 7 hardening item because the current app still emits known hydration, chart-dimension, and clipboard warnings during otherwise passing browser journeys.
 
 Required e2e journeys:

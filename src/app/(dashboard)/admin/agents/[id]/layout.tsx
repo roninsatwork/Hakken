@@ -52,16 +52,37 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
 
   const tabs = [
     { label: t('tabs.dashboard'), href: `/admin/agents/${agentId}`, icon: LayoutDashboard },
-    { label: t('tabs.runs'), href: `/admin/agents/${agentId}/runs`, icon: Timer },
-    { label: t('tabs.evals'), href: `/admin/agents/${agentId}/evals`, icon: ClipboardCheck },
+    {
+      label: t('tabs.context'),
+      href: `/admin/agents/${agentId}/runs`,
+      icon: BrainCircuit,
+      dropdownItems: [
+        { label: t('tabs.runs'), href: `/admin/agents/${agentId}/runs`, icon: Timer },
+        { label: t('tabs.evals'), href: `/admin/agents/${agentId}/evals`, icon: ClipboardCheck },
+        { label: t('tabs.skills'), href: `/admin/agents/${agentId}/skills`, icon: BrainCircuit },
+        { label: t('tabs.knowledge'), href: `/admin/agents/${agentId}/knowledge`, icon: Library },
+        { label: t('tabs.memory'), href: `/admin/agents/${agentId}/memory`, icon: Brain },
+      ],
+    },
+    {
+      label: t('tabs.governance'),
+      href: `/admin/agents/${agentId}/system-prompt`,
+      icon: Scale,
+      dropdownItems: [
+        { label: t('tabs.prompt'), href: `/admin/agents/${agentId}/system-prompt`, icon: Terminal },
+        { label: t('tabs.rules'), href: `/admin/agents/${agentId}/rules`, icon: Scale },
+      ],
+    },
+    {
+      label: t('tabs.interfaces'),
+      href: `/admin/agents/${agentId}/integrations`,
+      icon: Cpu,
+      dropdownItems: [
+        { label: t('tabs.integrations'), href: `/admin/agents/${agentId}/integrations`, icon: Cpu },
+        { label: t('tabs.schemas'), href: `/admin/agents/${agentId}/schemas`, icon: Code2 },
+      ],
+    },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
-    { label: t('tabs.skills'), href: `/admin/agents/${agentId}/skills`, icon: BrainCircuit },
-    { label: t('tabs.knowledge'), href: `/admin/agents/${agentId}/knowledge`, icon: Library },
-    { label: t('tabs.memory'), href: `/admin/agents/${agentId}/memory`, icon: Brain },
-    { label: t('tabs.prompt'), href: `/admin/agents/${agentId}/system-prompt`, icon: Terminal },
-    { label: t('tabs.rules'), href: `/admin/agents/${agentId}/rules`, icon: Scale },
-    { label: t('tabs.integrations'), href: `/admin/agents/${agentId}/integrations`, icon: Cpu },
-    { label: t('tabs.schemas'), href: `/admin/agents/${agentId}/schemas`, icon: Code2 },
     { label: t('tabs.logs'), href: `/admin/agents/${agentId}/logs`, icon: FileText },
   ];
 

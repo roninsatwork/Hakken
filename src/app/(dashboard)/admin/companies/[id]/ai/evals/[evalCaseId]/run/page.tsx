@@ -164,12 +164,12 @@ export default function RunCompanyEvalPage() {
               placeholder={'{"sourceIds":[],"memoryIds":[]}'}
             />
           </AdminModalFormField>
-          <AdminModalFormField label="Skill evidence" hint={`${evidenceSkillIds.length} selected from active company skills`}>
+          <AdminModalFormField label="Skill evidence" hint={`${evidenceSkillIds.length} selected from active central skills available to this company`}>
             <CompanySkillCheckboxPicker
               skills={activeSkills.results}
               selectedSkillIds={evidenceSkillIds}
               status={activeSkills.status}
-              emptyMessage="No active company skills are available to attach as evidence."
+              emptyMessage="No active central skills are available to this company."
               onToggleSkill={toggleEvidenceSkill}
               onLoadMore={() => activeSkills.loadMore(ADMIN_PAGE_SIZE)}
             />

@@ -24,7 +24,7 @@ test.describe("Admin widget and workflow journeys", () => {
     await expect(page.getByRole("button", { name: /Publish Configuration/i })).toBeEnabled();
   });
 
-  test("admin can create a workflow and verify schedules and logs", async ({ page }) => {
+  test("admin can create a workflow and verify schedules", async ({ page }) => {
     await gotoWithoutServerCrash(page, "/admin/workflows");
     await skipWhenRedirectedToLogin(page, "Workflow journey requires an authenticated admin storage state.");
 
@@ -50,11 +50,5 @@ test.describe("Admin widget and workflow journeys", () => {
     await page.getByTitle(/Force Dispatch/i).click();
     await expect(page.getByText(/Manual Dispatch Initiated/i)).toBeVisible();
     await page.getByRole("button", { name: /Got it/i }).click();
-
-    await gotoWithoutServerCrash(page, "/admin/workflows/logs");
-    await expect(page.getByRole("heading", { name: /Workflow Executions/i })).toBeVisible();
-    await expect(page.getByText("E2E Workflow")).toBeVisible();
-    await expect(page.getByText(/Success/i).first()).toBeVisible();
-    await expect(page.getByText(/Completed deterministic browser journey/i)).toBeVisible();
   });
 });

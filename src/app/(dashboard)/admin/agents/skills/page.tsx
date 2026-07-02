@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -219,7 +220,7 @@ type AgentSkillsCatalogPageProps = {
   basePath?: string;
 };
 
-export function AgentSkillsCatalog({ basePath = "/admin/agents/skills" }: AgentSkillsCatalogPageProps) {
+export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkillsCatalogPageProps) {
   const createSkill = useMutation(api.agentSkills.createSkill);
   const importSkillBundle = useMutation(api.agentSkills.importSkillBundle);
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
@@ -818,5 +819,5 @@ export function AgentSkillsCatalog({ basePath = "/admin/agents/skills" }: AgentS
 }
 
 export default function AgentSkillsCatalogPage() {
-  return <AgentSkillsCatalog />;
+  redirect("/admin/ai/skills");
 }

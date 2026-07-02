@@ -119,14 +119,14 @@ Source:
 
 Current modals:
 
-- `New Company Skill`: name, description, category, status, risk, version, instruction, required tools JSON, approval policy JSON, input contract JSON, output contract JSON, recommended knowledge JSON.
+- `Add From Skill Center`: select an active central skill for company availability.
 - `Bind Skill`: surface and optional surface id.
 - `Archive Skill`: yes/no destructive confirmation.
 
 Plan:
 
-- Replace `New Company Skill` with `/admin/companies/[id]/ai/skills/new`.
-- Add a future edit route at `/admin/companies/[id]/ai/skills/[skillId]/edit` before expanding skill editing.
+- Do not add a company skill creation or edit route. Skills are created and edited only in the central Skill Center.
+- Keep `/admin/companies/[id]/ai/skills/new` as a redirect back to the company skill availability screen for old deep links.
 - Keep `Bind Skill` as a small-input modal initially. Revisit if bindings gain policies, tests, or multiple surfaces.
 - Keep `Archive Skill` as a yes/no confirmation modal.
 
@@ -184,7 +184,7 @@ The page should show the selected thread/message evidence beside or above the fo
 | Add Memory | `/admin/companies/[id]/ai/memory/new` | `/admin/companies/[id]/ai/memory` |
 | Edit Memory | `/admin/companies/[id]/ai/memory/[memoryId]/edit` | `/admin/companies/[id]/ai/memory` |
 | Add Candidate | `/admin/companies/[id]/ai/memory/candidates/new` | `/admin/companies/[id]/ai/memory` |
-| New Company Skill | `/admin/companies/[id]/ai/skills/new` | `/admin/companies/[id]/ai/skills` |
+| Add From Skill Center | inline picker on `/admin/companies/[id]/ai/skills` | `/admin/companies/[id]/ai/skills` |
 | New Eval | `/admin/companies/[id]/ai/evals/new` | `/admin/companies/[id]/ai/evals` |
 | Run Eval | `/admin/companies/[id]/ai/evals/[evalCaseId]/run` | `/admin/companies/[id]/ai/evals` |
 | Chat to Memory Candidate | `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new` | `/admin/companies/[id]/ai/chat-logs` |
@@ -204,7 +204,7 @@ The page should show the selected thread/message evidence beside or above the fo
 
 ### Phase 2: Highest Pain, Highest Value
 
-- Move `New Company Skill` to `/ai/skills/new`.
+- Remove company-local skill creation; company skills are added from Skill Center.
 - Move `New Eval` to `/ai/evals/new`.
 - Move `Run Eval` to `/ai/evals/[evalCaseId]/run`.
 
@@ -276,4 +276,3 @@ This work is complete when:
 - existing small confirmation modals remain small and intentional,
 - all updated flows pass `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`,
 - browser verification confirms the new routed screens are usable from the Company AI submenu.
-

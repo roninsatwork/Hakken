@@ -162,7 +162,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
-  if (pathname.startsWith('/admin/workflows/logs')) return 'Workflow Logs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
   if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
@@ -186,7 +185,7 @@ function getActiveItemFromPathname(pathname: string) {
 }
 
 function getDefaultOpenSections(pathname: string): Record<string, boolean> {
-  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/releases') || pathname.startsWith('/admin/run-observatory') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows');
+  const isAgentsActive = pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch') || pathname.startsWith('/admin/agents') || pathname.startsWith('/admin/workflows');
 
   return {
     workspace: true,
@@ -201,7 +200,9 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     settings: pathname.startsWith('/admin/settings') &&
       !pathname.startsWith('/admin/settings/scripts') &&
       !pathname.startsWith('/admin/settings/system-health'),
-    maintenance: pathname.startsWith('/admin/settings/scripts') ||
+    maintenance: pathname.startsWith('/admin/releases') ||
+      pathname.startsWith('/admin/run-observatory') ||
+      pathname.startsWith('/admin/settings/scripts') ||
       pathname.startsWith('/admin/settings/system-health') ||
       pathname.startsWith('/admin/auth-diagnostics'),
     reports: false,
@@ -354,13 +355,10 @@ export default function SidebarNavigation() {
                         isActive={
                           activeItem === 'Agents' || 
                           activeItem === 'Agent Approvals' ||
-                          activeItem === 'Release Center' ||
-                          activeItem === 'Run Observatory' ||
                           activeItem === 'Manage Agents' || 
                           activeItem === 'Workflows' || 
                           activeItem === 'Manage Workflows' || 
-                          activeItem === 'Schedules' || 
-                          activeItem === 'Workflow Logs'
+                          activeItem === 'Schedules'
                         }
                         onClick={() => setActiveItem('Agents')}
                         hasChildren
@@ -368,13 +366,10 @@ export default function SidebarNavigation() {
                         onToggle={() => toggleSection('agents')}
                       >
                         <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
-                        <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
-                        <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
-                        <SubNavItem label={t('workflowLogs')} href="/admin/workflows/logs" isActive={pathname.startsWith('/admin/workflows/logs')} onClick={() => setActiveItem('Workflow Logs')} />
                       </NavItem>
                     )}
 
@@ -406,9 +401,13 @@ export default function SidebarNavigation() {
                           icon={Wrench}
                           label={t('maintenance')}
                           isActive={activeItem === 'Maintenance' ||
+                            activeItem === 'Release Center' ||
+                            activeItem === 'Run Observatory' ||
                             activeItem === 'Scripts' ||
                             activeItem === 'System Health' ||
                             activeItem === 'Auth Diagnostics' ||
+                            pathname.startsWith('/admin/releases') ||
+                            pathname.startsWith('/admin/run-observatory') ||
                             pathname.startsWith('/admin/settings/scripts') ||
                             pathname.startsWith('/admin/settings/system-health') ||
                             pathname.startsWith('/admin/auth-diagnostics')}
@@ -417,6 +416,8 @@ export default function SidebarNavigation() {
                           isOpen={openSections.maintenance}
                           onToggle={() => toggleSection('maintenance')}
                         >
+                          <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
+                          <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
                           <SubNavItem label={t('systemHealth')} href="/admin/settings/system-health" isActive={activeItem === 'System Health' || pathname.startsWith('/admin/settings/system-health')} onClick={() => setActiveItem('System Health')} />
                           <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
                           <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />

@@ -137,7 +137,6 @@ The System Health page can export the current health report as JSON. This is use
 
 Investigation links point to:
 
-- workflow execution logs
 - workflow schedules
 - agent approvals
 - agents

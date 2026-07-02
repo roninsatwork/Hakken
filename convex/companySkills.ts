@@ -11,6 +11,17 @@ const DESCRIPTION_MAX_CHARS = 1200;
 const JSON_MAX_CHARS = 16000;
 const CATEGORY_MAX_CHARS = 80;
 const VERSION_MAX_CHARS = 80;
+const CENTRAL_SKILL_ONLY_ERROR = "Company skills must be added from the central Skill Center. Create or edit the skill in Skill Center, then select it for this company.";
+const CENTRAL_SKILL_FIELDS = [
+  "name",
+  "description",
+  "category",
+  "riskLevel",
+  "instruction",
+  "requiredToolsJson",
+  "recommendedKnowledgeJson",
+  "versionLabel",
+];
 
 const skillStatusValidator = v.union(
   v.literal("DRAFT"),
@@ -285,11 +296,26 @@ export const getImportableGlobalSkills = query({
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
-    return await ctx.db
+    const activeSkills = await ctx.db
       .query("agentSkills")
       .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
       .order("desc")
       .take(250);
+    const companyActiveSkills = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(1000);
+    const companyDraftSkills = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "DRAFT"))
+      .take(1000);
+    const selectedCentralSkillIds = new Set(
+      [...companyActiveSkills, ...companyDraftSkills]
+        .map((skill) => skill.sourceAgentSkillId)
+        .filter((skillId): skillId is Id<"agentSkills"> => Boolean(skillId))
+    );
+
+    return activeSkills.filter((skill) => !selectedCentralSkillIds.has(skill._id));
   },
 });
 
@@ -323,48 +349,8 @@ export const createSkill = mutation({
     versionLabel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCompanyAccess(ctx, args.companyId);
-    const now = Date.now();
-    const patch = buildSkillPatch(args);
-    const skillId = await ctx.db.insert("companySkills", {
-      companyId: args.companyId,
-      name: patch.name ?? normalizeText(args.name, "Skill name", 160),
-      description: patch.description,
-      category: patch.category ?? normalizeCategory(args.category),
-      status: patch.status ?? args.status,
-      riskLevel: patch.riskLevel ?? args.riskLevel,
-      instruction: patch.instruction ?? normalizeText(args.instruction, "Skill instruction"),
-      inputContractJson: patch.inputContractJson,
-      outputContractJson: patch.outputContractJson,
-      requiredToolsJson: patch.requiredToolsJson,
-      approvalPolicyJson: patch.approvalPolicyJson,
-      recommendedKnowledgeJson: patch.recommendedKnowledgeJson,
-      versionLabel: patch.versionLabel,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: userId,
-      actionType: "CREATE_COMPANY_SKILL",
-      entityId: skillId,
-      entityType: "companySkills",
-      companyId: args.companyId,
-      timestamp: now,
-      metadata: JSON.stringify({ status: args.status, riskLevel: args.riskLevel, category: patch.category }),
-    });
-    await recordCompanyAiDriftEvent(ctx, {
-      companyId: args.companyId,
-      sourceType: "SKILL",
-      sourceId: skillId,
-      reason: "Company skill was created.",
-      affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
-      createdBy: userId,
-      createdAt: now,
-    });
-
-    return skillId;
+    await requireCompanyAccess(ctx, args.companyId);
+    throw new Error(CENTRAL_SKILL_ONLY_ERROR);
   },
 });
 
@@ -379,6 +365,61 @@ export const importGlobalSkill = mutation({
     if (!globalSkill || globalSkill.status !== "ACTIVE") {
       throw new Error("Only active global skills can be imported.");
     }
+    const existing = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_source_skill", (q) => q.eq("companyId", args.companyId).eq("sourceAgentSkillId", args.skillId))
+      .first();
+    const now = Date.now();
+    const centralSkillPatch = buildSkillPatch({
+      name: globalSkill.name,
+      description: globalSkill.description,
+      category: globalSkill.category,
+      status: "ACTIVE",
+      riskLevel: globalSkill.riskLevel,
+      instruction: globalSkill.instruction,
+      requiredToolsJson: globalSkill.requiredToolMappingsJson,
+      recommendedKnowledgeJson: globalSkill.recommendedKnowledgeJson,
+      versionLabel: "Central skill",
+    });
+
+    if (existing) {
+      if (existing.status !== "ARCHIVED") return { skillId: existing._id };
+
+      await ctx.db.patch(existing._id, {
+        sourceAgentSkillId: args.skillId,
+        ...centralSkillPatch,
+        status: "ACTIVE",
+        archivedBy: undefined,
+        archivedAt: undefined,
+        updatedAt: now,
+      });
+      await ctx.db.insert("auditLogs", {
+        actorId: userId,
+        actionType: "ADD_CENTRAL_SKILL_TO_COMPANY",
+        entityId: existing._id,
+        entityType: "companySkills",
+        companyId: args.companyId,
+        timestamp: now,
+        metadata: JSON.stringify({
+          globalSkillId: args.skillId,
+          globalSkillName: globalSkill.name,
+          status: "ACTIVE",
+          revived: true,
+        }),
+      });
+      await recordCompanyAiDriftEvent(ctx, {
+        companyId: args.companyId,
+        sourceType: "SKILL",
+        sourceId: existing._id,
+        reason: "Central skill was added to the company.",
+        affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
+        createdBy: userId,
+        createdAt: now,
+      });
+
+      return { skillId: existing._id };
+    }
+
     const existingCompanySkills = await ctx.db
       .query("companySkills")
       .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
@@ -391,24 +432,24 @@ export const importGlobalSkill = mutation({
     const importedName = existingNames.has(globalSkill.name.trim().toLowerCase())
       ? `${globalSkill.name} Copy`
       : globalSkill.name;
-    const now = Date.now();
     const patch = buildSkillPatch({
       name: importedName,
       description: globalSkill.description,
       category: globalSkill.category,
-      status: "DRAFT",
+      status: "ACTIVE",
       riskLevel: globalSkill.riskLevel,
       instruction: globalSkill.instruction,
       requiredToolsJson: globalSkill.requiredToolMappingsJson,
       recommendedKnowledgeJson: globalSkill.recommendedKnowledgeJson,
-      versionLabel: "Imported draft",
+      versionLabel: "Central skill",
     });
     const companySkillId = await ctx.db.insert("companySkills", {
       companyId: args.companyId,
+      sourceAgentSkillId: args.skillId,
       name: patch.name ?? importedName,
       description: patch.description,
       category: patch.category ?? globalSkill.category,
-      status: "DRAFT",
+      status: "ACTIVE",
       riskLevel: patch.riskLevel ?? globalSkill.riskLevel,
       instruction: patch.instruction ?? globalSkill.instruction,
       requiredToolsJson: patch.requiredToolsJson,
@@ -421,7 +462,7 @@ export const importGlobalSkill = mutation({
 
     await ctx.db.insert("auditLogs", {
       actorId: userId,
-      actionType: "IMPORT_GLOBAL_SKILL_TO_COMPANY",
+      actionType: "ADD_CENTRAL_SKILL_TO_COMPANY",
       entityId: companySkillId,
       entityType: "companySkills",
       companyId: args.companyId,
@@ -429,7 +470,7 @@ export const importGlobalSkill = mutation({
       metadata: JSON.stringify({
         globalSkillId: args.skillId,
         globalSkillName: globalSkill.name,
-        status: "DRAFT",
+        status: "ACTIVE",
         riskLevel: globalSkill.riskLevel,
         category: patch.category,
       }),
@@ -438,7 +479,7 @@ export const importGlobalSkill = mutation({
       companyId: args.companyId,
       sourceType: "SKILL",
       sourceId: companySkillId,
-      reason: "Company skill was imported from the global skill library.",
+      reason: "Central skill was added to the company.",
       affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
       createdBy: userId,
       createdAt: now,
@@ -467,6 +508,20 @@ export const updateSkill = mutation({
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
     if (skill.status === "ARCHIVED") throw new Error("Archived skills cannot be edited.");
+    if (skill.sourceAgentSkillId) {
+      const changedCentralFields = CENTRAL_SKILL_FIELDS.filter((field) => {
+        if (field === "name") return args.name !== undefined;
+        if (field === "description") return args.description !== undefined;
+        if (field === "category") return args.category !== undefined;
+        if (field === "riskLevel") return args.riskLevel !== undefined;
+        if (field === "instruction") return args.instruction !== undefined;
+        if (field === "requiredToolsJson") return args.requiredToolsJson !== undefined;
+        if (field === "recommendedKnowledgeJson") return args.recommendedKnowledgeJson !== undefined;
+        if (field === "versionLabel") return args.versionLabel !== undefined;
+        return false;
+      });
+      if (changedCentralFields.length > 0) throw new Error(CENTRAL_SKILL_ONLY_ERROR);
+    }
     const now = Date.now();
     const patch = buildSkillPatch({
       name: args.name,

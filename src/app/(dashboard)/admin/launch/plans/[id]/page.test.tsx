@@ -553,8 +553,8 @@ describe("LaunchPlanDetailPage", () => {
     expect(screen.getAllByText("Support Triage Agent")[1].closest("a")).toHaveAttribute("href", "/admin/agents/agent_1");
     expect(screen.getAllByText("New ticket triage")[1].closest("a")).toHaveAttribute("href", "/admin/workflows/workflow_1");
     expect(screen.getByText("Skill Attachments")).toBeInTheDocument();
-    expect(screen.getAllByText("Document Extraction").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/agents/skills/skill_1");
-    expect(screen.getAllByText("Approval Handoff").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/agents/skills/skill_2");
+    expect(screen.getAllByText("Document Extraction").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/ai/skills/skill_1");
+    expect(screen.getAllByText("Approval Handoff").at(-1)?.closest("a")).toHaveAttribute("href", "/admin/ai/skills/skill_2");
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
   });
 });

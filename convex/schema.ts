@@ -1042,6 +1042,7 @@ export default defineSchema({
 
   companySkills: defineTable({
     companyId: v.id("companies"),
+    sourceAgentSkillId: v.optional(v.id("agentSkills")),
     name: v.string(),
     description: v.optional(v.string()),
     category: v.string(),
@@ -1070,6 +1071,7 @@ export default defineSchema({
   })
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
     .index("by_company_category_status", ["companyId", "category", "status"])
+    .index("by_company_source_skill", ["companyId", "sourceAgentSkillId"])
     .searchIndex("search_name", {
       searchField: "name",
       filterFields: ["companyId", "status"],

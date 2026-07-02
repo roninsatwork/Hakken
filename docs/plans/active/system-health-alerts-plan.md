@@ -161,7 +161,7 @@ Add these signal keys to `PlatformAlertSignal`:
 - `failedScheduledExecutions`
   - Count recent `workflowExecutions` where `triggerType === "SCHEDULE"` and `status === "FAILED"`.
   - Details should show workflow/agent target, execution id, timestamp, and first failed step if available.
-  - Runbook: open workflow execution logs, fix failed node/config, then rerun manually.
+  - Runbook: inspect the target workflow or agent run, fix failed node/config, then rerun manually.
 - `staleScheduledExecutions`
   - Count scheduled executions still `RUNNING` after a grace period, for example 60 minutes.
   - Details should show target, execution id, age, and started timestamp.
@@ -318,7 +318,6 @@ Content rules:
 - Show sanitized summaries and stable ids only.
 - Link to existing detail pages where possible:
   - Agent logs: `/admin/agents/{agentId}/logs`.
-  - Workflow execution logs: `/admin/workflows/logs/{executionId}`.
   - Schedules: `/admin/workflows/schedules/{scheduleId}`.
 - Use in-app empty states and feedback only; no native browser dialogs.
 

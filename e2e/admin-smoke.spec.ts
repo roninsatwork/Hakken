@@ -14,7 +14,6 @@ test.describe('Admin Dashboard: Layout & Render Stability', () => {
     '/admin/users',
     '/admin/workflows',
     '/admin/workflows/schedules',
-    '/admin/workflows/logs',
     '/admin/settings/plans',
   ];
 
