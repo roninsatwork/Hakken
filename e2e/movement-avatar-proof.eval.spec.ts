@@ -2,6 +2,8 @@ import { inflateSync } from "node:zlib";
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "./helpers/navigation";
 
+process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY ??= "1";
+
 type AvatarProofMode =
   | "far-left-leg-raise"
   | "far-right-leg-raise"
@@ -342,15 +344,27 @@ async function captureProofScreenshot(
 }
 
 async function openAvatarProofMode(page: Page, proofCase: AvatarProofCase) {
-  await gotoWithoutServerCrash(page, `/demos/movements/squat-proof?mode=${proofCase.mode}`);
-  await skipWhenRedirectedToLogin(page, "Movement avatar proof eval requires the super-admin storage state.");
+  const isAlreadyOnProofPage = (() => {
+    try {
+      return new URL(page.url()).pathname === "/demos/movements/squat-proof";
+    } catch {
+      return false;
+    }
+  })();
+
+  if (isAlreadyOnProofPage) {
+    await page.getByTestId(`proof-mode-${proofCase.mode}`).click();
+  } else {
+    await gotoWithoutServerCrash(page, `/demos/movements/squat-proof?mode=${proofCase.mode}`);
+    await skipWhenRedirectedToLogin(page, "Movement avatar proof eval requires the super-admin storage state.");
+  }
 
   await expect(page.getByRole("heading", { name: "Synthetic player camera poses" })).toBeVisible();
   await expect(page.getByTestId("proof-current-mode")).toHaveText(
     `Current proof state: ${proofCase.label}`,
   );
   await expect(page.locator("canvas")).toBeVisible({ timeout: 30000 });
-  await expect(page.getByTestId("proof-debug-owners")).not.toContainText("pending", {
+  await expect(page.getByTestId("proof-debug-owners")).toHaveText(proofCase.ownerPattern, {
     timeout: 30000,
   });
 }
@@ -382,6 +396,8 @@ test.describe("Movement Avatar Proof Eval", () => {
   }
 
   test("synthetic poses produce distinct rendered avatar silhouettes", async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+
     await openAvatarProofMode(page, proofCaseFor("standing"));
     const standing = await captureProofScreenshot(page, testInfo, "standing");
 

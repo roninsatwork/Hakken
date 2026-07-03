@@ -243,6 +243,8 @@ export default function MovementSquatProofPage() {
   });
 
   useEffect(() => {
+    trackingDebugRef.current = null;
+    setDebugState(null);
     livePoseRef.current = {
       landmarks: makeProofPose(mode),
       hands: makeProofHands(mode),
