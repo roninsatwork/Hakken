@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SidebarNavigation from "./SidebarNavigation";
@@ -185,5 +185,19 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "Running Costs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Chat Logs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "System Prompt" })).not.toBeInTheDocument();
+  });
+
+  it("links Replay Alignment from the Posture Studio submenu", () => {
+    vi.mocked(usePathname).mockReturnValue("/demos/movements/replay-lab");
+
+    render(<SidebarNavigation />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Posture Studio" }));
+
+    expect(screen.getByRole("link", { name: "Studio Library" })).toHaveAttribute("href", "/demos/movements");
+    expect(screen.getByRole("link", { name: "Replay Alignment" })).toHaveAttribute(
+      "href",
+      "/demos/movements/replay-lab",
+    );
   });
 });

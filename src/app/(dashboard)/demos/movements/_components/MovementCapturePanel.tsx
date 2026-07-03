@@ -4,6 +4,7 @@ import React, { type RefObject } from "react";
 import Webcam from "react-webcam";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../_hooks/useMediaPipeVision";
+import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../_lib/movementCameraConstraints";
 
 type MovementCapturePanelProps = {
   webcamRef: RefObject<Webcam | null>;
@@ -66,9 +67,7 @@ export default function MovementCapturePanel({
         onUserMediaError={onCameraError}
         className="absolute inset-0 w-full h-full object-contain"
         mirrored={true}
-        videoConstraints={{
-          facingMode: "user",
-        }}
+        videoConstraints={MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS}
       />
       <canvas
         ref={canvasRef}

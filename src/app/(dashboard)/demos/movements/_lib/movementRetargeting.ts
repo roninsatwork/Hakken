@@ -136,6 +136,10 @@ function getBodyQuality(poseLandmarks: TrackingLandmark[]) {
   return total / indices.length;
 }
 
+function averageVisibility(poseLandmarks: TrackingLandmark[], indices: number[]) {
+  return average(indices.map((index) => visibility(poseLandmarks[index])));
+}
+
 function getCenters(poseLandmarks: TrackingLandmark[]) {
   const leftShoulder = poseLandmarks[11];
   const rightShoulder = poseLandmarks[12];
@@ -324,11 +328,20 @@ export function solveMovementRetargetFrame({
   const segments = buildSegments(poseLandmarks, calibration.torsoHeight);
   const solvedSegments = SEGMENT_NAMES.filter((name) => (segments[name]?.confidence ?? 0) >= 0.3);
   const heldSegments = SEGMENT_NAMES.filter((name) => !solvedSegments.includes(name));
-  const hipDrop = clamp(
-    (centers.hipCenter.y - calibration.hipCenter.y) / (calibration.torsoHeight * 0.62),
-    0,
-    1,
-  );
+  const hipConfidence = averageVisibility(poseLandmarks, [23, 24]);
+  const kneeConfidence = averageVisibility(poseLandmarks, [25, 26]);
+  const footConfidence = averageVisibility(poseLandmarks, [27, 28, 31, 32]);
+  const canTrustHipMotion = hipConfidence >= 0.35;
+  const canTrustSquatMotion =
+    canTrustHipMotion &&
+    (kneeConfidence >= 0.3 || footConfidence >= 0.35);
+  const hipDrop = canTrustHipMotion
+    ? clamp(
+        (centers.hipCenter.y - calibration.hipCenter.y) / (calibration.torsoHeight * 0.62),
+        0,
+        1,
+      )
+    : 0;
   const leftKneeLift = clamp(
     getRawKneeLift({
       hipCenterY: calibration.hipCenter.y,
@@ -352,7 +365,7 @@ export function solveMovementRetargetFrame({
     : 0;
   const kneeBendDepth = clamp((symmetricKneeLift - 0.04) / 0.18, 0, 1);
   const hipSquatDepth = clamp((hipDrop - 0.24) / 0.38, 0, 1);
-  const squatDepth = Math.max(hipSquatDepth, kneeBendDepth);
+  const squatDepth = canTrustSquatMotion ? Math.max(hipSquatDepth, kneeBendDepth) : 0;
   const isSymmetricSquat = squatDepth > 0.25 && Math.abs(leftKneeLift - rightKneeLift) < 0.2;
   const footContactWindow = calibration.torsoHeight * 0.22;
   const leftFootY = Math.max(

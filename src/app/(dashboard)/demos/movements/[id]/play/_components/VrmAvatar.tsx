@@ -92,6 +92,11 @@ type PlantedFootLockState = {
   strength: number;
 };
 
+type PlayerLowerBodyStabilityState = {
+  squatPresentationDepth: number;
+  visualRootDrop: number;
+};
+
 type MovementRetargetDebugRegistry = Record<
   "instructor" | "player",
   NonNullable<MovementTrackingDebugState["retarget"]> & {
@@ -153,6 +158,80 @@ function sourceSegmentToAvatarWorldDirection(
   return worldDirection.lengthSq() > 0.000001 ? worldDirection.normalize() : null;
 }
 
+function compactVector(vector: THREE.Vector3) {
+  return {
+    x: Number(vector.x.toFixed(4)),
+    y: Number(vector.y.toFixed(4)),
+    z: Number(vector.z.toFixed(4)),
+  };
+}
+
+function buildAvatarVisualTelemetry({
+  retargetFrame,
+  vrm,
+  zScale,
+}: {
+  retargetFrame: ReturnType<typeof solveMovementRetargetFrame>;
+  vrm: VRM;
+  zScale: number;
+}): MovementTrackingDebugState["avatarVisual"] {
+  vrm.scene.updateMatrixWorld(true);
+
+  const sourceErrors: number[] = [];
+  const segments = LOWER_BODY_RETARGET_MAPPINGS.reduce<
+    NonNullable<MovementTrackingDebugState["avatarVisual"]>["segments"]
+  >((telemetry, mapping) => {
+    const bone = vrm.humanoid.getNormalizedBoneNode(mapping.bone);
+    const child = vrm.humanoid.getNormalizedBoneNode(mapping.child);
+    if (!bone || !child) return telemetry;
+
+    const boneWorldPosition = new THREE.Vector3();
+    const childWorldPosition = new THREE.Vector3();
+    bone.getWorldPosition(boneWorldPosition);
+    child.getWorldPosition(childWorldPosition);
+
+    const avatarDirection = childWorldPosition.sub(boneWorldPosition);
+    const length = avatarDirection.length();
+    if (length <= 0.000001) return telemetry;
+
+    avatarDirection.normalize();
+    const sourceSegment = retargetFrame.segments[mapping.segment];
+    const sourceDirection = sourceSegment
+      ? sourceSegmentToAvatarWorldDirection(sourceSegment.direction, zScale)
+      : null;
+    const sourceError = sourceDirection
+      ? 1 - THREE.MathUtils.clamp(avatarDirection.dot(sourceDirection), -1, 1)
+      : undefined;
+
+    if (typeof sourceError === "number" && sourceSegment && sourceSegment.confidence >= 0.3) {
+      sourceErrors.push(sourceError);
+    }
+
+    telemetry[mapping.segment] = {
+      confidence: sourceSegment?.confidence,
+      direction: compactVector(avatarDirection),
+      length: Number(length.toFixed(4)),
+      sourceDirection: sourceDirection ? compactVector(sourceDirection) : undefined,
+      sourceError: typeof sourceError === "number" ? Number(sourceError.toFixed(4)) : undefined,
+    };
+    return telemetry;
+  }, {});
+
+  return {
+    averageLowerBodyDirectionError: sourceErrors.length
+      ? Number((sourceErrors.reduce((sum, value) => sum + value, 0) / sourceErrors.length).toFixed(4))
+      : undefined,
+    comparedLowerBodySegments: sourceErrors.length,
+    segments,
+  };
+}
+
+function smoothPlayerLowerBodyValue(current: number, target: number, rise: number, fall: number) {
+  const factor = target > current ? rise : fall;
+  const next = THREE.MathUtils.lerp(current, target, factor);
+  return target <= 0.001 && next < 0.025 ? 0 : next;
+}
+
 type VrmAvatarProps = {
   landmarksRef: RefObject<VrmMotionRef>;
   positionOffset: [number, number, number];
@@ -193,6 +272,10 @@ export default function VrmAvatar({
     right: null,
     strength: 0,
   });
+  const playerLowerBodyStabilityRef = useRef<PlayerLowerBodyStabilityState>({
+    squatPresentationDepth: 0,
+    visualRootDrop: 0,
+  });
   const lastGoodQuatRef = useRef<Record<string, THREE.Quaternion>>({});
   const avatarTrackingProfile = getMovementAvatarTrackingProfile(vrmUrl);
   const avatarTrackingProfileName = getMovementAvatarTrackingProfileName(vrmUrl);
@@ -222,6 +305,10 @@ export default function VrmAvatar({
         left: null,
         right: null,
         strength: 0,
+      };
+      playerLowerBodyStabilityRef.current = {
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
       };
       lastGoodQuatRef.current = {};
     }
@@ -575,7 +662,10 @@ export default function VrmAvatar({
         isPlayer,
         lowerBodyIntent,
       });
-      const torsoTrackingReady = !isPlayer || bodyConfidence.torso >= 0.45;
+      const upperBodyTrackingReady =
+        bodyConfidence.head >= 0.55 &&
+        Math.min(bodyConfidence.leftShoulder, bodyConfidence.rightShoulder) >= 0.55;
+      const torsoTrackingReady = !isPlayer || bodyConfidence.torso >= 0.45 || upperBodyTrackingReady;
       const shouldApplyLiveBody = isPlayer
         ? Boolean(activeCalibration)
         : Boolean(retargetSourceModelRef.current);
@@ -602,7 +692,7 @@ export default function VrmAvatar({
           ? "player-solver"
           : "neutral";
       const groundedSquatDepth = lowerBodyDrive.groundedSquatDepth;
-      const playerSquatPresentationDepth = lowerBodyDrive.playerSquatPresentationDepth;
+      let playerSquatPresentationDepth = lowerBodyDrive.playerSquatPresentationDepth;
       const balancedPlantedSquatDepth = getBalancedPlantedSquatDepth(retargetFrame);
       const instructorLowerBodyMotion = Math.max(
         groundedSquatDepth,
@@ -610,6 +700,34 @@ export default function VrmAvatar({
         retargetFrame.kneeLift.right,
       );
       visualRootDrop = lowerBodyDrive.visualRootDrop;
+
+      if (isPlayer) {
+        const stability = playerLowerBodyStabilityRef.current;
+        stability.squatPresentationDepth = smoothPlayerLowerBodyValue(
+          stability.squatPresentationDepth,
+          lowerBodyDrive.playerSquatPresentationDepth,
+          lowerBodyDrive.shouldDrivePlayerSquat ? 0.34 : 0.18,
+          0.32,
+        );
+        stability.visualRootDrop = smoothPlayerLowerBodyValue(
+          stability.visualRootDrop,
+          lowerBodyDrive.visualRootDrop,
+          0.3,
+          0.34,
+        );
+        playerSquatPresentationDepth = stability.squatPresentationDepth;
+        visualRootDrop = stability.visualRootDrop;
+      }
+      const shouldHoldPlayerSquatPose =
+        isPlayer &&
+        shouldApplyLowerBody &&
+        playerSquatPresentationDepth > 0.18;
+      const playerRetargetLowerBodyMotion = Math.max(
+        playerSquatPresentationDepth,
+        retargetFrame.squatDepth,
+        retargetFrame.kneeLift.left,
+        retargetFrame.kneeLift.right,
+      );
 
       if (forceStandby) {
         applyDemoFallbackPose(0.35);
@@ -1087,7 +1205,7 @@ export default function VrmAvatar({
         easeArmToRelaxed("left");
       }
 
-      if (lowerBodyTrackingReady && shouldApplyLowerBody) {
+      if ((lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && shouldApplyLowerBody) {
         const legAimOptions: AimVectorOptions = {
           minVectorLengthSq: 0.00002,
           slerpOverride: isPlayer ? avatarTrackingProfile.legSlerp : 0.36,
@@ -1108,24 +1226,37 @@ export default function VrmAvatar({
           aimVector("leftFoot", "leftToes", solverLms[29], leftToeTarget, footAimOptions);
         };
 
+        const canUsePlayerRetargetLegRaise =
+          isPlayer &&
+          lowerBodyDrive.shouldDrivePlayerLegRaise &&
+          retargetFrame.debug.sourceQuality >= 0.65 &&
+          retargetFrame.debug.solvedSegments.length >= 8;
+
         if (
           isPlayer &&
           lowerBodyDrive.shouldDrivePlayerLegRaise &&
-          lowerBodyDrive.playerLegRaiseSide
+          lowerBodyDrive.playerLegRaiseSide &&
+          !canUsePlayerRetargetLegRaise
         ) {
           lowerBodyOwner = `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`;
           applySingleLegRaisePose(
             lowerBodyDrive.playerLegRaiseSide,
             lowerBodyDrive.playerLegRaiseDepth,
           );
-        } else if (isPlayer && lowerBodyDrive.shouldDrivePlayerSquat) {
-          lowerBodyOwner = "player-stable-squat";
+        } else if (isPlayer && (lowerBodyDrive.shouldDrivePlayerSquat || shouldHoldPlayerSquatPose)) {
+          lowerBodyOwner = lowerBodyDrive.shouldDrivePlayerSquat
+            ? "player-stable-squat"
+            : "player-stable-squat-held";
+          footOwner = "recorded-retarget";
           const stableIkDepth = applyPlantedSquatIk(playerSquatPresentationDepth);
           plantedSquatIkDepth = stableIkDepth;
           applySquatFlexionPose(playerSquatPresentationDepth);
           if (playerSquatPresentationDepth <= 0.16) {
             easeLowerBodyToNeutral();
           }
+        } else if (isPlayer && playerRetargetLowerBodyMotion < 0.16) {
+          lowerBodyOwner = "player-lower-body-neutral";
+          easeLowerBodyToNeutral();
         } else if (!isPlayer && instructorLowerBodyMotion < 0.18) {
           lowerBodyOwner = "recorded-neutral";
           easeLowerBodyToNeutral();
@@ -1406,6 +1537,13 @@ export default function VrmAvatar({
       }
 
       applyPlantedFootLock({ leftFoot, rightFoot });
+      if (trackingDebugRef?.current && vrmRef.current) {
+        trackingDebugRef.current.avatarVisual = buildAvatarVisualTelemetry({
+          retargetFrame,
+          vrm: vrmRef.current,
+          zScale: payload?.worldLandmarks ? 1 : 0.18,
+        });
+      }
       if (trackingDebugRef?.current?.fallbacks.retarget) {
         trackingDebugRef.current.fallbacks.retarget +=
           ` lock ${plantedFootLockRef.current.strength.toFixed(2)}` +

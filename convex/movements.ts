@@ -58,6 +58,36 @@ export const list = query({
   },
 });
 
+export const listReplayAlignmentRecordings = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const limit = Math.max(1, Math.min(args.limit ?? 50, 100));
+    const movements = await ctx.db
+      .query("movements")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(limit);
+
+    return await Promise.all(movements.map(async (movement) => {
+      const storageId: Id<"_storage"> | null = movement.poseStorageId ?? (
+        movement.poseData && !isInlinePoseData(movement.poseData)
+          ? movement.poseData as Id<"_storage">
+          : null
+      );
+
+      return {
+        ...movement,
+        poseDataUrl: storageId ? await ctx.storage.getUrl(storageId) : null,
+      };
+    }));
+  },
+});
+
 export const getPaginated = query({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -243,5 +273,31 @@ export const listDebugTrackingSessions = query({
       samplesJson: undefined,
       samplesPreview: session.samplesJson.slice(0, 800),
     }));
+  },
+});
+
+export const getDebugTrackingSession = query({
+  args: {
+    id: v.id("movementDebugSessions"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getDebugTrackingSessions = query({
+  args: {
+    ids: v.array(v.id("movementDebugSessions")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const limitedIds = args.ids.slice(0, 20);
+    const sessions = await Promise.all(limitedIds.map((id) => ctx.db.get(id)));
+    return sessions.filter((session) => Boolean(session));
   },
 });

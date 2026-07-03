@@ -6,6 +6,7 @@ import Webcam from "react-webcam";
 import { ArrowLeft, Crosshair, Pause, Play, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
+import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../../../_lib/movementCameraConstraints";
 
 type MovementHudProps = {
   movementTitle: string;
@@ -217,7 +218,7 @@ export default function MovementHud({
           ref={webcamRef}
           audio={false}
           mirrored={true}
-          videoConstraints={{ facingMode: "user" }}
+          videoConstraints={MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS}
           onUserMedia={onCameraReady}
           onUserMediaError={(error) => {
             const rawMessage = error instanceof Error ? error.message : String(error);
@@ -226,7 +227,7 @@ export default function MovementHud({
               : "Camera access unavailable";
             onCameraError?.(message);
           }}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
       </div>
     </div>

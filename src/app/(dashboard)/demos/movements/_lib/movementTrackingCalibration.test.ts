@@ -106,6 +106,23 @@ describe("movementTrackingCalibration", () => {
     expect(calibration?.floorY).toBeGreaterThan(calibration?.hipCenter.y ?? 0);
   });
 
+  it("builds an upper-body automatic baseline when hips are inferred but shoulders are strong", () => {
+    const pose = withCorePose();
+    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+      pose[index] = { ...pose[index]!, visibility: 0.01 };
+    });
+
+    expect(buildUprightMovementAutoCalibration({ poseLandmarks: pose })).toBeNull();
+
+    const calibration = buildUpperBodyMovementAutoCalibration({ poseLandmarks: pose, now: 5678 });
+
+    expect(calibration).toMatchObject({
+      calibratedAt: 5678,
+      shoulderCenter: { y: 0.44 },
+    });
+    expect(calibration?.quality).toBeGreaterThan(0.8);
+  });
+
   it("rejects upper-body automatic baseline when torso tracking is weak", () => {
     const pose = withCorePose();
     [11, 12, 23, 24].forEach((index) => {
@@ -971,6 +988,80 @@ describe("movementTrackingCalibration", () => {
 
     expect(summary.primaryAction).toBe("Tune head pitch offset");
     expect(summary.warnings).toContain("Head pitch is near clamp");
+  });
+
+  it("prioritizes camera framing when only the head and shoulders are visible", () => {
+    const summary = getMovementTrackingHealthSummary({
+      updatedAt: 1,
+      headRaw: { pitch: 0.82, yaw: 0, roll: 0, confidence: 0.95, source: "face" },
+      headApplied: { pitch: 0.78, yaw: 0, roll: 0, confidence: 0.95, source: "face" },
+      bodyConfidence: {
+        head: 0.99,
+        torso: 0.51,
+        leftShoulder: 0.99,
+        rightShoulder: 0.99,
+        leftWrist: 0.02,
+        leftHand: 0,
+        rightWrist: 0.01,
+        rightHand: 0,
+        hips: 0.02,
+        leftKnee: 0.002,
+        rightKnee: 0.002,
+        leftFoot: 0.001,
+        rightFoot: 0.001,
+      },
+      fallbacks: {
+        baseline: "upper-body-auto-baseline",
+        leftKnee: "neutral-stance",
+        rightKnee: "neutral-stance",
+        leftFoot: "neutral-stance",
+        rightFoot: "neutral-stance",
+        floor: "fixed-floor",
+        head: "face",
+      },
+      calibrationQuality: 0.96,
+    });
+
+    expect(summary.primaryAction).toBe("Step back until hands, hips, and feet are visible");
+    expect(summary.warnings).toContain("Body is too close to camera");
+    expect(summary.warnings).toContain("Head pitch is near clamp");
+  });
+
+  it("prioritizes weak knee and foot tracking once hips are visible", () => {
+    const summary = getMovementTrackingHealthSummary({
+      updatedAt: 1,
+      headRaw: { pitch: 0, yaw: 0, roll: 0, confidence: 0.95, source: "face" },
+      headApplied: { pitch: 0, yaw: 0, roll: 0, confidence: 0.95, source: "face" },
+      bodyConfidence: {
+        head: 0.95,
+        torso: 0.99,
+        leftShoulder: 0.99,
+        rightShoulder: 0.99,
+        leftWrist: 0.45,
+        leftHand: 0.42,
+        rightWrist: 0.13,
+        rightHand: 0.1,
+        hips: 0.99,
+        leftKnee: 0.22,
+        rightKnee: 0.2,
+        leftFoot: 0.12,
+        rightFoot: 0.11,
+      },
+      fallbacks: {
+        baseline: "upper-body-auto-baseline",
+        leftKnee: "neutral-stance",
+        rightKnee: "neutral-stance",
+        leftFoot: "neutral-stance",
+        rightFoot: "neutral-stance",
+        floor: "fixed-floor",
+        head: "face",
+      },
+      calibrationQuality: 0.96,
+    });
+
+    expect(summary.primaryAction).toBe("Improve knee and foot tracking");
+    expect(summary.warnings).toContain("Knee and foot tracking is weak");
+    expect(summary.warnings).toContain("Right arm endpoint is weak");
   });
 
   it("reports head yaw and roll clamp pressure for avatar profile tuning", () => {

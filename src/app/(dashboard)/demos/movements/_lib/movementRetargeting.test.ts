@@ -124,6 +124,31 @@ describe("movementRetargeting", () => {
     expect(frame.squatDepth).toBeLessThan(0.3);
   });
 
+  it("does not report squat metrics from invisible lower-body landmarks", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const closeCroppedPose = withCorePose();
+    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+      closeCroppedPose[index] = {
+        ...closeCroppedPose[index]!,
+        y: closeCroppedPose[index]!.y + 1.4,
+        visibility: 0.01,
+      };
+    });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: closeCroppedPose,
+    });
+
+    expect(frame.debug.sourceQuality).toBeLessThan(0.35);
+    expect(frame.hipDrop).toBe(0);
+    expect(frame.squatDepth).toBe(0);
+    expect(frame.contacts.leftFoot).toBe(false);
+    expect(frame.contacts.rightFoot).toBe(false);
+    expect(frame.debug.solvedSegments).not.toContain("leftThigh");
+    expect(frame.debug.solvedSegments).not.toContain("rightThigh");
+  });
+
   it("solves a single-knee lift and releases that foot contact", () => {
     const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const kneeLiftPose = withCorePose();

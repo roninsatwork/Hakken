@@ -47,6 +47,7 @@ type DebugTrackingSample = {
   capturedAt: number;
   updatedAt?: number;
   baseline: string;
+  camera?: MovementTrackingDebugState["camera"];
   tracking: {
     poseCount: number;
     worldPoseCount: number;
@@ -66,8 +67,10 @@ type DebugTrackingSample = {
     warnings: string[];
   };
   calibrationQuality?: number;
+  avatarVisual?: MovementTrackingDebugState["avatarVisual"];
   bodyConfidence?: MovementTrackingDebugState["bodyConfidence"];
   fallbacks: MovementTrackingDebugState["fallbacks"];
+  poseBounds?: MovementTrackingDebugState["poseBounds"];
   retarget?: MovementTrackingDebugState["retarget"];
   headRaw?: MovementTrackingDebugState["headRaw"];
   headApplied?: MovementTrackingDebugState["headApplied"];
@@ -112,6 +115,48 @@ function compactTrackingPayload(payload: MovementPlayerMotionPayload | null) {
     leftHand: leftHand.length > 0 ? leftHand : undefined,
     rightHand: rightHand.length > 0 ? rightHand : undefined,
   };
+}
+
+function getDebugCameraInfo(video: HTMLVideoElement | null | undefined): MovementTrackingDebugState["camera"] {
+  if (!video) return undefined;
+  const track = video.srcObject instanceof MediaStream
+    ? video.srcObject.getVideoTracks()[0]
+    : undefined;
+  const settings = track?.getSettings();
+
+  return {
+    aspectRatio: settings?.aspectRatio,
+    deviceLabel: track?.label,
+    frameRate: settings?.frameRate,
+    trackHeight: settings?.height,
+    trackWidth: settings?.width,
+    videoHeight: video.videoHeight,
+    videoWidth: video.videoWidth,
+  };
+}
+
+function getDebugPoseBounds(
+  landmarks: MovementPlayerMotionPayload["landmarks"] | null | undefined,
+): MovementTrackingDebugState["poseBounds"] {
+  if (!landmarks || landmarks.length === 0) return undefined;
+
+  return landmarks.reduce<NonNullable<MovementTrackingDebugState["poseBounds"]>>(
+    (bounds, landmark) => ({
+      maxX: Math.max(bounds.maxX, compactNumber(landmark.x)),
+      maxY: Math.max(bounds.maxY, compactNumber(landmark.y)),
+      minX: Math.min(bounds.minX, compactNumber(landmark.x)),
+      minY: Math.min(bounds.minY, compactNumber(landmark.y)),
+      outOfFrameCount: bounds.outOfFrameCount +
+        (landmark.x < 0 || landmark.x > 1 || landmark.y < 0 || landmark.y > 1 ? 1 : 0),
+    }),
+    {
+      maxX: Number.NEGATIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+      minX: Number.POSITIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      outOfFrameCount: 0,
+    },
+  );
 }
 
 function summarizeSampleLabels(
@@ -319,11 +364,18 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         debugTrackingChunkStartedAtRef.current = Date.now();
       }
 
+      const camera = getDebugCameraInfo(webcamRef.current?.video);
+      const poseBounds = getDebugPoseBounds(trackingPayload?.landmarks);
+      if (debugState) {
+        debugState.camera = camera;
+        debugState.poseBounds = poseBounds;
+      }
       const health = getMovementTrackingHealthSummary(debugState, { now });
       debugTrackingSamplesRef.current.push({
         capturedAt: Date.now(),
         updatedAt: debugState?.updatedAt,
         baseline: debugState?.fallbacks.baseline ?? "waiting",
+        camera,
         tracking: compactTrackingPayload(trackingPayload),
         health: {
           score: health.score,
@@ -332,8 +384,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           warnings: health.warnings,
         },
         calibrationQuality: debugState?.calibrationQuality,
+        avatarVisual: debugState?.avatarVisual,
         bodyConfidence: debugState?.bodyConfidence,
         fallbacks: debugState?.fallbacks ?? { baseline: "waiting" },
+        poseBounds,
         retarget: debugState?.retarget,
         headRaw: debugState?.headRaw,
         headApplied: debugState?.headApplied,

@@ -67,4 +67,34 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByText(/body\d+\.\d+/)).toBeVisible();
     await expect(page.getByText("Coach Diagnostics")).toBeVisible();
   });
+
+  test("replay lab renders deterministic debug sessions and capture targets", async ({ page }) => {
+    await gotoWithoutServerCrash(page, "/demos/movements/replay-lab");
+    await skipWhenRedirectedToLogin(page, "Movement replay lab smoke requires the super-admin storage state.");
+
+    await expect(page.getByRole("heading", { name: "Replay Alignment" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Run Selected Recordings" })).toBeVisible();
+    await expect(page.getByTestId("movement-replay-session")).toBeVisible();
+    await expect(page.getByTestId("movement-replay-source-canvas")).toBeVisible();
+    await expect(page.getByTestId("movement-replay-avatar-section")).toBeVisible();
+    await expect(page.getByTestId("movement-replay-frame")).toHaveCount(0);
+    await page.getByTestId("movement-replay-session").first().click();
+    await expect(page.getByTestId("movement-replay-frame")).toHaveCount(4);
+    await page.getByRole("checkbox", { name: /Select recording/ }).first().check();
+    await page.getByRole("button", { name: "Run Selected Recordings" }).click();
+    await expect(page.getByTestId("movement-replay-run-status")).toContainText(/Run 1 complete/);
+    await expect(page.getByRole("button", { name: "Scene PNG" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Source Strip" })).toBeVisible();
+  });
+
+  test("sidebar Replay Alignment item opens the replay lab", async ({ page }) => {
+    await gotoWithoutServerCrash(page, "/demos/movements");
+    await skipWhenRedirectedToLogin(page, "Movement replay lab sidebar smoke requires the super-admin storage state.");
+
+    await page.getByRole("button", { name: "Posture Studio" }).click();
+    await page.getByRole("link", { name: "Replay Alignment" }).click();
+
+    await expect(page).toHaveURL(/\/demos\/movements\/replay-lab$/);
+    await expect(page.getByRole("heading", { name: "Replay Alignment" })).toBeVisible();
+  });
 });

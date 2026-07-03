@@ -24,6 +24,14 @@ function formatConfidence(value?: number) {
   return (value ?? 0).toFixed(2);
 }
 
+function formatCameraValue(value?: number) {
+  return value === undefined ? "?" : Math.round(value).toString();
+}
+
+function formatBoundsValue(value?: number) {
+  return value === undefined || !Number.isFinite(value) ? "?" : value.toFixed(2);
+}
+
 function formatAge(updatedAt?: number, now?: number) {
   if (updatedAt === undefined || now === undefined || now <= 0) return "waiting";
   return `${Math.max(0, (now - updatedAt) / 1000).toFixed(1)}s`;
@@ -59,6 +67,8 @@ export default function MovementTrackingDebugOverlay({
   if (!isEnabled) return null;
 
   const confidence = debugState?.bodyConfidence;
+  const camera = debugState?.camera;
+  const poseBounds = debugState?.poseBounds;
   const retarget = debugState?.retarget;
   const healthSummary = getMovementTrackingHealthSummary(debugState, { now: debugNow });
   const healthToneClass = getHealthToneClass(healthSummary.level);
@@ -133,6 +143,28 @@ export default function MovementTrackingDebugOverlay({
             <div className="text-white">{formatConfidence(value)}</div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-2 font-mono text-[11px] text-white/65">
+        <div className="mb-1 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
+          Camera / Bounds
+        </div>
+        <div>
+          Camera {formatCameraValue(camera?.trackWidth ?? camera?.videoWidth)}x{formatCameraValue(camera?.trackHeight ?? camera?.videoHeight)}
+          {camera?.aspectRatio ? ` ar ${camera.aspectRatio.toFixed(2)}` : ""}
+          {camera?.frameRate ? ` ${camera.frameRate.toFixed(0)}fps` : ""}
+        </div>
+        <div>
+          Video {formatCameraValue(camera?.videoWidth)}x{formatCameraValue(camera?.videoHeight)}
+        </div>
+        <div>
+          Bounds x {formatBoundsValue(poseBounds?.minX)}..{formatBoundsValue(poseBounds?.maxX)}
+          {" "}y {formatBoundsValue(poseBounds?.minY)}..{formatBoundsValue(poseBounds?.maxY)}
+          {" "}out {poseBounds?.outOfFrameCount ?? 0}
+        </div>
+        {camera?.deviceLabel ? (
+          <div className="truncate text-white/45">{camera.deviceLabel}</div>
+        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-2 font-mono text-[11px] text-white/60">

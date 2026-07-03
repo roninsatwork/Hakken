@@ -4,7 +4,7 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useState } from "react";
-import { Activity, Plus, Search } from "lucide-react";
+import { Activity, Bug, Plus, Search } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,13 +69,22 @@ export default function MovementsLibraryPage() {
           </p>
         </div>
 
-        <Link
-          href="/demos/movement-capture"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Routine</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/demos/movements/replay-lab"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] border border-border-dim bg-sidebar/50 text-secondary font-medium hover:text-foreground transition-all"
+          >
+            <Bug className="w-4 h-4" />
+            <span>Replay Lab</span>
+          </Link>
+          <Link
+            href="/demos/movement-capture"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Routine</span>
+          </Link>
+        </div>
       </div>
 
 

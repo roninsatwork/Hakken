@@ -1,0 +1,143 @@
+import {
+  getFrameLandmarks,
+  parseMovementFramePayload,
+} from "./movementFrameCodec";
+import type { MovementDataFormat, MovementFrame, MovementLandmark } from "./movementTypes";
+import type {
+  MovementDebugReplayLandmark,
+  MovementDebugReplayPoseBounds,
+  MovementDebugReplaySession,
+} from "./movementDebugReplay";
+
+export type MovementReplayRecordingSource = {
+  _id: string;
+  captureFps?: number;
+  createdAt?: number;
+  durationMs?: number;
+  frameCount?: number;
+  poseData: string;
+  poseDataFormat?: MovementDataFormat;
+  poseDataUrl?: string | null;
+  title?: string;
+};
+
+export type MovementReplayRecordingLoadResult = {
+  format: MovementDataFormat;
+  session: MovementDebugReplaySession;
+};
+
+function isFramePayload(frame: MovementFrame): frame is Exclude<MovementFrame, MovementLandmark[]> {
+  return !Array.isArray(frame) && typeof frame === "object" && frame !== null;
+}
+
+function getWorldLandmarks(frame: MovementFrame): MovementLandmark[] {
+  return isFramePayload(frame) && Array.isArray(frame.worldLandmarks) ? frame.worldLandmarks : [];
+}
+
+function getFrameTimestamp(frame: MovementFrame, fallback: number) {
+  return isFramePayload(frame) && typeof frame.timestamp === "number" ? frame.timestamp : fallback;
+}
+
+function toReplayLandmarks(landmarks: MovementLandmark[]): MovementDebugReplayLandmark[] {
+  return landmarks
+    .filter((landmark) => Number.isFinite(landmark.x) && Number.isFinite(landmark.y))
+    .map((landmark) => ({
+      visibility: typeof landmark.visibility === "number" ? landmark.visibility : undefined,
+      x: landmark.x,
+      y: landmark.y,
+      z: typeof landmark.z === "number" ? landmark.z : undefined,
+    }));
+}
+
+function buildPoseBounds(landmarks: MovementDebugReplayLandmark[]): MovementDebugReplayPoseBounds | undefined {
+  if (landmarks.length === 0) return undefined;
+
+  const xs = landmarks.map((landmark) => landmark.x);
+  const ys = landmarks.map((landmark) => landmark.y);
+
+  return {
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    outOfFrameCount: landmarks.filter((landmark) => (
+      landmark.x < 0 ||
+      landmark.x > 1 ||
+      landmark.y < 0 ||
+      landmark.y > 1
+    )).length,
+  };
+}
+
+export function buildMovementReplaySessionFromRecording(
+  recording: MovementReplayRecordingSource,
+  frames: MovementFrame[],
+  fps = 30,
+): MovementDebugReplaySession {
+  const startedAt = recording.createdAt ?? Date.now();
+  const frameDurationMs = 1000 / Math.max(fps, 1);
+  const samples = frames.map((frame, frameIndex) => {
+    const pose = toReplayLandmarks(getFrameLandmarks(frame));
+    const worldPose = toReplayLandmarks(getWorldLandmarks(frame));
+    const capturedAt = startedAt + getFrameTimestamp(frame, frameIndex * frameDurationMs);
+
+    return {
+      bodyConfidence: {},
+      capturedAt,
+      fallbacks: {
+        lowerBody: "recorded",
+        owners: "head recorded; torso recorded; lower recorded; feet recorded",
+      },
+      health: {
+        primaryAction: "recorded movement",
+      },
+      poseBounds: buildPoseBounds(pose),
+      tracking: {
+        pose,
+        worldPose,
+      },
+    };
+  });
+  const durationMs = recording.durationMs ?? (
+    samples.length > 1
+      ? Math.round((samples.length - 1) * frameDurationMs)
+      : 0
+  );
+
+  return {
+    baselineSummary: "saved movement recording",
+    createdAt: recording.createdAt,
+    durationMs,
+    endedAt: startedAt + durationMs,
+    fps,
+    id: recording._id,
+    movementId: recording._id,
+    sampleCount: samples.length,
+    samples,
+    startedAt,
+    trigger: "saved-movement-recording",
+    warningSummary: recording.title ?? "saved movement recording",
+  };
+}
+
+export async function loadMovementReplayRecording(
+  recording: MovementReplayRecordingSource,
+): Promise<MovementReplayRecordingLoadResult> {
+  const payload = recording.poseDataUrl
+    ? await fetch(recording.poseDataUrl).then((response) => {
+      if (!response.ok) throw new Error(`Could not load pose data (${response.status}).`);
+      return response.json() as Promise<unknown>;
+    })
+    : recording.poseData;
+  const sourceFormat = recording.poseDataFormat ?? (recording.poseDataUrl ? "legacy-storage-json" : "legacy-inline-json");
+  const parsed = parseMovementFramePayload(payload, sourceFormat);
+
+  return {
+    format: parsed.format,
+    session: buildMovementReplaySessionFromRecording(
+      recording,
+      parsed.frames,
+      recording.captureFps ?? parsed.fps,
+    ),
+  };
+}

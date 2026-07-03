@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { resolveMovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
-import { buildMovementCalibration } from "./movementTrackingCalibration";
+import {
+  buildMovementCalibration,
+  buildUpperBodyMovementAutoCalibration,
+} from "./movementTrackingCalibration";
 import type { MovementLandmark } from "./movementTypes";
 
 function visible(x: number, y: number, z = 0, visibility = 0.9): MovementLandmark {
@@ -22,6 +25,14 @@ function makeNeutralPose(visibility = 0.9) {
   pose[28] = visible(0.57, 0.95, 0, visibility);
   pose[31] = visible(0.42, 0.97, 0, visibility);
   pose[32] = visible(0.58, 0.97, 0, visibility);
+  return pose;
+}
+
+function makeCloseCroppedPose() {
+  const pose = makeNeutralPose();
+  [23, 24, 25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, visibility: 0.01 };
+  });
   return pose;
 }
 
@@ -76,5 +87,28 @@ describe("movement avatar player drive", () => {
 
     expect(drive.shouldApplySpine).toBe(false);
     expect(drive.owner).toBe("player-spine-held");
+  });
+
+  it("uses head and shoulders for close-cropped player spine motion when hips are unreliable", () => {
+    const neutralPose = makeCloseCroppedPose();
+    const calibration = buildUpperBodyMovementAutoCalibration({ poseLandmarks: neutralPose });
+    const sideBendPose = makeCloseCroppedPose();
+    sideBendPose[0] = visible(0.65, 0.25);
+    sideBendPose[7] = visible(0.61, 0.27);
+    sideBendPose[8] = visible(0.69, 0.27);
+    sideBendPose[11] = visible(0.53, 0.42);
+    sideBendPose[12] = visible(0.75, 0.42);
+
+    const drive = resolveMovementAvatarPlayerSpineDrive({
+      calibration,
+      isPlayer: true,
+      poseLandmarks: sideBendPose,
+      torsoTrackingReady: true,
+    });
+
+    expect(drive.shouldApplySpine).toBe(true);
+    expect(drive.owner).toBe("player-upper-body-model");
+    expect(drive.sideBend).toBeGreaterThan(0.35);
+    expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.14);
   });
 });

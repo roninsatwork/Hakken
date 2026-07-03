@@ -63,8 +63,43 @@ export type MovementTrackingDebugState = {
   updatedAt: number;
   headRaw: MovementHeadAngles;
   headApplied: MovementHeadAngles;
+  avatarVisual?: {
+    averageLowerBodyDirectionError?: number;
+    comparedLowerBodySegments: number;
+    segments: Record<string, {
+      confidence?: number;
+      direction: {
+        x: number;
+        y: number;
+        z: number;
+      };
+      length: number;
+      sourceDirection?: {
+        x: number;
+        y: number;
+        z: number;
+      };
+      sourceError?: number;
+    }>;
+  };
   bodyConfidence: Record<string, number>;
+  camera?: {
+    aspectRatio?: number;
+    deviceLabel?: string;
+    frameRate?: number;
+    trackHeight?: number;
+    trackWidth?: number;
+    videoHeight: number;
+    videoWidth: number;
+  };
   fallbacks: Record<string, string>;
+  poseBounds?: {
+    maxX: number;
+    maxY: number;
+    minX: number;
+    minY: number;
+    outOfFrameCount: number;
+  };
   retarget?: {
     sourceQuality: number;
     squatDepth: number;
@@ -413,8 +448,12 @@ export function buildUpperBodyMovementAutoCalibration({
   if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return null;
 
   const bodyConfidence = getMovementBodyConfidence(poseLandmarks);
-  const upperBodyQuality = average([bodyConfidence.head, bodyConfidence.torso]);
-  if (bodyConfidence.torso < MIN_CALIBRATION_QUALITY || bodyConfidence.head < 0.35) return null;
+  const shoulderConfidence = average([
+    bodyConfidence.leftShoulder,
+    bodyConfidence.rightShoulder,
+  ]);
+  const upperBodyQuality = average([bodyConfidence.head, shoulderConfidence]);
+  if (shoulderConfidence < MIN_CALIBRATION_QUALITY || bodyConfidence.head < 0.35) return null;
   if (upperBodyQuality < MIN_CALIBRATION_QUALITY) return null;
 
   const shoulders = midpoint(leftShoulder, rightShoulder);
@@ -966,6 +1005,28 @@ export function getMovementTrackingHealthWarnings(
   const staleAfterMs = options.staleAfterMs ?? 1200;
   const leftArmConfidence = Math.max(confidence.leftWrist ?? 0, confidence.leftHand ?? 0);
   const rightArmConfidence = Math.max(confidence.rightWrist ?? 0, confidence.rightHand ?? 0);
+  const hipConfidence = confidence.hips ?? 0;
+  const lowerBodyConfidence = Math.max(
+    hipConfidence,
+    confidence.leftKnee ?? 0,
+    confidence.rightKnee ?? 0,
+    confidence.leftFoot ?? 0,
+    confidence.rightFoot ?? 0,
+  );
+  const distalLowerBodyConfidence = Math.max(
+    confidence.leftKnee ?? 0,
+    confidence.rightKnee ?? 0,
+    confidence.leftFoot ?? 0,
+    confidence.rightFoot ?? 0,
+  );
+  const isCloseCroppedBody =
+    (confidence.head ?? 0) >= 0.8 &&
+    Math.min(confidence.leftShoulder ?? 0, confidence.rightShoulder ?? 0) >= 0.65 &&
+    lowerBodyConfidence < 0.12 &&
+    Math.max(leftArmConfidence, rightArmConfidence) < 0.2;
+  const hasWeakKneeAndFootTracking =
+    hipConfidence >= 0.45 &&
+    distalLowerBodyConfidence < 0.35;
   const leftFootConfidence = confidence.leftFoot ?? 0;
   const rightFootConfidence = confidence.rightFoot ?? 0;
 
@@ -997,6 +1058,14 @@ export function getMovementTrackingHealthWarnings(
 
   if ((confidence.torso ?? 0) < 0.55) {
     warnings.push("Torso confidence is low");
+  }
+
+  if (isCloseCroppedBody) {
+    warnings.push("Body is too close to camera");
+  }
+
+  if (hasWeakKneeAndFootTracking) {
+    warnings.push("Knee and foot tracking is weak");
   }
 
   if ((confidence.leftWrist ?? 0) < 0.35 && (confidence.leftHand ?? 0) < 0.35) {
@@ -1103,6 +1172,8 @@ function getMovementTrackingPrimaryAction(warnings: string[]) {
   if (warnings.includes("Tracking data is stale")) return "Restart camera tracking";
   if (warnings.includes("Calibration is missing")) return "Run calibration";
   if (warnings.includes("Calibration quality is low")) return "Recalibrate neutral stance";
+  if (warnings.includes("Body is too close to camera")) return "Step back until hands, hips, and feet are visible";
+  if (warnings.includes("Knee and foot tracking is weak")) return "Improve knee and foot tracking";
   if (warnings.includes("Head is holding last good pose")) return "Reacquire face tracking";
   if (warnings.includes("Head is using pose tracking")) return "Tune face/head tracking";
   if (warnings.includes("Head pitch is near clamp")) return "Tune head pitch offset";

@@ -184,6 +184,82 @@ const movementFrames = [
   worldLandmarks: landmarks.map((landmark) => ({ ...landmark })),
 }));
 
+const movementDebugSamples = movementFrames.map((frame, frameIndex) => {
+  const squatDepth = frameIndex === 1 ? 0.38 : 0;
+  const leftKneeLift = frameIndex === 2 ? 0.42 : 0;
+  const rightKneeLift = frameIndex === 3 ? 0.42 : 0;
+
+  return {
+    bodyConfidence: {
+      hips: 0.95,
+      leftFoot: 0.9,
+      leftKnee: 0.92,
+      rightFoot: 0.9,
+      rightKnee: 0.92,
+      torso: 0.96,
+    },
+    camera: {
+      aspectRatio: 1.333,
+      frameRate: 30,
+      trackHeight: 960,
+      trackWidth: 1280,
+      videoHeight: 960,
+      videoWidth: 1280,
+    },
+    capturedAt: now + frameIndex * 500,
+    fallbacks: {
+      lowerBody: squatDepth > 0 ? "squat player-retarget" : "neutral player-retarget",
+      owners: "head player; torso player; lower player-retarget; feet player-retarget",
+    },
+    health: {
+      primaryAction: squatDepth > 0 ? "squat" : "stand",
+      score: 91,
+      warnings: [],
+    },
+    poseBounds: {
+      maxX: 0.68,
+      maxY: 0.97,
+      minX: 0.32,
+      minY: 0.28,
+      outOfFrameCount: 0,
+    },
+    retarget: {
+      appliedLowerBody: 6,
+      hipDrop: squatDepth,
+      leftFootContact: leftKneeLift === 0,
+      leftKneeLift,
+      rightFootContact: rightKneeLift === 0,
+      rightKneeLift,
+      solvedSegments: 11,
+      sourceQuality: 0.96,
+      squatDepth,
+      totalLowerBody: 6,
+      totalSegments: 11,
+      visualRootDrop: squatDepth,
+    },
+    tracking: {
+      pose: frame.landmarks,
+      worldPose: frame.worldLandmarks,
+    },
+  };
+});
+
+const movementDebugSessionFixture = {
+  _id: "movement_debug_e2e_replay",
+  _creationTime: now,
+  baselineSummary: "neutral e2e replay baseline",
+  createdAt: now,
+  createdBy: superAdminId,
+  durationMs: 1500,
+  endedAt: now + 1500,
+  movementId,
+  sampleCount: movementDebugSamples.length,
+  samplesJson: JSON.stringify(movementDebugSamples),
+  startedAt: now,
+  trigger: "manual-debug-save",
+  warningSummary: "none",
+};
+
 const movementFixture = {
   _id: movementId,
   _creationTime: now,
@@ -554,6 +630,30 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics" || path === "analytics:getGlobalInventoryMetrics") return analytics;
   if (path === "movements:get") {
     return queryArgs.id === movementId ? movementFixture : null;
+  }
+  if (path === "movements:listReplayAlignmentRecordings") {
+    return [
+      {
+        ...movementFixture,
+        poseDataUrl: null,
+      },
+    ];
+  }
+  if (path === "movements:listDebugTrackingSessions") {
+    return [
+      {
+        ...movementDebugSessionFixture,
+        samplesJson: undefined,
+        samplesPreview: movementDebugSessionFixture.samplesJson.slice(0, 800),
+      },
+    ];
+  }
+  if (path === "movements:getDebugTrackingSession") {
+    return queryArgs.id === movementDebugSessionFixture._id ? movementDebugSessionFixture : null;
+  }
+  if (path === "movements:getDebugTrackingSessions") {
+    const ids = Array.isArray(queryArgs.ids) ? queryArgs.ids : [];
+    return ids.includes(movementDebugSessionFixture._id) ? [movementDebugSessionFixture] : [];
   }
   if (path === "movements:getFileUrl") {
     return null;
