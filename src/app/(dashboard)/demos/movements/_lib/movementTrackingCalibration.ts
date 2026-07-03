@@ -65,7 +65,9 @@ export type MovementTrackingDebugState = {
   headApplied: MovementHeadAngles;
   avatarVisual?: {
     averageLowerBodyDirectionError?: number;
+    averageUpperBodyDirectionError?: number;
     comparedLowerBodySegments: number;
+    comparedUpperBodySegments?: number;
     segments: Record<string, {
       confidence?: number;
       direction: {
@@ -100,16 +102,26 @@ export type MovementTrackingDebugState = {
     minY: number;
     outOfFrameCount: number;
   };
+  spineDrive?: {
+    confidence: number;
+    forwardLean: number;
+    owner: string;
+    sideBend: number;
+    twist: number;
+  };
   retarget?: {
     sourceQuality: number;
     squatDepth: number;
     hipDrop: number;
     leftKneeLift: number;
     rightKneeLift: number;
+    lowerBodySegmentMotion: number;
     leftFootContact: boolean;
     rightFootContact: boolean;
     solvedSegments: number;
     totalSegments: number;
+    appliedUpperBody: number;
+    totalUpperBody: number;
     appliedLowerBody: number;
     totalLowerBody: number;
     visualRootDrop: number;
@@ -682,6 +694,27 @@ export function getCalibratedFloorCorrection({
   );
 }
 
+function getFloorRelativeSquatDepth({
+  calibration,
+  currentFloorY,
+  floorConfidence,
+  hips,
+  torsoScale,
+}: {
+  calibration: MovementCalibration;
+  currentFloorY: number;
+  floorConfidence: number;
+  hips: { x: number; y: number; z: number };
+  torsoScale: number;
+}) {
+  const absoluteHipDrop = clamp((hips.y - calibration.hipCenter.y) / (torsoScale * 0.62), 0, 1);
+  if (floorConfidence < 0.35) return absoluteHipDrop;
+
+  const calibratedHipToFloor = calibration.floorY - calibration.hipCenter.y;
+  const currentHipToFloor = currentFloorY - hips.y;
+  return clamp((calibratedHipToFloor - currentHipToFloor) / (torsoScale * 0.8), 0, 1);
+}
+
 export function getMovementLowerBodyIntent({
   poseLandmarks,
   calibration,
@@ -759,14 +792,31 @@ export function getMovementLowerBodyIntent({
   const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
   const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
   const ankleConfidence = average([visibility(leftAnkle), visibility(rightAnkle)]);
+  const footConfidence = Math.max(
+    visibility(poseLandmarks[27]),
+    visibility(poseLandmarks[28]),
+    visibility(poseLandmarks[31]),
+    visibility(poseLandmarks[32]),
+  );
   const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
 
   if (confidence < 0.35 || calibration.quality < 0.45) {
     return estimateUncalibratedSquat();
   }
 
-  const hipDrop = hips.y - calibration.hipCenter.y;
-  const rawSquatDepth = clamp(hipDrop / (torsoScale * 0.62), 0, 1);
+  const currentFloorY = Math.max(
+    poseLandmarks[27]?.y ?? calibration.floorY,
+    poseLandmarks[28]?.y ?? calibration.floorY,
+    poseLandmarks[31]?.y ?? calibration.floorY,
+    poseLandmarks[32]?.y ?? calibration.floorY,
+  );
+  const rawSquatDepth = getFloorRelativeSquatDepth({
+    calibration,
+    currentFloorY,
+    floorConfidence: footConfidence,
+    hips,
+    torsoScale,
+  });
   const shoulders = leftShoulder && rightShoulder ? midpoint(leftShoulder, rightShoulder) : null;
   const shoulderDrop = shoulders && calibration.shoulderCenter
     ? shoulders.y - calibration.shoulderCenter.y

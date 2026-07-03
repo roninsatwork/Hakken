@@ -34,6 +34,7 @@ function frame(overrides: Partial<MovementDebugReplayFrame> = {}): MovementDebug
     },
     retarget: {
       appliedLowerBody: 0,
+      appliedUpperBody: 0,
       hipDrop: 0,
       leftFootContact: false,
       leftKneeLift: 0,
@@ -42,6 +43,9 @@ function frame(overrides: Partial<MovementDebugReplayFrame> = {}): MovementDebug
       rightKneeLift: 0,
       sourceQuality: 0.9,
       squatDepth: 0,
+      totalLowerBody: 6,
+      totalUpperBody: 5,
+      totalSegments: 11,
       visualRootDrop: 0,
     },
     tracking: {
@@ -157,6 +161,7 @@ describe("movement replay analyzer", () => {
         },
         retarget: {
           appliedLowerBody: 6,
+          appliedUpperBody: 5,
           hipDrop: 0.36,
           leftFootContact: true,
           leftKneeLift: 0.22,
@@ -165,6 +170,9 @@ describe("movement replay analyzer", () => {
           rightKneeLift: 0.22,
           sourceQuality: 0.92,
           squatDepth: 0.62,
+          totalLowerBody: 6,
+          totalUpperBody: 5,
+          totalSegments: 11,
           visualRootDrop: 0.62,
         },
       }),
@@ -185,6 +193,7 @@ describe("movement replay analyzer", () => {
         },
         retarget: {
           appliedLowerBody: 0,
+          appliedUpperBody: 5,
           hipDrop: 0.01,
           leftFootContact: false,
           leftKneeLift: 0,
@@ -193,6 +202,9 @@ describe("movement replay analyzer", () => {
           rightKneeLift: 0.46,
           sourceQuality: 0.98,
           squatDepth: 0,
+          totalLowerBody: 6,
+          totalUpperBody: 5,
+          totalSegments: 11,
           visualRootDrop: 0,
         },
       }),
@@ -215,10 +227,10 @@ describe("movement replay analyzer", () => {
         },
         poseBounds: {
           maxX: 0.7,
-          maxY: 1.4,
+          maxY: 1.04,
           minX: 0.35,
           minY: 0.1,
-          outOfFrameCount: 8,
+          outOfFrameCount: 3,
         },
         retarget: {
           sourceQuality: 0.5,
@@ -229,6 +241,31 @@ describe("movement replay analyzer", () => {
     expect(analysis.pass).toBe(true);
     expect(analysis.failures.map((failure) => failure.code)).toContain("source_lower_body_out_of_frame");
     expect(analysis.failures.every((failure) => failure.severity === "warning")).toBe(true);
+  });
+
+  it("compresses contiguous source-quality warnings into frame ranges", () => {
+    const makeOutOfFrame = () => frame({
+      poseBounds: {
+        maxX: 0.7,
+        maxY: 1.04,
+        minX: 0.35,
+        minY: 0.1,
+        outOfFrameCount: 3,
+      },
+    });
+    const analysis = analyzeMovementDebugReplaySession(session([
+      makeOutOfFrame(),
+      makeOutOfFrame(),
+      makeOutOfFrame(),
+      frame(),
+    ]));
+
+    const sourceWarnings = analysis.failures.filter((failure) => (
+      failure.code === "source_lower_body_out_of_frame"
+    ));
+    expect(sourceWarnings).toHaveLength(1);
+    expect(sourceWarnings[0]?.frameIndex).toBe(0);
+    expect(sourceWarnings[0]?.detail).toContain("Frames 0-2");
   });
 
   it("flags sticky squat recovery when source returns neutral but avatar remains held", () => {
@@ -322,5 +359,82 @@ describe("movement replay analyzer", () => {
     expect(analysis.failures.map((failure) => failure.code)).toContain("avatar_output_diverged");
     expect(analysis.metrics.avatarVisualFrameCount).toBe(1);
     expect(analysis.metrics.averageAvatarLowerBodyDirectionError).toBeCloseTo(0.68);
+  });
+
+  it("flags upper-body avatar divergence when torso and arms do not match the source", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      frame({
+        avatarVisual: {
+          averageLowerBodyDirectionError: 0.12,
+          averageUpperBodyDirectionError: 0.62,
+          comparedLowerBodySegments: 6,
+          comparedUpperBodySegments: 5,
+          segments: {
+            spine: {
+              confidence: 0.96,
+              direction: { x: 0, y: 1, z: 0 },
+              length: 0.24,
+              sourceDirection: { x: -0.45, y: 0.89, z: 0 },
+              sourceError: 0.62,
+            },
+            leftUpperArm: {
+              confidence: 0.96,
+              direction: { x: -0.2, y: -0.98, z: 0 },
+              length: 0.2,
+              sourceDirection: { x: -0.85, y: -0.52, z: 0 },
+              sourceError: 0.55,
+            },
+            rightUpperArm: {
+              confidence: 0.96,
+              direction: { x: 0.2, y: -0.98, z: 0 },
+              length: 0.2,
+              sourceDirection: { x: 0.85, y: -0.52, z: 0 },
+              sourceError: 0.55,
+            },
+          },
+        },
+      }),
+    ]));
+
+    expect(analysis.pass).toBe(true);
+    expect(analysis.failures.map((failure) => failure.code)).toContain("avatar_upper_body_diverged");
+  });
+
+  it("flags modest upper-body mismatch instead of showing a clean frame", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      frame({
+        avatarVisual: {
+          averageLowerBodyDirectionError: 0.08,
+          averageUpperBodyDirectionError: 0.21,
+          comparedLowerBodySegments: 6,
+          comparedUpperBodySegments: 5,
+          segments: {
+            spine: {
+              confidence: 1,
+              direction: { x: 0, y: 1, z: 0 },
+              length: 0.24,
+              sourceDirection: { x: -0.2, y: 0.98, z: 0 },
+              sourceError: 0.2,
+            },
+            leftUpperArm: {
+              confidence: 0.95,
+              direction: { x: -0.1, y: -0.99, z: 0 },
+              length: 0.2,
+              sourceDirection: { x: -0.35, y: -0.94, z: 0 },
+              sourceError: 0.2,
+            },
+            rightUpperArm: {
+              confidence: 0.95,
+              direction: { x: 0.1, y: -0.99, z: 0 },
+              length: 0.2,
+              sourceDirection: { x: 0.35, y: -0.94, z: 0 },
+              sourceError: 0.2,
+            },
+          },
+        },
+      }),
+    ]));
+
+    expect(analysis.failures.map((failure) => failure.code)).toContain("avatar_upper_body_diverged");
   });
 });

@@ -3,6 +3,8 @@ import {
   averageMovementRetargetSourceModels,
   buildMovementRetargetSourceModel,
   getBalancedPlantedSquatDepth,
+  getRecordedLowerBodySegmentMotionDepth,
+  getRecordedSquatPresentationDepth,
   solveMovementRetargetFrame,
 } from "./movementRetargeting";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
@@ -37,6 +39,12 @@ function withCorePose() {
   pose[31] = { x: 0.43, y: 0.97, z: 0, visibility: 0.8 };
   pose[32] = { x: 0.57, y: 0.97, z: 0, visibility: 0.8 };
   return pose;
+}
+
+function shiftLowerBodyVertically(pose: TrackingLandmark[], amount: number) {
+  [23, 24, 25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: pose[index]!.y + amount };
+  });
 }
 
 describe("movementRetargeting", () => {
@@ -124,6 +132,21 @@ describe("movementRetargeting", () => {
     expect(frame.squatDepth).toBeLessThan(0.3);
   });
 
+  it("keeps standing neutral when the whole lower body shifts down in camera frame", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const shiftedStandingPose = withCorePose();
+    shiftLowerBodyVertically(shiftedStandingPose, 0.09);
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: shiftedStandingPose,
+    });
+
+    expect(frame.hipDrop).toBe(0);
+    expect(frame.squatDepth).toBe(0);
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
+  });
+
   it("does not report squat metrics from invisible lower-body landmarks", () => {
     const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const closeCroppedPose = withCorePose();
@@ -194,5 +217,47 @@ describe("movementRetargeting", () => {
     expect(frame.contacts.rightFoot).toBe(true);
     expect(frame.squatDepth).toBeGreaterThan(0.5);
     expect(getBalancedPlantedSquatDepth(unevenFrame)).toBe(0);
+  });
+
+  it("keeps recorded squat presentation when feet are weak but hip and knees stay squatted", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const weakFeetSquatPose = withCorePose();
+    weakFeetSquatPose[23] = { ...weakFeetSquatPose[23]!, y: 0.8 };
+    weakFeetSquatPose[24] = { ...weakFeetSquatPose[24]!, y: 0.8 };
+    weakFeetSquatPose[25] = { ...weakFeetSquatPose[25]!, y: 0.73 };
+    weakFeetSquatPose[26] = { ...weakFeetSquatPose[26]!, y: 0.73 };
+    [27, 28, 29, 30, 31, 32].forEach((index) => {
+      weakFeetSquatPose[index] = { ...weakFeetSquatPose[index]!, visibility: 0.13 };
+    });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: weakFeetSquatPose,
+    });
+
+    expect(frame.contacts.leftFoot).toBe(false);
+    expect(frame.contacts.rightFoot).toBe(false);
+    expect(frame.squatDepth).toBeGreaterThan(0.55);
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
+    expect(getRecordedSquatPresentationDepth(frame)).toBeGreaterThan(0.55);
+  });
+
+  it("detects recorded side-leg motion even when squat and knee-lift signals stay neutral", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const sideLegPose = withCorePose();
+    sideLegPose[26] = { ...sideLegPose[26]!, x: 0.72, y: 0.78 };
+    sideLegPose[28] = { ...sideLegPose[28]!, x: 0.86, y: 0.9 };
+    sideLegPose[30] = { ...sideLegPose[30]!, x: 0.88, y: 0.91 };
+    sideLegPose[32] = { ...sideLegPose[32]!, x: 0.9, y: 0.92 };
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: sideLegPose,
+    });
+
+    expect(frame.squatDepth).toBe(0);
+    expect(frame.kneeLift.left).toBe(0);
+    expect(frame.kneeLift.right).toBe(0);
+    expect(getRecordedLowerBodySegmentMotionDepth({ calibration, frame })).toBeGreaterThan(0.3);
   });
 });

@@ -19,7 +19,7 @@ Options:
   --base-url <url>        App URL. Defaults to ${defaultBaseUrl}
   --out <dir>            Output directory. Defaults to ${defaultOutDir}
   --storage-state <file> Playwright storage state to reuse for auth
-  --session <id-or-tail> Click the matching session before capture
+  --session <id-title-tail> Click the matching session before capture
   --frames <list|auto>   Comma-separated frame indexes, or auto. Defaults to auto
   --local-test-auth      Sign in through /local-test-auth before capture
   --role <role>          Local-test-auth role. Defaults to super-admin
@@ -113,7 +113,12 @@ async function selectSession(page, session) {
 
   const exact = page.locator(`[data-testid="movement-replay-session"][data-session-id="${session}"]`);
   const partial = page.locator(`[data-testid="movement-replay-session"][data-session-id*="${session}"]`);
-  const target = await exact.count() > 0 ? exact.first() : partial.first();
+  const title = page.getByTestId("movement-replay-session").filter({ hasText: session });
+  const target = await exact.count() > 0
+    ? exact.first()
+    : await partial.count() > 0
+      ? partial.first()
+      : title.first();
 
   if (await target.count() === 0) {
     throw new Error(`No replay session matched "${session}".`);

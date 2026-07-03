@@ -44,6 +44,12 @@ function withCorePose() {
   return pose;
 }
 
+function shiftLowerBodyVertically(pose: TrackingLandmark[], amount: number) {
+  [23, 24, 25, 26, 27, 28, 31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: pose[index]!.y + amount };
+  });
+}
+
 describe("movementTrackingCalibration", () => {
   it("prefers face landmarks for head angles when they are available", () => {
     const face = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
@@ -334,6 +340,22 @@ describe("movementTrackingCalibration", () => {
     expect(intent.squatDepth).toBeGreaterThan(0.5);
     expect(intent.leftKneeRaise).toBe(0);
     expect(intent.rightKneeRaise).toBe(0);
+  });
+
+  it("keeps calibrated standing neutral when the whole lower body shifts down in camera frame", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const shiftedStandingPose = withCorePose();
+    shiftLowerBodyVertically(shiftedStandingPose, 0.09);
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: shiftedStandingPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("neutral");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.squatSignals.hipDrop).toBe(0);
   });
 
   it("does not turn raised knees without body drop into a squat", () => {

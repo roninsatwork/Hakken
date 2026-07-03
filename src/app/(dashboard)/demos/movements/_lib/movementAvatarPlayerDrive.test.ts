@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveMovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
+import {
+  resolveMovementAvatarPlayerSpineDrive,
+  resolveMovementAvatarRecordedSpineDrive,
+} from "./movementAvatarPlayerDrive";
+import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import {
   buildMovementCalibration,
   buildUpperBodyMovementAutoCalibration,
@@ -111,4 +115,72 @@ describe("movement avatar player drive", () => {
     expect(drive.sideBend).toBeGreaterThan(0.35);
     expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.14);
   });
+
+  it("turns recorded replay side-bend evidence into spine rotation", () => {
+    const neutralPose = makeNeutralPose();
+    const retargetCalibration = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose });
+    const sideBendPose = makeNeutralPose();
+    sideBendPose[0] = visible(0.66, 0.25);
+    sideBendPose[7] = visible(0.62, 0.27);
+    sideBendPose[8] = visible(0.7, 0.27);
+    sideBendPose[11] = visible(0.54, 0.42);
+    sideBendPose[12] = visible(0.76, 0.42);
+    sideBendPose[23] = visible(0.43, 0.66);
+    sideBendPose[24] = visible(0.57, 0.66);
+
+    const drive = resolveMovementAvatarRecordedSpineDrive({
+      poseLandmarks: sideBendPose,
+      retargetCalibration,
+      torsoTrackingReady: true,
+    });
+
+    expect(drive.shouldApplySpine).toBe(true);
+    expect(drive.owner).toBe("recorded-spine-model");
+    expect(drive.sideBend).toBeGreaterThan(0.5);
+    expect(drive.rotations.chest.z).toBeGreaterThan(0.4);
+    expect(drive.rotations.chest.z).toBeLessThan(0.44);
+  });
+
+  it("keeps modest recorded replay side-bend visible without overdriving it", () => {
+    const neutralPose = makeNeutralPose();
+    const retargetCalibration = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose });
+    const sideBendPose = makeNeutralPose();
+    sideBendPose[11] = visible(0.36, 0.42);
+    sideBendPose[12] = visible(0.58, 0.42);
+
+    const drive = resolveMovementAvatarRecordedSpineDrive({
+      poseLandmarks: sideBendPose,
+      retargetCalibration,
+      torsoTrackingReady: true,
+    });
+
+    expect(drive.shouldApplySpine).toBe(true);
+    expect(drive.owner).toBe("recorded-spine-model");
+    expect(drive.sideBend).toBeLessThan(-0.15);
+    expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.15);
+    expect(Math.abs(drive.rotations.chest.z)).toBeLessThan(0.33);
+  });
+
+  it("caps large recorded replay side-bend so leg-heavy frames do not overfold the torso", () => {
+    const neutralPose = makeNeutralPose();
+    const retargetCalibration = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose });
+    const sideBendPose = makeNeutralPose();
+    sideBendPose[11] = visible(0.34, 0.42);
+    sideBendPose[12] = visible(0.56, 0.42);
+
+    const drive = resolveMovementAvatarRecordedSpineDrive({
+      kneeLift: { left: 0.16, right: 0 },
+      poseLandmarks: sideBendPose,
+      retargetCalibration,
+      torsoTrackingReady: true,
+    });
+
+    expect(drive.shouldApplySpine).toBe(true);
+    expect(drive.owner).toBe("recorded-spine-model");
+    expect(drive.sideBend).toBeLessThan(-0.25);
+    expect(drive.sideBend).toBeGreaterThan(-0.4);
+    expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.1);
+    expect(Math.abs(drive.rotations.chest.z)).toBeLessThan(0.12);
+  });
+
 });

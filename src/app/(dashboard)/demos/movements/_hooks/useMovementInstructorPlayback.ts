@@ -112,7 +112,8 @@ const getMirroredInstructorMotionLandmarks = (
 
 function getRetargetNeutralScore(model: MovementRetargetSourceModel) {
   const neutralKneeLift = (model.neutralKneeLift.left + model.neutralKneeLift.right) / 2;
-  return neutralKneeLift + (1 - model.quality) * 0.08;
+  const torsoSideBend = Math.abs(model.shoulderCenter.x - model.hipCenter.x);
+  return neutralKneeLift + torsoSideBend * 2.4 + (1 - model.quality) * 0.08;
 }
 
 export function buildInstructorRetargetSourceModel(

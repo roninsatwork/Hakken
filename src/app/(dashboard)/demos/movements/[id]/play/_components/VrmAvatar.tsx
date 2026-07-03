@@ -11,6 +11,7 @@ import {
   getMovementAvatarTrackingProfileName,
 } from "../../../_lib/movementAvatarProfiles";
 import {
+  resolveMovementAvatarRecordedSpineDrive,
   resolveMovementAvatarPlayerSpineDrive,
 } from "../../../_lib/movementAvatarPlayerDrive";
 import {
@@ -20,6 +21,8 @@ import {
 import {
   buildMovementRetargetSourceModel,
   getBalancedPlantedSquatDepth,
+  getRecordedLowerBodySegmentMotionDepth,
+  getRecordedSquatPresentationDepth,
   solveMovementRetargetFrame,
   type MovementRetargetSegmentName,
   type MovementRetargetSourceModel,
@@ -38,6 +41,7 @@ import {
   selectMovementKneeTarget,
   selectMovementTrackingEndpoint,
   type MovementCalibration,
+  type MovementHeadAngles,
   type MovementTrackingDebugState,
 } from "../../../_lib/movementTrackingCalibration";
 import {
@@ -82,7 +86,7 @@ type RetargetBoneMapping = {
   bone: VrmBoneName;
   child: VrmBoneName;
   segment: MovementRetargetSegmentName;
-  type: "leg" | "foot";
+  type: "arm" | "foot" | "leg" | "spine";
 };
 
 type PlantedFootLockState = {
@@ -114,13 +118,54 @@ const LOWER_BODY_RETARGET_MAPPINGS: RetargetBoneMapping[] = [
   { bone: "leftFoot", child: "leftToes", segment: "leftFoot", type: "foot" },
 ];
 
+const UPPER_BODY_VISUAL_MAPPINGS: RetargetBoneMapping[] = [
+  { bone: "spine", child: "chest", segment: "spine", type: "spine" },
+  { bone: "rightUpperArm", child: "rightLowerArm", segment: "rightUpperArm", type: "arm" },
+  { bone: "rightLowerArm", child: "rightHand", segment: "rightLowerArm", type: "arm" },
+  { bone: "leftUpperArm", child: "leftLowerArm", segment: "leftUpperArm", type: "arm" },
+  { bone: "leftLowerArm", child: "leftHand", segment: "leftLowerArm", type: "arm" },
+];
+
+const UPPER_BODY_RECORDED_RETARGET_MAPPINGS = UPPER_BODY_VISUAL_MAPPINGS.filter(
+  (mapping) => mapping.type !== "spine",
+);
+
+const AVATAR_VISUAL_MAPPINGS = [
+  ...UPPER_BODY_VISUAL_MAPPINGS,
+  ...LOWER_BODY_RETARGET_MAPPINGS,
+];
+
 const AVATAR_BASE_Y = -2.8;
+const LOWER_BODY_SOURCE_LANDMARKS = [23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
+const RECORDED_LOWER_BODY_OUT_OF_FRAME_LIMIT = 3;
+
+function getRecordedLowerBodySourceBounds(landmarks: Array<{ x: number; y: number } | undefined>) {
+  let lowerOutOfFrameCount = 0;
+  let maxY = 0;
+
+  LOWER_BODY_SOURCE_LANDMARKS.forEach((index) => {
+    const landmark = landmarks[index];
+    if (!landmark) return;
+    maxY = Math.max(maxY, landmark.y);
+    if (landmark.x < 0 || landmark.x > 1 || landmark.y < 0 || landmark.y > 1) {
+      lowerOutOfFrameCount += 1;
+    }
+  });
+
+  return {
+    lowerOutOfFrameCount,
+    maxY,
+    reliable:
+      lowerOutOfFrameCount < RECORDED_LOWER_BODY_OUT_OF_FRAME_LIMIT &&
+      maxY <= 1.08,
+  };
+}
 
 function buildAvatarRetargetRestMap(vrm: VRM): RetargetAvatarRestMap {
   const restMap: RetargetAvatarRestMap = {};
   vrm.scene.updateMatrixWorld(true);
 
-  LOWER_BODY_RETARGET_MAPPINGS.forEach(({ bone: boneName, child: childName }) => {
+  AVATAR_VISUAL_MAPPINGS.forEach(({ bone: boneName, child: childName }) => {
     const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
     const child = vrm.humanoid.getNormalizedBoneNode(childName);
     if (!bone || !child) return;
@@ -177,8 +222,9 @@ function buildAvatarVisualTelemetry({
 }): MovementTrackingDebugState["avatarVisual"] {
   vrm.scene.updateMatrixWorld(true);
 
-  const sourceErrors: number[] = [];
-  const segments = LOWER_BODY_RETARGET_MAPPINGS.reduce<
+  const lowerBodySourceErrors: number[] = [];
+  const upperBodySourceErrors: number[] = [];
+  const segments = AVATAR_VISUAL_MAPPINGS.reduce<
     NonNullable<MovementTrackingDebugState["avatarVisual"]>["segments"]
   >((telemetry, mapping) => {
     const bone = vrm.humanoid.getNormalizedBoneNode(mapping.bone);
@@ -204,7 +250,11 @@ function buildAvatarVisualTelemetry({
       : undefined;
 
     if (typeof sourceError === "number" && sourceSegment && sourceSegment.confidence >= 0.3) {
-      sourceErrors.push(sourceError);
+      if (mapping.type === "leg" || mapping.type === "foot") {
+        lowerBodySourceErrors.push(sourceError);
+      } else {
+        upperBodySourceErrors.push(sourceError);
+      }
     }
 
     telemetry[mapping.segment] = {
@@ -218,10 +268,14 @@ function buildAvatarVisualTelemetry({
   }, {});
 
   return {
-    averageLowerBodyDirectionError: sourceErrors.length
-      ? Number((sourceErrors.reduce((sum, value) => sum + value, 0) / sourceErrors.length).toFixed(4))
+    averageLowerBodyDirectionError: lowerBodySourceErrors.length
+      ? Number((lowerBodySourceErrors.reduce((sum, value) => sum + value, 0) / lowerBodySourceErrors.length).toFixed(4))
       : undefined,
-    comparedLowerBodySegments: sourceErrors.length,
+    averageUpperBodyDirectionError: upperBodySourceErrors.length
+      ? Number((upperBodySourceErrors.reduce((sum, value) => sum + value, 0) / upperBodySourceErrors.length).toFixed(4))
+      : undefined,
+    comparedLowerBodySegments: lowerBodySourceErrors.length,
+    comparedUpperBodySegments: upperBodySourceErrors.length,
     segments,
   };
 }
@@ -232,12 +286,51 @@ function smoothPlayerLowerBodyValue(current: number, target: number, rise: numbe
   return target <= 0.001 && next < 0.025 ? 0 : next;
 }
 
+function smoothInstructorSquatDepth(current: number, sourceDepth: number) {
+  const enterThreshold = current > 0.08 ? 0.08 : 0.2;
+  const target = sourceDepth >= enterThreshold ? sourceDepth : 0;
+  return smoothPlayerLowerBodyValue(current, target, 0.2, 0.1);
+}
+
+function resolveRecordedHeadAngles({
+  profile,
+  rawHead,
+}: {
+  profile: ReturnType<typeof getMovementAvatarTrackingProfile>;
+  rawHead: MovementHeadAngles;
+}): MovementHeadAngles {
+  const poseOnlyHeadScale = rawHead.source === "pose"
+    ? { pitch: 0.38, roll: 0.22, yaw: 0.28 }
+    : { pitch: 0.72, roll: 0.48, yaw: 0.52 };
+
+  return {
+    pitch: THREE.MathUtils.clamp(
+      rawHead.pitch * poseOnlyHeadScale.pitch + profile.headPitchOffset,
+      Math.max(profile.minHeadPitch, -0.18),
+      Math.min(profile.maxHeadPitch, 0.24),
+    ),
+    yaw: THREE.MathUtils.clamp(
+      rawHead.yaw * poseOnlyHeadScale.yaw + profile.headYawOffset,
+      -Math.min(profile.maxHeadYaw, 0.2),
+      Math.min(profile.maxHeadYaw, 0.2),
+    ),
+    roll: THREE.MathUtils.clamp(
+      rawHead.roll * poseOnlyHeadScale.roll + profile.headRollOffset,
+      -Math.min(profile.maxHeadRoll, 0.12),
+      Math.min(profile.maxHeadRoll, 0.12),
+    ),
+    confidence: rawHead.confidence,
+    source: rawHead.source,
+  };
+}
+
 type VrmAvatarProps = {
   landmarksRef: RefObject<VrmMotionRef>;
   positionOffset: [number, number, number];
   isPlayer?: boolean;
   isPlaying?: boolean;
   showPausedPose?: boolean;
+  showNameLabel?: boolean;
   trackingCalibration?: MovementCalibration | null;
   trackingDebugRef?: MutableRefObject<MovementTrackingDebugState | null>;
   retargetSourceModel?: MovementRetargetSourceModel | null;
@@ -251,6 +344,7 @@ export default function VrmAvatar({
   isPlayer = false,
   isPlaying = true,
   showPausedPose = false,
+  showNameLabel = true,
   trackingCalibration = null,
   trackingDebugRef,
   retargetSourceModel = null,
@@ -273,6 +367,10 @@ export default function VrmAvatar({
     strength: 0,
   });
   const playerLowerBodyStabilityRef = useRef<PlayerLowerBodyStabilityState>({
+    squatPresentationDepth: 0,
+    visualRootDrop: 0,
+  });
+  const instructorLowerBodyStabilityRef = useRef<PlayerLowerBodyStabilityState>({
     squatPresentationDepth: 0,
     visualRootDrop: 0,
   });
@@ -307,6 +405,10 @@ export default function VrmAvatar({
         strength: 0,
       };
       playerLowerBodyStabilityRef.current = {
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      };
+      instructorLowerBodyStabilityRef.current = {
         squatPresentationDepth: 0,
         visualRootDrop: 0,
       };
@@ -447,6 +549,15 @@ export default function VrmAvatar({
           ),
         );
         bone.quaternion.slerp(targetQ, factor);
+      };
+
+      const mirrorRecordedTorsoRotation = (rotation?: RigRotation | null): RigRotation | undefined => {
+        if (!rotation) return undefined;
+
+        return {
+          ...rotation,
+          z: -rotation.z,
+        };
       };
 
       const easeBonePosition = (
@@ -642,6 +753,7 @@ export default function VrmAvatar({
       let lowerBodyOwner = "neutral";
       let retargetAppliedLowerBody = 0;
       let retargetAppliedLegs = 0;
+      let retargetAppliedUpperBody = 0;
       let plantedSquatIkDepth = 0;
       const rightArmTrackingReady =
         !isPlayer ||
@@ -657,11 +769,14 @@ export default function VrmAvatar({
           bodyConfidence.leftElbow >= avatarTrackingProfile.armVisibility &&
           Math.max(bodyConfidence.leftWrist, bodyConfidence.leftHand) >= avatarTrackingProfile.armStoreVisibility
         );
-      const lowerBodyTrackingReady = isMovementAvatarLowerBodyTrackingReady({
+      const recordedLowerBodySourceBounds = getRecordedLowerBodySourceBounds(imageLms);
+      const rawLowerBodyTrackingReady = isMovementAvatarLowerBodyTrackingReady({
         bodyConfidence,
         isPlayer,
         lowerBodyIntent,
       });
+      const recordedLowerBodySourceReliable = isPlayer || recordedLowerBodySourceBounds.reliable;
+      const lowerBodyTrackingReady = rawLowerBodyTrackingReady && recordedLowerBodySourceReliable;
       const upperBodyTrackingReady =
         bodyConfidence.head >= 0.55 &&
         Math.min(bodyConfidence.leftShoulder, bodyConfidence.rightShoulder) >= 0.55;
@@ -683,22 +798,31 @@ export default function VrmAvatar({
         poseLandmarks: imageLms,
         torsoTrackingReady,
       });
+      const recordedSpineDrive = resolveMovementAvatarRecordedSpineDrive({
+        kneeLift: retargetFrame.kneeLift,
+        poseLandmarks: imageLms,
+        retargetCalibration: retargetSourceModelRef.current,
+        torsoTrackingReady,
+      });
+      const activeSpineDrive = isPlayer ? playerSpineDrive : recordedSpineDrive;
       const liveSquatDepth = lowerBodyDrive.liveSquatDepth;
-      const shouldApplyLowerBody = lowerBodyDrive.shouldApplyLowerBody;
-      const shouldApplySolverTorso = lowerBodyDrive.shouldApplySolverTorso;
-      const torsoOwner = playerSpineDrive.shouldApplySpine
-        ? playerSpineDrive.owner
+      const shouldApplyLowerBody = lowerBodyDrive.shouldApplyLowerBody && recordedLowerBodySourceReliable;
+      const shouldApplySolverTorso =
+        lowerBodyDrive.shouldApplySolverTorso ||
+        (!isPlayer && torsoTrackingReady && retargetFrame.debug.sourceQuality >= 0.45);
+      const torsoOwner = activeSpineDrive.shouldApplySpine
+        ? activeSpineDrive.owner
         : shouldApplySolverTorso
-          ? "player-solver"
+          ? isPlayer ? "player-solver" : "recorded-solver"
           : "neutral";
-      const groundedSquatDepth = lowerBodyDrive.groundedSquatDepth;
       let playerSquatPresentationDepth = lowerBodyDrive.playerSquatPresentationDepth;
       const balancedPlantedSquatDepth = getBalancedPlantedSquatDepth(retargetFrame);
-      const instructorLowerBodyMotion = Math.max(
-        groundedSquatDepth,
-        retargetFrame.kneeLift.left,
-        retargetFrame.kneeLift.right,
-      );
+      const recordedSquatPresentationDepth = getRecordedSquatPresentationDepth(retargetFrame);
+      const recordedLowerBodySegmentMotion = getRecordedLowerBodySegmentMotionDepth({
+        calibration: retargetSourceModelRef.current,
+        frame: retargetFrame,
+      });
+      let instructorSquatPresentationDepth = recordedSquatPresentationDepth;
       visualRootDrop = lowerBodyDrive.visualRootDrop;
 
       if (isPlayer) {
@@ -717,7 +841,28 @@ export default function VrmAvatar({
         );
         playerSquatPresentationDepth = stability.squatPresentationDepth;
         visualRootDrop = stability.visualRootDrop;
+      } else {
+        const stability = instructorLowerBodyStabilityRef.current;
+        stability.squatPresentationDepth = smoothInstructorSquatDepth(
+          stability.squatPresentationDepth,
+          recordedSquatPresentationDepth,
+        );
+        stability.visualRootDrop = smoothPlayerLowerBodyValue(
+          stability.visualRootDrop,
+          stability.squatPresentationDepth * 0.56,
+          0.18,
+          0.12,
+        );
+        instructorSquatPresentationDepth = stability.squatPresentationDepth;
+        playerSquatPresentationDepth = instructorSquatPresentationDepth;
+        visualRootDrop = stability.visualRootDrop;
       }
+      const instructorLowerBodyMotion = Math.max(
+        instructorSquatPresentationDepth,
+        recordedLowerBodySegmentMotion,
+        retargetFrame.kneeLift.left,
+        retargetFrame.kneeLift.right,
+      );
       const shouldHoldPlayerSquatPose =
         isPlayer &&
         shouldApplyLowerBody &&
@@ -807,8 +952,12 @@ export default function VrmAvatar({
         const vrm = vrmRef.current;
         const segment = retargetFrame.segments[mapping.segment];
         if (!vrm || !segment || segment.confidence < 0.3) return false;
+        const presentationSquatDepth = isPlayer
+          ? retargetFrame.squatDepth
+          : instructorSquatPresentationDepth;
         const activeFootMotion = Math.max(
-          retargetFrame.squatDepth,
+          presentationSquatDepth,
+          recordedLowerBodySegmentMotion,
           retargetFrame.kneeLift.left,
           retargetFrame.kneeLift.right,
         );
@@ -854,7 +1003,13 @@ export default function VrmAvatar({
           .multiply(targetWorldQuaternion);
         const slerp = mapping.type === "foot"
           ? (isPlayer ? avatarTrackingProfile.footSlerp : 0.36)
-          : (isPlayer ? avatarTrackingProfile.legSlerp : 0.42);
+          : mapping.type === "arm"
+            ? mapping.bone.includes("UpperArm")
+              ? (isPlayer ? avatarTrackingProfile.upperArmSlerp : 0.72)
+              : (isPlayer ? avatarTrackingProfile.lowerArmSlerp : 0.78)
+            : mapping.type === "spine"
+              ? (isPlayer ? 0.32 : 0.66)
+              : (isPlayer ? avatarTrackingProfile.legSlerp : 0.42);
 
         bone.quaternion.slerp(targetLocalQuaternion, slerp);
         lastGoodQuatRef.current[mapping.bone] = bone.quaternion.clone();
@@ -1137,24 +1292,31 @@ export default function VrmAvatar({
         });
       };
 
-      if (playerSpineDrive.shouldApplySpine) {
-        easeBoneToRotation("hips", playerSpineDrive.rotations.hips, 0.22);
-        easeBoneToRotation("spine", playerSpineDrive.rotations.spine, 0.44);
-        easeBoneToRotation("chest", playerSpineDrive.rotations.chest, 0.42);
-        easeBoneToRotation("upperChest", playerSpineDrive.rotations.upperChest, 0.36);
+      if (activeSpineDrive.shouldApplySpine) {
+        easeBoneToRotation("hips", activeSpineDrive.rotations.hips, isPlayer ? 0.22 : 0.36);
+        easeBoneToRotation("spine", activeSpineDrive.rotations.spine, isPlayer ? 0.44 : 0.82);
+        easeBoneToRotation("chest", activeSpineDrive.rotations.chest, isPlayer ? 0.42 : 0.78);
+        easeBoneToRotation("upperChest", activeSpineDrive.rotations.upperChest, isPlayer ? 0.36 : 0.72);
       } else if (torsoTrackingReady && shouldApplySolverTorso) {
-        applyRot("hips", rp.Hips?.rotation, isPlayer ? 0.34 : 0.26, {
+        const solverHipRotation = isPlayer
+          ? rp.Hips?.rotation
+          : mirrorRecordedTorsoRotation(rp.Hips?.rotation);
+        const solverSpineRotation = isPlayer
+          ? rp.Spine
+          : mirrorRecordedTorsoRotation(rp.Spine);
+
+        applyRot("hips", solverHipRotation, isPlayer ? 0.34 : 0.26, {
           limits: { x: 0.35, y: 0.75, z: 0.45 },
         });
-        applyRot("spine", rp.Spine, isPlayer ? 0.42 : 0.28, {
+        applyRot("spine", solverSpineRotation, isPlayer ? 0.42 : 0.28, {
           limits: { x: 0.45, y: 0.65, z: 0.45 },
           scale: 0.65,
         });
-        applyRot("chest", rp.Spine, isPlayer ? 0.36 : 0.24, {
+        applyRot("chest", solverSpineRotation, isPlayer ? 0.36 : 0.24, {
           limits: { x: 0.35, y: 0.5, z: 0.35 },
           scale: 0.35,
         });
-        applyRot("upperChest", rp.Spine, isPlayer ? 0.32 : 0.22, {
+        applyRot("upperChest", solverSpineRotation, isPlayer ? 0.32 : 0.22, {
           limits: { x: 0.25, y: 0.35, z: 0.25 },
           scale: 0.2,
         });
@@ -1203,6 +1365,17 @@ export default function VrmAvatar({
         easeHandToNeutral("left");
       } else {
         easeArmToRelaxed("left");
+      }
+
+      if (!isPlayer && activeSpineDrive.shouldApplySpine) {
+        retargetAppliedUpperBody += 1;
+      }
+
+      if (!isPlayer && retargetFrame.debug.sourceQuality >= 0.45) {
+        UPPER_BODY_RECORDED_RETARGET_MAPPINGS.forEach((mapping) => {
+          if (!applyRetargetSegment(mapping)) return;
+          retargetAppliedUpperBody += 1;
+        });
       }
 
       if ((lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && shouldApplyLowerBody) {
@@ -1257,7 +1430,7 @@ export default function VrmAvatar({
         } else if (isPlayer && playerRetargetLowerBodyMotion < 0.16) {
           lowerBodyOwner = "player-lower-body-neutral";
           easeLowerBodyToNeutral();
-        } else if (!isPlayer && instructorLowerBodyMotion < 0.18) {
+        } else if (!isPlayer && instructorLowerBodyMotion < 0.08) {
           lowerBodyOwner = "recorded-neutral";
           easeLowerBodyToNeutral();
           easeInstructorFootToPlanted("right");
@@ -1275,6 +1448,10 @@ export default function VrmAvatar({
             retargetAppliedLegs >= 4 &&
             retargetFrame.debug.sourceQuality >= 0.45;
           const shouldUseLegacyLowerBody = !retargetOwnsLowerBody;
+          const shouldUseRecordedSquatPresentation =
+            !isPlayer &&
+            instructorSquatPresentationDepth > 0.18 &&
+            balancedPlantedSquatDepth === 0;
           lowerBodyOwner = retargetOwnsLowerBody
             ? (isPlayer ? "player-retarget" : "recorded-retarget")
             : retargetAppliedLowerBody > 0
@@ -1286,12 +1463,14 @@ export default function VrmAvatar({
           }
 
           if (shouldUseLegacyLowerBody) {
-            applySolvedLowerBodyPose(liveSquatDepth);
+            applySolvedLowerBodyPose(isPlayer ? liveSquatDepth : instructorSquatPresentationDepth);
           }
-          plantedSquatIkDepth = shouldUseLegacyLowerBody || isPlayer
-            ? applyPlantedSquatIk(isPlayer ? playerSquatPresentationDepth : balancedPlantedSquatDepth)
-            : 0;
-          if (shouldUseLegacyLowerBody) {
+          plantedSquatIkDepth = isPlayer
+            ? applyPlantedSquatIk(playerSquatPresentationDepth)
+            : shouldUseLegacyLowerBody && balancedPlantedSquatDepth > 0
+              ? applyPlantedSquatIk(instructorSquatPresentationDepth)
+              : 0;
+          if (shouldUseLegacyLowerBody || shouldUseRecordedSquatPresentation) {
             applySquatFlexionPose(playerSquatPresentationDepth);
           }
           if (!isPlayer && retargetFrame.contacts.rightFoot) {
@@ -1302,6 +1481,10 @@ export default function VrmAvatar({
           }
         }
       } else {
+        if (!isPlayer && !recordedLowerBodySourceReliable) {
+          lowerBodyOwner = "recorded-source-limited";
+          footOwner = "recorded-source-limited";
+        }
         easeLowerBodyToNeutral();
       }
 
@@ -1314,20 +1497,34 @@ export default function VrmAvatar({
         if (headNode) {
           const rawHead = estimateMovementHeadAngles({
             poseLandmarks: imageLms,
-            faceLandmarks: payload?.faceLandmarks,
+            faceLandmarks: isPlayer ? payload?.faceLandmarks : null,
           });
+          const recordedHeadTrackingReady =
+            !isPlayer &&
+            rawHead.source === "face" &&
+            rawHead.confidence >= 0.35;
           const appliedHead = isPlayer && activeCalibration
             ? applyHeadCalibration({
                 rawHead,
                 calibration: activeCalibration,
                 profile: avatarTrackingProfile,
               })
-            : getNeutralMovementHeadAngles(avatarTrackingProfile);
-          const shouldApplyHeadMotion = isPlayer && Boolean(activeCalibration);
-          const headOwner = shouldApplyHeadMotion ? "player-calibrated" : "neutral";
-          const headPitch = appliedHead.pitch + (shouldApplyHeadMotion ? headMotionIntent.depth * 0.22 : 0);
-          const headYaw = appliedHead.yaw + (shouldApplyHeadMotion ? headMotionIntent.lateral * 0.18 : 0);
-          const headRoll = appliedHead.roll + (shouldApplyHeadMotion ? -headMotionIntent.lateral * 0.16 : 0);
+            : recordedHeadTrackingReady
+              ? resolveRecordedHeadAngles({
+                  profile: avatarTrackingProfile,
+                  rawHead,
+                })
+              : getNeutralMovementHeadAngles(avatarTrackingProfile);
+          const shouldApplyPlayerHeadMotion = isPlayer && Boolean(activeCalibration);
+          const shouldApplyHeadMotion = shouldApplyPlayerHeadMotion || recordedHeadTrackingReady;
+          const headOwner = shouldApplyPlayerHeadMotion
+            ? "player-calibrated"
+            : recordedHeadTrackingReady
+              ? `recorded-${rawHead.source}`
+              : "neutral";
+          const headPitch = appliedHead.pitch + (shouldApplyPlayerHeadMotion ? headMotionIntent.depth * 0.22 : 0);
+          const headYaw = appliedHead.yaw + (shouldApplyPlayerHeadMotion ? headMotionIntent.lateral * 0.18 : 0);
+          const headRoll = appliedHead.roll + (shouldApplyPlayerHeadMotion ? -headMotionIntent.lateral * 0.16 : 0);
           const worldEuler = new THREE.Euler(
             headPitch,
             headYaw + Math.PI,
@@ -1342,12 +1539,12 @@ export default function VrmAvatar({
             const targetLocalQuat = parentWorldQ.invert().multiply(targetWorldQuat);
             headNode.quaternion.slerp(
               targetLocalQuat,
-              isPlayer ? avatarTrackingProfile.headSlerp : 0.3,
+              isPlayer ? avatarTrackingProfile.headSlerp : 0.82,
             );
           } else {
             headNode.quaternion.slerp(
               targetWorldQuat,
-              isPlayer ? avatarTrackingProfile.headSlerp : 0.3,
+              isPlayer ? avatarTrackingProfile.headSlerp : 0.82,
             );
           }
 
@@ -1355,24 +1552,29 @@ export default function VrmAvatar({
           if (shouldApplyHeadMotion && neckNode) {
             const neckTarget = new THREE.Quaternion().setFromEuler(
               new THREE.Euler(
-                headPitch * avatarTrackingProfile.neckPitchShare + headMotionIntent.depth * 0.12,
-                headYaw * avatarTrackingProfile.neckYawShare + headMotionIntent.lateral * 0.08,
-                headRoll * avatarTrackingProfile.neckRollShare - headMotionIntent.lateral * 0.08,
+                headPitch * avatarTrackingProfile.neckPitchShare +
+                  (shouldApplyPlayerHeadMotion ? headMotionIntent.depth * 0.12 : 0),
+                headYaw * avatarTrackingProfile.neckYawShare +
+                  (shouldApplyPlayerHeadMotion ? headMotionIntent.lateral * 0.08 : 0),
+                headRoll * avatarTrackingProfile.neckRollShare -
+                  (shouldApplyPlayerHeadMotion ? headMotionIntent.lateral * 0.08 : 0),
                 "YXZ",
               ),
             );
             neckNode.quaternion.slerp(neckTarget, avatarTrackingProfile.neckSlerp);
 
-            easeBonePosition(
-              "head",
-              new THREE.Vector3(
-                headMotionIntent.lateral * 0.025,
-                -headMotionIntent.vertical * 0.012,
-                -headMotionIntent.depth * 0.018,
-              ),
-              0.3,
-            );
-            if (isPlayer && !shouldApplyLowerBody && !playerSpineDrive.shouldApplySpine) {
+            if (shouldApplyPlayerHeadMotion) {
+              easeBonePosition(
+                "head",
+                new THREE.Vector3(
+                  headMotionIntent.lateral * 0.025,
+                  -headMotionIntent.vertical * 0.012,
+                  -headMotionIntent.depth * 0.018,
+                ),
+                0.3,
+              );
+            }
+            if (shouldApplyPlayerHeadMotion && !shouldApplyLowerBody && !activeSpineDrive.shouldApplySpine) {
               easeBoneToRotation(
                 "upperChest",
                 {
@@ -1398,12 +1600,14 @@ export default function VrmAvatar({
               retargetFrame.debug.solvedSegments.length + retargetFrame.debug.heldSegments.length;
             const retargetDebug: NonNullable<MovementTrackingDebugState["retarget"]> = {
               appliedLowerBody: retargetAppliedLowerBody,
+              appliedUpperBody: retargetAppliedUpperBody,
               footLockCorrection,
               footLockDrift,
               footLockStrength: plantedFootLockRef.current.strength,
               hipDrop: retargetFrame.hipDrop,
               leftFootContact: retargetFrame.contacts.leftFoot,
               leftKneeLift: retargetFrame.kneeLift.left,
+              lowerBodySegmentMotion: recordedLowerBodySegmentMotion,
               plantedSquatIkDepth,
               rightFootContact: retargetFrame.contacts.rightFoot,
               rightKneeLift: retargetFrame.kneeLift.right,
@@ -1411,6 +1615,7 @@ export default function VrmAvatar({
               sourceQuality: retargetFrame.debug.sourceQuality,
               squatDepth: liveSquatDepth,
               totalLowerBody: LOWER_BODY_RETARGET_MAPPINGS.length,
+              totalUpperBody: UPPER_BODY_VISUAL_MAPPINGS.length,
               totalSegments: totalRetargetSegments,
               visualRootDrop,
             };
@@ -1420,6 +1625,13 @@ export default function VrmAvatar({
               headRaw: rawHead,
               headApplied: appliedHead,
               bodyConfidence,
+              spineDrive: {
+                confidence: activeSpineDrive.confidence,
+                forwardLean: activeSpineDrive.forwardLean,
+                owner: activeSpineDrive.owner,
+                sideBend: activeSpineDrive.sideBend,
+                twist: activeSpineDrive.twist,
+              },
               fallbacks: {
                 baseline: trackingCalibration
                   ? "manual-calibration"
@@ -1432,7 +1644,7 @@ export default function VrmAvatar({
                     ? `${rawHead.confidence > 0.25 ? rawHead.source : "last-good"}-auto`
                     : "neutral",
                 headMotion: activeCalibration ? headMotionIntent.label : "uncalibrated",
-                spine: playerSpineDrive.owner,
+                spine: activeSpineDrive.owner,
                 armDepth: isPlayer ? "player-2d-safe-arms" : "recorded-depth-arms",
                 rightArm: rightArmTrackingReady ? rightWristSelection.source : "relaxed-arm",
                 leftArm: leftArmTrackingReady ? leftWristSelection.source : "relaxed-arm",
@@ -1449,7 +1661,7 @@ export default function VrmAvatar({
                   ? lowerBodyDebugLabel
                   : "neutral-stance",
                 owners: ownerDebugLabel,
-                retarget: `q${retargetDebug.sourceQuality.toFixed(2)} s${retargetDebug.squatDepth.toFixed(2)} hip${retargetDebug.hipDrop.toFixed(2)} knee ${retargetDebug.leftKneeLift.toFixed(2)}/${retargetDebug.rightKneeLift.toFixed(2)} feet ${retargetDebug.leftFootContact ? "L" : "-"}${retargetDebug.rightFootContact ? "R" : "-"} bones ${retargetDebug.solvedSegments}/${retargetDebug.totalSegments} apply ${retargetDebug.appliedLowerBody}/${retargetDebug.totalLowerBody} drop ${retargetDebug.visualRootDrop.toFixed(2)} ik ${retargetDebug.plantedSquatIkDepth.toFixed(2)}`,
+                retarget: `q${retargetDebug.sourceQuality.toFixed(2)} s${retargetDebug.squatDepth.toFixed(2)} hip${retargetDebug.hipDrop.toFixed(2)} seg${retargetDebug.lowerBodySegmentMotion.toFixed(2)} knee ${retargetDebug.leftKneeLift.toFixed(2)}/${retargetDebug.rightKneeLift.toFixed(2)} feet ${retargetDebug.leftFootContact ? "L" : "-"}${retargetDebug.rightFootContact ? "R" : "-"} bones ${retargetDebug.solvedSegments}/${retargetDebug.totalSegments} upper ${retargetDebug.appliedUpperBody}/${retargetDebug.totalUpperBody} lower ${retargetDebug.appliedLowerBody}/${retargetDebug.totalLowerBody} drop ${retargetDebug.visualRootDrop.toFixed(2)} ik ${retargetDebug.plantedSquatIkDepth.toFixed(2)}`,
               },
               retarget: retargetDebug,
               profileName: avatarTrackingProfileName,
@@ -1650,17 +1862,19 @@ export default function VrmAvatar({
     >
       <primitive object={avatarScene} />
 
-      <Html position={[nameLabelX, -0.38, 0]} center zIndexRange={[100, 0]}>
-        <div className="rounded-full border border-white/10 bg-[#111018]/70 px-6 py-1.5 shadow-2xl backdrop-blur-md">
-          <span
-            className={`text-xs font-black uppercase tracking-[0.2em] ${
-              isPlayer ? "text-[#f6ccbe]" : "text-[#a8d5ba]"
-            }`}
-          >
-            {name}
-          </span>
-        </div>
-      </Html>
+      {showNameLabel ? (
+        <Html position={[nameLabelX, -0.38, 0]} center zIndexRange={[100, 0]}>
+          <div className="rounded-full border border-white/10 bg-[#111018]/70 px-6 py-1.5 shadow-2xl backdrop-blur-md">
+            <span
+              className={`text-xs font-black uppercase tracking-[0.2em] ${
+                isPlayer ? "text-[#f6ccbe]" : "text-[#a8d5ba]"
+              }`}
+            >
+              {name}
+            </span>
+          </div>
+        </Html>
+      ) : null}
     </group>
   );
 }

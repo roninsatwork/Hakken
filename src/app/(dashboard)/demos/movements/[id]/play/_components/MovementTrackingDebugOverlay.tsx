@@ -208,7 +208,9 @@ export default function MovementTrackingDebugOverlay({
             <span>{retarget.leftKneeLift.toFixed(2)} / {retarget.rightKneeLift.toFixed(2)}</span>
             <span>Feet contact</span>
             <span>{retarget.leftFootContact ? "L" : "-"}{retarget.rightFootContact ? "R" : "-"}</span>
-            <span>Applied bones</span>
+            <span>Upper bones</span>
+            <span>{retarget.appliedUpperBody}/{retarget.totalUpperBody}</span>
+            <span>Lower bones</span>
             <span>{retarget.appliedLowerBody}/{retarget.totalLowerBody}</span>
             <span>Root / IK</span>
             <span>{retarget.visualRootDrop.toFixed(2)} / {retarget.plantedSquatIkDepth.toFixed(2)}</span>

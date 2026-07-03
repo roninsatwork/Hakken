@@ -73,6 +73,12 @@ const SEGMENT_LANDMARKS: Record<MovementRetargetSegmentName, [number, number]> =
 };
 
 const SEGMENT_NAMES = Object.keys(SEGMENT_LANDMARKS) as MovementRetargetSegmentName[];
+const LOWER_BODY_MOTION_SEGMENTS: MovementRetargetSegmentName[] = [
+  "leftThigh",
+  "leftShin",
+  "rightThigh",
+  "rightShin",
+];
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -92,6 +98,10 @@ function midpoint(a: TrackingLandmark, b: TrackingLandmark): MovementRetargetVec
 
 function vectorLength(vector: MovementRetargetVector) {
   return Math.hypot(vector.x, vector.y, vector.z);
+}
+
+function vectorDot(left: MovementRetargetVector, right: MovementRetargetVector) {
+  return left.x * right.x + left.y * right.y + left.z * right.z;
 }
 
 function normalizeVector(vector: MovementRetargetVector): MovementRetargetVector {
@@ -168,6 +178,35 @@ function getFloorY(poseLandmarks: TrackingLandmark[]) {
     poseLandmarks[28]?.y ?? 0,
     poseLandmarks[31]?.y ?? 0,
     poseLandmarks[32]?.y ?? 0,
+  );
+}
+
+function getFloorRelativeHipDrop({
+  calibration,
+  centers,
+  footConfidence,
+  poseLandmarks,
+}: {
+  calibration: MovementRetargetSourceModel;
+  centers: NonNullable<ReturnType<typeof getCenters>>;
+  footConfidence: number;
+  poseLandmarks: TrackingLandmark[];
+}) {
+  const absoluteHipDrop = clamp(
+    (centers.hipCenter.y - calibration.hipCenter.y) / (calibration.torsoHeight * 0.62),
+    0,
+    1,
+  );
+
+  if (footConfidence < 0.35) return absoluteHipDrop;
+
+  const calibratedHipToFloor = calibration.floorY - calibration.hipCenter.y;
+  const currentHipToFloor = getFloorY(poseLandmarks) - centers.hipCenter.y;
+
+  return clamp(
+    (calibratedHipToFloor - currentHipToFloor) / (calibration.torsoHeight * 0.8),
+    0,
+    1,
   );
 }
 
@@ -336,11 +375,12 @@ export function solveMovementRetargetFrame({
     canTrustHipMotion &&
     (kneeConfidence >= 0.3 || footConfidence >= 0.35);
   const hipDrop = canTrustHipMotion
-    ? clamp(
-        (centers.hipCenter.y - calibration.hipCenter.y) / (calibration.torsoHeight * 0.62),
-        0,
-        1,
-      )
+    ? getFloorRelativeHipDrop({
+        calibration,
+        centers,
+        footConfidence,
+        poseLandmarks,
+      })
     : 0;
   const leftKneeLift = clamp(
     getRawKneeLift({
@@ -365,7 +405,9 @@ export function solveMovementRetargetFrame({
     : 0;
   const kneeBendDepth = clamp((symmetricKneeLift - 0.04) / 0.18, 0, 1);
   const hipSquatDepth = clamp((hipDrop - 0.24) / 0.38, 0, 1);
-  const squatDepth = canTrustSquatMotion ? Math.max(hipSquatDepth, kneeBendDepth) : 0;
+  const squatDepth = canTrustSquatMotion && hipSquatDepth > 0.08
+    ? Math.max(hipSquatDepth, kneeBendDepth)
+    : 0;
   const isSymmetricSquat = squatDepth > 0.25 && Math.abs(leftKneeLift - rightKneeLift) < 0.2;
   const footContactWindow = calibration.torsoHeight * 0.22;
   const leftFootY = Math.max(
@@ -410,5 +452,42 @@ export function solveMovementRetargetFrame({
 export function getBalancedPlantedSquatDepth(frame: MovementRetargetFrame) {
   if (!frame.contacts.leftFoot || !frame.contacts.rightFoot) return 0;
   if (Math.abs(frame.kneeLift.left - frame.kneeLift.right) >= 0.2) return 0;
+  if (frame.hipDrop <= 0.12) return 0;
   return frame.squatDepth;
+}
+
+export function getRecordedSquatPresentationDepth(frame: MovementRetargetFrame) {
+  const plantedDepth = getBalancedPlantedSquatDepth(frame);
+  if (plantedDepth > 0) return plantedDepth;
+
+  const symmetricKnees = Math.abs(frame.kneeLift.left - frame.kneeLift.right) < 0.2;
+  const strongSquatEvidence =
+    frame.debug.sourceQuality >= 0.45 &&
+    frame.hipDrop > 0.2 &&
+    frame.squatDepth > 0.24 &&
+    symmetricKnees;
+
+  return strongSquatEvidence ? frame.squatDepth : 0;
+}
+
+export function getRecordedLowerBodySegmentMotionDepth({
+  calibration,
+  frame,
+}: {
+  calibration: MovementRetargetSourceModel | null | undefined;
+  frame: MovementRetargetFrame;
+}) {
+  if (!calibration) return 0;
+
+  return LOWER_BODY_MOTION_SEGMENTS.reduce((maxMotion, name) => {
+    const neutralSegment = calibration.segments[name];
+    const frameSegment = frame.segments[name];
+    if (!neutralSegment || !frameSegment) return maxMotion;
+    if (Math.min(neutralSegment.confidence, frameSegment.confidence) < 0.3) return maxMotion;
+
+    const dot = clamp(vectorDot(neutralSegment.direction, frameSegment.direction), -1, 1);
+    const angle = Math.acos(dot);
+    const motion = clamp((angle - 0.12) / 0.75, 0, 1);
+    return Math.max(maxMotion, motion);
+  }, 0);
 }

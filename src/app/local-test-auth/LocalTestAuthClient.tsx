@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, ShieldAlert } from "lucide-react";
@@ -23,6 +23,7 @@ function sanitizeRedirectTo(value: string | null) {
 export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
   const searchParams = useSearchParams();
   const { signIn } = useAuthActions();
+  const signInAttemptKeyRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const params = useMemo(() => {
@@ -34,6 +35,9 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
 
   useEffect(() => {
     let isActive = true;
+    const attemptKey = `${enabled ? "enabled" : "disabled"}:${params.role}:${params.secret}:${params.redirectTo}`;
+    if (signInAttemptKeyRef.current === attemptKey) return;
+    signInAttemptKeyRef.current = attemptKey;
 
     async function signInForLocalTest() {
       if (!enabled) {
@@ -58,16 +62,12 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
           redirectTo: params.redirectTo,
         });
 
-        if (!isActive) return;
-
         if (!result.signingIn) {
           setError("Local test sign-in was rejected.");
           return;
         }
 
         await new Promise((resolve) => setTimeout(resolve, 250));
-        if (!isActive) return;
-
         window.location.assign(params.redirectTo);
       } catch {
         if (isActive) setError("Local test sign-in failed.");

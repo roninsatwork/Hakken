@@ -26,11 +26,13 @@ import {
 import {
   analyzeMovementDebugReplaySession,
   type MovementReplayAnalysis,
+  type MovementReplayFailure,
 } from "../_lib/movementReplayAnalyzer";
 import {
   loadMovementReplayRecording,
   type MovementReplayRecordingSource,
 } from "../_lib/movementRecordingReplay";
+import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import type { MovementTrackingDebugState } from "../_lib/movementTrackingCalibration";
 import type { VrmMotionRef } from "../_lib/vrmRigging";
@@ -52,6 +54,38 @@ function formatNumber(value?: number, digits = 2) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "--";
 }
 
+function formatAngleDegrees(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+  return `${Math.round((value * 180) / Math.PI)}deg`;
+}
+
+function formatAnglesCompact(value?: { pitch: number; yaw: number; roll: number }) {
+  if (!value) return "--";
+  return `p ${formatAngleDegrees(value.pitch)} y ${formatAngleDegrees(value.yaw)} r ${formatAngleDegrees(value.roll)}`;
+}
+
+function formatPoint(value?: { x: number; y: number; z?: number; visibility?: number }) {
+  if (!value) return "--";
+  const z = typeof value.z === "number" && Number.isFinite(value.z) ? value.z.toFixed(2) : "--";
+  const visibility = typeof value.visibility === "number" && Number.isFinite(value.visibility)
+    ? value.visibility.toFixed(2)
+    : "--";
+  return `x ${value.x.toFixed(2)} y ${value.y.toFixed(2)} z ${z} v ${visibility}`;
+}
+
+function minNumber(values: Array<number | undefined>) {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (valid.length === 0) return undefined;
+  return Math.min(...valid);
+}
+
+const LIVE_UPPER_BODY_REVIEW_THRESHOLD = 0.18;
+const LIVE_SPINE_DRIVE_MOTION_THRESHOLD = 0.18;
+const LIVE_SPINE_DRIVE_REVIEW_THRESHOLD = 0.1;
+const LIVE_HEAD_DAMPING_REVIEW_THRESHOLD = 0.05;
+const LIVE_LOWER_BODY_REVIEW_THRESHOLD = 0.52;
+const SOURCE_OUT_OF_FRAME_REVIEW_COUNT = 3;
+
 function frameLandmarks(frame?: MovementDebugReplayFrame) {
   return frame?.tracking.pose ?? [];
 }
@@ -59,6 +93,11 @@ function frameLandmarks(frame?: MovementDebugReplayFrame) {
 function clampFrame(index: number, frameCount: number) {
   if (frameCount <= 0) return 0;
   return Math.max(0, Math.min(index, frameCount - 1));
+}
+
+function headMotionMagnitude(value?: { pitch: number; yaw: number; roll: number }) {
+  if (!value) return 0;
+  return Math.max(Math.abs(value.pitch), Math.abs(value.yaw), Math.abs(value.roll));
 }
 
 function captureFileName(recordingId: string | null, suffix: string) {
@@ -117,6 +156,48 @@ function getBatchSummary(analyses: MovementReplayAnalysis[]) {
       : visualScores.reduce((sum, score) => sum + score, 0) / visualScores.length,
     warnings: analyses.reduce((sum, analysis) => sum + countFailures(analysis, "warning"), 0),
   };
+}
+
+function getFailureGroups(failures: MovementReplayFailure[]) {
+  const groups = new Map<
+    string,
+    {
+      code: MovementReplayFailure["code"];
+      count: number;
+      firstFrame?: number;
+      samples: MovementReplayFailure[];
+      severity: MovementReplayFailure["severity"];
+    }
+  >();
+
+  failures.forEach((failure) => {
+    const group = groups.get(failure.code);
+    if (!group) {
+      groups.set(failure.code, {
+        code: failure.code,
+        count: 1,
+        firstFrame: failure.frameIndex,
+        samples: [failure],
+        severity: failure.severity,
+      });
+      return;
+    }
+
+    group.count += 1;
+    if (failure.severity === "error") group.severity = "error";
+    if (
+      typeof failure.frameIndex === "number" &&
+      (typeof group.firstFrame !== "number" || failure.frameIndex < group.firstFrame)
+    ) {
+      group.firstFrame = failure.frameIndex;
+    }
+    if (group.samples.length < 3) group.samples.push(failure);
+  });
+
+  return Array.from(groups.values()).sort((left, right) => {
+    if (left.severity !== right.severity) return left.severity === "error" ? -1 : 1;
+    return right.count - left.count;
+  });
 }
 
 function getRecordingLabel(analysis?: MovementReplayAnalysis) {
@@ -185,6 +266,7 @@ export default function MovementReplayLabPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [captureMode, setCaptureMode] = useState<"scene" | "strip" | null>(null);
   const [captureStatus, setCaptureStatus] = useState<string | null>(null);
+  const [currentAvatarDebug, setCurrentAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
   const [currentAvatarVisual, setCurrentAvatarVisual] = useState<MovementTrackingDebugState["avatarVisual"]>();
 
   const recordings = useQuery(api.movements.listReplayAlignmentRecordings, { limit: 50 });
@@ -291,10 +373,217 @@ export default function MovementReplayLabPage() {
     () => replaySession ? analyzeMovementDebugReplaySession(replaySession) : null,
     [replaySession],
   );
+  const failureGroups = useMemo(
+    () => getFailureGroups(analysis?.failures ?? []),
+    [analysis?.failures],
+  );
 
   const safeFrameIndex = clampFrame(frameIndex, replaySession?.samples.length ?? 0);
   const currentFrame = replaySession?.samples[safeFrameIndex];
-  const currentFrameFailures = analysis?.failures.filter((failure) => failure.frameIndex === safeFrameIndex) ?? [];
+  const currentPoseLandmarks = frameLandmarks(currentFrame);
+  const currentNose = currentPoseLandmarks[0];
+  const currentLeftEar = currentPoseLandmarks[7];
+  const currentRightEar = currentPoseLandmarks[8];
+  const currentBodyConfidence = currentAvatarDebug?.bodyConfidence;
+  const currentRetarget = currentAvatarDebug?.retarget;
+  const currentFallbacks = currentAvatarDebug?.fallbacks;
+  const currentSpineDrive = currentAvatarDebug?.spineDrive;
+  const armConfidence = minNumber([
+    currentBodyConfidence?.leftShoulder,
+    currentBodyConfidence?.rightShoulder,
+    currentBodyConfidence?.leftElbow,
+    currentBodyConfidence?.rightElbow,
+    Math.max(currentBodyConfidence?.leftWrist ?? 0, currentBodyConfidence?.leftHand ?? 0),
+    Math.max(currentBodyConfidence?.rightWrist ?? 0, currentBodyConfidence?.rightHand ?? 0),
+  ]);
+  const legConfidence = minNumber([
+    currentBodyConfidence?.hips,
+    currentBodyConfidence?.leftKnee,
+    currentBodyConfidence?.rightKnee,
+  ]);
+  const footConfidence = minNumber([
+    currentBodyConfidence?.leftFoot,
+    currentBodyConfidence?.rightFoot,
+  ]);
+  const liveLowerOwner = currentFallbacks?.lower ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
+  const liveFeetOwner = currentFallbacks?.feet ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
+  const inspectorCards = [
+    {
+      label: "Head",
+      primary: currentFallbacks?.head ?? "--",
+      secondary: formatAnglesCompact(currentAvatarDebug?.headApplied),
+      detail: `raw ${formatAnglesCompact(currentAvatarDebug?.headRaw)} · c ${formatNumber(currentAvatarDebug?.headRaw.confidence)}`,
+    },
+    {
+      label: "Torso",
+      primary: currentFallbacks?.spine ?? "--",
+      secondary: `conf ${formatNumber(currentBodyConfidence?.torso)}`,
+      detail: `bend ${formatNumber(currentSpineDrive?.sideBend)} · lean ${formatNumber(currentSpineDrive?.forwardLean)}`,
+    },
+    {
+      label: "Arms",
+      primary: `${currentFallbacks?.leftArm ?? "--"} / ${currentFallbacks?.rightArm ?? "--"}`,
+      secondary: `conf ${formatNumber(armConfidence)}`,
+      detail: `L ${formatNumber(currentBodyConfidence?.leftWrist)} R ${formatNumber(currentBodyConfidence?.rightWrist)}`,
+    },
+    {
+      label: "Legs",
+      primary: liveLowerOwner ?? "--",
+      secondary: `conf ${formatNumber(legConfidence)}`,
+      detail: `knee ${formatNumber(currentRetarget?.leftKneeLift ?? currentFrame?.retarget?.leftKneeLift)} / ${formatNumber(currentRetarget?.rightKneeLift ?? currentFrame?.retarget?.rightKneeLift)}`,
+    },
+    {
+      label: "Feet",
+      primary: liveFeetOwner ?? "--",
+      secondary: `conf ${formatNumber(footConfidence)}`,
+      detail: `contact ${currentRetarget?.leftFootContact ? "L" : "-"}${currentRetarget?.rightFootContact ? "R" : "-"}`,
+    },
+    {
+      label: "Retarget",
+      primary: currentFallbacks?.retarget ? "active" : "--",
+      secondary: `${currentRetarget?.appliedUpperBody ?? 0}/${currentRetarget?.totalUpperBody ?? 0} upper`,
+      detail: `seg ${formatNumber(currentRetarget?.lowerBodySegmentMotion)} · squat ${formatNumber(currentRetarget?.squatDepth ?? currentFrame?.retarget?.squatDepth)}`,
+    },
+  ];
+  const replayRetargetSourceModel = useMemo(() => {
+    if (!replaySession) return null;
+
+    return buildInstructorRetargetSourceModel(
+      replaySession.samples.map((sample) => ({
+        landmarks: sample.tracking.pose,
+        worldLandmarks: sample.tracking.worldPose.length > 0
+          ? sample.tracking.worldPose
+          : null,
+      })),
+    );
+  }, [replaySession]);
+  const liveCurrentFrameFailures = useMemo<MovementReplayFailure[]>(() => {
+    const failures: MovementReplayFailure[] = [];
+    const upperBodyError = currentAvatarVisual?.averageUpperBodyDirectionError;
+    const upperBodySegments = currentAvatarVisual?.comparedUpperBodySegments ?? 0;
+    const lowerBodyError = currentAvatarVisual?.averageLowerBodyDirectionError;
+    const lowerBodySegments = currentAvatarVisual?.comparedLowerBodySegments ?? 0;
+    const outOfFrameCount = currentFrame?.poseBounds?.outOfFrameCount ?? 0;
+    const maxY = currentFrame?.poseBounds?.maxY ?? 0;
+    const sourceQuality = currentRetarget?.sourceQuality ?? currentFrame?.retarget?.sourceQuality ?? 1;
+    const spineDriveMagnitude = Math.max(
+      Math.abs(currentSpineDrive?.sideBend ?? 0),
+      Math.abs(currentSpineDrive?.forwardLean ?? 0),
+    );
+    const rawHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headRaw);
+    const appliedHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headApplied);
+    const headDamping = rawHeadMagnitude - appliedHeadMagnitude;
+
+    if (outOfFrameCount >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT || maxY > 1.08) {
+      failures.push({
+        code: "source_lower_body_out_of_frame",
+        detail: `Current frame has ${outOfFrameCount} landmarks out of frame; review source tracking before trusting avatar alignment.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      typeof footConfidence === "number" &&
+      typeof legConfidence === "number" &&
+      footConfidence < 0.35 &&
+      legConfidence >= 0.45
+    ) {
+      failures.push({
+        code: "source_feet_weak",
+        detail: `Current frame has leg confidence ${legConfidence.toFixed(2)} but foot confidence ${footConfidence.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (sourceQuality < 0.45) {
+      failures.push({
+        code: "retarget_quality_drop",
+        detail: `Current frame retarget quality is ${sourceQuality.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      upperBodySegments >= 3 &&
+      typeof upperBodyError === "number" &&
+      upperBodyError > LIVE_UPPER_BODY_REVIEW_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_upper_body_diverged",
+        detail: `Live avatar upper-body direction error is ${upperBodyError.toFixed(2)} across ${upperBodySegments} segments; review visible spine/arm match.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      currentSpineDrive?.owner === "recorded-spine-model" &&
+      typeof upperBodyError === "number" &&
+      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
+      upperBodyError > LIVE_SPINE_DRIVE_REVIEW_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_upper_body_diverged",
+        detail: `Recorded spine drive is strong (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but avatar upper-body error is ${upperBodyError.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      currentSpineDrive?.owner === "recorded-spine-model" &&
+      currentAvatarDebug?.headRaw.source === "face" &&
+      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
+      rawHeadMagnitude >= 0.12 &&
+      headDamping > LIVE_HEAD_DAMPING_REVIEW_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_head_spine_diverged",
+        detail: `Recorded spine motion is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but head motion is damped from ${formatAngleDegrees(rawHeadMagnitude)} to ${formatAngleDegrees(appliedHeadMagnitude)}.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      lowerBodySegments >= 4 &&
+      typeof lowerBodyError === "number" &&
+      lowerBodyError > LIVE_LOWER_BODY_REVIEW_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: `Live avatar lower-body direction error is ${lowerBodyError.toFixed(2)} across ${lowerBodySegments} segments.`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    return failures;
+  }, [
+    currentAvatarVisual?.averageLowerBodyDirectionError,
+    currentAvatarVisual?.averageUpperBodyDirectionError,
+    currentAvatarVisual?.comparedLowerBodySegments,
+    currentAvatarVisual?.comparedUpperBodySegments,
+    currentAvatarDebug?.headApplied,
+    currentAvatarDebug?.headRaw,
+    currentFrame?.poseBounds?.maxY,
+    currentFrame?.poseBounds?.outOfFrameCount,
+    currentFrame?.retarget?.sourceQuality,
+    currentRetarget?.sourceQuality,
+    currentSpineDrive?.forwardLean,
+    currentSpineDrive?.owner,
+    currentSpineDrive?.sideBend,
+    footConfidence,
+    legConfidence,
+    safeFrameIndex,
+  ]);
+  const currentFrameFailures = [
+    ...(analysis?.failures.filter((failure) => failure.frameIndex === safeFrameIndex) ?? []),
+    ...liveCurrentFrameFailures,
+  ];
   const frameSeverity = useMemo(() => {
     const severityByFrame = new Map<number, "error" | "warning">();
     analysis?.failures.forEach((failure) => {
@@ -304,8 +593,15 @@ export default function MovementReplayLabPage() {
         severityByFrame.set(failure.frameIndex, failure.severity);
       }
     });
+    liveCurrentFrameFailures.forEach((failure) => {
+      if (typeof failure.frameIndex !== "number") return;
+      const currentSeverity = severityByFrame.get(failure.frameIndex);
+      if (failure.severity === "error" || !currentSeverity) {
+        severityByFrame.set(failure.frameIndex, failure.severity);
+      }
+    });
     return severityByFrame;
-  }, [analysis]);
+  }, [analysis, liveCurrentFrameFailures]);
 
   useEffect(() => {
     replayMotionRef.current = currentFrame
@@ -327,12 +623,15 @@ export default function MovementReplayLabPage() {
 
   useEffect(() => {
     if (!replaySession) {
+      setCurrentAvatarDebug(null);
       setCurrentAvatarVisual(undefined);
       return undefined;
     }
 
     const interval = window.setInterval(() => {
-      setCurrentAvatarVisual(replayAvatarDebugRef.current?.avatarVisual);
+      const debugState = replayAvatarDebugRef.current;
+      setCurrentAvatarDebug(debugState);
+      setCurrentAvatarVisual(debugState?.avatarVisual);
     }, 160);
 
     return () => window.clearInterval(interval);
@@ -342,9 +641,14 @@ export default function MovementReplayLabPage() {
     if (!isPlaying || !replaySession || replaySession.samples.length <= 1) return;
 
     const interval = window.setInterval(() => {
-      setFrameIndex((previousIndex) => (
-        previousIndex + 1 >= replaySession.samples.length ? 0 : previousIndex + 1
-      ));
+      setFrameIndex((previousIndex) => {
+        if (previousIndex + 1 >= replaySession.samples.length) {
+          setIsPlaying(false);
+          return replaySession.samples.length - 1;
+        }
+
+        return previousIndex + 1;
+      });
     }, replaySession.fps ? Math.max(33, Math.round(1000 / replaySession.fps)) : 220);
 
     return () => window.clearInterval(interval);
@@ -500,18 +804,18 @@ export default function MovementReplayLabPage() {
     <>
       <Header />
       <div
-        className="flex flex-col gap-5"
+        className="flex min-h-[calc(100dvh-92px)] flex-col gap-2"
         data-active-session-id={activeRecordingId ?? ""}
         data-frame-count={frameCount}
         data-testid="movement-replay-lab"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-              <ListChecks className="h-6 w-6 text-brand" />
+            <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
+              <ListChecks className="h-5 w-5 text-brand" />
               Replay Alignment
             </h1>
-            <p className="mt-1 text-[13px] text-secondary">
+            <p className="mt-0.5 text-xs text-secondary">
               Run selected recordings against the current avatar alignment code.
             </p>
           </div>
@@ -533,31 +837,24 @@ export default function MovementReplayLabPage() {
           </div>
         </div>
 
-        <section className="grid gap-4 rounded-[8px] border border-border-dim bg-sidebar/35 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Alignment Batch</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-5">
-              <div className="rounded-[8px] border border-border-dim bg-background/45 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">Selected</div>
-                <div className="mt-1 text-2xl font-bold text-foreground">{selectedCount}</div>
+        <section className="grid gap-2 rounded-[8px] border border-border-dim bg-sidebar/35 p-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="mr-1 text-xs font-bold uppercase tracking-wide text-foreground">Batch</h2>
+            {[
+              ["Selected", selectedCount, "text-foreground"],
+              ["Clean", hasRunBatch ? batchSummary.clean : "--", "text-[#a8d5ba]"],
+              ["Visual", hasRunBatch ? `${Math.round(batchSummary.visualMatchScore * 100)}%` : "--", "text-[#f6ccbe]"],
+              ["Errors", hasRunBatch ? batchSummary.errors : "--", "text-[#f28b82]"],
+              ["Warnings", hasRunBatch ? batchSummary.warnings : "--", "text-[#f6ccbe]"],
+            ].map(([label, value, valueClass]) => (
+              <div
+                key={label}
+                className="min-w-[74px] rounded-[8px] border border-border-dim bg-background/45 px-2 py-1.5"
+              >
+                <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
+                <div className={`text-base font-bold leading-tight ${valueClass}`}>{value}</div>
               </div>
-              <div className="rounded-[8px] border border-border-dim bg-background/45 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">Clean</div>
-                <div className="mt-1 text-2xl font-bold text-[#a8d5ba]">{hasRunBatch ? batchSummary.clean : "--"}</div>
-              </div>
-              <div className="rounded-[8px] border border-border-dim bg-background/45 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">Visual Match</div>
-                <div className="mt-1 text-2xl font-bold text-[#f6ccbe]">{hasRunBatch ? `${Math.round(batchSummary.visualMatchScore * 100)}%` : "--"}</div>
-              </div>
-              <div className="rounded-[8px] border border-border-dim bg-background/45 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">Code Errors</div>
-                <div className="mt-1 text-2xl font-bold text-[#f28b82]">{hasRunBatch ? batchSummary.errors : "--"}</div>
-              </div>
-              <div className="rounded-[8px] border border-border-dim bg-background/45 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">Warnings</div>
-                <div className="mt-1 text-2xl font-bold text-[#f6ccbe]">{hasRunBatch ? batchSummary.warnings : "--"}</div>
-              </div>
-            </div>
+            ))}
           </div>
           <div className="flex flex-col gap-2 lg:items-end">
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -565,7 +862,7 @@ export default function MovementReplayLabPage() {
                 type="button"
                 onClick={selectLatestRecordings}
                 disabled={!recordings || recordings.length === 0 || isRunInProgress}
-                className="h-10 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Select Latest 5
               </button>
@@ -573,14 +870,14 @@ export default function MovementReplayLabPage() {
                 type="button"
                 onClick={runAlignmentBatch}
                 disabled={selectedCount === 0 || isRunInProgress}
-                className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#f6ccbe] px-4 text-xs font-bold text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-8 items-center gap-2 rounded-[8px] bg-[#f6ccbe] px-3 text-xs font-bold text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isRunInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                 {isRunInProgress ? "Running..." : "Run Selected Recordings"}
               </button>
             </div>
             <div
-              className="min-h-5 text-right text-xs text-secondary"
+              className="min-h-4 text-right text-[11px] text-secondary"
               data-testid="movement-replay-run-status"
             >
               {runStatusText}
@@ -589,123 +886,221 @@ export default function MovementReplayLabPage() {
           </div>
         </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <aside className="flex flex-col gap-3 rounded-[8px] border border-border-dim bg-sidebar/35 p-3 xl:order-2">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Recordings</h2>
-              <span className="text-xs text-muted">{selectedCount} selected</span>
-            </div>
+        <section className="rounded-[8px] border border-border-dim bg-sidebar/35 p-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-foreground">Recordings</h2>
+            <span className="text-xs text-muted">{selectedCount} selected</span>
+          </div>
 
-            <div className="flex max-h-[640px] flex-col gap-2 overflow-y-auto pr-1">
-              {!recordings ? (
-                <div className="rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
-                  Loading saved recordings...
-                </div>
-              ) : recordings.length === 0 ? (
-                <div className="rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
-                  No saved movement recordings found.
-                </div>
-              ) : recordings.map((recording) => {
-                const selected = recording._id === activeRecordingId;
-                const included = selectedRecordingIds.includes(recording._id);
-                const recordingAnalysis = analysisByRecordingId.get(recording._id);
-                const loaded = loadedRecordings[recording._id];
-                const frameTotal = loaded?.session?.sampleCount ?? recording.frameCount ?? 0;
-                return (
-                  <div
-                    key={recording._id}
-                    className={`grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-[8px] border p-3 transition-colors ${
-                      selected
-                        ? "border-[#f6ccbe]/60 bg-[#f6ccbe]/10 text-foreground"
-                        : "border-border-dim bg-background/50 text-secondary hover:border-border"
-                    }`}
+          <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
+            {!recordings ? (
+              <div className="min-w-[260px] rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
+                Loading saved recordings...
+              </div>
+            ) : recordings.length === 0 ? (
+              <div className="min-w-[260px] rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
+                No saved movement recordings found.
+              </div>
+            ) : recordings.map((recording) => {
+              const selected = recording._id === activeRecordingId;
+              const included = selectedRecordingIds.includes(recording._id);
+              const recordingAnalysis = analysisByRecordingId.get(recording._id);
+              const loaded = loadedRecordings[recording._id];
+              const frameTotal = loaded?.session?.sampleCount ?? recording.frameCount ?? 0;
+              return (
+                <div
+                  key={recording._id}
+                  className={`grid min-w-[230px] max-w-[250px] grid-cols-[auto_minmax(0,1fr)] gap-2 rounded-[8px] border p-2 transition-colors ${
+                    selected
+                      ? "border-[#f6ccbe]/60 bg-[#f6ccbe]/10 text-foreground"
+                      : "border-border-dim bg-background/50 text-secondary hover:border-border"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={included}
+                    onChange={() => toggleRecordingSelection(recording._id)}
+                    aria-label={`Select recording ${recording.title}`}
+                    className="mt-0.5 h-4 w-4 accent-[#f6ccbe]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRecordingId(recording._id);
+                      setFrameIndex(0);
+                      setIsPlaying(false);
+                    }}
+                    className="min-w-0 text-left"
+                    data-session-id={recording._id}
+                    data-testid="movement-replay-session"
                   >
-                    <input
-                      type="checkbox"
-                      checked={included}
-                      onChange={() => toggleRecordingSelection(recording._id)}
-                      aria-label={`Select recording ${recording.title}`}
-                      className="mt-1 h-4 w-4 accent-[#f6ccbe]"
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-xs font-semibold text-foreground">{recording.title}</span>
+                      <span className="shrink-0 font-mono text-[11px]">{frameTotal}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="truncate text-[11px] text-muted">
+                        {formatTime(recording.createdAt)} · {formatDuration(recording.durationMs)}
+                      </span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        recordingAnalysis?.pass && countFailures(recordingAnalysis, "warning") === 0
+                          ? "bg-[#a8d5ba]/15 text-[#a8d5ba]"
+                          : recordingAnalysis
+                            ? "bg-[#f6ccbe]/15 text-[#f6ccbe]"
+                            : "bg-white/5 text-muted"
+                      }`}
+                      >
+                        {loaded?.isLoading ? "Loading" : loaded?.error ? "Load failed" : getRecordingLabel(recordingAnalysis)}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-secondary">
+                      {recordingAnalysis
+                        ? `${Math.round(recordingAnalysis.metrics.visualMatchScore * 100)}% match, ${recordingAnalysis.metrics.strongFullBodyFrameCount} strong`
+                        : loaded?.error ?? `${recording.difficulty} · ${recording.spineGoal ?? "uncategorized"}`}
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <main className="flex min-h-0 flex-1 flex-col gap-2">
+          <section className="grid shrink-0 gap-2 lg:grid-cols-3 xl:grid-cols-6">
+            {inspectorCards.map((card) => (
+              <div
+                key={card.label}
+                className="min-w-0 rounded-[8px] border border-border-dim bg-sidebar/35 p-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-[11px] font-bold uppercase tracking-wide text-muted">{card.label}</h2>
+                  <span className="truncate font-mono text-[11px] text-secondary">{card.secondary}</span>
+                </div>
+                <div className="mt-1 truncate text-sm font-semibold text-foreground">{card.primary}</div>
+                <div className="truncate font-mono text-[11px] text-secondary">{card.detail}</div>
+              </div>
+            ))}
+          </section>
+
+          <section className="grid min-h-[1040px] flex-1 gap-2 2xl:min-h-[1180px] xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="flex min-h-0 flex-col gap-2">
+              <section
+                ref={replaySceneRef}
+                className="relative min-h-[940px] flex-1 overflow-hidden rounded-[8px] border border-border-dim bg-[#07070b] 2xl:min-h-[1080px]"
+                data-testid="movement-replay-avatar-section"
+              >
+                <div className="grid h-full min-h-0 grid-rows-2 gap-px bg-border-dim">
+                  <div className="relative min-h-0 bg-[#07070b]">
+                    <div className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-secondary">
+                      Source
+                    </div>
+                    <canvas
+                      ref={canvasRef}
+                      width={1280}
+                      height={720}
+                      className="absolute inset-0 h-full w-full object-contain"
+                      data-testid="movement-replay-source-canvas"
                     />
+                    {!replaySession && (
+                      <div className="absolute inset-0 flex items-center justify-center text-sm text-secondary">
+                        {replayIsLoading ? "Loading recording..." : replayLoadError ?? "Select a saved movement recording"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative min-h-0 bg-[#07070b]" data-testid="movement-replay-avatar-scene">
+                    <div className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-secondary">
+                      Avatar
+                    </div>
+                    <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={captureAvatarFrame}
+                        disabled={captureDisabled}
+                        className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim bg-black/40 px-2 text-[11px] font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {captureMode === "scene" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="h-3.5 w-3.5" />
+                        )}
+                        Scene
+                      </button>
+                      <button
+                        type="button"
+                        onClick={captureSourceStrip}
+                        disabled={captureDisabled}
+                        className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim bg-black/40 px-2 text-[11px] font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {captureMode === "strip" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Images className="h-3.5 w-3.5" />
+                        )}
+                        Strip
+                      </button>
+                    </div>
+                    {replaySession ? (
+                      <MovementMatchScene>
+                        <MovementSourceSkeleton
+                          color="#f6ccbe"
+                          landmarksRef={replayMotionRef}
+                          mirrorX
+                          positionOffset={[0, 0, 0]}
+                        />
+                        <VrmAvatar
+                          landmarksRef={replayMotionRef}
+                          positionOffset={[0, 0, 0]}
+                          isPlaying
+                          name="Replay student"
+                          retargetSourceModel={replayRetargetSourceModel}
+                          showNameLabel={false}
+                          trackingDebugRef={replayAvatarDebugRef}
+                          vrmUrl="/models/VIPE_Hero__1793.vrm"
+                        />
+                      </MovementMatchScene>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-secondary">
+                        {replayIsLoading ? "Loading recording..." : replayLoadError ?? "Select a saved movement recording"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/60 p-2 shadow-2xl">
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedRecordingId(recording._id);
-                        setFrameIndex(0);
-                        setIsPlaying(false);
-                      }}
-                      className="min-w-0 text-left"
-                      data-session-id={recording._id}
-                      data-testid="movement-replay-session"
+                      onClick={() => setFrameIndex((index) => clampFrame(index - 1, frameCount))}
+                      disabled={frameCount <= 1}
+                      aria-label="Previous frame"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-secondary transition-colors hover:text-foreground disabled:opacity-50"
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="truncate text-xs font-semibold text-foreground">{recording.title}</span>
-                        <span className="shrink-0 text-[11px]">{frameTotal} frames</span>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted">
-                          {formatTime(recording.createdAt)} · {formatDuration(recording.durationMs)}
-                        </span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          recordingAnalysis?.pass && countFailures(recordingAnalysis, "warning") === 0
-                            ? "bg-[#a8d5ba]/15 text-[#a8d5ba]"
-                            : recordingAnalysis
-                              ? "bg-[#f6ccbe]/15 text-[#f6ccbe]"
-                              : "bg-white/5 text-muted"
-                        }`}
-                        >
-                          {loaded?.isLoading ? "Loading" : loaded?.error ? "Load failed" : getRecordingLabel(recordingAnalysis)}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate text-[11px] text-secondary">
-                        {recordingAnalysis
-                          ? `${Math.round(recordingAnalysis.metrics.visualMatchScore * 100)}% visual match, ${recordingAnalysis.metrics.strongFullBodyFrameCount} strong frames`
-                          : loaded?.error ?? `${recording.difficulty} · ${recording.spineGoal ?? "uncategorized"}`}
-                      </div>
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPlaying((playing) => !playing)}
+                      disabled={frameCount <= 1}
+                      aria-label={isPlaying ? "Pause replay" : "Play replay"}
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f6ccbe] text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:opacity-50"
+                    >
+                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFrameIndex((index) => clampFrame(index + 1, frameCount))}
+                      disabled={frameCount <= 1}
+                      aria-label="Next frame"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-secondary transition-colors hover:text-foreground disabled:opacity-50"
+                    >
+                      <ChevronRight className="h-5 w-5" />
                     </button>
                   </div>
-                );
-              })}
-            </div>
-          </aside>
-
-          <main className="flex flex-col gap-5 xl:order-1">
-            <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="flex flex-col gap-3">
-                <div className="relative aspect-video overflow-hidden rounded-[8px] border border-border-dim bg-[#07070b]">
-                  <canvas
-                    ref={canvasRef}
-                    width={1280}
-                    height={720}
-                    className="absolute inset-0 h-full w-full object-contain"
-                    data-testid="movement-replay-source-canvas"
-                  />
-                  {!replaySession && (
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-secondary">
-                      {replayIsLoading ? "Loading recording..." : replayLoadError ?? "Select a saved movement recording"}
-                    </div>
-                  )}
                 </div>
+              </section>
 
-                <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border-dim bg-sidebar/35 p-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlaying((playing) => !playing)}
-                    disabled={frameCount <= 1}
-                    aria-label={isPlaying ? "Pause replay" : "Play replay"}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f6ccbe] text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:opacity-50"
-                  >
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFrameIndex((index) => clampFrame(index - 1, frameCount))}
-                    disabled={frameCount <= 1}
-                    aria-label="Previous frame"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border-dim text-secondary transition-colors hover:text-foreground disabled:opacity-50"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
+              <div className="shrink-0 rounded-[8px] border border-border-dim bg-sidebar/35 p-2">
+                <div className="flex flex-wrap items-center gap-3">
                   <input
                     type="range"
                     min="0"
@@ -715,68 +1110,53 @@ export default function MovementReplayLabPage() {
                       setIsPlaying(false);
                       setFrameIndex(Number.parseInt(event.target.value, 10));
                     }}
-                    className="min-w-[180px] flex-1 accent-[#f6ccbe]"
+                    className="min-w-[220px] flex-1 accent-[#f6ccbe]"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setFrameIndex((index) => clampFrame(index + 1, frameCount))}
-                    disabled={frameCount <= 1}
-                    aria-label="Next frame"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border-dim text-secondary transition-colors hover:text-foreground disabled:opacity-50"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  <span className="min-w-[86px] text-right font-mono text-xs text-secondary">
+                  <span className="min-w-[96px] text-right font-mono text-xs text-secondary">
                     {safeFrameIndex} / {Math.max(frameCount - 1, 0)}
                   </span>
                 </div>
+                <div
+                  className="mt-2 grid min-w-full gap-1 overflow-x-auto"
+                  style={{ gridTemplateColumns: `repeat(${Math.max(frameCount, 1)}, minmax(8px, 1fr))` }}
+                >
+                  {replaySession?.samples.map((sample, index) => {
+                    const severity = frameSeverity.get(index);
+                    const quality = sample.retarget?.sourceQuality ?? 0;
+                    const selected = index === safeFrameIndex;
+                    const markerClass = selected
+                      ? "border-[#f6ccbe] bg-[#f6ccbe]"
+                      : severity === "error"
+                        ? "border-[#f28b82] bg-[#f28b82]/70"
+                        : severity === "warning"
+                          ? "border-[#f6ccbe] bg-[#f6ccbe]/45"
+                          : quality >= 0.8
+                            ? "border-[#a8d5ba] bg-[#a8d5ba]/50"
+                            : "border-border-dim bg-background";
 
-                <div className="rounded-[8px] border border-border-dim bg-sidebar/35 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <h2 className="text-xs font-bold uppercase tracking-wide text-foreground">Frame Timeline</h2>
-                    <span className="text-xs text-muted">quality / flags</span>
-                  </div>
-                  <div
-                    className="grid min-w-full gap-1 overflow-x-auto"
-                    style={{ gridTemplateColumns: `repeat(${Math.max(frameCount, 1)}, minmax(10px, 1fr))` }}
-                  >
-                    {replaySession?.samples.map((sample, index) => {
-                      const severity = frameSeverity.get(index);
-                      const quality = sample.retarget?.sourceQuality ?? 0;
-                      const selected = index === safeFrameIndex;
-                      const markerClass = selected
-                        ? "border-[#f6ccbe] bg-[#f6ccbe]"
-                        : severity === "error"
-                          ? "border-[#f28b82] bg-[#f28b82]/70"
-                          : severity === "warning"
-                            ? "border-[#f6ccbe] bg-[#f6ccbe]/45"
-                            : quality >= 0.8
-                              ? "border-[#a8d5ba] bg-[#a8d5ba]/50"
-                              : "border-border-dim bg-background";
-
-                      return (
-                        <button
-                          key={`frame-${index}`}
-                          type="button"
-                          onClick={() => {
-                            setIsPlaying(false);
-                            setFrameIndex(index);
-                          }}
-                          aria-label={`Show frame ${index}`}
-                          className={`h-8 rounded-[6px] border transition-transform hover:-translate-y-0.5 ${markerClass}`}
-                          data-frame-index={index}
-                          data-testid="movement-replay-frame"
-                          title={`Frame ${index} quality ${formatNumber(quality)}`}
-                        />
-                      );
-                    }) ?? (
-                      <div className="h-8 rounded-[6px] border border-border-dim bg-background" />
-                    )}
-                  </div>
+                    return (
+                      <button
+                        key={`frame-${index}`}
+                        type="button"
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setFrameIndex(index);
+                        }}
+                        aria-label={`Show frame ${index}`}
+                        className={`h-4 rounded-[5px] border transition-transform hover:-translate-y-0.5 ${markerClass}`}
+                        data-frame-index={index}
+                        data-testid="movement-replay-frame"
+                        title={`Frame ${index} quality ${formatNumber(quality)}`}
+                      />
+                    );
+                  }) ?? (
+                    <div className="h-4 rounded-[5px] border border-border-dim bg-background" />
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex flex-col gap-3 rounded-[8px] border border-border-dim bg-sidebar/35 p-4">
+            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-[8px] border border-border-dim bg-sidebar/35 p-2">
                 <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Current Frame</h2>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                   <dt className="text-muted">Health</dt>
@@ -804,6 +1184,72 @@ export default function MovementReplayLabPage() {
                 </dl>
 
                 <div className="mt-2 border-t border-border-dim pt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Frame Diagnostics</h3>
+                    <span className="font-mono text-xs text-secondary">frame {safeFrameIndex}</span>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <dt className="text-muted">Owners</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      h {currentFallbacks?.head ?? "--"} · t {currentFallbacks?.spine ?? "--"}
+                    </dd>
+                    <dt className="text-muted">Lower / feet</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {liveLowerOwner ?? "--"} · {liveFeetOwner ?? "--"}
+                    </dd>
+                    <dt className="text-muted">Arms</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      L {currentFallbacks?.leftArm ?? "--"} · R {currentFallbacks?.rightArm ?? "--"}
+                    </dd>
+                    <dt className="text-muted">Confidence</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      h {formatNumber(currentBodyConfidence?.head)} · t {formatNumber(currentBodyConfidence?.torso)}
+                    </dd>
+                    <dt className="text-muted">Spine drive</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      b {formatNumber(currentSpineDrive?.sideBend)} · l {formatNumber(currentSpineDrive?.forwardLean)}
+                    </dd>
+                    <dt className="text-muted">Avatar upper</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      e {formatNumber(currentAvatarVisual?.averageUpperBodyDirectionError)} · s {currentAvatarVisual?.comparedUpperBodySegments ?? "--"}
+                    </dd>
+                    <dt className="text-muted">Arm / leg / foot</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {formatNumber(armConfidence)} · {formatNumber(legConfidence)} · {formatNumber(footConfidence)}
+                    </dd>
+                    <dt className="text-muted">Retarget</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      q {formatNumber(currentRetarget?.sourceQuality ?? currentFrame?.retarget?.sourceQuality)} · upper {currentRetarget?.appliedUpperBody ?? "--"}/{currentRetarget?.totalUpperBody ?? "--"} · lower {currentRetarget?.appliedLowerBody ?? "--"}/{currentRetarget?.totalLowerBody ?? "--"}
+                    </dd>
+                    <dt className="text-muted">Knees</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {formatNumber(currentRetarget?.leftKneeLift ?? currentFrame?.retarget?.leftKneeLift)} / {formatNumber(currentRetarget?.rightKneeLift ?? currentFrame?.retarget?.rightKneeLift)}
+                    </dd>
+                    <dt className="text-muted">Head source</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {currentAvatarDebug?.headRaw.source ?? "--"} / {formatNumber(currentAvatarDebug?.headRaw.confidence)}
+                    </dd>
+                    <dt className="text-muted">Head raw</dt>
+                    <dd className="text-right font-mono text-secondary">{formatAnglesCompact(currentAvatarDebug?.headRaw)}</dd>
+                    <dt className="text-muted">Head applied</dt>
+                    <dd className="text-right font-mono text-secondary">{formatAnglesCompact(currentAvatarDebug?.headApplied)}</dd>
+                  </dl>
+                  <details className="mt-3 rounded-[8px] border border-border-dim bg-background/35 p-2 text-xs text-secondary">
+                    <summary className="cursor-pointer font-semibold uppercase tracking-wide text-muted">
+                      Raw points
+                    </summary>
+                    <dl className="mt-2 grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-1 font-mono">
+                      <dt>Nose</dt>
+                      <dd className="truncate">{formatPoint(currentNose)}</dd>
+                      <dt>Left ear</dt>
+                      <dd className="truncate">{formatPoint(currentLeftEar)}</dd>
+                      <dt>Right ear</dt>
+                      <dd className="truncate">{formatPoint(currentRightEar)}</dd>
+                    </dl>
+                  </details>
+                </div>
+
+                <div className="mt-2 border-t border-border-dim pt-3">
                   <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Frame Flags</h3>
                   <div className="mt-2 flex flex-col gap-2">
                     {currentFrameFailures.length === 0 ? (
@@ -824,79 +1270,13 @@ export default function MovementReplayLabPage() {
               </div>
             </section>
 
-            <section
-              ref={replaySceneRef}
-              className="overflow-hidden rounded-[8px] border border-border-dim bg-[#07070b]"
-              data-testid="movement-replay-avatar-section"
-            >
-              <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Avatar Replay</h2>
-                  <p className="mt-1 text-xs text-secondary">Current frame drives both source skeleton and student avatar.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={captureAvatarFrame}
-                    disabled={captureDisabled}
-                    className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {captureMode === "scene" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4" />
-                    )}
-                    Scene PNG
-                  </button>
-                  <button
-                    type="button"
-                    onClick={captureSourceStrip}
-                    disabled={captureDisabled}
-                    className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {captureMode === "strip" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Images className="h-4 w-4" />
-                    )}
-                    Source Strip
-                  </button>
-                  <span className="font-mono text-xs text-muted">frame {safeFrameIndex}</span>
-                </div>
-              </div>
-              <div className="relative h-[520px]" data-testid="movement-replay-avatar-scene">
-                    {replaySession ? (
-                  <MovementMatchScene>
-                    <MovementSourceSkeleton
-                      color="#f6ccbe"
-                      landmarksRef={replayMotionRef}
-                      positionOffset={[0, 0, 0]}
-                    />
-                    <VrmAvatar
-                      landmarksRef={replayMotionRef}
-                      positionOffset={[0, 0, 0]}
-                      isPlayer
-                      isPlaying
-                      name="Replay student"
-                      trackingDebugRef={replayAvatarDebugRef}
-                      vrmUrl="/models/VIPE_Hero__1793.vrm"
-                    />
-                  </MovementMatchScene>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-secondary">
-                    {replayIsLoading ? "Loading recording..." : replayLoadError ?? "Select a saved movement recording"}
-                  </div>
-                )}
-              </div>
-            </section>
-
             {captureStatus && (
               <div className="rounded-[8px] border border-border-dim bg-sidebar/35 px-3 py-2 text-xs text-secondary">
                 {captureStatus}
               </div>
             )}
 
-            <section className="grid gap-5 lg:grid-cols-5">
+            <section className="hidden">
               <div className="rounded-[8px] border border-border-dim bg-sidebar/35 p-4">
                 <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Visual Match</h2>
                 <div className="mt-3 text-3xl font-bold text-foreground">
@@ -958,42 +1338,58 @@ export default function MovementReplayLabPage() {
               </div>
             </section>
 
-            <section className="rounded-[8px] border border-border-dim bg-sidebar/35 p-4">
+            <section className="rounded-[8px] border border-border-dim bg-sidebar/35 p-3">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">All Replay Flags</h2>
-                <span className="text-xs text-muted">{analysis?.summary.lowerBodyOwners.join(", ") ?? "--"}</span>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Flag Review</h2>
+                <span className="text-xs text-muted">
+                  {analysis ? `${analysis.failures.length} flags · ${failureGroups.length} types` : "Waiting for analysis"}
+                </span>
               </div>
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-3 grid gap-2">
                 {!analysis ? (
                   <div className="text-sm text-secondary">Waiting for analysis.</div>
-                ) : analysis.failures.length === 0 ? (
+                ) : failureGroups.length === 0 ? (
                   <div className="rounded-[8px] border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-3 text-sm text-[#a8d5ba]">
                     No replay flags for this stored recording.
                   </div>
-                ) : analysis.failures.map((failure, index) => (
-                  <button
-                    key={`${failure.code}-${failure.frameIndex ?? "session"}-${index}`}
-                    type="button"
-                    onClick={() => {
-                      if (typeof failure.frameIndex === "number") {
-                        setIsPlaying(false);
-                        setFrameIndex(failure.frameIndex);
-                      }
-                    }}
-                    className="rounded-[8px] border border-border-dim bg-background/50 p-3 text-left text-sm transition-colors hover:border-border"
+                ) : failureGroups.map((group) => (
+                  <div
+                    key={group.code}
+                    className="rounded-[8px] border border-border-dim bg-background/50 p-3 text-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-mono text-xs text-[#f6ccbe]">{failure.code}</span>
-                      <span className="text-xs uppercase tracking-wide text-muted">{failure.severity}</span>
+                      <span className="font-mono text-xs text-[#f6ccbe]">{group.code}</span>
+                      <span className="text-xs uppercase tracking-wide text-muted">
+                        {group.count} · {group.severity}
+                        {typeof group.firstFrame === "number" ? ` · first ${group.firstFrame}` : ""}
+                      </span>
                     </div>
-                    <div className="mt-1 text-secondary">{failure.detail}</div>
-                  </button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.samples.map((failure, index) => (
+                        <button
+                          key={`${group.code}-${failure.frameIndex ?? "session"}-${index}`}
+                          type="button"
+                          onClick={() => {
+                            if (typeof failure.frameIndex === "number") {
+                              setIsPlaying(false);
+                              setFrameIndex(failure.frameIndex);
+                            }
+                          }}
+                          disabled={typeof failure.frameIndex !== "number"}
+                          className="rounded-[8px] border border-border-dim px-2 py-1 text-left font-mono text-[11px] text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          title={failure.detail}
+                        >
+                          {typeof failure.frameIndex === "number" ? `frame ${failure.frameIndex}` : "session"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 text-xs text-secondary">{group.samples[0]?.detail}</div>
+                  </div>
                 ))}
               </div>
             </section>
           </main>
         </div>
-      </div>
     </>
   );
 }

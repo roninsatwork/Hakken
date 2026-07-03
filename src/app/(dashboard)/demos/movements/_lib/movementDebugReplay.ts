@@ -18,12 +18,14 @@ export type MovementDebugReplayPoseBounds = {
 
 export type MovementDebugReplayRetarget = {
   appliedLowerBody?: number;
+  appliedUpperBody?: number;
   footLockCorrection?: number;
   footLockDrift?: number;
   footLockStrength?: number;
   hipDrop?: number;
   leftFootContact?: boolean;
   leftKneeLift?: number;
+  lowerBodySegmentMotion?: number;
   plantedSquatIkDepth?: number;
   rightFootContact?: boolean;
   rightKneeLift?: number;
@@ -31,13 +33,16 @@ export type MovementDebugReplayRetarget = {
   sourceQuality?: number;
   squatDepth?: number;
   totalLowerBody?: number;
+  totalUpperBody?: number;
   totalSegments?: number;
   visualRootDrop?: number;
 };
 
 export type MovementDebugReplayAvatarVisual = {
   averageLowerBodyDirectionError?: number;
+  averageUpperBodyDirectionError?: number;
   comparedLowerBodySegments: number;
+  comparedUpperBodySegments?: number;
   segments: Record<string, {
     confidence?: number;
     direction: {
@@ -181,12 +186,14 @@ function parseRetarget(value: unknown): MovementDebugReplayRetarget | undefined 
 
   return {
     appliedLowerBody: typeof value.appliedLowerBody === "number" ? value.appliedLowerBody : undefined,
+    appliedUpperBody: typeof value.appliedUpperBody === "number" ? value.appliedUpperBody : undefined,
     footLockCorrection: typeof value.footLockCorrection === "number" ? value.footLockCorrection : undefined,
     footLockDrift: typeof value.footLockDrift === "number" ? value.footLockDrift : undefined,
     footLockStrength: typeof value.footLockStrength === "number" ? value.footLockStrength : undefined,
     hipDrop: typeof value.hipDrop === "number" ? value.hipDrop : undefined,
     leftFootContact: booleanValue(value.leftFootContact),
     leftKneeLift: typeof value.leftKneeLift === "number" ? value.leftKneeLift : undefined,
+    lowerBodySegmentMotion: typeof value.lowerBodySegmentMotion === "number" ? value.lowerBodySegmentMotion : undefined,
     plantedSquatIkDepth: typeof value.plantedSquatIkDepth === "number" ? value.plantedSquatIkDepth : undefined,
     rightFootContact: booleanValue(value.rightFootContact),
     rightKneeLift: typeof value.rightKneeLift === "number" ? value.rightKneeLift : undefined,
@@ -194,6 +201,7 @@ function parseRetarget(value: unknown): MovementDebugReplayRetarget | undefined 
     sourceQuality: typeof value.sourceQuality === "number" ? value.sourceQuality : undefined,
     squatDepth: typeof value.squatDepth === "number" ? value.squatDepth : undefined,
     totalLowerBody: typeof value.totalLowerBody === "number" ? value.totalLowerBody : undefined,
+    totalUpperBody: typeof value.totalUpperBody === "number" ? value.totalUpperBody : undefined,
     totalSegments: typeof value.totalSegments === "number" ? value.totalSegments : undefined,
     visualRootDrop: typeof value.visualRootDrop === "number" ? value.visualRootDrop : undefined,
   };
@@ -233,7 +241,13 @@ function parseAvatarVisual(value: unknown): MovementDebugReplayAvatarVisual | un
     averageLowerBodyDirectionError: typeof value.averageLowerBodyDirectionError === "number"
       ? value.averageLowerBodyDirectionError
       : undefined,
+    averageUpperBodyDirectionError: typeof value.averageUpperBodyDirectionError === "number"
+      ? value.averageUpperBodyDirectionError
+      : undefined,
     comparedLowerBodySegments: numberValue(value.comparedLowerBodySegments),
+    comparedUpperBodySegments: typeof value.comparedUpperBodySegments === "number"
+      ? value.comparedUpperBodySegments
+      : undefined,
     segments,
   };
 }

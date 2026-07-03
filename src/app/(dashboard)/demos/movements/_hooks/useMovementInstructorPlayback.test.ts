@@ -50,6 +50,27 @@ describe("buildInstructorRetargetSourceModel", () => {
     expect(model.neutralKneeLift.right).toBe(0);
   });
 
+  it("chooses an upright spine baseline over a side-bent frame", () => {
+    const sideBentPose = withCorePose();
+    sideBentPose[0] = { ...sideBentPose[0]!, x: 0.66 };
+    sideBentPose[7] = { ...sideBentPose[7]!, x: 0.62 };
+    sideBentPose[8] = { ...sideBentPose[8]!, x: 0.7 };
+    sideBentPose[11] = { ...sideBentPose[11]!, x: 0.54 };
+    sideBentPose[12] = { ...sideBentPose[12]!, x: 0.78 };
+
+    const uprightPose = withCorePose();
+    const model = buildInstructorRetargetSourceModel([
+      { landmarks: sideBentPose },
+      { landmarks: uprightPose },
+    ] satisfies MovementInstructorMotionFrame[]);
+
+    expect(model).not.toBeNull();
+    if (!model) throw new Error("Expected an instructor retarget source model.");
+
+    expect(model.calibratedAt).toBe(1);
+    expect(Math.abs(model.shoulderCenter.x - model.hipCenter.x)).toBeLessThan(0.02);
+  });
+
   it("mirrors front-facing instructor frames before building the retarget baseline", () => {
     const pose = withCorePose();
     pose[23] = { ...pose[23]!, x: 0.58 };
