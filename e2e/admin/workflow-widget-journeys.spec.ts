@@ -12,7 +12,8 @@ test.describe("Admin widget and workflow journeys", () => {
     await expect(publicNameInput).toHaveValue("E2E Website Bot");
     await publicNameInput.fill("Phase 6 Widget Bot");
 
-    await page.getByRole("button", { name: /Integration/i }).click();
+    await page.getByRole("button", { name: "Widget", exact: true }).click();
+    await page.getByRole("menuitem", { name: /Integration/i }).click();
     await expect(page.getByText(/Authorized Domains/i)).toBeVisible();
     await page.getByPlaceholder(/example\.com/i).fill("example.com, app.example.com");
     await expect(page.getByText(/widget_e2e/i)).toBeVisible();

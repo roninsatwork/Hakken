@@ -1016,6 +1016,7 @@ export default function MovementReplayLabPage() {
                         type="button"
                         onClick={captureAvatarFrame}
                         disabled={captureDisabled}
+                        aria-label="Scene PNG"
                         className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim bg-black/40 px-2 text-[11px] font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {captureMode === "scene" ? (
@@ -1029,6 +1030,7 @@ export default function MovementReplayLabPage() {
                         type="button"
                         onClick={captureSourceStrip}
                         disabled={captureDisabled}
+                        aria-label="Source Strip"
                         className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-border-dim bg-black/40 px-2 text-[11px] font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {captureMode === "strip" ? (

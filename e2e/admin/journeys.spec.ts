@@ -6,7 +6,7 @@ test.describe("Super admin browser journeys", () => {
     await gotoWithoutServerCrash(page, "/admin/ai/models");
     await skipWhenRedirectedToLogin(page, "AI model journey requires the super-admin storage state.");
 
-    await expect(page.getByRole("heading", { name: /AI Models/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Model Catalogue|AI Models/i })).toBeVisible();
     await expect(page.getByText("E2E Primary Model")).toBeVisible();
     await expect(page.getByText(/Showing 1-15 of 16/i)).toBeVisible();
 

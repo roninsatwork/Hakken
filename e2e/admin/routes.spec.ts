@@ -57,14 +57,15 @@ test.describe("Admin route coverage", () => {
     await gotoWithoutServerCrash(page, "/admin/companies/company_e2e/ai/models");
     await skipWhenRedirectedToLogin(page, "Company AI navigation coverage requires an authenticated admin storage state.");
 
-    const aiSubmenu = page.getByLabel("AI workspace sections");
+    await expect(page.getByRole("button", { name: "AI", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "AI", exact: true }).click();
 
-    await expect(page.getByRole("link", { name: "AI", exact: true })).toBeVisible();
-    await expect(aiSubmenu.getByRole("link", { name: "Knowledge", exact: true })).toBeVisible();
-    await expect(aiSubmenu.getByRole("link", { name: "Prompt", exact: true })).toBeVisible();
-    await expect(aiSubmenu.getByRole("link", { name: "AI Rules", exact: true })).toBeVisible();
-    await expect(aiSubmenu.getByRole("link", { name: "AI Models", exact: true })).toBeVisible();
-    await expect(aiSubmenu.getByRole("link", { name: "Chat Logs", exact: true })).toBeVisible();
+    const aiMenu = page.getByRole("menu");
+    await expect(aiMenu.getByRole("menuitem", { name: "Knowledge", exact: true })).toBeVisible();
+    await expect(aiMenu.getByRole("menuitem", { name: "Prompt", exact: true })).toBeVisible();
+    await expect(aiMenu.getByRole("menuitem", { name: "AI Rules", exact: true })).toBeVisible();
+    await expect(aiMenu.getByRole("menuitem", { name: /AI Models/ })).toBeVisible();
+    await expect(aiMenu.getByRole("menuitem", { name: "Chat Logs", exact: true })).toBeVisible();
     await expect(page.getByText("Company AI Model Defaults")).toBeVisible();
   });
 
@@ -72,11 +73,12 @@ test.describe("Admin route coverage", () => {
     await gotoWithoutServerCrash(page, "/admin/companies/company_e2e/directory/invites");
     await skipWhenRedirectedToLogin(page, "Company directory navigation coverage requires an authenticated admin storage state.");
 
-    const directorySubmenu = page.getByLabel("Directory workspace sections");
+    await expect(page.getByRole("button", { name: "Directory", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Directory", exact: true }).click();
 
-    await expect(page.locator('a[href="/admin/companies/company_e2e/directory"]')).toBeVisible();
-    await expect(directorySubmenu.getByRole("link", { name: "Directory", exact: true })).toBeVisible();
-    await expect(directorySubmenu.getByRole("link", { name: "Invites", exact: true })).toBeVisible();
+    const directoryMenu = page.getByRole("menu");
+    await expect(directoryMenu.getByRole("menuitem", { name: "Directory", exact: true })).toBeVisible();
+    await expect(directoryMenu.getByRole("menuitem", { name: /Invites/ })).toBeVisible();
     await expect(page.getByText("Workspace Invitations")).toBeVisible();
   });
 });

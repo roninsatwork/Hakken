@@ -1399,6 +1399,12 @@ export default function VrmAvatar({
           aimVector("leftFoot", "leftToes", solverLms[29], leftToeTarget, footAimOptions);
         };
 
+        const playerLegRaiseOwner =
+          isPlayer &&
+          lowerBodyDrive.shouldDrivePlayerLegRaise &&
+          lowerBodyDrive.playerLegRaiseSide
+            ? `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`
+            : null;
         const canUsePlayerRetargetLegRaise =
           isPlayer &&
           lowerBodyDrive.shouldDrivePlayerLegRaise &&
@@ -1411,7 +1417,7 @@ export default function VrmAvatar({
           lowerBodyDrive.playerLegRaiseSide &&
           !canUsePlayerRetargetLegRaise
         ) {
-          lowerBodyOwner = `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`;
+          lowerBodyOwner = playerLegRaiseOwner ?? "player-leg-raise";
           applySingleLegRaisePose(
             lowerBodyDrive.playerLegRaiseSide,
             lowerBodyDrive.playerLegRaiseDepth,
@@ -1428,7 +1434,9 @@ export default function VrmAvatar({
             easeLowerBodyToNeutral();
           }
         } else if (isPlayer && playerRetargetLowerBodyMotion < 0.16) {
-          lowerBodyOwner = "player-lower-body-neutral";
+          lowerBodyOwner = retargetFrame.debug.sourceQuality >= 0.65
+            ? "player-retarget"
+            : "player-lower-body-neutral";
           easeLowerBodyToNeutral();
         } else if (!isPlayer && instructorLowerBodyMotion < 0.08) {
           lowerBodyOwner = "recorded-neutral";
@@ -1452,11 +1460,11 @@ export default function VrmAvatar({
             !isPlayer &&
             instructorSquatPresentationDepth > 0.18 &&
             balancedPlantedSquatDepth === 0;
-          lowerBodyOwner = retargetOwnsLowerBody
+          lowerBodyOwner = playerLegRaiseOwner ?? (retargetOwnsLowerBody
             ? (isPlayer ? "player-retarget" : "recorded-retarget")
             : retargetAppliedLowerBody > 0
               ? "retarget-legacy-fallback"
-              : "legacy-fallback";
+              : "legacy-fallback");
 
           if (retargetAppliedLowerBody < 4) {
             applyLegacyLowerBodyAim();
