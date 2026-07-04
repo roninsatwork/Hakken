@@ -109,6 +109,7 @@ describe("movement avatar lower-body drive", () => {
       lowerBodyIntent: liveSquatIntent,
       lowerBodyTrackingReady: true,
       retargetContactsBothFeet: false,
+      retargetHipDrop: 0,
       retargetSquatDepth: 0,
     });
 
@@ -130,6 +131,7 @@ describe("movement avatar lower-body drive", () => {
       lowerBodyIntent: neutralIntent,
       lowerBodyTrackingReady: true,
       retargetContactsBothFeet: false,
+      retargetHipDrop: 0,
       retargetSquatDepth: 0,
     });
 
@@ -141,6 +143,33 @@ describe("movement avatar lower-body drive", () => {
     expect(drive.visualRootDrop).toBe(0);
   });
 
+  it("does not drive a squat from borderline recovery intent without planted retarget evidence", () => {
+    const drive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: {
+        ...liveSquatIntent,
+        squatDepth: 0.26,
+        squatSignals: {
+          headDrop: 0.34,
+          hipDrop: 0.11,
+          kneeBend: 0.04,
+          torsoDrop: 0.36,
+        },
+      },
+      lowerBodyTrackingReady: true,
+      retargetContactsBothFeet: true,
+      retargetHipDrop: 0.11,
+      retargetSquatDepth: 0,
+    });
+
+    expect(drive.shouldDrivePlayerSquat).toBe(false);
+    expect(drive.shouldApplyLowerBody).toBe(true);
+    expect(drive.playerLowerBodyState).toBe("neutral");
+    expect(drive.playerSquatPresentationDepth).toBe(0);
+    expect(drive.visualRootDrop).toBe(0);
+  });
+
   it("drives a single player leg raise without adding squat root drop", () => {
     const drive = resolveMovementAvatarLowerBodyDrive({
       hasLiveBodyCalibration: true,
@@ -148,6 +177,7 @@ describe("movement avatar lower-body drive", () => {
       lowerBodyIntent: leftLegRaiseIntent,
       lowerBodyTrackingReady: true,
       retargetContactsBothFeet: false,
+      retargetHipDrop: 0,
       retargetSquatDepth: 0,
     });
 
@@ -167,6 +197,7 @@ describe("movement avatar lower-body drive", () => {
       lowerBodyIntent: neutralIntent,
       lowerBodyTrackingReady: true,
       retargetContactsBothFeet: true,
+      retargetHipDrop: 0.42,
       retargetSquatDepth: 0.42,
     });
 

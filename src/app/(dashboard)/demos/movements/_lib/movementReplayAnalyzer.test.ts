@@ -7,6 +7,7 @@ import {
 } from "./movementDebugReplay";
 import { buildMovementReplaySessionFromRecording } from "./movementRecordingReplay";
 import { analyzeMovementDebugReplaySession } from "./movementReplayAnalyzer";
+import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 function frame(overrides: Partial<MovementDebugReplayFrame> = {}): MovementDebugReplayFrame {
   return {
@@ -69,6 +70,69 @@ function session(samples: MovementDebugReplayFrame[]): MovementDebugReplaySessio
     trigger: "debug-auto-baseline",
     warningSummary: "none",
   };
+}
+
+const makePose = (): TrackingLandmark[] =>
+  Array.from({ length: 33 }, (_, index) => ({
+    x: 0.45 + index * 0.002,
+    y: 0.45,
+    z: 0,
+    visibility: 0.9,
+  }));
+
+function withCorePose() {
+  const pose = makePose();
+  pose[0] = { x: 0.5, y: 0.28, z: 0, visibility: 0.9 };
+  pose[7] = { x: 0.42, y: 0.3, z: 0, visibility: 0.9 };
+  pose[8] = { x: 0.58, y: 0.3, z: 0, visibility: 0.9 };
+  pose[11] = { x: 0.38, y: 0.44, z: 0, visibility: 0.9 };
+  pose[12] = { x: 0.62, y: 0.44, z: 0, visibility: 0.9 };
+  pose[13] = { x: 0.34, y: 0.56, z: 0, visibility: 0.9 };
+  pose[14] = { x: 0.66, y: 0.56, z: 0, visibility: 0.9 };
+  pose[15] = { x: 0.32, y: 0.68, z: 0, visibility: 0.9 };
+  pose[16] = { x: 0.68, y: 0.68, z: 0, visibility: 0.9 };
+  pose[23] = { x: 0.42, y: 0.68, z: 0, visibility: 0.9 };
+  pose[24] = { x: 0.58, y: 0.68, z: 0, visibility: 0.9 };
+  pose[25] = { x: 0.44, y: 0.82, z: 0, visibility: 0.85 };
+  pose[26] = { x: 0.56, y: 0.82, z: 0, visibility: 0.85 };
+  pose[27] = { x: 0.44, y: 0.94, z: 0, visibility: 0.8 };
+  pose[28] = { x: 0.56, y: 0.94, z: 0, visibility: 0.8 };
+  pose[29] = { x: 0.43, y: 0.95, z: 0.02, visibility: 0.8 };
+  pose[30] = { x: 0.57, y: 0.95, z: 0.02, visibility: 0.8 };
+  pose[31] = { x: 0.43, y: 0.97, z: 0, visibility: 0.8 };
+  pose[32] = { x: 0.57, y: 0.97, z: 0, visibility: 0.8 };
+  return pose;
+}
+
+function scalePoseInFrame(
+  pose: TrackingLandmark[],
+  scale: number,
+  origin = { x: 0.5, y: 0.28, z: 0 },
+) {
+  return pose.map((landmark) => ({
+    ...landmark,
+    x: origin.x + (landmark.x - origin.x) * scale,
+    y: origin.y + (landmark.y - origin.y) * scale,
+    z: origin.z + ((landmark.z ?? 0) - origin.z) * scale,
+  }));
+}
+
+function squatPose() {
+  const pose = withCorePose();
+  pose[23] = { ...pose[23]!, y: 0.8 };
+  pose[24] = { ...pose[24]!, y: 0.8 };
+  pose[25] = { ...pose[25]!, y: 0.73 };
+  pose[26] = { ...pose[26]!, y: 0.73 };
+  return pose;
+}
+
+function trackingFrame(pose: TrackingLandmark[]) {
+  return frame({
+    tracking: {
+      pose,
+      worldPose: pose,
+    },
+  });
 }
 
 describe("movement debug replay parsing", () => {
@@ -151,6 +215,50 @@ describe("movement debug replay parsing", () => {
 });
 
 describe("movement replay analyzer", () => {
+  it("exposes simulated game-path frames for replay/game parity checks", () => {
+    const neutralPose = withCorePose();
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(neutralPose),
+      trackingFrame(scalePoseInFrame(neutralPose, 0.68)),
+      trackingFrame(scalePoseInFrame(squatPose(), 0.68)),
+    ]));
+
+    expect(analysis.gamePath.calibrationQuality).toBeGreaterThan(0.8);
+    expect(analysis.gamePath.retargetSourceQuality).toBeGreaterThan(0.8);
+    expect(analysis.gamePath.parity.divergenceFrameCount).toBe(1);
+    expect(analysis.gamePath.frames[1]).toMatchObject({
+      lowerLabel: "neutral",
+      shouldDrivePlayerSquat: false,
+      squatDepth: 0,
+      visualRootDrop: 0,
+    });
+    expect(analysis.gamePath.frames[2]).toMatchObject({
+      feetOwner: "recorded-retarget",
+      lowerLabel: "squat",
+      lowerOwner: "player-stable-squat",
+      shouldDrivePlayerSquat: true,
+    });
+    expect(analysis.gamePath.frames[2]?.squatDepth).toBeGreaterThan(0.55);
+  });
+
+  it("flags stored replay output that diverges from the simulated game path", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(scalePoseInFrame(squatPose(), 0.68)),
+    ]));
+
+    const divergence = analysis.failures.find((failure) => failure.code === "replay_game_path_diverged");
+    expect(divergence).toMatchObject({
+      frameIndex: 1,
+      severity: "warning",
+    });
+    expect(analysis.gamePath.parity).toEqual({
+      divergenceFrameCount: 1,
+      firstDivergenceFrame: 1,
+    });
+    expect(divergence?.detail).toContain("replay output diverges from simulated game path");
+  });
+
   it("passes a stable squat and stand recovery session", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
       frame(),

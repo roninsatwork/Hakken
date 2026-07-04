@@ -77,6 +77,14 @@ export type VrmRiggedPose = {
 
 export type VrmHandRig = Record<string, VrmRigRotation | undefined>;
 
+export type VrmHandRotationSpec = {
+  isThumb: boolean;
+  isWrist: boolean;
+  rigKey: string;
+  shouldApply: boolean;
+  vrmName: string;
+};
+
 const PLAYER_FINGER_GAIN = 1.35;
 const INSTRUCTOR_FINGER_GAIN = 1.15;
 const THUMB_GAIN_MULTIPLIER = 0.9;
@@ -259,6 +267,20 @@ export function createVrmImageSolverLandmarks(
   }));
 }
 
+export function resolveVrmArmTargetLandmarks({
+  imageLandmarks,
+  isPlayer,
+  solverLandmarks,
+}: {
+  imageLandmarks: VrmSolverLandmark[];
+  isPlayer: boolean;
+  solverLandmarks: VrmSolverLandmark[];
+}) {
+  return isPlayer
+    ? createVrmImageSolverLandmarks(imageLandmarks)
+    : solverLandmarks;
+}
+
 export function getVrmHandWristFallbackTarget(
   handData: VrmHandCapture | null | undefined,
   imageLandmarks: VrmSolverLandmark[],
@@ -315,6 +337,43 @@ export function prepareVrmHandLandmarks(
     ...landmark,
     x: options.mirrorX ? 1 - landmark.x : landmark.x,
   }));
+}
+
+export function resolveVrmHandRigOptions({
+  isPlayer,
+}: {
+  isPlayer: boolean;
+}) {
+  return {
+    isPlayer,
+    mirrorX: !isPlayer,
+    slerp: isPlayer ? 0.85 : 0.55,
+  };
+}
+
+export function resolveVrmHandRotationSpecs(side: MovementHandSide): VrmHandRotationSpec[] {
+  const handedness = side === "left" ? "Left" : "Right";
+  const fingers = ["Thumb", "Index", "Middle", "Ring", "Little"];
+  const joints = ["Proximal", "Intermediate", "Distal"];
+
+  return [
+    {
+      isThumb: false,
+      isWrist: true,
+      rigKey: `${handedness}Wrist`,
+      shouldApply: false,
+      vrmName: `${side}Hand`,
+    },
+    ...fingers.flatMap((finger) =>
+      joints.map((joint) => ({
+        isThumb: finger === "Thumb",
+        isWrist: false,
+        rigKey: `${handedness}${finger}${joint}`,
+        shouldApply: true,
+        vrmName: `${side}${finger}${joint}`,
+      })),
+    ),
+  ];
 }
 
 export function strengthenVrmHandRotation(

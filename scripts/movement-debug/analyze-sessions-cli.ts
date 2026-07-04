@@ -280,6 +280,16 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       `  retarget avg: ${analysis.metrics.averageRetargetQuality.toFixed(2)}, strong full-body frames: ${analysis.metrics.strongFullBodyFrameCount}`,
     );
     console.log(
+      `  game path: calibration ${analysis.gamePath.calibrationQuality.toFixed(2)}, retarget baseline ${analysis.gamePath.retargetSourceQuality.toFixed(2)}, squat frames ${analysis.gamePath.frames.filter((frame) => frame.shouldDrivePlayerSquat).length}`,
+    );
+    console.log(
+      `  replay/game parity: ${analysis.gamePath.parity.divergenceFrameCount} divergence frame(s)${
+        typeof analysis.gamePath.parity.firstDivergenceFrame === "number"
+          ? `, first frame ${analysis.gamePath.parity.firstDivergenceFrame}`
+          : ""
+      }`,
+    );
+    console.log(
       `  visual match: ${Math.round(analysis.metrics.visualMatchScore * 100)}%, reliable frames: ${analysis.metrics.visualReliableFrameCount}/${analysis.summary.frameCount}, motion coverage: ${Math.round(analysis.metrics.visualMotionCoverage * 100)}%`,
     );
     console.log(

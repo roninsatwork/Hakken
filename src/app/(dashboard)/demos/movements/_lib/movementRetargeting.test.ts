@@ -47,6 +47,19 @@ function shiftLowerBodyVertically(pose: TrackingLandmark[], amount: number) {
   });
 }
 
+function scalePoseInFrame(
+  pose: TrackingLandmark[],
+  scale: number,
+  origin = { x: 0.5, y: 0.28, z: 0 },
+) {
+  return pose.map((landmark) => ({
+    ...landmark,
+    x: origin.x + (landmark.x - origin.x) * scale,
+    y: origin.y + (landmark.y - origin.y) * scale,
+    z: origin.z + ((landmark.z ?? 0) - origin.z) * scale,
+  }));
+}
+
 describe("movementRetargeting", () => {
   it("builds a neutral source body model from an upright full-body frame", () => {
     const calibration = buildMovementRetargetSourceModel({
@@ -145,6 +158,43 @@ describe("movementRetargeting", () => {
     expect(frame.hipDrop).toBe(0);
     expect(frame.squatDepth).toBe(0);
     expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
+  });
+
+  it("keeps standing neutral when the user steps farther back in camera frame", () => {
+    const calibrationPose = withCorePose();
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: calibrationPose });
+    const farStandingPose = scalePoseInFrame(calibrationPose, 0.68);
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: farStandingPose,
+    });
+
+    expect(frame.hipDrop).toBeLessThan(0.05);
+    expect(frame.kneeLift.left).toBe(0);
+    expect(frame.kneeLift.right).toBe(0);
+    expect(frame.squatDepth).toBe(0);
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
+  });
+
+  it("still solves a smaller-in-frame planted squat after distance normalization", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, y: 0.8 };
+    squatPose[24] = { ...squatPose[24]!, y: 0.8 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.73 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.73 };
+    const farSquatPose = scalePoseInFrame(squatPose, 0.68);
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: farSquatPose,
+    });
+
+    expect(frame.squatDepth).toBeGreaterThan(0.55);
+    expect(frame.contacts.leftFoot).toBe(true);
+    expect(frame.contacts.rightFoot).toBe(true);
+    expect(getBalancedPlantedSquatDepth(frame)).toBe(frame.squatDepth);
   });
 
   it("does not report squat metrics from invisible lower-body landmarks", () => {

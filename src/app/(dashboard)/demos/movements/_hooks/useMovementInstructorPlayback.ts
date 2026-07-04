@@ -201,13 +201,16 @@ export function buildInstructorRetargetAnalysis(
   const plantedSquatFrames = goodFrames.filter(
     (frame) => frame.leftFootContact && frame.rightFootContact,
   );
+  const kneeLiftFrames = goodFrames.filter(
+    (frame) => frame.balancedPlantedSquatDepth < 0.16,
+  );
 
   return {
     frameCount: frames.length,
-    peakLeftKneeLift: maxBy(goodFrames, (frame) => frame.leftKneeLift),
-    peakRightKneeLift: maxBy(goodFrames, (frame) => frame.rightKneeLift),
+    peakLeftKneeLift: maxBy(kneeLiftFrames, (frame) => frame.leftKneeLift),
+    peakRightKneeLift: maxBy(kneeLiftFrames, (frame) => frame.rightKneeLift),
     peakSingleKneeLift: maxBy(
-      goodFrames,
+      kneeLiftFrames,
       (frame) => Math.abs(frame.leftKneeLift - frame.rightKneeLift),
     ),
     peakSquat: maxBy(plantedSquatFrames, (frame) => frame.squatDepth),

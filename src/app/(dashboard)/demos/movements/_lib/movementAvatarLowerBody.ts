@@ -16,6 +16,13 @@ export type MovementAvatarLowerBodyDrive = {
   visualRootDrop: number;
 };
 
+export type MovementAvatarPlayerLowerBodyOwnerDecision = {
+  canUsePlayerRetargetLegRaise: boolean;
+  feetOwner: string;
+  lowerBodyOwner: string;
+  shouldUsePlayerFootFallback: boolean;
+};
+
 function confidenceValue(bodyConfidence: MovementAvatarBodyConfidence, key: string) {
   return bodyConfidence[key] ?? 0;
 }
@@ -69,6 +76,7 @@ export function resolveMovementAvatarLowerBodyDrive({
   lowerBodyIntent,
   lowerBodyTrackingReady,
   retargetContactsBothFeet,
+  retargetHipDrop,
   retargetSquatDepth,
 }: {
   hasLiveBodyCalibration: boolean;
@@ -76,6 +84,7 @@ export function resolveMovementAvatarLowerBodyDrive({
   lowerBodyIntent: MovementLowerBodyIntent;
   lowerBodyTrackingReady: boolean;
   retargetContactsBothFeet: boolean;
+  retargetHipDrop: number;
   retargetSquatDepth: number;
 }): MovementAvatarLowerBodyDrive {
   let liveSquatDepth = retargetSquatDepth;
@@ -83,10 +92,16 @@ export function resolveMovementAvatarLowerBodyDrive({
     isPlayer &&
     lowerBodyTrackingReady &&
     lowerBodyIntent.confidence >= 0.35;
+  const hasRetargetSquatEvidence =
+    retargetContactsBothFeet &&
+    (retargetSquatDepth > 0.08 || retargetHipDrop > 0.12);
+  const hasStrongLiveSquatEvidence =
+    lowerBodyIntent.squatDepth > 0.34 &&
+    lowerBodyIntent.squatSignals.kneeBend > 0.28;
   const shouldDrivePlayerSquat =
     canUsePlayerIntent &&
     lowerBodyIntent.label === "squat" &&
-    lowerBodyIntent.squatDepth > 0.16;
+    (hasRetargetSquatEvidence || hasStrongLiveSquatEvidence);
   const playerLegRaiseSide =
     canUsePlayerIntent && lowerBodyIntent.label === "left-knee-raise" && lowerBodyIntent.leftKneeRaise > 0.22
       ? "left"
@@ -135,5 +150,111 @@ export function resolveMovementAvatarLowerBodyDrive({
     visualRootDrop: lowerBodyTrackingReady && shouldApplyLowerBody
       ? playerSquatPresentationDepth * (isPlayer ? 1.72 : 0.56)
       : 0,
+  };
+}
+
+export function resolveMovementAvatarPlayerLowerBodyOwners({
+  lowerBodyDrive,
+  lowerBodySegmentMotion,
+  lowerBodyTrackingReady,
+  playerRetargetLowerBodyMotion,
+  retargetSourceQuality,
+  shouldApplyLowerBody,
+  shouldHoldPlayerSquatPose,
+  solvedFootSegments,
+  solvedLegSegments,
+  solvedLowerBodySegments,
+  totalSolvedSegments,
+}: {
+  lowerBodyDrive: MovementAvatarLowerBodyDrive;
+  lowerBodySegmentMotion: number;
+  lowerBodyTrackingReady: boolean;
+  playerRetargetLowerBodyMotion: number;
+  retargetSourceQuality: number;
+  shouldApplyLowerBody: boolean;
+  shouldHoldPlayerSquatPose: boolean;
+  solvedFootSegments: number;
+  solvedLegSegments: number;
+  solvedLowerBodySegments: number;
+  totalSolvedSegments: number;
+}): MovementAvatarPlayerLowerBodyOwnerDecision {
+  const canUsePlayerRetargetLegRaise =
+    lowerBodyDrive.shouldDrivePlayerLegRaise &&
+    retargetSourceQuality >= 0.65 &&
+    totalSolvedSegments >= 8;
+  const playerLegRaiseOwner =
+    lowerBodyDrive.shouldDrivePlayerLegRaise &&
+    lowerBodyDrive.playerLegRaiseSide
+      ? `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`
+      : null;
+  const retargetOwnsLowerBody = solvedLegSegments >= 4 && retargetSourceQuality >= 0.45;
+  const shouldUsePlayerFootFallback =
+    solvedLegSegments >= 4 &&
+    solvedFootSegments === 0 &&
+    lowerBodySegmentMotion > 0.16 &&
+    retargetSourceQuality >= 0.45;
+
+  if (!lowerBodyTrackingReady && !shouldHoldPlayerSquatPose) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      lowerBodyOwner: "neutral",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
+  if (!shouldApplyLowerBody) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      lowerBodyOwner: "neutral",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
+  if (lowerBodyDrive.shouldDrivePlayerLegRaise && !canUsePlayerRetargetLegRaise) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      lowerBodyOwner: playerLegRaiseOwner ?? "player-leg-raise",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
+  if (lowerBodyDrive.shouldDrivePlayerSquat || shouldHoldPlayerSquatPose) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "recorded-retarget",
+      lowerBodyOwner: lowerBodyDrive.shouldDrivePlayerSquat
+        ? "player-stable-squat"
+        : "player-stable-squat-held",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
+  if (playerRetargetLowerBodyMotion < 0.16) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      lowerBodyOwner: retargetSourceQuality >= 0.65
+        ? "player-retarget"
+        : "player-lower-body-neutral",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
+  return {
+    canUsePlayerRetargetLegRaise,
+    feetOwner: solvedFootSegments > 0
+      ? "recorded-retarget"
+      : shouldUsePlayerFootFallback
+        ? "player-legacy-foot-fallback"
+        : "neutral",
+    lowerBodyOwner: playerLegRaiseOwner ?? (retargetOwnsLowerBody
+      ? "player-retarget"
+      : solvedLowerBodySegments > 0
+        ? "retarget-legacy-fallback"
+        : "legacy-fallback"),
+    shouldUsePlayerFootFallback,
   };
 }

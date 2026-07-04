@@ -535,6 +535,68 @@ export function buildUprightMovementAutoCalibration({
   return calibration;
 }
 
+export type MovementAutoCalibrationKind = "full-body" | "upper-body";
+
+export type MovementAutoCalibrationState = {
+  calibration: MovementCalibration | null;
+  kind: MovementAutoCalibrationKind | null;
+  samples: MovementCalibration[];
+};
+
+export function resolveMovementAutoCalibrationState({
+  faceLandmarks,
+  maxRejectedSampleHistory = 3,
+  maxSampleHistory = 10,
+  minSamples = 6,
+  now = Date.now(),
+  poseLandmarks,
+  state,
+}: {
+  faceLandmarks?: TrackingLandmark[] | null;
+  maxRejectedSampleHistory?: number;
+  maxSampleHistory?: number;
+  minSamples?: number;
+  now?: number;
+  poseLandmarks: TrackingLandmark[];
+  state: MovementAutoCalibrationState;
+}): MovementAutoCalibrationState {
+  if (state.calibration) return state;
+
+  const fullBodyAutoCalibrationSample = buildUprightMovementAutoCalibration({
+    poseLandmarks,
+    faceLandmarks,
+    now,
+  });
+  const upperBodyAutoCalibrationSample =
+    fullBodyAutoCalibrationSample ??
+    buildUpperBodyMovementAutoCalibration({
+      poseLandmarks,
+      faceLandmarks,
+      now,
+    });
+  const autoCalibrationSample = fullBodyAutoCalibrationSample ?? upperBodyAutoCalibrationSample;
+
+  if (!autoCalibrationSample) {
+    const samples = state.samples.slice(-maxRejectedSampleHistory);
+    return {
+      calibration: null,
+      kind: samples.length === 0 ? null : state.kind,
+      samples,
+    };
+  }
+
+  const samples = [...state.samples, autoCalibrationSample].slice(-maxSampleHistory);
+  const kind = fullBodyAutoCalibrationSample ? "full-body" : "upper-body";
+
+  return {
+    calibration: samples.length >= minSamples
+      ? averageMovementCalibrations(samples)
+      : null,
+    kind: samples.length >= minSamples ? kind : state.kind,
+    samples,
+  };
+}
+
 export function averageMovementCalibrations(
   samples: MovementCalibration[],
 ): MovementCalibration | null {
@@ -697,12 +759,14 @@ export function getCalibratedFloorCorrection({
 function getFloorRelativeSquatDepth({
   calibration,
   currentFloorY,
+  currentTorsoScale,
   floorConfidence,
   hips,
   torsoScale,
 }: {
   calibration: MovementCalibration;
   currentFloorY: number;
+  currentTorsoScale: number;
   floorConfidence: number;
   hips: { x: number; y: number; z: number };
   torsoScale: number;
@@ -712,7 +776,12 @@ function getFloorRelativeSquatDepth({
 
   const calibratedHipToFloor = calibration.floorY - calibration.hipCenter.y;
   const currentHipToFloor = currentFloorY - hips.y;
-  return clamp((calibratedHipToFloor - currentHipToFloor) / (torsoScale * 0.8), 0, 1);
+  const floorDistanceDrop = clamp((calibratedHipToFloor - currentHipToFloor) / (torsoScale * 0.8), 0, 1);
+  const calibratedHipToFloorRatio = calibratedHipToFloor / Math.max(torsoScale, 0.001);
+  const currentHipToFloorRatio = currentHipToFloor / Math.max(currentTorsoScale, 0.001);
+  const bodyRatioDrop = clamp((calibratedHipToFloorRatio - currentHipToFloorRatio) / 0.76, 0, 1);
+
+  return Math.min(floorDistanceDrop, bodyRatioDrop);
 }
 
 export function getMovementLowerBodyIntent({
@@ -788,6 +857,10 @@ export function getMovementLowerBodyIntent({
   }
 
   const hips = midpoint(leftHip, rightHip);
+  const shoulders = leftShoulder && rightShoulder ? midpoint(leftShoulder, rightShoulder) : null;
+  const currentTorsoScale = shoulders
+    ? Math.max(distance2D(shoulders, hips), 0.12)
+    : Math.max(calibration.torsoHeight, 0.12);
   const torsoScale = Math.max(calibration.torsoHeight, 0.12);
   const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
   const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
@@ -813,11 +886,11 @@ export function getMovementLowerBodyIntent({
   const rawSquatDepth = getFloorRelativeSquatDepth({
     calibration,
     currentFloorY,
+    currentTorsoScale,
     floorConfidence: footConfidence,
     hips,
     torsoScale,
   });
-  const shoulders = leftShoulder && rightShoulder ? midpoint(leftShoulder, rightShoulder) : null;
   const shoulderDrop = shoulders && calibration.shoulderCenter
     ? shoulders.y - calibration.shoulderCenter.y
     : 0;
@@ -827,8 +900,8 @@ export function getMovementLowerBodyIntent({
     : 0;
   const torsoDropDepth = clamp(shoulderDrop / (torsoScale * 0.55), 0, 1);
   const headDropDepth = clamp(headDrop / (torsoScale * 0.8), 0, 1);
-  const kneeRaiseThreshold = calibration.hipCenter.y + torsoScale * 0.34;
-  const kneeRaiseWindow = torsoScale * 0.72;
+  const kneeRaiseThreshold = hips.y + currentTorsoScale * 0.34;
+  const kneeRaiseWindow = currentTorsoScale * 0.72;
   const leftKneeRaise = visibility(leftKnee) >= 0.3
     ? clamp((kneeRaiseThreshold - leftKnee.y) / kneeRaiseWindow, 0, 1)
     : 0;

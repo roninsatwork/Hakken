@@ -2,28 +2,13 @@ import {
   extractOwner,
   summarizeMovementDebugReplaySession,
   type MovementDebugReplayFrame,
-  type MovementDebugReplayRetarget,
   type MovementDebugReplaySession,
   type MovementDebugReplaySummary,
 } from "./movementDebugReplay";
 import {
-  isMovementAvatarLowerBodyTrackingReady,
-  resolveMovementAvatarLowerBodyDrive,
-} from "./movementAvatarLowerBody";
-import {
-  averageMovementRetargetSourceModels,
-  buildMovementRetargetSourceModel,
-  getRecordedLowerBodySegmentMotionDepth,
-  solveMovementRetargetFrame,
-  type MovementRetargetSourceModel,
-} from "./movementRetargeting";
-import {
-  averageMovementCalibrations,
-  buildMovementCalibration,
-  getMovementBodyConfidence,
-  getMovementLowerBodyIntent,
-  type TrackingLandmark,
-} from "./movementTrackingCalibration";
+  buildMovementGamePathSimulation,
+  type MovementGamePathDecision,
+} from "./movementGamePathSimulation";
 
 export type MovementReplayFailureCode =
   | "avatar_head_spine_diverged"
@@ -32,6 +17,7 @@ export type MovementReplayFailureCode =
   | "feet_neutral_while_leg_motion_present"
   | "false_knee_raise_candidate"
   | "lower_body_owner_flicker"
+  | "replay_game_path_diverged"
   | "retarget_quality_drop"
   | "source_feet_weak"
   | "source_lower_body_out_of_frame"
@@ -47,8 +33,33 @@ export type MovementReplayFailure = {
   severity: "error" | "warning";
 };
 
+export type MovementReplayGamePathFrame = {
+  feetOwner: string;
+  frameIndex: number;
+  hipDrop: number;
+  leftKneeLift: number;
+  lowerBodyTrackingReady: boolean;
+  lowerLabel: string;
+  lowerOwner: string;
+  rightKneeLift: number;
+  shouldDrivePlayerLegRaise: boolean;
+  shouldDrivePlayerSquat: boolean;
+  sourceQuality: number;
+  squatDepth: number;
+  visualRootDrop: number;
+};
+
 export type MovementReplayAnalysis = {
   failures: MovementReplayFailure[];
+  gamePath: {
+    calibrationQuality: number;
+    frames: MovementReplayGamePathFrame[];
+    parity: {
+      divergenceFrameCount: number;
+      firstDivergenceFrame?: number;
+    };
+    retargetSourceQuality: number;
+  };
   metrics: {
     averageOutOfFrameCount: number;
     averageAvatarLowerBodyDirectionError: number;
@@ -68,27 +79,18 @@ export type MovementReplayAnalysis = {
   summary: MovementDebugReplaySummary;
 };
 
-type MovementReplayCurrentDecision = {
-  bodyConfidence: Record<string, number>;
-  feetOwner: string;
-  lowerLabel: string;
-  lowerOwner: string;
-  retarget: MovementDebugReplayRetarget;
-};
+type MovementReplayCurrentDecision = MovementGamePathDecision;
 
 const STRONG_CONFIDENCE = 0.65;
 const AVATAR_LOWER_BODY_DIRECTION_REVIEW_THRESHOLD = 0.52;
 const AVATAR_UPPER_BODY_DIRECTION_REVIEW_THRESHOLD = 0.18;
+const REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD = 0.18;
 const SOURCE_OUT_OF_FRAME_REVIEW_COUNT = 3;
 const VISUAL_MATCH_REVIEW_THRESHOLD = 0.85;
 
 function average(values: number[]) {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function isNonNull<T>(value: T | null | undefined): value is T {
-  return Boolean(value);
 }
 
 function frameConfidence(
@@ -122,6 +124,41 @@ function lowerOwner(frame: MovementDebugReplayFrame) {
 
 function feetOwner(frame: MovementDebugReplayFrame) {
   return extractOwner(frame.fallbacks, "feet");
+}
+
+function isRecordedOnlyOwner(owner: string) {
+  const normalized = owner.toLowerCase();
+  return normalized === "recorded" || normalized.startsWith("recorded ");
+}
+
+function replayLowerMotionMode({
+  label,
+  owner,
+  retarget,
+}: {
+  label: string;
+  owner: string;
+  retarget?: MovementDebugReplayFrame["retarget"];
+}) {
+  const normalized = `${owner} ${label}`.toLowerCase();
+  if (owner === "unknown" || isRecordedOnlyOwner(owner)) return null;
+  if (normalized.includes("squat")) return "squat";
+  if (normalized.includes("leg-raise") || normalized.includes("knee-raise")) return "leg-raise";
+
+  const motion = Math.max(
+    retarget?.squatDepth ?? 0,
+    retarget?.hipDrop ?? 0,
+    retarget?.leftKneeLift ?? 0,
+    retarget?.rightKneeLift ?? 0,
+  );
+  if (motion >= REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD) return "retarget-motion";
+
+  return "not-motion";
+}
+
+function feetOwnerMode(owner: string) {
+  if (owner === "unknown" || isRecordedOnlyOwner(owner)) return null;
+  return owner.includes("neutral") ? "neutral" : "retarget";
 }
 
 function lowerLabel(frame: MovementDebugReplayFrame) {
@@ -229,6 +266,78 @@ function pushFailure(
   failures.push(failure);
 }
 
+function getReplayGamePathDivergenceFailure({
+  currentDecision,
+  frame,
+  frameIndex,
+}: {
+  currentDecision: MovementReplayCurrentDecision | undefined;
+  frame: MovementDebugReplayFrame;
+  frameIndex: number;
+}): MovementReplayFailure | null {
+  if (!currentDecision) return null;
+
+  const replayLowerOwner = lowerOwner(frame);
+  const replayFeetOwner = feetOwner(frame);
+  const replayMode = replayLowerMotionMode({
+    label: lowerLabel(frame),
+    owner: replayLowerOwner,
+    retarget: frame.retarget,
+  });
+  const gameMode = replayLowerMotionMode({
+    label: currentDecision.lowerLabel,
+    owner: currentDecision.lowerOwner,
+    retarget: currentDecision.retarget,
+  });
+  if (!replayMode || !gameMode) return null;
+
+  const replaySquatDepth = frame.retarget?.squatDepth;
+  const gameSquatDepth = currentDecision.retarget.squatDepth ?? 0;
+  const replayHipDrop = frame.retarget?.hipDrop;
+  const gameHipDrop = currentDecision.retarget.hipDrop ?? 0;
+  const hasMotion = replayMode !== "not-motion" ||
+    gameMode !== "not-motion" ||
+    (replaySquatDepth ?? 0) >= REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD ||
+    gameSquatDepth >= REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD ||
+    (replayHipDrop ?? 0) >= REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD ||
+    gameHipDrop >= REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD;
+  if (!hasMotion) return null;
+
+  const reasons: string[] = [];
+  if (replayMode !== gameMode) {
+    reasons.push(`lower replay "${replayLowerOwner}" (${replayMode}) vs game "${currentDecision.lowerOwner}" (${gameMode})`);
+  }
+
+  const replayFeetMode = feetOwnerMode(replayFeetOwner);
+  const gameFeetMode = feetOwnerMode(currentDecision.feetOwner);
+  if (replayFeetMode && gameFeetMode && replayFeetMode !== gameFeetMode) {
+    reasons.push(`feet replay "${replayFeetOwner}" vs game "${currentDecision.feetOwner}"`);
+  }
+
+  if (
+    typeof replaySquatDepth === "number" &&
+    Math.abs(replaySquatDepth - gameSquatDepth) > REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD
+  ) {
+    reasons.push(`squat replay ${replaySquatDepth.toFixed(2)} vs game ${gameSquatDepth.toFixed(2)}`);
+  }
+
+  if (
+    typeof replayHipDrop === "number" &&
+    Math.abs(replayHipDrop - gameHipDrop) > REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD
+  ) {
+    reasons.push(`hip replay ${replayHipDrop.toFixed(2)} vs game ${gameHipDrop.toFixed(2)}`);
+  }
+
+  if (reasons.length === 0) return null;
+
+  return {
+    code: "replay_game_path_diverged",
+    detail: `Frame ${frameIndex} replay output diverges from simulated game path: ${reasons.join("; ")}.`,
+    frameIndex,
+    severity: "warning",
+  };
+}
+
 function isCompressibleSourceWarning(failure: MovementReplayFailure) {
   return failure.severity === "warning" && (
     failure.code === "source_feet_weak" ||
@@ -304,128 +413,27 @@ function compressReplayFailures(failures: MovementReplayFailure[]) {
   });
 }
 
-function toTrackingLandmarks(frame: MovementDebugReplayFrame): TrackingLandmark[] | null {
-  return frame.tracking.pose.length >= 33 ? frame.tracking.pose : null;
-}
+function toGamePathFrames(
+  decisions: Array<MovementReplayCurrentDecision | undefined>,
+): MovementReplayGamePathFrame[] {
+  return decisions.flatMap((decision, frameIndex) => {
+    if (!decision) return [];
 
-function toReplayRetarget(
-  retargetSourceModel: MovementRetargetSourceModel | null,
-  retargetFrame: ReturnType<typeof solveMovementRetargetFrame>,
-): MovementDebugReplayRetarget {
-  return {
-    appliedLowerBody: retargetFrame.debug.solvedSegments.filter((name) => (
-      name === "leftThigh" ||
-      name === "leftShin" ||
-      name === "rightThigh" ||
-      name === "rightShin" ||
-      name === "leftFoot" ||
-      name === "rightFoot"
-    )).length,
-    appliedUpperBody: retargetFrame.debug.solvedSegments.filter((name) => (
-      name === "spine" ||
-      name === "leftUpperArm" ||
-      name === "leftLowerArm" ||
-      name === "rightUpperArm" ||
-      name === "rightLowerArm"
-    )).length,
-    hipDrop: retargetFrame.hipDrop,
-    leftFootContact: retargetFrame.contacts.leftFoot,
-    leftKneeLift: retargetFrame.kneeLift.left,
-    lowerBodySegmentMotion: getRecordedLowerBodySegmentMotionDepth({
-      calibration: retargetSourceModel,
-      frame: retargetFrame,
-    }),
-    rightFootContact: retargetFrame.contacts.rightFoot,
-    rightKneeLift: retargetFrame.kneeLift.right,
-    solvedSegments: retargetFrame.debug.solvedSegments.length,
-    sourceQuality: retargetFrame.debug.sourceQuality,
-    squatDepth: retargetFrame.squatDepth,
-    totalLowerBody: 6,
-    totalUpperBody: 5,
-    totalSegments: 11,
-    visualRootDrop: 0,
-  };
-}
-
-function buildCurrentDecisions(session: MovementDebugReplaySession): Array<MovementReplayCurrentDecision | undefined> {
-  const frameLandmarks = session.samples.map(toTrackingLandmarks);
-  const landmarkFrames = frameLandmarks.filter((landmarks): landmarks is TrackingLandmark[] => Boolean(landmarks));
-  if (landmarkFrames.length === 0) return session.samples.map(() => undefined);
-
-  const calibration = averageMovementCalibrations(
-    landmarkFrames
-      .map((poseLandmarks) => buildMovementCalibration({ poseLandmarks }))
-      .filter(isNonNull),
-  );
-  const retargetSourceModel = averageMovementRetargetSourceModels(
-    landmarkFrames
-      .map((poseLandmarks) => buildMovementRetargetSourceModel({ poseLandmarks }))
-      .filter(isNonNull),
-  );
-
-  return frameLandmarks.map((poseLandmarks) => {
-    if (!poseLandmarks) return undefined;
-
-    const bodyConfidence = getMovementBodyConfidence(poseLandmarks);
-    const lowerBodyIntent = getMovementLowerBodyIntent({
-      calibration,
-      poseLandmarks,
-    });
-    const retargetFrame = solveMovementRetargetFrame({
-      calibration: retargetSourceModel,
-      poseLandmarks,
-    });
-    const lowerBodyTrackingReady = isMovementAvatarLowerBodyTrackingReady({
-      bodyConfidence,
-      isPlayer: true,
-      lowerBodyIntent,
-    });
-    const lowerBodyDrive = resolveMovementAvatarLowerBodyDrive({
-      hasLiveBodyCalibration: Boolean(calibration),
-      isPlayer: true,
-      lowerBodyIntent,
-      lowerBodyTrackingReady,
-      retargetContactsBothFeet: retargetFrame.contacts.leftFoot && retargetFrame.contacts.rightFoot,
-      retargetSquatDepth: retargetFrame.squatDepth,
-    });
-    const solvedLowerSegments = retargetFrame.debug.solvedSegments.filter((name) => (
-      name === "leftThigh" ||
-      name === "leftShin" ||
-      name === "rightThigh" ||
-      name === "rightShin"
-    )).length;
-    const solvedFootSegments = retargetFrame.debug.solvedSegments.filter((name) => (
-      name === "leftFoot" ||
-      name === "rightFoot"
-    )).length;
-    const canUseRetargetLegRaise =
-      lowerBodyDrive.shouldDrivePlayerLegRaise &&
-      retargetFrame.debug.sourceQuality >= 0.65 &&
-      retargetFrame.debug.solvedSegments.length >= 8;
-    const retargetOwnsLowerBody =
-      solvedLowerSegments >= 4 &&
-      retargetFrame.debug.sourceQuality >= 0.45;
-    const lowerOwner = !lowerBodyTrackingReady || !lowerBodyDrive.shouldApplyLowerBody
-      ? "neutral"
-      : lowerBodyDrive.shouldDrivePlayerSquat
-        ? "player-stable-squat"
-        : lowerBodyDrive.shouldDrivePlayerLegRaise && !canUseRetargetLegRaise
-          ? `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`
-          : retargetOwnsLowerBody
-            ? "player-retarget"
-            : "neutral";
-    const feetOwner = lowerBodyDrive.shouldDrivePlayerSquat ||
-      (lowerOwner === "player-retarget" && solvedFootSegments > 0)
-      ? "recorded-retarget"
-      : "neutral";
-
-    return {
-      bodyConfidence,
-      feetOwner,
-      lowerLabel: lowerBodyIntent.label,
-      lowerOwner,
-      retarget: toReplayRetarget(retargetSourceModel, retargetFrame),
-    };
+    return [{
+      feetOwner: decision.feetOwner,
+      frameIndex,
+      hipDrop: decision.retarget.hipDrop ?? 0,
+      leftKneeLift: decision.retarget.leftKneeLift ?? 0,
+      lowerBodyTrackingReady: decision.lowerBodyTrackingReady,
+      lowerLabel: decision.lowerLabel,
+      lowerOwner: decision.lowerOwner,
+      rightKneeLift: decision.retarget.rightKneeLift ?? 0,
+      shouldDrivePlayerLegRaise: decision.lowerBodyDrive.shouldDrivePlayerLegRaise,
+      shouldDrivePlayerSquat: decision.lowerBodyDrive.shouldDrivePlayerSquat,
+      sourceQuality: decision.retarget.sourceQuality ?? 0,
+      squatDepth: decision.retarget.squatDepth ?? 0,
+      visualRootDrop: decision.lowerBodyDrive.visualRootDrop,
+    }];
   });
 }
 
@@ -434,7 +442,8 @@ export function analyzeMovementDebugReplaySession(
 ): MovementReplayAnalysis {
   const failures: MovementReplayFailure[] = [];
   const frames = session.samples;
-  const currentDecisions = buildCurrentDecisions(session);
+  const gamePathSimulation = buildMovementGamePathSimulation(session);
+  const currentDecisions = gamePathSimulation.decisions;
   const outOfFrameCounts = frames.map((frame) => frame.poseBounds?.outOfFrameCount ?? 0);
   const retargetQualities = frames
     .map((frame, index) => currentDecisions[index]?.retarget.sourceQuality ?? frame.retarget?.sourceQuality)
@@ -484,6 +493,15 @@ export function analyzeMovementDebugReplaySession(
     const label = currentDecision?.lowerLabel ?? lowerLabel(frame);
     const avatarDirectionError = avatarLowerBodyDirectionError(frame);
     const avatarUpperBodyError = avatarUpperBodyDirectionError(frame);
+    const replayGamePathDivergence = getReplayGamePathDivergenceFailure({
+      currentDecision,
+      frame,
+      frameIndex: index,
+    });
+
+    if (replayGamePathDivergence) {
+      pushFailure(failures, replayGamePathDivergence);
+    }
 
     if (
       (frame.poseBounds?.outOfFrameCount ?? 0) >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT ||
@@ -624,6 +642,9 @@ export function analyzeMovementDebugReplaySession(
   }
 
   const finalFailures = compressReplayFailures(failures);
+  const replayGamePathDivergences = finalFailures.filter((failure) => (
+    failure.code === "replay_game_path_diverged"
+  ));
   const summary = {
     ...summarizeMovementDebugReplaySession(session, finalFailures.length),
     lowerBodyOwners: unique(lowerOwners),
@@ -631,6 +652,17 @@ export function analyzeMovementDebugReplaySession(
 
   return {
     failures: finalFailures,
+    gamePath: {
+      calibrationQuality: gamePathSimulation.calibration?.quality ?? 0,
+      frames: toGamePathFrames(currentDecisions),
+      parity: {
+        divergenceFrameCount: replayGamePathDivergences.length,
+        firstDivergenceFrame: replayGamePathDivergences.find((failure) => (
+          typeof failure.frameIndex === "number"
+        ))?.frameIndex,
+      },
+      retargetSourceQuality: gamePathSimulation.retargetSourceModel?.quality ?? 0,
+    },
     metrics: {
       averageOutOfFrameCount: average(outOfFrameCounts),
       averageAvatarLowerBodyDirectionError,

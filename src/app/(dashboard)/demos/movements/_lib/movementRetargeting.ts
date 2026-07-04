@@ -202,12 +202,20 @@ function getFloorRelativeHipDrop({
 
   const calibratedHipToFloor = calibration.floorY - calibration.hipCenter.y;
   const currentHipToFloor = getFloorY(poseLandmarks) - centers.hipCenter.y;
-
-  return clamp(
+  const floorDistanceDrop = clamp(
     (calibratedHipToFloor - currentHipToFloor) / (calibration.torsoHeight * 0.8),
     0,
     1,
   );
+  const calibratedHipToFloorRatio = calibratedHipToFloor / Math.max(calibration.torsoHeight, 0.001);
+  const currentHipToFloorRatio = currentHipToFloor / Math.max(centers.torsoHeight, 0.001);
+  const bodyRatioDrop = clamp(
+    (calibratedHipToFloorRatio - currentHipToFloorRatio) / 0.76,
+    0,
+    1,
+  );
+
+  return Math.min(floorDistanceDrop, bodyRatioDrop);
 }
 
 function buildSegments(poseLandmarks: TrackingLandmark[], scale: number) {
@@ -257,6 +265,26 @@ function getRawKneeLift({
   const kneeLiftThreshold = hipCenterY + torsoHeight * 0.34;
   const kneeLiftWindow = torsoHeight * 0.72;
   return clamp((kneeLiftThreshold - knee.y) / kneeLiftWindow, 0, 1);
+}
+
+function getLowerBodySegmentMotionDepth({
+  calibration,
+  segments,
+}: {
+  calibration: MovementRetargetSourceModel;
+  segments: MovementRetargetFrame["segments"];
+}) {
+  return LOWER_BODY_MOTION_SEGMENTS.reduce((maxMotion, name) => {
+    const neutralSegment = calibration.segments[name];
+    const frameSegment = segments[name];
+    if (!neutralSegment || !frameSegment) return maxMotion;
+    if (Math.min(neutralSegment.confidence, frameSegment.confidence) < 0.3) return maxMotion;
+
+    const dot = clamp(vectorDot(neutralSegment.direction, frameSegment.direction), -1, 1);
+    const angle = Math.acos(dot);
+    const motion = clamp((angle - 0.12) / 0.75, 0, 1);
+    return Math.max(maxMotion, motion);
+  }, 0);
 }
 
 export function buildMovementRetargetSourceModel({
@@ -384,28 +412,33 @@ export function solveMovementRetargetFrame({
     : 0;
   const leftKneeLift = clamp(
     getRawKneeLift({
-      hipCenterY: calibration.hipCenter.y,
+      hipCenterY: centers.hipCenter.y,
       knee: poseLandmarks[25],
-      torsoHeight: calibration.torsoHeight,
+      torsoHeight: centers.torsoHeight,
     }) - calibration.neutralKneeLift.left,
     0,
     1,
   );
   const rightKneeLift = clamp(
     getRawKneeLift({
-      hipCenterY: calibration.hipCenter.y,
+      hipCenterY: centers.hipCenter.y,
       knee: poseLandmarks[26],
-      torsoHeight: calibration.torsoHeight,
+      torsoHeight: centers.torsoHeight,
     }) - calibration.neutralKneeLift.right,
     0,
     1,
   );
+  const lowerBodySegmentMotionDepth = getLowerBodySegmentMotionDepth({
+    calibration,
+    segments,
+  });
   const symmetricKneeLift = Math.abs(leftKneeLift - rightKneeLift) < 0.16
     ? Math.min(leftKneeLift, rightKneeLift)
     : 0;
   const kneeBendDepth = clamp((symmetricKneeLift - 0.04) / 0.18, 0, 1);
   const hipSquatDepth = clamp((hipDrop - 0.24) / 0.38, 0, 1);
-  const squatDepth = canTrustSquatMotion && hipSquatDepth > 0.08
+  const hasLowerBodySquatMotion = lowerBodySegmentMotionDepth > 0.08 || kneeBendDepth > 0.08;
+  const squatDepth = canTrustSquatMotion && hipSquatDepth > 0.08 && hasLowerBodySquatMotion
     ? Math.max(hipSquatDepth, kneeBendDepth)
     : 0;
   const isSymmetricSquat = squatDepth > 0.25 && Math.abs(leftKneeLift - rightKneeLift) < 0.2;
@@ -479,15 +512,8 @@ export function getRecordedLowerBodySegmentMotionDepth({
 }) {
   if (!calibration) return 0;
 
-  return LOWER_BODY_MOTION_SEGMENTS.reduce((maxMotion, name) => {
-    const neutralSegment = calibration.segments[name];
-    const frameSegment = frame.segments[name];
-    if (!neutralSegment || !frameSegment) return maxMotion;
-    if (Math.min(neutralSegment.confidence, frameSegment.confidence) < 0.3) return maxMotion;
-
-    const dot = clamp(vectorDot(neutralSegment.direction, frameSegment.direction), -1, 1);
-    const angle = Math.acos(dot);
-    const motion = clamp((angle - 0.12) / 0.75, 0, 1);
-    return Math.max(maxMotion, motion);
-  }, 0);
+  return getLowerBodySegmentMotionDepth({
+    calibration,
+    segments: frame.segments,
+  });
 }

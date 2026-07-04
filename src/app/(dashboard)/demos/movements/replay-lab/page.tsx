@@ -29,12 +29,20 @@ import {
   type MovementReplayFailure,
 } from "../_lib/movementReplayAnalyzer";
 import {
+  resolveMovementAvatarReplayDecision,
+  resolveMovementAvatarStudioDecision,
+  type MovementAvatarPipelineDecision,
+} from "../_lib/movementAvatarPipeline";
+import {
   loadMovementReplayRecording,
   type MovementReplayRecordingSource,
 } from "../_lib/movementRecordingReplay";
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
-import type { MovementTrackingDebugState } from "../_lib/movementTrackingCalibration";
+import {
+  buildMovementCalibration,
+  type MovementTrackingDebugState,
+} from "../_lib/movementTrackingCalibration";
 import type { VrmMotionRef } from "../_lib/vrmRigging";
 import MovementMatchScene from "../[id]/play/_components/MovementMatchScene";
 import MovementSourceSkeleton from "../[id]/play/_components/MovementSourceSkeleton";
@@ -144,6 +152,15 @@ function countFailures(analysis: MovementReplayAnalysis, severity: "error" | "wa
   return analysis.failures.filter((failure) => failure.severity === severity).length;
 }
 
+function classifyLowerOwner(owner?: string) {
+  if (!owner) return "unknown";
+  if (owner.includes("squat")) return "squat";
+  if (owner.includes("leg-raise") || owner.includes("knee-raise")) return "leg-raise";
+  if (owner.includes("retarget")) return "retarget";
+  if (owner.includes("neutral")) return "neutral";
+  return owner;
+}
+
 function getBatchSummary(analyses: MovementReplayAnalysis[]) {
   const visualScores = analyses.map((analysis) => analysis.metrics.visualMatchScore);
   return {
@@ -224,6 +241,54 @@ function getBatchStatusLabel({
   if (summary.errors > 0) return `${summary.errors} code errors in ${summary.failed}/${total} recordings`;
   if (summary.warnings > 0) return `0 code errors · ${Math.round(summary.visualMatchScore * 100)}% visual match · review needed`;
   return `${summary.clean}/${total} recordings clean`;
+}
+
+type ReplayStudioParitySnapshot = {
+  feetOwner: string;
+  leftArmFallback: string;
+  leftArmReady: boolean;
+  lowerBodyTrackingReady: boolean;
+  lowerLabel: string;
+  lowerOwner: string;
+  rightArmFallback: string;
+  rightArmReady: boolean;
+  shouldApplyLowerBody: boolean;
+  shouldDriveLegRaise: boolean;
+  shouldDriveSquat: boolean;
+  spineOwner: string;
+  torsoOwner: string;
+};
+
+function getReplayStudioParitySnapshot(
+  decision: MovementAvatarPipelineDecision,
+): ReplayStudioParitySnapshot {
+  return {
+    feetOwner: decision.feetOwner,
+    leftArmFallback: decision.leftArm.unreadyFallback,
+    leftArmReady: decision.leftArm.isTrackingReady,
+    lowerBodyTrackingReady: decision.lowerBodyTrackingReady,
+    lowerLabel: decision.lowerLabel,
+    lowerOwner: decision.lowerOwner,
+    rightArmFallback: decision.rightArm.unreadyFallback,
+    rightArmReady: decision.rightArm.isTrackingReady,
+    shouldApplyLowerBody: decision.shouldApplyLowerBody,
+    shouldDriveLegRaise: decision.lowerBodyDrive.shouldDrivePlayerLegRaise,
+    shouldDriveSquat: decision.lowerBodyDrive.shouldDrivePlayerSquat,
+    spineOwner: decision.spineDrive.owner,
+    torsoOwner: decision.torsoOwner,
+  };
+}
+
+function getReplayStudioParityDiffs({
+  replay,
+  studio,
+}: {
+  replay: ReplayStudioParitySnapshot;
+  studio: ReplayStudioParitySnapshot;
+}) {
+  return (Object.keys(replay) as Array<keyof ReplayStudioParitySnapshot>)
+    .filter((key) => replay[key] !== studio[key])
+    .map((key) => `${key}: replay ${String(replay[key])} / studio ${String(studio[key])}`);
 }
 
 type LoadedReplayRecording = {
@@ -405,8 +470,28 @@ export default function MovementReplayLabPage() {
     currentBodyConfidence?.leftFoot,
     currentBodyConfidence?.rightFoot,
   ]);
+  const currentGamePathFrame = analysis?.gamePath.frames.find((frame) => frame.frameIndex === safeFrameIndex);
   const liveLowerOwner = currentFallbacks?.lower ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
   const liveFeetOwner = currentFallbacks?.feet ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
+  const replayLowerOwner = liveLowerOwner ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
+  const replayFeetOwner = liveFeetOwner ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
+  const replaySquatDepth = currentRetarget?.squatDepth ?? currentFrame?.retarget?.squatDepth ?? 0;
+  const gamePathLowerMode = classifyLowerOwner(currentGamePathFrame?.lowerOwner);
+  const replayLowerMode = classifyLowerOwner(replayLowerOwner);
+  const gamePathParityNeedsReview = Boolean(
+    currentGamePathFrame &&
+      (
+        (
+          gamePathLowerMode !== "unknown" &&
+          replayLowerMode !== "unknown" &&
+          gamePathLowerMode !== replayLowerMode
+        ) ||
+        Math.abs(currentGamePathFrame.squatDepth - replaySquatDepth) > 0.18
+      ),
+  );
+  const gamePathParityLabel = currentGamePathFrame
+    ? gamePathParityNeedsReview ? "review" : "match"
+    : "--";
   const inspectorCards = [
     {
       label: "Head",
@@ -457,6 +542,34 @@ export default function MovementReplayLabPage() {
       })),
     );
   }, [replaySession]);
+  const replayStudioParity = useMemo(() => {
+    if (currentPoseLandmarks.length < 33) return null;
+
+    const calibration = buildMovementCalibration({ poseLandmarks: currentPoseLandmarks });
+    const source = { poseLandmarks: currentPoseLandmarks };
+    const replayDecision = resolveMovementAvatarReplayDecision({
+      avatarRole: "player",
+      calibration,
+      retargetSourceModel: replayRetargetSourceModel,
+      source,
+    });
+    const studioDecision = resolveMovementAvatarStudioDecision({
+      avatarRole: "player",
+      calibration,
+      retargetSourceModel: replayRetargetSourceModel,
+      source,
+    });
+    const replay = getReplayStudioParitySnapshot(replayDecision);
+    const studio = getReplayStudioParitySnapshot(studioDecision);
+    const diffs = getReplayStudioParityDiffs({ replay, studio });
+
+    return {
+      diffs,
+      label: diffs.length > 0 ? "diverged" : "match",
+      replay,
+      studio,
+    };
+  }, [currentPoseLandmarks, replayRetargetSourceModel]);
   const liveCurrentFrameFailures = useMemo<MovementReplayFailure[]>(() => {
     const failures: MovementReplayFailure[] = [];
     const upperBodyError = currentAvatarVisual?.averageUpperBodyDirectionError;
@@ -580,9 +693,20 @@ export default function MovementReplayLabPage() {
     legConfidence,
     safeFrameIndex,
   ]);
+  const replayStudioParityFailure = useMemo<MovementReplayFailure | null>(() => {
+    if (!replayStudioParity || replayStudioParity.diffs.length === 0) return null;
+
+    return {
+      code: "replay_game_path_diverged",
+      detail: `Replay wrapper diverges from Studio wrapper on frame ${safeFrameIndex}: ${replayStudioParity.diffs.join("; ")}.`,
+      frameIndex: safeFrameIndex,
+      severity: "warning",
+    };
+  }, [replayStudioParity, safeFrameIndex]);
   const currentFrameFailures = [
     ...(analysis?.failures.filter((failure) => failure.frameIndex === safeFrameIndex) ?? []),
     ...liveCurrentFrameFailures,
+    ...(replayStudioParityFailure ? [replayStudioParityFailure] : []),
   ];
   const frameSeverity = useMemo(() => {
     const severityByFrame = new Map<number, "error" | "warning">();
@@ -600,8 +724,14 @@ export default function MovementReplayLabPage() {
         severityByFrame.set(failure.frameIndex, failure.severity);
       }
     });
+    if (replayStudioParityFailure && typeof replayStudioParityFailure.frameIndex === "number") {
+      const currentSeverity = severityByFrame.get(replayStudioParityFailure.frameIndex);
+      if (replayStudioParityFailure.severity === "error" || !currentSeverity) {
+        severityByFrame.set(replayStudioParityFailure.frameIndex, replayStudioParityFailure.severity);
+      }
+    }
     return severityByFrame;
-  }, [analysis, liveCurrentFrameFailures]);
+  }, [analysis, liveCurrentFrameFailures, replayStudioParityFailure]);
 
   useEffect(() => {
     replayMotionRef.current = currentFrame
@@ -1236,6 +1366,100 @@ export default function MovementReplayLabPage() {
                     <dt className="text-muted">Head applied</dt>
                     <dd className="text-right font-mono text-secondary">{formatAnglesCompact(currentAvatarDebug?.headApplied)}</dd>
                   </dl>
+                  <div
+                    className="mt-3 rounded-[8px] border border-border-dim bg-background/35 p-2"
+                    data-testid="movement-replay-game-path"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Game Path</h3>
+                      <span
+                        className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
+                          gamePathParityNeedsReview
+                            ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                            : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                        }`}
+                      >
+                        {gamePathParityLabel}
+                      </span>
+                    </div>
+                    <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <dt className="text-muted">Replay lower / feet</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {replayLowerOwner ?? "--"} · {replayFeetOwner ?? "--"}
+                      </dd>
+                      <dt className="text-muted">Game lower / feet</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame
+                          ? `${currentGamePathFrame.lowerOwner} · ${currentGamePathFrame.feetOwner}`
+                          : "--"}
+                      </dd>
+                      <dt className="text-muted">Game squat / hip</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {formatNumber(currentGamePathFrame?.squatDepth)} / {formatNumber(currentGamePathFrame?.hipDrop)}
+                      </dd>
+                      <dt className="text-muted">Game knees</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {formatNumber(currentGamePathFrame?.leftKneeLift)} / {formatNumber(currentGamePathFrame?.rightKneeLift)}
+                      </dd>
+                      <dt className="text-muted">Game drive</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame
+                          ? `${currentGamePathFrame.shouldDrivePlayerSquat ? "squat" : currentGamePathFrame.shouldDrivePlayerLegRaise ? "leg" : "neutral"} · drop ${formatNumber(currentGamePathFrame.visualRootDrop)}`
+                          : "--"}
+                      </dd>
+                    </dl>
+                    <div
+                      className="mt-3 border-t border-border-dim pt-3"
+                      data-testid="movement-replay-wrapper-parity"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wide text-muted">Wrapper Parity</h4>
+                        <span
+                          className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
+                            replayStudioParity?.label === "diverged"
+                              ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                              : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                          }`}
+                        >
+                          {replayStudioParity?.label ?? "pending"}
+                        </span>
+                      </div>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <dt className="text-muted">Replay decision</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {replayStudioParity
+                            ? `${replayStudioParity.replay.lowerOwner} · ${replayStudioParity.replay.feetOwner} · ${replayStudioParity.replay.spineOwner}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Studio decision</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {replayStudioParity
+                            ? `${replayStudioParity.studio.lowerOwner} · ${replayStudioParity.studio.feetOwner} · ${replayStudioParity.studio.spineOwner}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Parity</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {replayStudioParity
+                            ? replayStudioParity.diffs.length === 0
+                              ? "matching"
+                              : `${replayStudioParity.diffs.length} diff${replayStudioParity.diffs.length === 1 ? "" : "s"}`
+                            : "--"}
+                        </dd>
+                      </dl>
+                      {replayStudioParity && replayStudioParity.diffs.length > 0 ? (
+                        <div className="mt-2 flex flex-col gap-1">
+                          {replayStudioParity.diffs.slice(0, 4).map((diff) => (
+                            <div
+                              key={diff}
+                              className="rounded-[6px] border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 px-2 py-1 font-mono text-[10px] text-[#f6ccbe]"
+                            >
+                              {diff}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                   <details className="mt-3 rounded-[8px] border border-border-dim bg-background/35 p-2 text-xs text-secondary">
                     <summary className="cursor-pointer font-semibold uppercase tracking-wide text-muted">
                       Raw points

@@ -76,6 +76,8 @@ Out of scope for the first slice:
 
 The replay lab should behave like a repeatable optimization loop, not a one-time inspection tool.
 
+Important parity rule: replay-lab success is not enough by itself. Use [Movement Demo Game And Replay Parity Plan](./movement-demo-game-replay-parity-plan.md) as the acceptance gate for any avatar/body fix found through the replay lab. A replay-lab fix should land in shared movement code or pass a game-path simulation before it is considered done.
+
 Loop:
 
 ```text

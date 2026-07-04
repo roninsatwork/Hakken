@@ -32,10 +32,17 @@ import {
   type MovementPlayerMotionPayload,
 } from "../../_hooks/useMovementPlayerTracking";
 import { useMovementTrackingCalibration } from "../../_hooks/useMovementTrackingCalibration";
+import {
+  makeMovementAvatarProofMotionPayload,
+  makeMovementAvatarProofPose,
+  toMovementAvatarProofMode,
+} from "../../_lib/movementAvatarProofFixtures";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
+import { buildMovementRetargetSourceModel } from "../../_lib/movementRetargeting";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import {
+  buildMovementCalibration,
   getMovementTrackingHealthSummary,
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
@@ -190,7 +197,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const isDebugTracking = searchParams.get("debugTracking") === "1";
   const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
   const isDebugAutoBaselineRoute = isDebugTracking && searchParams.get("debugAutoBaseline") === "1";
-  const shouldAutoStartGuidedPreview = isGuidedPreviewRoute && isDebugTracking;
+  const debugPlayerPoseMode = isDebugTracking
+    ? toMovementAvatarProofMode(searchParams.get("debugPlayerPose"))
+    : null;
+  const isDebugPlayerPoseRoute = Boolean(debugPlayerPoseMode);
+  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugPlayerPoseRoute;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
@@ -209,7 +220,26 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retry: retryVision,
     isReady: isVisionReady,
   } = useMediaPipeVision();
+  const isVisionReadyForSession = isVisionReady || isDebugPlayerPoseRoute;
   const instructorTrackingDebugRef = useRef<MovementTrackingDebugState | null>(null);
+  const debugPlayerNeutralPose = React.useMemo(() => makeMovementAvatarProofPose("standing"), []);
+  const debugPlayerMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => {
+    if (!debugPlayerPoseMode) return null;
+
+    return makeMovementAvatarProofMotionPayload(debugPlayerPoseMode);
+  }, [debugPlayerPoseMode]);
+  const debugPlayerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
+  debugPlayerLiveLmRef.current = debugPlayerMotionPayload;
+  const debugPlayerCalibration = React.useMemo(() => (
+    isDebugPlayerPoseRoute
+      ? buildMovementCalibration({ poseLandmarks: debugPlayerNeutralPose })
+      : null
+  ), [debugPlayerNeutralPose, isDebugPlayerPoseRoute]);
+  const debugPlayerRetargetSourceModel = React.useMemo(() => (
+    isDebugPlayerPoseRoute
+      ? buildMovementRetargetSourceModel({ poseLandmarks: debugPlayerNeutralPose })
+      : null
+  ), [debugPlayerNeutralPose, isDebugPlayerPoseRoute]);
   const {
     isLobby,
     playerAvatarUrl,
@@ -225,7 +255,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     markBodyTracked,
     togglePlaying,
     resetMatch,
-  } = useMovementMatchSession({ isVisionReady });
+  } = useMovementMatchSession({ isVisionReady: isVisionReadyForSession });
   const playerLiveLmRef = useMovementPlayerTracking({
     webcamRef,
     poseLandmarker,
@@ -233,6 +263,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     handLandmarker,
     onBodyTracked: markBodyTracked,
   });
+  const effectivePlayerLiveLmRef = isDebugPlayerPoseRoute ? debugPlayerLiveLmRef : playerLiveLmRef;
   const {
     calibration,
     isCalibrated,
@@ -247,10 +278,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetCalibration,
     skipCalibration,
   } = useMovementTrackingCalibration({
-    isVisionReady,
-    playerLiveLmRef,
+    isVisionReady: isVisionReadyForSession,
+    playerLiveLmRef: effectivePlayerLiveLmRef,
   });
-  const isTrackingReady = isCalibrated || isCalibrationSkipped;
+  const effectivePlayerCalibration = debugPlayerCalibration ?? calibration;
+  const effectivePlayerRetargetSourceModel = debugPlayerRetargetSourceModel ?? playerRetargetSourceModel;
+  const isTrackingReady = isDebugPlayerPoseRoute || isCalibrated || isCalibrationSkipped;
   const displayedCalibrationStatus = isCalibrationSkipped
     ? trackingCalibrationStatus
     : isCalibrated
@@ -282,9 +315,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetScoring,
   } = useMovementMatchScoring({
     isPlaying,
-    isScoringEnabled: isCalibrated,
+    isScoringEnabled: isCalibrated || isDebugPlayerPoseRoute,
     setIsPlaying,
-    playerLiveLmRef,
+    playerLiveLmRef: effectivePlayerLiveLmRef,
     advanceInstructorFrame,
     spineGoal,
   });
@@ -308,13 +341,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const startSelectedMatch = React.useCallback(() => {
     startMatch();
 
-    if (!isGuidedPreviewRoute) return;
+    if (!isGuidedPreviewRoute && !isDebugPlayerPoseRoute) return;
 
     skipCalibration();
     resetInstructorPlayback();
     resetScoring();
     setIsPlaying(true);
   }, [
+    isDebugPlayerPoseRoute,
     isGuidedPreviewRoute,
     resetInstructorPlayback,
     resetScoring,
@@ -357,7 +391,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
     const captureSample = () => {
       const debugState = trackingDebugRef.current;
-      const trackingPayload = playerLiveLmRef.current;
+      const trackingPayload = effectivePlayerLiveLmRef.current;
       const now = performance.now();
       if (!debugState && !trackingPayload) return;
       if (debugTrackingChunkStartedAtRef.current === null) {
@@ -440,7 +474,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isDebugAutoBaselineRoute,
     isLobby,
     movementId,
-    playerLiveLmRef,
+    effectivePlayerLiveLmRef,
     saveDebugTrackingSession,
   ]);
 
@@ -503,13 +537,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         ) : null}
 
         <VrmAvatar
-          landmarksRef={playerLiveLmRef}
+          landmarksRef={effectivePlayerLiveLmRef}
           positionOffset={[5, 0, 0]}
           isPlayer={true}
           isPlaying={isPlaying}
-          trackingCalibration={calibration}
+          trackingCalibration={effectivePlayerCalibration}
           trackingDebugRef={trackingDebugRef}
-          retargetSourceModel={playerRetargetSourceModel}
+          retargetSourceModel={effectivePlayerRetargetSourceModel}
           vrmUrl={playerAvatarUrl}
           name={playerAvatarName}
         />
@@ -517,12 +551,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         {isDebugTracking ? (
           <MovementSourceSkeleton
             color="#bfe7d0"
-            landmarksRef={playerLiveLmRef}
+            landmarksRef={effectivePlayerLiveLmRef}
             positionOffset={[5, 0, 0]}
           />
         ) : null}
 
-        <MovementSparkles landmarksRef={playerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
+        <MovementSparkles landmarksRef={effectivePlayerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
       </MovementMatchScene>
 
       <MovementHud
@@ -533,13 +567,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         hudSpine={hudSpine}
         hudSpineCue={hudSpineCue}
         isPlaying={isPlaying}
-        isVisionReady={isVisionReady}
+        isVisionReady={isVisionReadyForSession}
         isTrackingCalibrated={isTrackingReady}
         isPreviewMode={isCalibrationSkipped}
         isCalibrating={isCalibrating}
         visionStatus={visionStatus}
         visionError={visionError}
-        isCameraReady={cameraStatus === "ready"}
+        isCameraReady={isDebugPlayerPoseRoute || cameraStatus === "ready"}
         cameraError={cameraError}
         calibrationStatus={displayedCalibrationStatus}
         webcamRef={webcamRef}
@@ -582,7 +616,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementCalibrationOverlay
         isCalibrated={isTrackingReady}
         isCalibrating={isCalibrating}
-        isVisionReady={isVisionReady}
+        isVisionReady={isVisionReadyForSession}
         calibrationStatus={trackingCalibrationStatus}
         calibrationProgress={calibrationProgress}
         calibrationSampleCount={calibrationSampleCount}
@@ -593,7 +627,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       />
 
       <MovementTrackingDebugOverlay
-        calibration={calibration}
+        calibration={effectivePlayerCalibration}
         debugRef={trackingDebugRef}
         isEnabled={isDebugTracking}
         title="Student Diagnostics"

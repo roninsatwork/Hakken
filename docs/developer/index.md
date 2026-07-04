@@ -68,7 +68,10 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 - [Movement Tracking](./movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./movement-demo-client-recovery-plan.md)
+- [Movement Demo Game And Replay Parity Plan](./movement-demo-game-replay-parity-plan.md)
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
+- [Movement Studio And Replay Unification Plan](./movement-studio-replay-unification-plan.md)
+- [Movement Studio Reward Presentation Fix Plan](./movement-studio-reward-presentation-fix-plan.md)
 
 ## Coverage Status
 

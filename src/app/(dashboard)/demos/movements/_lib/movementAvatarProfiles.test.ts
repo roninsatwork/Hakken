@@ -13,8 +13,8 @@ describe("movementAvatarProfiles", () => {
       minHeadPitch: -0.45,
       maxHeadPitch: 0.85,
       headSlerp: expect.any(Number),
-      lowerArmSlerp: 0.92,
-      legSlerp: 0.64,
+      lowerArmSlerp: 0.56,
+      legSlerp: 0.42,
       floorCorrectionScale: 1.6,
     });
   });
@@ -32,8 +32,8 @@ describe("movementAvatarProfiles", () => {
 
     expect(profile).toMatchObject({
       headPitchOffset: 0.02,
-      footSlerp: 0.52,
-      lowerArmSlerp: 0.9,
+      footSlerp: 0.32,
+      lowerArmSlerp: 0.54,
       neckPitchShare: 0.28,
     });
   });

@@ -5,6 +5,9 @@ import {
   normalizeVrmLandmark,
   prepareVrmHandLandmarks,
   prepareVrmSolverInput,
+  resolveVrmArmTargetLandmarks,
+  resolveVrmHandRigOptions,
+  resolveVrmHandRotationSpecs,
   strengthenVrmHandRotation,
 } from "./vrmRigging";
 import type { VrmPoseLandmark } from "./vrmRigging";
@@ -86,6 +89,43 @@ describe("vrmRigging", () => {
     });
   });
 
+  it("uses image-space solver landmarks for player arm targets", () => {
+    const imageLandmarks = makeLandmarks().map((landmark, index) => normalizeVrmLandmark({
+      ...landmark,
+      x: index === 23 ? 0.4 : index === 24 ? 0.6 : landmark.x,
+      z: 0.05,
+    }));
+    const solverLandmarks = imageLandmarks.map((landmark) => ({
+      ...landmark,
+      x: landmark.x + 10,
+    }));
+
+    const resolved = resolveVrmArmTargetLandmarks({
+      imageLandmarks,
+      isPlayer: true,
+      solverLandmarks,
+    });
+
+    expect(resolved).not.toBe(solverLandmarks);
+    expect(resolved[16]?.x).toBeCloseTo(0);
+  });
+
+  it("keeps prepared solver landmarks for recorded arm targets", () => {
+    const imageLandmarks = makeLandmarks().map((landmark) => normalizeVrmLandmark(landmark));
+    const solverLandmarks = imageLandmarks.map((landmark) => ({
+      ...landmark,
+      x: landmark.x + 10,
+    }));
+
+    const resolved = resolveVrmArmTargetLandmarks({
+      imageLandmarks,
+      isPlayer: false,
+      solverLandmarks,
+    });
+
+    expect(resolved).toBe(solverLandmarks);
+  });
+
   it("uses the tracked hand wrist as a forearm target in image solver space", () => {
     const landmarks = makeLandmarks();
     landmarks[23] = { x: 0.4, y: 0.5, visibility: 0.9 };
@@ -113,6 +153,50 @@ describe("vrmRigging", () => {
     }, { mirrorX: true });
 
     expect(prepared.map((landmark) => landmark.x)).toEqual([0.8, 0.19999999999999996]);
+  });
+
+  it("resolves player and recorded hand rig options outside avatar bone application", () => {
+    expect(resolveVrmHandRigOptions({ isPlayer: true })).toEqual({
+      isPlayer: true,
+      mirrorX: false,
+      slerp: 0.85,
+    });
+    expect(resolveVrmHandRigOptions({ isPlayer: false })).toEqual({
+      isPlayer: false,
+      mirrorX: true,
+      slerp: 0.55,
+    });
+  });
+
+  it("resolves hand rotation specs outside avatar bone application", () => {
+    const specs = resolveVrmHandRotationSpecs("left");
+
+    expect(specs).toHaveLength(16);
+    expect(specs[0]).toEqual({
+      isThumb: false,
+      isWrist: true,
+      rigKey: "LeftWrist",
+      shouldApply: false,
+      vrmName: "leftHand",
+    });
+    expect(specs[1]).toEqual({
+      isThumb: true,
+      isWrist: false,
+      rigKey: "LeftThumbProximal",
+      shouldApply: true,
+      vrmName: "leftThumbProximal",
+    });
+    expect(specs.at(-1)).toEqual({
+      isThumb: false,
+      isWrist: false,
+      rigKey: "LeftLittleDistal",
+      shouldApply: true,
+      vrmName: "leftLittleDistal",
+    });
+    expect(resolveVrmHandRotationSpecs("right")[1]).toMatchObject({
+      rigKey: "RightThumbProximal",
+      vrmName: "rightThumbProximal",
+    });
   });
 
   it("strengthens finger rotations while leaving wrist rotations unchanged for callers that keep wrist solving", () => {

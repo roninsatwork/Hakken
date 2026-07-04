@@ -1,24 +1,21 @@
 import { inflateSync } from "node:zlib";
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "./helpers/navigation";
+import {
+  makeMovementAvatarProofPose,
+  type MovementAvatarProofMode,
+} from "../src/app/(dashboard)/demos/movements/_lib/movementAvatarProofFixtures";
+import type {
+  MovementDebugReplayFrame,
+  MovementDebugReplaySession,
+} from "../src/app/(dashboard)/demos/movements/_lib/movementDebugReplay";
+import { buildMovementGamePathSimulation } from "../src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation";
+import type { TrackingLandmark } from "../src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration";
 
 process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY ??= "1";
 
-type AvatarProofMode =
-  | "far-left-leg-raise"
-  | "far-right-leg-raise"
-  | "far-squat"
-  | "hands-front"
-  | "left-leg-raise"
-  | "right-leg-raise"
-  | "side-bend"
-  | "squat"
-  | "standing"
-  | "upper-body-auto"
-  | "upper-body-auto-rejected";
-
 type AvatarProofCase = {
-  mode: AvatarProofMode;
+  mode: MovementAvatarProofMode;
   label: string;
   baselinePattern: RegExp;
   ownerPattern: RegExp;
@@ -55,7 +52,7 @@ const proofCases: AvatarProofCase[] = [
     mode: "standing",
     label: "Standing",
     baselinePattern: /Baseline: manual-calibration/i,
-    ownerPattern: /lower player-retarget/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
@@ -115,6 +112,20 @@ const proofCases: AvatarProofCase[] = [
     spinePattern: /Spine: player-spine-model/i,
   },
   {
+    mode: "weak-feet-standing",
+    label: "Weak feet standing",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "lower-body-out-of-frame",
+    label: "Lower body out of frame",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower neutral; feet neutral/i,
+    spinePattern: /Spine: player-upper-body-neutral/i,
+  },
+  {
     mode: "upper-body-auto",
     label: "Upper-body auto baseline",
     baselinePattern: /Baseline: upper-body-auto-baseline/i,
@@ -128,6 +139,18 @@ const proofCases: AvatarProofCase[] = [
     ownerPattern: /torso neutral/i,
     spinePattern: /Spine: player-spine-held/i,
   },
+];
+
+const gamePathProofModes: MovementAvatarProofMode[] = [
+  "standing",
+  "squat",
+  "far-squat",
+  "left-leg-raise",
+  "far-left-leg-raise",
+  "right-leg-raise",
+  "far-right-leg-raise",
+  "weak-feet-standing",
+  "lower-body-out-of-frame",
 ];
 
 function paethPredictor(left: number, above: number, upperLeft: number) {
@@ -309,7 +332,7 @@ function countPlayerRegionPixelDifference(before: DecodedPng, after: DecodedPng)
   return changedPixels;
 }
 
-function expectVisiblePlayerAvatar(metrics: AvatarVisualMetrics, mode: AvatarProofMode) {
+function expectVisiblePlayerAvatar(metrics: AvatarVisualMetrics, mode: MovementAvatarProofMode) {
   expect(
     metrics.visiblePixels,
     `${mode} should render visible player-avatar pixels in the right-side proof region`,
@@ -319,7 +342,7 @@ function expectVisiblePlayerAvatar(metrics: AvatarVisualMetrics, mode: AvatarPro
 async function captureProofScreenshot(
   page: Page,
   testInfo: TestInfo,
-  mode: AvatarProofMode,
+  mode: MovementAvatarProofMode,
 ): Promise<AvatarProofCapture> {
   const screenshot = await page.screenshot({ fullPage: false });
   const png = decodePng(screenshot);
@@ -369,13 +392,67 @@ async function openAvatarProofMode(page: Page, proofCase: AvatarProofCase) {
   });
 }
 
-function proofCaseFor(mode: AvatarProofMode) {
+function proofCaseFor(mode: MovementAvatarProofMode) {
   const proofCase = proofCases.find((candidate) => candidate.mode === mode);
   expect(proofCase, `Expected proof case for ${mode}`).toBeDefined();
   return proofCase!;
 }
 
+function proofFrame(mode: MovementAvatarProofMode, capturedAt: number): MovementDebugReplayFrame {
+  const pose = makeMovementAvatarProofPose(mode) as TrackingLandmark[];
+
+  return {
+    bodyConfidence: {},
+    capturedAt,
+    fallbacks: {},
+    tracking: {
+      pose,
+      worldPose: pose,
+    },
+  };
+}
+
+function proofGamePathSession(mode: MovementAvatarProofMode): MovementDebugReplaySession {
+  return {
+    baselineSummary: "manual-calibration:1",
+    durationMs: 1000,
+    endedAt: 2000,
+    id: `proof-${mode}`,
+    movementId: "synthetic-proof",
+    sampleCount: 2,
+    samples: [
+      proofFrame("standing", 1000),
+      proofFrame(mode, 2000),
+    ],
+    startedAt: 1000,
+    trigger: "synthetic-proof",
+    warningSummary: "none",
+  };
+}
+
+function expectedGamePathOwners(mode: MovementAvatarProofMode) {
+  const simulation = buildMovementGamePathSimulation(proofGamePathSession(mode));
+  const decision = simulation.decisions[1];
+  expect(decision, `Expected game-path decision for ${mode}`).toBeDefined();
+
+  return {
+    feetOwner: decision!.feetOwner,
+    lowerOwner: decision!.lowerOwner,
+  };
+}
+
 test.describe("Movement Avatar Proof Eval", () => {
+  test("synthetic player proof owners match the game-path simulation harness", async ({ page }) => {
+    for (const mode of gamePathProofModes) {
+      const expectedOwners = expectedGamePathOwners(mode);
+      await openAvatarProofMode(page, proofCaseFor(mode));
+
+      const ownerText = page.getByTestId("proof-debug-owners");
+      await expect(ownerText).toContainText(`lower ${expectedOwners.lowerOwner}`);
+      await expect(ownerText).toContainText(`feet ${expectedOwners.feetOwner}`);
+    }
+  });
+
   for (const proofCase of proofCases) {
     test(`synthetic webcam skeleton drives ${proofCase.label.toLowerCase()} avatar state`, async ({
       page,

@@ -13,8 +13,10 @@ import {
   getMovementTrackingHealthWarnings,
   getMovementTrackingHealthSummary,
   getNeutralMovementHeadAngles,
+  resolveMovementAutoCalibrationState,
   selectMovementKneeTarget,
   selectMovementTrackingEndpoint,
+  type MovementAutoCalibrationState,
   type TrackingLandmark,
 } from "./movementTrackingCalibration";
 
@@ -48,6 +50,19 @@ function shiftLowerBodyVertically(pose: TrackingLandmark[], amount: number) {
   [23, 24, 25, 26, 27, 28, 31, 32].forEach((index) => {
     pose[index] = { ...pose[index]!, y: pose[index]!.y + amount };
   });
+}
+
+function scalePoseInFrame(
+  pose: TrackingLandmark[],
+  scale: number,
+  origin = { x: 0.5, y: 0.28, z: 0 },
+) {
+  return pose.map((landmark) => ({
+    ...landmark,
+    x: origin.x + (landmark.x - origin.x) * scale,
+    y: origin.y + (landmark.y - origin.y) * scale,
+    z: origin.z + ((landmark.z ?? 0) - origin.z) * scale,
+  }));
 }
 
 describe("movementTrackingCalibration", () => {
@@ -183,6 +198,80 @@ describe("movementTrackingCalibration", () => {
     expect(applied.pitch).toBeCloseTo(0);
     expect(applied.yaw).toBeCloseTo(0);
     expect(applied.roll).toBeCloseTo(0);
+  });
+
+  it("accumulates automatic full-body calibration samples into a shared state", () => {
+    let state: MovementAutoCalibrationState = {
+      calibration: null,
+      kind: null,
+      samples: [],
+    };
+
+    for (let index = 0; index < 6; index += 1) {
+      state = resolveMovementAutoCalibrationState({
+        poseLandmarks: withCorePose(),
+        now: 1000 + index,
+        state,
+      });
+    }
+
+    expect(state.samples).toHaveLength(6);
+    expect(state.kind).toBe("full-body");
+    expect(state.calibration?.calibratedAt).toBe(1005);
+    expect(state.calibration?.floorY).toBeCloseTo(0.97);
+  });
+
+  it("falls back to upper-body automatic calibration when lower body is weak", () => {
+    const pose = withCorePose();
+    [25, 26, 27, 28, 29, 30, 31, 32].forEach((index) => {
+      pose[index] = { ...pose[index]!, visibility: 0.1 };
+    });
+    let state: MovementAutoCalibrationState = {
+      calibration: null,
+      kind: null,
+      samples: [],
+    };
+
+    for (let index = 0; index < 6; index += 1) {
+      state = resolveMovementAutoCalibrationState({
+        poseLandmarks: pose,
+        now: 2000 + index,
+        state,
+      });
+    }
+
+    expect(state.kind).toBe("upper-body");
+    expect(state.calibration?.calibratedAt).toBe(2005);
+    expect(state.calibration?.floorY).toBeGreaterThan(state.calibration?.hipCenter.y ?? 0);
+  });
+
+  it("keeps only a short automatic calibration sample history after rejected frames", () => {
+    let state: MovementAutoCalibrationState = {
+      calibration: null,
+      kind: null,
+      samples: [],
+    };
+
+    for (let index = 0; index < 5; index += 1) {
+      state = resolveMovementAutoCalibrationState({
+        poseLandmarks: withCorePose(),
+        now: 3000 + index,
+        state,
+      });
+    }
+
+    const activePose = withCorePose().map((landmark) => ({
+      ...landmark,
+      visibility: 0.1,
+    }));
+    state = resolveMovementAutoCalibrationState({
+      poseLandmarks: activePose,
+      now: 4000,
+      state,
+    });
+
+    expect(state.calibration).toBeNull();
+    expect(state.samples).toHaveLength(3);
   });
 
   it("builds a neutral camera-facing head pose from avatar profile offsets", () => {
@@ -356,6 +445,44 @@ describe("movementTrackingCalibration", () => {
     expect(intent.label).toBe("neutral");
     expect(intent.squatDepth).toBe(0);
     expect(intent.squatSignals.hipDrop).toBe(0);
+  });
+
+  it("keeps calibrated standing neutral when the user steps farther back in camera frame", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const farStandingPose = scalePoseInFrame(neutralPose, 0.68);
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: farStandingPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("neutral");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.leftKneeRaise).toBe(0);
+    expect(intent.rightKneeRaise).toBe(0);
+    expect(intent.squatSignals.hipDrop).toBe(0);
+  });
+
+  it("still reads a calibrated squat when the user is farther back in camera frame", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, y: 0.78 };
+    squatPose[24] = { ...squatPose[24]!, y: 0.78 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.9 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.9 };
+    const farSquatPose = scalePoseInFrame(squatPose, 0.68);
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: farSquatPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("squat");
+    expect(intent.squatDepth).toBeGreaterThan(0.5);
+    expect(intent.leftKneeRaise).toBe(0);
+    expect(intent.rightKneeRaise).toBe(0);
   });
 
   it("does not turn raised knees without body drop into a squat", () => {

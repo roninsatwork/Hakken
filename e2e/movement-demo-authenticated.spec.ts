@@ -68,6 +68,28 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByText("Coach Diagnostics")).toBeVisible();
   });
 
+  test("debug player poses drive the actual play route with replay-aligned owners", async ({ page }) => {
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=far-squat`,
+    );
+    await skipWhenRedirectedToLogin(page, "Movement play debug pose proof requires the super-admin storage state.");
+
+    await expect(page.getByText("Student Diagnostics")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/lower player-stable-squat/i)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/feet recorded-retarget/i)).toBeVisible();
+    await expect(page.getByText(/player-left-leg-raise/i)).toHaveCount(0);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=far-left-leg-raise`,
+    );
+
+    await expect(page.getByText("Student Diagnostics")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/lower player-left-leg-raise/i)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/player-stable-squat/i)).toHaveCount(0);
+  });
+
   test("replay lab renders deterministic debug sessions and capture targets", async ({ page }) => {
     await gotoWithoutServerCrash(page, "/demos/movements/replay-lab");
     await skipWhenRedirectedToLogin(page, "Movement replay lab smoke requires the super-admin storage state.");
@@ -80,6 +102,8 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByTestId("movement-replay-frame")).toHaveCount(0);
     await page.getByTestId("movement-replay-session").first().click();
     await expect(page.getByTestId("movement-replay-frame")).toHaveCount(4);
+    await expect(page.getByTestId("movement-replay-game-path")).toBeVisible();
+    await expect(page.getByTestId("movement-replay-game-path")).toContainText("Game lower / feet");
     await page.getByRole("checkbox", { name: /Select recording/ }).first().check();
     await page.getByRole("button", { name: "Run Selected Recordings" }).click();
     await expect(page.getByTestId("movement-replay-run-status")).toContainText(/Run 1 complete/);
