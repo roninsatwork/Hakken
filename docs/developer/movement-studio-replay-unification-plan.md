@@ -371,6 +371,7 @@ Phase 6 progress update, 2026-07-04:
 
 Studio and Replay are aligned only when all of these are true:
 
+- Replay Studio/shared replay analysis remains the source of truth for motion. If the avatar is broken, repair the shared replay pipeline first and then route Game Studio through the same result; do not create a separate Game Studio fix path.
 - The same source frame produces the same movement decision for Replay and Studio.
 - Arms, hands, torso, lower body, and fallback ownership are decided by shared code.
 - Live-only behavior is limited to point smoothing or input normalization before the shared pipeline.
@@ -385,6 +386,8 @@ Studio and Replay are aligned only when all of these are true:
 - Do not claim a fix is complete because Studio looks correct for one live pose.
 - Do not duplicate Replay code inside Studio.
 - Do not add a second "almost replay" path for Studio.
+- Do not tune Game Studio bone numbers independently from Replay/shared motion proof.
+- Do not use live webcam repetition as the debugging loop when a matching recording exists; use the recording first, then live QA only as confirmation.
 - Do not treat confidence fallback as a live-only problem after source points enter the shared pipeline.
 
 ## Immediate Next Step

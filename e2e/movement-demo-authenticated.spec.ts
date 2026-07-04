@@ -79,6 +79,7 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByText(/lower player-stable-squat/i)).toBeVisible({ timeout: 30000 });
     await expect(page.getByText(/feet recorded-retarget/i)).toBeVisible();
     await expect(page.getByText(/player-left-leg-raise/i)).toHaveCount(0);
+    await expect(page.getByText(/player-right-leg-raise/i)).toHaveCount(0);
 
     await gotoWithoutServerCrash(
       page,
@@ -86,7 +87,7 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     );
 
     await expect(page.getByText("Student Diagnostics")).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/lower player-left-leg-raise/i)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/lower player-right-leg-raise/i)).toBeVisible({ timeout: 30000 });
     await expect(page.getByText(/player-stable-squat/i)).toHaveCount(0);
   });
 

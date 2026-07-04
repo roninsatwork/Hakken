@@ -40,9 +40,15 @@ import {
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {
+  averageMovementCalibrations,
   buildMovementCalibration,
   type MovementTrackingDebugState,
 } from "../_lib/movementTrackingCalibration";
+import { buildMovementSourceFrame } from "../_lib/movementSourceFrame";
+import {
+  resolveMovementMotionFrame,
+  type MovementMotionFrame,
+} from "../_lib/movementMotionFrame";
 import type { VrmMotionRef } from "../_lib/vrmRigging";
 import MovementMatchScene from "../[id]/play/_components/MovementMatchScene";
 import MovementSourceSkeleton from "../[id]/play/_components/MovementSourceSkeleton";
@@ -81,10 +87,85 @@ function formatPoint(value?: { x: number; y: number; z?: number; visibility?: nu
   return `x ${value.x.toFixed(2)} y ${value.y.toFixed(2)} z ${z} v ${visibility}`;
 }
 
+function buildPathStripPoints(
+  frames: MovementReplayAnalysis["rootMotion"]["frames"],
+) {
+  type PathStripPoint = {
+    frameIndex: number;
+    px: number;
+    py: number;
+    x: number;
+    z: number;
+  };
+  const points = frames
+    .filter((frame) => frame.rootPositionConfidence > 0)
+    .map((frame) => ({
+      frameIndex: frame.frameIndex,
+      x: frame.rootPosition.x,
+      z: frame.rootPosition.z,
+    }));
+  if (points.length === 0) {
+    return {
+      points: [] as PathStripPoint[],
+      polyline: "",
+    };
+  }
+
+  const xs = points.map((point) => point.x);
+  const zs = points.map((point) => point.z);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
+  const width = Math.max(maxX - minX, 0.01);
+  const depth = Math.max(maxZ - minZ, 0.01);
+  const padding = 10;
+  const plotWidth = 100 - padding * 2;
+  const plotHeight = 54 - padding * 2;
+  const plotted: PathStripPoint[] = points.map((point) => ({
+    ...point,
+    px: padding + ((point.x - minX) / width) * plotWidth,
+    py: padding + ((point.z - minZ) / depth) * plotHeight,
+  }));
+
+  return {
+    points: plotted,
+    polyline: plotted.map((point) => `${point.px.toFixed(1)},${point.py.toFixed(1)}`).join(" "),
+  };
+}
+
 function minNumber(values: Array<number | undefined>) {
   const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   if (valid.length === 0) return undefined;
   return Math.min(...valid);
+}
+
+function replayCalibrationNeutralScore(frame: MovementDebugReplayFrame) {
+  const landmarks = frame.tracking.pose;
+  const leftShoulder = landmarks[11];
+  const rightShoulder = landmarks[12];
+  const leftHip = landmarks[23];
+  const rightHip = landmarks[24];
+  const leftKnee = landmarks[25];
+  const rightKnee = landmarks[26];
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip || !leftKnee || !rightKnee) return Infinity;
+
+  const shoulderCenter = {
+    x: (leftShoulder.x + rightShoulder.x) / 2,
+    y: (leftShoulder.y + rightShoulder.y) / 2,
+  };
+  const hipCenter = {
+    x: (leftHip.x + rightHip.x) / 2,
+    y: (leftHip.y + rightHip.y) / 2,
+  };
+  const torsoHeight = Math.max(Math.hypot(shoulderCenter.x - hipCenter.x, shoulderCenter.y - hipCenter.y), 0.12);
+  const kneeLift = (
+    Math.max(0, hipCenter.y + torsoHeight * 0.34 - leftKnee.y) +
+    Math.max(0, hipCenter.y + torsoHeight * 0.34 - rightKnee.y)
+  ) / torsoHeight;
+  const sideBend = Math.abs(shoulderCenter.x - hipCenter.x);
+
+  return kneeLift + sideBend * 2.4;
 }
 
 const LIVE_UPPER_BODY_REVIEW_THRESHOLD = 0.18;
@@ -317,6 +398,7 @@ export default function MovementReplayLabPage() {
   const replaySceneRef = useRef<HTMLElement | null>(null);
   const replayAvatarDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const replayMotionRef = useRef<VrmMotionRef>(null);
+  const replayMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<Id<"movements"> | null>(null);
   const [selectedRecordingIds, setSelectedRecordingIds] = useState<Array<Id<"movements">>>([]);
   const [hasRunBatch, setHasRunBatch] = useState(false);
@@ -453,6 +535,7 @@ export default function MovementReplayLabPage() {
   const currentRetarget = currentAvatarDebug?.retarget;
   const currentFallbacks = currentAvatarDebug?.fallbacks;
   const currentSpineDrive = currentAvatarDebug?.spineDrive;
+  const currentLegRaise = currentAvatarDebug?.avatarLegRaise;
   const armConfidence = minNumber([
     currentBodyConfidence?.leftShoulder,
     currentBodyConfidence?.rightShoulder,
@@ -471,6 +554,27 @@ export default function MovementReplayLabPage() {
     currentBodyConfidence?.rightFoot,
   ]);
   const currentGamePathFrame = analysis?.gamePath.frames.find((frame) => frame.frameIndex === safeFrameIndex);
+  const currentSourceFrame = analysis?.gamePath.sourceFrames.find((frame) => frame.frameIndex === safeFrameIndex);
+  const currentRootMotionFrame = analysis?.rootMotion.frames.find((frame) => frame.frameIndex === safeFrameIndex);
+  const rootPathStrip = useMemo(
+    () => buildPathStripPoints(analysis?.rootMotion.frames ?? []),
+    [analysis?.rootMotion.frames],
+  );
+  const currentRootPathPoint = rootPathStrip.points.find((point) => point.frameIndex === safeFrameIndex);
+  const currentRootPathDistance = currentRootMotionFrame
+    ? Math.hypot(currentRootMotionFrame.rootPosition.x, currentRootMotionFrame.rootPosition.z)
+    : undefined;
+  const rootMotionNeedsReview = Boolean(
+    currentRootMotionFrame &&
+      (
+        currentRootMotionFrame.debug.source !== "world-landmarks" ||
+        Math.abs(currentRootMotionFrame.headingYaw) > 0.65 ||
+        (currentRootPathDistance ?? 0) > 0.16
+      ),
+  );
+  const rootMotionLabel = currentRootMotionFrame
+    ? rootMotionNeedsReview ? "review" : "stable"
+    : "--";
   const liveLowerOwner = currentFallbacks?.lower ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
   const liveFeetOwner = currentFallbacks?.feet ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
   const replayLowerOwner = liveLowerOwner ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
@@ -515,7 +619,9 @@ export default function MovementReplayLabPage() {
       label: "Legs",
       primary: liveLowerOwner ?? "--",
       secondary: `conf ${formatNumber(legConfidence)}`,
-      detail: `knee ${formatNumber(currentRetarget?.leftKneeLift ?? currentFrame?.retarget?.leftKneeLift)} / ${formatNumber(currentRetarget?.rightKneeLift ?? currentFrame?.retarget?.rightKneeLift)}`,
+      detail: currentLegRaise
+        ? `raw ${formatNumber(currentLegRaise.rawLeftDepth)} / ${formatNumber(currentLegRaise.rawRightDepth)} · applied ${formatNumber(currentLegRaise.appliedDepth)} · ${currentLegRaise.side ?? "--"}${currentLegRaise.holdActive ? " held" : ""}`
+        : `knee ${formatNumber(currentRetarget?.leftKneeLift ?? currentFrame?.retarget?.leftKneeLift)} / ${formatNumber(currentRetarget?.rightKneeLift ?? currentFrame?.retarget?.rightKneeLift)}`,
     },
     {
       label: "Feet",
@@ -542,10 +648,52 @@ export default function MovementReplayLabPage() {
       })),
     );
   }, [replaySession]);
+  const replayPlayerCalibration = useMemo(() => {
+    if (!replaySession) return null;
+
+    const calibrationSamples = replaySession.samples
+      .map((sample, index) => ({
+        calibration: buildMovementCalibration({
+          now: index,
+          poseLandmarks: sample.tracking.pose,
+        }),
+        score: replayCalibrationNeutralScore(sample),
+      }))
+      .filter((sample): sample is {
+        calibration: NonNullable<ReturnType<typeof buildMovementCalibration>>;
+        score: number;
+      } => Boolean(sample.calibration) && Number.isFinite(sample.score))
+      .sort((left, right) => (
+        left.score - right.score ||
+        right.calibration.quality - left.calibration.quality
+      ))
+      .slice(0, 8)
+      .map((sample) => sample.calibration);
+
+    return averageMovementCalibrations(calibrationSamples);
+  }, [replaySession]);
+  const currentReplayMotionFrame = useMemo(() => {
+    if (!currentFrame || currentPoseLandmarks.length < 33) return null;
+
+    return resolveMovementMotionFrame({
+      avatarRole: "player",
+      calibration: replayPlayerCalibration ?? buildMovementCalibration({ poseLandmarks: currentPoseLandmarks }),
+      displayPoseLandmarks: currentPoseLandmarks,
+      displayWorldPoseLandmarks: currentFrame.tracking.worldPose,
+      mirrorMode: "facing-player",
+      retargetSourceModel: replayRetargetSourceModel,
+      sourceFrame: buildMovementSourceFrame({
+        poseLandmarks: currentPoseLandmarks,
+        sourceOrigin: "recorded-replay",
+        sourceStatus: "decoded",
+        worldPoseLandmarks: currentFrame.tracking.worldPose,
+      }),
+    });
+  }, [currentFrame, currentPoseLandmarks, replayPlayerCalibration, replayRetargetSourceModel]);
   const replayStudioParity = useMemo(() => {
     if (currentPoseLandmarks.length < 33) return null;
 
-    const calibration = buildMovementCalibration({ poseLandmarks: currentPoseLandmarks });
+    const calibration = replayPlayerCalibration ?? buildMovementCalibration({ poseLandmarks: currentPoseLandmarks });
     const source = { poseLandmarks: currentPoseLandmarks };
     const replayDecision = resolveMovementAvatarReplayDecision({
       avatarRole: "player",
@@ -569,7 +717,7 @@ export default function MovementReplayLabPage() {
       replay,
       studio,
     };
-  }, [currentPoseLandmarks, replayRetargetSourceModel]);
+  }, [currentPoseLandmarks, replayPlayerCalibration, replayRetargetSourceModel]);
   const liveCurrentFrameFailures = useMemo<MovementReplayFailure[]>(() => {
     const failures: MovementReplayFailure[] = [];
     const upperBodyError = currentAvatarVisual?.averageUpperBodyDirectionError;
@@ -662,6 +810,35 @@ export default function MovementReplayLabPage() {
     }
 
     if (
+      currentAvatarDebug?.headRaw.source === "pose" &&
+      currentAvatarDebug.headRaw.confidence >= 0.75 &&
+      Math.abs(currentAvatarDebug.headRaw.yaw) >= 0.65 &&
+      Math.abs(currentAvatarDebug.headApplied.yaw) < 0.08
+    ) {
+      failures.push({
+        code: "avatar_head_spine_diverged",
+        detail: `Recorded pose head yaw is strong (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)}) but avatar applied yaw is nearly neutral (${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
+      currentAvatarDebug?.headRaw.source === "pose" &&
+      currentAvatarDebug.headRaw.confidence >= 0.75 &&
+      Math.abs(currentAvatarDebug.headRaw.yaw) >= 0.35 &&
+      Math.sign(currentAvatarDebug.headRaw.yaw) !== Math.sign(currentAvatarDebug.headApplied.yaw) &&
+      Math.abs(currentAvatarDebug.headApplied.yaw) >= 0.08
+    ) {
+      failures.push({
+        code: "avatar_head_spine_diverged",
+        detail: `Recorded pose head yaw and avatar applied yaw point in opposite directions (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)} vs ${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
+        frameIndex: safeFrameIndex,
+        severity: "warning",
+      });
+    }
+
+    if (
       lowerBodySegments >= 4 &&
       typeof lowerBodyError === "number" &&
       lowerBodyError > LIVE_LOWER_BODY_REVIEW_THRESHOLD
@@ -732,6 +909,10 @@ export default function MovementReplayLabPage() {
     }
     return severityByFrame;
   }, [analysis, liveCurrentFrameFailures, replayStudioParityFailure]);
+
+  useEffect(() => {
+    replayMotionFrameRef.current = currentReplayMotionFrame;
+  }, [currentReplayMotionFrame]);
 
   useEffect(() => {
     replayMotionRef.current = currentFrame
@@ -930,13 +1111,126 @@ export default function MovementReplayLabPage() {
     }
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    (window as Window & {
+      __movementReplayLabDebug?: unknown;
+    }).__movementReplayLabDebug = {
+      avatarVisual: currentAvatarVisual ?? null,
+      debug: currentAvatarDebug,
+      frameIndex: safeFrameIndex,
+      parity: replayStudioParity,
+      retarget: currentRetarget ?? null,
+    };
+  }, [currentAvatarDebug, currentAvatarVisual, currentRetarget, replayStudioParity, safeFrameIndex]);
+
   return (
     <>
       <Header />
       <div
         className="flex min-h-[calc(100dvh-92px)] flex-col gap-2"
         data-active-session-id={activeRecordingId ?? ""}
+        data-avatar-lower-error={currentAvatarVisual?.averageLowerBodyDirectionError ?? ""}
+        data-avatar-root-applied-x={currentAvatarDebug?.avatarRoot?.appliedX ?? ""}
+        data-avatar-root-applied-yaw={currentAvatarDebug?.avatarRoot?.appliedYaw ?? ""}
+        data-avatar-root-applied-z={currentAvatarDebug?.avatarRoot?.appliedZ ?? ""}
+        data-avatar-root-source={currentAvatarDebug?.avatarRoot?.source ?? ""}
+        data-avatar-root-target-x={currentAvatarDebug?.avatarRoot?.targetX ?? ""}
+        data-avatar-root-target-yaw={currentAvatarDebug?.avatarRoot?.targetYaw ?? ""}
+        data-avatar-root-target-z={currentAvatarDebug?.avatarRoot?.targetZ ?? ""}
+        data-avatar-upper-error={currentAvatarVisual?.averageUpperBodyDirectionError ?? ""}
+        data-coverage-blocked-count={analysis?.coverage.summary.blockedFamilies.length ?? ""}
+        data-coverage-blocked-families={analysis?.coverage.summary.blockedFamilies.join(",") ?? ""}
+        data-coverage-demo-ready-count={analysis?.coverage.summary.demoReadyCount ?? ""}
+        data-coverage-demo-ready-percent={analysis?.coverage.summary.demoReadyPercent ?? ""}
+        data-coverage-explicit-count={analysis?.coverage.summary.explicitStatusCount ?? ""}
+        data-coverage-family-count={analysis?.coverage.summary.familyCount ?? ""}
+        data-coverage-implemented-count={analysis?.coverage.summary.implementedCount ?? ""}
+        data-coverage-implemented-percent={analysis?.coverage.summary.implementedPercent ?? ""}
+        data-coverage-missing-proof-count={analysis?.coverage.summary.missingProofCount ?? ""}
+        data-coverage-missing-proof-families={analysis?.coverage.summary.missingProofFamilies.join(",") ?? ""}
+        data-coverage-phase-complete={analysis?.coverage.summary.phaseComplete ?? ""}
+        data-coverage-remaining-gap-count={analysis?.coverage.summary.remainingGapCount ?? ""}
+        data-coverage-unsupported-count={analysis?.coverage.summary.unsupportedCount ?? ""}
+        data-coverage-unsupported-families={analysis?.coverage.summary.unsupportedFamilies.join(",") ?? ""}
+        data-exercise-pose-average-quality-score={analysis?.metrics.averageExercisePoseQualityScore ?? ""}
+        data-exercise-pose-diagnostic-frame-count={analysis?.metrics.exercisePoseDiagnosticFrameCount ?? ""}
+        data-exercise-pose-moderate-frame-count={analysis?.metrics.exercisePoseModerateFrameCount ?? ""}
+        data-exercise-pose-strict-frame-count={analysis?.metrics.exercisePoseStrictFrameCount ?? ""}
+        data-camera-confidence-lost-frame-count={analysis?.metrics.cameraConfidenceLostFrameCount ?? ""}
+        data-camera-confidence-partial-frame-count={analysis?.metrics.cameraConfidencePartialFrameCount ?? ""}
+        data-camera-confidence-ready-frame-count={analysis?.metrics.cameraConfidenceReadyFrameCount ?? ""}
+        data-camera-confidence-uncertain-frame-count={analysis?.metrics.cameraConfidenceUncertainFrameCount ?? ""}
+        data-camera-help-event-count={analysis?.metrics.cameraHelpEventCount ?? ""}
+        data-camera-score-allowed-frame-count={analysis?.metrics.cameraScoreAllowedFrameCount ?? ""}
+        data-current-camera-help-events={currentSourceFrame?.cameraHelpEvents.join(",") ?? ""}
+        data-current-camera-reasons={currentSourceFrame?.cameraReasons.join(",") ?? ""}
+        data-current-camera-score={currentSourceFrame?.cameraScore ?? ""}
+        data-current-camera-state={currentSourceFrame?.cameraState ?? ""}
+        data-current-frame-visibility={currentSourceFrame?.frameVisibility ?? ""}
+        data-current-score-allowed={currentSourceFrame?.scoreAllowed ?? ""}
+        data-current-source-origin={currentSourceFrame?.sourceOrigin ?? ""}
+        data-current-source-status={currentSourceFrame?.sourceStatus ?? ""}
+        data-current-start-readiness={currentSourceFrame?.startReadinessState ?? ""}
+        data-current-start-readiness-blocked-reasons={currentSourceFrame?.blockedReasons.join(",") ?? ""}
+        data-current-start-readiness-prompts={currentSourceFrame?.promptEvents.join(",") ?? ""}
+        data-current-visible-body-parts={currentSourceFrame?.visibleBodyParts.join(",") ?? ""}
+        data-gameplay-clear-movement-event-count={analysis?.metrics.gameplayClearMovementEventCount ?? ""}
+        data-gameplay-score-delta-total={analysis?.metrics.gameplayScoreDeltaTotal ?? ""}
+        data-gameplay-tracking-uncertainty-event-count={analysis?.metrics.gameplayTrackingUncertaintyEventCount ?? ""}
+        data-head-applied-yaw={currentAvatarDebug?.headApplied?.yaw ?? ""}
+        data-head-owner={currentAvatarDebug?.fallbacks.head ?? ""}
+        data-head-raw-confidence={currentAvatarDebug?.headRaw?.confidence ?? ""}
+        data-head-raw-source={currentAvatarDebug?.headRaw?.source ?? ""}
+        data-head-raw-yaw={currentAvatarDebug?.headRaw?.yaw ?? ""}
+        data-leg-raise-applied-depth={currentLegRaise?.appliedDepth ?? ""}
+        data-leg-raise-expires-in-ms={currentLegRaise?.expiresInMs ?? ""}
+        data-leg-raise-hold-active={currentLegRaise?.holdActive ?? ""}
+        data-leg-raise-raw-left-depth={currentLegRaise?.rawLeftDepth ?? ""}
+        data-leg-raise-raw-right-depth={currentLegRaise?.rawRightDepth ?? ""}
+        data-leg-raise-side={currentLegRaise?.side ?? ""}
+        data-current-frame-index={safeFrameIndex}
         data-frame-count={frameCount}
+        data-game-lower-body-target-can-use-player-retarget-leg-raise={currentGamePathFrame?.lowerBodyTargetCanUsePlayerRetargetLegRaise ?? ""}
+        data-game-lower-body-target-instructor-motion={currentGamePathFrame?.lowerBodyTargetInstructorMotion ?? ""}
+        data-game-lower-body-target-player-retarget-motion={currentGamePathFrame?.lowerBodyTargetPlayerRetargetMotion ?? ""}
+        data-game-lower-body-target-should-hold-player-squat={currentGamePathFrame?.lowerBodyTargetShouldHoldPlayerSquat ?? ""}
+        data-game-lower-body-target-stage={currentGamePathFrame?.lowerBodyTargetStage ?? ""}
+        data-lower-owner={liveLowerOwner ?? ""}
+        data-retarget-left-knee={currentRetarget?.leftKneeLift ?? ""}
+        data-retarget-right-knee={currentRetarget?.rightKneeLift ?? ""}
+        data-root-heading-confidence={currentRootMotionFrame?.headingConfidence ?? ""}
+        data-root-heading-yaw={currentRootMotionFrame?.headingYaw ?? ""}
+        data-root-intent-key={currentRootMotionFrame?.intent.key ?? ""}
+        data-root-intent-label={currentRootMotionFrame?.intent.label ?? ""}
+        data-root-intent-planted-foot={currentRootMotionFrame?.intent.plantedFoot ?? ""}
+        data-root-intent-swing-foot={currentRootMotionFrame?.intent.swingFoot ?? ""}
+        data-root-intent-travel-direction={currentRootMotionFrame?.intent.travelDirection ?? ""}
+        data-root-intent-travel-distance={currentRootMotionFrame?.intent.travelDistance ?? ""}
+        data-root-jump-count={analysis?.metrics.rootMotionJumpFrameCount ?? ""}
+        data-root-jump-response-count={analysis?.metrics.rootMotionJumpResponseFrameCount ?? ""}
+        data-root-jump-response-offset={currentGamePathFrame?.rootMotionJumpResponseHeightOffset ?? ""}
+        data-root-jump-response-owner={currentGamePathFrame?.rootMotionJumpResponseOwner ?? ""}
+        data-root-path-distance={currentRootPathDistance ?? ""}
+        data-root-pivot-count={analysis?.metrics.rootMotionPivotFrameCount ?? ""}
+        data-root-position-confidence={currentRootMotionFrame?.rootPositionConfidence ?? ""}
+        data-root-source={currentRootMotionFrame?.debug.source ?? ""}
+        data-root-source-limited-count={analysis?.rootMotion.sourceLimitedFrameCount ?? ""}
+        data-root-step-count={analysis?.metrics.rootMotionStepEventFrameCount ?? ""}
+        data-root-step-response-count={analysis?.metrics.rootMotionStepResponseFrameCount ?? ""}
+        data-root-step-response-offset={currentGamePathFrame?.rootMotionStepResponseFootLiftOffset ?? ""}
+        data-root-step-response-owner={currentGamePathFrame?.rootMotionStepResponseOwner ?? ""}
+        data-root-step-response-side={currentGamePathFrame?.rootMotionStepResponseSide ?? ""}
+        data-root-travel-count={analysis?.metrics.rootMotionTravelFrameCount ?? ""}
+        data-root-turn-count={analysis?.metrics.rootMotionTurnFrameCount ?? ""}
+        data-root-weight-transfer-count={analysis?.metrics.rootMotionWeightTransferFrameCount ?? ""}
+        data-root-world-count={analysis?.rootMotion.worldLandmarkFrameCount ?? ""}
+        data-start-readiness-blocked-frame-count={analysis?.metrics.startReadinessBlockedFrameCount ?? ""}
+        data-start-readiness-can-start-game-frame-count={analysis?.metrics.startReadinessCanStartGameFrameCount ?? ""}
+        data-start-readiness-ready-frame-count={analysis?.metrics.startReadinessReadyFrameCount ?? ""}
+        data-spine-owner={currentSpineDrive?.owner ?? ""}
+        data-spine-side-bend={currentSpineDrive?.sideBend ?? ""}
         data-testid="movement-replay-lab"
       >
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -1085,7 +1379,7 @@ export default function MovementReplayLabPage() {
                     </div>
                     <div className="mt-0.5 truncate text-[11px] text-secondary">
                       {recordingAnalysis
-                        ? `${Math.round(recordingAnalysis.metrics.visualMatchScore * 100)}% match, ${recordingAnalysis.metrics.strongFullBodyFrameCount} strong`
+                        ? `${Math.round(recordingAnalysis.metrics.visualMatchScore * 100)}% match, ${recordingAnalysis.metrics.strongFullBodyFrameCount} strong, ${recordingAnalysis.metrics.supportConstraintPartialFrameCount} partial support`
                         : loaded?.error ?? `${recording.difficulty} · ${recording.spineGoal ?? "uncategorized"}`}
                     </div>
                   </button>
@@ -1176,16 +1470,20 @@ export default function MovementReplayLabPage() {
                         <MovementSourceSkeleton
                           color="#f6ccbe"
                           landmarksRef={replayMotionRef}
-                          mirrorX
                           positionOffset={[0, 0, 0]}
                         />
                         <VrmAvatar
                           landmarksRef={replayMotionRef}
+                          motionFrameRef={replayMotionFrameRef}
                           positionOffset={[0, 0, 0]}
+                          isPlayer
                           isPlaying
+                          motionMode="recorded"
                           name="Replay student"
                           retargetSourceModel={replayRetargetSourceModel}
+                          rootMotionFrame={currentRootMotionFrame ?? null}
                           showNameLabel={false}
+                          trackingCalibration={replayPlayerCalibration}
                           trackingDebugRef={replayAvatarDebugRef}
                           vrmUrl="/models/VIPE_Hero__1793.vrm"
                         />
@@ -1371,7 +1669,7 @@ export default function MovementReplayLabPage() {
                     data-testid="movement-replay-game-path"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Game Path</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Game Decision</h3>
                       <span
                         className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                           gamePathParityNeedsReview
@@ -1393,6 +1691,10 @@ export default function MovementReplayLabPage() {
                           ? `${currentGamePathFrame.lowerOwner} · ${currentGamePathFrame.feetOwner}`
                           : "--"}
                       </dd>
+                      <dt className="text-muted">Target stage</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame?.lowerBodyTargetStage ?? "--"}
+                      </dd>
                       <dt className="text-muted">Game squat / hip</dt>
                       <dd className="text-right font-mono text-secondary">
                         {formatNumber(currentGamePathFrame?.squatDepth)} / {formatNumber(currentGamePathFrame?.hipDrop)}
@@ -1407,7 +1709,132 @@ export default function MovementReplayLabPage() {
                           ? `${currentGamePathFrame.shouldDrivePlayerSquat ? "squat" : currentGamePathFrame.shouldDrivePlayerLegRaise ? "leg" : "neutral"} · drop ${formatNumber(currentGamePathFrame.visualRootDrop)}`
                           : "--"}
                       </dd>
+                      <dt className="text-muted">Game pose</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame?.exercisePoseLabel ?? "--"}
+                      </dd>
+                      <dt className="text-muted">Game support</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame
+                          ? `${currentGamePathFrame.supportIntentLabel} · ${currentGamePathFrame.supportConstraintStatus} · ${currentGamePathFrame.supportContactOwner}`
+                          : "--"}
+                      </dd>
+                      <dt className="text-muted">Game transition</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame?.exerciseTransitionLabel ?? "--"}
+                      </dd>
+                      <dt className="text-muted">Jump response</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame
+                          ? `${currentGamePathFrame.rootMotionJumpResponseOwner} · ${formatNumber(currentGamePathFrame.rootMotionJumpResponseHeightOffset)}`
+                          : "--"}
+                      </dd>
+                      <dt className="text-muted">Step response</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentGamePathFrame
+                          ? `${currentGamePathFrame.rootMotionStepResponseOwner} · ${formatNumber(currentGamePathFrame.rootMotionStepResponseFootLiftOffset)}`
+                          : "--"}
+                      </dd>
                     </dl>
+                    <div
+                      className="mt-3 border-t border-border-dim pt-3"
+                      data-testid="movement-replay-physical-path"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wide text-muted">Physical Path</h4>
+                        <span
+                          className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
+                            rootMotionNeedsReview
+                              ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                              : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                          }`}
+                        >
+                          {rootMotionLabel}
+                        </span>
+                      </div>
+                      <svg
+                        aria-hidden="true"
+                        className="mt-2 h-14 w-full overflow-visible border border-border-dim bg-black/25"
+                        preserveAspectRatio="none"
+                        viewBox="0 0 100 54"
+                      >
+                        <line x1="10" x2="90" y1="27" y2="27" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
+                        <line x1="50" x2="50" y1="10" y2="44" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
+                        {rootPathStrip.polyline ? (
+                          <polyline
+                            fill="none"
+                            points={rootPathStrip.polyline}
+                            stroke="#a8d5ba"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                          />
+                        ) : null}
+                        {currentRootPathPoint ? (
+                          <circle
+                            cx={currentRootPathPoint.px}
+                            cy={currentRootPathPoint.py}
+                            fill="#f6ccbe"
+                            r="2.6"
+                          />
+                        ) : null}
+                      </svg>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <dt className="text-muted">Source</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {currentRootMotionFrame?.debug.source ?? "--"}
+                        </dd>
+                        <dt className="text-muted">Intent</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {currentRootMotionFrame
+                            ? `${currentRootMotionFrame.intent.label} · ${currentRootMotionFrame.intent.travelDirection}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Heading</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {formatAngleDegrees(currentRootMotionFrame?.headingYaw)} · q {formatNumber(currentRootMotionFrame?.headingConfidence)}
+                        </dd>
+                        <dt className="text-muted">Root X/Z</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {currentRootMotionFrame
+                            ? `${formatNumber(currentRootMotionFrame.rootPosition.x)} / ${formatNumber(currentRootMotionFrame.rootPosition.z)}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Path / q</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {formatNumber(currentRootPathDistance)} / {formatNumber(currentRootMotionFrame?.rootPositionConfidence)}
+                        </dd>
+                        <dt className="text-muted">Feet</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {currentRootMotionFrame
+                            ? `${currentRootMotionFrame.feet.left.stepPhase} · ${currentRootMotionFrame.feet.right.stepPhase}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Plant / swing</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {currentRootMotionFrame
+                            ? `${currentRootMotionFrame.intent.plantedFoot} · ${currentRootMotionFrame.intent.swingFoot}`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Batch</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {analysis
+                            ? `${analysis.rootMotion.worldLandmarkFrameCount} world · ${analysis.rootMotion.sourceLimitedFrameCount} limited`
+                            : "--"}
+                        </dd>
+                        <dt className="text-muted">Intent counts</dt>
+                        <dd className="text-right font-mono text-secondary">
+                          {analysis
+                            ? `t ${analysis.metrics.rootMotionTravelFrameCount} · r ${analysis.metrics.rootMotionTurnFrameCount} · p ${analysis.metrics.rootMotionPivotFrameCount} · s ${analysis.metrics.rootMotionStepEventFrameCount} · j ${analysis.metrics.rootMotionJumpFrameCount}`
+                            : "--"}
+                        </dd>
+                      </dl>
+                      {currentRootMotionFrame?.debug.reasons.length ? (
+                        <div className="mt-2 border-t border-border-dim pt-2 text-[11px] leading-relaxed text-muted">
+                          {currentRootMotionFrame.debug.reasons[0]}
+                        </div>
+                      ) : null}
+                    </div>
                     <div
                       className="mt-3 border-t border-border-dim pt-3"
                       data-testid="movement-replay-wrapper-parity"
@@ -1524,7 +1951,9 @@ export default function MovementReplayLabPage() {
                     : "--"}
                 </div>
                 <div className="mt-2 text-xs text-secondary">
-                  {analysis ? `${countFailures(analysis, "error")} errors, ${countFailures(analysis, "warning")} warnings, ${analysis.metrics.strongFullBodyFrameCount} strong full-body frames` : "Waiting for data"}
+                  {analysis
+                    ? `${countFailures(analysis, "error")} errors, ${countFailures(analysis, "warning")} warnings, ${analysis.metrics.strongFullBodyFrameCount} strong full-body frames, ${analysis.metrics.supportConstraintPartialFrameCount} partial support frames`
+                    : "Waiting for data"}
                 </div>
               </div>
               <div className="rounded-[8px] border border-border-dim bg-sidebar/35 p-4">
@@ -1551,6 +1980,17 @@ export default function MovementReplayLabPage() {
                 </div>
                 <div className="mt-2 text-xs text-secondary">
                   avg quality, {analysis?.metrics.lowerBodyOwnerTransitions ?? 0} lower-owner transitions
+                </div>
+              </div>
+              <div className="rounded-[8px] border border-border-dim bg-sidebar/35 p-4">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Support</h2>
+                <div className="mt-3 text-3xl font-bold text-foreground">
+                  {analysis ? analysis.metrics.supportConstraintPartialFrameCount : "--"}
+                </div>
+                <div className="mt-2 text-xs text-secondary">
+                  {analysis
+                    ? `${analysis.metrics.supportConstraintActiveFrameCount} active, ${analysis.metrics.supportContactCorrectionFrameCount} corrected, ${analysis.metrics.supportPresentationAppliedFrameCount} presented, ${analysis.metrics.supportConstraintMissingFrameCount} missing`
+                    : "Waiting for support constraints"}
                 </div>
               </div>
               <div className="rounded-[8px] border border-border-dim bg-sidebar/35 p-4">

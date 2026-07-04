@@ -95,9 +95,16 @@ export function resolveMovementAvatarLowerBodyDrive({
   const hasRetargetSquatEvidence =
     retargetContactsBothFeet &&
     (retargetSquatDepth > 0.08 || retargetHipDrop > 0.12);
+  const hasLiveDropSquatEvidence =
+    retargetHipDrop > 0.12 ||
+    retargetSquatDepth > 0.08 ||
+    lowerBodyIntent.squatSignals.hipDrop > 0.16 ||
+    lowerBodyIntent.squatSignals.torsoDrop > 0.2 ||
+    lowerBodyIntent.squatSignals.headDrop > 0.2;
   const hasStrongLiveSquatEvidence =
     lowerBodyIntent.squatDepth > 0.34 &&
-    lowerBodyIntent.squatSignals.kneeBend > 0.28;
+    lowerBodyIntent.squatSignals.kneeBend > 0.28 &&
+    hasLiveDropSquatEvidence;
   const shouldDrivePlayerSquat =
     canUsePlayerIntent &&
     lowerBodyIntent.label === "squat" &&
@@ -121,9 +128,13 @@ export function resolveMovementAvatarLowerBodyDrive({
 
   const shouldApplyLowerBody = hasLiveBodyCalibration || shouldDrivePlayerSquat || shouldDrivePlayerLegRaise;
   const groundedSquatDepth = retargetContactsBothFeet ? liveSquatDepth : 0;
-  const playerSquatPresentationDepth = isPlayer
+  const rawPlayerSquatPresentationDepth = isPlayer
     ? Math.max(groundedSquatDepth, shouldDrivePlayerSquat ? lowerBodyIntent.squatDepth : 0)
     : groundedSquatDepth;
+  const playerSquatPresentationDepth =
+    isPlayer && !shouldDrivePlayerSquat
+      ? 0
+      : rawPlayerSquatPresentationDepth;
   const playerLowerBodyState = shouldDrivePlayerSquat
     ? "planted-squat"
     : shouldDrivePlayerLegRaise && playerLegRaiseSide === "left"
@@ -132,10 +143,9 @@ export function resolveMovementAvatarLowerBodyDrive({
         ? "right-leg-raise"
         : canUsePlayerIntent && lowerBodyIntent.label === "mixed-lower-body"
           ? "mixed-lower-body"
-          : shouldApplyLowerBody
+        : shouldApplyLowerBody
             ? "neutral"
             : "held";
-
   return {
     groundedSquatDepth,
     liveSquatDepth,

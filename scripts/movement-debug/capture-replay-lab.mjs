@@ -109,7 +109,12 @@ function parseFrameSelection(value, frameCount) {
 }
 
 async function selectSession(page, session) {
-  if (!session) return;
+  if (!session) {
+    const firstSession = page.getByTestId("movement-replay-session").first();
+    await firstSession.waitFor({ state: "visible" });
+    await firstSession.click();
+    return;
+  }
 
   const exact = page.locator(`[data-testid="movement-replay-session"][data-session-id="${session}"]`);
   const partial = page.locator(`[data-testid="movement-replay-session"][data-session-id*="${session}"]`);
@@ -219,12 +224,96 @@ async function main() {
 
       const avatarPath = path.join(args.outDir, `movement-replay-${sessionPart}-avatar-frame-${frame}.png`);
       const sourcePath = path.join(args.outDir, `movement-replay-${sessionPart}-source-frame-${frame}.png`);
+      const diagnostics = await lab.evaluate((element) => {
+        const readNumberAttr = (name) => {
+          const value = element.getAttribute(name);
+          if (value === null || value === "") return null;
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        return {
+          avatarLowerError: readNumberAttr("data-avatar-lower-error"),
+          avatarRootAppliedX: readNumberAttr("data-avatar-root-applied-x"),
+          avatarRootAppliedYaw: readNumberAttr("data-avatar-root-applied-yaw"),
+          avatarRootAppliedZ: readNumberAttr("data-avatar-root-applied-z"),
+          avatarRootSource: element.getAttribute("data-avatar-root-source") || null,
+          avatarRootTargetX: readNumberAttr("data-avatar-root-target-x"),
+          avatarRootTargetYaw: readNumberAttr("data-avatar-root-target-yaw"),
+          avatarRootTargetZ: readNumberAttr("data-avatar-root-target-z"),
+          avatarUpperError: readNumberAttr("data-avatar-upper-error"),
+          cameraConfidenceLostFrameCount: readNumberAttr("data-camera-confidence-lost-frame-count"),
+          cameraConfidencePartialFrameCount: readNumberAttr("data-camera-confidence-partial-frame-count"),
+          cameraConfidenceReadyFrameCount: readNumberAttr("data-camera-confidence-ready-frame-count"),
+          cameraConfidenceUncertainFrameCount: readNumberAttr("data-camera-confidence-uncertain-frame-count"),
+          cameraHelpEventCount: readNumberAttr("data-camera-help-event-count"),
+          cameraScoreAllowedFrameCount: readNumberAttr("data-camera-score-allowed-frame-count"),
+          coverageExplicitCount: readNumberAttr("data-coverage-explicit-count"),
+          coverageFamilyCount: readNumberAttr("data-coverage-family-count"),
+          coverageMissingProofCount: readNumberAttr("data-coverage-missing-proof-count"),
+          coverageMissingProofFamilies: element.getAttribute("data-coverage-missing-proof-families") || null,
+          coveragePhaseComplete: element.getAttribute("data-coverage-phase-complete") || null,
+          coverageUnsupportedCount: readNumberAttr("data-coverage-unsupported-count"),
+          coverageUnsupportedFamilies: element.getAttribute("data-coverage-unsupported-families") || null,
+          currentCameraHelpEvents: element.getAttribute("data-current-camera-help-events") || null,
+          currentCameraReasons: element.getAttribute("data-current-camera-reasons") || null,
+          currentCameraScore: readNumberAttr("data-current-camera-score"),
+          currentCameraState: element.getAttribute("data-current-camera-state") || null,
+          currentFrameVisibility: readNumberAttr("data-current-frame-visibility"),
+          currentScoreAllowed: element.getAttribute("data-current-score-allowed") || null,
+          currentSourceOrigin: element.getAttribute("data-current-source-origin") || null,
+          currentSourceStatus: element.getAttribute("data-current-source-status") || null,
+          currentStartReadiness: element.getAttribute("data-current-start-readiness") || null,
+          currentStartReadinessBlockedReasons: element.getAttribute("data-current-start-readiness-blocked-reasons") || null,
+          currentStartReadinessPrompts: element.getAttribute("data-current-start-readiness-prompts") || null,
+          currentVisibleBodyParts: element.getAttribute("data-current-visible-body-parts") || null,
+          frameIndex: readNumberAttr("data-current-frame-index"),
+          gameLowerBodyTargetCanUsePlayerRetargetLegRaise: element.getAttribute("data-game-lower-body-target-can-use-player-retarget-leg-raise") || null,
+          gameLowerBodyTargetInstructorMotion: readNumberAttr("data-game-lower-body-target-instructor-motion"),
+          gameLowerBodyTargetPlayerRetargetMotion: readNumberAttr("data-game-lower-body-target-player-retarget-motion"),
+          gameLowerBodyTargetShouldHoldPlayerSquat: element.getAttribute("data-game-lower-body-target-should-hold-player-squat") || null,
+          gameLowerBodyTargetStage: element.getAttribute("data-game-lower-body-target-stage") || null,
+          gameplayClearMovementEventCount: readNumberAttr("data-gameplay-clear-movement-event-count"),
+          gameplayScoreDeltaTotal: readNumberAttr("data-gameplay-score-delta-total"),
+          gameplayTrackingUncertaintyEventCount: readNumberAttr("data-gameplay-tracking-uncertainty-event-count"),
+          headAppliedYaw: readNumberAttr("data-head-applied-yaw"),
+          headOwner: element.getAttribute("data-head-owner") || null,
+          headRawConfidence: readNumberAttr("data-head-raw-confidence"),
+          headRawSource: element.getAttribute("data-head-raw-source") || null,
+          headRawYaw: readNumberAttr("data-head-raw-yaw"),
+          lowerOwner: element.getAttribute("data-lower-owner") || null,
+          rootHeadingConfidence: readNumberAttr("data-root-heading-confidence"),
+          rootHeadingYaw: readNumberAttr("data-root-heading-yaw"),
+          rootIntentKey: element.getAttribute("data-root-intent-key") || null,
+          rootIntentLabel: element.getAttribute("data-root-intent-label") || null,
+          rootIntentPlantedFoot: element.getAttribute("data-root-intent-planted-foot") || null,
+          rootIntentSwingFoot: element.getAttribute("data-root-intent-swing-foot") || null,
+          rootIntentTravelDirection: element.getAttribute("data-root-intent-travel-direction") || null,
+          rootIntentTravelDistance: readNumberAttr("data-root-intent-travel-distance"),
+          rootJumpCount: readNumberAttr("data-root-jump-count"),
+          rootPathDistance: readNumberAttr("data-root-path-distance"),
+          rootPivotCount: readNumberAttr("data-root-pivot-count"),
+          rootPositionConfidence: readNumberAttr("data-root-position-confidence"),
+          rootSource: element.getAttribute("data-root-source") || null,
+          rootSourceLimitedCount: readNumberAttr("data-root-source-limited-count"),
+          rootStepCount: readNumberAttr("data-root-step-count"),
+          rootTravelCount: readNumberAttr("data-root-travel-count"),
+          rootTurnCount: readNumberAttr("data-root-turn-count"),
+          rootWeightTransferCount: readNumberAttr("data-root-weight-transfer-count"),
+          rootWorldCount: readNumberAttr("data-root-world-count"),
+          spineOwner: element.getAttribute("data-spine-owner") || null,
+          startReadinessBlockedFrameCount: readNumberAttr("data-start-readiness-blocked-frame-count"),
+          startReadinessCanStartGameFrameCount: readNumberAttr("data-start-readiness-can-start-game-frame-count"),
+          startReadinessReadyFrameCount: readNumberAttr("data-start-readiness-ready-frame-count"),
+        };
+      });
 
       await page.getByTestId("movement-replay-avatar-section").screenshot({ path: avatarPath });
       await page.getByTestId("movement-replay-source-canvas").screenshot({ path: sourcePath });
 
       captures.push({
         avatarPath,
+        diagnostics,
         frame,
         sourcePath,
       });

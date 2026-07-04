@@ -35,6 +35,7 @@
     "movement:replay:analyze": "node scripts/movement-debug/analyze-sessions.mjs",
     "movement:replay:compare": "node scripts/movement-debug/compare-replay-analysis.mjs",
     "movement:replay:capture": "node scripts/movement-debug/capture-replay-lab.mjs",
+    "movement:replay:proof-set": "node scripts/movement-debug/capture-replay-proof-set.mjs",
     "movement:replay:iteration": "node scripts/movement-debug/run-replay-iteration.mjs"
   },
   "dependencies": {

@@ -85,6 +85,13 @@ export type VrmHandRotationSpec = {
   vrmName: string;
 };
 
+export type VrmHandRotationTarget = {
+  rigKey: string;
+  rotation: VrmRigRotation;
+  slerp: number;
+  vrmName: string;
+};
+
 const PLAYER_FINGER_GAIN = 1.35;
 const INSTRUCTOR_FINGER_GAIN = 1.15;
 const THUMB_GAIN_MULTIPLIER = 0.9;
@@ -104,6 +111,7 @@ type PrepareVrmSolverInput = {
   payload: VrmMotionPayload | null;
   isPlayer: boolean;
   isPlaying: boolean;
+  mirrorForDisplay?: boolean;
 };
 
 export function normalizeVrmLandmark(landmark: VrmLandmarkInput): VrmSolverLandmark {
@@ -200,8 +208,10 @@ export function prepareVrmSolverInput({
   payload,
   isPlayer,
   isPlaying,
+  mirrorForDisplay = false,
 }: PrepareVrmSolverInput) {
   const forceStandby = !isPlayer && !isPlaying;
+  const shouldMirror = !isPlayer || mirrorForDisplay;
   const format = (landmark: VrmLandmarkInput) => {
     const normalized = normalizeVrmLandmark(landmark);
     return {
@@ -223,7 +233,7 @@ export function prepareVrmSolverInput({
 
   const kalidokitSolverLandmarks = solverLandmarks.map((lm) => ({ ...lm }));
 
-  if (!isPlayer) {
+  if (shouldMirror) {
     mirrorVrmLandmarkArray(imageLandmarks, (x) => 1 - x);
     mirrorVrmLandmarkArray(solverLandmarks, (x) => -x);
     mirrorVrmLandmarkArray(kalidokitSolverLandmarks, (x) => -x);
@@ -341,12 +351,14 @@ export function prepareVrmHandLandmarks(
 
 export function resolveVrmHandRigOptions({
   isPlayer,
+  mirrorForDisplay = false,
 }: {
   isPlayer: boolean;
+  mirrorForDisplay?: boolean;
 }) {
   return {
     isPlayer,
-    mirrorX: !isPlayer,
+    mirrorX: !isPlayer || mirrorForDisplay,
     slerp: isPlayer ? 0.85 : 0.55,
   };
 }
@@ -391,4 +403,34 @@ export function strengthenVrmHandRotation(
     y: clampRotation(rotation.y * gain),
     z: clampRotation(rotation.z * gain),
   };
+}
+
+export function resolveVrmHandRotationTargets({
+  isPlayer,
+  rig,
+  side,
+  slerp,
+}: {
+  isPlayer: boolean;
+  rig: VrmHandRig;
+  side: MovementHandSide;
+  slerp: number;
+}): VrmHandRotationTarget[] {
+  return resolveVrmHandRotationSpecs(side).flatMap((spec) => {
+    if (!spec.shouldApply) return [];
+
+    const rotation = rig[spec.rigKey];
+    if (!rotation) return [];
+
+    return [{
+      rigKey: spec.rigKey,
+      rotation: strengthenVrmHandRotation(rotation, {
+        isPlayer,
+        isThumb: spec.isThumb,
+        isWrist: spec.isWrist,
+      }),
+      slerp,
+      vrmName: spec.vrmName,
+    }];
+  });
 }

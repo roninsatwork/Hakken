@@ -273,6 +273,9 @@ function printReport(analyses: MovementReplayAnalysis[]) {
     const errorCount = analysis.failures.filter((failure) => failure.severity === "error").length;
     const warningCount = analysis.failures.filter((failure) => failure.severity === "warning").length;
     const resultLabel = errorCount > 0 ? "FAIL" : warningCount > 0 ? "REVIEW" : "CLEAN";
+    const targetStages = Array.from(new Set(
+      analysis.gamePath.frames.map((frame) => frame.lowerBodyTargetStage),
+    )).sort();
     console.log("");
     console.log(`${resultLabel} ${analysis.sessionId}`);
     console.log(`  samples: ${analysis.summary.frameCount}, duration: ${analysis.summary.durationMs}ms`);
@@ -283,9 +286,43 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       `  game path: calibration ${analysis.gamePath.calibrationQuality.toFixed(2)}, retarget baseline ${analysis.gamePath.retargetSourceQuality.toFixed(2)}, squat frames ${analysis.gamePath.frames.filter((frame) => frame.shouldDrivePlayerSquat).length}`,
     );
     console.log(
+      `  lower-body targets: ${targetStages.join(", ") || "none"}`,
+    );
+    console.log(
+      `  coverage audit: ${analysis.coverage.summary.explicitStatusCount}/${analysis.coverage.summary.familyCount} explicit, supported ${analysis.coverage.summary.supportedCount}, approximate ${analysis.coverage.summary.approximateCount}, diagnostic ${analysis.coverage.summary.diagnosticOnlyCount}, unsupported ${analysis.coverage.summary.unsupportedCount}, missing-proof ${analysis.coverage.summary.missingProofCount}${analysis.coverage.summary.unsupportedFamilies.length ? ` (${analysis.coverage.summary.unsupportedFamilies.join(", ")})` : ""}`,
+    );
+    console.log(
+      `  exercise classes: lunges ${analysis.metrics.exerciseLungeFrameCount}, roll/crawl ${analysis.metrics.exerciseRollingCrawlingFrameCount}, floor rolls ${analysis.metrics.exerciseFloorRollTransitionCount}, transitions ${analysis.metrics.exerciseTransitionCount}`,
+    );
+    console.log(
+      `  camera confidence: ready ${analysis.metrics.cameraConfidenceReadyFrameCount}, partial ${analysis.metrics.cameraConfidencePartialFrameCount}, uncertain ${analysis.metrics.cameraConfidenceUncertainFrameCount}, lost ${analysis.metrics.cameraConfidenceLostFrameCount}, score allowed ${analysis.metrics.cameraScoreAllowedFrameCount}, help events ${analysis.metrics.cameraHelpEventCount}`,
+    );
+    console.log(
+      `  start readiness: ready ${analysis.metrics.startReadinessReadyFrameCount}, blocked ${analysis.metrics.startReadinessBlockedFrameCount}, can start game ${analysis.metrics.startReadinessCanStartGameFrameCount}`,
+    );
+    console.log(
+      `  gameplay events: clear ${analysis.metrics.gameplayClearMovementEventCount}, tracking uncertainty ${analysis.metrics.gameplayTrackingUncertaintyEventCount}, score delta ${analysis.metrics.gameplayScoreDeltaTotal}`,
+    );
+    console.log(
+      `  root motion: world ${analysis.metrics.rootMotionWorldLandmarkFrameCount}/${analysis.summary.frameCount}, limited ${analysis.metrics.rootMotionSourceLimitedFrameCount}, max yaw ${analysis.metrics.maxRootHeadingYaw.toFixed(2)}, max path ${analysis.metrics.maxRootPathDistance.toFixed(2)}, heading q ${analysis.metrics.averageRootHeadingConfidence.toFixed(2)}, path q ${analysis.metrics.averageRootPositionConfidence.toFixed(2)}`,
+    );
+    console.log(
+      `  root intent: travel ${analysis.metrics.rootMotionTravelFrameCount}, turn ${analysis.metrics.rootMotionTurnFrameCount}, pivot ${analysis.metrics.rootMotionPivotFrameCount}, step ${analysis.metrics.rootMotionStepEventFrameCount}, weight ${analysis.metrics.rootMotionWeightTransferFrameCount}, jump ${analysis.metrics.rootMotionJumpFrameCount}`,
+    );
+    console.log(
+      `  head/root: pose ${analysis.metrics.headPoseFrameCount}/${analysis.summary.frameCount}, applied ${analysis.metrics.headAppliedFrameCount}, away body ${analysis.metrics.awayBodyFrameCount}, divergence frames ${analysis.metrics.headRootDivergenceFrameCount}, avg divergence ${analysis.metrics.averageHeadRootDivergence.toFixed(2)}`,
+    );
+    console.log(
       `  replay/game parity: ${analysis.gamePath.parity.divergenceFrameCount} divergence frame(s)${
         typeof analysis.gamePath.parity.firstDivergenceFrame === "number"
           ? `, first frame ${analysis.gamePath.parity.firstDivergenceFrame}`
+          : ""
+      }`,
+    );
+    console.log(
+      `  replay/game wrappers: ${analysis.metrics.replayGameWrapperFrameCount} frame(s), ${analysis.metrics.replayGameWrapperDivergenceFrameCount} divergence frame(s)${
+        typeof analysis.gamePath.parity.firstWrapperDivergenceFrame === "number"
+          ? `, first frame ${analysis.gamePath.parity.firstWrapperDivergenceFrame}`
           : ""
       }`,
     );

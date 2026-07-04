@@ -77,6 +77,8 @@ describe("movement avatar player drive", () => {
     expect(drive.shouldApplySpine).toBe(true);
     expect(drive.owner).toBe("player-spine-model");
     expect(drive.sideBend).toBeGreaterThan(0.5);
+    expect(Math.abs(drive.rotations.hips.z)).toBeGreaterThan(0.02);
+    expect(Math.abs(drive.rotations.spine.z)).toBeGreaterThan(0.1);
     expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.15);
     expect(Math.abs(drive.rotations.upperChest.z)).toBeGreaterThan(0.1);
   });
@@ -91,6 +93,28 @@ describe("movement avatar player drive", () => {
 
     expect(drive.shouldApplySpine).toBe(false);
     expect(drive.owner).toBe("player-spine-held");
+  });
+
+  it("holds side-bend motion until calibration is available", () => {
+    const sideBendPose = makeNeutralPose();
+    sideBendPose[0] = visible(0.66, 0.25);
+    sideBendPose[7] = visible(0.62, 0.27);
+    sideBendPose[8] = visible(0.7, 0.27);
+    sideBendPose[11] = visible(0.54, 0.42);
+    sideBendPose[12] = visible(0.76, 0.42);
+
+    const drive = resolveMovementAvatarPlayerSpineDrive({
+      calibration: null,
+      isPlayer: true,
+      poseLandmarks: sideBendPose,
+      torsoTrackingReady: true,
+    });
+
+    expect(drive.shouldApplySpine).toBe(false);
+    expect(drive.owner).toBe("player-spine-held");
+    expect(drive.sideBend).toBe(0);
+    expect(drive.rotations.hips.z).toBe(0);
+    expect(drive.rotations.spine.z).toBe(0);
   });
 
   it("uses head and shoulders for close-cropped player spine motion when hips are unreliable", () => {

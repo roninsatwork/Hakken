@@ -8,6 +8,7 @@ import {
   resolveVrmArmTargetLandmarks,
   resolveVrmHandRigOptions,
   resolveVrmHandRotationSpecs,
+  resolveVrmHandRotationTargets,
   strengthenVrmHandRotation,
 } from "./vrmRigging";
 import type { VrmPoseLandmark } from "./vrmRigging";
@@ -64,6 +65,44 @@ describe("vrmRigging", () => {
       "eyeBlinkRight",
       "mouthSmileLeft",
     ]);
+  });
+
+  it("mirrors player display landmarks so source left drives avatar right", () => {
+    const landmarks = makeLandmarks();
+    landmarks[25] = { x: 0.25, y: 0.7, z: 0.01, visibility: 0.91 };
+    landmarks[26] = { x: 0.75, y: 0.8, z: 0.02, visibility: 0.92 };
+
+    const prepared = prepareVrmSolverInput({
+      rawLandmarks: landmarks,
+      payload: {
+        hands: {
+          left: { landmarks: [{ x: 0.2, y: 0.4, z: 0.1 }], worldLandmarks: [{ x: 0.3, y: 0.4, z: 0.1 }] },
+          right: { landmarks: [{ x: 0.8, y: 0.4, z: 0.1 }], worldLandmarks: [{ x: 0.7, y: 0.4, z: 0.1 }] },
+        },
+        worldLandmarks: landmarks,
+      },
+      isPlayer: true,
+      isPlaying: true,
+      mirrorForDisplay: true,
+    });
+
+    expect(prepared.imageLandmarks[26]).toMatchObject({
+      x: 0.75,
+      y: 0.7,
+      visibility: 0.91,
+    });
+    expect(prepared.imageLandmarks[25]).toMatchObject({
+      x: 0.25,
+      y: 0.8,
+      visibility: 0.92,
+    });
+    expect(prepared.solverLandmarks[26]).toMatchObject({
+      x: -0.25,
+      y: 0.7,
+      visibility: 0.91,
+    });
+    expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.3);
+    expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.7);
   });
 
   it("creates image-space solver landmarks around the hips", () => {
@@ -161,6 +200,11 @@ describe("vrmRigging", () => {
       mirrorX: false,
       slerp: 0.85,
     });
+    expect(resolveVrmHandRigOptions({ isPlayer: true, mirrorForDisplay: true })).toEqual({
+      isPlayer: true,
+      mirrorX: true,
+      slerp: 0.85,
+    });
     expect(resolveVrmHandRigOptions({ isPlayer: false })).toEqual({
       isPlayer: false,
       mirrorX: true,
@@ -211,5 +255,38 @@ describe("vrmRigging", () => {
 
     expect(wrist).toEqual({ x: 0.2, y: -0.1, z: 0.3 });
     expect(finger).toMatchObject({ x: 0.27, y: -0.135, z: 0.405 });
+  });
+
+  it("resolves hand rotation targets without wrist application details leaking into the renderer", () => {
+    const targets = resolveVrmHandRotationTargets({
+      isPlayer: true,
+      rig: {
+        LeftIndexProximal: { x: 0.2, y: -0.1, z: 0.3 },
+        LeftThumbProximal: { x: 0.2, y: -0.1, z: 0.3 },
+        LeftWrist: { x: 1, y: 1, z: 1 },
+      },
+      side: "left",
+      slerp: 0.85,
+    });
+
+    expect(targets).toHaveLength(2);
+    expect(targets.map((target) => target.rigKey)).toEqual([
+      "LeftThumbProximal",
+      "LeftIndexProximal",
+    ]);
+    expect(targets[0]).toMatchObject({
+      rigKey: "LeftThumbProximal",
+      slerp: 0.85,
+      vrmName: "leftThumbProximal",
+    });
+    expect(targets[0].rotation.x).toBeCloseTo(0.243);
+    expect(targets[0].rotation.y).toBeCloseTo(-0.1215);
+    expect(targets[0].rotation.z).toBeCloseTo(0.3645);
+    expect(targets[1]).toMatchObject({
+      vrmName: "leftIndexProximal",
+    });
+    expect(targets[1].rotation.x).toBeCloseTo(0.27);
+    expect(targets[1].rotation.y).toBeCloseTo(-0.135);
+    expect(targets[1].rotation.z).toBeCloseTo(0.405);
   });
 });

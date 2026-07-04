@@ -165,6 +165,8 @@ function renderSessionRows(analyses) {
     analysis.metrics.avatarVisualFrameCount
       ? `${formatNumber(analysis.metrics.averageAvatarLowerBodyDirectionError)} / ${analysis.metrics.avatarVisualFrameCount}`
       : "none",
+    `${formatNumber(analysis.metrics.maxRootHeadingYaw)} / ${formatNumber(analysis.metrics.maxRootPathDistance)}`,
+    `${analysis.metrics.rootMotionWorldLandmarkFrameCount} / ${analysis.metrics.rootMotionSourceLimitedFrameCount}`,
     formatNumber(analysis.metrics.averageRetargetQuality),
     analysis.metrics.strongFullBodyFrameCount,
     analysis.metrics.lowerBodyOwnerTransitions,
@@ -241,8 +243,8 @@ async function writeMarkdownReport({
     "",
     "## Sessions",
     "",
-    "| Result | Session | Frames | Visual Match | Avatar Output | Retarget Avg | Strong Frames | Owner Transitions | Errors | Warnings |",
-    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Result | Session | Frames | Visual Match | Avatar Output | Root Yaw/Path | Root World/Limited | Retarget Avg | Strong Frames | Owner Transitions | Errors | Warnings |",
+    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ...renderSessionRows(analyses),
     "",
   ];

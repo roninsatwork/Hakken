@@ -1,4 +1,10 @@
 import type { MovementHandSide } from "./movementTypes";
+import type { MovementBodyOrientationDecision } from "./movementBodyOrientation";
+import type { MovementExercisePoseDecision } from "./movementExercisePose";
+import type { MovementExerciseTransitionDecision } from "./movementExerciseTransition";
+import type { MovementSupportContactDecision } from "./movementSupportContact";
+import type { MovementSupportConstraintDecision } from "./movementSupportConstraint";
+import type { MovementSupportIntentDecision } from "./movementSupportIntent";
 
 export type TrackingLandmark = {
   x: number;
@@ -61,6 +67,12 @@ export type MovementAvatarTrackingProfile = {
 
 export type MovementTrackingDebugState = {
   updatedAt: number;
+  bodyOrientation?: MovementBodyOrientationDecision;
+  bodySupport?: MovementSupportContactDecision;
+  exercisePose?: MovementExercisePoseDecision;
+  exerciseTransition?: MovementExerciseTransitionDecision;
+  supportConstraint?: MovementSupportConstraintDecision;
+  supportIntent?: MovementSupportIntentDecision;
   headRaw: MovementHeadAngles;
   headApplied: MovementHeadAngles;
   avatarVisual?: {
@@ -83,6 +95,42 @@ export type MovementTrackingDebugState = {
       };
       sourceError?: number;
     }>;
+  };
+  avatarRoot?: {
+    appliedPitch?: number;
+    appliedRoll?: number;
+    appliedYaw: number;
+    appliedX: number;
+    appliedY?: number;
+    appliedZ: number;
+    jumpResponseOwner?: string;
+    orientationOwner?: string;
+    stepResponseOwner?: string;
+    stepResponseSide?: string;
+    targetHeightDrop?: number;
+    targetJumpHeightOffset?: number;
+    targetStepFootLiftOffset?: number;
+    targetPitch?: number;
+    targetRoll?: number;
+    targetYaw: number;
+    targetX: number;
+    targetZ: number;
+    source: string;
+  };
+  avatarHead?: {
+    appliedLocalPitch: number;
+    boneYaw: number;
+    bonePitch: number;
+    trackingPitch: number;
+    trackingYaw: number;
+  };
+  avatarLegRaise?: {
+    appliedDepth: number;
+    expiresInMs: number;
+    holdActive: boolean;
+    rawLeftDepth: number;
+    rawRightDepth: number;
+    side: "left" | "right" | null;
   };
   bodyConfidence: Record<string, number>;
   camera?: {
@@ -800,7 +848,7 @@ export function getMovementLowerBodyIntent({
   const leftAnkle = poseLandmarks[27];
   const rightAnkle = poseLandmarks[28];
 
-  const estimateUncalibratedSquat = (): MovementLowerBodyIntent => {
+  const estimateUncalibratedLowerBodyIntent = (): MovementLowerBodyIntent => {
     if (!leftHip || !rightHip || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
       return {
         squatDepth: 0,
@@ -815,6 +863,9 @@ export function getMovementLowerBodyIntent({
     const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
     const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
     const ankleConfidence = average([visibility(leftAnkle), visibility(rightAnkle)]);
+    const shoulderConfidence = leftShoulder && rightShoulder
+      ? average([visibility(leftShoulder), visibility(rightShoulder)])
+      : 0;
     const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
     if (confidence < 0.35) {
       return {
@@ -834,13 +885,45 @@ export function getMovementLowerBodyIntent({
     const kneeBendDepth = kneeAngleDifference < 0.5
       ? clamp((2.62 - averageKneeAngle) / 1.2, 0, 1)
       : 0;
-    const squatDepth = kneeBendDepth;
-    const label = squatDepth > 0.18 ? "squat" : "neutral";
+    const hips = midpoint(leftHip, rightHip);
+    const shoulders = leftShoulder && rightShoulder && shoulderConfidence >= 0.35
+      ? midpoint(leftShoulder, rightShoulder)
+      : null;
+    const ankles = midpoint(leftAnkle, rightAnkle);
+    const currentTorsoScale = shoulders
+      ? Math.max(distance2D(shoulders, hips), 0.12)
+      : Math.max(distance2D(hips, ankles) * 0.62, 0.12);
+    const kneeRaiseThreshold = hips.y + currentTorsoScale * 0.34;
+    const kneeRaiseWindow = currentTorsoScale * 0.72;
+    const leftKneeRaise = visibility(leftKnee) >= 0.3
+      ? clamp((kneeRaiseThreshold - leftKnee.y) / kneeRaiseWindow, 0, 1)
+      : 0;
+    const rightKneeRaise = visibility(rightKnee) >= 0.3
+      ? clamp((kneeRaiseThreshold - rightKnee.y) / kneeRaiseWindow, 0, 1)
+      : 0;
+    const strongestKneeRaise = Math.max(leftKneeRaise, rightKneeRaise);
+    const kneeRaiseDifference = Math.abs(leftKneeRaise - rightKneeRaise);
+    const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
+    const squatDepth = clearSingleKneeRaise ? 0 : kneeBendDepth;
+    const label =
+      clearSingleKneeRaise
+        ? leftKneeRaise > rightKneeRaise
+          ? "left-knee-raise"
+          : "right-knee-raise"
+        : leftKneeRaise > 0.32 && rightKneeRaise > 0.32
+          ? "mixed-lower-body"
+          : leftKneeRaise > 0.32
+            ? "left-knee-raise"
+            : rightKneeRaise > 0.32
+              ? "right-knee-raise"
+              : squatDepth > 0.18
+                ? "squat"
+                : "neutral";
 
     return {
       squatDepth: label === "squat" ? squatDepth : 0,
-      leftKneeRaise: 0,
-      rightKneeRaise: 0,
+      leftKneeRaise,
+      rightKneeRaise,
       squatSignals: {
         hipDrop: 0,
         kneeBend: kneeBendDepth,
@@ -853,7 +936,7 @@ export function getMovementLowerBodyIntent({
   };
 
   if (!calibration || !leftHip || !rightHip || !leftKnee || !rightKnee) {
-    return estimateUncalibratedSquat();
+    return estimateUncalibratedLowerBodyIntent();
   }
 
   const hips = midpoint(leftHip, rightHip);
@@ -874,7 +957,7 @@ export function getMovementLowerBodyIntent({
   const confidence = clamp(average([hipConfidence, kneeConfidence, ankleConfidence]), 0, 1);
 
   if (confidence < 0.35 || calibration.quality < 0.45) {
-    return estimateUncalibratedSquat();
+    return estimateUncalibratedLowerBodyIntent();
   }
 
   const currentFloorY = Math.max(

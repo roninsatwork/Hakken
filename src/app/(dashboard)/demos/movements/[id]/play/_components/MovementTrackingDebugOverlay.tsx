@@ -190,6 +190,22 @@ export default function MovementTrackingDebugOverlay({
         <span>{debugState?.fallbacks.lowerBody ?? "waiting"}</span>
         <span>Floor</span>
         <span>{debugState?.fallbacks.floor ?? "waiting"}</span>
+        <span>Orientation</span>
+        <span>
+          {debugState?.bodyOrientation
+            ? `${debugState.bodyOrientation.orientation} ${debugState.bodyOrientation.status}`
+            : "waiting"}
+        </span>
+        <span>Support</span>
+        <span>{debugState?.bodySupport?.supportLabel ?? "waiting"}</span>
+        <span>Support intent</span>
+        <span>{debugState?.supportIntent?.label ?? "waiting"}</span>
+        <span>Constraint</span>
+        <span>{debugState?.supportConstraint?.status ?? "waiting"}</span>
+        <span>Pose</span>
+        <span>{debugState?.exercisePose?.label ?? "waiting"}</span>
+        <span>Transition</span>
+        <span>{debugState?.exerciseTransition?.label ?? "waiting"}</span>
         <span>Owners</span>
         <span>{debugState?.fallbacks.owners ?? "waiting"}</span>
         <span>Retarget</span>

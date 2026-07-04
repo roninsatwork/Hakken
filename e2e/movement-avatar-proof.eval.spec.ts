@@ -70,6 +70,34 @@ const proofCases: AvatarProofCase[] = [
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
+    mode: "head-up",
+    label: "Head up",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /head player-calibrated/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "head-down",
+    label: "Head down",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /head player-calibrated/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "head-left",
+    label: "Head left",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /head player-calibrated/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "head-right",
+    label: "Head right",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /head player-calibrated/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
     mode: "squat",
     label: "Squat",
     baselinePattern: /Baseline: manual-calibration/i,
@@ -87,28 +115,77 @@ const proofCases: AvatarProofCase[] = [
     mode: "left-leg-raise",
     label: "Left leg raise",
     baselinePattern: /Baseline: manual-calibration/i,
-    ownerPattern: /lower player-left-leg-raise/i,
+    ownerPattern: /lower player-right-leg-raise/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "far-left-leg-raise",
     label: "Far left leg raise",
     baselinePattern: /Baseline: manual-calibration/i,
-    ownerPattern: /lower player-left-leg-raise/i,
+    ownerPattern: /lower player-right-leg-raise/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
     mode: "right-leg-raise",
     label: "Right leg raise",
     baselinePattern: /Baseline: manual-calibration/i,
-    ownerPattern: /lower player-right-leg-raise/i,
+    ownerPattern: /lower player-left-leg-raise/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-turn-left",
+    label: "Root turn left",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-turn-right",
+    label: "Root turn right",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-travel-right",
+    label: "Root travel right",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-travel-left",
+    label: "Root travel left",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-travel-forward",
+    label: "Root travel forward",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-travel-back",
+    label: "Root travel back",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
+    spinePattern: /Spine: player-spine-neutral/i,
+  },
+  {
+    mode: "root-turn-travel",
+    label: "Root turn and travel",
+    baselinePattern: /Baseline: manual-calibration/i,
+    ownerPattern: /lower player-lower-body-neutral; feet neutral/i,
     spinePattern: /Spine: player-spine-neutral/i,
   },
   {
     mode: "far-right-leg-raise",
     label: "Far right leg raise",
     baselinePattern: /Baseline: manual-calibration/i,
-    ownerPattern: /lower player-right-leg-raise/i,
+    ownerPattern: /lower player-left-leg-raise/i,
     spinePattern: /Spine: player-spine-model/i,
   },
   {
@@ -143,6 +220,10 @@ const proofCases: AvatarProofCase[] = [
 
 const gamePathProofModes: MovementAvatarProofMode[] = [
   "standing",
+  "head-up",
+  "head-down",
+  "head-left",
+  "head-right",
   "squat",
   "far-squat",
   "left-leg-raise",
@@ -344,6 +425,15 @@ async function captureProofScreenshot(
   testInfo: TestInfo,
   mode: MovementAvatarProofMode,
 ): Promise<AvatarProofCapture> {
+  await expect.poll(async () => {
+    const pendingScreenshot = await page.screenshot({ fullPage: false });
+    const pendingPng = decodePng(pendingScreenshot);
+    return getPlayerAvatarMetrics(pendingPng).visiblePixels;
+  }, {
+    message: `${mode} should finish rendering visible player-avatar pixels in the right-side proof region`,
+    timeout: 5000,
+  }).toBeGreaterThan(900);
+
   const screenshot = await page.screenshot({ fullPage: false });
   const png = decodePng(screenshot);
   const metrics = getPlayerAvatarMetrics(png);
@@ -546,23 +636,246 @@ test.describe("Movement Avatar Proof Eval", () => {
     await captureProofScreenshot(page, testInfo, "squat");
 
     await openAvatarProofMode(page, proofCaseFor("left-leg-raise"));
-    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-left-leg-raise/i);
+    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-right-leg-raise/i);
     await expect(page.getByTestId("proof-debug-owners")).not.toContainText("stable-squat");
     await captureProofScreenshot(page, testInfo, "left-leg-raise");
 
     await openAvatarProofMode(page, proofCaseFor("far-left-leg-raise"));
-    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-left-leg-raise/i);
+    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-right-leg-raise/i);
     await expect(page.getByTestId("proof-debug-owners")).not.toContainText("stable-squat");
     await captureProofScreenshot(page, testInfo, "far-left-leg-raise");
 
     await openAvatarProofMode(page, proofCaseFor("right-leg-raise"));
-    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-right-leg-raise/i);
+    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-left-leg-raise/i);
     await expect(page.getByTestId("proof-debug-owners")).not.toContainText("stable-squat");
     await captureProofScreenshot(page, testInfo, "right-leg-raise");
 
     await openAvatarProofMode(page, proofCaseFor("far-right-leg-raise"));
-    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-right-leg-raise/i);
+    await expect(page.getByTestId("proof-debug-owners")).toHaveText(/lower player-left-leg-raise/i);
     await expect(page.getByTestId("proof-debug-owners")).not.toContainText("stable-squat");
     await captureProofScreenshot(page, testInfo, "far-right-leg-raise");
+  });
+
+  test("live player head pitch applies in the same direction as source head movement", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("head-up"));
+
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-head").textContent();
+      const match = text?.match(/tracking pitch (-?\d+\.\d+) · bone pitch (-?\d+\.\d+)/i);
+      return match ? { bone: Number(match[2]), tracking: Number(match[1]) } : null;
+    }, {
+      message: "Expected head-up proof to convert positive tracking pitch into the corrected player bone pitch",
+      timeout: 30000,
+    }).toMatchObject({
+      bone: expect.any(Number),
+      tracking: expect.any(Number),
+    });
+    const headUpText = await page.getByTestId("proof-debug-head").textContent();
+    const headUpMatch = headUpText?.match(/tracking pitch (-?\d+\.\d+) · bone pitch (-?\d+\.\d+)/i);
+    expect(Number(headUpMatch?.[1] ?? 0)).toBeGreaterThan(0.15);
+    expect(Number(headUpMatch?.[2] ?? 0)).toBeLessThan(-0.15);
+    await captureProofScreenshot(page, testInfo, "head-up");
+
+    await openAvatarProofMode(page, proofCaseFor("head-down"));
+
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-head").textContent();
+      const match = text?.match(/tracking pitch (-?\d+\.\d+) · bone pitch (-?\d+\.\d+)/i);
+      return match ? { bone: Number(match[2]), tracking: Number(match[1]) } : null;
+    }, {
+      message: "Expected head-down proof to convert negative tracking pitch into the corrected player bone pitch",
+      timeout: 30000,
+    }).toMatchObject({
+      bone: expect.any(Number),
+      tracking: expect.any(Number),
+    });
+    const headDownText = await page.getByTestId("proof-debug-head").textContent();
+    const headDownMatch = headDownText?.match(/tracking pitch (-?\d+\.\d+) · bone pitch (-?\d+\.\d+)/i);
+    expect(Number(headDownMatch?.[1] ?? 0)).toBeLessThan(-0.15);
+    expect(Number(headDownMatch?.[2] ?? 0)).toBeGreaterThan(0.15);
+    await captureProofScreenshot(page, testInfo, "head-down");
+  });
+
+  test("live player head yaw mirrors source left and right movement", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("head-left"));
+
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-head").textContent();
+      const match = text?.match(/tracking yaw (-?\d+\.\d+) · bone yaw (-?\d+\.\d+)/i);
+      return match ? { bone: Number(match[2]), tracking: Number(match[1]) } : null;
+    }, {
+      message: "Expected head-left proof to mirror source yaw on the player avatar",
+      timeout: 30000,
+    }).toMatchObject({
+      bone: expect.any(Number),
+      tracking: expect.any(Number),
+    });
+    const headLeftText = await page.getByTestId("proof-debug-head").textContent();
+    const headLeftMatch = headLeftText?.match(/tracking yaw (-?\d+\.\d+) · bone yaw (-?\d+\.\d+)/i);
+    expect(Number(headLeftMatch?.[1] ?? 0)).toBeLessThan(-0.35);
+    expect(Number(headLeftMatch?.[2] ?? 0)).toBeGreaterThan(0.25);
+    await captureProofScreenshot(page, testInfo, "head-left");
+
+    await openAvatarProofMode(page, proofCaseFor("head-right"));
+
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-head").textContent();
+      const match = text?.match(/tracking yaw (-?\d+\.\d+) · bone yaw (-?\d+\.\d+)/i);
+      return match ? { bone: Number(match[2]), tracking: Number(match[1]) } : null;
+    }, {
+      message: "Expected head-right proof to mirror source yaw on the player avatar",
+      timeout: 30000,
+    }).toMatchObject({
+      bone: expect.any(Number),
+      tracking: expect.any(Number),
+    });
+    const headRightText = await page.getByTestId("proof-debug-head").textContent();
+    const headRightMatch = headRightText?.match(/tracking yaw (-?\d+\.\d+) · bone yaw (-?\d+\.\d+)/i);
+    expect(Number(headRightMatch?.[1] ?? 0)).toBeGreaterThan(0.35);
+    expect(Number(headRightMatch?.[2] ?? 0)).toBeLessThan(-0.25);
+    await captureProofScreenshot(page, testInfo, "head-right");
+  });
+
+  test("synthetic root turn applies live avatar root yaw", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("root-turn-left"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/applied (-?\d+\.\d+)/i);
+      return match ? Math.abs(Number(match[1])) : 0;
+    }, {
+      message: "Expected root-turn proof to apply a visible avatar root yaw",
+      timeout: 30000,
+    }).toBeGreaterThan(2.6);
+
+    await captureProofScreenshot(page, testInfo, "root-turn-left");
+  });
+
+  test("synthetic right root turn applies mirrored positive live avatar root yaw", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("root-turn-right"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/yaw target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected mirrored root-turn-right proof to apply positive avatar root yaw",
+      timeout: 30000,
+    }).toBeGreaterThan(1.2);
+
+    await captureProofScreenshot(page, testInfo, "root-turn-right");
+  });
+
+  test("synthetic root travel applies live avatar root path", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("root-travel-right"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/x target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected mirrored root-travel proof to apply visible negative avatar root X movement",
+      timeout: 30000,
+    }).toBeLessThan(3.95);
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/z target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected root-travel proof to apply visible avatar root Z movement",
+      timeout: 30000,
+    }).toBeGreaterThan(0.12);
+
+    await captureProofScreenshot(page, testInfo, "root-travel-right");
+  });
+
+  test("synthetic root travel applies left, forward, and back paths", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("root-travel-left"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/x target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 4.2;
+    }, {
+      message: "Expected mirrored left root-travel proof to apply positive avatar root X movement",
+      timeout: 30000,
+    }).toBeGreaterThan(4.45);
+    await captureProofScreenshot(page, testInfo, "root-travel-left");
+
+    await openAvatarProofMode(page, proofCaseFor("root-travel-forward"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/z target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected forward root-travel proof to apply positive avatar root Z movement",
+      timeout: 30000,
+    }).toBeGreaterThan(0.3);
+    await captureProofScreenshot(page, testInfo, "root-travel-forward");
+
+    await openAvatarProofMode(page, proofCaseFor("root-travel-back"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/z target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected back root-travel proof to apply negative avatar root Z movement",
+      timeout: 30000,
+    }).toBeLessThan(-0.18);
+    await captureProofScreenshot(page, testInfo, "root-travel-back");
+  });
+
+  test("synthetic root turn and travel applies live avatar yaw and path", async ({ page }, testInfo) => {
+    await openAvatarProofMode(page, proofCaseFor("root-turn-travel"));
+
+    await expect(page.getByTestId("proof-debug-root")).toContainText("world-landmarks", {
+      timeout: 30000,
+    });
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/yaw target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected mirrored mixed root proof to apply negative avatar root yaw",
+      timeout: 30000,
+    }).toBeLessThan(-1.2);
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/x target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected mirrored mixed root proof to apply visible negative avatar root X movement",
+      timeout: 30000,
+    }).toBeLessThan(3.95);
+    await expect.poll(async () => {
+      const text = await page.getByTestId("proof-debug-root").textContent();
+      const match = text?.match(/z target -?\d+\.\d+ · applied (-?\d+\.\d+)/i);
+      return match ? Number(match[1]) : 0;
+    }, {
+      message: "Expected mixed root proof to apply visible avatar root Z movement",
+      timeout: 30000,
+    }).toBeGreaterThan(0.12);
+
+    await captureProofScreenshot(page, testInfo, "root-turn-travel");
   });
 });

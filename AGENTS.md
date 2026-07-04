@@ -62,6 +62,12 @@ The user considers this demo temporary and expects to delete it after the client
 
 If the user explicitly reopens avatar body motion, read `docs/developer/movement-demo-retargeting-approach.md` before changing `VrmAvatar` or lower-body tracking. The documented direction is source-skeleton proof, neutral calibration, vector retargeting, and foot locking; do not drive body animation primarily from labels such as `squat` or from canned poses.
 
+### Replay/Game Motion Vision
+
+Replay Studio is the motion source of truth. If avatar motion is broken, fix the Replay/shared motion pipeline first, prove it with recorded data such as FULL MOTION EXERCISES, and then make Game Studio consume that same shared result. Do not patch Game Studio with separate bone rules, pose-specific tuning, or live-only presentation numbers that diverge from Replay. Any remaining Game Studio difference must be explicit input cleanup before the shared pipeline, or documented VRM application plumbing with parity proof.
+
+When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
+
 ## Project Guardrails
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.

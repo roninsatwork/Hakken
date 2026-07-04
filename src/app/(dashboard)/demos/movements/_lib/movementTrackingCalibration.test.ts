@@ -522,6 +522,23 @@ describe("movementTrackingCalibration", () => {
     expect(intent.squatDepth).toBeGreaterThan(0.25);
   });
 
+  it("reads a single raised knee before calibration is available", () => {
+    const kneeRaisePose = withCorePose();
+    kneeRaisePose[25] = { ...kneeRaisePose[25]!, y: 0.53 };
+    kneeRaisePose[27] = { ...kneeRaisePose[27]!, y: 0.68 };
+    kneeRaisePose[31] = { ...kneeRaisePose[31]!, y: 0.7 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: kneeRaisePose,
+      calibration: null,
+    });
+
+    expect(intent.label).toBe("left-knee-raise");
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.6);
+    expect(intent.rightKneeRaise).toBe(0);
+    expect(intent.squatDepth).toBe(0);
+  });
+
   it("boosts squat depth from torso and head lowering when knees also bend", () => {
     const neutralPose = withCorePose();
     const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });

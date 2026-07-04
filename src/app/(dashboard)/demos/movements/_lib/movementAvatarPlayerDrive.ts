@@ -200,7 +200,14 @@ export function resolveMovementAvatarPlayerSpineDrive({
   torsoTrackingReady: boolean;
 }): MovementAvatarPlayerSpineDrive {
   if (!isPlayer) return NEUTRAL_PLAYER_SPINE_DRIVE;
-  if (!torsoTrackingReady || !calibration || calibration.quality < 0.45) {
+  if (!torsoTrackingReady) {
+    return {
+      ...NEUTRAL_PLAYER_SPINE_DRIVE,
+      owner: "player-spine-held",
+    };
+  }
+
+  if (!calibration || calibration.quality < 0.45) {
     return {
       ...NEUTRAL_PLAYER_SPINE_DRIVE,
       owner: "player-spine-held",

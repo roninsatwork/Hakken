@@ -5,11 +5,7 @@ import type {
 } from "./movementDebugReplay";
 import {
   buildMovementAvatarRetargetDebug,
-  resolveMovementAvatarInactiveLowerBodyDecision,
-  resolveMovementAvatarLowerBodyApplicationStage,
   resolveMovementAvatarLowerBodyVisualDecision,
-  resolveMovementAvatarPlayerSourceOwnerDecision,
-  resolveMovementAvatarStudioDecision,
   type MovementAvatarLowerBodyVisualState,
   type MovementAvatarPipelineDecision,
 } from "./movementAvatarPipeline";
@@ -26,15 +22,54 @@ import {
   type MovementCalibration,
   type TrackingLandmark,
 } from "./movementTrackingCalibration";
+import type { MovementExerciseTransitionDecision } from "./movementExerciseTransition";
+import {
+  buildMovementRootMotionAnalysis,
+  type MovementRootMotionAnalysis,
+  type MovementRootMotionFrame,
+} from "./movementRootMotion";
+import {
+  buildRecordedMovementSourceFrame,
+  type MovementSourceFrame,
+} from "./movementSourceFrame";
+import {
+  mirrorMovementLandmarksForDisplay,
+  type MovementMirrorMode,
+} from "./movementMirrorMapping";
+import {
+  resolveMovementMotionFrame,
+  type MovementMotionFrame,
+} from "./movementMotionFrame";
+import {
+  resolveMovementGameplayEvents,
+  type MovementGameplayEventFrame,
+} from "./movementGameplayEvents";
+import {
+  resolveMovementAvatarLowerBodyTarget,
+  type MovementAvatarLowerBodyTargetDecision,
+} from "./movementAvatarTarget";
+import {
+  createMovementAvatarExerciseTransitionState,
+  resolveMovementAvatarExerciseTarget,
+  type MovementAvatarExerciseTransitionState,
+} from "./movementAvatarExerciseTarget";
 
 export type MovementGamePathDecision = MovementAvatarPipelineDecision & {
+  exerciseTransition: MovementExerciseTransitionDecision;
+  lowerBodyTarget: MovementAvatarLowerBodyTargetDecision;
   retarget: MovementDebugReplayRetarget;
+  rootMotion: MovementRootMotionFrame;
 };
 
 export type MovementGamePathSimulation = {
   calibration: MovementCalibration | null;
   decisions: Array<MovementGamePathDecision | undefined>;
+  gameplayEvents: Array<MovementGameplayEventFrame | undefined>;
+  mirrorMode: MovementMirrorMode;
+  motionFrames: Array<MovementMotionFrame | undefined>;
   retargetSourceModel: MovementRetargetSourceModel | null;
+  rootMotion: MovementRootMotionAnalysis;
+  sourceFrames: Array<MovementSourceFrame | null>;
 };
 
 function isNonNull<T>(value: T | null | undefined): value is T {
@@ -43,6 +78,36 @@ function isNonNull<T>(value: T | null | undefined): value is T {
 
 function toTrackingLandmarks(frame: MovementDebugReplayFrame): TrackingLandmark[] | null {
   return frame.tracking.pose.length >= 33 ? frame.tracking.pose : null;
+}
+
+type PreparedGamePathFrame = {
+  pose: TrackingLandmark[];
+  sourceFrame: MovementSourceFrame;
+  worldPose: TrackingLandmark[] | null;
+};
+
+const GAME_PATH_MIRROR_MODE: MovementMirrorMode = "facing-player";
+
+function preparePlayerGamePathFrame(frame: MovementDebugReplayFrame): PreparedGamePathFrame | null {
+  const sourceFrame = buildRecordedMovementSourceFrame(frame);
+  const pose = toTrackingLandmarks(frame);
+  if (!pose) return null;
+
+  const hasWorldPose = sourceFrame.landmarks.worldPose.length >= 33;
+
+  return {
+    sourceFrame,
+    pose: mirrorMovementLandmarksForDisplay(pose, {
+      mapX: (x) => 1 - x,
+      mirrorMode: GAME_PATH_MIRROR_MODE,
+    }),
+    worldPose: hasWorldPose
+      ? mirrorMovementLandmarksForDisplay(sourceFrame.landmarks.worldPose, {
+          mapX: (x) => -x,
+          mirrorMode: GAME_PATH_MIRROR_MODE,
+        })
+      : null,
+  };
 }
 
 function buildSimulationCalibration(landmarkFrames: TrackingLandmark[][]) {
@@ -61,76 +126,43 @@ function buildSimulationCalibration(landmarkFrames: TrackingLandmark[][]) {
   );
 }
 
-function resolveGamePathAppliedOwners({
+function resolveGamePathLowerBodyTarget({
   decision,
   lowerBodyVisualState,
 }: {
   decision: MovementAvatarPipelineDecision;
   lowerBodyVisualState: MovementAvatarLowerBodyVisualState;
 }) {
-  const playerSquatPresentationDepth = lowerBodyVisualState.squatPresentationDepth;
-  const recordedSquatPresentationDepth = getRecordedSquatPresentationDepth(decision.retargetFrame);
-  const instructorLowerBodyMotion = Math.max(
-    recordedSquatPresentationDepth,
-    decision.lowerBodySegmentMotion,
-    decision.retargetFrame.kneeLift.left,
-    decision.retargetFrame.kneeLift.right,
-  );
-  const shouldHoldPlayerSquatPose =
-    decision.shouldApplyLowerBody &&
-    playerSquatPresentationDepth > 0.18;
-  const playerSourceOwner = resolveMovementAvatarPlayerSourceOwnerDecision({
+  return resolveMovementAvatarLowerBodyTarget({
     avatarRole: "player",
     decision,
-    playerSquatPresentationDepth,
-    shouldHoldPlayerSquatPose,
+    lowerBodyVisualState,
   });
-
-  if ((decision.lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && decision.shouldApplyLowerBody) {
-    const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
-      avatarRole: "player",
-      instructorLowerBodyMotion,
-      lowerBodyDrive: decision.lowerBodyDrive,
-      playerRetargetLowerBodyMotion: playerSourceOwner.playerRetargetLowerBodyMotion,
-      retargetSourceQuality: decision.retargetFrame.debug.sourceQuality,
-      sourceOwnerDecision: playerSourceOwner.lowerBodyOwnerDecision,
-      shouldHoldPlayerSquatPose,
-    });
-
-    if (stageDecision.stage !== "retarget") {
-      return {
-        feetOwner: stageDecision.feetOwner,
-        lowerOwner: stageDecision.lowerBodyOwner,
-      };
-    }
-  } else {
-    const inactiveDecision = resolveMovementAvatarInactiveLowerBodyDecision({
-      avatarRole: "player",
-      lowerBodySourceReliable: decision.lowerBodySourceReliable,
-    });
-
-    return {
-      feetOwner: inactiveDecision.feetOwner ?? decision.feetOwner,
-      lowerOwner: inactiveDecision.lowerBodyOwner ?? decision.lowerOwner,
-    };
-  }
-
-  return {
-    feetOwner: decision.feetOwner,
-    lowerOwner: decision.lowerOwner,
-  };
 }
 
 export function buildMovementGamePathSimulation(
   session: MovementDebugReplaySession,
 ): MovementGamePathSimulation {
-  const frameLandmarks = session.samples.map(toTrackingLandmarks);
+  const preparedFrames = session.samples.map(preparePlayerGamePathFrame);
+  const sourceFrames = preparedFrames.map((frame) => frame?.sourceFrame ?? null);
+  const frameLandmarks = preparedFrames.map((frame) => frame?.pose ?? null);
+  const rootMotion = buildMovementRootMotionAnalysis(
+    preparedFrames.map((frame) => ({
+      pose: frame?.pose ?? [],
+      worldPose: frame?.worldPose ?? null,
+    })),
+  );
   const landmarkFrames = frameLandmarks.filter((landmarks): landmarks is TrackingLandmark[] => Boolean(landmarks));
   if (landmarkFrames.length === 0) {
     return {
       calibration: null,
       decisions: session.samples.map(() => undefined),
+      gameplayEvents: session.samples.map(() => undefined),
+      mirrorMode: GAME_PATH_MIRROR_MODE,
+      motionFrames: session.samples.map(() => undefined),
       retargetSourceModel: null,
+      rootMotion,
+      sourceFrames,
     };
   }
 
@@ -145,16 +177,38 @@ export function buildMovementGamePathSimulation(
     squatPresentationDepth: 0,
     visualRootDrop: 0,
   };
+  let exerciseTransitionState: MovementAvatarExerciseTransitionState = createMovementAvatarExerciseTransitionState();
+  const motionFrames: Array<MovementMotionFrame | undefined> = [];
+  const gameplayEvents: Array<MovementGameplayEventFrame | undefined> = [];
+  let gameplayStreak = 0;
 
-  const decisions = frameLandmarks.map((poseLandmarks) => {
-    if (!poseLandmarks) return undefined;
+  const decisions = frameLandmarks.map((poseLandmarks, frameIndex) => {
+    const sourceFrame = preparedFrames[frameIndex]?.sourceFrame;
+    if (!poseLandmarks || !sourceFrame) {
+      gameplayStreak = 0;
+      gameplayEvents.push(undefined);
+      motionFrames.push(undefined);
+      return undefined;
+    }
 
-    const decision = resolveMovementAvatarStudioDecision({
+    const motionFrame = resolveMovementMotionFrame({
       avatarRole: "player",
       calibration,
+      displayPoseLandmarks: poseLandmarks,
+      displayWorldPoseLandmarks: preparedFrames[frameIndex]?.worldPose ?? [],
+      mirrorMode: GAME_PATH_MIRROR_MODE,
       retargetSourceModel,
-      source: { poseLandmarks },
+      sourceFrame,
     });
+    motionFrames.push(motionFrame);
+    const gameplayEventFrame = resolveMovementGameplayEvents({
+      motionFrame,
+      previousMotionFrame: motionFrames[frameIndex - 1] ?? null,
+      streak: gameplayStreak,
+    });
+    gameplayStreak = gameplayEventFrame.nextStreak;
+    gameplayEvents.push(gameplayEventFrame);
+    const decision = motionFrame.avatarDecision;
     const visualDecision = resolveMovementAvatarLowerBodyVisualDecision({
       avatarRole: "player",
       lowerBodyDrive: decision.lowerBodyDrive,
@@ -162,7 +216,7 @@ export function buildMovementGamePathSimulation(
       recordedSquatPresentationDepth: getRecordedSquatPresentationDepth(decision.retargetFrame),
     });
     lowerBodyVisualState = visualDecision.state;
-    const appliedOwners = resolveGamePathAppliedOwners({
+    const lowerBodyTarget = resolveGamePathLowerBodyTarget({
       decision,
       lowerBodyVisualState,
     });
@@ -171,18 +225,31 @@ export function buildMovementGamePathSimulation(
       retargetSourceModel,
       visualRootDrop: decision.lowerBodyDrive.visualRootDrop,
     });
+    const exerciseTarget = resolveMovementAvatarExerciseTarget({
+      decision,
+      previousState: exerciseTransitionState,
+    });
+    exerciseTransitionState = exerciseTarget.nextState;
 
     return {
       ...decision,
-      feetOwner: appliedOwners.feetOwner,
-      lowerOwner: appliedOwners.lowerOwner,
+      exerciseTransition: exerciseTarget.exerciseTransition,
+      feetOwner: lowerBodyTarget.feetOwner,
+      lowerBodyTarget,
+      lowerOwner: lowerBodyTarget.lowerBodyOwner,
       retarget,
+      rootMotion: rootMotion.frames[frameIndex]!,
     };
   });
 
   return {
     calibration,
     decisions,
+    gameplayEvents,
+    mirrorMode: GAME_PATH_MIRROR_MODE,
+    motionFrames,
     retargetSourceModel,
+    rootMotion,
+    sourceFrames,
   };
 }
