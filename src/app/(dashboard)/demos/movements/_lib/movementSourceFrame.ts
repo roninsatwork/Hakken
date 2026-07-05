@@ -13,6 +13,11 @@ export type MovementSourceStatus =
   | "synthetic"
   | "held-last-good";
 
+export type MovementBlendshape = {
+  categoryName: string;
+  score: number;
+};
+
 export type MovementCameraConfidenceState = "ready" | "partial" | "uncertain" | "lost";
 
 export type MovementCameraMessageEvent =
@@ -72,12 +77,24 @@ export type MovementStartReadiness = {
   visibleBodyParts: MovementCameraBodyPart[];
 };
 
+export type MovementStartReadinessTarget = "game" | "recording";
+
+export type MovementStartGateDecision = {
+  blockedReasons: string[];
+  canStart: boolean;
+  promptEvents: MovementStartPromptEvent[];
+  readiness: MovementStartReadiness | null;
+  state: MovementStartReadinessState | "missing-readiness";
+  target: MovementStartReadinessTarget;
+};
+
 export type MovementSourceFrame = {
   camera?: MovementDebugReplayFrame["camera"];
   cameraConfidence: MovementCameraConfidence;
   capturedAt: number;
   frameId?: string;
   landmarks: {
+    blendshapes?: MovementBlendshape[];
     hands?: MovementHandsForConfidence;
     pose: TrackingLandmark[];
     worldPose: TrackingLandmark[];
@@ -97,6 +114,7 @@ export type MovementSourceFrameRequirements = {
 };
 
 export type BuildMovementSourceFrameInput = {
+  blendshapes?: MovementBlendshape[];
   camera?: MovementDebugReplayFrame["camera"];
   capturedAt?: number;
   frameId?: string;
@@ -343,7 +361,40 @@ export function resolveMovementStartReadiness({
   };
 }
 
+export function resolveMovementStartGateDecision({
+  readiness,
+  target,
+}: {
+  readiness: MovementStartReadiness | null | undefined;
+  target: MovementStartReadinessTarget;
+}): MovementStartGateDecision {
+  if (!readiness) {
+    return {
+      blockedReasons: ["readiness-missing"],
+      canStart: false,
+      promptEvents: ["walk-back-into-frame"],
+      readiness: null,
+      state: "missing-readiness",
+      target,
+    };
+  }
+
+  const canStart = target === "game"
+    ? readiness.canStartGame
+    : readiness.canStartRecording;
+
+  return {
+    blockedReasons: readiness.blockedReasons,
+    canStart,
+    promptEvents: readiness.promptEvents,
+    readiness,
+    state: readiness.state,
+    target,
+  };
+}
+
 export function buildMovementSourceFrame({
+  blendshapes,
   camera,
   capturedAt = Date.now(),
   frameId,
@@ -375,6 +426,7 @@ export function buildMovementSourceFrame({
     capturedAt,
     frameId,
     landmarks: {
+      blendshapes,
       hands,
       pose: poseLandmarks,
       worldPose: worldPoseLandmarks,

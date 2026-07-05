@@ -15,6 +15,11 @@ export type MovementAvatarFootLockApplicationDecision = {
   shouldApplyCorrection: boolean;
 };
 
+export type MovementAvatarFootLockRootCorrectionApplicationResult = {
+  applied: boolean;
+  correctionScale: number;
+};
+
 export function createMovementAvatarFootLockState(): MovementAvatarFootLockState {
   return {
     correction: new THREE.Vector3(),
@@ -118,5 +123,29 @@ export function resolveMovementAvatarFootLockApplication({
     drift,
     nextState,
     shouldApplyCorrection: true,
+  };
+}
+
+export function applyMovementAvatarFootLockRootCorrection({
+  apply,
+  decision,
+  options,
+}: {
+  apply: (correction: THREE.Vector3, correctionScale: number) => boolean;
+  decision: MovementAvatarFootLockApplicationDecision;
+  options: MovementAvatarFootLockOptionsDecision;
+}): MovementAvatarFootLockRootCorrectionApplicationResult {
+  if (!decision.shouldApplyCorrection) {
+    return {
+      applied: false,
+      correctionScale: 0,
+    };
+  }
+
+  const correctionScale = decision.nextState.strength * options.correctionScale;
+
+  return {
+    applied: apply(decision.nextState.correction, correctionScale),
+    correctionScale,
   };
 }

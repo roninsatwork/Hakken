@@ -82,6 +82,46 @@ describe("MovementCapturePanel", () => {
     expect(onToggleRecording).toHaveBeenCalledTimes(1);
   });
 
+  it("shows capture countdown and blocks duplicate starts", () => {
+    const onToggleRecording = vi.fn();
+
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        isVisionReady
+        visionStatus="ready"
+        isPoseReady
+        captureReadinessCountdownSeconds={3}
+        captureReadinessMessage="Walk back into frame."
+        captureReadinessStatus="countdown"
+        onToggleRecording={onToggleRecording}
+      />,
+    );
+
+    expect(screen.getByText("Get ready: 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start posture capture" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start posture capture" }));
+
+    expect(onToggleRecording).not.toHaveBeenCalled();
+  });
+
+  it("shows capture visibility block messages", () => {
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        isVisionReady
+        visionStatus="ready"
+        isPoseReady
+        captureReadinessMessage="Show your whole body."
+        captureReadinessStatus="blocked"
+      />,
+    );
+
+    expect(screen.getByText("Show your whole body.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start posture capture" })).toBeEnabled();
+  });
+
   it("shows active capture state", () => {
     render(
       <MovementCapturePanel

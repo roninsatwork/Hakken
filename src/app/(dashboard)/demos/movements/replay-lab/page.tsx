@@ -31,6 +31,8 @@ import {
 import {
   resolveMovementAvatarReplayDecision,
   resolveMovementAvatarStudioDecision,
+} from "../_lib/movementAvatarLegacyDecision";
+import {
   type MovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
 import {
@@ -1148,12 +1150,16 @@ export default function MovementReplayLabPage() {
         data-coverage-family-count={analysis?.coverage.summary.familyCount ?? ""}
         data-coverage-implemented-count={analysis?.coverage.summary.implementedCount ?? ""}
         data-coverage-implemented-percent={analysis?.coverage.summary.implementedPercent ?? ""}
+        data-coverage-internal-demo-only-count={analysis?.coverage.summary.internalDemoOnlyCount ?? ""}
+        data-coverage-internal-demo-only-families={analysis?.coverage.summary.internalDemoOnlyFamilies.join(",") ?? ""}
         data-coverage-missing-proof-count={analysis?.coverage.summary.missingProofCount ?? ""}
         data-coverage-missing-proof-families={analysis?.coverage.summary.missingProofFamilies.join(",") ?? ""}
         data-coverage-phase-complete={analysis?.coverage.summary.phaseComplete ?? ""}
         data-coverage-remaining-gap-count={analysis?.coverage.summary.remainingGapCount ?? ""}
         data-coverage-unsupported-count={analysis?.coverage.summary.unsupportedCount ?? ""}
         data-coverage-unsupported-families={analysis?.coverage.summary.unsupportedFamilies.join(",") ?? ""}
+        data-coverage-user-facing-count={analysis?.coverage.summary.userFacingCount ?? ""}
+        data-coverage-user-facing-families={analysis?.coverage.summary.userFacingFamilies.join(",") ?? ""}
         data-exercise-pose-average-quality-score={analysis?.metrics.averageExercisePoseQualityScore ?? ""}
         data-exercise-pose-diagnostic-frame-count={analysis?.metrics.exercisePoseDiagnosticFrameCount ?? ""}
         data-exercise-pose-moderate-frame-count={analysis?.metrics.exercisePoseModerateFrameCount ?? ""}

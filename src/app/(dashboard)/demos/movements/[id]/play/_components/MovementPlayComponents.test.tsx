@@ -318,6 +318,70 @@ describe("movement play components", () => {
     expect(onTogglePlaying).toHaveBeenCalledTimes(1);
   });
 
+  it("shows start-readiness countdown before practice begins", () => {
+    const onTogglePlaying = vi.fn();
+
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying={false}
+        isVisionReady
+        isTrackingCalibrated
+        isCalibrating={false}
+        visionStatus="ready"
+        visionError={null}
+        calibrationStatus="Ready"
+        startReadinessCountdownSeconds={4}
+        startReadinessMessage="Walk back into frame."
+        startReadinessStatus="countdown"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={onTogglePlaying}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Get Ready")).toBeInTheDocument();
+    expect(screen.getByText("Get ready: 4")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start practice" }));
+
+    expect(onTogglePlaying).not.toHaveBeenCalled();
+  });
+
+  it("shows start-readiness block messages", () => {
+    render(
+      <MovementHud
+        movementTitle="Roll Down"
+        difficulty="Beginner"
+        hudScore={0}
+        hudSync={0}
+        isPlaying={false}
+        isVisionReady
+        isTrackingCalibrated
+        isCalibrating={false}
+        visionStatus="ready"
+        visionError={null}
+        calibrationStatus="Ready"
+        startReadinessMessage="Show your whole body."
+        startReadinessStatus="blocked"
+        webcamRef={React.createRef<Webcam>()}
+        onTogglePlaying={vi.fn()}
+        onRetryVision={vi.fn()}
+        onCalibrate={vi.fn()}
+        onResetStudio={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Show your whole body.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeEnabled();
+  });
+
   it("exposes recalibration when vision is ready", () => {
     const onCalibrate = vi.fn();
 

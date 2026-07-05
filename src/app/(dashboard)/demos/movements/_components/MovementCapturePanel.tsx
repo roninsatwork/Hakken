@@ -15,6 +15,9 @@ type MovementCapturePanelProps = {
   visionStatus: MediaPipeVisionStatus;
   visionError: string | null;
   isPoseReady: boolean;
+  captureReadinessCountdownSeconds?: number;
+  captureReadinessMessage?: string | null;
+  captureReadinessStatus?: "idle" | "countdown" | "checking-visibility" | "blocked";
   frameCount: number;
   trackingQuality: number;
   spineQuality: number;
@@ -32,6 +35,9 @@ export default function MovementCapturePanel({
   visionStatus,
   visionError,
   isPoseReady,
+  captureReadinessCountdownSeconds = 0,
+  captureReadinessMessage = null,
+  captureReadinessStatus = "idle",
   frameCount,
   trackingQuality,
   spineQuality,
@@ -39,6 +45,9 @@ export default function MovementCapturePanel({
   onRetryVision,
   onToggleRecording,
 }: MovementCapturePanelProps) {
+  const isCaptureStartGateActive =
+    captureReadinessStatus === "countdown" ||
+    captureReadinessStatus === "checking-visibility";
   const visionLabel =
     visionStatus === "ready"
       ? "Posture Tracking: Ready"
@@ -116,10 +125,22 @@ export default function MovementCapturePanel({
         </div>
       )}
 
+      {captureReadinessStatus !== "idle" && (
+        <div className="absolute bottom-24 left-1/2 z-20 w-[min(90%,360px)] -translate-x-1/2 rounded-2xl border border-white/10 bg-black/70 px-5 py-3 text-center backdrop-blur-md">
+          <Typography className="text-xs font-black uppercase tracking-[0.18em] text-[#f6ccbe]">
+            {captureReadinessStatus === "countdown"
+              ? `Get ready: ${Math.max(captureReadinessCountdownSeconds, 1)}`
+              : captureReadinessStatus === "checking-visibility"
+                ? "Checking visibility"
+                : captureReadinessMessage ?? "Show your whole body"}
+          </Typography>
+        </div>
+      )}
+
       <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20">
         <button
           onClick={onToggleRecording}
-          disabled={!isVisionReady}
+          disabled={!isVisionReady || isCaptureStartGateActive}
           aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
           className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
             isRecording
@@ -127,7 +148,13 @@ export default function MovementCapturePanel({
               : "bg-[#f6ccbe] text-[#17131d] hover:bg-[#f7efe7] shadow-[0_0_20px_rgba(246,204,190,0.34)]"
           }`}
         >
-          {isRecording ? "Finish Capture" : "Start Posture Capture"}
+          {isRecording
+            ? "Finish Capture"
+            : captureReadinessStatus === "countdown"
+              ? `Get Ready ${Math.max(captureReadinessCountdownSeconds, 1)}`
+              : captureReadinessStatus === "checking-visibility"
+                ? "Checking Visibility"
+                : "Start Posture Capture"}
         </button>
       </div>
     </div>

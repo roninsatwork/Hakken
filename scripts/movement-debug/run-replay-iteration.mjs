@@ -25,6 +25,7 @@ Options:
   --label <name>    Human-readable run label used in filenames.
   --out-dir <dir>   Directory for timestamped run files. Defaults to ${defaultRunsDir}
   --strict          Forward strict mode to movement:replay:analyze.
+  --strict-manifest Forward strict manifest proof mode to movement:replay:analyze.
   --help            Show this help.
 `);
 }
@@ -40,6 +41,7 @@ function parseArgs(argv) {
     refreshExport: false,
     source: "recordings",
     strict: false,
+    strictManifest: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -69,6 +71,8 @@ function parseArgs(argv) {
       args.outDir = argv[++index] || defaultRunsDir;
     } else if (arg === "--strict") {
       args.strict = true;
+    } else if (arg === "--strict-manifest") {
+      args.strictManifest = true;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -144,12 +148,155 @@ function formatDelta(value, digits = 2) {
 }
 
 function summarizeAnalyses(analyses) {
+  const coverageSummary = analyses[0]?.coverage?.summary ?? null;
+
   return {
+    coverageInternalDemoOnly: coverageSummary?.internalDemoOnlyCount ?? 0,
+    coverageMissingProof: coverageSummary?.missingProofCount ?? 0,
+    coverageUserFacing: coverageSummary?.userFacingCount ?? 0,
     errors: analyses.reduce((sum, analysis) => sum + countFailures(analysis, "error"), 0),
     failed: analyses.filter((analysis) => !analysis.pass).length,
     sessions: analyses.length,
     warnings: analyses.reduce((sum, analysis) => sum + countFailures(analysis, "warning"), 0),
   };
+}
+
+function proofManifestPathForAnalysis(analysisPath) {
+  return analysisPath.endsWith(".json")
+    ? analysisPath.replace(/\.json$/, ".proof-manifest.json")
+    : `${analysisPath}.proof-manifest.json`;
+}
+
+function summarizeProofManifest(manifest) {
+  if (!manifest?.summary) return null;
+
+  return {
+    failed: manifest.summary.failedCount ?? 0,
+    manualReview: manifest.summary.manualReviewCount ?? 0,
+    missingProof: manifest.summary.missingProofCount ?? 0,
+    passed: manifest.summary.passedCount ?? 0,
+    sourceDataLimitation: manifest.summary.sourceDataLimitationCount ?? 0,
+    total: manifest.summary.totalRows ?? 0,
+    visualCaptureRows: manifest.summary.visualCaptureRowCount ?? 0,
+  };
+}
+
+function escapeMarkdownCell(value) {
+  return String(value ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function formatOptionalAmplitude(value) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? formatNumber(value)
+    : "n/a";
+}
+
+function formatCountSummary(counts) {
+  return Object.entries(counts || {})
+    .filter(([, count]) => typeof count === "number" && count > 0)
+    .sort(([, leftCount], [, rightCount]) => rightCount - leftCount)
+    .map(([key, count]) => `${key}:${count}`)
+    .join(", ") || "none";
+}
+
+function countBlockingProofCases(rows) {
+  return rows.reduce((summary, row) => ({
+    ...summary,
+    [row.proofCase]: (summary[row.proofCase] ?? 0) + 1,
+  }), {});
+}
+
+function countBlockingMissingLayers(rows) {
+  return rows.reduce((summary, row) => {
+    for (const layer of row.missingLayers || []) {
+      summary[layer] = (summary[layer] ?? 0) + 1;
+    }
+    return summary;
+  }, {});
+}
+
+function countBlockingStatuses(rows) {
+  return rows.reduce((summary, row) => ({
+    ...summary,
+    [row.status]: (summary[row.status] ?? 0) + 1,
+  }), {});
+}
+
+function blockingStatusSummary(manifest, rows) {
+  return formatCountSummary(
+    manifest?.summary?.blockingRowsByStatus ?? countBlockingStatuses(rows),
+  );
+}
+
+function blockingProofCaseSummary(manifest, rows) {
+  return formatCountSummary(
+    manifest?.summary?.blockingRowsByProofCase ?? countBlockingProofCases(rows),
+  );
+}
+
+function blockingMissingLayerSummary(manifest, rows) {
+  return formatCountSummary(
+    manifest?.summary?.blockingRowsByMissingLayer ?? countBlockingMissingLayers(rows),
+  );
+}
+
+function renderBlockingProofRows(manifest, limit = 16) {
+  if (!manifest?.rows?.length) {
+    return [
+      "## Blocking Proof Rows",
+      "",
+      "Proof manifest is missing or empty.",
+    ];
+  }
+
+  const blockingRows = manifest.rows
+    .filter((row) => row.status !== "passed")
+    .sort((left, right) => {
+      const statusOrder = ["failed", "missing-proof", "manual-review", "source-data-limitation"];
+      const leftStatus = statusOrder.indexOf(left.status);
+      const rightStatus = statusOrder.indexOf(right.status);
+      if (leftStatus !== rightStatus) return leftStatus - rightStatus;
+      const caseCompare = String(left.proofCase).localeCompare(String(right.proofCase));
+      if (caseCompare !== 0) return caseCompare;
+      return String(left.recordingId).localeCompare(String(right.recordingId));
+    });
+
+  if (blockingRows.length === 0) {
+    return [
+      "## Blocking Proof Rows",
+      "",
+      "None. The recorded proof manifest gate is clear.",
+    ];
+  }
+
+  const visibleRows = blockingRows.slice(0, limit);
+  const blockingRowCount = manifest.summary?.blockingRowCount ?? blockingRows.length;
+  const lines = [
+    "## Blocking Proof Rows",
+    "",
+    `Showing ${visibleRows.length} of ${blockingRowCount} blocking proof row(s).`,
+    `Blocking proof statuses: ${blockingStatusSummary(manifest, blockingRows)}`,
+    `Blocking proof cases: ${blockingProofCaseSummary(manifest, blockingRows)}`,
+    `Blocking missing layers: ${blockingMissingLayerSummary(manifest, blockingRows)}`,
+    "",
+    "| Status | Proof Case | Recording | Observed / Required | Missing / Required Layers | Next Action | Reason |",
+    "| --- | --- | --- | ---: | --- | --- | --- |",
+    ...visibleRows.map((row) => `| ${[
+      row.status,
+      row.proofCase,
+      row.recordingId,
+      `${formatOptionalAmplitude(row.observedAmplitude)} / ${formatOptionalAmplitude(row.expectedMinimumAmplitude)}`,
+      `${row.missingLayers?.join(", ") || "none"} / ${row.requiredLayers?.join(", ") || "unknown"}`,
+      row.nextAction,
+      row.statusReason,
+    ].map(escapeMarkdownCell).join(" | ")} |`),
+  ];
+
+  if (blockingRowCount > visibleRows.length) {
+    lines.push("", `${blockingRowCount - visibleRows.length} more blocking row(s) are in the proof manifest JSON.`);
+  }
+
+  return lines;
 }
 
 function renderSessionRows(analyses) {
@@ -223,7 +370,12 @@ async function writeMarkdownReport({
   const comparison = comparisonPath && await fileExists(comparisonPath)
     ? await readJson(comparisonPath)
     : null;
+  const proofManifestPath = proofManifestPathForAnalysis(analysisPath);
+  const proofManifest = await fileExists(proofManifestPath)
+    ? await readJson(proofManifestPath)
+    : null;
   const summary = summarizeAnalyses(analyses);
+  const proofSummary = summarizeProofManifest(proofManifest);
   const lines = [
     `# Movement Replay Iteration: ${label}`,
     "",
@@ -235,9 +387,16 @@ async function writeMarkdownReport({
     `- Failed sessions: ${summary.failed}`,
     `- Errors: ${summary.errors}`,
     `- Warnings: ${summary.warnings}`,
+    `- Coverage product truth: ${summary.coverageUserFacing} user-facing, ${summary.coverageInternalDemoOnly} internal-demo-only, ${summary.coverageMissingProof} missing-proof`,
     `- Analysis JSON: ${analysisPath}`,
+    `- Proof manifest JSON: ${proofManifestPath}`,
+    proofSummary
+      ? `- Proof manifest: ${proofSummary.passed}/${proofSummary.total} passed, ${proofSummary.failed} failed, ${proofSummary.missingProof} missing-proof, ${proofSummary.manualReview} manual-review, ${proofSummary.sourceDataLimitation} source-data-limitation, ${proofSummary.visualCaptureRows} visual-capture row(s)`
+      : "- Proof manifest: missing",
     `- Previous analysis: ${previousPath || "none"}`,
     comparisonPath ? `- Comparison JSON: ${comparisonPath}` : "- Comparison JSON: none",
+    "",
+    ...renderBlockingProofRows(proofManifest),
     "",
     ...renderComparison(comparison),
     "",
@@ -284,6 +443,7 @@ async function main() {
   if (exportPath) analyzeArgs.push("--export", exportPath);
   if (shouldCreateExport) analyzeArgs.push("--create-export");
   if (args.strict) analyzeArgs.push("--strict");
+  if (args.strictManifest) analyzeArgs.push("--strict-manifest");
 
   console.log(`Running replay iteration: ${label}`);
   if (args.source === "recordings") {

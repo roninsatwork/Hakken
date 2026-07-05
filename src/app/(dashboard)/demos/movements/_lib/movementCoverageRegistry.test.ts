@@ -69,6 +69,10 @@ describe("movementCoverageRegistry", () => {
       "pivot-weight-transfer",
       "jump-hop",
       "lunges",
+      "sitting",
+      "kneeling",
+      "lying-floor-work",
+      "quadruped",
       "rolling-crawling",
       "yoga",
       "pilates",
@@ -83,12 +87,39 @@ describe("movementCoverageRegistry", () => {
     expect(summary.missingProofFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
       "squat-knee-lift",
+      "sitting",
+      "kneeling",
+      "lying-floor-work",
+      "quadruped",
       "walking",
       "yoga",
       "props-contact",
     ]));
+    expect(MOVEMENT_COVERAGE_REGISTRY.sitting.demoReady).toBe(false);
+    expect(MOVEMENT_COVERAGE_REGISTRY.kneeling.demoReady).toBe(false);
+    expect(MOVEMENT_COVERAGE_REGISTRY["lying-floor-work"].demoReady).toBe(false);
+    expect(MOVEMENT_COVERAGE_REGISTRY.quadruped.demoReady).toBe(false);
     expect(summary.remainingGapCount).toBeGreaterThan(summary.familyCount);
     expect(summary.supportedCount + summary.approximateCount + summary.diagnosticOnlyCount + summary.unsupportedCount)
       .toBe(summary.familyCount);
+  });
+
+  it("separates user-facing support from internal demo readiness", () => {
+    const summary = summarizeMovementCoverageRegistry();
+
+    expect(summary.userFacingFamilies).toEqual(["upright"]);
+    expect(summary.userFacingCount).toBe(1);
+    expect(summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
+      "upper-body-standing",
+      "squat-knee-lift",
+      "root-turn",
+      "root-travel",
+    ]));
+    expect(summary.internalDemoOnlyCount).toBe(summary.internalDemoOnlyFamilies.length);
+    summary.internalDemoOnlyFamilies.forEach((family) => {
+      const entry = MOVEMENT_COVERAGE_REGISTRY[family];
+      expect(entry.demoReady).toBe(true);
+      expect(entry.proofLevel).not.toBe("full");
+    });
   });
 });

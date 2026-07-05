@@ -5,6 +5,7 @@ import {
   buildRecordedMovementSourceFrame,
   buildSyntheticMovementSourceFrame,
   resolveMovementCameraConfidence,
+  resolveMovementStartGateDecision,
   resolveMovementStartReadiness,
 } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
@@ -103,7 +104,11 @@ describe("movement source frame contracts", () => {
         movementId: "movement-1",
         sessionId: "session-1",
       });
-      const synthetic = buildSyntheticMovementSourceFrame({ capturedAt: 2, poseLandmarks: pose });
+      const synthetic = buildSyntheticMovementSourceFrame({
+        blendshapes: [{ categoryName: "mouthSmileLeft", score: 0.7 }],
+        capturedAt: 2,
+        poseLandmarks: pose,
+      });
 
       expect(live.sourceOrigin).toBe("live-webcam");
       expect(recorded.sourceOrigin).toBe("recorded-replay");
@@ -113,6 +118,9 @@ describe("movement source frame contracts", () => {
       expect(synthetic.landmarks.pose).toHaveLength(33);
       expect(recorded.movementId).toBe("movement-1");
       expect(recorded.sessionId).toBe("session-1");
+      expect(synthetic.landmarks.blendshapes).toEqual([
+        { categoryName: "mouthSmileLeft", score: 0.7 },
+      ]);
       expect(live.cameraConfidence.scoreAllowed).toBe(true);
       expect(recorded.cameraConfidence.scoreAllowed).toBe(true);
       expect(synthetic.cameraConfidence.scoreAllowed).toBe(true);
@@ -162,6 +170,56 @@ describe("movement source frame contracts", () => {
     expect(frame.startReadiness.promptEvents).toContain("get-ready");
     expect(afterCountdown.state).toBe("calibrating");
     expect(afterCountdown.promptEvents).toContain("hold-still-for-calibration");
+  });
+
+  it("resolves target-specific start gate decisions from one readiness policy", () => {
+    const ready = resolveMovementStartReadiness({
+      cameraConfidence: resolveMovementCameraConfidence({
+        capturedAt: 3100,
+        poseLandmarks: withCorePose(),
+      }),
+    });
+    const countdown = resolveMovementStartReadiness({
+      cameraConfidence: resolveMovementCameraConfidence({
+        capturedAt: 3200,
+        poseLandmarks: withCorePose(),
+      }),
+      requirements: { countdownMsRemaining: 1500 },
+    });
+
+    expect(resolveMovementStartGateDecision({
+      readiness: ready,
+      target: "game",
+    })).toMatchObject({
+      canStart: true,
+      state: "ready",
+      target: "game",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: ready,
+      target: "recording",
+    })).toMatchObject({
+      canStart: true,
+      state: "ready",
+      target: "recording",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: countdown,
+      target: "game",
+    })).toMatchObject({
+      canStart: false,
+      state: "countdown",
+      target: "game",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: null,
+      target: "recording",
+    })).toMatchObject({
+      blockedReasons: ["readiness-missing"],
+      canStart: false,
+      state: "missing-readiness",
+      target: "recording",
+    });
   });
 
   it("marks stale or missing source frames as unscoreable camera loss", () => {

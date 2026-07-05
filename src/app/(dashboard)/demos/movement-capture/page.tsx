@@ -21,6 +21,43 @@ import type {
   MovementDifficulty,
   MovementSpineGoal,
 } from "../movements/_lib/movementTypes";
+import {
+  resolveMovementStartGateDecision,
+  type MovementStartReadiness,
+} from "../movements/_lib/movementSourceFrame";
+
+const MOVEMENT_CAPTURE_START_COUNTDOWN_MS = 5000;
+
+type MovementCaptureStartGateStatus =
+  | "idle"
+  | "countdown"
+  | "checking-visibility"
+  | "blocked";
+
+type MovementCaptureStartGateState = {
+  countdownMsRemaining: number;
+  endsAt: number | null;
+  message: string | null;
+  status: MovementCaptureStartGateStatus;
+};
+
+function createIdleCaptureStartGate(): MovementCaptureStartGateState {
+  return {
+    countdownMsRemaining: 0,
+    endsAt: null,
+    message: null,
+    status: "idle",
+  };
+}
+
+function getCaptureStartReadinessMessage(readiness: MovementStartReadiness | null) {
+  if (!readiness) return "Move where I can see you.";
+  if (readiness.promptEvents.includes("show-your-whole-body")) return "Show your whole body.";
+  if (readiness.promptEvents.includes("show-your-feet")) return "Show your feet.";
+  if (readiness.promptEvents.includes("show-your-hands")) return "Show your hands.";
+  if (readiness.promptEvents.includes("walk-back-into-frame")) return "Walk back into frame.";
+  return "Move where I can see you.";
+}
 
 export default function MovementCapturePage() {
   const webcamRef = useRef<Webcam>(null);
@@ -37,6 +74,7 @@ export default function MovementCapturePage() {
     isReady: isVisionReady,
   } = useMediaPipeVision();
   const {
+    captureStartReadiness,
     isRecording,
     frameCount,
     trackingQuality,
@@ -60,23 +98,110 @@ export default function MovementCapturePage() {
   const [bodyFocus, setBodyFocus] = useState<MovementBodyFocus[]>(["ribcage", "pelvis"]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [captureStartGate, setCaptureStartGate] = useState<MovementCaptureStartGateState>(
+    createIdleCaptureStartGate,
+  );
+  const [recordingStartReadiness, setRecordingStartReadiness] =
+    useState<MovementStartReadiness | null>(null);
+  const captureStartReadinessRef = useRef<MovementStartReadiness | null>(null);
 
   const createMovement = useMutation(api.movements.create);
   const generateUploadUrl = useMutation(api.movements.generateUploadUrl);
   const router = useRouter();
+
+  React.useEffect(() => {
+    captureStartReadinessRef.current = captureStartReadiness;
+  }, [captureStartReadiness]);
+
+  React.useEffect(() => {
+    if (!isVisionReady && captureStartGate.status !== "idle") {
+      setCaptureStartGate(createIdleCaptureStartGate());
+    }
+  }, [captureStartGate.status, isVisionReady]);
+
+  React.useEffect(() => {
+    if (captureStartGate.status !== "countdown" || captureStartGate.endsAt === null) {
+      return undefined;
+    }
+
+    let startCheckTimeoutId: number | null = null;
+    const updateCountdown = () => {
+      const countdownMsRemaining = Math.max(0, captureStartGate.endsAt! - Date.now());
+      if (countdownMsRemaining > 0) {
+        setCaptureStartGate((current) => (
+          current.status === "countdown" && current.endsAt === captureStartGate.endsAt
+            ? { ...current, countdownMsRemaining }
+            : current
+        ));
+        return;
+      }
+
+      setCaptureStartGate((current) => (
+        current.status === "countdown" && current.endsAt === captureStartGate.endsAt
+          ? {
+              countdownMsRemaining: 0,
+              endsAt: null,
+              message: "Checking visibility.",
+              status: "checking-visibility",
+            }
+          : current
+      ));
+      startCheckTimeoutId = window.setTimeout(() => {
+        const readiness = captureStartReadinessRef.current;
+        const gateDecision = resolveMovementStartGateDecision({
+          readiness,
+          target: "recording",
+        });
+        if (gateDecision.canStart && gateDecision.readiness) {
+          setRecordingStartReadiness(gateDecision.readiness);
+          startRecording();
+          setCaptureStartGate(createIdleCaptureStartGate());
+          return;
+        }
+
+        setCaptureStartGate({
+          countdownMsRemaining: 0,
+          endsAt: null,
+          message: getCaptureStartReadinessMessage(gateDecision.readiness),
+          status: "blocked",
+        });
+      }, 120);
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 100);
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (startCheckTimeoutId !== null) {
+        window.clearTimeout(startCheckTimeoutId);
+      }
+    };
+  }, [
+    captureStartGate.endsAt,
+    captureStartGate.status,
+    startRecording,
+  ]);
 
   const toggleRecording = useCallback(() => {
     if (!isVisionReady) return;
 
     if (isRecording) {
       stopRecording();
+      setCaptureStartGate(createIdleCaptureStartGate());
       setSaveError(null);
       setShowSaveModal(true);
     } else {
+      setRecordingStartReadiness(null);
       setSaveError(null);
-      startRecording();
+      setCaptureStartGate({
+        countdownMsRemaining: MOVEMENT_CAPTURE_START_COUNTDOWN_MS,
+        endsAt: Date.now() + MOVEMENT_CAPTURE_START_COUNTDOWN_MS,
+        message: "Walk back into frame.",
+        status: "countdown",
+      });
     }
-  }, [isRecording, isVisionReady, startRecording, stopRecording]);
+  }, [isRecording, isVisionReady, stopRecording]);
 
   const handleSave = async () => {
     const recordedFrames = getRecordedFrames();
@@ -91,6 +216,7 @@ export default function MovementCapturePage() {
         spineGoal,
         primaryCue,
         bodyFocus,
+        captureStartReadiness: recordingStartReadiness,
         frames: recordedFrames,
         generateUploadUrl,
         createMovement,
@@ -126,6 +252,11 @@ export default function MovementCapturePage() {
           visionStatus={visionStatus}
           visionError={visionError}
           isPoseReady={Boolean(poseLandmarker)}
+          captureReadinessCountdownSeconds={Math.ceil(
+            captureStartGate.countdownMsRemaining / 1000,
+          )}
+          captureReadinessMessage={captureStartGate.message}
+          captureReadinessStatus={captureStartGate.status}
           frameCount={frameCount}
           trackingQuality={trackingQuality}
           spineQuality={spineQuality}

@@ -208,7 +208,7 @@ export function buildMovementGamePathSimulation(
     });
     gameplayStreak = gameplayEventFrame.nextStreak;
     gameplayEvents.push(gameplayEventFrame);
-    const decision = motionFrame.avatarDecision;
+    const decision = motionFrame.avatarDisplayDecision;
     const visualDecision = resolveMovementAvatarLowerBodyVisualDecision({
       avatarRole: "player",
       lowerBodyDrive: decision.lowerBodyDrive,

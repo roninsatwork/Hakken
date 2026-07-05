@@ -1,3 +1,5 @@
+import type { MovementStartReadiness } from "./movementSourceFrame";
+
 export type MovementDifficulty = "Beginner" | "Intermediate" | "Advanced";
 
 export type MovementSpineGoal =
@@ -51,6 +53,7 @@ export type MovementFrame = MovementFramePayload | MovementLandmark[];
 export type MovementFrameEnvelope = {
   schemaVersion: 1;
   capturedAt?: number;
+  captureStartReadiness?: MovementStartReadiness;
   fps?: number;
   frames: MovementFrame[];
 };
@@ -59,5 +62,6 @@ export type MovementFrameParseResult = {
   frames: MovementFrame[];
   format: MovementDataFormat;
   fps: number;
+  captureStartReadiness?: MovementStartReadiness;
   schemaVersion?: number;
 };

@@ -29,9 +29,9 @@ import {
   resolveMovementAvatarPlantedFootOwner,
   resolveMovementAvatarPlantedSquatIkOptions,
   resolveMovementAvatarPlantedSquatIkPose,
+  resolveMovementAvatarActiveSpinePose,
   resolveMovementAvatarPlayerSourceOwnerDecision,
   resolveMovementAvatarRawHeadDecision,
-  resolveMovementAvatarReplayDecision,
   resolveMovementAvatarRetargetSegmentApplication,
   resolveMovementAvatarSingleLegRaisePose,
   resolveMovementAvatarSolvedLowerBodyPose,
@@ -39,9 +39,12 @@ import {
   resolveMovementAvatarSpineNeutralPose,
   resolveMovementAvatarSpineSolverPose,
   resolveMovementAvatarSquatFlexionPose,
-  resolveMovementAvatarStudioDecision,
   resolveMovementAvatarTrackingFallbackLabels,
 } from "./movementAvatarPipeline";
+import {
+  resolveMovementAvatarReplayDecision,
+  resolveMovementAvatarStudioDecision,
+} from "./movementAvatarLegacyDecision";
 import {
   MOVEMENT_AVATAR_PROOF_MODES,
   type MovementAvatarProofMode,
@@ -1740,6 +1743,29 @@ describe("movementGamePathSimulation", () => {
       avatarRole: "instructor",
       shouldApplySpine: false,
     }).shouldCountRecordedSpineRetarget).toBe(false);
+
+    expect(resolveMovementAvatarActiveSpinePose({
+      spineApplyOptions: playerOptions,
+      spineDrive: {
+        confidence: 0.9,
+        forwardLean: 0.2,
+        owner: "player-spine-model",
+        rotations: {
+          chest: { x: 0.3, y: 0.04, z: 0.02 },
+          hips: { x: 0.1, y: 0.02, z: 0.01 },
+          spine: { x: 0.2, y: 0.03, z: 0.015 },
+          upperChest: { x: 0.25, y: 0.035, z: 0.018 },
+        },
+        shouldApplySpine: true,
+        sideBend: 0.1,
+        twist: 0.05,
+      },
+    })).toEqual([
+      { bone: "hips", rotation: { x: 0.1, y: 0.02, z: 0.01 }, slerp: 0.22 },
+      { bone: "spine", rotation: { x: 0.2, y: 0.03, z: 0.015 }, slerp: 0.44 },
+      { bone: "chest", rotation: { x: 0.3, y: 0.04, z: 0.02 }, slerp: 0.42 },
+      { bone: "upperChest", rotation: { x: 0.25, y: 0.035, z: 0.018 }, slerp: 0.36 },
+    ]);
 
     expect(resolveMovementAvatarSpineSolverPose({
       avatarRole: "player",

@@ -120,6 +120,8 @@ export type MovementRootMotionAnalysis = {
   };
 };
 
+export const DEFAULT_MOVEMENT_ROOT_MOTION_HISTORY_LIMIT = 180;
+
 const LEFT_SHOULDER = 11;
 const RIGHT_SHOULDER = 12;
 const LEFT_HIP = 23;
@@ -130,6 +132,32 @@ const LEFT_HEEL = 29;
 const RIGHT_HEEL = 30;
 const LEFT_TOE = 31;
 const RIGHT_TOE = 32;
+
+export function appendMovementRootMotionHistoryFrame({
+  history,
+  limit = DEFAULT_MOVEMENT_ROOT_MOTION_HISTORY_LIMIT,
+  pose,
+  worldPose,
+}: {
+  history: MovementRootMotionInputFrame[];
+  limit?: number;
+  pose: MovementRootMotionInputFrame["pose"];
+  worldPose?: MovementRootMotionInputFrame["worldPose"];
+}) {
+  if (pose.length < 33) return null;
+
+  history.push({
+    pose,
+    worldPose: worldPose && worldPose.length >= 33 ? worldPose : null,
+  });
+
+  if (history.length > limit) {
+    history.splice(0, history.length - limit);
+  }
+
+  const analysis = buildMovementRootMotionAnalysis(history);
+  return analysis.frames.at(-1) ?? null;
+}
 
 function visibility(landmark?: TrackingLandmark | null) {
   return landmark?.visibility ?? 0.8;

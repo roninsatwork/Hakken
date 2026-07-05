@@ -18,6 +18,7 @@ import {
 import { buildMovementRetargetSourceModel } from "../_lib/movementRetargeting";
 import {
   buildMovementCalibration,
+  type MovementCalibration,
   type MovementHandsForConfidence,
   type MovementTrackingDebugState,
   type TrackingLandmark,
@@ -29,7 +30,15 @@ import {
   resolveMovementMotionFrame,
   type MovementMotionFrame,
 } from "../_lib/movementMotionFrame";
-import type { VrmMotionPayload } from "../_lib/vrmRigging";
+import {
+  prepareVrmSolverInput,
+  type VrmMotionPayload,
+} from "../_lib/vrmRigging";
+import {
+  createMovementAvatarSetupState,
+  resolveMovementAvatarSetup,
+  type MovementAvatarSetupState,
+} from "../_lib/movementAvatarSetup";
 
 function toProofMode(value: string | null): MovementAvatarProofMode {
   return toMovementAvatarProofMode(value) ?? "squat";
@@ -38,32 +47,69 @@ function toProofMode(value: string | null): MovementAvatarProofMode {
 function buildProofMotionFrame({
   payload,
   retargetSourceModel,
+  setupState,
   trackingCalibration,
   usesExplicitCalibration,
 }: {
   payload: VrmMotionPayload;
   retargetSourceModel: ReturnType<typeof buildMovementRetargetSourceModel>;
+  setupState: MovementAvatarSetupState;
   trackingCalibration: ReturnType<typeof buildMovementCalibration>;
   usesExplicitCalibration: boolean;
-}): MovementMotionFrame | null {
+}): {
+  activeCalibration: MovementCalibration | null;
+  motionFrame: MovementMotionFrame | null;
+  setupState: MovementAvatarSetupState;
+} {
   const poseLandmarks = (payload.pose ?? payload.landmarks ?? []) as TrackingLandmark[];
-  if (poseLandmarks.length < 33) return null;
-
-  return resolveMovementMotionFrame({
-    avatarRole: "player",
-    calibration: usesExplicitCalibration ? trackingCalibration : null,
-    displayPoseLandmarks: poseLandmarks,
-    displayWorldPoseLandmarks: (payload.worldLandmarks ?? []) as TrackingLandmark[],
-    mirrorMode: "facing-player",
-    retargetSourceModel,
-    sourceFrame: buildMovementSourceFrame({
-      hands: payload.hands as MovementHandsForConfidence | undefined,
-      poseLandmarks,
-      sourceOrigin: "synthetic-proof",
-      sourceStatus: "synthetic",
-      worldPoseLandmarks: (payload.worldLandmarks ?? []) as TrackingLandmark[],
-    }),
+  if (poseLandmarks.length < 33) {
+    return {
+      activeCalibration: null,
+      motionFrame: null,
+      setupState,
+    };
+  }
+  const displayPreparedInput = prepareVrmSolverInput({
+    rawLandmarks: poseLandmarks,
+    payload,
+    isPlayer: true,
+    isPlaying: true,
+    mirrorForDisplay: true,
   });
+  const hasWorldPose = payload.worldLandmarks?.length === 33;
+  const setupTarget = resolveMovementAvatarSetup({
+    faceLandmarks: payload.faceLandmarks,
+    hands: payload.hands as MovementHandsForConfidence | undefined,
+    isLivePlayer: true,
+    manualCalibration: usesExplicitCalibration ? trackingCalibration : null,
+    poseLandmarks: displayPreparedInput.imageLandmarks,
+    previousState: setupState,
+    worldPoseLandmarks: hasWorldPose ? displayPreparedInput.solverLandmarks : undefined,
+  });
+  const activeCalibration = setupTarget.activeCalibration;
+
+  return {
+    activeCalibration,
+    motionFrame: resolveMovementMotionFrame({
+      avatarRole: "player",
+      calibration: activeCalibration,
+      displayPoseLandmarks: displayPreparedInput.imageLandmarks,
+      displayWorldPoseLandmarks: hasWorldPose ? displayPreparedInput.solverLandmarks : [],
+      mirrorMode: "facing-player",
+      retargetSourceModel,
+      sourceFrame: buildMovementSourceFrame({
+        hands: payload.hands as MovementHandsForConfidence | undefined,
+        poseLandmarks,
+        requirements: {
+          calibrationQuality: activeCalibration?.quality ?? null,
+        },
+        sourceOrigin: "synthetic-proof",
+        sourceStatus: "synthetic",
+        worldPoseLandmarks: (payload.worldLandmarks ?? []) as TrackingLandmark[],
+      }),
+    }),
+    setupState: setupTarget.nextState,
+  };
 }
 
 export default function MovementSquatProofPage() {
@@ -83,37 +129,73 @@ export default function MovementSquatProofPage() {
   );
   const usesExplicitCalibration = mode !== "upper-body-auto" && mode !== "upper-body-auto-rejected";
   const isRootMotionProofMode = mode.startsWith("root-");
-  const initialProofPayload = isRootMotionProofMode
-    ? makeMovementAvatarProofRootBaselinePayload()
-    : makeMovementAvatarProofMotionPayload(mode);
+  const initialProofPayload = useMemo(
+    () => (
+      isRootMotionProofMode
+        ? makeMovementAvatarProofRootBaselinePayload()
+        : makeMovementAvatarProofMotionPayload(mode)
+    ),
+    [isRootMotionProofMode, mode],
+  );
+  const initialMotionFrameResult = useMemo(() => buildProofMotionFrame({
+    payload: initialProofPayload,
+    retargetSourceModel,
+    setupState: createMovementAvatarSetupState(),
+    trackingCalibration,
+    usesExplicitCalibration,
+  }), [initialProofPayload, retargetSourceModel, trackingCalibration, usesExplicitCalibration]);
   const livePoseRef = useRef<VrmMotionPayload>({
     ...initialProofPayload,
   });
-  const motionFrameRef = useRef<MovementMotionFrame | null>(
-    buildProofMotionFrame({
-      payload: initialProofPayload,
-      retargetSourceModel,
-      trackingCalibration,
-      usesExplicitCalibration,
-    }),
-  );
+  const proofSetupStateRef = useRef<MovementAvatarSetupState>(initialMotionFrameResult.setupState);
+  const motionFrameRef = useRef<MovementMotionFrame | null>(initialMotionFrameResult.motionFrame);
 
   useEffect(() => {
     trackingDebugRef.current = null;
     setDebugState(null);
+    proofSetupStateRef.current = createMovementAvatarSetupState();
     const nextPayload = isRootMotionProofMode
       ? makeMovementAvatarProofRootBaselinePayload()
       : makeMovementAvatarProofMotionPayload(mode);
     livePoseRef.current = { ...nextPayload };
-    motionFrameRef.current = buildProofMotionFrame({
+    const motionFrameResult = buildProofMotionFrame({
       payload: nextPayload,
       retargetSourceModel,
+      setupState: proofSetupStateRef.current,
       trackingCalibration,
       usesExplicitCalibration,
     });
+    proofSetupStateRef.current = motionFrameResult.setupState;
+    motionFrameRef.current = motionFrameResult.motionFrame;
     setRootProofArmedMode(isRootMotionProofMode ? mode : null);
     return undefined;
   }, [isRootMotionProofMode, mode, retargetSourceModel, trackingCalibration, usesExplicitCalibration]);
+
+  useEffect(() => {
+    let active = true;
+    let animationFrameId = 0;
+
+    const updateProofMotionFrame = () => {
+      if (!active) return;
+      const motionFrameResult = buildProofMotionFrame({
+        payload: livePoseRef.current,
+        retargetSourceModel,
+        setupState: proofSetupStateRef.current,
+        trackingCalibration,
+        usesExplicitCalibration,
+      });
+      proofSetupStateRef.current = motionFrameResult.setupState;
+      motionFrameRef.current = motionFrameResult.motionFrame;
+      animationFrameId = window.requestAnimationFrame(updateProofMotionFrame);
+    };
+
+    updateProofMotionFrame();
+
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [retargetSourceModel, trackingCalibration, usesExplicitCalibration]);
 
   useEffect(() => {
     if (!isRootMotionProofMode || rootProofArmedMode !== mode) return undefined;
@@ -122,12 +204,15 @@ export default function MovementSquatProofPage() {
     const timeoutId = window.setTimeout(() => {
       const nextPayload = makeMovementAvatarProofMotionPayload(mode);
       livePoseRef.current = { ...nextPayload };
-      motionFrameRef.current = buildProofMotionFrame({
+      const motionFrameResult = buildProofMotionFrame({
         payload: nextPayload,
         retargetSourceModel,
+        setupState: proofSetupStateRef.current,
         trackingCalibration,
         usesExplicitCalibration,
       });
+      proofSetupStateRef.current = motionFrameResult.setupState;
+      motionFrameRef.current = motionFrameResult.motionFrame;
       setRootProofArmedMode(null);
     }, 300);
 

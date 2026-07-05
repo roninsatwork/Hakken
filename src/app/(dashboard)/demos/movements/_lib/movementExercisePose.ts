@@ -280,8 +280,14 @@ function isYogaTreePrep(poseLandmarks?: TrackingLandmark[]) {
   const rightKnee = poseLandmarks?.[26];
   const leftAnkle = poseLandmarks?.[27];
   const rightAnkle = poseLandmarks?.[28];
-  if (!centers || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) return false;
+  const leftWrist = poseLandmarks?.[15];
+  const rightWrist = poseLandmarks?.[16];
+  if (!centers || !leftKnee || !rightKnee || !leftAnkle || !rightAnkle || !leftWrist || !rightWrist) return false;
 
+  const wristCenter = midpoint(leftWrist, rightWrist);
+  const handsRaisedForTree =
+    wristCenter.y < centers.shoulderCenter.y - 0.08 &&
+    Math.abs(leftWrist.x - rightWrist.x) < 0.18;
   const leftLegLifted =
     leftKnee.y < centers.hipCenter.y + 0.06 &&
     leftAnkle.y < rightKnee.y + 0.04 &&
@@ -290,7 +296,7 @@ function isYogaTreePrep(poseLandmarks?: TrackingLandmark[]) {
     rightKnee.y < centers.hipCenter.y + 0.06 &&
     rightAnkle.y < leftKnee.y + 0.04 &&
     leftAnkle.y > centers.hipCenter.y + 0.18;
-  return leftLegLifted || rightLegLifted;
+  return handsRaisedForTree && (leftLegLifted || rightLegLifted);
 }
 
 function isYogaTrianglePrep(poseLandmarks?: TrackingLandmark[]) {

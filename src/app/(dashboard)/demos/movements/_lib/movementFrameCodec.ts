@@ -5,6 +5,7 @@ import type {
   MovementFrameParseResult,
   MovementLandmark,
 } from "./movementTypes";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 
 const DEFAULT_CAPTURE_FPS = 30;
 
@@ -19,6 +20,17 @@ function isLandmark(value: unknown): value is MovementLandmark {
 
 function isLandmarkArray(value: unknown): value is MovementLandmark[] {
   return Array.isArray(value) && value.every(isLandmark);
+}
+
+export function isMovementStartReadiness(value: unknown): value is MovementStartReadiness {
+  return (
+    isRecord(value) &&
+    typeof value.state === "string" &&
+    typeof value.canStartRecording === "boolean" &&
+    typeof value.canStartGame === "boolean" &&
+    Array.isArray(value.requiredBodyParts) &&
+    Array.isArray(value.visibleBodyParts)
+  );
 }
 
 export function isInlinePoseData(value: string) {
@@ -57,6 +69,9 @@ export function parseMovementFramePayload(
       frames: envelope.frames,
       format: envelope.schemaVersion === 1 ? "storage-json-v1" : sourceFormat,
       fps: typeof envelope.fps === "number" && envelope.fps > 0 ? envelope.fps : DEFAULT_CAPTURE_FPS,
+      captureStartReadiness: isMovementStartReadiness(envelope.captureStartReadiness)
+        ? envelope.captureStartReadiness
+        : undefined,
       schemaVersion: typeof envelope.schemaVersion === "number" ? envelope.schemaVersion : undefined,
     };
   }
@@ -64,10 +79,17 @@ export function parseMovementFramePayload(
   throw new Error("Movement pose payload must be a frame array or versioned frame envelope.");
 }
 
-export function buildMovementFrameEnvelope(frames: MovementFrame[], fps = DEFAULT_CAPTURE_FPS): MovementFrameEnvelope {
+export function buildMovementFrameEnvelope(
+  frames: MovementFrame[],
+  fps = DEFAULT_CAPTURE_FPS,
+  options: {
+    captureStartReadiness?: MovementStartReadiness | null;
+  } = {},
+): MovementFrameEnvelope {
   return {
     schemaVersion: 1,
     capturedAt: Date.now(),
+    captureStartReadiness: options.captureStartReadiness ?? undefined,
     fps,
     frames,
   };

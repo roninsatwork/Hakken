@@ -40,6 +40,44 @@ const movementDebugTriggerValidator = v.union(
   v.literal("manual-debug-save")
 );
 
+const movementCameraBodyPartValidator = v.union(
+  v.literal("head"),
+  v.literal("torso"),
+  v.literal("leftArm"),
+  v.literal("rightArm"),
+  v.literal("leftHand"),
+  v.literal("rightHand"),
+  v.literal("leftLeg"),
+  v.literal("rightLeg"),
+  v.literal("leftFoot"),
+  v.literal("rightFoot")
+);
+
+const movementStartReadinessValidator = v.object({
+  blockedReasons: v.array(v.string()),
+  calibrationQuality: v.union(v.number(), v.null()),
+  canStartGame: v.boolean(),
+  canStartRecording: v.boolean(),
+  countdownMsRemaining: v.number(),
+  promptEvents: v.array(v.union(
+    v.literal("get-ready"),
+    v.literal("walk-back-into-frame"),
+    v.literal("show-your-whole-body"),
+    v.literal("show-your-hands"),
+    v.literal("show-your-feet"),
+    v.literal("hold-still-for-calibration")
+  )),
+  requiredBodyParts: v.array(movementCameraBodyPartValidator),
+  state: v.union(
+    v.literal("countdown"),
+    v.literal("checking-visibility"),
+    v.literal("calibrating"),
+    v.literal("ready"),
+    v.literal("blocked")
+  ),
+  visibleBodyParts: v.array(movementCameraBodyPartValidator),
+});
+
 function isInlinePoseData(value: string) {
   const trimmed = value.trim();
   return trimmed.startsWith("[") || trimmed.startsWith("{");
@@ -221,6 +259,7 @@ export const saveDebugTrackingSession = mutation({
     endedAt: v.number(),
     baselineSummary: v.string(),
     warningSummary: v.string(),
+    captureStartReadiness: v.optional(movementStartReadinessValidator),
     samplesJson: v.string(),
   },
   handler: async (ctx, args) => {
@@ -239,6 +278,7 @@ export const saveDebugTrackingSession = mutation({
       endedAt: args.endedAt,
       baselineSummary: args.baselineSummary,
       warningSummary: args.warningSummary,
+      captureStartReadiness: args.captureStartReadiness,
       samplesJson: args.samplesJson,
       createdBy: userId,
       createdAt: Date.now(),

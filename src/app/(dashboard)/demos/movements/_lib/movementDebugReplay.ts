@@ -1,3 +1,6 @@
+import type { MovementStartReadiness } from "./movementSourceFrame";
+import { isMovementStartReadiness } from "./movementFrameCodec";
+
 export type MovementDebugReplayCamera = {
   aspectRatio?: number;
   deviceLabel?: string;
@@ -82,6 +85,7 @@ export type MovementDebugReplayFrame = {
   };
   poseBounds?: MovementDebugReplayPoseBounds;
   retarget?: MovementDebugReplayRetarget;
+  startReadiness?: MovementStartReadiness;
   tracking: {
     pose: MovementDebugReplayLandmark[];
     worldPose: MovementDebugReplayLandmark[];
@@ -91,6 +95,7 @@ export type MovementDebugReplayFrame = {
 
 export type MovementDebugReplaySession = {
   baselineSummary: string;
+  captureStartReadiness?: MovementStartReadiness;
   createdAt?: number;
   durationMs: number;
   endedAt: number;
@@ -323,6 +328,9 @@ export function parseMovementDebugReplayFrame(value: unknown): MovementDebugRepl
     health: parseHealth(value.health),
     poseBounds: parsePoseBounds(value.poseBounds),
     retarget: parseRetarget(value.retarget),
+    startReadiness: isMovementStartReadiness(value.startReadiness)
+      ? value.startReadiness
+      : undefined,
     tracking: parseTracking(value.tracking),
     updatedAt: typeof value.updatedAt === "number" ? value.updatedAt : undefined,
   };
@@ -337,6 +345,9 @@ export function parseMovementDebugReplaySession(value: unknown): MovementDebugRe
 
   return {
     baselineSummary: stringValue(value.baselineSummary, "none"),
+    captureStartReadiness: isMovementStartReadiness(value.captureStartReadiness)
+      ? value.captureStartReadiness
+      : undefined,
     createdAt: typeof value.createdAt === "number" ? value.createdAt : undefined,
     durationMs: numberValue(value.durationMs),
     endedAt: numberValue(value.endedAt),

@@ -6,8 +6,8 @@ import {
   resolveMovementAvatarHipsPositionOptions,
   resolveMovementAvatarPlayerLegRaiseHold,
   resolveMovementAvatarRootOrientation,
-  resolveMovementAvatarStudioDecision,
 } from "./movementAvatarPipeline";
+import { resolveMovementAvatarStudioDecision } from "./movementAvatarLegacyDecision";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import { classifyMovementBodyOrientation } from "./movementBodyOrientation";
 import {

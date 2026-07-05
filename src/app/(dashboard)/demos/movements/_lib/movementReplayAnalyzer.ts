@@ -9,7 +9,10 @@ import {
   buildMovementGamePathSimulation,
   type MovementGamePathDecision,
 } from "./movementGamePathSimulation";
-import type { MovementGameplayEventFrame } from "./movementGameplayEvents";
+import {
+  resolveMovementGameplayEventFrameSummary,
+  type MovementGameplayEventFrame,
+} from "./movementGameplayEvents";
 import {
   getMovementCoverageEntries,
   getMovementCoverageMissingProofs,
@@ -21,6 +24,8 @@ import {
 import {
   resolveMovementAvatarReplayDecision,
   resolveMovementAvatarStudioDecision,
+} from "./movementAvatarLegacyDecision";
+import {
   type MovementAvatarPipelineDecision,
 } from "./movementAvatarPipeline";
 import { resolveMovementAvatarHeadTarget } from "./movementAvatarHeadTarget";
@@ -37,6 +42,7 @@ import type {
   MovementSourceOrigin,
   MovementSourceStatus,
   MovementStartPromptEvent,
+  MovementStartReadiness,
   MovementStartReadinessState,
 } from "./movementSourceFrame";
 import type { MovementHeadMotionIntent } from "./movementTrackingCalibration";
@@ -59,6 +65,8 @@ export type MovementReplayFailureCode =
   | "root_turn_detected"
   | "source_feet_weak"
   | "source_lower_body_out_of_frame"
+  | "start_readiness_blocked_at_capture"
+  | "start_readiness_replay_mismatch"
   | "support_constraint_missing"
   | "support_constraint_partial"
   | "squat_hold_too_sticky"
@@ -123,6 +131,7 @@ export type MovementReplayGamePathFrame = {
   shouldDrivePlayerLegRaise: boolean;
   shouldDrivePlayerSquat: boolean;
   sourceQuality: number;
+  spineSideBend: number;
   squatDepth: number;
   rootHeadingYaw: number;
   rootPathDistance: number;
@@ -248,10 +257,12 @@ export type MovementReplayAnalysis = {
     coverageFamilyCount: number;
     coverageImplementedCount: number;
     coverageImplementedPercent: number;
+    coverageInternalDemoOnlyCount: number;
     coverageMissingProofCount: number;
     coverageRemainingGapCount: number;
     coverageSupportedCount: number;
     coverageUnsupportedCount: number;
+    coverageUserFacingCount: number;
     averageExercisePoseQualityScore: number;
     exerciseFloorRollTransitionCount: number;
     exerciseLungeFrameCount: number;
@@ -290,6 +301,9 @@ export type MovementReplayAnalysis = {
     rootMotionWorldLandmarkFrameCount: number;
     replayGameWrapperDivergenceFrameCount: number;
     replayGameWrapperFrameCount: number;
+    startReadinessCaptureBlockedCount: number;
+    startReadinessMismatchFrameCount: number;
+    startReadinessStoredFrameCount: number;
     startReadinessBlockedFrameCount: number;
     startReadinessCanStartGameFrameCount: number;
     startReadinessReadyFrameCount: number;
@@ -738,6 +752,61 @@ function getSupportConstraintFailures(
   return failures;
 }
 
+function isStartReadinessBlocked(readiness: MovementStartReadiness) {
+  return !readiness.canStartGame || !readiness.canStartRecording || readiness.state !== "ready";
+}
+
+function getStartReadinessAudit({
+  frames,
+  session,
+  sourceFrames,
+}: {
+  frames: MovementDebugReplayFrame[];
+  session: MovementDebugReplaySession;
+  sourceFrames: MovementReplaySourceFrame[];
+}) {
+  const failures: MovementReplayFailure[] = [];
+  let blockedCaptureCount = 0;
+  let mismatchFrameCount = 0;
+  let storedFrameCount = 0;
+
+  if (session.captureStartReadiness && isStartReadinessBlocked(session.captureStartReadiness)) {
+    blockedCaptureCount = 1;
+    failures.push({
+      code: "start_readiness_blocked_at_capture",
+      detail: `Session started with readiness "${session.captureStartReadiness.state}" (${session.captureStartReadiness.blockedReasons.join(", ") || "no reason"}).`,
+      severity: "error",
+    });
+  }
+
+  frames.forEach((frame, frameIndex) => {
+    if (!frame.startReadiness) return;
+    storedFrameCount += 1;
+    const replayFrame = sourceFrames.find((sourceFrame) => sourceFrame.frameIndex === frameIndex);
+    if (!replayFrame) return;
+    const mismatched =
+      frame.startReadiness.state !== replayFrame.startReadinessState ||
+      frame.startReadiness.canStartGame !== replayFrame.canStartGame ||
+      frame.startReadiness.canStartRecording !== replayFrame.canStartRecording;
+
+    if (!mismatched) return;
+    mismatchFrameCount += 1;
+    failures.push({
+      code: "start_readiness_replay_mismatch",
+      detail: `Frame ${frameIndex} stored readiness "${frame.startReadiness.state}" but replay recomputed "${replayFrame.startReadinessState}".`,
+      frameIndex,
+      severity: "warning",
+    });
+  });
+
+  return {
+    blockedCaptureCount,
+    failures,
+    mismatchFrameCount,
+    storedFrameCount,
+  };
+}
+
 function isCompressibleSourceWarning(failure: MovementReplayFailure) {
   return failure.severity === "warning" && (
     failure.code === "source_feet_weak" ||
@@ -852,6 +921,7 @@ function toGamePathFrames(
       shouldDrivePlayerLegRaise: decision.lowerBodyDrive.shouldDrivePlayerLegRaise,
       shouldDrivePlayerSquat: decision.lowerBodyDrive.shouldDrivePlayerSquat,
       sourceQuality: decision.retarget.sourceQuality ?? 0,
+      spineSideBend: decision.spineDrive.sideBend,
       squatDepth: decision.retarget.squatDepth ?? 0,
       rootHeadingYaw: decision.rootMotion.headingYaw,
       rootPathDistance: Math.hypot(
@@ -1099,6 +1169,11 @@ export function analyzeMovementDebugReplaySession(
     decision?.exerciseTransition.key === "floor-roll"
   )).length;
   const sourceFrames = toReplaySourceFrames(gamePathSimulation.sourceFrames);
+  const startReadinessAudit = getStartReadinessAudit({
+    frames,
+    session,
+    sourceFrames,
+  });
   const cameraConfidenceReadyFrameCount = sourceFrames.filter((frame) => frame.cameraState === "ready").length;
   const cameraConfidencePartialFrameCount = sourceFrames.filter((frame) => frame.cameraState === "partial").length;
   const cameraConfidenceUncertainFrameCount = sourceFrames.filter((frame) => frame.cameraState === "uncertain").length;
@@ -1116,7 +1191,7 @@ export function analyzeMovementDebugReplaySession(
     count + (frame?.events.filter((event) => event.eventType === "tracking-uncertainty").length ?? 0)
   ), 0);
   const gameplayScoreDeltaTotal = gameplayEvents.reduce((total, frame) => (
-    total + (frame?.events.reduce((sum, event) => sum + event.scoreDelta, 0) ?? 0)
+    total + resolveMovementGameplayEventFrameSummary(frame).scoreDeltaTotal
   ), 0);
   const rootMotionTravelFrameCount = currentDecisions.filter((decision) => (
     decision?.rootMotion.intent.key === "root-travel" ||
@@ -1220,6 +1295,7 @@ export function analyzeMovementDebugReplaySession(
   getHeadRootFailures(headFrames).forEach((failure) => pushFailure(failures, failure));
   getReplayGameWrapperFailures(wrapperFrames).forEach((failure) => pushFailure(failures, failure));
   getSupportConstraintFailures(currentDecisions).forEach((failure) => pushFailure(failures, failure));
+  startReadinessAudit.failures.forEach((failure) => pushFailure(failures, failure));
 
   frames.forEach((frame, index) => {
     const currentDecision = currentDecisions[index];
@@ -1440,10 +1516,12 @@ export function analyzeMovementDebugReplaySession(
       coverageFamilyCount: coverageSummary.familyCount,
       coverageImplementedCount: coverageSummary.implementedCount,
       coverageImplementedPercent: coverageSummary.implementedPercent,
+      coverageInternalDemoOnlyCount: coverageSummary.internalDemoOnlyCount,
       coverageMissingProofCount: coverageSummary.missingProofCount,
       coverageRemainingGapCount: coverageSummary.remainingGapCount,
       coverageSupportedCount: coverageSummary.supportedCount,
       coverageUnsupportedCount: coverageSummary.unsupportedCount,
+      coverageUserFacingCount: coverageSummary.userFacingCount,
       averageExercisePoseQualityScore: average(exercisePoseQualityScores),
       exerciseFloorRollTransitionCount,
       exerciseLungeFrameCount,
@@ -1482,6 +1560,9 @@ export function analyzeMovementDebugReplaySession(
       rootMotionWorldLandmarkFrameCount: rootMotionAnalysis.summary.worldLandmarkFrameCount,
       replayGameWrapperDivergenceFrameCount: replayGameWrapperDivergences.length,
       replayGameWrapperFrameCount: wrapperFrames.length,
+      startReadinessCaptureBlockedCount: startReadinessAudit.blockedCaptureCount,
+      startReadinessMismatchFrameCount: startReadinessAudit.mismatchFrameCount,
+      startReadinessStoredFrameCount: startReadinessAudit.storedFrameCount,
       startReadinessBlockedFrameCount,
       startReadinessCanStartGameFrameCount,
       startReadinessReadyFrameCount,

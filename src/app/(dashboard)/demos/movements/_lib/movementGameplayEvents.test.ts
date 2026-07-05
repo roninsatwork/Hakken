@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { resolveMovementGameplayEvents } from "./movementGameplayEvents";
-import { resolveMovementMotionFrame } from "./movementMotionFrame";
+import {
+  resolveMovementGameplayEventFrameSummary,
+  resolveMovementGameplayEvents,
+} from "./movementGameplayEvents";
+import {
+  resolveMovementMotionFrame,
+  type MovementMotionFrame,
+} from "./movementMotionFrame";
 import {
   buildLiveMovementSourceFrame,
   buildSyntheticMovementSourceFrame,
@@ -57,7 +63,11 @@ function weakTrackingPose() {
   }));
 }
 
-function motionFrameFor(poseLandmarks: TrackingLandmark[], capturedAt = 1000) {
+function motionFrameFor(
+  poseLandmarks: TrackingLandmark[],
+  capturedAt = 1000,
+  previousMotionFrame: MovementMotionFrame | null = null,
+) {
   const neutral = withCorePose();
   const sourceFrame = buildSyntheticMovementSourceFrame({
     capturedAt,
@@ -68,6 +78,7 @@ function motionFrameFor(poseLandmarks: TrackingLandmark[], capturedAt = 1000) {
     avatarRole: "player",
     calibration: buildMovementCalibration({ poseLandmarks: neutral }),
     mirrorMode: "facing-player",
+    previousMotionFrame,
     retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
     sourceFrame,
   });
@@ -77,10 +88,15 @@ describe("movementGameplayEvents", () => {
   it("awards child-friendly gameplay events for clear visible movement", () => {
     const motionFrame = motionFrameFor(squatPose());
     const result = resolveMovementGameplayEvents({ motionFrame });
+    const summary = resolveMovementGameplayEventFrameSummary(result);
 
     expect(result.scoreAllowed).toBe(true);
     expect(result.readableMovementStrength).toBeGreaterThan(0.28);
     expect(result.nextStreak).toBe(1);
+    expect(summary).toEqual({
+      feedbackMessage: "great-effort",
+      scoreDeltaTotal: 15,
+    });
     expect(result.events).toEqual(expect.arrayContaining([
       expect.objectContaining({
         eventType: "effort-reward",
@@ -93,6 +109,21 @@ describe("movementGameplayEvents", () => {
         scoreDelta: 10,
       }),
     ]));
+  });
+
+  it("scores from motion-frame readability instead of recalculating avatar internals", () => {
+    const motionFrame = motionFrameFor(squatPose());
+    motionFrame.readability = {
+      ...motionFrame.readability,
+      readableMovementStrength: 0.12,
+    };
+    const result = resolveMovementGameplayEvents({ motionFrame });
+
+    expect(result.readableMovementStrength).toBe(0.12);
+    expect(result.nextStreak).toBe(0);
+    expect(result.events.map((event) => event.eventType)).toEqual([
+      "bigger-movement-prompt",
+    ]);
   });
 
   it("uses help events instead of score loss when tracking is not scoreable", () => {
@@ -123,6 +154,57 @@ describe("movementGameplayEvents", () => {
     ]);
   });
 
+  it("uses readability uncertainty instead of direct camera state for tracking events", () => {
+    const motionFrame = motionFrameFor(squatPose());
+    motionFrame.readability = {
+      ...motionFrame.readability,
+      confidence: 0.22,
+      messageEvents: ["step-back"],
+      scoreAllowed: false,
+      state: "uncertain",
+    };
+    const result = resolveMovementGameplayEvents({
+      motionFrame,
+      streak: 3,
+    });
+
+    expect(result.scoreAllowed).toBe(false);
+    expect(result.nextStreak).toBe(0);
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        confidence: 0.22,
+        eventType: "tracking-uncertainty",
+        message: "step-back",
+        scoreAllowed: false,
+        scoreDelta: 0,
+      }),
+    ]);
+  });
+
+  it("keeps held readable motion unscoreable during tracking drops", () => {
+    const previousMotionFrame = motionFrameFor(squatPose(), 2000);
+    const motionFrame = motionFrameFor(weakTrackingPose(), 2100, previousMotionFrame);
+    const result = resolveMovementGameplayEvents({
+      motionFrame,
+      streak: 3,
+    });
+
+    expect(motionFrame.readability.state).toBe("held");
+    expect(result.scoreAllowed).toBe(false);
+    expect(result.readableMovementStrength).toBe(
+      previousMotionFrame.readability.readableMovementStrength,
+    );
+    expect(result.nextStreak).toBe(0);
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        eventType: "tracking-uncertainty",
+        readableMovementStrength: previousMotionFrame.readability.readableMovementStrength,
+        scoreAllowed: false,
+        scoreDelta: 0,
+      }),
+    ]);
+  });
+
   it("emits recovery and streak events from motion-frame state", () => {
     const lost = resolveMovementMotionFrame({
       avatarRole: "player",
@@ -140,11 +222,23 @@ describe("movementGameplayEvents", () => {
       previousMotionFrame: lost,
       streak: 4,
     });
+    const summary = resolveMovementGameplayEventFrameSummary(result);
 
     expect(result.nextStreak).toBe(5);
     expect(result.events.map((event) => event.eventType)).toEqual(expect.arrayContaining([
       "recovery-after-lost-tracking",
       "streak-celebration",
     ]));
+    expect(summary).toEqual({
+      feedbackMessage: "tracking-back",
+      scoreDeltaTotal: 30,
+    });
+  });
+
+  it("summarizes absent gameplay frames as no score or feedback", () => {
+    expect(resolveMovementGameplayEventFrameSummary(undefined)).toEqual({
+      feedbackMessage: null,
+      scoreDeltaTotal: 0,
+    });
   });
 });

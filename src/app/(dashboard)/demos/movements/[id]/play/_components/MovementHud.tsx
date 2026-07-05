@@ -25,6 +25,9 @@ type MovementHudProps = {
   isCameraReady?: boolean;
   cameraError?: string | null;
   calibrationStatus: string;
+  startReadinessCountdownSeconds?: number;
+  startReadinessMessage?: string | null;
+  startReadinessStatus?: "idle" | "countdown" | "checking-visibility" | "blocked";
   webcamRef: React.RefObject<Webcam | null>;
   onTogglePlaying: () => void;
   onRetryVision: () => void;
@@ -52,6 +55,9 @@ export default function MovementHud({
   isCameraReady = false,
   cameraError = null,
   calibrationStatus,
+  startReadinessCountdownSeconds = 0,
+  startReadinessMessage = null,
+  startReadinessStatus = "idle",
   webcamRef,
   onTogglePlaying,
   onRetryVision,
@@ -74,19 +80,36 @@ export default function MovementHud({
 
   const cameraNeedsAttention =
     Boolean(cameraError) || (visionStatus === "ready" && !isCameraReady && hasCameraWaitElapsed);
-  const readinessLabel = visionStatus === "failed"
-    ? "Vision Failed"
-    : isPreviewMode
-      ? "Preview mode"
-    : cameraNeedsAttention
-      ? "Camera check needed"
-    : visionStatus === "ready"
-      ? (isTrackingCalibrated ? (isPlaying ? calibrationStatus : "Ready") : calibrationStatus)
-      : "Loading Vision";
+  const isStartGateActive =
+    startReadinessStatus === "countdown" || startReadinessStatus === "checking-visibility";
+  let readinessLabel = "Loading Vision";
+  if (startReadinessStatus === "countdown") {
+    readinessLabel = `Get ready: ${Math.max(startReadinessCountdownSeconds, 1)}`;
+  } else if (startReadinessStatus === "checking-visibility") {
+    readinessLabel = "Checking visibility";
+  } else if (startReadinessStatus === "blocked") {
+    readinessLabel = startReadinessMessage ?? "Move where I can see you";
+  } else if (visionStatus === "failed") {
+    readinessLabel = "Vision Failed";
+  } else if (isPreviewMode) {
+    readinessLabel = "Preview mode";
+  } else if (cameraNeedsAttention) {
+    readinessLabel = "Camera check needed";
+  } else if (visionStatus === "ready") {
+    readinessLabel = isTrackingCalibrated
+      ? (isPlaying ? calibrationStatus : "Ready")
+      : calibrationStatus;
+  }
   const isPlaybackDisabled = isPreviewMode
     ? isCalibrating
-    : !isVisionReady || !isTrackingCalibrated || isCalibrating;
-  const practiceLabel = isPlaying ? "Guided Practice" : "Studio Ready";
+    : !isVisionReady || !isTrackingCalibrated || isCalibrating || isStartGateActive;
+  const practiceLabel = startReadinessStatus === "countdown"
+    ? "Get Ready"
+    : startReadinessStatus === "checking-visibility"
+      ? "Checking Setup"
+      : isPlaying
+        ? "Guided Practice"
+        : "Studio Ready";
 
   return (
     <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>

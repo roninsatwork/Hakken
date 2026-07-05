@@ -3,7 +3,7 @@ import { resolveMovementAvatarArmTargetComposition } from "./movementAvatarArmTa
 import {
   resolveMovementAvatarReplayDecision,
   resolveMovementAvatarStudioDecision,
-} from "./movementAvatarPipeline";
+} from "./movementAvatarLegacyDecision";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import { buildMovementCalibration } from "./movementTrackingCalibration";

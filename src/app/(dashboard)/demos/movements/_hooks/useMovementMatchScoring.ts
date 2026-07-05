@@ -2,16 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import {
-  getVrmMotionLandmarks,
   type VrmMotionFrame,
-  type VrmMotionPayload,
-  type VrmMotionRef,
 } from "../_lib/vrmRigging";
 import {
-  calculateLandmarkMotion,
   calculateMovementSync,
-  updateMovementScore,
-  type ScoreBlendshape,
   type ScoreHandsPayload,
   type ScoreLandmark,
 } from "../_lib/movementScoring";
@@ -20,6 +14,12 @@ import {
   compareMovementSpineModels,
 } from "../_lib/movementSpineMetrics";
 import type { MovementSpineGoal } from "../_lib/movementTypes";
+import {
+  resolveMovementGameplayEventFrameSummary,
+  resolveMovementGameplayEvents,
+  type MovementGameplayMessage,
+} from "../_lib/movementGameplayEvents";
+import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
 
 type FeedbackMessage = { text: string; id: number } | null;
 
@@ -32,19 +32,125 @@ type UseMovementMatchScoringInput = {
   isPlaying: boolean;
   isScoringEnabled?: boolean;
   setIsPlaying: (isPlaying: boolean) => void;
-  playerLiveLmRef: RefObject<VrmMotionPayload | null>;
+  playerMotionFrameRef?: RefObject<MovementMotionFrame | null>;
+  instructorMotionFrameRef?: RefObject<MovementMotionFrame | null>;
   advanceInstructorFrame: () => InstructorPlaybackAdvance;
   spineGoal?: MovementSpineGoal | null;
 };
 
-const PLAYER_MOTION_SCORE_THRESHOLD = 0.012;
 const SCORE_UPDATE_INTERVAL_MS = 140;
+
+const GAMEPLAY_FEEDBACK_TEXT: Record<MovementGameplayMessage, string> = {
+  "great-effort": "Great effort!",
+  "nice-clear-move": "Nice clear move!",
+  "try-a-little-bigger": "Try making the next one a little bigger.",
+  "move-where-i-can-see-you": "Move where I can see you.",
+  "step-back": "Step back so I can see you.",
+  "step-closer": "Step a little closer.",
+  "show-your-hands": "Show your hands.",
+  "show-your-feet": "Show your feet.",
+  "tracking-back": "Tracking is back.",
+  "streak-celebration": "Brilliant streak!",
+};
+
+type MovementMatchHudFrame = {
+  spineCue: string;
+  spineScore: number;
+  sync: number;
+};
+
+export type MovementMatchScoringGameplaySummary = {
+  gameplayEventFrame: ReturnType<typeof resolveMovementGameplayEvents>;
+  gameplaySummary: ReturnType<typeof resolveMovementGameplayEventFrameSummary>;
+};
+
+export function resolveMovementMatchScoringGameplaySummary({
+  playerMotionFrame,
+  previousPlayerMotionFrame = null,
+  streak = 0,
+}: {
+  playerMotionFrame: MovementMotionFrame;
+  previousPlayerMotionFrame?: MovementMotionFrame | null;
+  streak?: number;
+}): MovementMatchScoringGameplaySummary {
+  const gameplayEventFrame = resolveMovementGameplayEvents({
+    motionFrame: playerMotionFrame,
+    previousMotionFrame: previousPlayerMotionFrame,
+    streak,
+  });
+
+  return {
+    gameplayEventFrame,
+    gameplaySummary: resolveMovementGameplayEventFrameSummary(gameplayEventFrame),
+  };
+}
+
+function selectMotionFrameScoreLandmarks(
+  playerMotionFrame: MovementMotionFrame,
+  instructorMotionFrame: MovementMotionFrame,
+) {
+  const playerWorldLandmarks = playerMotionFrame.displayLandmarks.worldPose;
+  const instructorWorldLandmarks = instructorMotionFrame.displayLandmarks.worldPose;
+
+  if (playerWorldLandmarks.length >= 33 && instructorWorldLandmarks.length >= 33) {
+    return {
+      instructorLandmarks: instructorWorldLandmarks as ScoreLandmark[],
+      playerLandmarks: playerWorldLandmarks as ScoreLandmark[],
+    };
+  }
+
+  return {
+    instructorLandmarks: instructorMotionFrame.displayLandmarks.pose as ScoreLandmark[],
+    playerLandmarks: playerMotionFrame.displayLandmarks.pose as ScoreLandmark[],
+  };
+}
+
+export function resolveMovementMatchHudFrame({
+  instructorMotionFrame,
+  playerMotionFrame,
+  spineGoal,
+}: {
+  instructorMotionFrame: MovementMotionFrame;
+  playerMotionFrame: MovementMotionFrame;
+  spineGoal?: MovementSpineGoal | null;
+}): MovementMatchHudFrame | null {
+  // HUD sync/spine is a presentation diagnostic against the instructor frame.
+  // Gameplay score and feedback must come from resolveMovementMatchScoringGameplaySummary.
+  const {
+    instructorLandmarks,
+    playerLandmarks,
+  } = selectMotionFrameScoreLandmarks(playerMotionFrame, instructorMotionFrame);
+
+  if (playerLandmarks.length < 33 || instructorLandmarks.length < 33) {
+    return null;
+  }
+
+  const syncResult = calculateMovementSync({
+    playerLandmarks,
+    instructorLandmarks,
+    playerHands: playerMotionFrame.source.landmarks.hands as ScoreHandsPayload | undefined,
+    instructorHands: instructorMotionFrame.source.landmarks.hands as ScoreHandsPayload | undefined,
+    playerBlendshapes: playerMotionFrame.source.landmarks.blendshapes,
+  });
+  const spineMatch = compareMovementSpineModels(
+    buildMovementSpineModel(playerLandmarks),
+    buildMovementSpineModel(instructorLandmarks),
+    spineGoal,
+  );
+
+  return {
+    spineCue: spineMatch.cue,
+    spineScore: spineMatch.score,
+    sync: syncResult.sync,
+  };
+}
 
 export function useMovementMatchScoring({
   isPlaying,
   isScoringEnabled = true,
   setIsPlaying,
-  playerLiveLmRef,
+  playerMotionFrameRef,
+  instructorMotionFrameRef,
   advanceInstructorFrame,
   spineGoal = null,
 }: UseMovementMatchScoringInput) {
@@ -62,7 +168,7 @@ export function useMovementMatchScoring({
   const syncRef = useRef(0);
   const bestSpineRef = useRef({ cue: "Review the spine guide and try one calmer pass.", score: 0 });
   const lastHudUpdateRef = useRef(0);
-  const lastPlayerLandmarksRef = useRef<ScoreLandmark[] | null>(null);
+  const lastPlayerMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const lastScoreUpdateRef = useRef(0);
 
   useEffect(() => {
@@ -98,79 +204,64 @@ export function useMovementMatchScoring({
         return;
       }
 
-      const pData =
-        playerLiveLmRef.current && !Array.isArray(playerLiveLmRef.current)
-          ? playerLiveLmRef.current
-          : null;
-      const iData = (playback.lagFrame as VrmMotionRef) || {};
-      const iPayload = !Array.isArray(iData) ? iData : null;
+      const playerMotionFrame = playerMotionFrameRef?.current ?? null;
+      const instructorMotionFrame = instructorMotionFrameRef?.current ?? null;
+      const hudFrame = playerMotionFrame && instructorMotionFrame
+        ? resolveMovementMatchHudFrame({
+            instructorMotionFrame,
+            playerMotionFrame,
+            spineGoal,
+          })
+        : null;
 
-      let currentPL = pData?.landmarks || [];
-      let instructorLandmarks = getVrmMotionLandmarks(iData);
-
-      if (pData?.worldLandmarks?.length === 33 && iPayload?.worldLandmarks?.length === 33) {
-        currentPL = pData.worldLandmarks;
-        instructorLandmarks = iPayload.worldLandmarks;
-      }
-
-      if (currentPL.length >= 33 && instructorLandmarks.length >= 33) {
-        const playerLandmarks = currentPL as ScoreLandmark[];
-        const playerMotion = calculateLandmarkMotion(
-          lastPlayerLandmarksRef.current,
-          playerLandmarks,
-        );
-        lastPlayerLandmarksRef.current = playerLandmarks.map((landmark) => ({ ...landmark }));
-
-        const syncResult = calculateMovementSync({
-          playerLandmarks,
-          instructorLandmarks: instructorLandmarks as ScoreLandmark[],
-          playerHands: pData?.hands as ScoreHandsPayload | undefined,
-          instructorHands: iPayload?.hands as ScoreHandsPayload | undefined,
-          playerBlendshapes: pData?.blendshapes as ScoreBlendshape[] | undefined,
-        });
-
-        syncRef.current = syncResult.sync;
-        const spineMatch = compareMovementSpineModels(
-          buildMovementSpineModel(playerLandmarks),
-          buildMovementSpineModel(instructorLandmarks as ScoreLandmark[]),
-          spineGoal,
-        );
-        if (spineMatch.score > bestSpineRef.current.score) {
-          bestSpineRef.current = spineMatch;
+      if (hudFrame) {
+        syncRef.current = hudFrame.sync;
+        if (hudFrame.spineScore > bestSpineRef.current.score) {
+          bestSpineRef.current = {
+            cue: hudFrame.spineCue,
+            score: hudFrame.spineScore,
+          };
         }
 
         const now = performance.now();
         const shouldUpdateScore = now - lastScoreUpdateRef.current >= SCORE_UPDATE_INTERVAL_MS;
-        const hasMeaningfulPlayerMotion = playerMotion >= PLAYER_MOTION_SCORE_THRESHOLD;
 
-        if (!isScoringEnabled || !hasMeaningfulPlayerMotion) {
+        if (!isScoringEnabled) {
           comboRef.current = 0;
           setFeedbackMsg(null);
         } else if (shouldUpdateScore) {
           lastScoreUpdateRef.current = now;
-          const scoreUpdate = updateMovementScore({
-            sync: syncResult.sync,
-            combo: comboRef.current,
-            score: scoreRef.current,
-            isZenActive: syncResult.isZenActive,
-          });
 
-          comboRef.current = scoreUpdate.combo;
-          scoreRef.current = scoreUpdate.score;
-
-          if (scoreUpdate.feedbackText) {
-            setFeedbackMsg({ text: scoreUpdate.feedbackText, id: Date.now() });
-          } else if (scoreUpdate.shouldClearFeedback) {
+          if (!playerMotionFrame) {
+            comboRef.current = 0;
             setFeedbackMsg(null);
+          } else {
+            const { gameplayEventFrame, gameplaySummary } = resolveMovementMatchScoringGameplaySummary({
+              playerMotionFrame,
+              previousPlayerMotionFrame: lastPlayerMotionFrameRef.current,
+              streak: comboRef.current,
+            });
+            lastPlayerMotionFrameRef.current = playerMotionFrame;
+            comboRef.current = gameplayEventFrame.nextStreak;
+            scoreRef.current += gameplaySummary.scoreDeltaTotal;
+
+            if (!gameplaySummary.feedbackMessage) {
+              setFeedbackMsg(null);
+            } else {
+              setFeedbackMsg({
+                text: GAMEPLAY_FEEDBACK_TEXT[gameplaySummary.feedbackMessage],
+                id: Date.now(),
+              });
+            }
           }
         }
 
         if (now - lastHudUpdateRef.current > 100) {
           lastHudUpdateRef.current = now;
           setHudScore(scoreRef.current);
-          setHudSync(Math.round(syncResult.sync));
-          setHudSpine(spineMatch.score);
-          setHudSpineCue(spineMatch.cue);
+          setHudSync(Math.round(hudFrame.sync));
+          setHudSpine(hudFrame.spineScore);
+          setHudSpineCue(hudFrame.spineCue);
         }
       }
     };
@@ -180,7 +271,15 @@ export function useMovementMatchScoring({
       active = false;
       cancelAnimationFrame(animationFrameId);
     };
-  }, [advanceInstructorFrame, isPlaying, isScoringEnabled, playerLiveLmRef, setIsPlaying, spineGoal]);
+  }, [
+    advanceInstructorFrame,
+    instructorMotionFrameRef,
+    isPlaying,
+    isScoringEnabled,
+    playerMotionFrameRef,
+    setIsPlaying,
+    spineGoal,
+  ]);
 
   const resetScoring = useCallback(() => {
     setIsComplete(false);
@@ -191,7 +290,7 @@ export function useMovementMatchScoring({
       cue: "Review the spine guide and try one calmer pass.",
       score: 0,
     };
-    lastPlayerLandmarksRef.current = null;
+    lastPlayerMotionFrameRef.current = null;
     lastScoreUpdateRef.current = 0;
     setFinalScore(0);
     setFinalSpineScore(0);

@@ -38,30 +38,16 @@ export type MovementGameplayEventFrame = {
   scoreAllowed: boolean;
 };
 
+export type MovementGameplayEventFrameSummary = {
+  feedbackMessage: MovementGameplayMessage | null;
+  scoreDeltaTotal: number;
+};
+
 export type ResolveMovementGameplayEventsInput = {
   motionFrame: MovementMotionFrame;
   previousMotionFrame?: MovementMotionFrame | null;
   streak?: number;
 };
-
-function clamp01(value: number) {
-  return Math.min(Math.max(value, 0), 1);
-}
-
-function getReadableMovementStrength(motionFrame: MovementMotionFrame) {
-  const decision = motionFrame.avatarDecision;
-  return clamp01(Math.max(
-    decision.lowerBodyDrive.playerSquatPresentationDepth,
-    decision.lowerBodyDrive.playerLegRaiseDepth,
-    decision.lowerBodyDrive.liveSquatDepth,
-    Math.abs(decision.spineDrive.sideBend),
-    Math.abs(decision.spineDrive.forwardLean),
-    Math.abs(decision.spineDrive.twist),
-    decision.retargetFrame.squatDepth,
-    decision.retargetFrame.kneeLift.left,
-    decision.retargetFrame.kneeLift.right,
-  ));
-}
 
 function event({
   confidence,
@@ -84,7 +70,7 @@ function event({
     message,
     mirrorMode: motionFrame.mirrorMode,
     readableMovementStrength,
-    scoreAllowed: motionFrame.source.cameraConfidence.scoreAllowed,
+    scoreAllowed: motionFrame.readability.scoreAllowed,
     scoreDelta,
     sourceFrameId: motionFrame.source.frameId,
   };
@@ -95,14 +81,14 @@ export function resolveMovementGameplayEvents({
   previousMotionFrame = null,
   streak = 0,
 }: ResolveMovementGameplayEventsInput): MovementGameplayEventFrame {
-  const readableMovementStrength = getReadableMovementStrength(motionFrame);
-  const confidence = motionFrame.source.cameraConfidence.frameVisibility;
-  const scoreAllowed = motionFrame.source.cameraConfidence.scoreAllowed;
+  const readableMovementStrength = motionFrame.readability.readableMovementStrength;
+  const confidence = motionFrame.readability.confidence;
+  const scoreAllowed = motionFrame.readability.scoreAllowed;
   const events: MovementGameplayEvent[] = [];
-  const previousScoreAllowed = previousMotionFrame?.source.cameraConfidence.scoreAllowed ?? true;
+  const previousScoreAllowed = previousMotionFrame?.readability.scoreAllowed ?? true;
 
   if (!scoreAllowed) {
-    const message = motionFrame.source.cameraConfidence.messageEvents[0] ?? "move-where-i-can-see-you";
+    const message = motionFrame.readability.messageEvents[0] ?? "move-where-i-can-see-you";
     events.push(event({
       confidence,
       eventType: "tracking-uncertainty",
@@ -184,5 +170,14 @@ export function resolveMovementGameplayEvents({
     nextStreak: 0,
     readableMovementStrength,
     scoreAllowed,
+  };
+}
+
+export function resolveMovementGameplayEventFrameSummary(
+  frame: MovementGameplayEventFrame | null | undefined,
+): MovementGameplayEventFrameSummary {
+  return {
+    feedbackMessage: frame?.events.find((event) => event.message)?.message ?? null,
+    scoreDeltaTotal: frame?.events.reduce((sum, event) => sum + event.scoreDelta, 0) ?? 0,
   };
 }

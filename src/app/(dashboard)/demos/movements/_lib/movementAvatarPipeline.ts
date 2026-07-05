@@ -3075,6 +3075,37 @@ export function resolveMovementAvatarSpineApplyOptions({
   };
 }
 
+export function resolveMovementAvatarActiveSpinePose({
+  spineApplyOptions,
+  spineDrive,
+}: {
+  spineApplyOptions: MovementAvatarSpineApplyOptionsDecision;
+  spineDrive: MovementAvatarPlayerSpineDrive;
+}): MovementAvatarSpineBoneRotationSpec[] {
+  return [
+    {
+      bone: "hips",
+      rotation: spineDrive.rotations.hips,
+      slerp: spineApplyOptions.activeDrive.hips,
+    },
+    {
+      bone: "spine",
+      rotation: spineDrive.rotations.spine,
+      slerp: spineApplyOptions.activeDrive.spine,
+    },
+    {
+      bone: "chest",
+      rotation: spineDrive.rotations.chest,
+      slerp: spineApplyOptions.activeDrive.chest,
+    },
+    {
+      bone: "upperChest",
+      rotation: spineDrive.rotations.upperChest,
+      slerp: spineApplyOptions.activeDrive.upperChest,
+    },
+  ];
+}
+
 export function resolveMovementAvatarSpineSolverPose({
   avatarRole,
   spineApplyOptions,
@@ -4310,22 +4341,4 @@ export function resolveMovementAvatarPipelineDecision({
     torsoTrackingReady,
     upperBodyTrackingReady,
   };
-}
-
-export function resolveMovementAvatarReplayDecision(
-  input: MovementAvatarSourceWrapperInput,
-): MovementAvatarPipelineDecision {
-  return resolveMovementAvatarPipelineDecision({
-    ...input,
-    sourceOrigin: "replay",
-  });
-}
-
-export function resolveMovementAvatarStudioDecision(
-  input: MovementAvatarSourceWrapperInput,
-): MovementAvatarPipelineDecision {
-  return resolveMovementAvatarPipelineDecision({
-    ...input,
-    sourceOrigin: "studio",
-  });
 }

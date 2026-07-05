@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  appendMovementRootMotionHistoryFrame,
   buildMovementRootMotionAnalysis,
   resolveMovementRootMotionJumpResponse,
   resolveMovementRootMotionStepResponse,
@@ -59,6 +60,60 @@ function frame(worldPose: TrackingLandmark[], pose = worldPose): MovementRootMot
 }
 
 describe("movement root motion", () => {
+  it("appends live history frames, trims to the configured limit, and returns the latest root-motion frame", () => {
+    const history: MovementRootMotionInputFrame[] = [];
+
+    const first = appendMovementRootMotionHistoryFrame({
+      history,
+      limit: 2,
+      pose: standingWorldPose(),
+      worldPose: standingWorldPose(),
+    });
+    const second = appendMovementRootMotionHistoryFrame({
+      history,
+      limit: 2,
+      pose: standingWorldPose({ x: 0.2, z: 0.05 }),
+      worldPose: standingWorldPose({ x: 0.2, z: 0.05 }),
+    });
+    const third = appendMovementRootMotionHistoryFrame({
+      history,
+      limit: 2,
+      pose: standingWorldPose({ x: 0.45, z: 0.1 }),
+      worldPose: standingWorldPose({ x: 0.45, z: 0.1 }),
+    });
+
+    expect(first?.frameIndex).toBe(0);
+    expect(second?.frameIndex).toBe(1);
+    expect(third?.frameIndex).toBe(1);
+    expect(history).toHaveLength(2);
+    expect(third?.rootPosition.x).toBeCloseTo(0.25, 2);
+  });
+
+  it("does not append invalid live root-motion poses", () => {
+    const history: MovementRootMotionInputFrame[] = [];
+
+    const result = appendMovementRootMotionHistoryFrame({
+      history,
+      pose: standingWorldPose().slice(0, 20),
+      worldPose: standingWorldPose(),
+    });
+
+    expect(result).toBeNull();
+    expect(history).toHaveLength(0);
+  });
+
+  it("stores null world pose when the provided live world landmarks are incomplete", () => {
+    const history: MovementRootMotionInputFrame[] = [];
+
+    appendMovementRootMotionHistoryFrame({
+      history,
+      pose: standingWorldPose(),
+      worldPose: standingWorldPose().slice(0, 20),
+    });
+
+    expect(history[0]?.worldPose).toBeNull();
+  });
+
   it("keeps fixed-spot saved movement frames near zero path drift", () => {
     const analysis = buildMovementRootMotionAnalysis([
       frame(standingWorldPose()),

@@ -7,8 +7,36 @@ import {
 } from "./movementDebugReplay";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import { buildMovementReplaySessionFromRecording } from "./movementRecordingReplay";
+import { resolveMovementGameplayEventFrameSummary } from "./movementGameplayEvents";
 import { analyzeMovementDebugReplaySession } from "./movementReplayAnalyzer";
+import {
+  buildMovementRecordedProofManifest,
+  summarizeMovementRecordedProofGate,
+} from "./movementRecordedProofManifest";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
+
+const captureStartReadiness: MovementStartReadiness = {
+  blockedReasons: [],
+  calibrationQuality: 0.91,
+  canStartGame: true,
+  canStartRecording: true,
+  countdownMsRemaining: 0,
+  promptEvents: [],
+  requiredBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+  state: "ready",
+  visibleBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+};
+
+const blockedCaptureStartReadiness: MovementStartReadiness = {
+  ...captureStartReadiness,
+  blockedReasons: ["leftFoot-missing"],
+  canStartGame: false,
+  canStartRecording: false,
+  promptEvents: ["show-your-whole-body", "show-your-feet"],
+  state: "blocked",
+  visibleBodyParts: ["head", "torso", "rightFoot"],
+};
 
 function frame(overrides: Partial<MovementDebugReplayFrame> = {}): MovementDebugReplayFrame {
   return {
@@ -127,6 +155,14 @@ function squatPose() {
   return pose;
 }
 
+function sideBendPose() {
+  const pose = withCorePose();
+  [0, 7, 8, 11, 12, 13, 14, 15, 16].forEach((index) => {
+    pose[index] = { ...pose[index]!, x: pose[index]!.x + 0.12 };
+  });
+  return pose;
+}
+
 function withWeakFeetPose() {
   const pose = withCorePose();
   [27, 28, 29, 30, 31, 32].forEach((index) => {
@@ -178,6 +214,7 @@ describe("movement debug replay parsing", () => {
       {
         _id: "abc",
         baselineSummary: "full-body-auto-baseline:2",
+        captureStartReadiness,
         durationMs: 900,
         endedAt: 1900,
         movementId: "movement-1",
@@ -196,6 +233,7 @@ describe("movement debug replay parsing", () => {
                 },
               },
             },
+            startReadiness: captureStartReadiness,
             camera: {
               aspectRatio: 4 / 3,
               trackHeight: 960,
@@ -213,6 +251,8 @@ describe("movement debug replay parsing", () => {
 
     expect(sessions).toHaveLength(1);
     expect(sessions[0]?.id).toBe("abc");
+    expect(sessions[0]?.captureStartReadiness).toEqual(captureStartReadiness);
+    expect(sessions[0]?.samples[0]?.startReadiness).toEqual(captureStartReadiness);
     expect(sessions[0]?.samples[0]?.avatarVisual?.comparedLowerBodySegments).toBe(6);
     expect(sessions[0]?.samples[0]?.camera?.trackWidth).toBe(1280);
 
@@ -241,9 +281,13 @@ describe("movement debug replay parsing", () => {
         { timestamp: 33, landmarks: pose, worldLandmarks: pose },
       ],
       30,
+      {
+        captureStartReadiness,
+      },
     );
 
     expect(sessionFromRecording.id).toBe("movement-recording-1");
+    expect(sessionFromRecording.captureStartReadiness).toEqual(captureStartReadiness);
     expect(sessionFromRecording.trigger).toBe("saved-movement-recording");
     expect(sessionFromRecording.sampleCount).toBe(2);
     expect(sessionFromRecording.samples[0]?.tracking.pose).toHaveLength(33);
@@ -337,6 +381,64 @@ describe("movement replay analyzer", () => {
     expect(analysis.metrics.startReadinessCanStartGameFrameCount).toBe(1);
     expect(analysis.metrics.startReadinessReadyFrameCount).toBe(1);
     expect(analysis.metrics.gameplayTrackingUncertaintyEventCount).toBeGreaterThan(0);
+
+    const lostFrameGameEvents = analysis.gamePath.gameplayEvents[2];
+    expect(lostFrameGameEvents?.scoreAllowed).toBe(false);
+    expect(lostFrameGameEvents?.events).toEqual([
+      expect.objectContaining({
+        eventType: "tracking-uncertainty",
+        message: expect.stringMatching(/move-where-i-can-see-you|show-your-hands|show-your-feet/),
+        scoreDelta: 0,
+      }),
+    ]);
+    expect(resolveMovementGameplayEventFrameSummary(lostFrameGameEvents)).toEqual({
+      feedbackMessage: expect.stringMatching(/move-where-i-can-see-you|show-your-hands|show-your-feet/),
+      scoreDeltaTotal: 0,
+    });
+    expect(analysis.metrics.gameplayScoreDeltaTotal).toBe(
+      analysis.gamePath.gameplayEvents.reduce((total, frame) => (
+        total + resolveMovementGameplayEventFrameSummary(frame).scoreDeltaTotal
+      ), 0),
+    );
+  });
+
+  it("fails replay analysis when stored capture readiness was blocked", () => {
+    const analysis = analyzeMovementDebugReplaySession({
+      ...session([trackingFrame(withCorePose())]),
+      captureStartReadiness: blockedCaptureStartReadiness,
+    });
+
+    expect(analysis.pass).toBe(false);
+    expect(analysis.metrics.startReadinessCaptureBlockedCount).toBe(1);
+    expect(analysis.failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "start_readiness_blocked_at_capture",
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
+  it("warns when stored live readiness disagrees with replay recomputation", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      {
+        ...trackingFrame(withCorePose()),
+        startReadiness: blockedCaptureStartReadiness,
+      },
+    ]));
+
+    expect(analysis.metrics.startReadinessStoredFrameCount).toBe(1);
+    expect(analysis.metrics.startReadinessMismatchFrameCount).toBe(1);
+    expect(analysis.failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "start_readiness_replay_mismatch",
+          frameIndex: 0,
+          severity: "warning",
+        }),
+      ]),
+    );
   });
 
   it("counts exercise posture transitions from the simulated game path", () => {
@@ -366,6 +468,11 @@ describe("movement replay analyzer", () => {
     ]));
     expect(analysis.coverage.summary.demoReadyCount).toBeLessThan(analysis.coverage.summary.familyCount);
     expect(analysis.coverage.summary.demoReadyPercent).toBeLessThan(100);
+    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright"]);
+    expect(analysis.coverage.summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
+      "upper-body-standing",
+      "squat-knee-lift",
+    ]));
     expect(analysis.coverage.summary.missingProofCount).toBeGreaterThan(0);
     expect(analysis.coverage.summary.missingProofFamilies).toContain("squat-knee-lift");
     expect(analysis.coverage.missingProofs).toEqual(
@@ -388,9 +495,11 @@ describe("movement replay analyzer", () => {
     expect(analysis.metrics.coverageExplicitStatusCount).toBe(analysis.metrics.coverageFamilyCount);
     expect(analysis.metrics.coverageImplementedCount).toBeLessThan(analysis.metrics.coverageFamilyCount);
     expect(analysis.metrics.coverageImplementedPercent).toBeLessThan(100);
+    expect(analysis.metrics.coverageInternalDemoOnlyCount).toBe(analysis.coverage.summary.internalDemoOnlyCount);
     expect(analysis.metrics.coverageMissingProofCount).toBe(analysis.coverage.summary.missingProofCount);
     expect(analysis.metrics.coverageRemainingGapCount).toBe(analysis.coverage.summary.remainingGapCount);
     expect(analysis.metrics.coverageUnsupportedCount).toBe(0);
+    expect(analysis.metrics.coverageUserFacingCount).toBe(analysis.coverage.summary.userFacingCount);
     expect(analysis.metrics.averageExercisePoseQualityScore).toBeGreaterThan(60);
     expect(analysis.metrics.exercisePoseStrictFrameCount).toBe(2);
     expect(analysis.metrics.exercisePoseModerateFrameCount).toBe(0);
@@ -988,5 +1097,153 @@ describe("movement replay analyzer", () => {
     ]));
 
     expect(analysis.failures.map((failure) => failure.code)).toContain("avatar_upper_body_diverged");
+  });
+
+  it("builds a recorded proof manifest with explicit missing and review rows", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(squatPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const squatRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "squat"
+    ));
+    const sideBendRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "side-bend"
+    ));
+
+    expect(manifest.recordingCount).toBe(1);
+    expect(manifest.summary.totalRows).toBeGreaterThan(0);
+    expect(manifest.summary.coverageProductTruth).toEqual({
+      internalDemoOnlyCount: analysis.coverage.summary.internalDemoOnlyCount,
+      internalDemoOnlyFamilies: analysis.coverage.summary.internalDemoOnlyFamilies,
+      missingProofCount: analysis.coverage.summary.missingProofCount,
+      userFacingCount: analysis.coverage.summary.userFacingCount,
+      userFacingFamilies: analysis.coverage.summary.userFacingFamilies,
+    });
+    expect(squatRow).toEqual(expect.objectContaining({
+      automatedStatus: "passed",
+      evidenceFrameCount: expect.any(Number),
+      proofCase: "squat",
+      recordingId: analysis.sessionId,
+      requiredLayers: expect.arrayContaining([
+        "recorded replay analyzer proof",
+        "recorded replay visual capture",
+        "Game Studio parity proof",
+      ]),
+      status: "manual-review",
+    }));
+    expect(squatRow?.evidenceFrameCount ?? 0).toBeGreaterThan(0);
+    expect(squatRow?.missingLayers).toContain("recorded replay visual capture");
+    expect(squatRow?.statusReason).toContain("Automated analyzer/Game proof passed");
+    expect(sideBendRow).toEqual(expect.objectContaining({
+      automatedStatus: "missing-proof",
+      nextAction: expect.stringContaining("Add or tag a saved recording"),
+      proofCase: "side-bend",
+      status: "missing-proof",
+    }));
+    expect(manifest.summary.automatedPassedCount).toBeGreaterThan(0);
+    expect(manifest.summary.automatedMissingProofCount).toBeGreaterThan(0);
+    expect(manifest.summary.blockingRowCount).toBeGreaterThan(0);
+    expect(manifest.summary.blockingRowsByProofCase["side-bend"]).toBeGreaterThan(0);
+    expect(manifest.summary.blockingRowsByMissingLayer["recorded replay visual capture"]).toBeGreaterThan(0);
+  });
+
+  it("uses replay spine side-bend frames as recorded side-bend proof evidence", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(sideBendPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const sideBendRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "side-bend"
+    ));
+
+    expect(analysis.gamePath.frames[1]?.spineSideBend ?? 0).not.toBe(0);
+    expect(sideBendRow).toEqual(expect.objectContaining({
+      automatedStatus: "passed",
+      directionSign: "negative",
+      evidenceFrameCount: expect.any(Number),
+      nextAction: expect.stringContaining("movement:replay:proof-set"),
+      observedAmplitude: expect.any(Number),
+      proofCase: "side-bend",
+      status: "manual-review",
+    }));
+    expect(sideBendRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
+      sideBendRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
+    );
+    expect(sideBendRow?.expectedFrameWindow).toEqual({
+      endFrame: 1,
+      startFrame: 1,
+    });
+  });
+
+  it("uses replay visual capture frames to satisfy the recorded visual layer", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(squatPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis], {
+      visualCaptures: [{
+        avatarLowerError: 0.12,
+        avatarPath: "movement-replay-session-1-avatar-frame-1.png",
+        avatarUpperError: null,
+        frameIndex: 1,
+        recordingId: analysis.sessionId,
+        sourcePath: "movement-replay-session-1-source-frame-1.png",
+      }],
+    });
+    const squatRow = manifest.rows.find((row) => row.proofCase === "squat");
+
+    expect(squatRow?.automatedStatus).toBe("passed");
+    expect(squatRow?.visualCaptureFrameCount).toBe(1);
+    expect(squatRow?.visualCaptureFrames).toEqual([1]);
+    expect(squatRow?.missingLayers).not.toContain("recorded replay visual capture");
+    expect(manifest.summary.visualCaptureFrameCount).toBeGreaterThan(0);
+    expect(manifest.summary.visualCaptureRowCount).toBeGreaterThan(0);
+  });
+
+  it("keeps source-limited recorded proof rows separate from child movement failure", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withWeakFeetPose()),
+      trackingFrame(withLostTrackingPose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const weakFeetRow = manifest.rows.find((row) => row.proofCase === "weak-feet");
+    const lowerBodyOutOfFrameRow = manifest.rows.find((row) => row.proofCase === "lower-body-out-of-frame");
+
+    expect(weakFeetRow?.status).toBe("source-data-limitation");
+    expect(weakFeetRow?.automatedStatus).toBe("source-data-limitation");
+    expect(weakFeetRow?.statusReason).toContain("not a child failure");
+    expect(lowerBodyOutOfFrameRow?.status).toBe("source-data-limitation");
+    expect(lowerBodyOutOfFrameRow?.automatedStatus).toBe("source-data-limitation");
+    expect(manifest.summary.sourceDataLimitationCount).toBeGreaterThanOrEqual(2);
+    expect(manifest.summary.automatedSourceDataLimitationCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it("blocks the recorded proof gate when manifest rows still need proof or review", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(squatPose()),
+      trackingFrame(withWeakFeetPose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const gate = summarizeMovementRecordedProofGate(manifest);
+
+    expect(gate.status).toBe("blocked");
+    expect(gate.blockingRows.length).toBeGreaterThan(0);
+    expect(gate.blockingRows.length).toBe(manifest.summary.blockingRowCount);
+    expect(gate.blockingRowsByProofCase["side-bend"]).toBeGreaterThan(0);
+    expect(gate.blockingRowsByMissingLayer["recorded replay analyzer proof"]).toBeGreaterThan(0);
+    expect(gate.blockingRowsByMissingLayer["recorded replay visual capture"]).toBeGreaterThan(0);
+    expect(gate.blockingRowsByStatus["manual-review"]).toBeGreaterThan(0);
+    expect(gate.blockingRowsByStatus["missing-proof"]).toBeGreaterThan(0);
+    expect(gate.blockingRowsByMissingLayer).toEqual(manifest.summary.blockingRowsByMissingLayer);
+    expect(gate.blockingRowsByProofCase).toEqual(manifest.summary.blockingRowsByProofCase);
+    expect(gate.blockingRowsByStatus).toEqual(manifest.summary.blockingRowsByStatus);
+    expect(gate.summary).toContain("Recorded proof manifest gate blocked");
   });
 });

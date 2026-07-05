@@ -23,10 +23,12 @@ import MovementTrackingDebugOverlay from "./_components/MovementTrackingDebugOve
 import VrmAvatar from "./_components/VrmAvatar";
 import Webcam from "react-webcam";
 import { useMovementInstructorPlayback } from "../../_hooks/useMovementInstructorPlayback";
+import { useMovementLiveMotionFrame } from "../../_hooks/useMovementLiveMotionFrame";
 import { useMovementMatchScoring } from "../../_hooks/useMovementMatchScoring";
 import { useMovementMatchSession } from "../../_hooks/useMovementMatchSession";
 import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
+import { useMovementRecordedMotionFrame } from "../../_hooks/useMovementRecordedMotionFrame";
 import {
   useMovementPlayerTracking,
   type MovementPlayerMotionPayload,
@@ -39,6 +41,7 @@ import {
 } from "../../_lib/movementAvatarProofFixtures";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import { buildMovementRetargetSourceModel } from "../../_lib/movementRetargeting";
+import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import {
@@ -46,9 +49,29 @@ import {
   getMovementTrackingHealthSummary,
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
+import {
+  resolveMovementStartGateDecision,
+  resolveMovementStartReadiness,
+  type MovementStartReadiness,
+} from "../../_lib/movementSourceFrame";
 import type { VrmMotionFrame } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
+
+const MOVEMENT_GAME_START_COUNTDOWN_MS = 5000;
+
+type MovementGameStartGateStatus =
+  | "idle"
+  | "countdown"
+  | "checking-visibility"
+  | "blocked";
+
+type MovementGameStartGateState = {
+  countdownMsRemaining: number;
+  endsAt: number | null;
+  message: string | null;
+  status: MovementGameStartGateStatus;
+};
 
 type DebugTrackingSample = {
   capturedAt: number;
@@ -74,6 +97,7 @@ type DebugTrackingSample = {
     warnings: string[];
   };
   calibrationQuality?: number;
+  startReadiness?: MovementStartReadiness;
   avatarVisual?: MovementTrackingDebugState["avatarVisual"];
   bodyConfidence?: MovementTrackingDebugState["bodyConfidence"];
   fallbacks: MovementTrackingDebugState["fallbacks"];
@@ -190,6 +214,30 @@ function toMovementSpineGoal(value: unknown): MovementSpineGoal | null {
     : null;
 }
 
+function getMovementStartReadinessMessage(readiness: MovementStartReadiness | null) {
+  if (!readiness) return "Move where I can see you.";
+  if (readiness.promptEvents.includes("show-your-whole-body")) return "Show your whole body.";
+  if (readiness.promptEvents.includes("show-your-feet")) return "Show your feet.";
+  if (readiness.promptEvents.includes("show-your-hands")) return "Show your hands.";
+  if (readiness.promptEvents.includes("hold-still-for-calibration")) {
+    return "Hold still for posture check.";
+  }
+  if (readiness.promptEvents.includes("walk-back-into-frame")) {
+    return "Walk back into frame.";
+  }
+  if (readiness.blockedReasons.length > 0) return "Move where I can see you.";
+  return "Get ready.";
+}
+
+function createIdleGameStartGate(): MovementGameStartGateState {
+  return {
+    countdownMsRemaining: 0,
+    endsAt: null,
+    message: null,
+    status: "idle",
+  };
+}
+
 export default function MatchPlayPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const searchParams = useSearchParams();
@@ -284,6 +332,26 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const effectivePlayerCalibration = debugPlayerCalibration ?? calibration;
   const effectivePlayerRetargetSourceModel = debugPlayerRetargetSourceModel ?? playerRetargetSourceModel;
   const isTrackingReady = isDebugPlayerPoseRoute || isCalibrated || isCalibrationSkipped;
+  const [gameStartGate, setGameStartGate] = useState<MovementGameStartGateState>(
+    createIdleGameStartGate,
+  );
+  const liveMotionFrameRequirements = React.useMemo(() => ({
+    calibrationQuality: effectivePlayerCalibration?.quality ?? null,
+    countdownMsRemaining: gameStartGate.status === "countdown"
+      ? gameStartGate.countdownMsRemaining
+      : 0,
+  }), [
+    effectivePlayerCalibration?.quality,
+    gameStartGate.countdownMsRemaining,
+    gameStartGate.status,
+  ]);
+  const playerMotionFrameRef = useMovementLiveMotionFrame({
+    calibration: effectivePlayerCalibration,
+    isPlaying,
+    playerLiveLmRef: effectivePlayerLiveLmRef,
+    requirements: liveMotionFrameRequirements,
+    retargetSourceModel: effectivePlayerRetargetSourceModel,
+  });
   const displayedCalibrationStatus = isCalibrationSkipped
     ? trackingCalibrationStatus
     : isCalibrated
@@ -300,6 +368,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetInstructorPlayback,
     setInstructorFrame,
   } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
+  const instructorMotionFrameRef = useMovementRecordedMotionFrame({
+    instructorFrameRef: instructorCurrentLmRef,
+    isPlaying,
+    retargetSourceModel: instructorRetargetSourceModel,
+  });
   const spineGoal = toMovementSpineGoal(movement?.spineGoal);
   const {
     finalScore,
@@ -317,15 +390,23 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isPlaying,
     isScoringEnabled: isCalibrated || isDebugPlayerPoseRoute,
     setIsPlaying,
-    playerLiveLmRef: effectivePlayerLiveLmRef,
+    playerMotionFrameRef,
+    instructorMotionFrameRef,
     advanceInstructorFrame,
     spineGoal,
   });
   const hasStartedGuidedPreviewRef = useRef(false);
   const debugTrackingSamplesRef = useRef<DebugTrackingSample[]>([]);
   const debugTrackingChunkStartedAtRef = useRef<number | null>(null);
+  const debugTrackingChunkStartReadinessRef = useRef<MovementStartReadiness | null>(null);
   const isSavingDebugTrackingRef = useRef(false);
   const startDebugAutoBaseline = React.useCallback(() => {
+    const readinessBypassReason = resolveMovementStartReadinessBypassReason({
+      isDebugAutoBaselineRoute: true,
+    });
+    if (readinessBypassReason !== "debug-auto-baseline") return;
+
+    setGameStartGate(createIdleGameStartGate());
     startMatch();
     skipCalibration();
     resetInstructorPlayback();
@@ -339,9 +420,14 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     startMatch,
   ]);
   const startSelectedMatch = React.useCallback(() => {
+    setGameStartGate(createIdleGameStartGate());
     startMatch();
 
-    if (!isGuidedPreviewRoute && !isDebugPlayerPoseRoute) return;
+    const readinessBypassReason = resolveMovementStartReadinessBypassReason({
+      isDebugPlayerPoseRoute,
+      isGuidedPreviewRoute,
+    });
+    if (!readinessBypassReason) return;
 
     skipCalibration();
     resetInstructorPlayback();
@@ -355,6 +441,127 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     setIsPlaying,
     skipCalibration,
     startMatch,
+  ]);
+
+  const resolveCurrentGameStartReadiness = React.useCallback(() => {
+    const sourceFrame = playerMotionFrameRef.current?.source;
+    if (!sourceFrame) return null;
+
+    return resolveMovementStartReadiness({
+      cameraConfidence: sourceFrame.cameraConfidence,
+      requirements: {
+        calibrationQuality: effectivePlayerCalibration?.quality ?? null,
+      },
+    });
+  }, [effectivePlayerCalibration?.quality, playerMotionFrameRef]);
+
+  const completeGameStartGate = React.useCallback(() => {
+    const readiness = resolveCurrentGameStartReadiness();
+    const gateDecision = resolveMovementStartGateDecision({
+      readiness,
+      target: "game",
+    });
+    if (gateDecision.canStart) {
+      resetInstructorPlayback();
+      resetScoring();
+      setGameStartGate(createIdleGameStartGate());
+      setIsPlaying(true);
+      return;
+    }
+
+    setGameStartGate({
+      countdownMsRemaining: 0,
+      endsAt: null,
+      message: getMovementStartReadinessMessage(gateDecision.readiness),
+      status: "blocked",
+    });
+  }, [
+    resetInstructorPlayback,
+    resetScoring,
+    resolveCurrentGameStartReadiness,
+    setIsPlaying,
+  ]);
+
+  useEffect(() => {
+    if (gameStartGate.status !== "countdown" || gameStartGate.endsAt === null) {
+      return undefined;
+    }
+
+    let startCheckTimeoutId: number | null = null;
+    const updateCountdown = () => {
+      const countdownMsRemaining = Math.max(0, gameStartGate.endsAt! - Date.now());
+      if (countdownMsRemaining > 0) {
+        setGameStartGate((current) => (
+          current.status === "countdown" && current.endsAt === gameStartGate.endsAt
+            ? { ...current, countdownMsRemaining }
+            : current
+        ));
+        return;
+      }
+
+      setGameStartGate((current) => (
+        current.status === "countdown" && current.endsAt === gameStartGate.endsAt
+          ? {
+              countdownMsRemaining: 0,
+              endsAt: null,
+              message: "Checking visibility.",
+              status: "checking-visibility",
+            }
+          : current
+      ));
+      startCheckTimeoutId = window.setTimeout(completeGameStartGate, 120);
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 100);
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (startCheckTimeoutId !== null) {
+        window.clearTimeout(startCheckTimeoutId);
+      }
+    };
+  }, [
+    completeGameStartGate,
+    gameStartGate.endsAt,
+    gameStartGate.status,
+  ]);
+
+  const handleTogglePlaying = React.useCallback(() => {
+    if (isPlaying) {
+      setGameStartGate(createIdleGameStartGate());
+      togglePlaying();
+      return;
+    }
+
+    const readinessBypassReason = resolveMovementStartReadinessBypassReason({
+      isDebugPlayerPoseRoute,
+      isManualPreviewSkip: isCalibrationSkipped,
+    });
+    if (readinessBypassReason) {
+      setGameStartGate(createIdleGameStartGate());
+      togglePlaying();
+      return;
+    }
+
+    if (!isVisionReadyForSession || !isTrackingReady || isCalibrating) return;
+
+    setIsPlaying(false);
+    setGameStartGate({
+      countdownMsRemaining: MOVEMENT_GAME_START_COUNTDOWN_MS,
+      endsAt: Date.now() + MOVEMENT_GAME_START_COUNTDOWN_MS,
+      message: "Walk back into frame.",
+      status: "countdown",
+    });
+  }, [
+    isCalibrating,
+    isCalibrationSkipped,
+    isDebugPlayerPoseRoute,
+    isPlaying,
+    isTrackingReady,
+    isVisionReadyForSession,
+    setIsPlaying,
+    togglePlaying,
   ]);
 
   useEffect(() => {
@@ -392,10 +599,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     const captureSample = () => {
       const debugState = trackingDebugRef.current;
       const trackingPayload = effectivePlayerLiveLmRef.current;
+      const startReadiness = playerMotionFrameRef.current?.source.startReadiness ?? undefined;
       const now = performance.now();
       if (!debugState && !trackingPayload) return;
       if (debugTrackingChunkStartedAtRef.current === null) {
         debugTrackingChunkStartedAtRef.current = Date.now();
+        debugTrackingChunkStartReadinessRef.current = startReadiness ?? null;
       }
 
       const camera = getDebugCameraInfo(webcamRef.current?.video);
@@ -418,6 +627,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           warnings: health.warnings,
         },
         calibrationQuality: debugState?.calibrationQuality,
+        startReadiness,
         avatarVisual: debugState?.avatarVisual,
         bodyConfidence: debugState?.bodyConfidence,
         fallbacks: debugState?.fallbacks ?? { baseline: "waiting" },
@@ -437,8 +647,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       const chunk = samples.slice(0, 40);
       const startedAt = debugTrackingChunkStartedAtRef.current ?? chunk[0]?.capturedAt ?? Date.now();
       const endedAt = chunk[chunk.length - 1]?.capturedAt ?? Date.now();
+      const captureStartReadiness = chunk[0]?.startReadiness ??
+        debugTrackingChunkStartReadinessRef.current ??
+        undefined;
       debugTrackingSamplesRef.current = samples.slice(chunk.length);
       debugTrackingChunkStartedAtRef.current = debugTrackingSamplesRef.current[0]?.capturedAt ?? null;
+      debugTrackingChunkStartReadinessRef.current = debugTrackingSamplesRef.current[0]?.startReadiness ?? null;
       isSavingDebugTrackingRef.current = true;
 
       try {
@@ -451,6 +665,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           endedAt,
           baselineSummary: summarizeSampleLabels(chunk, (sample) => sample.baseline) || "none",
           warningSummary: summarizeSampleLabels(chunk, (sample) => sample.health.warnings[0]) || "none",
+          captureStartReadiness,
           samplesJson: JSON.stringify(chunk),
         });
       } finally {
@@ -475,6 +690,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isLobby,
     movementId,
     effectivePlayerLiveLmRef,
+    playerMotionFrameRef,
     saveDebugTrackingSession,
   ]);
 
@@ -518,6 +734,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementMatchScene>
         <VrmAvatar
           landmarksRef={instructorCurrentLmRef}
+          motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}
           isPlaying={isPlaying}
           showPausedPose={isDebugTracking}
@@ -541,6 +758,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           positionOffset={[5, 0, 0]}
           isPlayer={true}
           isPlaying={isPlaying}
+          motionFrameRef={playerMotionFrameRef}
           trackingCalibration={effectivePlayerCalibration}
           trackingDebugRef={trackingDebugRef}
           retargetSourceModel={effectivePlayerRetargetSourceModel}
@@ -577,14 +795,27 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         cameraError={cameraError}
         calibrationStatus={displayedCalibrationStatus}
         webcamRef={webcamRef}
-        onTogglePlaying={togglePlaying}
+        startReadinessCountdownSeconds={Math.ceil(gameStartGate.countdownMsRemaining / 1000)}
+        startReadinessMessage={gameStartGate.message}
+        startReadinessStatus={gameStartGate.status}
+        onTogglePlaying={handleTogglePlaying}
         onRetryVision={retryVision}
-        onCalibrate={startCalibration}
+        onCalibrate={() => {
+          setGameStartGate(createIdleGameStartGate());
+          startCalibration();
+        }}
         onResetStudio={() => {
+          setGameStartGate(createIdleGameStartGate());
           resetCalibration();
           resetMatch({ returnToLobby: true, resetInstructorPlayback, resetScoring });
         }}
         onStartGuidedPreview={() => {
+          const readinessBypassReason = resolveMovementStartReadinessBypassReason({
+            isManualPreviewSkip: true,
+          });
+          if (readinessBypassReason !== "manual-preview-skip") return;
+
+          setGameStartGate(createIdleGameStartGate());
           skipCalibration();
           resetInstructorPlayback();
           resetScoring();

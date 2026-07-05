@@ -3,6 +3,7 @@ import {
   parseMovementFramePayload,
 } from "./movementFrameCodec";
 import type { MovementDataFormat, MovementFrame, MovementLandmark } from "./movementTypes";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 import type {
   MovementDebugReplayLandmark,
   MovementDebugReplayPoseBounds,
@@ -24,6 +25,10 @@ export type MovementReplayRecordingSource = {
 export type MovementReplayRecordingLoadResult = {
   format: MovementDataFormat;
   session: MovementDebugReplaySession;
+};
+
+type MovementReplaySessionBuildOptions = {
+  captureStartReadiness?: MovementStartReadiness;
 };
 
 function isFramePayload(frame: MovementFrame): frame is Exclude<MovementFrame, MovementLandmark[]> {
@@ -73,6 +78,7 @@ export function buildMovementReplaySessionFromRecording(
   recording: MovementReplayRecordingSource,
   frames: MovementFrame[],
   fps = 30,
+  options: MovementReplaySessionBuildOptions = {},
 ): MovementDebugReplaySession {
   const startedAt = recording.createdAt ?? Date.now();
   const frameDurationMs = 1000 / Math.max(fps, 1);
@@ -106,6 +112,7 @@ export function buildMovementReplaySessionFromRecording(
 
   return {
     baselineSummary: "saved movement recording",
+    captureStartReadiness: options.captureStartReadiness,
     createdAt: recording.createdAt,
     durationMs,
     endedAt: startedAt + durationMs,
@@ -138,6 +145,9 @@ export async function loadMovementReplayRecording(
       recording,
       parsed.frames,
       recording.captureFps ?? parsed.fps,
+      {
+        captureStartReadiness: parsed.captureStartReadiness,
+      },
     ),
   };
 }

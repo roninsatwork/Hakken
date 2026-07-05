@@ -67,6 +67,8 @@ export type MovementCoverageSummary = {
   implementedCount: number;
   implementedFamilies: MovementCoverageFamily[];
   implementedPercent: number;
+  internalDemoOnlyCount: number;
+  internalDemoOnlyFamilies: MovementCoverageFamily[];
   missingProofCount: number;
   missingProofFamilies: MovementCoverageFamily[];
   phaseComplete: boolean;
@@ -74,6 +76,8 @@ export type MovementCoverageSummary = {
   supportedCount: number;
   unsupportedCount: number;
   unsupportedFamilies: MovementCoverageFamily[];
+  userFacingCount: number;
+  userFacingFamilies: MovementCoverageFamily[];
 };
 
 export const MOVEMENT_COVERAGE_FAMILIES: MovementCoverageFamily[] = [
@@ -189,40 +193,40 @@ export const MOVEMENT_COVERAGE_REGISTRY: Record<MovementCoverageFamily, Movement
     summary: "Low-lunge setup, forward-lunge prep, side-lunge prep, and yoga warrior lunges are detected with approximate presentation plus conservative foot release/landing response; travelling lunge balance recovery is still missing.",
   },
   sitting: {
-    demoReady: true,
+    demoReady: false,
     family: "sitting",
     label: "Sitting",
     proofLevel: "synthetic",
-    remainingGaps: ["chair geometry is virtual", "pelvis-chair IK is conservative"],
+    remainingGaps: ["recorded replay proof is missing", "chair geometry is virtual", "pelvis-chair IK is conservative"],
     status: "approximate",
-    summary: "Seated body orientation, twist, forward fold, leg lift presentation, and conservative pelvis/foot contact correction are implemented; exact chair geometry is still missing.",
+    summary: "Seated body orientation, twist, forward fold, leg lift presentation, and conservative pelvis/foot contact correction are implemented for internal synthetic proof; recorded replay and exact chair geometry are still missing before user-facing support.",
   },
   kneeling: {
-    demoReady: true,
+    demoReady: false,
     family: "kneeling",
     label: "Kneeling",
     proofLevel: "synthetic",
-    remainingGaps: ["knee contact locks are conservative", "shin/foot rest state is approximate"],
+    remainingGaps: ["recorded replay proof is missing", "knee contact locks are conservative", "shin/foot rest state is approximate"],
     status: "approximate",
-    summary: "Kneeling body orientation, presentation, and conservative knee/foot floor correction are implemented; full shin/foot rest solve is still missing.",
+    summary: "Kneeling body orientation, presentation, and conservative knee/foot floor correction are implemented for internal synthetic proof; recorded replay and full shin/foot rest solve are still missing before user-facing support.",
   },
   "lying-floor-work": {
-    demoReady: true,
+    demoReady: false,
     family: "lying-floor-work",
     label: "Lying and floor work",
     proofLevel: "synthetic",
-    remainingGaps: ["full body-plane contact IK is missing", "floor limb solve remains approximate"],
+    remainingGaps: ["recorded replay proof is missing", "full body-plane contact IK is missing", "floor limb solve remains approximate"],
     status: "approximate",
-    summary: "Lying/floor orientation, presentation, and body-anchor floor correction are implemented; full body-plane contact is still missing.",
+    summary: "Lying/floor orientation, presentation, and body-anchor floor correction are implemented for internal synthetic proof; recorded replay and full body-plane contact are still missing before user-facing support.",
   },
   quadruped: {
-    demoReady: true,
+    demoReady: false,
     family: "quadruped",
     label: "Quadruped",
     proofLevel: "synthetic",
-    remainingGaps: ["hand/knee locks are conservative", "continuous crawl sequencing is not solved"],
+    remainingGaps: ["recorded replay proof is missing", "hand/knee locks are conservative", "continuous crawl sequencing is not solved"],
     status: "approximate",
-    summary: "Hands-and-knees orientation, presentation, and conservative hand/knee floor correction are implemented; continuous crawl sequencing is still missing.",
+    summary: "Hands-and-knees orientation, presentation, and conservative hand/knee floor correction are implemented for internal synthetic proof; recorded replay and continuous crawl sequencing are still missing before user-facing support.",
   },
   "rolling-crawling": {
     demoReady: false,
@@ -313,6 +317,12 @@ export function summarizeMovementCoverageRegistry(): MovementCoverageSummary {
   const implementedFamilies = entries
     .filter((entry) => entry.status === "supported" || entry.status === "approximate")
     .map((entry) => entry.family);
+  const userFacingFamilies = entries
+    .filter((entry) => entry.status === "supported" && entry.proofLevel === "full")
+    .map((entry) => entry.family);
+  const internalDemoOnlyFamilies = entries
+    .filter((entry) => entry.demoReady && !userFacingFamilies.includes(entry.family))
+    .map((entry) => entry.family);
   const blockedFamilies = entries
     .filter((entry) => !entry.demoReady)
     .map((entry) => entry.family);
@@ -329,6 +339,8 @@ export function summarizeMovementCoverageRegistry(): MovementCoverageSummary {
     implementedCount: implementedFamilies.length,
     implementedFamilies,
     implementedPercent: Math.round((implementedFamilies.length / Math.max(entries.length, 1)) * 100),
+    internalDemoOnlyCount: internalDemoOnlyFamilies.length,
+    internalDemoOnlyFamilies,
     missingProofCount: missingProofs.length,
     missingProofFamilies: missingProofs.map((proof) => proof.family),
     phaseComplete: entries.every((entry) => (
@@ -341,5 +353,7 @@ export function summarizeMovementCoverageRegistry(): MovementCoverageSummary {
     supportedCount: entries.filter((entry) => entry.status === "supported").length,
     unsupportedCount: unsupportedFamilies.length,
     unsupportedFamilies,
+    userFacingCount: userFacingFamilies.length,
+    userFacingFamilies,
   };
 }

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import {
+  applyMovementAvatarFootLockRootCorrection,
   createMovementAvatarFootLockState,
   resolveMovementAvatarFootLockApplication,
   type MovementAvatarFootLockState,
@@ -69,6 +70,47 @@ describe("movement avatar foot lock", () => {
     expect(decision.nextState.correction.z).toBeCloseTo(0.075);
     expect(decision.appliedCorrection).toBeGreaterThan(0);
     expect(decision.shouldApplyCorrection).toBe(true);
+  });
+
+  it("executes root correction through the supplied renderer callback", () => {
+    const decision = resolveMovementAvatarFootLockApplication({
+      currentLeft: new THREE.Vector3(-0.5, -2.65, -0.2),
+      currentRight: new THREE.Vector3(0.3, -2.65, -0.2),
+      options,
+      previousState: lockedState(),
+      shouldLock: true,
+    });
+    const applied: Array<{ scale: number; x: number }> = [];
+
+    const result = applyMovementAvatarFootLockRootCorrection({
+      apply: (correction, correctionScale) => {
+        applied.push({
+          scale: correctionScale,
+          x: correction.x,
+        });
+        return true;
+      },
+      decision,
+      options,
+    });
+
+    expect(result.applied).toBe(true);
+    expect(result.correctionScale).toBeCloseTo(decision.nextState.strength * options.correctionScale);
+    expect(applied).toEqual([{
+      scale: expect.closeTo(result.correctionScale),
+      x: expect.closeTo(0.075),
+    }]);
+    expect(applyMovementAvatarFootLockRootCorrection({
+      apply: () => true,
+      decision: {
+        ...decision,
+        shouldApplyCorrection: false,
+      },
+      options,
+    })).toEqual({
+      applied: false,
+      correctionScale: 0,
+    });
   });
 
   it("resets anchors instead of applying correction when drift is too large", () => {

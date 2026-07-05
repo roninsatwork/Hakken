@@ -8,6 +8,7 @@ const defaultAnalysisPath = "tmp/movement-replay-lab/root-motion-proof-analysis.
 const defaultBaseUrl = "http://localhost:3000";
 const defaultOutDir = "tmp/movement-replay-lab/captures/root-motion-proof-set";
 const rootReviewCodes = new Set(["root_turn_detected", "root_path_detected"]);
+const visualCaptureLayer = "recorded replay visual capture";
 
 function printHelp() {
   console.log(`Capture a Movement Replay Lab proof set from an analysis JSON.
@@ -17,9 +18,12 @@ Usage:
 
 Options:
   --analysis <file>      Analysis JSON from movement:replay:analyze. Defaults to ${defaultAnalysisPath}
+  --manifest <file>      Recorded proof manifest JSON from movement:replay:analyze.
   --base-url <url>       App URL. Defaults to ${defaultBaseUrl}
   --out <dir>            Output directory. Defaults to ${defaultOutDir}
   --max-sessions <n>     Limit selected proof sessions. Defaults to all selected sessions.
+  --root-only            Capture the legacy root-turn/root-path proof set instead of manifest visual-proof rows.
+  --dry-run              Print selected capture jobs without opening a browser.
   --no-baseline          Do not add a stable baseline session with no root review warning.
   --storage-state <file> Playwright storage state to reuse for auth.
   --local-test-auth      Sign in through /local-test-auth before capture.
@@ -34,12 +38,15 @@ function parseArgs(argv) {
   const args = {
     analysisPath: defaultAnalysisPath,
     baseUrl: defaultBaseUrl,
+    dryRun: false,
     headed: false,
     includeBaseline: true,
     localTestAuth: false,
+    manifestPath: "",
     maxSessions: Number.POSITIVE_INFINITY,
     outDir: defaultOutDir,
     role: "super-admin",
+    rootOnly: false,
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     storageState: "",
   };
@@ -48,14 +55,20 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === "--help" || arg === "-h") {
       args.help = true;
+    } else if (arg === "--dry-run") {
+      args.dryRun = true;
     } else if (arg === "--headed") {
       args.headed = true;
     } else if (arg === "--local-test-auth") {
       args.localTestAuth = true;
+    } else if (arg === "--root-only") {
+      args.rootOnly = true;
     } else if (arg === "--no-baseline") {
       args.includeBaseline = false;
     } else if (arg === "--analysis") {
       args.analysisPath = argv[++index] || args.analysisPath;
+    } else if (arg === "--manifest") {
+      args.manifestPath = argv[++index] || args.manifestPath;
     } else if (arg === "--base-url") {
       args.baseUrl = argv[++index] || args.baseUrl;
     } else if (arg === "--out") {
@@ -127,6 +140,47 @@ function selectProofAnalyses(analyses, includeBaseline) {
   return baseline ? [baseline, ...selected] : selected;
 }
 
+function manifestRowsForAnalysis(manifest, analysis) {
+  if (!manifest || !Array.isArray(manifest.rows)) return [];
+
+  return manifest.rows.filter((row) => row.recordingId === analysis.sessionId);
+}
+
+function visualProofRowsForAnalysis(manifest, analysis) {
+  return manifestRowsForAnalysis(manifest, analysis).filter((row) => (
+    row.automatedStatus === "passed" &&
+    row.status === "manual-review" &&
+    Array.isArray(row.missingLayers) &&
+    row.missingLayers.includes(visualCaptureLayer)
+  ));
+}
+
+function proofFramesForManifestRows(rows, frameCount) {
+  const frames = rows.flatMap((row) => {
+    const start = row.expectedFrameWindow?.startFrame;
+    const end = row.expectedFrameWindow?.endFrame;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
+    const middle = Math.floor((Number(start) + Number(end)) / 2);
+    return [start, middle, end];
+  });
+
+  return uniqueSortedFrames(frames, frameCount);
+}
+
+function proofKindForManifestRows(rows) {
+  const cases = Array.from(new Set(rows.map((row) => row.proofCase).filter(Boolean)));
+  return cases.length > 0 ? `visual-${cases.slice(0, 4).join("-")}` : "visual-proof";
+}
+
+function selectManifestProofAnalyses(analyses, manifest) {
+  return analyses
+    .map((analysis) => ({
+      analysis,
+      rows: visualProofRowsForAnalysis(manifest, analysis),
+    }))
+    .filter((entry) => entry.rows.length > 0);
+}
+
 function runCapture({
   args,
   frames,
@@ -160,6 +214,17 @@ function runCapture({
   });
 }
 
+function coverageProductTruthForAnalyses(analyses) {
+  const summary = analyses[0]?.coverage?.summary;
+  return {
+    internalDemoOnlyCount: summary?.internalDemoOnlyCount ?? 0,
+    internalDemoOnlyFamilies: summary?.internalDemoOnlyFamilies ?? [],
+    missingProofCount: summary?.missingProofCount ?? 0,
+    userFacingCount: summary?.userFacingCount ?? 0,
+    userFacingFamilies: summary?.userFacingFamilies ?? [],
+  };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -172,22 +237,36 @@ async function main() {
     throw new Error("--analysis must point to an array of replay analyses.");
   }
 
-  const selected = selectProofAnalyses(analyses, args.includeBaseline).slice(0, args.maxSessions);
+  const manifest = args.manifestPath
+    ? JSON.parse(await readFile(path.resolve(args.manifestPath), "utf8"))
+    : null;
+  const manifestSelections = !args.rootOnly && manifest
+    ? selectManifestProofAnalyses(analyses, manifest)
+    : [];
+  const rootSelections = manifestSelections.length > 0
+    ? []
+    : selectProofAnalyses(analyses, args.includeBaseline).map((analysis) => ({ analysis, rows: [] }));
+  const selected = [...manifestSelections, ...rootSelections].slice(0, args.maxSessions);
   if (selected.length === 0) {
     throw new Error("No proof sessions selected from analysis JSON.");
   }
 
   await mkdir(args.outDir, { recursive: true });
 
-  const jobs = selected.map((analysis, index) => {
+  const jobs = selected.map((selection, index) => {
+    const { analysis, rows } = selection;
     const frameCount = Number(analysis.summary?.frameCount || 0);
-    const frames = proofFramesForAnalysis(analysis);
+    const frames = rows.length > 0
+      ? proofFramesForManifestRows(rows, frameCount)
+      : proofFramesForAnalysis(analysis);
     const rootCodes = Array.from(new Set(
       analysis.failures
         .filter((failure) => rootReviewCodes.has(failure.code))
         .map((failure) => failure.code),
     ));
-    const kind = rootCodes.length > 0 ? rootCodes.join("-") : "baseline";
+    const kind = rows.length > 0
+      ? proofKindForManifestRows(rows)
+      : rootCodes.length > 0 ? rootCodes.join("-") : "baseline";
     const outDir = path.join(
       args.outDir,
       `${String(index + 1).padStart(2, "0")}-${sanitizeFilePart(kind)}-${sanitizeFilePart(String(analysis.sessionId).slice(-8))}`,
@@ -198,6 +277,7 @@ async function main() {
       frames,
       kind,
       outDir,
+      proofCases: rows.map((row) => row.proofCase),
       rootCodes,
       sessionId: analysis.sessionId,
     };
@@ -207,6 +287,7 @@ async function main() {
     console.log("");
     console.log(`Capturing ${job.kind} proof for ${job.sessionId}: frames ${job.frames.join(", ")}`);
     await mkdir(job.outDir, { recursive: true });
+    if (args.dryRun) continue;
     runCapture({
       args,
       frames: job.frames,
@@ -215,14 +296,15 @@ async function main() {
     });
   }
 
-  const manifest = {
+  const captureManifest = {
     analysisPath: path.resolve(args.analysisPath),
     baseUrl: args.baseUrl,
     capturedAt: new Date().toISOString(),
+    coverageProductTruth: coverageProductTruthForAnalyses(analyses),
     jobs,
   };
   const manifestPath = path.join(args.outDir, "movement-replay-proof-set-manifest.json");
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(manifestPath, `${JSON.stringify(captureManifest, null, 2)}\n`);
 
   console.log("");
   console.log(`Captured ${jobs.length} proof session(s).`);

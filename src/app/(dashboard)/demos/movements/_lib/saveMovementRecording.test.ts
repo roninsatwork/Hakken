@@ -5,8 +5,20 @@ import {
   saveMovementRecording,
 } from "./saveMovementRecording";
 import type { MovementFrame } from "./movementTypes";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 
 const landmark = { x: 0.1, y: 0.2, visibility: 0.9 };
+const captureStartReadiness: MovementStartReadiness = {
+  blockedReasons: [],
+  calibrationQuality: 0.86,
+  canStartGame: true,
+  canStartRecording: true,
+  countdownMsRemaining: 0,
+  promptEvents: [],
+  requiredBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+  state: "ready",
+  visibleBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+};
 
 function makeFrames(count = MIN_MOVEMENT_CAPTURE_FRAMES): MovementFrame[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -67,6 +79,10 @@ describe("saveMovementRecording", () => {
 
   it("creates the movement with storage metadata", async () => {
     const createMovement = vi.fn(async () => "movement-id");
+    const uploadFetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ storageId: "storage-id" }),
+    } as Response));
 
     await saveMovementRecording({
       title: "  Morning flow  ",
@@ -74,15 +90,20 @@ describe("saveMovementRecording", () => {
       spineGoal: "hipHinge",
       primaryCue: "  Keep ribs over hips  ",
       bodyFocus: ["ribcage", "pelvis"],
+      captureStartReadiness,
       frames: makeFrames(6),
       generateUploadUrl: vi.fn(async () => "https://upload.example"),
       createMovement,
-      uploadFetch: vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ storageId: "storage-id" }),
-      } as Response)),
+      uploadFetch,
     });
 
+    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
+    expect(typeof uploadBody).toBe("string");
+    expect(JSON.parse(uploadBody as string)).toEqual(
+      expect.objectContaining({
+        captureStartReadiness,
+      }),
+    );
     expect(createMovement).toHaveBeenCalledWith(expect.objectContaining({
       title: "Morning flow",
       difficulty: "Intermediate",

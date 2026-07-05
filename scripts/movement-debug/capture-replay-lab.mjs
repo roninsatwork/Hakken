@@ -109,27 +109,37 @@ function parseFrameSelection(value, frameCount) {
 }
 
 async function selectSession(page, session) {
+  await page.getByTestId("movement-replay-session").first().waitFor({ state: "visible" });
+
   if (!session) {
     const firstSession = page.getByTestId("movement-replay-session").first();
-    await firstSession.waitFor({ state: "visible" });
     await firstSession.click();
     return;
   }
 
-  const exact = page.locator(`[data-testid="movement-replay-session"][data-session-id="${session}"]`);
-  const partial = page.locator(`[data-testid="movement-replay-session"][data-session-id*="${session}"]`);
-  const title = page.getByTestId("movement-replay-session").filter({ hasText: session });
-  const target = await exact.count() > 0
-    ? exact.first()
-    : await partial.count() > 0
-      ? partial.first()
-      : title.first();
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const exact = page.locator(`[data-testid="movement-replay-session"][data-session-id="${session}"]`);
+    const partial = page.locator(`[data-testid="movement-replay-session"][data-session-id*="${session}"]`);
+    const title = page.getByTestId("movement-replay-session").filter({ hasText: session });
+    const target = await exact.count() > 0
+      ? exact.first()
+      : await partial.count() > 0
+        ? partial.first()
+        : await title.count() > 0 ? title.first() : null;
 
-  if (await target.count() === 0) {
-    throw new Error(`No replay session matched "${session}".`);
+    if (target) {
+      await target.click();
+      return;
+    }
+
+    await page.waitForTimeout(500);
   }
 
-  await target.click();
+  const available = await page.getByTestId("movement-replay-session").evaluateAll((nodes) => (
+    nodes.map((node) => node.getAttribute("data-session-id")).filter(Boolean)
+  ));
+  throw new Error(`No replay session matched "${session}". Available sessions: ${available.join(", ") || "none"}.`);
 }
 
 async function signInWithLocalTestAuth(page, args) {
@@ -250,11 +260,15 @@ async function main() {
           cameraScoreAllowedFrameCount: readNumberAttr("data-camera-score-allowed-frame-count"),
           coverageExplicitCount: readNumberAttr("data-coverage-explicit-count"),
           coverageFamilyCount: readNumberAttr("data-coverage-family-count"),
+          coverageInternalDemoOnlyCount: readNumberAttr("data-coverage-internal-demo-only-count"),
+          coverageInternalDemoOnlyFamilies: element.getAttribute("data-coverage-internal-demo-only-families") || null,
           coverageMissingProofCount: readNumberAttr("data-coverage-missing-proof-count"),
           coverageMissingProofFamilies: element.getAttribute("data-coverage-missing-proof-families") || null,
           coveragePhaseComplete: element.getAttribute("data-coverage-phase-complete") || null,
           coverageUnsupportedCount: readNumberAttr("data-coverage-unsupported-count"),
           coverageUnsupportedFamilies: element.getAttribute("data-coverage-unsupported-families") || null,
+          coverageUserFacingCount: readNumberAttr("data-coverage-user-facing-count"),
+          coverageUserFacingFamilies: element.getAttribute("data-coverage-user-facing-families") || null,
           currentCameraHelpEvents: element.getAttribute("data-current-camera-help-events") || null,
           currentCameraReasons: element.getAttribute("data-current-camera-reasons") || null,
           currentCameraScore: readNumberAttr("data-current-camera-score"),

@@ -1,5 +1,7 @@
 import type { Classifications } from "@mediapipe/tasks-vision";
+import type { VRM } from "@pixiv/three-vrm";
 import * as Kalidokit from "kalidokit";
+import * as THREE from "three";
 import type { MovementHandSide } from "./movementTypes";
 
 export type VrmBlendshapeCategory = Classifications["categories"][number];
@@ -43,6 +45,21 @@ export type VrmMotionPayload = {
 export type VrmMotionFrame = VrmMotionPayload | VrmPoseLandmark[];
 
 export type VrmMotionRef = VrmMotionFrame | null;
+
+export type VrmNormalizedBoneName = Parameters<VRM["humanoid"]["getNormalizedBoneNode"]>[0];
+
+export function lookupVrmNormalizedBone(
+  vrm: VRM | null | undefined,
+  boneName: string,
+) {
+  return vrm?.humanoid?.getNormalizedBoneNode(boneName as VrmNormalizedBoneName) ?? null;
+}
+
+export function createVrmNormalizedBoneLookup(
+  getVrm: () => VRM | null | undefined,
+) {
+  return (boneName: string) => lookupVrmNormalizedBone(getVrm(), boneName);
+}
 
 export type VrmRigVector = {
   x: number;
@@ -92,9 +109,67 @@ export type VrmHandRotationTarget = {
   vrmName: string;
 };
 
+export type VrmHandRotationApplicationTarget = VrmHandRotationTarget & {
+  targetQuaternion: THREE.Quaternion;
+};
+
+export type VrmHandRotationTargetApplicationResult = {
+  applied: boolean;
+};
+
+export type VrmArmRotationTarget = {
+  bone: string;
+  rotation: VrmRigRotation;
+  slerp: number;
+};
+
+export type VrmArmStoredRotationTarget = {
+  bone: string;
+  slerp: number;
+};
+
+export type VrmStoredRotationTargetApplicationResult = {
+  applied: boolean;
+};
+
+export type VrmExpressionTarget = {
+  name: "aa" | "blinkLeft" | "blinkRight" | "happy";
+  value: number;
+};
+
+export type VrmExpressionTargetWriter = {
+  setValue: (name: VrmExpressionTarget["name"], value: number) => void;
+};
+
+export type VrmExpressionTargetApplicationResult = {
+  applied: boolean;
+};
+
+export type VrmRigRotationLimits = Partial<Record<"x" | "y" | "z", number>>;
+
+export type VrmRigRotationApplicationTarget = {
+  bone: string;
+  remember: boolean;
+  rotation: VrmRigRotation;
+  slerp: number;
+  targetQuaternion: THREE.Quaternion;
+};
+
+export type VrmNamedRotationTarget = {
+  bone: string;
+  remember?: boolean;
+  rotation: VrmRigRotation;
+  slerp: number;
+};
+
+export type VrmQuaternionBoneLike = {
+  quaternion: THREE.Quaternion;
+};
+
 const PLAYER_FINGER_GAIN = 1.35;
 const INSTRUCTOR_FINGER_GAIN = 1.15;
 const THUMB_GAIN_MULTIPLIER = 0.9;
+const ARM_LAST_GOOD_SLERP = 0.42;
 
 function clampRotation(value: number, limit = Math.PI) {
   return Math.max(-limit, Math.min(limit, value));
@@ -433,4 +508,545 @@ export function resolveVrmHandRotationTargets({
       vrmName: spec.vrmName,
     }];
   });
+}
+
+export function resolveVrmRigRotationApplicationTarget({
+  bone,
+  limits,
+  remember = true,
+  rotation,
+  scale = 1,
+  slerp,
+}: {
+  bone: string;
+  limits?: VrmRigRotationLimits;
+  remember?: boolean;
+  rotation?: VrmRigRotation;
+  scale?: number;
+  slerp: number;
+}): VrmRigRotationApplicationTarget | null {
+  if (!rotation) return null;
+
+  const targetEuler = new THREE.Euler(
+    limits?.x ? clampRotation(rotation.x * scale, limits.x) : rotation.x * scale,
+    limits?.y ? clampRotation(rotation.y * scale, limits.y) : rotation.y * scale,
+    limits?.z ? clampRotation(rotation.z * scale, limits.z) : rotation.z * scale,
+    (rotation.rotationOrder || "XYZ") as THREE.EulerOrder,
+  );
+
+  return {
+    bone,
+    remember,
+    rotation,
+    slerp,
+    targetQuaternion: new THREE.Quaternion().setFromEuler(targetEuler),
+  };
+}
+
+export function resolveVrmDemoFallbackRotationTargets({
+  slerp,
+}: {
+  slerp: number;
+}): VrmNamedRotationTarget[] {
+  return [
+    { bone: "spine", rotation: { x: 0.04, y: 0, z: 0 }, slerp },
+    { bone: "chest", rotation: { x: 0.03, y: 0, z: 0 }, slerp },
+    { bone: "rightUpperArm", rotation: { x: 0, y: 0, z: -1.12 }, slerp },
+    { bone: "leftUpperArm", rotation: { x: 0, y: 0, z: 1.12 }, slerp },
+    { bone: "rightLowerArm", rotation: { x: 0, y: 0, z: -0.12 }, slerp },
+    { bone: "leftLowerArm", rotation: { x: 0, y: 0, z: 0.12 }, slerp },
+    { bone: "rightHand", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "leftHand", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "hips", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "rightUpperLeg", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "rightLowerLeg", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "leftUpperLeg", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "leftLowerLeg", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "rightFoot", rotation: { x: 0, y: 0, z: 0 }, slerp },
+    { bone: "leftFoot", rotation: { x: 0, y: 0, z: 0 }, slerp },
+  ];
+}
+
+export function applyVrmDemoFallbackPoseToBones({
+  lookupBone,
+  slerp,
+}: {
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  slerp: number;
+}) {
+  return applyVrmNamedRotationTargetsToBones({
+    lookupBone,
+    targets: resolveVrmDemoFallbackRotationTargets({ slerp }),
+  });
+}
+
+export function applyVrmRigRotationApplicationTarget({
+  apply,
+  target,
+  storeLastGood,
+}: {
+  apply: (target: VrmRigRotationApplicationTarget) => false | THREE.Quaternion | null | void;
+  target: VrmRigRotationApplicationTarget | null;
+  storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
+}) {
+  if (!target) {
+    return {
+      applied: false,
+    };
+  }
+
+  const finalLocalQuaternion = apply(target);
+  const applied = finalLocalQuaternion !== false && finalLocalQuaternion !== null;
+
+  if (applied && target.remember && finalLocalQuaternion instanceof THREE.Quaternion) {
+    storeLastGood?.(target.bone, finalLocalQuaternion);
+  }
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmNamedRotationTargets({
+  apply,
+  storeLastGood,
+  targets,
+}: {
+  apply: (target: VrmRigRotationApplicationTarget) => false | THREE.Quaternion | null | void;
+  storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
+  targets: VrmNamedRotationTarget[];
+}) {
+  let applied = 0;
+
+  targets.forEach((target) => {
+    const result = applyVrmRigRotationApplicationTarget({
+      apply,
+      storeLastGood,
+      target: resolveVrmRigRotationApplicationTarget({
+        bone: target.bone,
+        remember: target.remember ?? false,
+        rotation: target.rotation,
+        slerp: target.slerp,
+      }),
+    });
+
+    if (result.applied) applied += 1;
+  });
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmNamedRotationTargetsToBones({
+  lookupBone,
+  storeLastGood,
+  targets,
+}: {
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
+  targets: VrmNamedRotationTarget[];
+}) {
+  return applyVrmNamedRotationTargets({
+    apply: (target) => {
+      const bone = lookupBone(target.bone);
+      if (!bone) return false;
+
+      bone.quaternion.slerp(target.targetQuaternion, target.slerp);
+      return bone.quaternion.clone();
+    },
+    storeLastGood,
+    targets,
+  });
+}
+
+export function applyVrmNamedRotationTargetToBones({
+  bone,
+  lookupBone,
+  remember,
+  rotation,
+  slerp,
+  storeLastGood,
+}: VrmNamedRotationTarget & {
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
+}) {
+  return applyVrmNamedRotationTargetsToBones({
+    lookupBone,
+    storeLastGood,
+    targets: [{
+      bone,
+      remember,
+      rotation,
+      slerp,
+    }],
+  });
+}
+
+function getVrmArmBones(side: MovementHandSide) {
+  return [
+    `${side}UpperArm`,
+    `${side}LowerArm`,
+    `${side}Hand`,
+  ];
+}
+
+export function resolveVrmArmRelaxedRotationTargets({
+  side,
+  slerp,
+}: {
+  side: MovementHandSide;
+  slerp: number;
+}): VrmArmRotationTarget[] {
+  const direction = side === "right" ? -1 : 1;
+
+  return [
+    {
+      bone: `${side}UpperArm`,
+      rotation: { x: 0, y: 0, z: direction * 1.12 },
+      slerp,
+    },
+    {
+      bone: `${side}LowerArm`,
+      rotation: { x: 0, y: 0, z: direction * 0.12 },
+      slerp,
+    },
+    {
+      bone: `${side}Hand`,
+      rotation: { x: 0, y: 0, z: 0 },
+      slerp,
+    },
+  ];
+}
+
+export function resolveVrmArmLastGoodRotationTargets({
+  side,
+  slerp = ARM_LAST_GOOD_SLERP,
+}: {
+  side: MovementHandSide;
+  slerp?: number;
+}): VrmArmStoredRotationTarget[] {
+  return getVrmArmBones(side).map((bone) => ({
+    bone,
+    slerp,
+  }));
+}
+
+export function resolveVrmHandNeutralRotationTargets({
+  side,
+  slerp,
+}: {
+  side: MovementHandSide;
+  slerp: number;
+}): VrmArmRotationTarget[] {
+  return [{
+    bone: `${side}Hand`,
+    rotation: { x: 0, y: 0, z: 0 },
+    slerp,
+  }];
+}
+
+export function applyVrmArmRelaxedPoseToBones({
+  lookupBone,
+  side,
+  slerp,
+}: {
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  side: MovementHandSide;
+  slerp: number;
+}) {
+  return applyVrmNamedRotationTargetsToBones({
+    lookupBone,
+    targets: resolveVrmArmRelaxedRotationTargets({ side, slerp }),
+  });
+}
+
+export function applyVrmHandNeutralPoseToBones({
+  lookupBone,
+  side,
+  slerp,
+}: {
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  side: MovementHandSide;
+  slerp: number;
+}) {
+  return applyVrmNamedRotationTargetsToBones({
+    lookupBone,
+    targets: resolveVrmHandNeutralRotationTargets({ side, slerp }),
+  });
+}
+
+export function applyVrmArmLastGoodPoseToBones({
+  lastGood,
+  lookupBone,
+  side,
+}: {
+  lastGood: Partial<Record<string, THREE.Quaternion | null | undefined>>;
+  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
+  side: MovementHandSide;
+}) {
+  return applyVrmArmStoredRotationTargets({
+    apply: (target) => applyVrmStoredRotationTargetToBone({
+      bone: lookupBone(target.bone),
+      storedQuaternion: lastGood[target.bone],
+      target,
+    }).applied,
+    targets: resolveVrmArmLastGoodRotationTargets({ side }),
+  });
+}
+
+export function resolveVrmHandsRotationTargets({
+  hands,
+  isPlayer,
+  mirrorForDisplay = false,
+  solveHand = solveVrmHand,
+}: {
+  hands?: VrmHandsPayload | null;
+  isPlayer: boolean;
+  mirrorForDisplay?: boolean;
+  solveHand?: (landmarks: VrmPoseLandmark[], handedness: "Left" | "Right") => VrmHandRig | null;
+}): VrmHandRotationTarget[] {
+  if (!hands) return [];
+
+  const handRigOptions = resolveVrmHandRigOptions({
+    isPlayer,
+    mirrorForDisplay,
+  });
+
+  return (["left", "right"] as MovementHandSide[]).flatMap((side) => {
+    const handData = hands[side];
+    if (!handData?.landmarks) return [];
+
+    const handedness = side === "left" ? "Left" : "Right";
+    const handLandmarks = prepareVrmHandLandmarks(handData, {
+      mirrorX: handRigOptions.mirrorX,
+    });
+    const rig = solveHand(handLandmarks, handedness);
+    if (!rig) return [];
+
+    return resolveVrmHandRotationTargets({
+      isPlayer: handRigOptions.isPlayer,
+      rig,
+      side,
+      slerp: handRigOptions.slerp,
+    });
+  });
+}
+
+export function resolveVrmBlendshapeExpressionTargets(
+  blendshapes?: VrmBlendshapeCategory[] | null,
+): VrmExpressionTarget[] {
+  if (!blendshapes) return [];
+
+  let smileScore = 0;
+  const targets: VrmExpressionTarget[] = [];
+
+  blendshapes.forEach((blendshape) => {
+    if (blendshape.categoryName === "eyeBlinkLeft") {
+      targets.push({ name: "blinkLeft", value: blendshape.score });
+    }
+    if (blendshape.categoryName === "eyeBlinkRight") {
+      targets.push({ name: "blinkRight", value: blendshape.score });
+    }
+    if (blendshape.categoryName === "jawOpen") {
+      targets.push({ name: "aa", value: Math.min(1.0, blendshape.score * 1.5) });
+    }
+    if (
+      blendshape.categoryName === "mouthSmileLeft" ||
+      blendshape.categoryName === "mouthSmileRight"
+    ) {
+      smileScore += blendshape.score / 2;
+    }
+  });
+
+  return [
+    ...targets,
+    { name: "happy", value: smileScore },
+  ];
+}
+
+export function applyVrmExpressionTargets({
+  apply,
+  targets,
+}: {
+  apply: (target: VrmExpressionTarget) => boolean | void;
+  targets: VrmExpressionTarget[];
+}) {
+  let applied = 0;
+
+  targets.forEach((target) => {
+    const result = apply(target);
+    if (result !== false) applied += 1;
+  });
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmExpressionTargetToManager({
+  expressionManager,
+  target,
+}: {
+  expressionManager: VrmExpressionTargetWriter | null | undefined;
+  target: VrmExpressionTarget;
+}): VrmExpressionTargetApplicationResult {
+  if (!expressionManager) {
+    return {
+      applied: false,
+    };
+  }
+
+  expressionManager.setValue(target.name, target.value);
+
+  return {
+    applied: true,
+  };
+}
+
+export function applyVrmBlendshapeExpressionTargetsToManager({
+  blendshapes,
+  expressionManager,
+}: {
+  blendshapes?: VrmBlendshapeCategory[] | null;
+  expressionManager: VrmExpressionTargetWriter | null | undefined;
+}) {
+  return applyVrmExpressionTargets({
+    apply: (target) => applyVrmExpressionTargetToManager({
+      expressionManager,
+      target,
+    }).applied,
+    targets: resolveVrmBlendshapeExpressionTargets(blendshapes),
+  });
+}
+
+export function applyVrmHandRotationTargets({
+  apply,
+  targets,
+}: {
+  apply: (target: VrmHandRotationApplicationTarget) => boolean | void;
+  targets: VrmHandRotationTarget[];
+}) {
+  let applied = 0;
+
+  targets.forEach((target) => {
+    const result = apply({
+      ...target,
+      targetQuaternion: new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(target.rotation.x, target.rotation.y, target.rotation.z),
+      ),
+    });
+    if (result !== false) applied += 1;
+  });
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmHandRotationTargetToBone({
+  bone,
+  target,
+}: {
+  bone: THREE.Object3D | null | undefined;
+  target: VrmHandRotationApplicationTarget;
+}): VrmHandRotationTargetApplicationResult {
+  if (!bone) {
+    return {
+      applied: false,
+    };
+  }
+
+  bone.quaternion.slerp(target.targetQuaternion, target.slerp);
+
+  return {
+    applied: true,
+  };
+}
+
+export function applyVrmHandsRotationTargetsToBones({
+  hands,
+  isPlayer,
+  lookupBone,
+  mirrorForDisplay = false,
+  solveHand,
+}: {
+  hands?: VrmHandsPayload | null;
+  isPlayer: boolean;
+  lookupBone: (vrmName: string) => THREE.Object3D | null | undefined;
+  mirrorForDisplay?: boolean;
+  solveHand?: (landmarks: VrmPoseLandmark[], handedness: "Left" | "Right") => VrmHandRig | null;
+}) {
+  return applyVrmHandRotationTargets({
+    apply: (target) => applyVrmHandRotationTargetToBone({
+      bone: lookupBone(target.vrmName),
+      target,
+    }).applied,
+    targets: resolveVrmHandsRotationTargets({
+      hands,
+      isPlayer,
+      mirrorForDisplay,
+      solveHand,
+    }),
+  });
+}
+
+export function applyVrmArmRotationTargets({
+  apply,
+  targets,
+}: {
+  apply: (target: VrmArmRotationTarget) => boolean | void;
+  targets: VrmArmRotationTarget[];
+}) {
+  let applied = 0;
+
+  targets.forEach((target) => {
+    const result = apply(target);
+    if (result !== false) applied += 1;
+  });
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmArmStoredRotationTargets({
+  apply,
+  targets,
+}: {
+  apply: (target: VrmArmStoredRotationTarget) => boolean | void;
+  targets: VrmArmStoredRotationTarget[];
+}) {
+  let applied = 0;
+
+  targets.forEach((target) => {
+    const result = apply(target);
+    if (result !== false) applied += 1;
+  });
+
+  return {
+    applied,
+  };
+}
+
+export function applyVrmStoredRotationTargetToBone({
+  bone,
+  storedQuaternion,
+  target,
+}: {
+  bone: VrmQuaternionBoneLike | null | undefined;
+  storedQuaternion: THREE.Quaternion | null | undefined;
+  target: VrmArmStoredRotationTarget;
+}): VrmStoredRotationTargetApplicationResult {
+  if (!bone || !storedQuaternion) {
+    return {
+      applied: false,
+    };
+  }
+
+  bone.quaternion.slerp(storedQuaternion, target.slerp);
+
+  return {
+    applied: true,
+  };
 }

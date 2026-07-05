@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import {
   parseMovementDebugReplaySessions,
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementDebugReplay";
@@ -16,27 +16,44 @@ import {
   analyzeMovementDebugReplaySessions,
   type MovementReplayAnalysis,
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer";
+import {
+  buildMovementRecordedProofManifest,
+  summarizeMovementRecordedProofGate,
+  type MovementRecordedVisualCaptureFrame,
+} from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordedProofManifest";
 import type { MovementDataFormat } from "../../src/app/(dashboard)/demos/movements/_lib/movementTypes";
 
 type CliArgs = {
+  autoExport: boolean;
   createExport: boolean;
   exportPath: string | null;
   file: string | null;
   limit: string;
+  manifestOut: string | null;
   out: string | null;
   source: "debug-sessions" | "recordings";
   strict: boolean;
+  strictManifest: boolean;
+  visualCapturePaths: string[];
 };
+
+const DEFAULT_REPLAY_RUNS_DIR = "tmp/movement-replay-lab/runs";
+const LATEST_EXPORT_POINTER = "latest-export-path.txt";
+const DEFAULT_MANIFEST_PATH = "tmp/movement-replay-lab/latest-recorded-proof-manifest.json";
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
+    autoExport: true,
     createExport: false,
     exportPath: null,
     file: null,
     limit: "10",
+    manifestOut: null,
     out: null,
     source: "recordings",
     strict: false,
+    strictManifest: false,
+    visualCapturePaths: [],
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -56,14 +73,24 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--create-export") {
       args.createExport = true;
+    } else if (arg === "--no-auto-export") {
+      args.autoExport = false;
     } else if (arg === "--limit") {
       args.limit = argv[index + 1] ?? "10";
+      index += 1;
+    } else if (arg === "--manifest-out") {
+      args.manifestOut = argv[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--visual-captures") {
+      args.visualCapturePaths.push(argv[index + 1] ?? "");
       index += 1;
     } else if (arg === "--out") {
       args.out = argv[index + 1] ?? null;
       index += 1;
     } else if (arg === "--strict") {
       args.strict = true;
+    } else if (arg === "--strict-manifest") {
+      args.strictManifest = true;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
@@ -87,8 +114,16 @@ Options:
   --limit <n>        Number of recent rows to fetch from Convex dev data. Default: 10.
   --export <path>    Convex export ZIP or extracted directory with _storage files.
   --create-export    Create a fresh Convex export with file storage before analyzing recordings.
+  --no-auto-export   Do not auto-create/reuse a Convex storage export for storage-backed recordings.
   --out <path>       Write the JSON analysis report.
+  --manifest-out <path>
+                     Write the recorded proof manifest JSON. Defaults next to --out, or
+                     ${DEFAULT_MANIFEST_PATH} when --out is omitted.
+  --visual-captures <path>
+                     Replay Lab capture manifest file or directory. Can be passed more than once.
   --strict           Exit non-zero when any error-level replay failure is found.
+  --strict-manifest  Exit non-zero when the recorded proof manifest has failed,
+                     missing-proof, manual-review, or source-data-limitation rows.
 `);
 }
 
@@ -129,7 +164,74 @@ function readRows(args: CliArgs): unknown {
   return convexDataTable(table, args.limit);
 }
 
+function maybeNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function maybeString(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function captureManifestFiles(inputPath: string): string[] {
+  const resolved = resolve(inputPath);
+  if (!existsSync(resolved)) return [];
+
+  const stats = statSync(resolved);
+  if (stats.isFile()) return [resolved];
+  if (!stats.isDirectory()) return [];
+
+  return readdirSync(resolved, { withFileTypes: true }).flatMap((entry) => {
+    const child = join(resolved, entry.name);
+    if (entry.isDirectory()) return captureManifestFiles(child);
+    if (!entry.isFile()) return [];
+    return basename(child).startsWith("movement-replay-") &&
+      basename(child).endsWith("-manifest.json")
+      ? [child]
+      : [];
+  });
+}
+
+function parseVisualCaptureManifest(value: unknown): MovementRecordedVisualCaptureFrame[] {
+  if (!value || typeof value !== "object") return [];
+
+  const manifest = value as {
+    captures?: Array<{
+      avatarPath?: unknown;
+      diagnostics?: Record<string, unknown>;
+      frame?: unknown;
+      sourcePath?: unknown;
+    }>;
+    sessionId?: unknown;
+  };
+  const recordingId = maybeString(manifest.sessionId);
+  if (!recordingId || !Array.isArray(manifest.captures)) return [];
+
+  return manifest.captures.flatMap((capture) => {
+    const frameIndex = maybeNumber(capture.frame);
+    if (frameIndex === null) return [];
+
+    return [{
+      avatarLowerError: maybeNumber(capture.diagnostics?.avatarLowerError),
+      avatarPath: maybeString(capture.avatarPath),
+      avatarUpperError: maybeNumber(capture.diagnostics?.avatarUpperError),
+      frameIndex,
+      recordingId,
+      sourcePath: maybeString(capture.sourcePath),
+    }];
+  });
+}
+
+function readVisualCaptures(paths: string[]) {
+  return paths.flatMap((inputPath) => (
+    captureManifestFiles(inputPath).flatMap((manifestPath) => (
+      parseVisualCaptureManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown)
+    ))
+  ));
+}
+
 function createConvexExport(exportPath: string) {
+  mkdirSync(dirname(exportPath), { recursive: true });
   const output = execFileSync(
     "npx",
     [
@@ -151,6 +253,50 @@ function createConvexExport(exportPath: string) {
   );
 
   if (output.trim()) console.log(output.trim());
+}
+
+function timestampForPath() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function readLatestExportPath() {
+  const pointerPath = resolve(DEFAULT_REPLAY_RUNS_DIR, LATEST_EXPORT_POINTER);
+  if (!existsSync(pointerPath)) return null;
+
+  const exportPath = readFileSync(pointerPath, "utf8").trim();
+  if (!exportPath || !existsSync(exportPath)) return null;
+  return exportPath;
+}
+
+function writeLatestExportPath(exportPath: string) {
+  const pointerPath = resolve(DEFAULT_REPLAY_RUNS_DIR, LATEST_EXPORT_POINTER);
+  mkdirSync(dirname(pointerPath), { recursive: true });
+  writeFileSync(pointerPath, `${exportPath}\n`);
+}
+
+function rowsContainStorageBackedRecordings(rows: unknown) {
+  const records = (Array.isArray(rows) ? rows : [rows])
+    .map(parseRecordingRow)
+    .filter((recording): recording is MovementReplayRecordingSource => Boolean(recording));
+
+  return records.some((recording) => !isInlinePoseData(recording.poseData));
+}
+
+function resolveRecordingExportPath(args: CliArgs, rows: unknown) {
+  if (args.source !== "recordings") return null;
+  if (args.exportPath) return resolve(args.exportPath);
+  if (!args.autoExport) return null;
+  if (!rowsContainStorageBackedRecordings(rows)) return null;
+
+  return readLatestExportPath() ??
+    resolve(DEFAULT_REPLAY_RUNS_DIR, `${timestampForPath()}-movement-recordings.convex-export.zip`);
+}
+
+function shouldCreateRecordingExport(args: CliArgs, exportPath: string | null) {
+  if (!exportPath) return false;
+  if (args.createExport) return true;
+  if (args.exportPath) return false;
+  return !existsSync(exportPath);
 }
 
 function storagePayloadFromDirectory(exportPath: string, storageId: string) {
@@ -250,8 +396,19 @@ function parseMovementReplayRecordings(rows: unknown, exportPath: string | null)
       recording,
       parsed.frames,
       recording.captureFps ?? parsed.fps,
+      {
+        captureStartReadiness: parsed.captureStartReadiness,
+      },
     );
   });
+}
+
+function defaultManifestPath(outPath: string | null) {
+  if (!outPath) return DEFAULT_MANIFEST_PATH;
+  if (outPath.endsWith(".json")) {
+    return outPath.replace(/\.json$/, ".proof-manifest.json");
+  }
+  return `${outPath}.proof-manifest.json`;
 }
 
 function printReport(analyses: MovementReplayAnalysis[]) {
@@ -289,7 +446,7 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       `  lower-body targets: ${targetStages.join(", ") || "none"}`,
     );
     console.log(
-      `  coverage audit: ${analysis.coverage.summary.explicitStatusCount}/${analysis.coverage.summary.familyCount} explicit, supported ${analysis.coverage.summary.supportedCount}, approximate ${analysis.coverage.summary.approximateCount}, diagnostic ${analysis.coverage.summary.diagnosticOnlyCount}, unsupported ${analysis.coverage.summary.unsupportedCount}, missing-proof ${analysis.coverage.summary.missingProofCount}${analysis.coverage.summary.unsupportedFamilies.length ? ` (${analysis.coverage.summary.unsupportedFamilies.join(", ")})` : ""}`,
+      `  coverage audit: ${analysis.coverage.summary.explicitStatusCount}/${analysis.coverage.summary.familyCount} explicit, user-facing ${analysis.coverage.summary.userFacingCount}, internal-demo-only ${analysis.coverage.summary.internalDemoOnlyCount}, supported ${analysis.coverage.summary.supportedCount}, approximate ${analysis.coverage.summary.approximateCount}, diagnostic ${analysis.coverage.summary.diagnosticOnlyCount}, unsupported ${analysis.coverage.summary.unsupportedCount}, missing-proof ${analysis.coverage.summary.missingProofCount}${analysis.coverage.summary.unsupportedFamilies.length ? ` (${analysis.coverage.summary.unsupportedFamilies.join(", ")})` : ""}`,
     );
     console.log(
       `  exercise classes: lunges ${analysis.metrics.exerciseLungeFrameCount}, roll/crawl ${analysis.metrics.exerciseRollingCrawlingFrameCount}, floor rolls ${analysis.metrics.exerciseFloorRollTransitionCount}, transitions ${analysis.metrics.exerciseTransitionCount}`,
@@ -298,7 +455,7 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       `  camera confidence: ready ${analysis.metrics.cameraConfidenceReadyFrameCount}, partial ${analysis.metrics.cameraConfidencePartialFrameCount}, uncertain ${analysis.metrics.cameraConfidenceUncertainFrameCount}, lost ${analysis.metrics.cameraConfidenceLostFrameCount}, score allowed ${analysis.metrics.cameraScoreAllowedFrameCount}, help events ${analysis.metrics.cameraHelpEventCount}`,
     );
     console.log(
-      `  start readiness: ready ${analysis.metrics.startReadinessReadyFrameCount}, blocked ${analysis.metrics.startReadinessBlockedFrameCount}, can start game ${analysis.metrics.startReadinessCanStartGameFrameCount}`,
+      `  start readiness: ready ${analysis.metrics.startReadinessReadyFrameCount}, blocked ${analysis.metrics.startReadinessBlockedFrameCount}, can start game ${analysis.metrics.startReadinessCanStartGameFrameCount}, stored ${analysis.metrics.startReadinessStoredFrameCount}, mismatches ${analysis.metrics.startReadinessMismatchFrameCount}, blocked captures ${analysis.metrics.startReadinessCaptureBlockedCount}`,
     );
     console.log(
       `  gameplay events: clear ${analysis.metrics.gameplayClearMovementEventCount}, tracking uncertainty ${analysis.metrics.gameplayTrackingUncertaintyEventCount}, score delta ${analysis.metrics.gameplayScoreDeltaTotal}`,
@@ -352,22 +509,51 @@ function printReport(analyses: MovementReplayAnalysis[]) {
   });
 }
 
+function formatGateCounts(counts: Partial<Record<string, number>>) {
+  const entries = Object.entries(counts)
+    .filter(([, count]) => typeof count === "number" && count > 0)
+    .sort(([, leftCount], [, rightCount]) => (rightCount ?? 0) - (leftCount ?? 0));
+
+  if (entries.length === 0) return "none";
+  return entries.map(([key, count]) => `${key}:${count}`).join(", ");
+}
+
 export async function runMovementReplayAnalyzerCli(argv: string[]) {
   const args = parseArgs(argv);
-  if (args.createExport) {
-    if (!args.exportPath) {
-      throw new Error("--create-export requires --export <path>.");
-    }
-    createConvexExport(resolve(args.exportPath));
+  const rows = readRows(args);
+  const exportPath = resolveRecordingExportPath(args, rows);
+  const shouldCreateExport = shouldCreateRecordingExport(args, exportPath);
+  if (shouldCreateExport && exportPath) {
+    console.log(`Creating Convex storage export: ${exportPath}`);
+    createConvexExport(exportPath);
+    writeLatestExportPath(exportPath);
+  } else if (args.source === "recordings" && exportPath) {
+    console.log(`Using Convex storage export: ${exportPath}`);
+    if (!args.exportPath) writeLatestExportPath(exportPath);
   }
 
-  const rows = readRows(args);
   const sessions = args.source === "recordings"
-    ? parseMovementReplayRecordings(rows, args.exportPath)
+    ? parseMovementReplayRecordings(rows, exportPath)
     : parseMovementDebugReplaySessions(rows);
   const analyses = analyzeMovementDebugReplaySessions(sessions);
+  const visualCaptures = readVisualCaptures(args.visualCapturePaths);
+  const proofManifest = buildMovementRecordedProofManifest(analyses, { visualCaptures });
+  const proofGate = summarizeMovementRecordedProofGate(proofManifest);
 
   printReport(analyses);
+  console.log("");
+  console.log(
+    `Recorded proof manifest: ${proofManifest.summary.totalRows} row(s), ${proofManifest.summary.passedCount} passed, ${proofManifest.summary.failedCount} failed, ${proofManifest.summary.missingProofCount} missing-proof, ${proofManifest.summary.manualReviewCount} manual-review, ${proofManifest.summary.sourceDataLimitationCount} source-data-limitation; automated proof ${proofManifest.summary.automatedPassedCount} passed, ${proofManifest.summary.automatedMissingProofCount} missing-proof, ${proofManifest.summary.automatedFailedCount} failed; visual capture ${proofManifest.summary.visualCaptureRowCount} row(s), ${proofManifest.summary.visualCaptureFrameCount} frame match(es), ${proofManifest.summary.visualCaptureMissingRowCount} row(s) still missing.`,
+  );
+  if (args.visualCapturePaths.length > 0) {
+    console.log(`Replay visual captures: ${visualCaptures.length} frame(s) loaded.`);
+  }
+  console.log(proofGate.summary);
+  if (proofGate.status === "blocked") {
+    console.log(`Blocking proof statuses: ${formatGateCounts(proofGate.blockingRowsByStatus)}`);
+    console.log(`Blocking proof cases: ${formatGateCounts(proofGate.blockingRowsByProofCase)}`);
+    console.log(`Blocking missing layers: ${formatGateCounts(proofGate.blockingRowsByMissingLayer)}`);
+  }
 
   if (args.out) {
     const outPath = resolve(args.out);
@@ -377,7 +563,15 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
     console.log(`Wrote ${outPath}`);
   }
 
+  const manifestPath = resolve(args.manifestOut ?? defaultManifestPath(args.out));
+  mkdirSync(dirname(manifestPath), { recursive: true });
+  writeFileSync(manifestPath, `${JSON.stringify(proofManifest, null, 2)}\n`);
+  console.log(`Wrote ${manifestPath}`);
+
   if (args.strict && analyses.some((analysis) => !analysis.pass)) {
+    process.exit(1);
+  }
+  if (args.strictManifest && proofGate.status === "blocked") {
     process.exit(1);
   }
 }

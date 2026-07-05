@@ -3,7 +3,7 @@ import {
   classifyMovementBodyOrientation,
   shouldHoldUnsupportedBodyOrientation,
 } from "./movementBodyOrientation";
-import { resolveMovementAvatarStudioDecision } from "./movementAvatarPipeline";
+import { resolveMovementAvatarStudioDecision } from "./movementAvatarLegacyDecision";
 import {
   makeMovementAvatarProofPose,
 } from "./movementAvatarProofFixtures";

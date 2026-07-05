@@ -6,6 +6,7 @@ import type {
   MovementFrame,
   MovementSpineGoal,
 } from "./movementTypes";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 
 export const MIN_MOVEMENT_CAPTURE_FRAMES = 5;
 
@@ -30,6 +31,7 @@ type SaveMovementRecordingInput = {
   spineGoal?: MovementSpineGoal;
   primaryCue?: string;
   bodyFocus?: MovementBodyFocus[];
+  captureStartReadiness?: MovementStartReadiness | null;
   frames: MovementFrame[];
   generateUploadUrl: () => Promise<string>;
   createMovement: (input: MovementCreateInput) => Promise<unknown>;
@@ -67,6 +69,7 @@ export async function saveMovementRecording({
   spineGoal,
   primaryCue,
   bodyFocus,
+  captureStartReadiness,
   frames,
   generateUploadUrl,
   createMovement,
@@ -81,7 +84,9 @@ export async function saveMovementRecording({
     throw new Error(`Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} valid frames before saving.`);
   }
 
-  const payload = buildMovementFrameEnvelope(frames);
+  const payload = buildMovementFrameEnvelope(frames, 30, {
+    captureStartReadiness,
+  });
   const postUrl = await generateUploadUrl();
   const uploadResponse = await uploadFetch(postUrl, {
     method: "POST",

@@ -14,6 +14,10 @@ import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import { resolveHandSideByWrist } from "../_lib/handMatching";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
+import {
+  buildLiveMovementSourceFrame,
+  type MovementStartReadiness,
+} from "../_lib/movementSourceFrame";
 import type { MovementHandSide } from "../_lib/movementTypes";
 
 type HandCapture = {
@@ -81,6 +85,18 @@ export function shouldRecordMovementCaptureFrame(landmarks: NormalizedLandmark[]
   );
 }
 
+export function resolveMovementCaptureStartReadiness(
+  landmarks: NormalizedLandmark[],
+): MovementStartReadiness {
+  return buildLiveMovementSourceFrame({
+    poseLandmarks: landmarks,
+    requirements: {
+      mode: "full-body",
+    },
+    sourceStatus: "smoothed",
+  }).startReadiness;
+}
+
 export function useMovementCapture({
   webcamRef,
   canvasRef,
@@ -93,6 +109,8 @@ export function useMovementCapture({
   const [frameCount, setFrameCount] = useState(0);
   const [trackingQuality, setTrackingQuality] = useState(0);
   const [spineQuality, setSpineQuality] = useState(0);
+  const [captureStartReadiness, setCaptureStartReadiness] =
+    useState<MovementStartReadiness | null>(null);
   const isRecordingRef = useRef(false);
   const recordedFramesRef = useRef<MovementCaptureFrame[]>([]);
   const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
@@ -138,9 +156,11 @@ export function useMovementCapture({
             const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
             const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
             const fullBodyVisibility = getMovementCaptureFullBodyVisibility(smoothedLandmarks);
+            const startReadiness = resolveMovementCaptureStartReadiness(smoothedLandmarks);
             const spineModel = buildMovementSpineModel(smoothedLandmarks);
             setTrackingQuality(Math.round(fullBodyVisibility * 100));
             setSpineQuality(spineModel?.neutralStackScore ?? 0);
+            setCaptureStartReadiness(startReadiness);
             drawMovementSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
 
             if (shouldRecordMovementCaptureFrame(smoothedLandmarks)) {
@@ -194,6 +214,7 @@ export function useMovementCapture({
           } else {
             setTrackingQuality(0);
             setSpineQuality(0);
+            setCaptureStartReadiness(null);
           }
         }
       }
@@ -228,6 +249,7 @@ export function useMovementCapture({
   const getRecordedFrames = useCallback(() => recordedFramesRef.current, []);
 
   return {
+    captureStartReadiness,
     isRecording,
     frameCount,
     trackingQuality,

@@ -5,8 +5,20 @@ import {
   isInlinePoseData,
   parseMovementFramePayload,
 } from "./movementFrameCodec";
+import type { MovementStartReadiness } from "./movementSourceFrame";
 
 const landmark = { x: 0.1, y: 0.2, z: 0.3, visibility: 0.9 };
+const captureStartReadiness: MovementStartReadiness = {
+  blockedReasons: [],
+  calibrationQuality: 0.9,
+  canStartGame: true,
+  canStartRecording: true,
+  countdownMsRemaining: 0,
+  promptEvents: [],
+  requiredBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+  state: "ready",
+  visibleBodyParts: ["head", "torso", "leftFoot", "rightFoot"],
+};
 
 describe("movement frame codec", () => {
   test("detects inline legacy JSON separately from storage ids", () => {
@@ -24,12 +36,15 @@ describe("movement frame codec", () => {
   });
 
   test("parses versioned frame envelopes", () => {
-    const envelope = buildMovementFrameEnvelope([{ landmarks: [landmark] }], 60);
+    const envelope = buildMovementFrameEnvelope([{ landmarks: [landmark] }], 60, {
+      captureStartReadiness,
+    });
     const result = parseMovementFramePayload(JSON.stringify(envelope), "legacy-storage-json");
 
     expect(result.format).toBe("storage-json-v1");
     expect(result.fps).toBe(60);
     expect(result.schemaVersion).toBe(1);
+    expect(result.captureStartReadiness).toEqual(captureStartReadiness);
     expect(getFrameLandmarks(result.frames[0])).toEqual([landmark]);
   });
 

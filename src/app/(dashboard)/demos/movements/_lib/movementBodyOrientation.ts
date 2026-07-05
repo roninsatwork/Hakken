@@ -214,8 +214,9 @@ export function classifyMovementBodyOrientation(
     const feetBelowKnees = ankleCenter.y > kneeCenter.y + torsoHeight * 0.22;
     const asymmetricKnees = Math.abs(leftKnee.y - rightKnee.y) > torsoHeight * 0.45;
     const wideStandingBase = Math.abs(leftAnkle.x - rightAnkle.x) > shoulderWidth * 2.1;
+    const hipsAboveKnees = hipCenter.y < kneeCenter.y - torsoHeight * 0.08;
 
-    if (torsoDy < 0 && thighIsFolded && feetBelowKnees && !asymmetricKnees && !wideStandingBase) {
+    if (torsoDy < 0 && hipsAboveKnees && thighIsFolded && feetBelowKnees && !asymmetricKnees && !wideStandingBase) {
       return buildDecision({
         confidence: average([coreConfidence, kneeCenter.visibility, ankleCenter.visibility]),
         coverageFamily: "sitting",
