@@ -38,6 +38,23 @@ export type MovementAvatarSpineSolverRotationRequest = Omit<
 
 export type MovementAvatarSpineApplicationMode = "active" | "solver" | "neutral";
 
+export type MovementAvatarSpineRuntimeDebugTelemetry = Pick<
+  MovementAvatarPlayerSpineDrive,
+  "confidence" | "forwardLean" | "owner" | "sideBend" | "twist"
+>;
+
+export function buildMovementAvatarSpineRuntimeDebugTelemetry(
+  spineDrive: MovementAvatarPlayerSpineDrive,
+): MovementAvatarSpineRuntimeDebugTelemetry {
+  return {
+    confidence: spineDrive.confidence,
+    forwardLean: spineDrive.forwardLean,
+    owner: spineDrive.owner,
+    sideBend: spineDrive.sideBend,
+    twist: spineDrive.twist,
+  };
+}
+
 export function mirrorMovementAvatarSpineSolverRotation(
   rotation: MovementAvatarSpineRotation | null | undefined,
 ): MovementAvatarSpineRotation | undefined {

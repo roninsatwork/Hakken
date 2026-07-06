@@ -67,4 +67,49 @@ describe("movementLiveMotionFrame", () => {
     expect(motionFrame?.readability.state).toBe("held");
     expect(motionFrame?.held).toEqual(["readability"]);
   });
+
+  it("keeps live source landmarks independent from mirrored display landmarks", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const payload = makeMovementAvatarProofMotionPayload("left-leg-raise");
+    const motionFrame = buildLiveMovementMotionFrame({
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      capturedAt: 5000,
+      isPlaying: false,
+      motionRef: payload,
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+    });
+
+    expect(motionFrame).not.toBeNull();
+    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose[25]?.x).toBe(payload.landmarks[25]?.x);
+    expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
+    expect(motionFrame?.displayLandmarks.pose[26]?.x).toBeCloseTo(1 - (payload.landmarks[25]?.x ?? 0));
+  });
+
+  it("keeps live source world pose, hands, and blendshapes independent from display preparation", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const payload = {
+      ...makeMovementAvatarProofMotionPayload("hands-front"),
+      blendshapes: [{ categoryName: "mouthSmileLeft", displayName: "mouthSmileLeft", index: 0, score: 0.45 }],
+    };
+    const worldLandmarks = payload.landmarks.map((landmark) => ({ ...landmark, z: (landmark.z ?? 0) + 0.05 }));
+    const payloadWithWorldPose = {
+      ...payload,
+      worldLandmarks,
+    };
+    const motionFrame = buildLiveMovementMotionFrame({
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      capturedAt: 5100,
+      isPlaying: true,
+      motionRef: payloadWithWorldPose,
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+    });
+
+    expect(motionFrame).not.toBeNull();
+    expect(motionFrame?.source.landmarks.worldPose).toBe(worldLandmarks);
+    expect(motionFrame?.source.landmarks.hands).toBe(payload.hands);
+    expect(motionFrame?.source.landmarks.blendshapes).toBe(payload.blendshapes);
+    expect(motionFrame?.displayLandmarks.worldPose).not.toBe(worldLandmarks);
+    expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
+  });
 });

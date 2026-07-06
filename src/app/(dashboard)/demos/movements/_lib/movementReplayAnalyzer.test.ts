@@ -11,6 +11,7 @@ import { resolveMovementGameplayEventFrameSummary } from "./movementGameplayEven
 import { analyzeMovementDebugReplaySession } from "./movementReplayAnalyzer";
 import {
   buildMovementRecordedProofManifest,
+  movementRecordedProofDecisionReviewContextForRow,
   summarizeMovementRecordedProofGate,
 } from "./movementRecordedProofManifest";
 import type { MovementStartReadiness } from "./movementSourceFrame";
@@ -308,6 +309,35 @@ describe("movement replay analyzer", () => {
     expect(analysis.gamePath.retargetSourceQuality).toBeGreaterThan(0.8);
     expect(analysis.gamePath.parity.divergenceFrameCount).toBe(1);
     expect(analysis.gamePath.parity.wrapperDivergenceFrameCount).toBe(0);
+    expect(analysis.gamePath.parity.scoreMessageDivergenceFrameCount).toBe(0);
+    expect(analysis.gamePath.parity.scoreMessageFrameCount).toBe(3);
+    expect(analysis.gamePath.scoreMessageParityFrames).toHaveLength(3);
+    expect(analysis.gamePath.scoreMessageParityFrames[2]).toMatchObject({
+      diffs: [],
+      gameEventTypes: ["effort-reward", "clear-movement-match"],
+      gameSummary: {
+        feedbackMessage: "great-effort",
+        scoreDeltaTotal: 15,
+      },
+      replayEventTypes: ["effort-reward", "clear-movement-match"],
+      replaySummary: {
+        feedbackMessage: "great-effort",
+        scoreDeltaTotal: 15,
+      },
+    });
+    expect(analysis.gamePath.visualProofFrames).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          cases: expect.arrayContaining(["baseline"]),
+          frameIndex: 0,
+          mirrorMode: "facing-player",
+        }),
+        expect.objectContaining({
+          cases: expect.arrayContaining(["first-scoring-frame", "strongest-squat"]),
+          frameIndex: 2,
+        }),
+      ]),
+    );
     expect(analysis.gamePath.wrapperFrames).toHaveLength(3);
     expect(analysis.gamePath.gameplayEvents).toHaveLength(3);
     expect(analysis.gamePath.sourceFrames).toHaveLength(3);
@@ -324,6 +354,8 @@ describe("movement replay analyzer", () => {
     expect(analysis.metrics.startReadinessReadyFrameCount).toBe(3);
     expect(analysis.metrics.replayGameWrapperFrameCount).toBe(3);
     expect(analysis.metrics.replayGameWrapperDivergenceFrameCount).toBe(0);
+    expect(analysis.metrics.replayGameScoreMessageFrameCount).toBe(3);
+    expect(analysis.metrics.replayGameScoreMessageDivergenceFrameCount).toBe(0);
     expect(analysis.gamePath.frames[1]).toMatchObject({
       lowerLabel: "neutral",
       shouldDrivePlayerSquat: false,
@@ -1139,12 +1171,19 @@ describe("movement replay analyzer", () => {
     expect(squatRow?.statusReason).toContain("Automated analyzer/Game proof passed");
     expect(sideBendRow).toEqual(expect.objectContaining({
       automatedStatus: "missing-proof",
-      nextAction: expect.stringContaining("Add or tag a saved recording"),
+      candidateAmplitude: expect.any(Number),
+      nextAction: expect.stringContaining("Best candidate amplitude"),
+      proofBlockerCode: "candidate-below-threshold",
       proofCase: "side-bend",
       status: "missing-proof",
+      statusReason: expect.stringContaining("Best candidate amplitude"),
     }));
+    expect(sideBendRow?.candidateAmplitude ?? Number.POSITIVE_INFINITY).toBeLessThan(
+      sideBendRow?.expectedMinimumAmplitude ?? Number.NEGATIVE_INFINITY,
+    );
     expect(manifest.summary.automatedPassedCount).toBeGreaterThan(0);
     expect(manifest.summary.automatedMissingProofCount).toBeGreaterThan(0);
+    expect(manifest.summary.blockingRowsByProofBlockerCode["candidate-below-threshold"]).toBeGreaterThan(0);
     expect(manifest.summary.blockingRowCount).toBeGreaterThan(0);
     expect(manifest.summary.blockingRowsByProofCase["side-bend"]).toBeGreaterThan(0);
     expect(manifest.summary.blockingRowsByMissingLayer["recorded replay visual capture"]).toBeGreaterThan(0);
@@ -1180,6 +1219,75 @@ describe("movement replay analyzer", () => {
     });
   });
 
+  it("explains far-squat candidate rejection when only regular squat proof exists", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(squatPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const squatFrame = analysis.gamePath.frames.find((gameFrame) => gameFrame.frameIndex === 1);
+    expect(squatFrame).toBeDefined();
+    if (squatFrame) {
+      squatFrame.hipDrop = 0.36;
+      squatFrame.sourceQuality = 0.92;
+      squatFrame.squatDepth = 0.62;
+      squatFrame.visualRootDrop = 0.62;
+    }
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const farSquatRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "far-squat"
+    ));
+
+    expect(farSquatRow).toEqual(expect.objectContaining({
+      automatedStatus: "missing-proof",
+      candidateAmplitude: expect.any(Number),
+      candidateRejectionCode: "far-camera-source-quality",
+      candidateRejectionReason: expect.stringContaining("far-camera threshold"),
+      proofBlockerCode: "far-camera-source-quality",
+      proofCase: "far-squat",
+      status: "missing-proof",
+    }));
+    expect(farSquatRow?.candidateAmplitude ?? 0).toBeGreaterThanOrEqual(
+      farSquatRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
+    );
+    expect(
+      manifest.summary.blockingRowsByCandidateRejectionReason[farSquatRow?.candidateRejectionReason ?? ""],
+    ).toBe(1);
+    expect(manifest.summary.blockingRowsByCandidateRejectionCode["far-camera-source-quality"]).toBe(1);
+    expect(manifest.summary.blockingRowsByProofBlockerCode["far-camera-source-quality"]).toBe(1);
+    expect(farSquatRow?.nextAction).toContain("full analyzer proof window");
+    expect(farSquatRow?.statusReason).toContain("source quality");
+  });
+
+  it("uses side-specific knee-lift frames as mirror-side ownership proof evidence", () => {
+    const rightLegRaisePose = makeMovementAvatarProofMotionPayload("right-leg-raise").landmarks;
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(rightLegRaisePose),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const mirrorSideRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "mirror-side-ownership"
+    ));
+
+    expect(mirrorSideRow).toEqual(expect.objectContaining({
+      automatedStatus: "passed",
+      evidenceFrameCount: 1,
+      expectedFrameWindow: {
+        endFrame: 1,
+        startFrame: 1,
+      },
+      nextAction: expect.stringContaining("movement:replay:proof-set"),
+      observedAmplitude: expect.any(Number),
+      proofCase: "mirror-side-ownership",
+      status: "manual-review",
+    }));
+    expect(mirrorSideRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(0.18);
+    expect(mirrorSideRow?.missingLayers).not.toContain("recorded replay analyzer proof");
+    expect(mirrorSideRow?.missingLayers).toContain("recorded replay visual capture");
+  });
+
   it("uses replay visual capture frames to satisfy the recorded visual layer", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
       trackingFrame(withCorePose()),
@@ -1200,10 +1308,199 @@ describe("movement replay analyzer", () => {
 
     expect(squatRow?.automatedStatus).toBe("passed");
     expect(squatRow?.visualCaptureFrameCount).toBe(1);
+    expect(squatRow?.visualCaptureDiagnostics).toEqual({
+      avatarLowerError: {
+        average: 0.12,
+        count: 1,
+        max: 0.12,
+      },
+      avatarUpperError: {
+        average: null,
+        count: 0,
+        max: null,
+      },
+    });
     expect(squatRow?.visualCaptureFrames).toEqual([1]);
     expect(squatRow?.missingLayers).not.toContain("recorded replay visual capture");
     expect(manifest.summary.visualCaptureFrameCount).toBeGreaterThan(0);
     expect(manifest.summary.visualCaptureRowCount).toBeGreaterThan(0);
+  });
+
+  it("applies manual readable-pass review decisions only to visual manual-review rows", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(sideBendPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const visualCaptures = [{
+      avatarLowerError: 0.12,
+      avatarPath: "movement-replay-session-1-avatar-frame-1.png",
+      avatarUpperError: null,
+      frameIndex: 1,
+      recordingId: analysis.sessionId,
+      sourcePath: "movement-replay-session-1-source-frame-1.png",
+    }];
+    const baselineManifest = buildMovementRecordedProofManifest([analysis], { visualCaptures });
+    const baselineSideBendRow = baselineManifest.rows.find((row) => row.proofCase === "side-bend");
+    expect(baselineSideBendRow).toBeDefined();
+    if (!baselineSideBendRow) throw new Error("Expected side-bend proof row.");
+
+    const manifest = buildMovementRecordedProofManifest([analysis], {
+      manualReviewDecisions: [{
+        notes: "Avatar side bend is visually readable against the source frame.",
+        proofCase: "side-bend",
+        recordingId: analysis.sessionId,
+        result: "readable-pass",
+        reviewContext: movementRecordedProofDecisionReviewContextForRow(baselineSideBendRow),
+        reviewedAt: "2026-07-06T00:00:00.000Z",
+        reviewer: "movement-proof-review",
+      }],
+      visualCaptures,
+    });
+    const sideBendRow = manifest.rows.find((row) => row.proofCase === "side-bend");
+    const rootTravelRow = manifest.rows.find((row) => row.proofCase === "root-travel");
+
+    expect(sideBendRow).toEqual(expect.objectContaining({
+      manualReview: expect.objectContaining({
+        result: "readable-pass",
+      }),
+      status: "passed",
+      statusReason: expect.stringContaining("Manual visual review accepted"),
+    }));
+    expect(sideBendRow?.nextAction).toBe("No action.");
+    expect(rootTravelRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      missingLayers: [],
+      proofBlockerCode: null,
+      status: "product-scope-limitation",
+    }));
+    expect(manifest.summary.appliedManualReviewDecisionCount).toBe(1);
+    expect(manifest.summary.passedCount).toBeGreaterThan(0);
+    expect(manifest.summary.productScopeLimitationCount).toBeGreaterThan(0);
+  });
+
+  it("marks duplicate missing proof rows as covered when another recording passes the proof case", () => {
+    const sideBendAnalysis = analyzeMovementDebugReplaySession({
+      ...session([
+        trackingFrame(withCorePose()),
+        trackingFrame(sideBendPose()),
+        trackingFrame(withCorePose()),
+      ]),
+      id: "side-bend-recording",
+    });
+    const nonTargetAnalysis = analyzeMovementDebugReplaySession({
+      ...session([
+        trackingFrame(withCorePose()),
+        trackingFrame(squatPose()),
+        trackingFrame(withCorePose()),
+      ]),
+      id: "non-target-recording",
+    });
+    const visualCaptures = [{
+      avatarLowerError: 0.12,
+      avatarPath: "side-bend-avatar-frame-1.png",
+      avatarUpperError: null,
+      frameIndex: 1,
+      recordingId: sideBendAnalysis.sessionId,
+      sourcePath: "side-bend-source-frame-1.png",
+    }];
+    const baselineManifest = buildMovementRecordedProofManifest(
+      [sideBendAnalysis, nonTargetAnalysis],
+      { visualCaptures },
+    );
+    const baselineSideBendRow = baselineManifest.rows.find((row) => (
+      row.recordingId === sideBendAnalysis.sessionId && row.proofCase === "side-bend"
+    ));
+    expect(baselineSideBendRow).toBeDefined();
+    if (!baselineSideBendRow) throw new Error("Expected side-bend proof row.");
+
+    const manifest = buildMovementRecordedProofManifest(
+      [sideBendAnalysis, nonTargetAnalysis],
+      {
+        manualReviewDecisions: [{
+          notes: "Side bend is readable in this recording.",
+          proofCase: "side-bend",
+          recordingId: sideBendAnalysis.sessionId,
+          result: "readable-pass",
+          reviewContext: movementRecordedProofDecisionReviewContextForRow(baselineSideBendRow),
+        }],
+        visualCaptures,
+      },
+    );
+    const coveredSideBendRow = manifest.rows.find((row) => (
+      row.recordingId === nonTargetAnalysis.sessionId && row.proofCase === "side-bend"
+    ));
+
+    expect(coveredSideBendRow).toEqual(expect.objectContaining({
+      automatedStatus: "covered-by-other-recording",
+      missingLayers: [],
+      proofBlockerCode: null,
+      status: "covered-by-other-recording",
+    }));
+    expect(coveredSideBendRow?.nextAction).toBe(
+      "No action; this proof case is already covered by another recording.",
+    );
+    expect(manifest.summary.coveredByOtherRecordingCount).toBeGreaterThan(0);
+    expect(manifest.summary.automatedCoveredByOtherRecordingCount).toBeGreaterThan(0);
+    expect(manifest.summary.blockingRowsByProofCase["side-bend"]).toBeUndefined();
+  });
+
+  it("keeps root-travel missing recordings visible as non-blocking product-scope limitations", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(squatPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const gate = summarizeMovementRecordedProofGate(manifest);
+    const rootTravelRow = manifest.rows.find((row) => row.proofCase === "root-travel");
+
+    expect(rootTravelRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      nextAction: "No action; this proof case is outside the current user-facing recorded proof gate.",
+      proofBlockerCode: null,
+      status: "product-scope-limitation",
+      statusReason: expect.stringContaining("internal/demo-only"),
+    }));
+    expect(rootTravelRow?.candidateAmplitude ?? Number.POSITIVE_INFINITY).toBeLessThan(
+      rootTravelRow?.expectedMinimumAmplitude ?? Number.NEGATIVE_INFINITY,
+    );
+    expect(manifest.summary.productScopeLimitationCount).toBe(1);
+    expect(manifest.summary.automatedProductScopeLimitationCount).toBe(1);
+    expect(manifest.summary.missingProofCount).toBeLessThan(manifest.summary.totalRows);
+    expect(gate.blockingRows).not.toContainEqual(expect.objectContaining({
+      proofCase: "root-travel",
+    }));
+  });
+
+  it("ignores manual review decisions without matching review context", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(sideBendPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis], {
+      manualReviewDecisions: [{
+        proofCase: "side-bend",
+        recordingId: analysis.sessionId,
+        result: "readable-pass",
+      }],
+      visualCaptures: [{
+        avatarLowerError: 0.12,
+        avatarPath: "movement-replay-session-1-avatar-frame-1.png",
+        avatarUpperError: null,
+        frameIndex: 1,
+        recordingId: analysis.sessionId,
+        sourcePath: "movement-replay-session-1-source-frame-1.png",
+      }],
+    });
+    const sideBendRow = manifest.rows.find((row) => row.proofCase === "side-bend");
+
+    expect(sideBendRow?.manualReview).toBeUndefined();
+    expect(sideBendRow?.status).toBe("manual-review");
+    expect(manifest.summary.appliedManualReviewDecisionCount).toBe(0);
   });
 
   it("keeps source-limited recorded proof rows separate from child movement failure", () => {
@@ -1222,6 +1519,144 @@ describe("movement replay analyzer", () => {
     expect(lowerBodyOutOfFrameRow?.automatedStatus).toBe("source-data-limitation");
     expect(manifest.summary.sourceDataLimitationCount).toBeGreaterThanOrEqual(2);
     expect(manifest.summary.automatedSourceDataLimitationCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it("lets explicit product-limitation decisions resolve source-limited proof blockers", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withWeakFeetPose()),
+      trackingFrame(withLostTrackingPose()),
+    ]));
+    const baselineManifest = buildMovementRecordedProofManifest([analysis]);
+    const baselineWeakFeetRow = baselineManifest.rows.find((row) => row.proofCase === "weak-feet");
+    expect(baselineWeakFeetRow).toBeDefined();
+    if (!baselineWeakFeetRow) throw new Error("Expected weak-feet proof row.");
+    const acceptedManifest = buildMovementRecordedProofManifest([analysis], {
+      sourceLimitationDecisions: [{
+        notes: "Weak feet are accepted as a source limitation for this recording.",
+        proofCase: "weak-feet",
+        recordingId: analysis.sessionId,
+        result: "accepted-product-limitation",
+        reviewContext: movementRecordedProofDecisionReviewContextForRow(baselineWeakFeetRow),
+        reviewedAt: "2026-07-06T00:00:00.000Z",
+        reviewer: "movement-proof-review",
+      }],
+    });
+    const acceptedWeakFeetRow = acceptedManifest.rows.find((row) => row.proofCase === "weak-feet");
+    const acceptedGate = summarizeMovementRecordedProofGate(acceptedManifest);
+
+    expect(baselineWeakFeetRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: false,
+      proofBlockerCode: "source-data-limitation",
+      status: "source-data-limitation",
+    }));
+    expect(acceptedWeakFeetRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      proofBlockerCode: null,
+      sourceLimitationDecision: expect.objectContaining({
+        result: "accepted-product-limitation",
+      }),
+      status: "source-data-limitation",
+      statusReason: expect.stringContaining("explicit product limitation"),
+    }));
+    expect(acceptedWeakFeetRow?.nextAction).toBe("No action; source limitation is explicitly accepted.");
+    expect(acceptedManifest.summary.sourceDataLimitationCount).toBeGreaterThanOrEqual(2);
+    expect(acceptedManifest.summary.acceptedProductLimitationCount).toBeGreaterThanOrEqual(2);
+    expect(acceptedManifest.summary.productScopeLimitationCount).toBeGreaterThanOrEqual(1);
+    expect(acceptedManifest.summary.appliedSourceLimitationDecisionCount).toBe(1);
+    expect(acceptedManifest.summary.blockingRowCount).toBe(baselineManifest.summary.blockingRowCount - 1);
+    expect(acceptedGate.blockingRows).not.toContainEqual(expect.objectContaining({
+      proofCase: "weak-feet",
+      recordingId: analysis.sessionId,
+    }));
+  });
+
+  it("ignores source-limitation decisions without matching review context", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withWeakFeetPose()),
+      trackingFrame(withLostTrackingPose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis], {
+      sourceLimitationDecisions: [{
+        proofCase: "weak-feet",
+        recordingId: analysis.sessionId,
+        result: "accepted-product-limitation",
+      }],
+    });
+    const weakFeetRow = manifest.rows.find((row) => row.proofCase === "weak-feet");
+
+    expect(weakFeetRow?.acceptedProductLimitation).toBe(false);
+    expect(weakFeetRow?.proofBlockerCode).toBe("source-data-limitation");
+    expect(weakFeetRow?.sourceLimitationDecision).toBeUndefined();
+    expect(manifest.summary.appliedSourceLimitationDecisionCount).toBe(0);
+  });
+
+  it("requires the post-review source-limitation context before accepting a manual-review limitation", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(sideBendPose()),
+      trackingFrame(withCorePose()),
+    ]));
+    const visualCaptures = [{
+      avatarLowerError: 0.12,
+      avatarPath: "movement-replay-session-1-avatar-frame-1.png",
+      avatarUpperError: null,
+      frameIndex: 1,
+      recordingId: analysis.sessionId,
+      sourcePath: "movement-replay-session-1-source-frame-1.png",
+    }];
+    const baselineManifest = buildMovementRecordedProofManifest([analysis], { visualCaptures });
+    const baselineSideBendRow = baselineManifest.rows.find((row) => row.proofCase === "side-bend");
+    expect(baselineSideBendRow).toBeDefined();
+    if (!baselineSideBendRow) throw new Error("Expected side-bend proof row.");
+    const manualReviewDecisions = [{
+      proofCase: "side-bend" as const,
+      recordingId: analysis.sessionId,
+      result: "source-data-limitation" as const,
+      reviewContext: movementRecordedProofDecisionReviewContextForRow(baselineSideBendRow),
+    }];
+    const intermediateManifest = buildMovementRecordedProofManifest([analysis], {
+      manualReviewDecisions,
+      visualCaptures,
+    });
+    const intermediateSideBendRow = intermediateManifest.rows.find((row) => row.proofCase === "side-bend");
+    expect(intermediateSideBendRow).toBeDefined();
+    if (!intermediateSideBendRow) throw new Error("Expected intermediate side-bend proof row.");
+    const staleAcceptanceManifest = buildMovementRecordedProofManifest([analysis], {
+      manualReviewDecisions,
+      sourceLimitationDecisions: [{
+        proofCase: "side-bend",
+        recordingId: analysis.sessionId,
+        result: "accepted-product-limitation",
+        reviewContext: movementRecordedProofDecisionReviewContextForRow(baselineSideBendRow),
+      }],
+      visualCaptures,
+    });
+    const acceptedManifest = buildMovementRecordedProofManifest([analysis], {
+      manualReviewDecisions,
+      sourceLimitationDecisions: [{
+        proofCase: "side-bend",
+        recordingId: analysis.sessionId,
+        result: "accepted-product-limitation",
+        reviewContext: movementRecordedProofDecisionReviewContextForRow(intermediateSideBendRow),
+      }],
+      visualCaptures,
+    });
+    const staleSideBendRow = staleAcceptanceManifest.rows.find((row) => row.proofCase === "side-bend");
+    const acceptedSideBendRow = acceptedManifest.rows.find((row) => row.proofCase === "side-bend");
+
+    expect(intermediateSideBendRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: false,
+      status: "source-data-limitation",
+    }));
+    expect(staleSideBendRow?.acceptedProductLimitation).toBe(false);
+    expect(staleAcceptanceManifest.summary.appliedSourceLimitationDecisionCount).toBe(0);
+    expect(acceptedSideBendRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      proofBlockerCode: null,
+      status: "source-data-limitation",
+    }));
+    expect(acceptedManifest.summary.appliedManualReviewDecisionCount).toBe(1);
+    expect(acceptedManifest.summary.appliedSourceLimitationDecisionCount).toBe(1);
   });
 
   it("blocks the recorded proof gate when manifest rows still need proof or review", () => {

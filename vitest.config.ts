@@ -80,7 +80,7 @@ export default defineConfig({
           name: 'backend',
           globals: true,
           environment: 'node',
-          include: ['convex/**/*.test.{ts,tsx}'],
+          include: ['convex/**/*.test.{ts,tsx}', 'scripts/**/*.test.{js,mjs,ts,tsx}'],
         },
       },
     ],

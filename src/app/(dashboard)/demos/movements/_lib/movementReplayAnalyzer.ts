@@ -10,9 +10,17 @@ import {
   type MovementGamePathDecision,
 } from "./movementGamePathSimulation";
 import {
+  selectMovementGameVisualParityProofFrames,
+  type MovementGameVisualParityProofFrame,
+} from "./movementGameVisualParityProof";
+import {
   resolveMovementGameplayEventFrameSummary,
   type MovementGameplayEventFrame,
+  type MovementGameplayEventFrameSummary,
 } from "./movementGameplayEvents";
+import {
+  resolveMovementMatchScoringGameplaySummary,
+} from "./movementGameplayScoring";
 import {
   getMovementCoverageEntries,
   getMovementCoverageMissingProofs,
@@ -58,6 +66,7 @@ export type MovementReplayFailureCode =
   | "heading_unavailable"
   | "lower_body_owner_flicker"
   | "replay_game_path_diverged"
+  | "replay_game_score_message_diverged"
   | "replay_game_wrapper_diverged"
   | "retarget_quality_drop"
   | "root_path_detected"
@@ -215,6 +224,17 @@ export type MovementReplayGameWrapperFrame = {
   studio: MovementReplayGameWrapperParitySnapshot;
 };
 
+export type MovementReplayScoreMessageParityFrame = {
+  diffs: string[];
+  frameIndex: number;
+  gameEventTypes: string[];
+  gameNextStreak: number;
+  gameSummary: MovementGameplayEventFrameSummary;
+  replayEventTypes: string[];
+  replayNextStreak: number;
+  replaySummary: MovementGameplayEventFrameSummary;
+};
+
 export type MovementReplayAnalysis = {
   coverage: {
     entries: MovementCoverageEntry[];
@@ -229,11 +249,16 @@ export type MovementReplayAnalysis = {
     parity: {
       divergenceFrameCount: number;
       firstDivergenceFrame?: number;
+      firstScoreMessageDivergenceFrame?: number;
       firstWrapperDivergenceFrame?: number;
+      scoreMessageDivergenceFrameCount: number;
+      scoreMessageFrameCount: number;
       wrapperDivergenceFrameCount: number;
     };
     retargetSourceQuality: number;
+    scoreMessageParityFrames: MovementReplayScoreMessageParityFrame[];
     sourceFrames: MovementReplaySourceFrame[];
+    visualProofFrames: MovementGameVisualParityProofFrame[];
     wrapperFrames: MovementReplayGameWrapperFrame[];
   };
   head: {
@@ -301,6 +326,8 @@ export type MovementReplayAnalysis = {
     rootMotionWorldLandmarkFrameCount: number;
     replayGameWrapperDivergenceFrameCount: number;
     replayGameWrapperFrameCount: number;
+    replayGameScoreMessageDivergenceFrameCount: number;
+    replayGameScoreMessageFrameCount: number;
     startReadinessCaptureBlockedCount: number;
     startReadinessMismatchFrameCount: number;
     startReadinessStoredFrameCount: number;
@@ -554,6 +581,7 @@ function semanticCodeForReplayFailure(
   if (failure.code === "feet_neutral_while_leg_motion_present") return "movement-visible-but-unscored";
   if (failure.code === "false_knee_raise_candidate") return "leg-lift-wrong-side";
   if (failure.code === "replay_game_path_diverged") return "score-positive-but-avatar-wrong";
+  if (failure.code === "replay_game_score_message_diverged") return "movement-visible-but-unscored";
   if (failure.code === "replay_game_wrapper_diverged") return "score-positive-but-avatar-wrong";
   if (failure.code === "root_motion_missing") return "root-travel-reversed";
   if (failure.code === "squat_not_detected") return "squat-missing";
@@ -710,6 +738,91 @@ function getReplayGameWrapperFailures(wrapperFrames: MovementReplayGameWrapperFr
     .map((frame): MovementReplayFailure => ({
       code: "replay_game_wrapper_diverged",
       detail: `Frame ${frame.frameIndex} replay wrapper diverges from game wrapper: ${frame.diffs.join("; ")}.`,
+      frameIndex: frame.frameIndex,
+      severity: "error",
+    }));
+}
+
+function eventTypes(frame: MovementGameplayEventFrame | undefined) {
+  return frame?.events.map((event) => event.eventType) ?? [];
+}
+
+function diffArray({
+  key,
+  left,
+  right,
+}: {
+  key: string;
+  left: string[];
+  right: string[];
+}) {
+  return JSON.stringify(left) === JSON.stringify(right)
+    ? []
+    : [`${key}: replay ${left.join(",") || "none"} / game ${right.join(",") || "none"}`];
+}
+
+function buildReplayGameScoreMessageParityFrames(
+  simulation: ReturnType<typeof buildMovementGamePathSimulation>,
+): MovementReplayScoreMessageParityFrame[] {
+  let gameStreak = 0;
+
+  return simulation.motionFrames.flatMap((motionFrame, frameIndex) => {
+    if (!motionFrame) {
+      gameStreak = 0;
+      return [];
+    }
+
+    const gameScoring = resolveMovementMatchScoringGameplaySummary({
+      playerMotionFrame: motionFrame,
+      previousPlayerMotionFrame: simulation.motionFrames[frameIndex - 1] ?? null,
+      streak: gameStreak,
+    });
+    gameStreak = gameScoring.gameplayEventFrame.nextStreak;
+
+    const replayFrame = simulation.gameplayEvents[frameIndex];
+    const replaySummary = resolveMovementGameplayEventFrameSummary(replayFrame);
+    const replayEventTypes = eventTypes(replayFrame);
+    const gameEventTypes = eventTypes(gameScoring.gameplayEventFrame);
+    const gameSummary = gameScoring.gameplaySummary;
+    const diffs = [
+      ...diffArray({
+        key: "eventTypes",
+        left: replayEventTypes,
+        right: gameEventTypes,
+      }),
+      replaySummary.scoreDeltaTotal === gameSummary.scoreDeltaTotal
+        ? null
+        : `scoreDeltaTotal: replay ${replaySummary.scoreDeltaTotal} / game ${gameSummary.scoreDeltaTotal}`,
+      replaySummary.feedbackMessage === gameSummary.feedbackMessage
+        ? null
+        : `feedbackMessage: replay ${replaySummary.feedbackMessage ?? "none"} / game ${gameSummary.feedbackMessage ?? "none"}`,
+      (replayFrame?.nextStreak ?? 0) === gameScoring.gameplayEventFrame.nextStreak
+        ? null
+        : `nextStreak: replay ${replayFrame?.nextStreak ?? 0} / game ${gameScoring.gameplayEventFrame.nextStreak}`,
+      (replayFrame?.scoreAllowed ?? false) === gameScoring.gameplayEventFrame.scoreAllowed
+        ? null
+        : `scoreAllowed: replay ${String(replayFrame?.scoreAllowed ?? false)} / game ${String(gameScoring.gameplayEventFrame.scoreAllowed)}`,
+    ].filter((diff): diff is string => Boolean(diff));
+
+    return [{
+      diffs,
+      frameIndex,
+      gameEventTypes,
+      gameNextStreak: gameScoring.gameplayEventFrame.nextStreak,
+      gameSummary,
+      replayEventTypes,
+      replayNextStreak: replayFrame?.nextStreak ?? 0,
+      replaySummary,
+    }];
+  });
+}
+
+function getReplayGameScoreMessageFailures(scoreMessageFrames: MovementReplayScoreMessageParityFrame[]) {
+  return scoreMessageFrames
+    .filter((frame) => frame.diffs.length > 0)
+    .map((frame): MovementReplayFailure => ({
+      code: "replay_game_score_message_diverged",
+      detail: `Frame ${frame.frameIndex} replay score/message events diverge from Game scoring helper: ${frame.diffs.join("; ")}.`,
       frameIndex: frame.frameIndex,
       severity: "error",
     }));
@@ -1137,6 +1250,8 @@ export function analyzeMovementDebugReplaySession(
     session,
     simulation: gamePathSimulation,
   });
+  const scoreMessageParityFrames = buildReplayGameScoreMessageParityFrames(gamePathSimulation);
+  const gameVisualProofFrames = selectMovementGameVisualParityProofFrames(gamePathSimulation);
   const outOfFrameCounts = frames.map((frame) => frame.poseBounds?.outOfFrameCount ?? 0);
   const retargetQualities = frames
     .map((frame, index) => currentDecisions[index]?.retarget.sourceQuality ?? frame.retarget?.sourceQuality)
@@ -1294,6 +1409,7 @@ export function analyzeMovementDebugReplaySession(
   }).forEach((failure) => pushFailure(failures, failure));
   getHeadRootFailures(headFrames).forEach((failure) => pushFailure(failures, failure));
   getReplayGameWrapperFailures(wrapperFrames).forEach((failure) => pushFailure(failures, failure));
+  getReplayGameScoreMessageFailures(scoreMessageParityFrames).forEach((failure) => pushFailure(failures, failure));
   getSupportConstraintFailures(currentDecisions).forEach((failure) => pushFailure(failures, failure));
   startReadinessAudit.failures.forEach((failure) => pushFailure(failures, failure));
 
@@ -1462,6 +1578,9 @@ export function analyzeMovementDebugReplaySession(
   const replayGameWrapperDivergences = finalFailures.filter((failure) => (
     failure.code === "replay_game_wrapper_diverged"
   ));
+  const replayGameScoreMessageDivergences = finalFailures.filter((failure) => (
+    failure.code === "replay_game_score_message_diverged"
+  ));
   const summary = {
     ...summarizeMovementDebugReplaySession(session, finalFailures.length),
     lowerBodyOwners: unique(lowerOwners),
@@ -1486,13 +1605,20 @@ export function analyzeMovementDebugReplaySession(
         firstDivergenceFrame: replayGamePathDivergences.find((failure) => (
           typeof failure.frameIndex === "number"
         ))?.frameIndex,
+        firstScoreMessageDivergenceFrame: replayGameScoreMessageDivergences.find((failure) => (
+          typeof failure.frameIndex === "number"
+        ))?.frameIndex,
         firstWrapperDivergenceFrame: replayGameWrapperDivergences.find((failure) => (
           typeof failure.frameIndex === "number"
         ))?.frameIndex,
+        scoreMessageDivergenceFrameCount: replayGameScoreMessageDivergences.length,
+        scoreMessageFrameCount: scoreMessageParityFrames.length,
         wrapperDivergenceFrameCount: replayGameWrapperDivergences.length,
       },
       retargetSourceQuality: gamePathSimulation.retargetSourceModel?.quality ?? 0,
+      scoreMessageParityFrames,
       sourceFrames,
+      visualProofFrames: gameVisualProofFrames,
       wrapperFrames,
     },
     head: {
@@ -1560,6 +1686,8 @@ export function analyzeMovementDebugReplaySession(
       rootMotionWorldLandmarkFrameCount: rootMotionAnalysis.summary.worldLandmarkFrameCount,
       replayGameWrapperDivergenceFrameCount: replayGameWrapperDivergences.length,
       replayGameWrapperFrameCount: wrapperFrames.length,
+      replayGameScoreMessageDivergenceFrameCount: replayGameScoreMessageDivergences.length,
+      replayGameScoreMessageFrameCount: scoreMessageParityFrames.length,
       startReadinessCaptureBlockedCount: startReadinessAudit.blockedCaptureCount,
       startReadinessMismatchFrameCount: startReadinessAudit.mismatchFrameCount,
       startReadinessStoredFrameCount: startReadinessAudit.storedFrameCount,

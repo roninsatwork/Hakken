@@ -42,12 +42,9 @@ export function buildLiveMovementMotionFrame({
   const rawLandmarks = getVrmMotionLandmarks(motionRef);
   if (rawLandmarks.length < 33) return null;
 
-  const displayFrame = resolveMovementDisplayLandmarkFrame({
-    isPlaying,
-    payload,
-    rawLandmarks,
-    role: "live-player",
-  });
+  const sourceWorldPoseLandmarks = payload?.worldLandmarks?.length === 33
+    ? payload.worldLandmarks as TrackingLandmark[]
+    : undefined;
   const sourceFrame = buildLiveMovementSourceFrame({
     blendshapes: payload?.blendshapes,
     capturedAt,
@@ -58,9 +55,13 @@ export function buildLiveMovementMotionFrame({
       ...requirements,
     },
     sourceStatus: "smoothed",
-    worldPoseLandmarks: payload && displayFrame.hasWorldPose
-      ? payload.worldLandmarks as TrackingLandmark[]
-      : undefined,
+    worldPoseLandmarks: sourceWorldPoseLandmarks,
+  });
+  const displayFrame = resolveMovementDisplayLandmarkFrame({
+    isPlaying,
+    payload,
+    rawLandmarks,
+    role: "live-player",
   });
 
   return resolveMovementMotionFrame({

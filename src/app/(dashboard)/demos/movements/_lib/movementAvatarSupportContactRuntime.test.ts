@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { applyMovementAvatarSupportContactRuntimeLocks } from "./movementAvatarSupportContactRuntime";
+import {
+  applyMovementAvatarSupportContactRuntimeFrame,
+  applyMovementAvatarSupportContactRuntimeLocks,
+} from "./movementAvatarSupportContactRuntime";
 import type { MovementAvatarSupportContactLockDecision } from "./movementAvatarPipeline";
 
 function contactLocks(
@@ -73,5 +76,30 @@ describe("movementAvatarSupportContactRuntime", () => {
     expect(result.appliedAnchors).toBe(1);
     expect(result.supportContactCorrection).toBeGreaterThan(0);
     expect(avatarRoot.position.y).not.toBe(0);
+  });
+
+  it("returns frame telemetry for support-contact debug context", () => {
+    const scene = new THREE.Object3D();
+    const avatarRoot = new THREE.Object3D();
+    const hips = new THREE.Object3D();
+    scene.add(avatarRoot);
+    avatarRoot.add(hips);
+    hips.position.y = -0.5;
+    scene.updateMatrixWorld(true);
+
+    const result = applyMovementAvatarSupportContactRuntimeFrame({
+      avatarRoot,
+      contactLocks: contactLocks({ owner: "runtime-frame-test" }),
+      floorY: -1,
+      lookupBone: (bone) => bone === "hips" ? hips : null,
+      scene,
+    });
+
+    expect(result.application.applied).toBe(true);
+    expect(result.telemetry).toEqual({
+      anchorCount: result.application.appliedAnchors,
+      correction: result.application.supportContactCorrection,
+      owner: "runtime-frame-test",
+    });
   });
 });

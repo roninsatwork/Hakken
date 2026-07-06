@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const metricKeys = [
   "averageAvatarLowerBodyDirectionError",
@@ -51,6 +52,8 @@ const metricKeys = [
   "rootMotionTurnFrameCount",
   "rootMotionWeightTransferFrameCount",
   "rootMotionWorldLandmarkFrameCount",
+  "replayGameScoreMessageDivergenceFrameCount",
+  "replayGameScoreMessageFrameCount",
   "replayGameWrapperDivergenceFrameCount",
   "replayGameWrapperFrameCount",
   "startReadinessBlockedFrameCount",
@@ -72,6 +75,8 @@ Options:
   --before <path>  Required. JSON written by movement:replay:analyze before a code change.
   --after <path>   Required. JSON written by movement:replay:analyze after a code change.
   --out <path>     Optional. Write a JSON comparison summary.
+  --strict-proof-regression
+                 Exit non-zero if sibling proof manifests show blocker regressions.
   --help           Show this help.
 `);
 }
@@ -81,6 +86,7 @@ function parseArgs(argv) {
     after: "",
     before: "",
     out: "",
+    strictProofRegression: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -94,6 +100,8 @@ function parseArgs(argv) {
       args.after = argv[++index] || "";
     } else if (arg === "--out") {
       args.out = argv[++index] || "";
+    } else if (arg === "--strict-proof-regression") {
+      args.strictProofRegression = true;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -112,6 +120,21 @@ async function readAnalysisFile(filePath) {
     throw new Error(`${filePath} must contain an array of replay analyses.`);
   }
   return parsed;
+}
+
+async function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(await readFile(resolve(filePath), "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function proofManifestPathForAnalysis(analysisPath) {
+  return analysisPath.endsWith(".json")
+    ? analysisPath.replace(/\.json$/, ".proof-manifest.json")
+    : `${analysisPath}.proof-manifest.json`;
 }
 
 function failureCount(analysis, severity) {
@@ -172,7 +195,114 @@ function compareCounts(beforeCounts, afterCounts) {
   );
 }
 
-function compareAnalyses(beforeAnalyses, afterAnalyses) {
+function proofSummary(manifest) {
+  const summary = manifest?.summary;
+  if (!summary) return null;
+
+  return {
+    acceptedProductLimitationCount: summary.acceptedProductLimitationCount ?? 0,
+    appliedManualReviewDecisionCount: summary.appliedManualReviewDecisionCount ?? 0,
+    appliedSourceLimitationDecisionCount: summary.appliedSourceLimitationDecisionCount ?? 0,
+    blockingRowCount: summary.blockingRowCount ?? 0,
+    blockingRowsByProofBlockerCode: summary.blockingRowsByProofBlockerCode ?? {},
+    blockingRowsByProofCase: summary.blockingRowsByProofCase ?? {},
+    blockingRowsByStatus: summary.blockingRowsByStatus ?? {},
+    failedCount: summary.failedCount ?? 0,
+    manualReviewCount: summary.manualReviewCount ?? 0,
+    missingProofCount: summary.missingProofCount ?? 0,
+    passedCount: summary.passedCount ?? 0,
+    productScopeLimitationCount: summary.productScopeLimitationCount ?? 0,
+    sourceDataLimitationCount: summary.sourceDataLimitationCount ?? 0,
+    totalRows: summary.totalRows ?? 0,
+    visualCaptureFrameCount: summary.visualCaptureFrameCount ?? 0,
+    visualCaptureRowCount: summary.visualCaptureRowCount ?? 0,
+  };
+}
+
+function compareNumericSummary(beforeSummary, afterSummary, keys) {
+  return Object.fromEntries(keys.map((key) => [
+    key,
+    {
+      after: afterSummary?.[key] ?? 0,
+      before: beforeSummary?.[key] ?? 0,
+      delta: (afterSummary?.[key] ?? 0) - (beforeSummary?.[key] ?? 0),
+    },
+  ]));
+}
+
+function proofImprovementReasonsFromDeltas(deltas) {
+  const countDeltas = deltas.counts ?? {};
+  const reasons = [];
+  const decreasesThatImprove = [
+    "blockingRowCount",
+    "failedCount",
+    "manualReviewCount",
+    "missingProofCount",
+    "productScopeLimitationCount",
+    "sourceDataLimitationCount",
+  ];
+  for (const key of decreasesThatImprove) {
+    const delta = countDeltas[key]?.delta ?? 0;
+    if (delta < 0) reasons.push(`${key} decreased by ${Math.abs(delta)}`);
+  }
+
+  const increasesThatImprove = [
+    "acceptedProductLimitationCount",
+    "passedCount",
+    "visualCaptureFrameCount",
+    "visualCaptureRowCount",
+  ];
+  for (const key of increasesThatImprove) {
+    const delta = countDeltas[key]?.delta ?? 0;
+    if (delta > 0) reasons.push(`${key} increased by ${delta}`);
+  }
+
+  return reasons;
+}
+
+export function compareProofManifests(beforeManifest, afterManifest) {
+  const before = proofSummary(beforeManifest);
+  const after = proofSummary(afterManifest);
+  if (!before && !after) return null;
+  const deltas = {
+    counts: compareNumericSummary(before, after, [
+      "acceptedProductLimitationCount",
+      "appliedManualReviewDecisionCount",
+      "appliedSourceLimitationDecisionCount",
+      "blockingRowCount",
+      "failedCount",
+      "manualReviewCount",
+      "missingProofCount",
+      "passedCount",
+      "sourceDataLimitationCount",
+      "totalRows",
+      "visualCaptureFrameCount",
+      "visualCaptureRowCount",
+    ]),
+    blockingRowsByProofBlockerCode: compareCounts(
+      before?.blockingRowsByProofBlockerCode ?? {},
+      after?.blockingRowsByProofBlockerCode ?? {},
+    ),
+    blockingRowsByProofCase: compareCounts(
+      before?.blockingRowsByProofCase ?? {},
+      after?.blockingRowsByProofCase ?? {},
+    ),
+    blockingRowsByStatus: compareCounts(
+      before?.blockingRowsByStatus ?? {},
+      after?.blockingRowsByStatus ?? {},
+    ),
+  };
+  const improvementReasons = proofImprovementReasonsFromDeltas(deltas);
+
+  return {
+    after,
+    before,
+    deltas,
+    improvementReasons,
+  };
+}
+
+export function compareAnalyses(beforeAnalyses, afterAnalyses, proofManifestComparison = null) {
   const beforeSummary = summarize(beforeAnalyses);
   const afterSummary = summarize(afterAnalyses);
   const beforeBySession = indexBySession(beforeAnalyses);
@@ -222,8 +352,58 @@ function compareAnalyses(beforeAnalyses, afterAnalyses) {
       ])),
       warningCount: afterSummary.warningCount - beforeSummary.warningCount,
     },
+    proofManifest: proofManifestComparison,
     sessions,
   };
+}
+
+export function proofRegressionReasons(comparison) {
+  const proof = comparison.proofManifest;
+  if (!proof) return [];
+
+  const countDeltas = proof.deltas.counts ?? {};
+  const reasons = [];
+  const increasesThatRegress = [
+    "blockingRowCount",
+    "failedCount",
+    "manualReviewCount",
+    "missingProofCount",
+    "sourceDataLimitationCount",
+  ];
+  for (const key of increasesThatRegress) {
+    const delta = countDeltas[key]?.delta ?? 0;
+    if (delta > 0) reasons.push(`${key} increased by ${delta}`);
+  }
+
+  const decreasesThatRegress = [
+    "acceptedProductLimitationCount",
+    "passedCount",
+    "visualCaptureFrameCount",
+    "visualCaptureRowCount",
+  ];
+  for (const key of decreasesThatRegress) {
+    const delta = countDeltas[key]?.delta ?? 0;
+    if (delta < 0) reasons.push(`${key} decreased by ${Math.abs(delta)}`);
+  }
+
+  return reasons;
+}
+
+export function hasProofRegression(comparison) {
+  return proofRegressionReasons(comparison).length > 0;
+}
+
+export function proofRegressionGateReasons(comparison) {
+  if (!comparison.proofManifest) {
+    return ["proof manifest comparison is missing"];
+  }
+  return proofRegressionReasons(comparison);
+}
+
+export function proofComparisonTrend(comparison) {
+  if (!comparison.proofManifest) return "missing";
+  if (hasProofRegression(comparison)) return "regressed";
+  return comparison.proofManifest.improvementReasons?.length > 0 ? "improved" : "unchanged";
 }
 
 function printComparison(comparison) {
@@ -256,6 +436,29 @@ function printComparison(comparison) {
     }
   }
 
+  if (comparison.proofManifest) {
+    const proof = comparison.proofManifest;
+    console.log("");
+    console.log(`Proof manifest deltas (${proofComparisonTrend(comparison)})`);
+    if (proof.improvementReasons?.length) {
+      console.log(`  Improvements: ${proof.improvementReasons.join("; ")}`);
+    }
+    for (const [key, count] of Object.entries(proof.deltas.counts)) {
+      if (count.delta !== 0) {
+        console.log(`  ${key}: ${count.before} -> ${count.after} (${formatDelta(count.delta, 0)})`);
+      }
+    }
+
+    const changedBlockers = Object.entries(proof.deltas.blockingRowsByProofBlockerCode)
+      .filter(([, count]) => count.delta !== 0);
+    if (changedBlockers.length > 0) {
+      console.log("  Blocking proof blocker deltas:");
+      for (const [code, count] of changedBlockers) {
+        console.log(`    ${code}: ${count.before} -> ${count.after} (${formatDelta(count.delta, 0)})`);
+      }
+    }
+  }
+
   const changedSessions = comparison.sessions.filter((session) => {
     if (!session.before || !session.after) return true;
     return session.before.pass !== session.after.pass ||
@@ -282,7 +485,11 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const beforeAnalyses = await readAnalysisFile(args.before);
   const afterAnalyses = await readAnalysisFile(args.after);
-  const comparison = compareAnalyses(beforeAnalyses, afterAnalyses);
+  const proofManifestComparison = compareProofManifests(
+    await readJsonIfExists(proofManifestPathForAnalysis(args.before)),
+    await readJsonIfExists(proofManifestPathForAnalysis(args.after)),
+  );
+  const comparison = compareAnalyses(beforeAnalyses, afterAnalyses, proofManifestComparison);
 
   printComparison(comparison);
 
@@ -293,9 +500,18 @@ async function main() {
     console.log("");
     console.log(`Wrote ${outPath}`);
   }
+
+  if (args.strictProofRegression) {
+    const reasons = proofRegressionGateReasons(comparison);
+    if (reasons.length > 0) {
+      throw new Error(`Proof manifest regression detected: ${reasons.join("; ")}.`);
+    }
+  }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

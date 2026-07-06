@@ -3,7 +3,9 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import {
   applyMovementAvatarFootLockDebugToTrackingState,
+  applyMovementAvatarOptionalPostFrameDebugTelemetry,
   applyMovementAvatarPostFrameDebugTelemetry,
+  buildMovementAvatarFrameTrackingDebugState,
   buildMovementAvatarRootDebug,
   buildMovementAvatarRuntimeRetargetDebug,
   buildMovementAvatarTrackingFallbackContext,
@@ -180,7 +182,24 @@ describe("movement avatar debug telemetry", () => {
         orientation: "front",
         status: "ready",
       },
-      retarget: "q0.95",
+      retarget: {
+        appliedLowerBody: 4,
+        appliedUpperBody: 3,
+        hipDrop: 0.12,
+        leftFootContact: true,
+        leftKneeLift: 0.45,
+        lowerBodySegmentMotion: 0.67,
+        plantedSquatIkDepth: 0.23,
+        rightFootContact: false,
+        rightKneeLift: 0.11,
+        solvedSegments: 7,
+        sourceQuality: 0.95,
+        squatDepth: 0.34,
+        totalLowerBody: 6,
+        totalSegments: 8,
+        totalUpperBody: 5,
+        visualRootDrop: 0.21,
+      },
       support: {
         supportLabel: "standing",
       },
@@ -205,7 +224,7 @@ describe("movement avatar debug telemetry", () => {
       exerciseTransition: "stable",
       motionFrameInput: "movement-motion-frame",
       orientation: "front ready",
-      retarget: "q0.95",
+      retarget: "q0.95 s0.34 hip0.12 seg0.67 knee 0.45/0.11 feet L- bones 7/8 upper 3/5 lower 4/6 drop 0.21 ik 0.23",
       support: "standing",
       supportConstraint: "support-solver active",
       supportContact: "support-contact anchors 2 corr 0.123",
@@ -341,6 +360,236 @@ describe("movement avatar debug telemetry", () => {
       profileName: "default",
       retarget: retargetDebug,
       updatedAt: 1000,
+    });
+  });
+
+  it("builds frame tracking debug state outside the renderer", () => {
+    const headNode = new THREE.Object3D();
+    headNode.rotation.x = 0.12345;
+    const state = buildMovementAvatarFrameTrackingDebugState({
+      activeCalibrationQuality: 0.88,
+      activeSpineDrive: {
+        confidence: 0.8,
+        forwardLean: 0.1,
+        owner: "player-spine-model",
+        sideBend: 0.2,
+        twist: -0.1,
+      } as Parameters<typeof buildMovementAvatarFrameTrackingDebugState>[0]["activeSpineDrive"],
+      appliedHead: {
+        confidence: 0.9,
+        pitch: 0.2,
+        roll: 0,
+        source: "pose",
+        yaw: -0.3,
+      },
+      armTargets: {
+        left: {
+          elbowTarget: null,
+          frontBias: 0,
+          wristSource: "left-wrist",
+          wristTarget: null,
+        },
+        right: {
+          elbowTarget: null,
+          frontBias: 0,
+          wristSource: "right-wrist",
+          wristTarget: null,
+        },
+      },
+      autoCalibrationKind: "upright",
+      avatarHead: {
+        headNode,
+        headTarget: {
+          headBonePitch: 0.23456,
+          headDecision: {
+            headPitch: 0.45678,
+            headYaw: -0.34567,
+          },
+          rawHeadDecision: {
+            rawHead: {
+              confidence: 0.9,
+              pitch: 0.22,
+              roll: 0,
+              source: "pose",
+              yaw: -0.56789,
+            },
+          },
+        } as unknown as Parameters<typeof buildMovementAvatarFrameTrackingDebugState>[0]["avatarHead"]["headTarget"],
+      },
+      avatarRole: "player",
+      bodyConfidence: {
+        leftFoot: 0.9,
+        rightFoot: 0.9,
+      },
+      exercisePose: { label: "standing", status: "ready" } as unknown as NonNullable<MovementTrackingDebugState["exercisePose"]>,
+      exerciseTransition: { label: "stable" } as NonNullable<MovementTrackingDebugState["exerciseTransition"]>,
+      feetOwner: "player-feet",
+      footLock: {
+        correction: 0.12,
+        drift: 0.34,
+        state: {
+          correction: new THREE.Vector3(),
+          left: null,
+          right: null,
+          strength: 0.56,
+        },
+      },
+      hasActiveCalibration: true,
+      hasManualCalibration: false,
+      headMotionIntent: {
+        confidence: 1,
+        depth: 0,
+        label: "side-left",
+        lateral: 0,
+        vertical: 0,
+      },
+      headOwner: "head-live",
+      leftArmTrackingReady: true,
+      leftFootSource: "left-foot-live",
+      leftKneeSource: "left-knee-live",
+      legRaise: {
+        holdDecision: {
+          lowerBodyDrive: {
+            playerLegRaiseDepth: 0.34,
+            playerLegRaiseSide: "left",
+          },
+          state: {
+            depth: 0.34,
+            expiresAt: 1250,
+            side: "left",
+          },
+          wasHeld: true,
+        } as Parameters<typeof buildMovementAvatarFrameTrackingDebugState>[0]["legRaise"]["holdDecision"],
+        lowerBodyDrive: {
+          playerLegRaiseDepth: 0.34,
+          playerLegRaiseSide: "left",
+        } as Parameters<typeof buildMovementAvatarFrameTrackingDebugState>[0]["legRaise"]["lowerBodyDrive"],
+        lowerBodyIntent: {
+          confidence: 1,
+          label: "left-knee-raise",
+          leftKneeRaise: 0.45,
+          rightKneeRaise: 0.12,
+          squatDepth: 0.2,
+          squatSignals: {
+            headDrop: 0,
+            hipDrop: 0.11,
+            kneeBend: 0.22,
+            torsoDrop: 0.33,
+          },
+        },
+        now: 1000,
+        playerLegRaiseHoldState: {
+          depth: 0.34,
+          expiresAt: 1250,
+          side: "left",
+        },
+      },
+      lowerBodyIntent: {
+        confidence: 1,
+        label: "left-knee-raise",
+        leftKneeRaise: 0.45,
+        rightKneeRaise: 0.12,
+        squatDepth: 0.2,
+        squatSignals: {
+          headDrop: 0,
+          hipDrop: 0.11,
+          kneeBend: 0.22,
+          torsoDrop: 0.33,
+        },
+      },
+      lowerBodyOwner: "player-left-leg-raise",
+      lowerBodyTrackingReady: true,
+      motionFrameInputOwner: "movement-motion-frame",
+      orientation: {
+        orientation: "front",
+        status: "ready",
+      },
+      profileName: "default",
+      rawHead: {
+        confidence: 0.9,
+        pitch: 0.22,
+        roll: 0,
+        source: "pose",
+        yaw: -0.56789,
+      },
+      retarget: {
+        appliedLowerBody: 4,
+        appliedUpperBody: 3,
+        liveSquatDepth: 0.42,
+        plantedSquatIkDepth: 0.22,
+        retargetFrame: retargetFrame({
+          debug: {
+            heldSegments: ["leftFoot"],
+            solvedSegments: ["leftThigh", "leftShin"],
+            sourceQuality: 0.88,
+          },
+          hipDrop: 0.18,
+          kneeLift: {
+            left: 0.45,
+            right: 0.12,
+          },
+          squatDepth: 0.51,
+        }),
+        retargetSourceModel: null,
+        visualRootDrop: 0.2,
+      },
+      rightArmTrackingReady: true,
+      rightFootSource: "right-foot-live",
+      rightKneeSource: "right-knee-live",
+      shouldApplyLowerBody: true,
+      support: {
+        supportLabel: "standing",
+      },
+      supportConstraint: { owner: "support", status: "active" } as NonNullable<MovementTrackingDebugState["supportConstraint"]>,
+      supportContact: {
+        anchorCount: 2,
+        correction: 0.12345,
+        owner: "support-contact",
+      },
+      supportIntent: { label: "stand", status: "ready" } as unknown as NonNullable<MovementTrackingDebugState["supportIntent"]>,
+      supportPresentation: {
+        owner: "support-presentation",
+      },
+      torsoOwner: "torso-live",
+      updatedAt: 1000,
+    });
+
+    expect(state).toMatchObject({
+      avatarHead: {
+        appliedLocalPitch: 0.1235,
+        bonePitch: 0.2346,
+        boneYaw: -0.3457,
+        trackingPitch: 0.4568,
+        trackingYaw: -0.5679,
+      },
+      avatarLegRaise: {
+        appliedDepth: 0.34,
+        expiresInMs: 250,
+        holdActive: true,
+        rawLeftDepth: 0.45,
+        rawRightDepth: 0.12,
+        side: "left",
+      },
+      calibrationQuality: 0.88,
+      fallbacks: {
+        baseline: "upright-auto-baseline",
+        leftArm: "left-wrist",
+        leftFoot: "left-foot-live",
+        lowerBody: "left-knee-raise-auto d0.20 h0.11 k0.22 t0.33 l0.45 r0.12",
+        motionFrameInput: "movement-motion-frame",
+        owners: "head head-live; torso torso-live; lower player-left-leg-raise; feet player-feet",
+        retarget: expect.stringContaining("q0.88"),
+        rightArm: "right-wrist",
+        spine: "player-spine-model",
+      },
+      profileName: "default",
+      retarget: expect.objectContaining({
+        appliedLowerBody: 4,
+        appliedUpperBody: 3,
+        footLockCorrection: 0.12,
+        footLockDrift: 0.34,
+        footLockStrength: 0.56,
+      }),
     });
   });
 
@@ -615,6 +864,118 @@ describe("movement avatar debug telemetry", () => {
       footLockCorrection: 0.1234,
       frameUpdatedAt: 456,
     });
+  });
+
+  it("keeps optional post-frame debug telemetry neutral when state or VRM is unavailable", () => {
+    expect(applyMovementAvatarOptionalPostFrameDebugTelemetry({
+      avatarName: "Player",
+      avatarRole: "player",
+      footLock: {
+        correction: 0,
+        drift: 0,
+        strength: 0,
+      },
+      frameUpdatedAt: 456,
+      retargetFrame: retargetFrame(),
+      state: null,
+      vrm: null,
+      zScale: 1,
+    })).toBeNull();
+  });
+
+  it("applies optional post-frame debug telemetry when state and VRM are available", () => {
+    const scene = new THREE.Scene();
+    const rightUpperArm = new THREE.Object3D();
+    const rightLowerArm = new THREE.Object3D();
+    rightLowerArm.position.set(2, 0, 0);
+    scene.add(rightUpperArm);
+    rightUpperArm.add(rightLowerArm);
+    scene.updateMatrixWorld(true);
+    const bones: Record<string, THREE.Object3D> = {
+      rightLowerArm,
+      rightUpperArm,
+    };
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: (name: string) => bones[name] ?? null,
+      },
+      scene,
+    } as unknown as VRM;
+    const registryWindow: MovementAvatarRetargetDebugRegistryWindow = {};
+    const state: MovementTrackingDebugState = {
+      bodyConfidence: {},
+      fallbacks: {
+        retarget: "q0.82",
+      },
+      headApplied: {
+        confidence: 1,
+        pitch: 0,
+        roll: 0,
+        source: "pose",
+        yaw: 0,
+      },
+      headRaw: {
+        confidence: 1,
+        pitch: 0,
+        roll: 0,
+        source: "pose",
+        yaw: 0,
+      },
+      profileName: "default",
+      retarget: {
+        appliedLowerBody: 0,
+        appliedUpperBody: 0,
+        footLockCorrection: 0,
+        footLockDrift: 0,
+        footLockStrength: 0,
+        hipDrop: 0,
+        leftFootContact: false,
+        leftKneeLift: 0,
+        lowerBodySegmentMotion: 0,
+        plantedSquatIkDepth: 0,
+        rightFootContact: false,
+        rightKneeLift: 0,
+        solvedSegments: 0,
+        sourceQuality: 0.82,
+        squatDepth: 0,
+        totalLowerBody: 6,
+        totalSegments: 6,
+        totalUpperBody: 5,
+        visualRootDrop: 0,
+      },
+      updatedAt: 123,
+    };
+
+    const updated = applyMovementAvatarOptionalPostFrameDebugTelemetry({
+      avatarName: "Player",
+      avatarRole: "player",
+      footLock: {
+        correction: 0.1234,
+        drift: 0.5678,
+        strength: 0.9,
+      },
+      frameUpdatedAt: 456,
+      registryWindow,
+      retargetFrame: retargetFrame({
+        segments: {
+          rightUpperArm: {
+            confidence: 0.9,
+            direction: {
+              x: 1,
+              y: 0,
+              z: 0,
+            },
+            length: 2,
+          },
+        },
+      }),
+      state,
+      vrm,
+      zScale: 1,
+    });
+
+    expect(updated?.avatarVisual?.comparedUpperBodySegments).toBe(1);
+    expect(registryWindow.__sonaeMovementRetargetDebug?.player?.avatarName).toBe("Player");
   });
 
   it("writes role-keyed retarget debug registry entries", () => {

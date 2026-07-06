@@ -41,9 +41,11 @@ import {
   type MovementMotionFrame,
 } from "./movementMotionFrame";
 import {
-  resolveMovementGameplayEvents,
   type MovementGameplayEventFrame,
 } from "./movementGameplayEvents";
+import {
+  resolveMovementMatchScoringGameplaySummary,
+} from "./movementGameplayScoring";
 import {
   resolveMovementAvatarLowerBodyTarget,
   type MovementAvatarLowerBodyTargetDecision,
@@ -201,9 +203,9 @@ export function buildMovementGamePathSimulation(
       sourceFrame,
     });
     motionFrames.push(motionFrame);
-    const gameplayEventFrame = resolveMovementGameplayEvents({
-      motionFrame,
-      previousMotionFrame: motionFrames[frameIndex - 1] ?? null,
+    const { gameplayEventFrame } = resolveMovementMatchScoringGameplaySummary({
+      playerMotionFrame: motionFrame,
+      previousPlayerMotionFrame: motionFrames[frameIndex - 1] ?? null,
       streak: gameplayStreak,
     });
     gameplayStreak = gameplayEventFrame.nextStreak;

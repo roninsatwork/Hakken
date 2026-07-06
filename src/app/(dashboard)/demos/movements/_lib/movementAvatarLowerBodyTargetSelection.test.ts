@@ -26,6 +26,14 @@ describe("movement avatar lower-body target selection composition", () => {
     expect(target.leftAnkleTarget).toEqual(target.selections.leftAnkle.target ?? targetSolverLandmarks[27]);
     expect(target.rightToeTarget).toEqual(target.selections.rightToe.target ?? targetSolverLandmarks[32]);
     expect(target.leftToeTarget).toEqual(target.selections.leftToe.target ?? targetSolverLandmarks[31]);
+    expect(target.aimTargets).toEqual({
+      leftAnkle: target.leftAnkleTarget,
+      leftKnee: target.leftKneeTarget,
+      leftToe: target.leftToeTarget,
+      rightAnkle: target.rightAnkleTarget,
+      rightKnee: target.rightKneeTarget,
+      rightToe: target.rightToeTarget,
+    });
   });
 
   it("keeps player display landmarks on the explicit target solver side", () => {

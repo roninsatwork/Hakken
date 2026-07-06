@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMovementAvatarLegRaiseRuntimeDebugInput,
   createMovementAvatarLowerBodyVisualState,
   createMovementAvatarPlayerLegRaiseHoldState,
   resolveMovementAvatarLowerBodyRuntimeState,
@@ -41,6 +42,51 @@ describe("movementAvatarRuntimeState", () => {
     expect(second).toEqual({
       squatPresentationDepth: 0,
       visualRootDrop: 0,
+    });
+  });
+
+  it("builds leg-raise debug input from runtime state", () => {
+    expect(buildMovementAvatarLegRaiseRuntimeDebugInput({
+      holdDecision: {
+        lowerBodyDrive: buildLowerBodyDrive(),
+        state: {
+          depth: 0.42,
+          expiresAt: 120,
+          side: "left",
+        },
+        wasHeld: true,
+      },
+      lowerBodyDrive: buildLowerBodyDrive({
+        playerLegRaiseDepth: 0.42,
+        playerLegRaiseSide: "left",
+      }),
+      lowerBodyIntent: {
+        confidence: 1,
+        label: "left-knee-raise",
+        leftKneeRaise: 0.52,
+        rightKneeRaise: 0.08,
+        squatDepth: 0,
+        squatSignals: {
+          headDrop: 0,
+          hipDrop: 0,
+          kneeBend: 0,
+          torsoDrop: 0,
+        },
+      },
+      now: 100,
+      playerLegRaiseHoldState: {
+        depth: 0.42,
+        expiresAt: 120,
+        side: "left",
+      },
+    })).toEqual({
+      appliedDepth: 0.42,
+      expiresAt: 120,
+      holdActive: true,
+      now: 100,
+      rawLeftDepth: 0.52,
+      rawRightDepth: 0.08,
+      side: "left",
     });
   });
 
@@ -95,7 +141,7 @@ describe("movementAvatarRuntimeState", () => {
       side: null,
     });
     expect(decision.nextPlayerLowerBodyVisualState).toBe(playerVisualState);
-    expect(decision.nextInstructorLowerBodyVisualState.squatPresentationDepth).toBeGreaterThan(0);
-    expect(decision.lowerBodyVisualDecision.instructorSquatPresentationDepth).toBeGreaterThan(0);
+    expect(decision.nextInstructorLowerBodyVisualState.squatPresentationDepth).toBeGreaterThanOrEqual(0.18);
+    expect(decision.lowerBodyVisualDecision.instructorSquatPresentationDepth).toBeGreaterThanOrEqual(0.18);
   });
 });

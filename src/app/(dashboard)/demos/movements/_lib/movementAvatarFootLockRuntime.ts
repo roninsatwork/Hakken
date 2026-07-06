@@ -20,6 +20,37 @@ export type MovementAvatarFootLockRuntimeDecision = {
   shouldLock: boolean;
 };
 
+export type MovementAvatarFootLockRuntimeFrameApplication = {
+  appliedCorrection: number;
+  drift: number;
+  footLockDecision: MovementAvatarFootLockApplicationDecision;
+  nextState: MovementAvatarFootLockState;
+  rootCorrection: MovementAvatarFootLockRootCorrectionApplicationResult;
+  shouldLock: boolean;
+};
+
+export type MovementAvatarFootLockRuntimeDebugTelemetry = {
+  correction: number;
+  drift: number;
+  strength: number;
+};
+
+export function buildMovementAvatarFootLockRuntimeDebugTelemetry({
+  correction,
+  drift,
+  state,
+}: {
+  correction: number;
+  drift: number;
+  state: MovementAvatarFootLockState;
+}): MovementAvatarFootLockRuntimeDebugTelemetry {
+  return {
+    correction,
+    drift,
+    strength: state.strength,
+  };
+}
+
 export function resolveMovementAvatarFootLockRuntimeDecision({
   avatarRole,
   currentLeft,
@@ -97,4 +128,55 @@ export function applyMovementAvatarFootLockRuntimeRootCorrection({
   }
 
   return application;
+}
+
+export function applyMovementAvatarFootLockRuntimeFrame({
+  avatarRole,
+  avatarRoot,
+  currentLeft,
+  currentRight,
+  lowerBodyDrive,
+  lowerBodyTrackingReady,
+  previousState,
+  retargetFrame,
+  shouldApplyLowerBody,
+  shouldHoldPlayerSquatPose,
+}: {
+  avatarRole: "instructor" | "player";
+  avatarRoot: THREE.Object3D | null | undefined;
+  currentLeft: THREE.Vector3 | null;
+  currentRight: THREE.Vector3 | null;
+  lowerBodyDrive: MovementAvatarLowerBodyDrive;
+  lowerBodyTrackingReady: boolean;
+  previousState: MovementAvatarFootLockState;
+  retargetFrame: MovementRetargetFrame;
+  shouldApplyLowerBody: boolean;
+  shouldHoldPlayerSquatPose: boolean;
+}): MovementAvatarFootLockRuntimeFrameApplication {
+  const runtimeDecision = resolveMovementAvatarFootLockRuntimeDecision({
+    avatarRole,
+    currentLeft,
+    currentRight,
+    hasAvatarRoot: Boolean(avatarRoot),
+    lowerBodyDrive,
+    lowerBodyTrackingReady,
+    previousState,
+    retargetFrame,
+    shouldApplyLowerBody,
+    shouldHoldPlayerSquatPose,
+  });
+  const footLockDecision = runtimeDecision.footLockDecision;
+
+  return {
+    appliedCorrection: footLockDecision.appliedCorrection,
+    drift: footLockDecision.drift,
+    footLockDecision,
+    nextState: footLockDecision.nextState,
+    rootCorrection: applyMovementAvatarFootLockRuntimeRootCorrection({
+      avatarRoot,
+      footLockDecision,
+      options: runtimeDecision.options,
+    }),
+    shouldLock: runtimeDecision.shouldLock,
+  };
 }

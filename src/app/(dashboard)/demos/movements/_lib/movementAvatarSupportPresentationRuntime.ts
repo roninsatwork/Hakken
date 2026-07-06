@@ -1,9 +1,9 @@
 import type * as THREE from "three";
 import type { MovementAvatarSupportPresentationDecision } from "./movementAvatarPipeline";
 import {
-  applyMovementAvatarSupportPresentationRotationSpecsToVrmBones,
   type MovementAvatarSupportPresentationRotationSpec,
 } from "./movementAvatarLowerBodyApplication";
+import { applyMovementAvatarSupportPresentationRotationSpecsToVrmBones } from "./movementAvatarLowerBodyRotationVrmAdapters";
 
 type MovementAvatarSupportPresentationRuntimeInput = Pick<
   MovementAvatarSupportPresentationDecision,

@@ -21,6 +21,32 @@ export type MovementAvatarHeadRuntimeApplication =
     headTarget: MovementAvatarHeadTargetDecision;
   };
 
+export type MovementAvatarHeadRuntimeDebugTelemetry = {
+  appliedLocalPitch: number;
+  bonePitch: number;
+  boneYaw: number;
+  trackingPitch: number;
+  trackingYaw: number;
+};
+
+export function buildMovementAvatarHeadRuntimeDebugTelemetry({
+  headNode,
+  headTarget,
+}: {
+  headNode: THREE.Object3D;
+  headTarget: MovementAvatarHeadTargetDecision;
+}): MovementAvatarHeadRuntimeDebugTelemetry {
+  const { rawHead } = headTarget.rawHeadDecision;
+
+  return {
+    appliedLocalPitch: headNode.rotation.x,
+    boneYaw: headTarget.headDecision.headYaw,
+    bonePitch: headTarget.headBonePitch,
+    trackingPitch: headTarget.headDecision.headPitch,
+    trackingYaw: rawHead.yaw,
+  };
+}
+
 export function applyMovementAvatarHeadRuntimeToVrmBones({
   avatarRole,
   avatarRootYaw,

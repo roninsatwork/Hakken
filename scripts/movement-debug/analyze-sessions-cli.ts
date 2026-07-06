@@ -19,6 +19,8 @@ import {
 import {
   buildMovementRecordedProofManifest,
   summarizeMovementRecordedProofGate,
+  type MovementRecordedManualReviewDecision,
+  type MovementRecordedSourceLimitationDecision,
   type MovementRecordedVisualCaptureFrame,
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordedProofManifest";
 import type { MovementDataFormat } from "../../src/app/(dashboard)/demos/movements/_lib/movementTypes";
@@ -31,6 +33,12 @@ type CliArgs = {
   limit: string;
   manifestOut: string | null;
   out: string | null;
+  recordingIdPath: string | null;
+  recordingIds: string[];
+  recordingPlanPath: string | null;
+  recordingScenarioIds: string[];
+  reviewDecisionPath: string | null;
+  sourceLimitationDecisionPath: string | null;
   source: "debug-sessions" | "recordings";
   strict: boolean;
   strictManifest: boolean;
@@ -50,6 +58,12 @@ function parseArgs(argv: string[]): CliArgs {
     limit: "10",
     manifestOut: null,
     out: null,
+    recordingIdPath: null,
+    recordingIds: [],
+    recordingPlanPath: null,
+    recordingScenarioIds: [],
+    reviewDecisionPath: null,
+    sourceLimitationDecisionPath: null,
     source: "recordings",
     strict: false,
     strictManifest: false,
@@ -84,8 +98,26 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--visual-captures") {
       args.visualCapturePaths.push(argv[index + 1] ?? "");
       index += 1;
+    } else if (arg === "--review-decisions") {
+      args.reviewDecisionPath = argv[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--source-limitation-decisions") {
+      args.sourceLimitationDecisionPath = argv[index + 1] ?? null;
+      index += 1;
     } else if (arg === "--out") {
       args.out = argv[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--recording-ids" || arg === "--session-ids") {
+      args.recordingIds.push(...parseMovementReplayTargetIds(argv[index + 1] ?? ""));
+      index += 1;
+    } else if (arg === "--recording-ids-file" || arg === "--session-ids-file") {
+      args.recordingIdPath = argv[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--recording-plan") {
+      args.recordingPlanPath = argv[index + 1] ?? null;
+      index += 1;
+    } else if (arg === "--recording-scenario") {
+      args.recordingScenarioIds.push(argv[index + 1] ?? "");
       index += 1;
     } else if (arg === "--strict") {
       args.strict = true;
@@ -119,11 +151,26 @@ Options:
   --manifest-out <path>
                      Write the recorded proof manifest JSON. Defaults next to --out, or
                      ${DEFAULT_MANIFEST_PATH} when --out is omitted.
+  --recording-ids <ids>
+                     Comma/space/newline separated recording or debug-session ids to analyze.
+  --recording-ids-file <path>
+                     Read recording/debug-session ids from a text file. Lines may contain ids,
+                     commas, or comments beginning with #.
+  --recording-plan <path>
+                     Read recording/debug-session ids from a generated recording-plan JSON.
+  --recording-scenario <id>
+                     With --recording-plan, analyze only one capture scenario by id,
+                     fresh recording label, title, or proof case. Can repeat.
   --visual-captures <path>
                      Replay Lab capture manifest file or directory. Can be passed more than once.
+  --review-decisions <path>
+                     JSON manual review decisions to apply to visual manual-review proof rows.
+  --source-limitation-decisions <path>
+                     JSON source-limitation decisions to accept explicit product limitations.
   --strict           Exit non-zero when any error-level replay failure is found.
   --strict-manifest  Exit non-zero when the recorded proof manifest has failed,
-                     missing-proof, manual-review, or source-data-limitation rows.
+                     missing-proof, manual-review, or unresolved source-data-limitation rows.
+                     covered-by-other-recording and product-scope-limitation rows are non-blocking.
 `);
 }
 
@@ -155,12 +202,179 @@ function convexDataTable(table: string, limit: string): unknown {
   return JSON.parse(output) as unknown;
 }
 
+export function parseMovementReplayTargetIds(value: string): string[] {
+  return Array.from(new Set(
+    value
+      .split(/\r?\n/)
+      .map((line) => line.replace(/#.*$/, ""))
+      .join("\n")
+      .split(/[\s,]+/)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  ));
+}
+
+function normalizeMovementReplayScenarioId(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function movementReplayScenarioMatches(value: unknown, scenarioIdSet: Set<string>): boolean {
+  if (!isRecord(value)) return false;
+  const candidates = [
+    value.id,
+    value.freshRecordingLabel,
+    value.title,
+    ...(Array.isArray(value.proofCases) ? value.proofCases : []),
+  ].map(normalizeMovementReplayScenarioId);
+
+  return candidates.some((candidate) => scenarioIdSet.has(candidate));
+}
+
+export function parseMovementReplayRecordingPlanIds(value: unknown, scenarioIds: string[] = []): string[] {
+  if (!isRecord(value)) return [];
+  const normalizedScenarioIds = scenarioIds
+    .map(normalizeMovementReplayScenarioId)
+    .filter(Boolean);
+  if (normalizedScenarioIds.length > 0) {
+    const scenarioIdSet = new Set(normalizedScenarioIds);
+    const scenarios = Array.isArray(value.captureScenarios) ? value.captureScenarios : [];
+    const matchingScenarios = scenarios.filter((scenario) => movementReplayScenarioMatches(scenario, scenarioIdSet));
+    const matchedCandidates = new Set(
+      matchingScenarios.flatMap((scenario) => {
+        if (!isRecord(scenario)) return [];
+        return [
+          scenario.id,
+          scenario.freshRecordingLabel,
+          scenario.title,
+          ...(Array.isArray(scenario.proofCases) ? scenario.proofCases : []),
+        ].map(normalizeMovementReplayScenarioId);
+      }),
+    );
+    const missingScenarios = normalizedScenarioIds.filter((scenarioId) => !matchedCandidates.has(scenarioId));
+    if (missingScenarios.length > 0) {
+      throw new Error(`Requested recording scenario(s) were not found in the recording plan: ${missingScenarios.join(", ")}`);
+    }
+
+    return parseMovementReplayTargetIds(
+      matchingScenarios
+        .flatMap((scenario) => (
+          isRecord(scenario) && Array.isArray(scenario.recordingIds)
+            ? scenario.recordingIds
+            : []
+        ))
+        .map((entry) => (typeof entry === "string" ? entry : ""))
+        .join("\n"),
+    );
+  }
+
+  const summaryIds = isRecord(value.summary) && Array.isArray(value.summary.recordingIds)
+    ? value.summary.recordingIds
+    : [];
+  const rowIds = Array.isArray(value.rows)
+    ? value.rows.flatMap((row) => (isRecord(row) ? maybeString(row.recordingId) ?? [] : []))
+    : [];
+
+  return parseMovementReplayTargetIds(
+    [...summaryIds, ...rowIds]
+      .map((entry) => (typeof entry === "string" ? entry : ""))
+      .join("\n"),
+  );
+}
+
+function readTargetIds(args: CliArgs) {
+  if (args.recordingScenarioIds.length > 0 && !args.recordingPlanPath) {
+    throw new Error("--recording-scenario requires --recording-plan.");
+  }
+  const fromFile = args.recordingIdPath
+    ? parseMovementReplayTargetIds(
+        readFileSync(resolve(args.recordingIdPath), "utf8"),
+      )
+    : [];
+  const fromPlan = args.recordingPlanPath
+    ? parseMovementReplayRecordingPlanIds(
+        JSON.parse(readFileSync(resolve(args.recordingPlanPath), "utf8")),
+        args.recordingScenarioIds,
+      )
+    : [];
+
+  return Array.from(new Set([...args.recordingIds, ...fromFile, ...fromPlan]));
+}
+
+function rowId(value: unknown) {
+  if (!isRecord(value)) return null;
+  return maybeString(value._id) ?? maybeString(value.id);
+}
+
+export function filterMovementReplayRowsByIds(rows: unknown, targetIds: string[]): unknown {
+  if (targetIds.length === 0) return rows;
+
+  const sourceRows = Array.isArray(rows) ? rows : [rows];
+  const idSet = new Set(targetIds);
+  const filteredRows = sourceRows.filter((row) => {
+    const id = rowId(row);
+    return id ? idSet.has(id) : false;
+  });
+  const foundIds = new Set(filteredRows.flatMap((row) => {
+    const id = rowId(row);
+    return id ? [id] : [];
+  }));
+  const missingIds = targetIds.filter((id) => !foundIds.has(id));
+  if (missingIds.length > 0) {
+    throw new Error(`Requested recording/session id(s) were not found in the input rows: ${missingIds.join(", ")}`);
+  }
+
+  return filteredRows;
+}
+
+function parseJsonlRows(payload: string) {
+  return payload
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as unknown);
+}
+
+function exportTablePayloadFromDirectory(exportPath: string, table: string) {
+  const candidate = resolve(exportPath, table, "documents.jsonl");
+  if (!existsSync(candidate)) return null;
+  return readFileSync(candidate, "utf8");
+}
+
+function exportTablePayloadFromZip(exportPath: string, table: string) {
+  try {
+    return execFileSync("unzip", ["-p", exportPath, `${table}/documents.jsonl`], {
+      encoding: "utf8",
+      maxBuffer: 512 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+}
+
+function readRowsFromConvexExport(exportPath: string, table: string) {
+  const resolvedExportPath = resolve(exportPath);
+  if (!existsSync(resolvedExportPath)) return null;
+
+  const stats = statSync(resolvedExportPath);
+  const payload = stats.isDirectory()
+    ? exportTablePayloadFromDirectory(resolvedExportPath, table)
+    : exportTablePayloadFromZip(resolvedExportPath, table);
+
+  return payload ? parseJsonlRows(payload) : null;
+}
+
 function readRows(args: CliArgs): unknown {
   if (args.file) {
     return JSON.parse(readFileSync(resolve(args.file), "utf8")) as unknown;
   }
 
   const table = args.source === "recordings" ? "movements" : "movementDebugSessions";
+  if (args.exportPath) {
+    const exportedRows = readRowsFromConvexExport(args.exportPath, table);
+    if (exportedRows) return exportedRows;
+  }
+
   return convexDataTable(table, args.limit);
 }
 
@@ -228,6 +442,93 @@ function readVisualCaptures(paths: string[]) {
       parseVisualCaptureManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown)
     ))
   ));
+}
+
+function isReviewResult(value: unknown): value is MovementRecordedManualReviewDecision["result"] {
+  return (
+    value === "needs-stronger-automated-assertion" ||
+    value === "readable-fail" ||
+    value === "readable-pass" ||
+    value === "source-data-limitation"
+  );
+}
+
+function isSourceLimitationResult(value: unknown): value is MovementRecordedSourceLimitationDecision["result"] {
+  return value === "accepted-product-limitation" || value === "needs-better-recording";
+}
+
+export function parseManualReviewDecisions(parsed: unknown): MovementRecordedManualReviewDecision[] {
+  const entries = Array.isArray(parsed)
+    ? parsed
+    : typeof parsed === "object" && parsed !== null && Array.isArray((parsed as { decisions?: unknown[] }).decisions)
+      ? (parsed as { decisions: unknown[] }).decisions
+      : [];
+
+  return entries.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+
+    const value = entry as Record<string, unknown>;
+    const proofCase = maybeString(value.proofCase);
+    const recordingId = maybeString(value.recordingId);
+    const result = value.result;
+    if (!proofCase || !recordingId || !isReviewResult(result)) return [];
+
+    return [{
+      notes: maybeString(value.notes) ?? undefined,
+      proofCase: proofCase as MovementRecordedManualReviewDecision["proofCase"],
+      recordingId,
+      result,
+      reviewContext: typeof value.reviewContext === "object" && value.reviewContext !== null
+        ? value.reviewContext as MovementRecordedManualReviewDecision["reviewContext"]
+        : undefined,
+      reviewedAt: maybeString(value.reviewedAt) ?? undefined,
+      reviewer: maybeString(value.reviewer) ?? undefined,
+    }];
+  });
+}
+
+function readManualReviewDecisions(inputPath: string | null): MovementRecordedManualReviewDecision[] {
+  if (!inputPath) return [];
+
+  const parsed = JSON.parse(readFileSync(resolve(inputPath), "utf8")) as unknown;
+  return parseManualReviewDecisions(parsed);
+}
+
+export function parseSourceLimitationDecisions(parsed: unknown): MovementRecordedSourceLimitationDecision[] {
+  const entries = Array.isArray(parsed)
+    ? parsed
+    : typeof parsed === "object" && parsed !== null && Array.isArray((parsed as { limitations?: unknown[] }).limitations)
+      ? (parsed as { limitations: unknown[] }).limitations
+      : [];
+
+  return entries.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+
+    const value = entry as Record<string, unknown>;
+    const proofCase = maybeString(value.proofCase);
+    const recordingId = maybeString(value.recordingId);
+    const result = value.result;
+    if (!proofCase || !recordingId || !isSourceLimitationResult(result)) return [];
+
+    return [{
+      notes: maybeString(value.notes) ?? undefined,
+      proofCase: proofCase as MovementRecordedSourceLimitationDecision["proofCase"],
+      recordingId,
+      result,
+      reviewContext: typeof value.reviewContext === "object" && value.reviewContext !== null
+        ? value.reviewContext as MovementRecordedSourceLimitationDecision["reviewContext"]
+        : undefined,
+      reviewedAt: maybeString(value.reviewedAt) ?? undefined,
+      reviewer: maybeString(value.reviewer) ?? undefined,
+    }];
+  });
+}
+
+function readSourceLimitationDecisions(inputPath: string | null): MovementRecordedSourceLimitationDecision[] {
+  if (!inputPath) return [];
+
+  const parsed = JSON.parse(readFileSync(resolve(inputPath), "utf8")) as unknown;
+  return parseSourceLimitationDecisions(parsed);
 }
 
 function createConvexExport(exportPath: string) {
@@ -484,6 +785,16 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       }`,
     );
     console.log(
+      `  replay/game score-message parity: ${analysis.metrics.replayGameScoreMessageFrameCount ?? 0} frame(s), ${analysis.metrics.replayGameScoreMessageDivergenceFrameCount ?? 0} divergence frame(s)${
+        typeof analysis.gamePath.parity.firstScoreMessageDivergenceFrame === "number"
+          ? `, first frame ${analysis.gamePath.parity.firstScoreMessageDivergenceFrame}`
+          : ""
+      }`,
+    );
+    console.log(
+      `  game visual proof targets: ${analysis.gamePath.visualProofFrames.length} frame(s), cases ${Array.from(new Set(analysis.gamePath.visualProofFrames.flatMap((frame) => frame.cases))).join(", ") || "none"}`,
+    );
+    console.log(
       `  visual match: ${Math.round(analysis.metrics.visualMatchScore * 100)}%, reliable frames: ${analysis.metrics.visualReliableFrameCount}/${analysis.summary.frameCount}, motion coverage: ${Math.round(analysis.metrics.visualMotionCoverage * 100)}%`,
     );
     console.log(
@@ -520,7 +831,8 @@ function formatGateCounts(counts: Partial<Record<string, number>>) {
 
 export async function runMovementReplayAnalyzerCli(argv: string[]) {
   const args = parseArgs(argv);
-  const rows = readRows(args);
+  const targetIds = readTargetIds(args);
+  const rows = filterMovementReplayRowsByIds(readRows(args), targetIds);
   const exportPath = resolveRecordingExportPath(args, rows);
   const shouldCreateExport = shouldCreateRecordingExport(args, exportPath);
   if (shouldCreateExport && exportPath) {
@@ -537,22 +849,48 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
     : parseMovementDebugReplaySessions(rows);
   const analyses = analyzeMovementDebugReplaySessions(sessions);
   const visualCaptures = readVisualCaptures(args.visualCapturePaths);
-  const proofManifest = buildMovementRecordedProofManifest(analyses, { visualCaptures });
+  const manualReviewDecisions = readManualReviewDecisions(args.reviewDecisionPath);
+  const sourceLimitationDecisions = readSourceLimitationDecisions(args.sourceLimitationDecisionPath);
+  const proofManifest = buildMovementRecordedProofManifest(analyses, {
+    manualReviewDecisions,
+    sourceLimitationDecisions,
+    visualCaptures,
+  });
   const proofGate = summarizeMovementRecordedProofGate(proofManifest);
 
   printReport(analyses);
   console.log("");
   console.log(
-    `Recorded proof manifest: ${proofManifest.summary.totalRows} row(s), ${proofManifest.summary.passedCount} passed, ${proofManifest.summary.failedCount} failed, ${proofManifest.summary.missingProofCount} missing-proof, ${proofManifest.summary.manualReviewCount} manual-review, ${proofManifest.summary.sourceDataLimitationCount} source-data-limitation; automated proof ${proofManifest.summary.automatedPassedCount} passed, ${proofManifest.summary.automatedMissingProofCount} missing-proof, ${proofManifest.summary.automatedFailedCount} failed; visual capture ${proofManifest.summary.visualCaptureRowCount} row(s), ${proofManifest.summary.visualCaptureFrameCount} frame match(es), ${proofManifest.summary.visualCaptureMissingRowCount} row(s) still missing.`,
+    `Recorded proof manifest: ${proofManifest.summary.totalRows} row(s), ${proofManifest.summary.passedCount} passed, ${proofManifest.summary.failedCount} failed, ${proofManifest.summary.missingProofCount} missing-proof, ${proofManifest.summary.manualReviewCount} manual-review, ${proofManifest.summary.productScopeLimitationCount} product-scope-limitation, ${proofManifest.summary.sourceDataLimitationCount} source-data-limitation; automated proof ${proofManifest.summary.automatedPassedCount} passed, ${proofManifest.summary.automatedMissingProofCount} missing-proof, ${proofManifest.summary.automatedFailedCount} failed, ${proofManifest.summary.automatedProductScopeLimitationCount} product-scope-limitation, ${proofManifest.summary.automatedSourceDataLimitationCount} source-data-limitation; visual capture ${proofManifest.summary.visualCaptureRowCount} row(s), ${proofManifest.summary.visualCaptureFrameCount} frame match(es), ${proofManifest.summary.visualCaptureMissingRowCount} row(s) still missing.`,
   );
+  if (proofManifest.summary.acceptedProductLimitationCount > 0) {
+    console.log(`Accepted product limitations: ${proofManifest.summary.acceptedProductLimitationCount} row(s).`);
+  }
   if (args.visualCapturePaths.length > 0) {
     console.log(`Replay visual captures: ${visualCaptures.length} frame(s) loaded.`);
+  }
+  if (targetIds.length > 0) {
+    console.log(`Target recording/session ids: ${targetIds.length} selected.`);
+  }
+  if (args.reviewDecisionPath) {
+    const applied = proofManifest.summary.appliedManualReviewDecisionCount;
+    console.log(
+      `Manual review decisions: ${manualReviewDecisions.length} decision(s) loaded, ${applied} applied, ${manualReviewDecisions.length - applied} ignored.`,
+    );
+  }
+  if (args.sourceLimitationDecisionPath) {
+    const applied = proofManifest.summary.appliedSourceLimitationDecisionCount;
+    console.log(
+      `Source limitation decisions: ${sourceLimitationDecisions.length} decision(s) loaded, ${applied} applied, ${sourceLimitationDecisions.length - applied} ignored.`,
+    );
   }
   console.log(proofGate.summary);
   if (proofGate.status === "blocked") {
     console.log(`Blocking proof statuses: ${formatGateCounts(proofGate.blockingRowsByStatus)}`);
+    console.log(`Blocking proof blocker codes: ${formatGateCounts(proofGate.blockingRowsByProofBlockerCode)}`);
     console.log(`Blocking proof cases: ${formatGateCounts(proofGate.blockingRowsByProofCase)}`);
     console.log(`Blocking missing layers: ${formatGateCounts(proofGate.blockingRowsByMissingLayer)}`);
+    console.log(`Blocking candidate rejections: ${formatGateCounts(proofGate.blockingRowsByCandidateRejectionCode)}`);
   }
 
   if (args.out) {

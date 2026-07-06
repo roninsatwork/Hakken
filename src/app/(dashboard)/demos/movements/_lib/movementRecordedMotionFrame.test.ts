@@ -62,4 +62,38 @@ describe("movementRecordedMotionFrame", () => {
     expect(motionFrame?.readability.state).toBe("held");
     expect(motionFrame?.held).toEqual(["readability"]);
   });
+
+  it("keeps recorded source landmarks independent from presentation standby state", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const payload = makeMovementAvatarProofMotionPayload("squat");
+    const motionFrame = buildRecordedMovementMotionFrame({
+      capturedAt: 5000,
+      isPlaying: false,
+      motionRef: payload,
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+    });
+
+    expect(motionFrame).not.toBeNull();
+    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose.some((landmark) => (landmark.visibility ?? 0) > 0)).toBe(true);
+    expect(motionFrame?.displayLandmarks.pose.every((landmark) => landmark.visibility === 0)).toBe(true);
+  });
+
+  it("keeps recorded source world pose independent from mirrored display world pose", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const payload = makeMovementAvatarProofMotionPayload("root-turn-right");
+    const motionFrame = buildRecordedMovementMotionFrame({
+      capturedAt: 5200,
+      isPlaying: true,
+      motionRef: payload,
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+    });
+
+    expect(motionFrame).not.toBeNull();
+    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.worldPose).toBe(payload.worldLandmarks);
+    expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
+    expect(motionFrame?.displayLandmarks.worldPose).not.toBe(payload.worldLandmarks);
+    expect(motionFrame?.displayLandmarks.pose[0]?.x).toBeCloseTo(1 - (payload.landmarks[0]?.x ?? 0));
+  });
 });

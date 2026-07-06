@@ -53,6 +53,9 @@ import {
   makeMovementAvatarProofRootBaselinePayload,
 } from "./movementAvatarProofFixtures";
 import { buildMovementGamePathSimulation } from "./movementGamePathSimulation";
+import {
+  selectMovementGameVisualParityProofFrames,
+} from "./movementGameVisualParityProof";
 import { prepareVrmSolverInput } from "./vrmRigging";
 import {
   buildMovementCalibration,
@@ -486,6 +489,69 @@ describe("movementGamePathSimulation", () => {
     expect(simulation.motionFrames[0]?.avatarDecision.lowerLabel).toBe(simulation.decisions[0]?.lowerLabel);
     expect(simulation.gameplayEvents[1]?.scoreAllowed).toBe(true);
     expect(simulation.gameplayEvents[1]?.events.map((event) => event.eventType)).toContain("clear-movement-match");
+  });
+
+  it("selects deterministic Game visual parity proof frames from simulation motion", () => {
+    const replay = session([
+      frame(withCorePose()),
+      frame(squatPose()),
+      frame(leftKneeLiftPose()),
+      frame(weakFeetPose()),
+    ]);
+    const proofFrames = selectMovementGameVisualParityProofFrames(buildMovementGamePathSimulation(replay));
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+
+    expect(proofFrames[0]).toMatchObject({
+      cases: expect.arrayContaining(["baseline"]),
+      frameIndex: 0,
+      mirrorMode: "facing-player",
+    });
+    expect(proofCases).toContain("first-scoring-frame");
+    expect(proofCases).toContain("strongest-squat");
+    expect(proofCases.some((proofCase) => (
+      proofCase === "strongest-left-leg-lift" || proofCase === "strongest-right-leg-lift"
+    ))).toBe(true);
+    expect(proofFrames.every((proofFrame) => proofFrame.sourceLowerLabel)).toBe(true);
+    expect(proofFrames.every((proofFrame) => proofFrame.displayLowerLabel)).toBe(true);
+  });
+
+  it("selects Game root-motion frames for focused visual parity capture", () => {
+    const replay = session([
+      frameWithWorld(withCorePose(), worldHeadingPose(0, { x: 0, z: 0 })),
+      frameWithWorld(withCorePose(), worldHeadingPose(0.82, { x: 0.24, z: 0.02 })),
+    ]);
+    const proofFrames = selectMovementGameVisualParityProofFrames(
+      buildMovementGamePathSimulation(replay),
+      {
+        minRootTravel: 0.01,
+        minRootTurnYaw: 0.1,
+      },
+    );
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+
+    expect(proofCases).toContain("strongest-root-turn");
+    expect(proofCases).toContain("strongest-root-travel");
+  });
+
+  it("marks the first source/display semantic divergence for visual proof", () => {
+    const simulation = buildMovementGamePathSimulation(session([frame(withCorePose())]));
+    const motionFrame = simulation.motionFrames[0]!;
+    const proofFrames = selectMovementGameVisualParityProofFrames({
+      ...simulation,
+      motionFrames: [{
+        ...motionFrame,
+        avatarDisplayDecision: {
+          ...motionFrame.avatarDisplayDecision,
+          lowerLabel: "squat",
+        },
+      }],
+    });
+
+    expect(proofFrames[0]).toMatchObject({
+      cases: expect.arrayContaining(["first-source-display-divergence"]),
+      displayLowerLabel: "squat",
+      sourceLowerLabel: motionFrame.avatarDecision.lowerLabel,
+    });
   });
 
   it("keeps every deterministic proof mode in wrapper and game-path parity coverage", () => {
@@ -988,7 +1054,7 @@ describe("movementGamePathSimulation", () => {
     });
 
     expect(lowMotionDecision.instructorSquatPresentationDepth).toBe(0);
-    expect(enteringDecision.instructorSquatPresentationDepth).toBeGreaterThan(0);
+    expect(enteringDecision.instructorSquatPresentationDepth).toBeGreaterThanOrEqual(0.18);
   });
 
   it("resolves player foot fallback after leg retarget application without foot segments", () => {

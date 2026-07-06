@@ -15,11 +15,17 @@ import {
 } from "../_lib/movementSpineMetrics";
 import type { MovementSpineGoal } from "../_lib/movementTypes";
 import {
-  resolveMovementGameplayEventFrameSummary,
-  resolveMovementGameplayEvents,
   type MovementGameplayMessage,
 } from "../_lib/movementGameplayEvents";
+import {
+  resolveMovementMatchScoringGameplaySummary,
+} from "../_lib/movementGameplayScoring";
 import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
+
+export {
+  resolveMovementMatchScoringGameplaySummary,
+  type MovementMatchScoringGameplaySummary,
+} from "../_lib/movementGameplayScoring";
 
 type FeedbackMessage = { text: string; id: number } | null;
 
@@ -58,32 +64,6 @@ type MovementMatchHudFrame = {
   spineScore: number;
   sync: number;
 };
-
-export type MovementMatchScoringGameplaySummary = {
-  gameplayEventFrame: ReturnType<typeof resolveMovementGameplayEvents>;
-  gameplaySummary: ReturnType<typeof resolveMovementGameplayEventFrameSummary>;
-};
-
-export function resolveMovementMatchScoringGameplaySummary({
-  playerMotionFrame,
-  previousPlayerMotionFrame = null,
-  streak = 0,
-}: {
-  playerMotionFrame: MovementMotionFrame;
-  previousPlayerMotionFrame?: MovementMotionFrame | null;
-  streak?: number;
-}): MovementMatchScoringGameplaySummary {
-  const gameplayEventFrame = resolveMovementGameplayEvents({
-    motionFrame: playerMotionFrame,
-    previousMotionFrame: previousPlayerMotionFrame,
-    streak,
-  });
-
-  return {
-    gameplayEventFrame,
-    gameplaySummary: resolveMovementGameplayEventFrameSummary(gameplayEventFrame),
-  };
-}
 
 function selectMotionFrameScoreLandmarks(
   playerMotionFrame: MovementMotionFrame,

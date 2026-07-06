@@ -15,6 +15,17 @@ function emptySupportContactRuntimeResult(): MovementAvatarSupportContactObjectA
   };
 }
 
+export type MovementAvatarSupportContactRuntimeTelemetry = {
+  anchorCount: number;
+  correction: number;
+  owner: string;
+};
+
+export type MovementAvatarSupportContactRuntimeFrameApplication = {
+  application: MovementAvatarSupportContactObjectApplicationResult;
+  telemetry: MovementAvatarSupportContactRuntimeTelemetry;
+};
+
 export function applyMovementAvatarSupportContactRuntimeLocks({
   avatarRoot,
   contactLocks,
@@ -39,4 +50,35 @@ export function applyMovementAvatarSupportContactRuntimeLocks({
     lookupBone,
     scene,
   });
+}
+
+export function applyMovementAvatarSupportContactRuntimeFrame({
+  avatarRoot,
+  contactLocks,
+  floorY,
+  lookupBone,
+  scene,
+}: {
+  avatarRoot: THREE.Object3D | null | undefined;
+  contactLocks: MovementAvatarSupportContactLockDecision;
+  floorY: number;
+  lookupBone: (bone: string) => THREE.Object3D | null | undefined;
+  scene: THREE.Object3D | null | undefined;
+}): MovementAvatarSupportContactRuntimeFrameApplication {
+  const application = applyMovementAvatarSupportContactRuntimeLocks({
+    avatarRoot,
+    contactLocks,
+    floorY,
+    lookupBone,
+    scene,
+  });
+
+  return {
+    application,
+    telemetry: {
+      anchorCount: application.applied ? application.appliedAnchors : 0,
+      correction: application.applied ? application.supportContactCorrection : 0,
+      owner: contactLocks.owner,
+    },
+  };
 }

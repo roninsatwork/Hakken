@@ -19,6 +19,8 @@ import {
 } from "../_lib/movementMotionFrame";
 import {
   resolveMovementMatchScoringGameplaySummary,
+} from "../_lib/movementGameplayScoring";
+import {
   resolveMovementMatchHudFrame,
 } from "./useMovementMatchScoring";
 

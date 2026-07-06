@@ -35,12 +35,9 @@ export function buildRecordedMovementMotionFrame({
   const rawLandmarks = getVrmMotionLandmarks(motionRef);
   if (rawLandmarks.length < 33) return null;
 
-  const displayFrame = resolveMovementDisplayLandmarkFrame({
-    isPlaying,
-    payload,
-    rawLandmarks,
-    role: "recorded-instructor",
-  });
+  const sourceWorldPoseLandmarks = payload?.worldLandmarks?.length === 33
+    ? payload.worldLandmarks as TrackingLandmark[]
+    : undefined;
   const sourceFrame = buildMovementSourceFrame({
     blendshapes: payload?.blendshapes,
     capturedAt,
@@ -48,9 +45,13 @@ export function buildRecordedMovementMotionFrame({
     poseLandmarks: rawLandmarks as TrackingLandmark[],
     sourceOrigin: "recorded-replay",
     sourceStatus: "decoded",
-    worldPoseLandmarks: payload && displayFrame.hasWorldPose
-      ? payload.worldLandmarks as TrackingLandmark[]
-      : undefined,
+    worldPoseLandmarks: sourceWorldPoseLandmarks,
+  });
+  const displayFrame = resolveMovementDisplayLandmarkFrame({
+    isPlaying,
+    payload,
+    rawLandmarks,
+    role: "recorded-instructor",
   });
 
   return resolveMovementMotionFrame({

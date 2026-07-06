@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveMovementAvatarHipsRuntimePosition } from "./movementAvatarHipsRuntime";
+import * as THREE from "three";
+import {
+  applyMovementAvatarHipsRuntimeToBone,
+  resolveMovementAvatarHipsRuntimePosition,
+} from "./movementAvatarHipsRuntime";
 import type {
   MovementAvatarHipsApplicationDecision,
   MovementAvatarHipsPositionOptionsDecision,
@@ -71,5 +75,46 @@ describe("movementAvatarHipsRuntime", () => {
 
     expect(decision.floorContactCorrection).toBeCloseTo(0.18 * 0.7);
     expect(decision.nextHipsY).toBeCloseTo(1 + 0.18 * 0.7);
+  });
+
+  it("captures the base hips position and writes the resolved hips Y to the bone", () => {
+    const hipsNode = {
+      position: new THREE.Vector3(0, 1, 0),
+    };
+    const application = applyMovementAvatarHipsRuntimeToBone({
+      baseHipsPosition: null,
+      floorY: -2.75,
+      hipsApplication: {
+        shouldApplyFloorContactCorrection: false,
+        shouldApplySquatDrop: true,
+        squatDrop: 0.4,
+      },
+      hipsNode,
+      hipsPositionOptions,
+      lowestFootY: null,
+    });
+
+    expect(application.applied).toBe(true);
+    expect(application.nextBaseHipsPosition?.y).toBe(1);
+    expect(application.positionDecision?.nextHipsY).toBeCloseTo(0.8);
+    expect(hipsNode.position.y).toBeCloseTo(0.8);
+  });
+
+  it("skips hips writeback when the bone is unavailable", () => {
+    const baseHipsPosition = new THREE.Vector3(0, 1, 0);
+    const application = applyMovementAvatarHipsRuntimeToBone({
+      baseHipsPosition,
+      floorY: -2.75,
+      hipsApplication: neutralHipsApplication,
+      hipsNode: null,
+      hipsPositionOptions,
+      lowestFootY: null,
+    });
+
+    expect(application).toEqual({
+      applied: false,
+      nextBaseHipsPosition: baseHipsPosition,
+      positionDecision: null,
+    });
   });
 });

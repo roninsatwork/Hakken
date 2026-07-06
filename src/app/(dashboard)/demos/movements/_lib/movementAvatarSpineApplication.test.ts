@@ -7,6 +7,7 @@ import {
   applyMovementAvatarSpineRotationSpecs,
   applyMovementAvatarSpineSolverPoseApplication,
   applyMovementAvatarSpineSolverSpecs,
+  buildMovementAvatarSpineRuntimeDebugTelemetry,
   mirrorMovementAvatarSpineSolverRotation,
 } from "./movementAvatarSpineApplication";
 import type { MovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
@@ -146,6 +147,16 @@ describe("movement avatar spine application", () => {
       "chest:0.3",
       "upperChest:0.4",
     ]);
+  });
+
+  it("builds spine debug telemetry from the active spine drive", () => {
+    expect(buildMovementAvatarSpineRuntimeDebugTelemetry(spineDrive())).toEqual({
+      confidence: 0.9,
+      forwardLean: 0.2,
+      owner: "player-spine-model",
+      sideBend: 0.1,
+      twist: 0.2,
+    });
   });
 
   it("resolves and executes spine solver pose application", () => {

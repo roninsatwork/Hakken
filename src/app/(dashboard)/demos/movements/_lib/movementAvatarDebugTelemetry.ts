@@ -1,13 +1,22 @@
 import type { VRM } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import {
+  MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
+  MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS,
   MOVEMENT_AVATAR_VISUAL_MAPPINGS,
 } from "./movementAvatarRestPose";
 import {
   appendMovementAvatarFootLockDebugLabel,
   buildMovementAvatarRetargetDebug,
+  formatMovementAvatarRetargetDebugLabel,
+  resolveMovementAvatarTrackingFallbackLabels,
+  type MovementAvatarRetargetDebugLabelInput,
   type MovementAvatarTrackingFallbackLabelsDecision,
 } from "./movementAvatarPipeline";
+import { buildMovementAvatarSpineRuntimeDebugTelemetry } from "./movementAvatarSpineApplication";
+import { buildMovementAvatarHeadRuntimeDebugTelemetry } from "./movementAvatarHeadRuntime";
+import { buildMovementAvatarFootLockRuntimeDebugTelemetry } from "./movementAvatarFootLockRuntime";
+import { buildMovementAvatarLegRaiseRuntimeDebugInput } from "./movementAvatarRuntimeState";
 import type { MovementAvatarRootTransformApplication } from "./movementAvatarRootApplication";
 import type { MovementAvatarRootTargetDecision } from "./movementAvatarRootTarget";
 import {
@@ -42,6 +51,52 @@ export type MovementAvatarRetargetDebugRegistry = Record<
 
 export type MovementAvatarRetargetDebugRegistryWindow = {
   __sonaeMovementRetargetDebug?: Partial<MovementAvatarRetargetDebugRegistry>;
+};
+
+type MovementAvatarTrackingFallbackLabelInput = Parameters<typeof resolveMovementAvatarTrackingFallbackLabels>[0];
+type MovementAvatarTrackingDebugStateInput = Parameters<typeof buildMovementAvatarTrackingDebugState>[0];
+type MovementAvatarLegRaiseDebugInput = Parameters<typeof buildMovementAvatarLegRaiseRuntimeDebugInput>[0];
+
+export type MovementAvatarFrameTrackingDebugInput = {
+  activeCalibrationQuality?: number;
+  activeSpineDrive: Parameters<typeof buildMovementAvatarSpineRuntimeDebugTelemetry>[0];
+  appliedHead: MovementAvatarTrackingDebugStateInput["appliedHead"];
+  armTargets: MovementAvatarTrackingFallbackLabelInput["armTargets"];
+  autoCalibrationKind: MovementAvatarTrackingFallbackLabelInput["autoCalibrationKind"];
+  avatarHead: Parameters<typeof buildMovementAvatarHeadRuntimeDebugTelemetry>[0];
+  avatarRole: MovementAvatarTrackingFallbackLabelInput["avatarRole"];
+  bodyConfidence: MovementAvatarTrackingFallbackLabelInput["bodyConfidence"];
+  exercisePose: MovementAvatarTrackingDebugStateInput["exercisePose"];
+  exerciseTransition: MovementAvatarTrackingDebugStateInput["exerciseTransition"];
+  feetOwner: MovementAvatarTrackingFallbackLabelInput["feetOwner"];
+  footLock: Parameters<typeof buildMovementAvatarFootLockRuntimeDebugTelemetry>[0];
+  hasActiveCalibration: MovementAvatarTrackingFallbackLabelInput["hasActiveCalibration"];
+  hasManualCalibration: MovementAvatarTrackingFallbackLabelInput["hasManualCalibration"];
+  headMotionIntent: MovementAvatarTrackingFallbackLabelInput["headMotionIntent"];
+  headOwner: MovementAvatarTrackingFallbackLabelInput["headOwner"];
+  leftArmTrackingReady: MovementAvatarTrackingFallbackLabelInput["leftArmTrackingReady"];
+  leftFootSource: MovementAvatarTrackingFallbackLabelInput["leftFootSource"];
+  leftKneeSource: MovementAvatarTrackingFallbackLabelInput["leftKneeSource"];
+  legRaise: MovementAvatarLegRaiseDebugInput;
+  lowerBodyIntent: MovementAvatarTrackingFallbackLabelInput["lowerBodyIntent"];
+  lowerBodyOwner: MovementAvatarTrackingFallbackLabelInput["lowerBodyOwner"];
+  lowerBodyTrackingReady: MovementAvatarTrackingFallbackLabelInput["lowerBodyTrackingReady"];
+  motionFrameInputOwner: string;
+  orientation: Parameters<typeof buildMovementAvatarTrackingFallbackContext>[0]["orientation"];
+  profileName: string;
+  rawHead: MovementAvatarTrackingFallbackLabelInput["rawHead"] & MovementAvatarTrackingDebugStateInput["rawHead"];
+  retarget: Omit<Parameters<typeof buildMovementAvatarRuntimeRetargetDebug>[0], "footLock" | "totalLowerBody" | "totalUpperBody">;
+  rightArmTrackingReady: MovementAvatarTrackingFallbackLabelInput["rightArmTrackingReady"];
+  rightFootSource: MovementAvatarTrackingFallbackLabelInput["rightFootSource"];
+  rightKneeSource: MovementAvatarTrackingFallbackLabelInput["rightKneeSource"];
+  shouldApplyLowerBody: MovementAvatarTrackingFallbackLabelInput["shouldApplyLowerBody"];
+  support: Parameters<typeof buildMovementAvatarTrackingFallbackContext>[0]["support"];
+  supportConstraint: MovementAvatarTrackingDebugStateInput["supportConstraint"];
+  supportContact: Parameters<typeof buildMovementAvatarTrackingFallbackContext>[0]["supportContact"];
+  supportIntent: MovementAvatarTrackingDebugStateInput["supportIntent"];
+  supportPresentation: Parameters<typeof buildMovementAvatarTrackingFallbackContext>[0]["supportPresentation"];
+  torsoOwner: MovementAvatarTrackingFallbackLabelInput["torsoOwner"];
+  updatedAt: number;
 };
 
 function compactVector(vector: THREE.Vector3) {
@@ -231,7 +286,7 @@ export function buildMovementAvatarTrackingFallbackContext({
     orientation: string;
     status: string;
   };
-  retarget: string;
+  retarget: MovementAvatarRetargetDebugLabelInput;
   support: {
     supportLabel: string;
   };
@@ -262,7 +317,7 @@ export function buildMovementAvatarTrackingFallbackContext({
     exercisePose: `${exercisePose.label} ${exercisePose.status}`,
     exerciseTransition: exerciseTransition.label,
     motionFrameInput,
-    retarget,
+    retarget: formatMovementAvatarRetargetDebugLabel(retarget),
   };
 }
 
@@ -372,6 +427,110 @@ export function buildMovementAvatarTrackingDebugState({
   };
 }
 
+export function buildMovementAvatarFrameTrackingDebugState({
+  activeCalibrationQuality,
+  activeSpineDrive,
+  appliedHead,
+  armTargets,
+  autoCalibrationKind,
+  avatarHead,
+  avatarRole,
+  bodyConfidence,
+  exercisePose,
+  exerciseTransition,
+  feetOwner,
+  footLock,
+  hasActiveCalibration,
+  hasManualCalibration,
+  headMotionIntent,
+  headOwner,
+  leftArmTrackingReady,
+  leftFootSource,
+  leftKneeSource,
+  legRaise,
+  lowerBodyIntent,
+  lowerBodyOwner,
+  lowerBodyTrackingReady,
+  motionFrameInputOwner,
+  orientation,
+  profileName,
+  rawHead,
+  retarget,
+  rightArmTrackingReady,
+  rightFootSource,
+  rightKneeSource,
+  shouldApplyLowerBody,
+  support,
+  supportConstraint,
+  supportContact,
+  supportIntent,
+  supportPresentation,
+  torsoOwner,
+  updatedAt,
+}: MovementAvatarFrameTrackingDebugInput): MovementTrackingDebugState {
+  const fallbackLabels = resolveMovementAvatarTrackingFallbackLabels({
+    activeSpineOwner: activeSpineDrive.owner,
+    armTargets,
+    autoCalibrationKind,
+    avatarRole,
+    bodyConfidence,
+    feetOwner,
+    hasActiveCalibration,
+    hasManualCalibration,
+    headMotionIntent,
+    headOwner,
+    leftArmTrackingReady,
+    leftFootSource,
+    leftKneeSource,
+    lowerBodyIntent,
+    lowerBodyOwner,
+    lowerBodyTrackingReady,
+    rawHead,
+    rightArmTrackingReady,
+    rightFootSource,
+    rightKneeSource,
+    shouldApplyLowerBody,
+    torsoOwner,
+  });
+  const footLockDebug = buildMovementAvatarFootLockRuntimeDebugTelemetry(footLock);
+  const retargetDebug = buildMovementAvatarRuntimeRetargetDebug({
+    ...retarget,
+    footLock: footLockDebug,
+    totalLowerBody: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS.length,
+    totalUpperBody: MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS.length,
+  });
+
+  return buildMovementAvatarTrackingDebugState({
+    updatedAt,
+    rawHead,
+    appliedHead,
+    avatarHead: buildMovementAvatarHeadRuntimeDebugTelemetry(avatarHead),
+    avatarLegRaise: buildMovementAvatarLegRaiseRuntimeDebugInput(legRaise),
+    bodyConfidence,
+    exercisePose,
+    exerciseTransition,
+    supportConstraint,
+    supportIntent,
+    spineDrive: buildMovementAvatarSpineRuntimeDebugTelemetry(activeSpineDrive),
+    fallbackLabels,
+    fallbackContext: buildMovementAvatarTrackingFallbackContext({
+      exercisePose,
+      exerciseTransition,
+      motionFrameInput: motionFrameInputOwner,
+      orientation,
+      retarget: retargetDebug,
+      support,
+      supportConstraint,
+      supportContact,
+      supportIntent,
+      supportPresentation,
+    }),
+    retargetDebug,
+    profileName,
+    calibrationQuality: activeCalibrationQuality,
+  });
+}
+
 export function applyMovementAvatarFootLockDebugToTrackingState({
   footLock,
   state,
@@ -455,6 +614,46 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   }
 
   return nextState;
+}
+
+export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
+  avatarName,
+  avatarRole,
+  footLock,
+  frameUpdatedAt,
+  registryWindow,
+  retargetFrame,
+  state,
+  vrm,
+  zScale,
+}: {
+  avatarName: string;
+  avatarRole: "instructor" | "player";
+  footLock: {
+    correction: number;
+    drift: number;
+    strength: number;
+  };
+  frameUpdatedAt: number;
+  registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
+  retargetFrame: MovementRetargetFrame;
+  state: MovementTrackingDebugState | null | undefined;
+  vrm: VRM | null | undefined;
+  zScale: number;
+}): MovementTrackingDebugState | null {
+  if (!state || !vrm) return state ?? null;
+
+  return applyMovementAvatarPostFrameDebugTelemetry({
+    avatarName,
+    avatarRole,
+    footLock,
+    frameUpdatedAt,
+    registryWindow,
+    retargetFrame,
+    state,
+    vrm,
+    zScale,
+  });
 }
 
 export function writeMovementAvatarRetargetDebugRegistry({

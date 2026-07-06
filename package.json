@@ -36,7 +36,14 @@
     "movement:replay:compare": "node scripts/movement-debug/compare-replay-analysis.mjs",
     "movement:replay:capture": "node scripts/movement-debug/capture-replay-lab.mjs",
     "movement:replay:proof-set": "node scripts/movement-debug/capture-replay-proof-set.mjs",
-    "movement:replay:iteration": "node scripts/movement-debug/run-replay-iteration.mjs"
+    "movement:replay:review": "node scripts/movement-debug/write-replay-proof-review.mjs",
+    "movement:replay:scenario-summary": "node scripts/movement-debug/scenario-smoke-summary.mjs",
+    "movement:replay:validate-scenario": "node scripts/movement-debug/validate-recording-scenario.mjs",
+    "movement:replay:iteration": "node scripts/movement-debug/run-replay-iteration.mjs",
+    "movement:game-visual-plan": "node scripts/movement-debug/game-visual-proof-plan.mjs",
+    "movement:game-visual-capture": "node scripts/movement-debug/capture-game-visual-proof.mjs",
+    "movement:game-visual-review": "node scripts/movement-debug/write-game-visual-review.mjs",
+    "movement:architecture-guard": "node scripts/movement-debug/movement-architecture-guard.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

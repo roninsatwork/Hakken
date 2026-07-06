@@ -1,3 +1,4 @@
+import type { VRM } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import {
@@ -6,7 +7,10 @@ import {
   type MovementAvatarRetargetRestMap,
 } from "./movementAvatarRestPose";
 import type { MovementRetargetFrame } from "./movementRetargeting";
-import { applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones } from "./movementAvatarRetargetSegmentRuntime";
+import {
+  applyMovementAvatarRetargetSegmentRuntimeFrame,
+  applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones,
+} from "./movementAvatarRetargetSegmentRuntime";
 
 function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): MovementRetargetFrame {
   return {
@@ -121,5 +125,46 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
 
     expect(result.applied).toBe(0);
     expect(result.restMap).toBe(existingRestMap);
+  });
+
+  it("applies a retarget segment runtime frame and writes last-good rotations", () => {
+    const scene = new THREE.Object3D();
+    const rightUpperLeg = new THREE.Object3D();
+    const rightLowerLeg = new THREE.Object3D();
+    scene.add(rightUpperLeg);
+    scene.add(rightLowerLeg);
+    rightUpperLeg.position.set(0, 1, 0);
+    rightLowerLeg.position.set(0, 0, 0);
+    scene.updateMatrixWorld(true);
+    const bones = new Map<MovementAvatarRetargetBoneName, THREE.Object3D>([
+      ["rightLowerLeg", rightLowerLeg],
+      ["rightUpperLeg", rightUpperLeg],
+    ]);
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: (boneName: MovementAvatarRetargetBoneName) => bones.get(boneName) ?? null,
+      },
+      scene,
+    } as unknown as VRM;
+    const lastGood: Record<string, THREE.Quaternion> = {};
+
+    const result = applyMovementAvatarRetargetSegmentRuntimeFrame({
+      avatarRole: "instructor",
+      currentRestMap: {},
+      hasWorldLandmarks: true,
+      instructorSquatPresentationDepth: 0.55,
+      lastGood,
+      lookupBone: (boneName) => bones.get(boneName) ?? null,
+      lowerBodySegmentMotion: 0.55,
+      mappings: [MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!],
+      retargetFrame: retargetFrame(),
+      shouldUseRetargetedUpperBody: false,
+      vrm,
+    });
+
+    expect(result.applied).toBe(1);
+    expect(result.restMap.rightUpperLeg).toBeDefined();
+    expect(lastGood.rightUpperLeg).toBeInstanceOf(THREE.Quaternion);
+    expect(rightUpperLeg.quaternion.w).toBeLessThan(1);
   });
 });

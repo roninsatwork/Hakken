@@ -5,7 +5,10 @@ import type {
   MovementHeadMotionIntent,
   TrackingLandmark,
 } from "./movementTrackingCalibration";
-import { applyMovementAvatarHeadRuntimeToVrmBones } from "./movementAvatarHeadRuntime";
+import {
+  applyMovementAvatarHeadRuntimeToVrmBones,
+  buildMovementAvatarHeadRuntimeDebugTelemetry,
+} from "./movementAvatarHeadRuntime";
 
 const neutralHeadIntent: MovementHeadMotionIntent = {
   confidence: 0.9,
@@ -119,5 +122,43 @@ describe("movementAvatarHeadRuntime", () => {
     expect(result.headApplication.baseHeadPosition).toEqual(new THREE.Vector3(0.1, 0.2, 0.3));
     expect(head.position.y).not.toBe(0.2);
     expect(head.quaternion.w).toBeLessThan(1);
+  });
+
+  it("builds avatar head debug telemetry from the applied head node and target", () => {
+    const head = new THREE.Object3D();
+    head.rotation.x = 0.1234;
+
+    const result = applyMovementAvatarHeadRuntimeToVrmBones({
+      avatarRole: "player",
+      avatarRootYaw: 0,
+      baseHeadPosition: null,
+      calibration: neutralCalibration,
+      headMotionIntent: {
+        ...neutralHeadIntent,
+        lateral: 0.35,
+        vertical: 0.4,
+      },
+      lookupBone: (boneName) => boneName === "head" ? head : new THREE.Object3D(),
+      neckSlerp: 1,
+      poseLandmarks: poseLandmarks(),
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+
+    expect(result.applied).toBe(true);
+    if (!result.applied) throw new Error("expected head runtime to apply");
+
+    const telemetry = buildMovementAvatarHeadRuntimeDebugTelemetry({
+      headNode: result.headNode,
+      headTarget: result.headTarget,
+    });
+
+    expect(telemetry).toEqual({
+      appliedLocalPitch: result.headNode.rotation.x,
+      boneYaw: result.headTarget.headDecision.headYaw,
+      bonePitch: result.headTarget.headBonePitch,
+      trackingPitch: result.headTarget.headDecision.headPitch,
+      trackingYaw: result.headTarget.rawHeadDecision.rawHead.yaw,
+    });
   });
 });

@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import {
+  applyMovementAvatarFootLockRuntimeFrame,
   applyMovementAvatarFootLockRuntimeRootCorrection,
+  buildMovementAvatarFootLockRuntimeDebugTelemetry,
   resolveMovementAvatarFootLockRuntimeDecision,
 } from "./movementAvatarFootLockRuntime";
 import {
@@ -52,6 +54,23 @@ function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): Movement
 }
 
 describe("movementAvatarFootLockRuntime", () => {
+  it("builds foot-lock debug telemetry from current runtime state", () => {
+    expect(buildMovementAvatarFootLockRuntimeDebugTelemetry({
+      correction: 0.12,
+      drift: 0.34,
+      state: {
+        correction: new THREE.Vector3(),
+        left: null,
+        right: null,
+        strength: 0.56,
+      },
+    })).toEqual({
+      correction: 0.12,
+      drift: 0.34,
+      strength: 0.56,
+    });
+  });
+
   it("releases the current foot lock when runtime objects are unavailable", () => {
     const state = createMovementAvatarFootLockState();
     state.strength = 0.5;
@@ -170,5 +189,34 @@ describe("movementAvatarFootLockRuntime", () => {
       decision.nextState.correction.y * result.correctionScale,
     );
     expect(avatarRoot.matrixWorldNeedsUpdate).toBe(false);
+  });
+
+  it("applies a full foot-lock runtime frame and returns state telemetry", () => {
+    const avatarRoot = new THREE.Object3D();
+    const previousState = {
+      correction: new THREE.Vector3(),
+      left: new THREE.Vector3(-0.4, -2.7, 0),
+      right: new THREE.Vector3(0.4, -2.7, 0),
+      strength: 0.5,
+    };
+
+    const application = applyMovementAvatarFootLockRuntimeFrame({
+      avatarRole: "player",
+      avatarRoot,
+      currentLeft: new THREE.Vector3(-0.5, -2.65, -0.2),
+      currentRight: new THREE.Vector3(0.3, -2.65, -0.2),
+      lowerBodyDrive: lowerBodyDrive({ shouldDrivePlayerSquat: true }),
+      lowerBodyTrackingReady: true,
+      previousState,
+      retargetFrame: retargetFrame(),
+      shouldApplyLowerBody: true,
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(application.shouldLock).toBe(true);
+    expect(application.nextState.strength).toBeGreaterThan(previousState.strength);
+    expect(application.appliedCorrection).toBeGreaterThan(0);
+    expect(application.rootCorrection.applied).toBe(true);
+    expect(avatarRoot.position.length()).toBeGreaterThan(0);
   });
 });

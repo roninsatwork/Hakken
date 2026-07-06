@@ -9,8 +9,19 @@ import {
   resolveMovementAvatarPlayerLegRaiseHold,
 } from "./movementAvatarPipeline";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
+import type { MovementLowerBodyIntent } from "./movementTrackingCalibration";
 
 type MovementAvatarRuntimeRole = "instructor" | "player";
+
+export type MovementAvatarLegRaiseRuntimeDebugInput = {
+  appliedDepth: number;
+  expiresAt: number;
+  holdActive: boolean;
+  now: number;
+  rawLeftDepth: number;
+  rawRightDepth: number;
+  side: "left" | "right" | null;
+};
 
 export type MovementAvatarLowerBodyRuntimeStateDecision = {
   legRaiseHoldDecision: MovementAvatarPlayerLegRaiseHoldDecision;
@@ -33,6 +44,30 @@ export function createMovementAvatarLowerBodyVisualState(): MovementAvatarLowerB
   return {
     squatPresentationDepth: 0,
     visualRootDrop: 0,
+  };
+}
+
+export function buildMovementAvatarLegRaiseRuntimeDebugInput({
+  holdDecision,
+  lowerBodyDrive,
+  lowerBodyIntent,
+  now,
+  playerLegRaiseHoldState,
+}: {
+  holdDecision: MovementAvatarPlayerLegRaiseHoldDecision;
+  lowerBodyDrive: MovementAvatarLowerBodyDrive;
+  lowerBodyIntent: MovementLowerBodyIntent;
+  now: number;
+  playerLegRaiseHoldState: MovementAvatarPlayerLegRaiseHoldState;
+}): MovementAvatarLegRaiseRuntimeDebugInput {
+  return {
+    appliedDepth: lowerBodyDrive.playerLegRaiseDepth,
+    expiresAt: playerLegRaiseHoldState.expiresAt,
+    holdActive: holdDecision.wasHeld,
+    now,
+    rawLeftDepth: lowerBodyIntent.leftKneeRaise,
+    rawRightDepth: lowerBodyIntent.rightKneeRaise,
+    side: lowerBodyDrive.playerLegRaiseSide,
   };
 }
 

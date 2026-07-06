@@ -1,8 +1,10 @@
+import type { VRM } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { resolveMovementAvatarRetargetSegmentApplication } from "./movementAvatarPipeline";
 import type { MovementAvatarTrackingProfile } from "./movementTrackingCalibration";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import {
+  buildMovementAvatarRetargetRestMap,
   type MovementAvatarRetargetBoneMapping,
   type MovementAvatarRetargetBoneName,
   type MovementAvatarRetargetRestMap,
@@ -81,4 +83,50 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
     ...counts,
     restMap,
   };
+}
+
+export function applyMovementAvatarRetargetSegmentRuntimeFrame({
+  avatarRole,
+  currentRestMap,
+  hasWorldLandmarks,
+  instructorSquatPresentationDepth,
+  lastGood,
+  lookupBone,
+  lowerBodySegmentMotion,
+  mappings,
+  profile,
+  retargetFrame,
+  shouldUseRetargetedUpperBody,
+  vrm,
+}: {
+  avatarRole: "instructor" | "player";
+  currentRestMap: MovementAvatarRetargetRestMap;
+  hasWorldLandmarks: boolean;
+  instructorSquatPresentationDepth: number;
+  lastGood: Record<string, THREE.Quaternion>;
+  lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
+  lowerBodySegmentMotion: number;
+  mappings: MovementAvatarRetargetBoneMapping[];
+  profile?: MovementAvatarTrackingProfile;
+  retargetFrame: MovementRetargetFrame;
+  shouldUseRetargetedUpperBody: boolean;
+  vrm: VRM | null | undefined;
+}): MovementAvatarRetargetSegmentRuntimeApplication {
+  return applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
+    avatarRole,
+    canApply: Boolean(vrm),
+    currentRestMap,
+    hasWorldLandmarks,
+    instructorSquatPresentationDepth,
+    lookupBone,
+    lowerBodySegmentMotion,
+    mappings,
+    profile,
+    refreshRestMap: () => vrm ? buildMovementAvatarRetargetRestMap(vrm) : currentRestMap,
+    retargetFrame,
+    shouldUseRetargetedUpperBody,
+    storeLastGood: (lastGoodBoneName, quaternion) => {
+      lastGood[lastGoodBoneName] = quaternion;
+    },
+  });
 }

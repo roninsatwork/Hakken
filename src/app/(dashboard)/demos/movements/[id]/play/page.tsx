@@ -39,13 +39,24 @@ import {
   makeMovementAvatarProofPose,
   toMovementAvatarProofMode,
 } from "../../_lib/movementAvatarProofFixtures";
+import {
+  parseMovementDebugGameFrameIndex,
+  shouldShowMovementDebugPlayerPausedPose,
+} from "../../_lib/movementGameDebugRoute";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
-import { buildMovementRetargetSourceModel } from "../../_lib/movementRetargeting";
+import {
+  averageMovementRetargetSourceModels,
+  buildMovementRetargetSourceModel,
+  type MovementRetargetSourceModel,
+} from "../../_lib/movementRetargeting";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import {
+  averageMovementCalibrations,
   buildMovementCalibration,
+  buildUprightMovementAutoCalibration,
+  type MovementCalibration,
   getMovementTrackingHealthSummary,
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
@@ -54,7 +65,7 @@ import {
   resolveMovementStartReadiness,
   type MovementStartReadiness,
 } from "../../_lib/movementSourceFrame";
-import type { VrmMotionFrame } from "../../_lib/vrmRigging";
+import type { VrmMotionFrame, VrmPoseLandmark } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
 
@@ -238,6 +249,33 @@ function createIdleGameStartGate(): MovementGameStartGateState {
   };
 }
 
+function toDebugPlayerMotionPayload(frame: MotionFrame | null | undefined): MovementPlayerMotionPayload | null {
+  if (!frame) return null;
+  const normalizeLandmarks = (landmarks: VrmPoseLandmark[]) =>
+    landmarks.map((landmark) => ({
+      ...landmark,
+      z: landmark.z ?? 0,
+    }));
+
+  if (Array.isArray(frame)) {
+    return {
+      landmarks: normalizeLandmarks(frame) as MovementPlayerMotionPayload["landmarks"],
+    };
+  }
+
+  const poseLandmarks = frame.landmarks ?? frame.pose;
+
+  return {
+    ...frame,
+    landmarks: poseLandmarks
+      ? normalizeLandmarks(poseLandmarks) as MovementPlayerMotionPayload["landmarks"]
+      : undefined,
+    worldLandmarks: frame.worldLandmarks
+      ? normalizeLandmarks(frame.worldLandmarks) as MovementPlayerMotionPayload["worldLandmarks"]
+      : frame.worldLandmarks,
+  } as MovementPlayerMotionPayload;
+}
+
 export default function MatchPlayPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const searchParams = useSearchParams();
@@ -245,11 +283,17 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const isDebugTracking = searchParams.get("debugTracking") === "1";
   const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
   const isDebugAutoBaselineRoute = isDebugTracking && searchParams.get("debugAutoBaseline") === "1";
+  const debugGameFrameIndex = isDebugTracking
+    ? parseMovementDebugGameFrameIndex(searchParams.get("debugGameFrame"))
+    : null;
+  const isDebugGameFrameRoute = debugGameFrameIndex !== null;
   const debugPlayerPoseMode = isDebugTracking
     ? toMovementAvatarProofMode(searchParams.get("debugPlayerPose"))
     : null;
   const isDebugPlayerPoseRoute = Boolean(debugPlayerPoseMode);
-  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugPlayerPoseRoute;
+  const isDebugPlayerInjectionRoute = isDebugPlayerPoseRoute || isDebugGameFrameRoute;
+  const shouldShowPlayerPausedPose = shouldShowMovementDebugPlayerPausedPose({ isDebugTracking });
+  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugPlayerInjectionRoute;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
@@ -268,7 +312,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retry: retryVision,
     isReady: isVisionReady,
   } = useMediaPipeVision();
-  const isVisionReadyForSession = isVisionReady || isDebugPlayerPoseRoute;
+  const isVisionReadyForSession = isVisionReady || isDebugPlayerInjectionRoute;
   const instructorTrackingDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const debugPlayerNeutralPose = React.useMemo(() => makeMovementAvatarProofPose("standing"), []);
   const debugPlayerMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => {
@@ -276,8 +320,45 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
     return makeMovementAvatarProofMotionPayload(debugPlayerPoseMode);
   }, [debugPlayerPoseMode]);
+  const debugGameFrameMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => (
+    debugGameFrameIndex === null
+      ? null
+      : toDebugPlayerMotionPayload(loadedFrames[debugGameFrameIndex] as unknown as MotionFrame | undefined)
+  ), [debugGameFrameIndex, loadedFrames]);
   const debugPlayerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
-  debugPlayerLiveLmRef.current = debugPlayerMotionPayload;
+  debugPlayerLiveLmRef.current = debugGameFrameMotionPayload ?? debugPlayerMotionPayload;
+  const debugGameFrameCalibration = React.useMemo(() => {
+    if (!isDebugGameFrameRoute) return null;
+
+    const calibrations = loadedFrames
+      .map((frame) => toDebugPlayerMotionPayload(frame as unknown as MotionFrame))
+      .map((frame) => {
+        const poseLandmarks = frame?.landmarks ?? [];
+        if (poseLandmarks.length < 33) return null;
+        return buildUprightMovementAutoCalibration({ poseLandmarks }) ??
+          buildMovementCalibration({ poseLandmarks });
+      })
+      .filter((calibration): calibration is MovementCalibration => Boolean(calibration));
+
+    return averageMovementCalibrations(calibrations);
+  }, [isDebugGameFrameRoute, loadedFrames]);
+  const debugGameFrameRetargetSourceModel = React.useMemo(() => {
+    if (!isDebugGameFrameRoute) return null;
+
+    const models = loadedFrames
+      .map((frame) => toDebugPlayerMotionPayload(frame as unknown as MotionFrame))
+      .map((frame, index) => {
+        const poseLandmarks = frame?.landmarks ?? [];
+        if (poseLandmarks.length < 33) return null;
+        return buildMovementRetargetSourceModel({
+          now: index,
+          poseLandmarks,
+        });
+      })
+      .filter((model): model is MovementRetargetSourceModel => Boolean(model));
+
+    return averageMovementRetargetSourceModels(models);
+  }, [isDebugGameFrameRoute, loadedFrames]);
   const debugPlayerCalibration = React.useMemo(() => (
     isDebugPlayerPoseRoute
       ? buildMovementCalibration({ poseLandmarks: debugPlayerNeutralPose })
@@ -311,7 +392,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     handLandmarker,
     onBodyTracked: markBodyTracked,
   });
-  const effectivePlayerLiveLmRef = isDebugPlayerPoseRoute ? debugPlayerLiveLmRef : playerLiveLmRef;
+  const effectivePlayerLiveLmRef = isDebugPlayerInjectionRoute ? debugPlayerLiveLmRef : playerLiveLmRef;
   const {
     calibration,
     isCalibrated,
@@ -329,9 +410,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isVisionReady: isVisionReadyForSession,
     playerLiveLmRef: effectivePlayerLiveLmRef,
   });
-  const effectivePlayerCalibration = debugPlayerCalibration ?? calibration;
-  const effectivePlayerRetargetSourceModel = debugPlayerRetargetSourceModel ?? playerRetargetSourceModel;
-  const isTrackingReady = isDebugPlayerPoseRoute || isCalibrated || isCalibrationSkipped;
+  const effectivePlayerCalibration = debugGameFrameCalibration ?? debugPlayerCalibration ?? calibration;
+  const effectivePlayerRetargetSourceModel =
+    debugGameFrameRetargetSourceModel ?? debugPlayerRetargetSourceModel ?? playerRetargetSourceModel;
+  const isTrackingReady = isDebugPlayerInjectionRoute || isCalibrated || isCalibrationSkipped;
   const [gameStartGate, setGameStartGate] = useState<MovementGameStartGateState>(
     createIdleGameStartGate,
   );
@@ -373,6 +455,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isPlaying,
     retargetSourceModel: instructorRetargetSourceModel,
   });
+  useEffect(() => {
+    if (debugGameFrameIndex === null || loadedFrames.length === 0) return;
+    setInstructorFrame(Math.min(debugGameFrameIndex, loadedFrames.length - 1));
+  }, [debugGameFrameIndex, loadedFrames.length, setInstructorFrame]);
   const spineGoal = toMovementSpineGoal(movement?.spineGoal);
   const {
     finalScore,
@@ -388,7 +474,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetScoring,
   } = useMovementMatchScoring({
     isPlaying,
-    isScoringEnabled: isCalibrated || isDebugPlayerPoseRoute,
+    isScoringEnabled: isCalibrated || isDebugPlayerInjectionRoute,
     setIsPlaying,
     playerMotionFrameRef,
     instructorMotionFrameRef,
@@ -424,21 +510,29 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     startMatch();
 
     const readinessBypassReason = resolveMovementStartReadinessBypassReason({
-      isDebugPlayerPoseRoute,
+      isDebugPlayerPoseRoute: isDebugPlayerInjectionRoute,
       isGuidedPreviewRoute,
     });
     if (!readinessBypassReason) return;
 
     skipCalibration();
     resetInstructorPlayback();
+    if (debugGameFrameIndex !== null && loadedFrames.length > 0) {
+      setInstructorFrame(Math.min(debugGameFrameIndex, loadedFrames.length - 1));
+    }
     resetScoring();
-    setIsPlaying(true);
+    setIsPlaying(!isDebugGameFrameRoute);
   }, [
+    debugGameFrameIndex,
+    isDebugGameFrameRoute,
     isDebugPlayerPoseRoute,
+    isDebugPlayerInjectionRoute,
     isGuidedPreviewRoute,
+    loadedFrames.length,
     resetInstructorPlayback,
     resetScoring,
     setIsPlaying,
+    setInstructorFrame,
     skipCalibration,
     startMatch,
   ]);
@@ -535,7 +629,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     }
 
     const readinessBypassReason = resolveMovementStartReadinessBypassReason({
-      isDebugPlayerPoseRoute,
+      isDebugPlayerPoseRoute: isDebugPlayerInjectionRoute,
       isManualPreviewSkip: isCalibrationSkipped,
     });
     if (readinessBypassReason) {
@@ -556,7 +650,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }, [
     isCalibrating,
     isCalibrationSkipped,
-    isDebugPlayerPoseRoute,
+    isDebugPlayerInjectionRoute,
     isPlaying,
     isTrackingReady,
     isVisionReadyForSession,
@@ -584,9 +678,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     }
   }, [
     isFramesLoading,
+    loadedFrames.length,
     isDebugAutoBaselineRoute,
     isLobby,
-    loadedFrames.length,
     movement,
     shouldAutoStartGuidedPreview,
     startDebugAutoBaseline,
@@ -758,6 +852,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           positionOffset={[5, 0, 0]}
           isPlayer={true}
           isPlaying={isPlaying}
+          showPausedPose={shouldShowPlayerPausedPose}
           motionFrameRef={playerMotionFrameRef}
           trackingCalibration={effectivePlayerCalibration}
           trackingDebugRef={trackingDebugRef}

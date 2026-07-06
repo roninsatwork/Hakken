@@ -10,111 +10,54 @@ import {
   getMovementAvatarTrackingProfile,
   getMovementAvatarTrackingProfileName,
 } from "../../../_lib/movementAvatarProfiles";
+import { resolveMovementAvatarLegacyLowerBodyAimOptions } from "../../../_lib/movementAvatarPipeline";
+import { resolveMovementAvatarLowerBodyFrameStateRuntime } from "../../../_lib/movementAvatarLowerBodyFrameStateRuntime";
+import { applyMovementAvatarLowerBodyFrameStateRefsRuntime } from "../../../_lib/movementAvatarLowerBodyFrameStateRefsRuntime";
+import { applyMovementAvatarLowerBodyFrameRuntime } from "../../../_lib/movementAvatarLowerBodyFrameRuntime";
+import { resolveMovementAvatarFrameTargetRuntime } from "../../../_lib/movementAvatarFrameTargetRuntime";
 import {
-  formatMovementAvatarRetargetDebugLabel,
-  resolveMovementAvatarBoneEaseOptions,
-  resolveMovementAvatarHipsApplication,
-  resolveMovementAvatarHipsPositionOptions,
-  resolveMovementAvatarLegacyLowerBodyAimOptions,
-  resolveMovementAvatarSpineApplyOptions,
-  resolveMovementAvatarTrackingFallbackLabels,
-  type MovementAvatarLowerBodyVisualState,
-  type MovementAvatarPlayerLegRaiseHoldState,
-} from "../../../_lib/movementAvatarPipeline";
-import { resolveMovementAvatarLowerBodyTarget } from "../../../_lib/movementAvatarTarget";
-import {
-  applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones,
-  applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones,
-  applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones,
-  applyMovementAvatarLowerBodyRetargetSegmentCounts,
-  resolveMovementAvatarLowerBodyApplicationPlan,
-  resolveMovementAvatarLowerBodyRetargetAimRequests,
-  resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
-} from "../../../_lib/movementAvatarLowerBodyApplication";
-import { resolveMovementAvatarArmTargetComposition } from "../../../_lib/movementAvatarArmTarget";
-import { resolveMovementAvatarLowerBodyTargetSelectionComposition } from "../../../_lib/movementAvatarLowerBodyTargetSelection";
-import {
-  applyMovementAvatarPostFrameDebugTelemetry,
-  buildMovementAvatarRootDebug,
-  buildMovementAvatarRuntimeRetargetDebug,
-  buildMovementAvatarTrackingDebugState,
-  buildMovementAvatarTrackingFallbackContext,
+  applyMovementAvatarOptionalPostFrameDebugTelemetry,
   type MovementAvatarRetargetDebugRegistryWindow,
 } from "../../../_lib/movementAvatarDebugTelemetry";
+import { createMovementAvatarRetargetFrameRuntimeAdapters } from "../../../_lib/movementAvatarRetargetFrameRuntime";
+import { applyMovementAvatarFootingFrameRuntime } from "../../../_lib/movementAvatarFootingFrameRuntime";
+import { applyMovementAvatarFootingFrameRefsRuntime } from "../../../_lib/movementAvatarFootingFrameRefsRuntime";
+import { applyMovementAvatarSupportFrameRuntime } from "../../../_lib/movementAvatarSupportFrameRuntime";
+import { applyMovementAvatarUpperBodyFrameRuntime } from "../../../_lib/movementAvatarUpperBodyFrameRuntime";
+import { applyMovementAvatarHeadFrameRuntime } from "../../../_lib/movementAvatarHeadFrameRuntime";
+import { applyMovementAvatarHeadFrameRefsRuntime } from "../../../_lib/movementAvatarHeadFrameRefsRuntime";
 import {
-  MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
-  MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
-  MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS,
-  buildMovementAvatarRetargetRestMap,
-  type MovementAvatarRetargetRestMap,
-} from "../../../_lib/movementAvatarRestPose";
-import { applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones } from "../../../_lib/movementAvatarRetargetSegmentRuntime";
-import { applyMovementAvatarPlantedSquatIkRuntimeToVrmBones } from "../../../_lib/movementAvatarPlantedSquatIkRuntime";
-import {
-  createMovementAvatarFootLockState,
-  type MovementAvatarFootLockState,
-} from "../../../_lib/movementAvatarFootLock";
-import {
-  applyMovementAvatarFootLockRuntimeRootCorrection,
-  resolveMovementAvatarFootLockRuntimeDecision,
-} from "../../../_lib/movementAvatarFootLockRuntime";
-import { resolveMovementAvatarFootWorldRuntimeSnapshot } from "../../../_lib/movementAvatarFootWorldRuntime";
-import { applyMovementAvatarSupportContactRuntimeLocks } from "../../../_lib/movementAvatarSupportContactRuntime";
-import { applyMovementAvatarSupportPresentationRuntimeToVrmBones } from "../../../_lib/movementAvatarSupportPresentationRuntime";
-import { applyMovementAvatarHeadRuntimeToVrmBones } from "../../../_lib/movementAvatarHeadRuntime";
-import {
-  getBalancedPlantedSquatDepth,
-  getRecordedSquatPresentationDepth,
   type MovementRetargetSourceModel,
 } from "../../../_lib/movementRetargeting";
-import { resolveMovementAvatarRetargetSourceRuntimeModel } from "../../../_lib/movementAvatarRetargetSourceRuntime";
-import {
-  type MovementRootMotionFrame,
-  type MovementRootMotionInputFrame,
-} from "../../../_lib/movementRootMotion";
+import type { MovementRootMotionFrame } from "../../../_lib/movementRootMotion";
 import type { MovementMotionFrame } from "../../../_lib/movementMotionFrame";
-import { resolveMovementAvatarMotionFrameInput } from "../../../_lib/movementAvatarMotionFrameInput";
-import { applyMovementAvatarRootStepRuntimeResponse } from "../../../_lib/movementAvatarRootStepRuntime";
-import { applyMovementAvatarRootTransformRuntime } from "../../../_lib/movementAvatarRootTransformRuntime";
-import { resolveMovementAvatarRootMotionRuntimeFrame } from "../../../_lib/movementAvatarRootMotionRuntime";
-import { resolveMovementAvatarRootTarget } from "../../../_lib/movementAvatarRootTarget";
+import { applyMovementAvatarRootFrameRuntime } from "../../../_lib/movementAvatarRootFrameRuntime";
+import { applyMovementAvatarRootFrameRefsRuntime } from "../../../_lib/movementAvatarRootFrameRefsRuntime";
+import { resolveMovementAvatarFrameDecisionRuntime } from "../../../_lib/movementAvatarFrameDecisionRuntime";
+import { applyMovementAvatarFrameDecisionRefsRuntime } from "../../../_lib/movementAvatarFrameDecisionRefsRuntime";
 import {
-  createMovementAvatarExerciseTransitionState,
-  resolveMovementAvatarExerciseTarget,
-  type MovementAvatarExerciseTransitionState,
-} from "../../../_lib/movementAvatarExerciseTarget";
-import {
-  createMovementAvatarLowerBodyVisualState,
-  createMovementAvatarPlayerLegRaiseHoldState,
-  resolveMovementAvatarLowerBodyRuntimeState,
-} from "../../../_lib/movementAvatarRuntimeState";
-import {
-  getCalibratedFloorCorrection,
   type MovementCalibration,
   type MovementTrackingDebugState,
 } from "../../../_lib/movementTrackingCalibration";
-import { resolveMovementAvatarHipsRuntimePosition } from "../../../_lib/movementAvatarHipsRuntime";
+import { resolveMovementAvatarHipsFrameRuntime } from "../../../_lib/movementAvatarHipsFrameRuntime";
 import {
-  createMovementAvatarSetupState,
-  type MovementAvatarSetupState,
-} from "../../../_lib/movementAvatarSetup";
-import { resolveMovementAvatarSetupRuntimeState } from "../../../_lib/movementAvatarSetupRuntime";
+  useMovementAvatarRuntimeRefs,
+  useSyncMovementAvatarRuntimeInputs,
+} from "../../../_lib/movementAvatarRuntimeRefs";
+import { resetMovementAvatarRuntimeRefs } from "../../../_lib/movementAvatarRuntimeReset";
+import { resolveMovementAvatarFrameSetupRuntime } from "../../../_lib/movementAvatarFrameSetupRuntime";
+import { applyMovementAvatarFrameSetupRefsRuntime } from "../../../_lib/movementAvatarFrameSetupRefsRuntime";
 import { applyMovementAvatarEndFrameRuntime } from "../../../_lib/movementAvatarEndFrameRuntime";
-import { applyMovementAvatarDemoFallbackRuntimePose } from "../../../_lib/movementAvatarDemoFallbackRuntime";
-import { applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones } from "../../../_lib/movementAvatarInactiveLowerBodyRuntime";
-import { applyMovementAvatarUpperBodyRuntimeToVrmBones } from "../../../_lib/movementAvatarUpperBodyRuntime";
+import { createMovementAvatarFrameAccessRuntime } from "../../../_lib/movementAvatarFrameAccessRuntime";
+import { resolveMovementAvatarFrameRuntimeContext } from "../../../_lib/movementAvatarFrameRuntimeContext";
+import { createMovementAvatarLowerBodyFrameCallbacksRuntime } from "../../../_lib/movementAvatarLowerBodyFrameCallbacksRuntime";
+import { resolveMovementAvatarReadyFrameRuntime } from "../../../_lib/movementAvatarReadyFrameRuntime";
 import {
-  createVrmNormalizedBoneLookup,
-  createVrmImageSolverLandmarks,
-  getVrmMotionLandmarks,
-  prepareVrmSolverInput,
-  solveVrmPose,
   type VrmMotionRef,
-  type VrmRiggedPose,
 } from "../../../_lib/vrmRigging";
+import { resolveMovementAvatarSolvedFrameRuntime } from "../../../_lib/movementAvatarSolverRuntime";
 
 type LoaderPlugin = ReturnType<Parameters<InstanceType<typeof GLTFLoader>["register"]>[0]>;
-type RiggedPose = VrmRiggedPose;
 
 const AVATAR_BASE_Y = -2.8;
 
@@ -153,32 +96,33 @@ export default function VrmAvatar({
 }: VrmAvatarProps) {
   const group = useRef<THREE.Group>(null);
   const vrmRef = useRef<VRM | null>(null);
-  const baseHipsPositionRef = useRef<THREE.Vector3 | null>(null);
-  const baseBonePositionRef = useRef<Record<string, THREE.Vector3>>({});
-  const setupStateRef = useRef<MovementAvatarSetupState>(createMovementAvatarSetupState());
-  const retargetAvatarRestRef = useRef<MovementAvatarRetargetRestMap>({});
-  const retargetSourceModelRef = useRef<MovementRetargetSourceModel | null>(null);
-  const rootMotionFrameRef = useRef<MovementRootMotionFrame | null>(rootMotionFrame);
-  const liveRootMotionHistoryRef = useRef<MovementRootMotionInputFrame[]>([]);
-  const exerciseTransitionStateRef = useRef<MovementAvatarExerciseTransitionState>(
-    createMovementAvatarExerciseTransitionState(),
-  );
-  const playerLegRaiseHoldRef = useRef<MovementAvatarPlayerLegRaiseHoldState>(
-    createMovementAvatarPlayerLegRaiseHoldState(),
-  );
-  const plantedFootLockRef = useRef<MovementAvatarFootLockState>(
-    createMovementAvatarFootLockState(),
-  );
-  const playerLowerBodyStabilityRef = useRef<MovementAvatarLowerBodyVisualState>(
-    createMovementAvatarLowerBodyVisualState(),
-  );
-  const instructorLowerBodyStabilityRef = useRef<MovementAvatarLowerBodyVisualState>(
-    createMovementAvatarLowerBodyVisualState(),
-  );
-  const lastGoodQuatRef = useRef<Record<string, THREE.Quaternion>>({});
+  const runtimeRefs = useMovementAvatarRuntimeRefs(rootMotionFrame);
+  const {
+    baseBonePositionRef,
+    baseHipsPositionRef,
+    exerciseTransitionStateRef,
+    instructorLowerBodyStabilityRef,
+    lastGoodQuatRef,
+    liveRootMotionHistoryRef,
+    plantedFootLockRef,
+    playerLegRaiseHoldRef,
+    playerLowerBodyStabilityRef,
+    resetRefs,
+    retargetAvatarRestRef,
+    retargetSourceModelRef,
+    rootMotionFrameRef,
+    setupStateRef,
+  } = runtimeRefs;
   const avatarTrackingProfile = getMovementAvatarTrackingProfile(vrmUrl);
   const avatarTrackingProfileName = getMovementAvatarTrackingProfileName(vrmUrl);
   const usesPlayerMotionPath = isPlayer && motionMode !== "recorded";
+
+  useSyncMovementAvatarRuntimeInputs({
+    refs: runtimeRefs,
+    retargetSourceModel,
+    rootMotionFrame,
+    shouldClearRetargetSourceModel: usesPlayerMotionPath && Boolean(trackingCalibration) && !retargetSourceModel,
+  });
 
   const urlToLoad = isPlayer ? `${vrmUrl}?player` : vrmUrl;
 
@@ -193,161 +137,120 @@ export default function VrmAvatar({
     if (loadedVrm) {
       VRMUtils.combineSkeletons(gltf.scene);
       vrmRef.current = loadedVrm;
-      baseHipsPositionRef.current = null;
-      baseBonePositionRef.current = {};
-      setupStateRef.current = createMovementAvatarSetupState();
-      retargetAvatarRestRef.current = buildMovementAvatarRetargetRestMap(loadedVrm);
-      retargetSourceModelRef.current = null;
-      liveRootMotionHistoryRef.current = [];
-      exerciseTransitionStateRef.current = createMovementAvatarExerciseTransitionState();
-      playerLegRaiseHoldRef.current = createMovementAvatarPlayerLegRaiseHoldState();
-      plantedFootLockRef.current = createMovementAvatarFootLockState();
-      playerLowerBodyStabilityRef.current = createMovementAvatarLowerBodyVisualState();
-      instructorLowerBodyStabilityRef.current = createMovementAvatarLowerBodyVisualState();
-      lastGoodQuatRef.current = {};
+      resetMovementAvatarRuntimeRefs({
+        refs: resetRefs,
+        vrm: loadedVrm,
+      });
     }
-  }, [gltf.scene, loadedVrm]);
-
-  useEffect(() => {
-    retargetSourceModelRef.current = retargetSourceModel;
-  }, [retargetSourceModel]);
-
-  useEffect(() => {
-    rootMotionFrameRef.current = rootMotionFrame;
-  }, [rootMotionFrame]);
-
-  useEffect(() => {
-    if (usesPlayerMotionPath && trackingCalibration && !retargetSourceModel) {
-      retargetSourceModelRef.current = null;
-    }
-  }, [retargetSourceModel, trackingCalibration, usesPlayerMotionPath]);
+  }, [gltf.scene, loadedVrm, resetRefs]);
 
   useFrame((state, delta) => {
-    if (!vrmRef.current || !group.current) return;
-    const avatarRoot = group.current;
-    vrmRef.current.update(delta);
+    const frameRuntimeContext = resolveMovementAvatarFrameRuntimeContext({
+      avatarRoot: group.current,
+      delta,
+      vrm: vrmRef.current,
+    });
+    if (!frameRuntimeContext) return;
+    const { avatarRoot, vrm } = frameRuntimeContext;
 
-      const avatarRole = usesPlayerMotionPath ? "player" : "instructor";
-      const lookupVrmBone = createVrmNormalizedBoneLookup(() => vrmRef.current);
-      const boneEaseOptions = resolveMovementAvatarBoneEaseOptions({
-        avatarRole,
-      });
+    const {
+      applyDemoFallbackPose,
+      avatarRole,
+      boneEaseOptions,
+      lookupBone: lookupVrmBone,
+    } = createMovementAvatarFrameAccessRuntime({
+      avatarRole: usesPlayerMotionPath ? "player" : "instructor",
+      getVrm: () => vrm,
+    });
 
-      const applyDemoFallbackPose = (factor = boneEaseOptions.demoFallbackSlerp) => {
-        applyMovementAvatarDemoFallbackRuntimePose({
-          lookupBone: lookupVrmBone,
-          slerp: factor,
-        });
-      };
-
-    const motionRef = landmarksRef.current;
-    const payload = motionRef && !Array.isArray(motionRef) ? motionRef : null;
-    const raw = getVrmMotionLandmarks(motionRef);
-    if (!raw || raw.length < 33) {
+    const solvedFrameRuntime = resolveMovementAvatarSolvedFrameRuntime({
+      isPlaying,
+      motionRef: landmarksRef.current,
+      showPausedPose,
+      usesPlayerMotionPath,
+    });
+    const readyFrameRuntime = resolveMovementAvatarReadyFrameRuntime({
+      hasHumanoid: Boolean(vrm.humanoid),
+      solvedFrameRuntime,
+    });
+    if (readyFrameRuntime.status === "fallback-demo-pose") {
       applyDemoFallbackPose();
       return;
     }
+    if (readyFrameRuntime.status !== "ready") return;
 
-    const rawPreparedInput = prepareVrmSolverInput({
-      rawLandmarks: raw,
-      payload,
-      isPlayer: usesPlayerMotionPath,
-      isPlaying: isPlaying || showPausedPose,
-    });
-    const displayPreparedInput = usesPlayerMotionPath
-      ? prepareVrmSolverInput({
-          rawLandmarks: raw,
-          payload,
-          isPlayer: true,
-          isPlaying: isPlaying || showPausedPose,
-          mirrorForDisplay: true,
-        })
-      : rawPreparedInput;
-    const mirrorPlayerDisplay = usesPlayerMotionPath;
     const {
+      displayPreparedInput,
       forceStandby,
       imageLandmarks: imageLms,
-      rigHands,
+      mirrorPlayerDisplay,
+      payload,
       rigBlendshapes,
-    } = displayPreparedInput;
-    const {
+      riggedPose,
+      rigHands,
       solverLandmarks: solverLms,
-      kalidokitSolverLandmarks: kdSolverLms,
-    } = rawPreparedInput;
-    const targetSolverLms = mirrorPlayerDisplay
-      ? createVrmImageSolverLandmarks(imageLms)
-      : solverLms;
+      targetSolverLandmarks: targetSolverLms,
+    } = readyFrameRuntime.solvedFrameRuntime;
 
-    let riggedPose: RiggedPose | null;
-    try {
-      riggedPose = solveVrmPose(kdSolverLms, imageLms);
-    } catch {
-      return;
-    }
-
-    if (riggedPose && vrmRef.current.humanoid) {
+    if (riggedPose) {
       const slerpFactor = usesPlayerMotionPath ? 0.5 : 0.3;
 
       const hipsNode = lookupVrmBone("hips");
 
-      if (hipsNode && !baseHipsPositionRef.current) {
-        baseHipsPositionRef.current = hipsNode.position.clone();
+      if (vrm.scene) {
+        vrm.scene.updateMatrixWorld(true);
       }
 
-      if (vrmRef.current.scene) {
-        vrmRef.current.scene.updateMatrixWorld(true);
-      }
-
-      const setupTarget = resolveMovementAvatarSetupRuntimeState({
+      const frameSetupRuntime = resolveMovementAvatarFrameSetupRuntime({
+        currentRetargetSourceModel: retargetSourceModelRef.current,
         faceLandmarks: payload?.faceLandmarks,
         hands: rigHands,
         isLivePlayer: usesPlayerMotionPath,
         manualCalibration: trackingCalibration,
         poseLandmarks: imageLms,
-        previousState: setupStateRef.current,
+        previousSetupState: setupStateRef.current,
+        providedRetargetSourceModel: retargetSourceModel,
         worldPoseLandmarks: payload?.worldLandmarks ?? undefined,
       });
-      setupStateRef.current = setupTarget.nextState;
-      const activeCalibration = setupTarget.activeCalibration;
-      const autoCalibrationKind = setupTarget.autoCalibrationKind;
-      retargetSourceModelRef.current = resolveMovementAvatarRetargetSourceRuntimeModel({
-        currentModel: retargetSourceModelRef.current,
-        poseLandmarks: imageLms,
-        providedModel: retargetSourceModel,
+      const {
+        activeCalibration,
+        autoCalibrationKind,
+      } = applyMovementAvatarFrameSetupRefsRuntime({
+        frameSetupRuntime,
+        retargetSourceModelRef,
+        setupStateRef,
       });
-      const motionFrameInput = resolveMovementAvatarMotionFrameInput({
+      const frameDecisionRuntime = resolveMovementAvatarFrameDecisionRuntime({
         motionFrame: motionFrameRef.current ?? null,
-        requiresMotionFrame: true,
+        previousExerciseTransitionState: exerciseTransitionStateRef.current,
       });
-      const avatarDecision = motionFrameInput.decision;
-      if (!avatarDecision) {
+      const frameDecisionRefsRuntime = applyMovementAvatarFrameDecisionRefsRuntime({
+        exerciseTransitionStateRef,
+        frameDecisionRuntime,
+      });
+      if (frameDecisionRefsRuntime.status === "fallback-demo-pose") {
         applyDemoFallbackPose(0.35);
         return;
       }
+      const {
+        avatarDecision,
+        exerciseTransition,
+        motionFrameInput,
+      } = frameDecisionRefsRuntime;
       const bodyConfidence = avatarDecision.bodyConfidence;
       const bodyOrientation = avatarDecision.bodyOrientation;
       const bodySupport = avatarDecision.bodySupport;
       const exercisePose = avatarDecision.exercisePose;
       const supportConstraint = avatarDecision.supportConstraint;
       const supportIntent = avatarDecision.supportIntent;
-      const exerciseTarget = resolveMovementAvatarExerciseTarget({
-        decision: avatarDecision,
-        previousState: exerciseTransitionStateRef.current,
-      });
-      exerciseTransitionStateRef.current = exerciseTarget.nextState;
-      const exerciseTransition = exerciseTarget.exerciseTransition;
       const retargetFrame = avatarDecision.retargetFrame;
       const lowerBodyIntent = avatarDecision.lowerBodyIntent;
       let visualRootDrop = 0;
       let footLockCorrection = 0;
       let footLockDrift = 0;
-      let supportContactAnchorCount = 0;
-      let supportContactCorrection = 0;
       let footOwner = "neutral";
       let lowerBodyOwner = "neutral";
       let retargetAppliedLowerBody = 0;
-      let retargetAppliedLegs = 0;
-      let retargetAppliedFeet = 0;
       let retargetAppliedUpperBody = 0;
       let plantedSquatIkDepth = 0;
       const rightArmDecision = avatarDecision.rightArm;
@@ -357,244 +260,114 @@ export default function VrmAvatar({
       const lowerBodyTrackingReady = avatarDecision.lowerBodyTrackingReady;
       const recordedLowerBodySourceReliable = avatarDecision.lowerBodySourceReliable;
       const torsoTrackingReady = avatarDecision.torsoTrackingReady;
-      let lowerBodyDrive = avatarDecision.lowerBodyDrive;
       const activeSpineDrive = avatarDecision.spineDrive;
       const rootOrientation = avatarDecision.rootOrientation;
-      const recordedSquatPresentationDepth = getRecordedSquatPresentationDepth(retargetFrame);
-      const lowerBodyRuntimeStateDecision = resolveMovementAvatarLowerBodyRuntimeState({
+      const lowerBodyFrameStateRuntime = resolveMovementAvatarLowerBodyFrameStateRuntime({
+        avatarDecision,
         avatarRole: usesPlayerMotionPath ? "player" : "instructor",
         instructorLowerBodyVisualState: instructorLowerBodyStabilityRef.current,
-        lowerBodyDrive,
         now: performance.now(),
         playerLegRaiseHoldState: playerLegRaiseHoldRef.current,
         playerLowerBodyVisualState: playerLowerBodyStabilityRef.current,
-        recordedSquatPresentationDepth,
       });
-      lowerBodyDrive = lowerBodyRuntimeStateDecision.lowerBodyDrive;
-      playerLegRaiseHoldRef.current = lowerBodyRuntimeStateDecision.nextPlayerLegRaiseHoldState;
-      playerLowerBodyStabilityRef.current = lowerBodyRuntimeStateDecision.nextPlayerLowerBodyVisualState;
-      instructorLowerBodyStabilityRef.current = lowerBodyRuntimeStateDecision.nextInstructorLowerBodyVisualState;
-      const legRaiseHoldDecision = lowerBodyRuntimeStateDecision.legRaiseHoldDecision;
-      const liveSquatDepth = lowerBodyDrive.liveSquatDepth;
-      const shouldApplyLowerBody = lowerBodyDrive.shouldApplyLowerBody;
-      const shouldApplySolverTorso = lowerBodyDrive.shouldApplySolverTorso;
+      const { legRaiseHoldDecision } = applyMovementAvatarLowerBodyFrameStateRefsRuntime({
+        instructorLowerBodyStabilityRef,
+        lowerBodyFrameStateRuntime,
+        playerLegRaiseHoldRef,
+        playerLowerBodyStabilityRef,
+      });
+      const lowerBodyDrive = lowerBodyFrameStateRuntime.lowerBodyDrive;
+      const liveSquatDepth = lowerBodyFrameStateRuntime.liveSquatDepth;
+      const shouldApplyLowerBody = lowerBodyFrameStateRuntime.shouldApplyLowerBody;
+      const shouldApplySolverTorso = lowerBodyFrameStateRuntime.shouldApplySolverTorso;
       const shouldUseRetargetedUpperBody = avatarDecision.shouldUseRetargetedUpperBody;
       const torsoOwner = avatarDecision.torsoOwner;
-      let playerSquatPresentationDepth = lowerBodyDrive.playerSquatPresentationDepth;
-      const balancedPlantedSquatDepth = getBalancedPlantedSquatDepth(retargetFrame);
+      const playerSquatPresentationDepth = lowerBodyFrameStateRuntime.playerSquatPresentationDepth;
+      const balancedPlantedSquatDepth = lowerBodyFrameStateRuntime.balancedPlantedSquatDepth;
       const recordedLowerBodySegmentMotion = avatarDecision.lowerBodySegmentMotion;
-      let instructorSquatPresentationDepth = recordedSquatPresentationDepth;
-      visualRootDrop = lowerBodyDrive.visualRootDrop;
-      const lowerBodyVisualDecision = lowerBodyRuntimeStateDecision.lowerBodyVisualDecision;
-      instructorSquatPresentationDepth = lowerBodyVisualDecision.instructorSquatPresentationDepth;
-      playerSquatPresentationDepth = lowerBodyVisualDecision.playerSquatPresentationDepth;
-      visualRootDrop = lowerBodyVisualDecision.visualRootDrop;
-      const lowerBodyTarget = resolveMovementAvatarLowerBodyTarget({
-        avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-        decision: avatarDecision,
-        lowerBodyVisualState: lowerBodyVisualDecision.state,
-      });
-      const shouldHoldPlayerSquatPose = lowerBodyTarget.shouldHoldPlayerSquatPose;
-      const playerRetargetLowerBodyMotion = lowerBodyTarget.playerSourceOwner.playerRetargetLowerBodyMotion;
-      const hipsPositionOptions = resolveMovementAvatarHipsPositionOptions({
-        avatarRole: usesPlayerMotionPath ? "player" : "instructor",
+      const instructorSquatPresentationDepth = lowerBodyFrameStateRuntime.instructorSquatPresentationDepth;
+      visualRootDrop = lowerBodyFrameStateRuntime.visualRootDrop;
+      const lowerBodyTarget = lowerBodyFrameStateRuntime.lowerBodyTarget;
+      const shouldHoldPlayerSquatPose = lowerBodyFrameStateRuntime.shouldHoldPlayerSquatPose;
+      const playerRetargetLowerBodyMotion = lowerBodyFrameStateRuntime.playerRetargetLowerBodyMotion;
+      const hipsFrameRuntime = resolveMovementAvatarHipsFrameRuntime({
+        avatarRole,
+        calibration: activeCalibration,
         lowerBodyDrive,
-        profile: avatarTrackingProfile,
-      });
-      const currentFloorY = Math.max(
-        imageLms[27]?.y ?? 0,
-        imageLms[28]?.y ?? 0,
-        imageLms[31]?.y ?? 0,
-        imageLms[32]?.y ?? 0,
-      );
-      const floorConfidence = Math.max(
-        imageLms[27]?.visibility ?? 0,
-        imageLms[28]?.visibility ?? 0,
-        imageLms[31]?.visibility ?? 0,
-        imageLms[32]?.visibility ?? 0,
-      );
-      const calibratedFloorCorrection = hipsPositionOptions.shouldUseCalibratedFloorCorrection
-        ? getCalibratedFloorCorrection({
-            calibration: activeCalibration,
-            currentFloorY,
-            floorConfidence,
-            profile: avatarTrackingProfile,
-          })
-        : 0;
-      const hipsApplication = resolveMovementAvatarHipsApplication({
-        hipsPositionOptions,
         lowerBodyTrackingReady,
         playerSquatPresentationDepth,
+        poseLandmarks: imageLms,
+        profile: avatarTrackingProfile,
         shouldApplyLowerBody,
       });
+      const { calibratedFloorCorrection } = hipsFrameRuntime.floorRuntime;
+      const { hipsApplication, hipsPositionOptions } = hipsFrameRuntime;
 
       if (forceStandby) {
         applyDemoFallbackPose(0.35);
         return;
       }
 
-      const rootMotion = resolveMovementAvatarRootMotionRuntimeFrame({
+      const rootFrameRuntime = applyMovementAvatarRootFrameRuntime({
+        avatarBaseY: AVATAR_BASE_Y,
+        avatarRoot,
+        avatarRootVisualLerp: hipsPositionOptions.avatarRootVisualLerp,
         history: liveRootMotionHistoryRef.current,
         livePose: imageLms,
         liveWorldPose: mirrorPlayerDisplay && payload?.worldLandmarks
           ? displayPreparedInput.solverLandmarks
           : payload?.worldLandmarks ?? null,
-        recordedRootMotionFrame: rootMotionFrameRef.current,
-      });
-      const rootTarget = resolveMovementAvatarRootTarget({
-        avatarBaseY: AVATAR_BASE_Y,
-        avatarRootVisualLerp: hipsPositionOptions.avatarRootVisualLerp,
         positionOffset,
-        rootMotion,
+        recordedRootMotionFrame: rootMotionFrameRef.current,
         rootOrientation,
         visualRootDrop,
       });
-      const { stepResponse } = rootTarget;
-
-      const rootTransformRuntime = applyMovementAvatarRootTransformRuntime({
-        root: avatarRoot,
-        rootTarget,
+      const { stepResponse } = rootFrameRuntime;
+      applyMovementAvatarRootFrameRefsRuntime({
+        rootFrameRuntime,
+        trackingDebugRef,
       });
-      const rootApplication = rootTransformRuntime.application;
-      if (trackingDebugRef?.current && rootApplication) {
-        trackingDebugRef.current.avatarRoot = buildMovementAvatarRootDebug({
-          orientationOwner: rootOrientation.owner,
-          rootApplication,
-          rootTarget,
-        });
-      }
 
-      const armTargetComposition = resolveMovementAvatarArmTargetComposition({
+      const frameTargetRuntime = resolveMovementAvatarFrameTargetRuntime({
+        avatarRole,
         imageLandmarks: imageLms,
-        isPlayer: usesPlayerMotionPath,
         lowerBodyDrive,
         rigHands,
         solverLandmarks: solverLms,
         targetSolverLandmarks: targetSolverLms,
       });
+      const { armTargetComposition } = frameTargetRuntime;
+      const { armTargets } = armTargetComposition;
+      const { lowerBodyTargetComposition } = frameTargetRuntime;
       const {
-        armTargets,
-        leftElbowTarget,
-        leftFrontBodyArmBias,
-        leftWristTarget,
-        playerArmLandmarks: playerArmLms,
-        playerSafeArmZScale,
-        rightElbowTarget,
-        rightFrontBodyArmBias,
-        rightWristTarget,
-      } = armTargetComposition;
-      const lowerBodyTargetComposition = resolveMovementAvatarLowerBodyTargetSelectionComposition({
-        avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-        targetSolverLandmarks: targetSolverLms,
-      });
-      const {
-        leftAnkleTarget,
-        leftKneeTarget,
-        leftToeTarget,
-        rightAnkleTarget,
-        rightKneeTarget,
-        rightToeTarget,
+        aimTargets: lowerBodyAimTargets,
         selections: lowerBodyTargetSelections,
       } = lowerBodyTargetComposition;
 
-      const applyRetargetMappings = (mappings: typeof MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS) => {
-        const vrm = vrmRef.current;
-        const application = applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
-          avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-          canApply: Boolean(vrm),
-          currentRestMap: retargetAvatarRestRef.current,
-          hasWorldLandmarks: Boolean(payload?.worldLandmarks),
-          instructorSquatPresentationDepth,
-          lookupBone: lookupVrmBone,
-          lowerBodySegmentMotion: recordedLowerBodySegmentMotion,
-          mappings,
-          profile: avatarTrackingProfile,
-          refreshRestMap: () => buildMovementAvatarRetargetRestMap(vrm!),
-          retargetFrame,
-          shouldUseRetargetedUpperBody,
-          storeLastGood: (lastGoodBoneName, quaternion) => {
-            lastGoodQuatRef.current[lastGoodBoneName] = quaternion;
-          },
-        });
-        retargetAvatarRestRef.current = application.restMap;
-
-        return application;
-      };
-
-      const applyPlantedSquatIk = (depth: number) => {
-        const forward = new THREE.Vector3(0, 0, 1);
-        if (group.current) {
-          group.current.getWorldDirection(forward).normalize();
-        }
-
-        const vrm = vrmRef.current;
-        const application = applyMovementAvatarPlantedSquatIkRuntimeToVrmBones({
-          avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-          canApply: Boolean(vrm),
-          currentRestMap: retargetAvatarRestRef.current,
-          depth,
-          forward,
-          lookupBone: lookupVrmBone,
-          refreshRestMap: () => buildMovementAvatarRetargetRestMap(vrm!),
-        });
-        retargetAvatarRestRef.current = application.restMap;
-
-        return application.appliedDepth;
-      };
-
-      const applyPlantedFootLock = ({
-        footWorldSnapshot,
-      }: {
-        footWorldSnapshot: ReturnType<typeof resolveMovementAvatarFootWorldRuntimeSnapshot>;
-      }) => {
-        const avatarRoot = group.current;
-
-        const footLockRuntimeDecision = resolveMovementAvatarFootLockRuntimeDecision({
-          avatarRole,
-          currentLeft: footWorldSnapshot.left,
-          currentRight: footWorldSnapshot.right,
-          hasAvatarRoot: Boolean(avatarRoot),
-          lowerBodyDrive,
-          lowerBodyTrackingReady,
-          previousState: plantedFootLockRef.current,
-          retargetFrame,
-          shouldApplyLowerBody,
-          shouldHoldPlayerSquatPose,
-        });
-        const footLockDecision = footLockRuntimeDecision.footLockDecision;
-        plantedFootLockRef.current = footLockDecision.nextState;
-        footLockDrift = footLockDecision.drift;
-        footLockCorrection = footLockDecision.appliedCorrection;
-        applyMovementAvatarFootLockRuntimeRootCorrection({
-          avatarRoot,
-          footLockDecision,
-          options: footLockRuntimeDecision.options,
-        });
-      };
+      const retargetFrameRuntimeAdapters = createMovementAvatarRetargetFrameRuntimeAdapters({
+        avatarRole,
+        avatarRoot,
+        currentRestMap: retargetAvatarRestRef.current,
+        hasWorldLandmarks: Boolean(payload?.worldLandmarks),
+        instructorSquatPresentationDepth,
+        lastGood: lastGoodQuatRef.current,
+        lookupBone: lookupVrmBone,
+        lowerBodySegmentMotion: recordedLowerBodySegmentMotion,
+        profile: avatarTrackingProfile,
+        retargetFrame,
+        shouldUseRetargetedUpperBody,
+        vrm,
+      });
 
       const rp = riggedPose;
 
-      const spineApplyOptions = resolveMovementAvatarSpineApplyOptions({
-        avatarRole,
-        shouldApplySpine: activeSpineDrive.shouldApplySpine,
-      });
-
-      const upperBodyRuntimeApplication = applyMovementAvatarUpperBodyRuntimeToVrmBones({
+      const upperBodyFrameRuntime = applyMovementAvatarUpperBodyFrameRuntime({
         activeSpineDrive,
-        armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
-        armTargets: {
-          leftElbowTarget,
-          leftFrontBodyArmBias,
-          leftWristTarget,
-          playerArmLandmarks: playerArmLms,
-          playerSafeArmZScale,
-          rightElbowTarget,
-          rightFrontBodyArmBias,
-          rightWristTarget,
-        },
+        applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
+        armTargetComposition,
         avatarRole,
+        boneEaseOptions,
         fallbackZScale: payload?.worldLandmarks ? 1 : 0.1,
-        handNeutralSlerp: boneEaseOptions.handNeutralSlerp,
         lastGood: lastGoodQuatRef.current,
         leftArmDecision,
         lookupBone: lookupVrmBone,
@@ -606,346 +379,196 @@ export default function VrmAvatar({
           hips: rp.Hips?.rotation,
           spine: rp.Spine,
         },
-        spineApplyOptions,
         torsoTrackingReady,
       });
-      retargetAppliedUpperBody += upperBodyRuntimeApplication.recordedSpineRetargetCount;
-
-      if (shouldUseRetargetedUpperBody) {
-        const upperBodyRetargetCounts = applyRetargetMappings(
-          MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
-        );
-        retargetAppliedUpperBody += upperBodyRetargetCounts.applied;
-      }
-
-      if ((lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && shouldApplyLowerBody) {
-        const lowerBodyAimOptions = resolveMovementAvatarLegacyLowerBodyAimOptions({
-          avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-          profile: avatarTrackingProfile,
-        });
-        const lowerBodyAimTargets = {
-          leftAnkle: leftAnkleTarget,
-          leftKnee: leftKneeTarget,
-          leftToe: leftToeTarget,
-          rightAnkle: rightAnkleTarget,
-          rightKnee: rightKneeTarget,
-          rightToe: rightToeTarget,
-        };
-
-        const lowerBodyApplicationPlan = resolveMovementAvatarLowerBodyApplicationPlan({
-          lowerBodyDrive,
-          lowerBodyTarget,
-        });
-
-        const nonRetargetLowerBodyApplication = applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones({
-          applyPlantedSquatIk,
-          currentFeetOwner: footOwner,
-          isPlayer: usesPlayerMotionPath,
-          lookupBone: lookupVrmBone,
-          lowerBodyNeutralSlerp: boneEaseOptions.lowerBodyNeutralSlerp,
-          plan: lowerBodyApplicationPlan,
-          singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,
-          squatFlexionBendBoost: avatarTrackingProfile.squatLegBendBoost,
-          squatFlexionSlerp: boneEaseOptions.squatFlexionSlerp,
-        });
-        if (nonRetargetLowerBodyApplication.handled) {
-          lowerBodyOwner = nonRetargetLowerBodyApplication.lowerBodyOwner ?? lowerBodyOwner;
-          footOwner = nonRetargetLowerBodyApplication.feetOwner ?? footOwner;
-          if (nonRetargetLowerBodyApplication.plantedSquatIkDepth !== null) {
-            plantedSquatIkDepth = nonRetargetLowerBodyApplication.plantedSquatIkDepth;
-          }
-        } else if (lowerBodyApplicationPlan.mode === "retarget") {
-          vrmRef.current.scene.updateMatrixWorld(true);
-          const lowerBodyRetargetCounts = applyRetargetMappings(
-            MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
-          );
-          const retargetCountApplication = applyMovementAvatarLowerBodyRetargetSegmentCounts({
-            current: {
-              feet: retargetAppliedFeet,
-              legs: retargetAppliedLegs,
-              lowerBody: retargetAppliedLowerBody,
-            },
-            segmentCounts: lowerBodyRetargetCounts,
-          });
-          retargetAppliedLowerBody = retargetCountApplication.lowerBody;
-          retargetAppliedLegs = retargetCountApplication.legs;
-          retargetAppliedFeet = retargetCountApplication.feet;
-          if (retargetCountApplication.footOwnerOverride) {
-            footOwner = retargetCountApplication.footOwnerOverride;
-          }
-
-          const retargetDecisionApplication = resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput({
-            appliedFootSegments: retargetAppliedFeet,
-            appliedLegSegments: retargetAppliedLegs,
-            appliedLowerBodySegments: retargetAppliedLowerBody,
-            avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-            balancedPlantedSquatDepth,
-            instructorSquatPresentationDepth,
-            lowerBodyDrive,
-            lowerBodySegmentMotion: recordedLowerBodySegmentMotion,
-            lowerBodyTrackingReady,
-            playerRetargetLowerBodyMotion,
-            retargetFrame,
-            shouldApplyLowerBody,
-            shouldHoldPlayerSquatPose,
-            playerSquatPresentationDepth,
-            stageDecision: lowerBodyApplicationPlan.stageDecision,
-          });
-          lowerBodyOwner = retargetDecisionApplication.lowerBodyOwner;
-          const { retargetApplicationPlan } = retargetDecisionApplication;
-
-          applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones({
-            fallbackSlerp: slerpFactor,
-            getLastGoodQuaternion: (bone) => lastGoodQuatRef.current[bone] ?? null,
-            lookupBone: lookupVrmBone,
-            requests: resolveMovementAvatarLowerBodyRetargetAimRequests({
-              options: lowerBodyAimOptions,
-              retargetApplicationPlan,
-              targets: lowerBodyAimTargets,
-              targetSolverLandmarks: targetSolverLms,
-            }),
-            storeLastGoodQuaternion: (bone, quaternion) => {
-              lastGoodQuatRef.current[bone] = quaternion;
-            },
-            zScale: payload?.worldLandmarks ? 1 : 0.1,
-          });
-          footOwner = retargetDecisionApplication.feetOwner;
-
-          const retargetPostPlanApplication = applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones({
-            applyPlantedSquatIk,
-            contacts: retargetFrame.contacts,
-            currentFeetOwner: footOwner,
-            isPlayer: usesPlayerMotionPath,
-            lookupBone: lookupVrmBone,
-            plan: retargetApplicationPlan,
-            singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,
-            solvedLowerBodySlerp: boneEaseOptions.solvedLowerBodySlerp,
-            solvedLowerBodySources: {
-              LeftLowerLeg: rp.LeftLowerLeg,
-              LeftUpperLeg: rp.LeftUpperLeg,
-              RightLowerLeg: rp.RightLowerLeg,
-              RightUpperLeg: rp.RightUpperLeg,
-            },
-            squatFlexionBendBoost: avatarTrackingProfile.squatLegBendBoost,
-            squatFlexionSlerp: boneEaseOptions.squatFlexionSlerp,
-            storeLastGood: (bone, quaternion) => {
-              lastGoodQuatRef.current[bone] = quaternion;
-            },
-          });
-          plantedSquatIkDepth = retargetPostPlanApplication.plantedSquatIkDepth;
-          footOwner = retargetPostPlanApplication.feetOwner;
-        }
-      } else {
-        const inactiveLowerBodyApplication = applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones({
-          avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-          lookupBone: lookupVrmBone,
-          lowerBodyNeutralSlerp: boneEaseOptions.lowerBodyNeutralSlerp,
-          lowerBodySourceReliable: recordedLowerBodySourceReliable,
-        });
-        if (inactiveLowerBodyApplication.lowerBodyOwner) {
-          lowerBodyOwner = inactiveLowerBodyApplication.lowerBodyOwner;
-        }
-        if (inactiveLowerBodyApplication.feetOwner) {
-          footOwner = inactiveLowerBodyApplication.feetOwner;
-        }
-      }
-
-      const supportPresentationApplication = applyMovementAvatarSupportPresentationRuntimeToVrmBones({
-        lookupBone: lookupVrmBone,
-        supportPresentation: avatarDecision.supportPresentation,
+      retargetAppliedUpperBody = upperBodyFrameRuntime.retargetAppliedUpperBody;
+      const lowerBodyFrameCallbacks = createMovementAvatarLowerBodyFrameCallbacksRuntime({
+        lastGoodQuaternionRef: lastGoodQuatRef,
+        scene: vrm.scene,
       });
-      if (supportPresentationApplication.owner) {
-        lowerBodyOwner = supportPresentationApplication.owner;
-      }
-      const supportContactApplication = applyMovementAvatarSupportContactRuntimeLocks({
-        avatarRoot: group.current,
+
+      const lowerBodyFrameRuntime = applyMovementAvatarLowerBodyFrameRuntime({
+        applyPlantedSquatIk: retargetFrameRuntimeAdapters.applyPlantedSquatIk,
+        applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
+        avatarRole,
+        balancedPlantedSquatDepth,
+        boneEaseOptions,
+        currentFeetOwner: footOwner,
+        currentLowerBodyOwner: lowerBodyOwner,
+        fallbackSlerp: slerpFactor,
+        getLastGoodQuaternion: lowerBodyFrameCallbacks.getLastGoodQuaternion,
+        instructorSquatPresentationDepth,
+        lookupBone: lookupVrmBone,
+        lowerBodyAimOptions: resolveMovementAvatarLegacyLowerBodyAimOptions({
+          avatarRole,
+          profile: avatarTrackingProfile,
+        }),
+        lowerBodyAimTargets,
+        lowerBodyDrive,
+        lowerBodySegmentMotion: recordedLowerBodySegmentMotion,
+        lowerBodyTarget,
+        lowerBodyTrackingReady,
+        playerRetargetLowerBodyMotion,
+        playerSquatPresentationDepth,
+        recordedLowerBodySourceReliable,
+        retargetFrame,
+        shouldApplyLowerBody,
+        shouldHoldPlayerSquatPose,
+        solvedLowerBodySources: {
+          LeftLowerLeg: rp.LeftLowerLeg,
+          LeftUpperLeg: rp.LeftUpperLeg,
+          RightLowerLeg: rp.RightLowerLeg,
+          RightUpperLeg: rp.RightUpperLeg,
+        },
+        squatFlexionBendBoost: avatarTrackingProfile.squatLegBendBoost,
+        storeLastGoodQuaternion: lowerBodyFrameCallbacks.storeLastGoodQuaternion,
+        targetSolverLandmarks: targetSolverLms,
+        updateWorldMatrix: lowerBodyFrameCallbacks.updateWorldMatrix,
+        zScale: payload?.worldLandmarks ? 1 : 0.1,
+      });
+      lowerBodyOwner = lowerBodyFrameRuntime.lowerBodyOwner;
+      footOwner = lowerBodyFrameRuntime.footOwner;
+      plantedSquatIkDepth = lowerBodyFrameRuntime.plantedSquatIkDepth;
+      retargetAppliedLowerBody = lowerBodyFrameRuntime.retargetAppliedLowerBody;
+      retargetAvatarRestRef.current = retargetFrameRuntimeAdapters.getRestMap();
+
+      const supportFrameRuntime = applyMovementAvatarSupportFrameRuntime({
+        avatarRoot,
         contactLocks: avatarDecision.supportContactLocks,
+        currentLowerBodyOwner: lowerBodyOwner,
         floorY: -2.75 + calibratedFloorCorrection,
         lookupBone: lookupVrmBone,
-        scene: vrmRef.current?.scene,
+        scene: vrm.scene,
+        supportPresentation: avatarDecision.supportPresentation,
       });
-      if (supportContactApplication.applied) {
-        supportContactAnchorCount = supportContactApplication.appliedAnchors;
-        supportContactCorrection = supportContactApplication.supportContactCorrection;
-      }
+      lowerBodyOwner = supportFrameRuntime.nextLowerBodyOwner ?? lowerBodyOwner;
+      const supportContactTelemetry = supportFrameRuntime.supportContactTelemetry;
 
-      const headRuntimeApplication = applyMovementAvatarHeadRuntimeToVrmBones({
-        avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-        avatarRootYaw: group.current.rotation.y,
-        baseHeadPosition: baseBonePositionRef.current.head,
-        calibration: activeCalibration,
-        faceLandmarks: payload?.faceLandmarks,
-        lookupBone: lookupVrmBone,
-        neckSlerp: avatarTrackingProfile.neckSlerp,
-        poseLandmarks: imageLms,
-        profile: avatarTrackingProfile,
-        shouldApplyLowerBody,
-        shouldApplySpine: activeSpineDrive.shouldApplySpine,
-      });
-
-      if (headRuntimeApplication.applied) {
-        const { headApplication, headNode, headTarget } = headRuntimeApplication;
-        const {
-          appliedHead,
-          headOwner,
-        } = headTarget.headDecision;
-        const { headMotionIntent } = headTarget;
-        const { rawHead } = headTarget.rawHeadDecision;
-        if (headApplication.baseHeadPosition) {
-          baseBonePositionRef.current.head = headApplication.baseHeadPosition;
-        }
-
-        if (trackingDebugRef) {
-          const fallbackLabels = resolveMovementAvatarTrackingFallbackLabels({
-            activeSpineOwner: activeSpineDrive.owner,
-            armTargets,
-            autoCalibrationKind,
-            avatarRole: usesPlayerMotionPath ? "player" : "instructor",
-            bodyConfidence,
-            feetOwner: footOwner,
-            hasActiveCalibration: Boolean(activeCalibration),
-            hasManualCalibration: Boolean(trackingCalibration),
-            headMotionIntent,
-            headOwner,
-            leftArmTrackingReady,
-            leftFootSource: lowerBodyTargetSelections.leftToe.source,
-            leftKneeSource: lowerBodyTargetSelections.leftKnee.source,
-            lowerBodyIntent,
-            lowerBodyOwner,
-            lowerBodyTrackingReady,
-            rawHead,
-            rightArmTrackingReady,
-            rightFootSource: lowerBodyTargetSelections.rightToe.source,
-            rightKneeSource: lowerBodyTargetSelections.rightKnee.source,
-            shouldApplyLowerBody,
-            torsoOwner,
-          });
-
-          const retargetDebug = buildMovementAvatarRuntimeRetargetDebug({
-            appliedLowerBody: retargetAppliedLowerBody,
-            appliedUpperBody: retargetAppliedUpperBody,
-            footLock: {
-              correction: footLockCorrection,
-              drift: footLockDrift,
-              strength: plantedFootLockRef.current.strength,
-            },
-            liveSquatDepth,
-            plantedSquatIkDepth,
-            retargetFrame,
-            retargetSourceModel: retargetSourceModelRef.current,
-            totalLowerBody: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS.length,
-            totalUpperBody: MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS.length,
-            visualRootDrop,
-          });
-
-          const debugUpdatedAt = performance.now();
-          trackingDebugRef.current = buildMovementAvatarTrackingDebugState({
-            updatedAt: debugUpdatedAt,
-            rawHead,
-            appliedHead,
-            avatarHead: {
-              appliedLocalPitch: headNode.rotation.x,
-              boneYaw: headTarget.headDecision.headYaw,
-              bonePitch: headTarget.headBonePitch,
-              trackingPitch: headTarget.headDecision.headPitch,
-              trackingYaw: rawHead.yaw,
-            },
-            avatarLegRaise: {
-              appliedDepth: lowerBodyDrive.playerLegRaiseDepth,
-              expiresAt: playerLegRaiseHoldRef.current.expiresAt,
-              holdActive: legRaiseHoldDecision.wasHeld,
-              now: debugUpdatedAt,
-              rawLeftDepth: lowerBodyIntent.leftKneeRaise,
-              rawRightDepth: lowerBodyIntent.rightKneeRaise,
-              side: lowerBodyDrive.playerLegRaiseSide,
-            },
-            bodyConfidence,
-            exercisePose,
-            exerciseTransition,
-            supportConstraint,
-            supportIntent,
-            spineDrive: {
-              confidence: activeSpineDrive.confidence,
-              forwardLean: activeSpineDrive.forwardLean,
-              owner: activeSpineDrive.owner,
-              sideBend: activeSpineDrive.sideBend,
-              twist: activeSpineDrive.twist,
-            },
-            fallbackLabels,
-            fallbackContext: buildMovementAvatarTrackingFallbackContext({
+      const debugUpdatedAt = performance.now();
+      const headFrameRuntime = applyMovementAvatarHeadFrameRuntime({
+        debugUpdatedAt,
+        debugInput: trackingDebugRef
+          ? {
+              activeCalibrationQuality: activeCalibration?.quality,
+              activeSpineDrive,
+              armTargets,
+              autoCalibrationKind,
+              avatarRole,
+              bodyConfidence,
               exercisePose,
               exerciseTransition,
-              motionFrameInput: motionFrameInput.owner,
+              feetOwner: footOwner,
+              footLock: {
+                correction: footLockCorrection,
+                drift: footLockDrift,
+                state: plantedFootLockRef.current,
+              },
+              hasActiveCalibration: Boolean(activeCalibration),
+              hasManualCalibration: Boolean(trackingCalibration),
+              leftArmTrackingReady,
+              leftFootSource: lowerBodyTargetSelections.leftToe.source,
+              leftKneeSource: lowerBodyTargetSelections.leftKnee.source,
+              legRaise: {
+                holdDecision: legRaiseHoldDecision,
+                lowerBodyDrive,
+                lowerBodyIntent,
+                now: debugUpdatedAt,
+                playerLegRaiseHoldState: playerLegRaiseHoldRef.current,
+              },
+              lowerBodyIntent,
+              lowerBodyOwner,
+              lowerBodyTrackingReady,
+              motionFrameInputOwner: motionFrameInput.owner,
               orientation: bodyOrientation,
-              retarget: formatMovementAvatarRetargetDebugLabel(retargetDebug),
+              profileName: avatarTrackingProfileName,
+              retarget: {
+                appliedLowerBody: retargetAppliedLowerBody,
+                appliedUpperBody: retargetAppliedUpperBody,
+                liveSquatDepth,
+                plantedSquatIkDepth,
+                retargetFrame,
+                retargetSourceModel: retargetSourceModelRef.current,
+                visualRootDrop,
+              },
+              rightArmTrackingReady,
+              rightFootSource: lowerBodyTargetSelections.rightToe.source,
+              rightKneeSource: lowerBodyTargetSelections.rightKnee.source,
+              shouldApplyLowerBody,
               support: bodySupport,
               supportConstraint,
-              supportContact: {
-                anchorCount: supportContactAnchorCount,
-                correction: supportContactCorrection,
-                owner: avatarDecision.supportContactLocks.owner,
-              },
+              supportContact: supportContactTelemetry,
               supportIntent,
               supportPresentation: avatarDecision.supportPresentation,
-            }),
-            retargetDebug,
-            profileName: avatarTrackingProfileName,
-            calibrationQuality: activeCalibration?.quality,
-          });
-        }
-      }
+              torsoOwner,
+            }
+          : null,
+        headInput: {
+          avatarRole,
+          avatarRootYaw: avatarRoot.rotation.y,
+          baseHeadPosition: baseBonePositionRef.current.head,
+          calibration: activeCalibration,
+          faceLandmarks: payload?.faceLandmarks,
+          lookupBone: lookupVrmBone,
+          neckSlerp: avatarTrackingProfile.neckSlerp,
+          poseLandmarks: imageLms,
+          profile: avatarTrackingProfile,
+          shouldApplyLowerBody,
+          shouldApplySpine: activeSpineDrive.shouldApplySpine,
+        },
+      });
+      applyMovementAvatarHeadFrameRefsRuntime({
+        baseBonePositionRef,
+        headFrameRuntime,
+        trackingDebugRef,
+      });
 
       const leftFoot = lookupVrmBone("leftFoot");
       const rightFoot = lookupVrmBone("rightFoot");
-      const footWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
-        avatarRoot: group.current,
+      const footingRuntime = applyMovementAvatarFootingFrameRuntime({
+        avatarRole,
+        avatarRoot,
+        baseHipsPosition: baseHipsPositionRef.current,
+        floorY: -2.75 + calibratedFloorCorrection,
+        hipsApplication,
+        hipsNode,
+        hipsPositionOptions,
         leftFoot,
+        lowerBodyDrive,
+        lowerBodyTrackingReady,
+        previousFootLockState: plantedFootLockRef.current,
+        retargetFrame,
         rightFoot,
-        scene: vrmRef.current.scene,
-      });
-      if (hipsNode && baseHipsPositionRef.current) {
-        const baseHipsY = baseHipsPositionRef.current.y;
-
-        hipsNode.position.y = resolveMovementAvatarHipsRuntimePosition({
-          baseHipsY,
-          currentHipsY: hipsNode.position.y,
-          floorY: -2.75 + calibratedFloorCorrection,
-          hipsApplication,
-          hipsPositionOptions,
-          lowestFootY: footWorldSnapshot.lowestFootY,
-        }).nextHipsY;
-      }
-
-      applyPlantedFootLock({ footWorldSnapshot });
-      applyMovementAvatarRootStepRuntimeResponse({
-        leftFoot,
-        rightFoot,
-        scene: vrmRef.current?.scene,
+        scene: vrm.scene,
+        shouldApplyLowerBody,
+        shouldHoldPlayerSquatPose,
         stepResponse,
       });
-      if (trackingDebugRef?.current && vrmRef.current) {
-        trackingDebugRef.current = applyMovementAvatarPostFrameDebugTelemetry({
+      const footingFrameRefsRuntime = applyMovementAvatarFootingFrameRefsRuntime({
+        baseHipsPositionRef,
+        footingRuntime,
+        plantedFootLockRef,
+      });
+      footLockDrift = footingFrameRefsRuntime.footLockDrift;
+      footLockCorrection = footingFrameRefsRuntime.footLockCorrection;
+      if (trackingDebugRef) {
+        trackingDebugRef.current = applyMovementAvatarOptionalPostFrameDebugTelemetry({
           avatarName: name,
           avatarRole,
-          footLock: {
-            correction: footLockCorrection,
-            drift: footLockDrift,
-            strength: plantedFootLockRef.current.strength,
-          },
+          footLock: footingRuntime.footLockDebug,
           frameUpdatedAt: performance.now(),
           registryWindow: typeof window === "undefined"
             ? undefined
             : window as Window & MovementAvatarRetargetDebugRegistryWindow,
           retargetFrame,
           state: trackingDebugRef.current,
-          vrm: vrmRef.current,
+          vrm,
           zScale: payload?.worldLandmarks ? 1 : 0.18,
         });
       }
 
       applyMovementAvatarEndFrameRuntime({
         blendshapes: rigBlendshapes,
-        expressionManager: vrmRef.current?.expressionManager,
+        expressionManager: vrm.expressionManager,
         hands: rigHands,
         isPlayer: usesPlayerMotionPath,
         lookupBone: lookupVrmBone,
