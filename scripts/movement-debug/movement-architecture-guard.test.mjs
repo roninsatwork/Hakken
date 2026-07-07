@@ -27,8 +27,9 @@ const supportClaimVisualTargets = [
   { cases: ["strongest-right-leg-lift"], displayLowerLabel: "right-knee-raise", sourceLowerLabel: "left-knee-raise" },
   { cases: ["first-source-display-divergence"], displayLowerLabel: "left-knee-raise", sourceLowerLabel: "right-knee-raise" },
 ];
+const expectedGameVisualProofFrames = 49;
 
-const visualCaptures = Array.from({ length: 37 }, (_, index) => {
+const visualCaptures = Array.from({ length: expectedGameVisualProofFrames }, (_, index) => {
   const recordingId = index < 20 ? "recording-a" : "recording-b";
   const supportClaimTarget = supportClaimVisualTargets[index];
   const cases = supportClaimTarget?.cases ?? [`case-${index}`];
@@ -367,9 +368,9 @@ describe("movement architecture guard", () => {
       errors: [],
     }, cleanCaptureManifest)).toMatchObject({
       captureErrorCount: 0,
-      captureTargetCount: 37,
+      captureTargetCount: expectedGameVisualProofFrames,
       contextMismatchCount: 0,
-      decisionTargetCount: 37,
+      decisionTargetCount: expectedGameVisualProofFrames,
       missingDecisionKeys: [],
       staleDecisionKeys: [],
     });
@@ -393,7 +394,7 @@ describe("movement architecture guard", () => {
     }, cleanCaptureManifest);
 
     expect(staleReviewSummary).toMatchObject({
-      captureTargetCount: 37,
+      captureTargetCount: expectedGameVisualProofFrames,
       contextMismatchCount: 1,
       decisionTargetCount: 2,
       staleDecisionKeys: ["stale:0:baseline"],
@@ -406,8 +407,8 @@ describe("movement architecture guard", () => {
 
   it("summarizes Game visual capture consistency against reviewed analysis targets", () => {
     expect(summarizeGameVisualCaptureConsistency(cleanAnalysis, cleanCaptureManifest)).toMatchObject({
-      analysisTargetCount: 37,
-      captureTargetCount: 37,
+      analysisTargetCount: expectedGameVisualProofFrames,
+      captureTargetCount: expectedGameVisualProofFrames,
       contextMismatchCount: 0,
       missingCaptureKeys: [],
       staleCaptureKeys: [],
@@ -432,7 +433,7 @@ describe("movement architecture guard", () => {
       ],
       errors: [],
     })).toMatchObject({
-      analysisTargetCount: 37,
+      analysisTargetCount: expectedGameVisualProofFrames,
       captureTargetCount: 2,
       contextMismatchCount: 1,
       missingCaptureKeys: expect.arrayContaining([
@@ -447,7 +448,7 @@ describe("movement architecture guard", () => {
       scoreMessageDivergenceFrames: 0,
       scoreMessageParityFrames: 11383,
       sessionCount: 2,
-      visualProofFrames: 37,
+      visualProofFrames: expectedGameVisualProofFrames,
       wrapperDivergenceFrames: 0,
     });
   });

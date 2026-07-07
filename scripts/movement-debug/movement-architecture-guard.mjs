@@ -267,6 +267,7 @@ export const DEFAULT_PROOF_PATHS = {
   manifest: "tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json",
   semanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
 };
+export const DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT = 49;
 
 export const DEFAULT_SOURCE_PURITY_RULES = [
   {
@@ -605,8 +606,8 @@ export function buildMovementArchitectureGuardReport({
   semanticReview,
   sourcePurityResults = [],
 }) {
-  const expectedSemanticPasses = proofExpectations.semanticReadablePasses ?? 37;
-  const expectedVisualProofFrames = proofExpectations.visualProofFrames ?? 37;
+  const expectedSemanticPasses = proofExpectations.semanticReadablePasses ?? DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT;
+  const expectedVisualProofFrames = proofExpectations.visualProofFrames ?? DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT;
   const minimumParityFrames = proofExpectations.minimumScoreMessageParityFrames ?? 11000;
   const expectedUserFacingFamilies = proofExpectations.userFacingFamilies ?? ["upright", "squat-knee-lift"];
   const expectedInternalDemoOnlyFamilies = proofExpectations.internalDemoOnlyFamilies ?? [
