@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json";
@@ -54,6 +54,8 @@ Options:
                              Can be repeated for supplemental focused plans.
   --semantic-review <file>   Game visual semantic review decisions. Defaults to ${defaultSemanticReviewPath}
                              Can be repeated for supplemental focused reviews.
+  --candidate-review-out <file>
+                             Write a Markdown checklist for ranked broad evidence candidates.
   --strict                   Exit non-zero when broad upper-body support is not ready.
   --json                     Print machine-readable JSON.
   --help                     Show this help.
@@ -63,6 +65,7 @@ Options:
 export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   const args = {
     gameVisualPlanPaths: [defaultGameVisualPlanPath],
+    candidateReviewOutPath: null,
     json: false,
     manifestPath: defaultManifestPath,
     semanticReviewPaths: [defaultSemanticReviewPath],
@@ -90,6 +93,8 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
         sawExplicitSemanticReview = true;
       }
       args.semanticReviewPaths.push(argv[++index] || defaultSemanticReviewPath);
+    } else if (arg === "--candidate-review-out") {
+      args.candidateReviewOutPath = argv[++index] || null;
     } else if (arg === "--strict") {
       args.strict = true;
     } else if (arg === "--json") {
@@ -364,6 +369,53 @@ function formatCandidateSummary(candidates) {
     .join("; ");
 }
 
+function formatCandidateEvidence(candidate) {
+  return Object.entries(candidate.proofCaseEvidence)
+    .map(([proofCase, evidence]) => (
+      `${proofCase}: ${evidence.evidenceFrameCount} frame(s)` +
+      `${evidence.observedAmplitude === null ? "" : `, observed ${evidence.observedAmplitude}`}`
+    ))
+    .join("; ");
+}
+
+export function formatBroadCandidateReview(audit) {
+  const candidateRows = audit.productScopedBroadEvidenceCandidates
+    .slice(0, 3)
+    .map((candidate, index) => (
+      `| ${index + 1} | \`${candidate.recordingId}\` | ${candidate.totalEvidenceFrameCount} | ` +
+      `${candidate.missingProductScopedEvidenceCases.length > 0
+        ? candidate.missingProductScopedEvidenceCases.join(", ")
+        : "none"} | ${formatCandidateEvidence(candidate)} |`
+    ));
+
+  return [
+    "# Broad Upper-Body Standing Candidate Review",
+    "",
+    "This checklist is decision support only. Broad `upper-body-standing` remains internal/demo-only until recorded proof rows are no longer product-scoped and the readiness audit passes.",
+    "",
+    `Audit decision: ${audit.decision}`,
+    `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}`,
+    `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}`,
+    "",
+    "## Top Candidates",
+    "",
+    "| Rank | Recording | Evidence frames | Missing evidence cases | Evidence detail |",
+    "| ---: | --- | ---: | --- | --- |",
+    ...(candidateRows.length > 0 ? candidateRows : ["| n/a | none | 0 | n/a | n/a |"]),
+    "",
+    "## Reviewer Decision",
+    "",
+    "- [ ] Existing candidate is sufficient for a scoped broad upper-body manual review.",
+    "- [ ] Existing candidate only proves presentation plumbing; keep broad rows product-scoped.",
+    "- [ ] Capture a new explicit broad upper-body bundle before any support-claim change.",
+    "",
+    "## Capture Protocol",
+    "",
+    ...BROAD_UPPER_BODY_CAPTURE_PROTOCOL.map((item) => `- ${item}`),
+    "",
+  ].join("\n");
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -396,6 +448,13 @@ async function main() {
     )),
   ));
   const audit = auditUpperBodyStandingSupportReadiness({ gameVisualPlan, manifest, semanticReview });
+
+  if (args.candidateReviewOutPath) {
+    const candidateReviewPath = path.resolve(args.candidateReviewOutPath);
+    await mkdir(path.dirname(candidateReviewPath), { recursive: true });
+    await writeFile(candidateReviewPath, formatBroadCandidateReview(audit));
+    console.error(`Wrote ${candidateReviewPath}`);
+  }
 
   console.log(args.json ? JSON.stringify(audit, null, 2) : formatAudit(audit));
   if (args.strict && !audit.broadReady) {

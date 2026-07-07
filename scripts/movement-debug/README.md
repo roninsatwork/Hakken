@@ -68,6 +68,7 @@ npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit
 
 This is expected to report `blocked` for the broad `upper-body-standing` family until arm/reach/twist/shoulder proof and upper-body Game visual target/review cases exist. The narrow `standing-side-bend-head-direction` family is separately guarded by the same audit and the architecture guard while it remains user-facing. Use `--strict` only when intentionally trying to promote the broad family.
 Pass repeated `--game-visual-plan` and `--semantic-review` paths when auditing focused supplemental proof alongside the stable default review, for example the default 49-frame plan plus a broad upper-body arm/reach/twist review.
+Add `--candidate-review-out tmp/movement-replay-lab/current-upper-body-standing-broad-candidate-review.md` to write a Markdown checklist for the ranked broad evidence candidates and fallback capture protocol. That checklist is decision support only: broad `upper-body-standing` remains internal/demo-only until recorded proof rows are no longer product-scoped and the audit passes.
 
 Analyze recent stored sessions:
 

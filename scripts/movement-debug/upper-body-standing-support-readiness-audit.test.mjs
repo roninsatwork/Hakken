@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditUpperBodyStandingSupportReadiness,
+  formatBroadCandidateReview,
   mergeGameVisualPlans,
   mergeSemanticReviews,
   parseUpperBodyStandingSupportReadinessAuditArgs,
@@ -209,6 +210,13 @@ describe("upper body standing support readiness audit", () => {
         },
       },
     });
+
+    const review = formatBroadCandidateReview(audit);
+    expect(review).toContain("# Broad Upper-Body Standing Candidate Review");
+    expect(review).toContain("`recording-a`");
+    expect(review).toContain("standing-arm-raise: 12 frame(s), observed 2");
+    expect(review).toContain("Capture Protocol");
+    expect(review).toContain("Capture a new explicit broad upper-body bundle");
   });
 
   it("parses CLI options", () => {
@@ -223,10 +231,13 @@ describe("upper body standing support readiness audit", () => {
       "tmp/review.json",
       "--semantic-review",
       "tmp/broad-review.json",
+      "--candidate-review-out",
+      "tmp/candidate-review.md",
       "--strict",
       "--json",
     ])).toEqual({
       gameVisualPlanPaths: ["tmp/plan.json", "tmp/broad-plan.json"],
+      candidateReviewOutPath: "tmp/candidate-review.md",
       json: true,
       manifestPath: "tmp/manifest.json",
       semanticReviewPaths: ["tmp/review.json", "tmp/broad-review.json"],
