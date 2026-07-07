@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -653,6 +654,39 @@ export function applyBroadCaptureContractArgs(args, contract) {
   };
 }
 
+export function validateBroadCaptureContractAuditArtifacts(contract, {
+  fileExists = existsSync,
+  rootDir = process.cwd(),
+} = {}) {
+  const paths = contract?.paths ?? {};
+  const requiredArtifacts = [
+    {
+      key: "reviewedManifest",
+      nextAction: "run the reviewed-analysis command from the capture contract",
+    },
+    {
+      key: "gameVisualPlan",
+      nextAction: "run the focused-game-visual-plan command from the capture contract",
+    },
+    {
+      key: "semanticReviewDecisions",
+      nextAction: "fill the focused Game semantic review decisions after running focused-game-visual-review",
+    },
+  ];
+
+  return requiredArtifacts
+    .filter(({ key }) => {
+      const artifactPath = paths[key];
+      return typeof artifactPath !== "string" || artifactPath.length === 0 ||
+        !fileExists(path.resolve(rootDir, artifactPath));
+    })
+    .map(({ key, nextAction }) => ({
+      key,
+      nextAction,
+      path: paths[key] ?? null,
+    }));
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -675,6 +709,13 @@ async function main() {
   let args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
   if (args.captureContractPath) {
     const captureContract = JSON.parse(await readFile(path.resolve(args.captureContractPath), "utf8"));
+    const missingContractArtifacts = validateBroadCaptureContractAuditArtifacts(captureContract);
+    if (missingContractArtifacts.length > 0) {
+      const missingText = missingContractArtifacts
+        .map((artifact) => `${artifact.key}${artifact.path ? ` (${artifact.path})` : ""}: ${artifact.nextAction}`)
+        .join("; ");
+      throw new Error(`Broad capture contract is not ready for final audit: ${missingText}`);
+    }
     args = applyBroadCaptureContractArgs(args, captureContract);
   }
   const manifest = JSON.parse(await readFile(path.resolve(args.manifestPath), "utf8"));

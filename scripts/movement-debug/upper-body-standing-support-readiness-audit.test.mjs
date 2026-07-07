@@ -9,6 +9,7 @@ import {
   mergeGameVisualPlans,
   mergeSemanticReviews,
   parseUpperBodyStandingSupportReadinessAuditArgs,
+  validateBroadCaptureContractAuditArtifacts,
 } from "./upper-body-standing-support-readiness-audit.mjs";
 
 function row(recordingId, proofCase, status = "passed", overrides = {}) {
@@ -337,6 +338,58 @@ describe("upper body standing support readiness audit", () => {
         gameVisualPlan: "tmp/focused-plan.json",
       },
     })).toThrow("Broad capture contract is missing path(s): reviewedManifest, semanticReviewDecisions");
+  });
+
+  it("validates generated broad capture contract artifacts before final audit", () => {
+    const contract = {
+      paths: {
+        gameVisualPlan: "tmp/focused-plan.json",
+        reviewedManifest: "tmp/reviewed-manifest.json",
+        semanticReviewDecisions: "tmp/focused-review.json",
+      },
+    };
+    const existingPaths = new Set([
+      "/repo/tmp/focused-plan.json",
+      "/repo/tmp/focused-review.json",
+      "/repo/tmp/reviewed-manifest.json",
+    ]);
+
+    expect(validateBroadCaptureContractAuditArtifacts(contract, {
+      fileExists: (filePath) => existingPaths.has(filePath),
+      rootDir: "/repo",
+    })).toEqual([]);
+
+    expect(validateBroadCaptureContractAuditArtifacts(contract, {
+      fileExists: (filePath) => filePath !== "/repo/tmp/reviewed-manifest.json",
+      rootDir: "/repo",
+    })).toEqual([
+      {
+        key: "reviewedManifest",
+        nextAction: "run the reviewed-analysis command from the capture contract",
+        path: "tmp/reviewed-manifest.json",
+      },
+    ]);
+
+    expect(validateBroadCaptureContractAuditArtifacts({ paths: {} }, {
+      fileExists: () => true,
+      rootDir: "/repo",
+    })).toEqual([
+      {
+        key: "reviewedManifest",
+        nextAction: "run the reviewed-analysis command from the capture contract",
+        path: null,
+      },
+      {
+        key: "gameVisualPlan",
+        nextAction: "run the focused-game-visual-plan command from the capture contract",
+        path: null,
+      },
+      {
+        key: "semanticReviewDecisions",
+        nextAction: "fill the focused Game semantic review decisions after running focused-game-visual-review",
+        path: null,
+      },
+    ]);
   });
 
   it("merges default and supplemental Game visual proof artifacts", () => {
