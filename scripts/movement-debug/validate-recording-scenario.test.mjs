@@ -1,3 +1,7 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,6 +13,7 @@ import {
   parseValidateRecordingScenarioArgs,
   proofManifestValidationSummary,
   proofManifestValidationSummaryText,
+  resolveRecordingPlanForValidation,
   selectRecordingValidationScenario,
   validationDisplayCommand,
 } from "./validate-recording-scenario.mjs";
@@ -78,6 +83,7 @@ describe("validate recording scenario", () => {
       out: "tmp/out.json",
       quiet: true,
       recordingPlanPath: "tmp/plan.json",
+      recordingPlanPathExplicit: true,
       scenario: "movement-proof-front-leg-isolation",
       strict: false,
       strictManifest: true,
@@ -95,6 +101,76 @@ describe("validate recording scenario", () => {
       quiet: true,
       scenario: "",
     });
+  });
+
+  it("auto-discovers a support recording plan when the scenario is not in the default plan", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "movement-validate-plan-"));
+    const defaultPlanPath = path.join(tempDir, "default.json");
+    const supportPlanPath = path.join(tempDir, "support.json");
+
+    try {
+      await writeFile(defaultPlanPath, `${JSON.stringify({ captureScenarios: [] })}\n`);
+      await writeFile(supportPlanPath, `${JSON.stringify({
+        captureScenarios: [
+          {
+            freshRecordingLabel: "movement-proof-seated-forward-fold",
+            id: "seated-forward-fold",
+            proofCases: ["seated-forward-fold"],
+          },
+        ],
+      })}\n`);
+
+      const result = await resolveRecordingPlanForValidation(
+        {
+          all: false,
+          recordingPlanPath: defaultPlanPath,
+          recordingPlanPathExplicit: false,
+          scenario: "movement-proof-seated-forward-fold",
+        },
+        {
+          supportRecordingPlanPaths: [supportPlanPath],
+        },
+      );
+
+      expect(result.recordingPlanPath).toBe(supportPlanPath);
+      expect(result.preselectedScenario.id).toBe("seated-forward-fold");
+    } finally {
+      await rm(tempDir, { force: true, recursive: true });
+    }
+  });
+
+  it("requires an explicit recording plan when auto-discovery is ambiguous", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "movement-validate-plan-"));
+    const firstPlanPath = path.join(tempDir, "first.json");
+    const secondPlanPath = path.join(tempDir, "second.json");
+    const duplicatePlan = {
+      captureScenarios: [
+        {
+          freshRecordingLabel: "movement-proof-root-travel",
+          id: "root-travel",
+          proofCases: ["root-travel"],
+        },
+      ],
+    };
+
+    try {
+      await writeFile(firstPlanPath, `${JSON.stringify(duplicatePlan)}\n`);
+      await writeFile(secondPlanPath, `${JSON.stringify(duplicatePlan)}\n`);
+
+      await expect(resolveRecordingPlanForValidation(
+        {
+          all: false,
+          recordingPlanPath: firstPlanPath,
+          recordingPlanPathExplicit: false,
+          scenario: "movement-proof-root-travel",
+        },
+        {
+          supportRecordingPlanPaths: [secondPlanPath],
+        },
+      )).rejects.toThrow("matched multiple recording plans");
+    } finally {
+      await rm(tempDir, { force: true, recursive: true });
+    }
   });
 
   it("selects scenarios by label, id, title, or proof case", () => {

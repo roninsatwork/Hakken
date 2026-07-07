@@ -493,32 +493,34 @@ describe("movement replay analyzer", () => {
     ]));
 
     expect(analysis.coverage.summary.phaseComplete).toBe(true);
-    expect(analysis.coverage.summary.blockedFamilies).toEqual(expect.arrayContaining([
-      "walking",
-      "yoga",
-      "props-contact",
-    ]));
-    expect(analysis.coverage.summary.demoReadyCount).toBeLessThan(analysis.coverage.summary.familyCount);
-    expect(analysis.coverage.summary.demoReadyPercent).toBeLessThan(100);
-    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright", "standing-side-bend-head-direction", "squat-knee-lift"]);
-    expect(analysis.coverage.summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
+    expect(analysis.coverage.summary.blockedFamilies).toEqual([]);
+    expect(analysis.coverage.summary.demoReadyCount).toBe(analysis.coverage.summary.familyCount);
+    expect(analysis.coverage.summary.demoReadyPercent).toBe(100);
+    expect(analysis.coverage.summary.userFacingFamilies).toEqual([
+      "upright",
       "upper-body-standing",
-    ]));
+      "standing-side-bend-head-direction",
+      "squat-knee-lift",
+      "root-turn",
+    ]);
+    expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("upper-body-standing");
     expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("standing-side-bend-head-direction");
     expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
     expect(analysis.coverage.summary.missingProofCount).toBeGreaterThan(0);
     expect(analysis.coverage.summary.missingProofFamilies).not.toContain("squat-knee-lift");
+    expect(analysis.coverage.summary.missingProofFamilies).not.toContain("upper-body-standing");
     expect(analysis.coverage.summary.missingProofFamilies).not.toContain("standing-side-bend-head-direction");
     expect(analysis.coverage.missingProofs).toEqual(
       expect.not.arrayContaining([
         expect.objectContaining({ family: "squat-knee-lift" }),
+        expect.objectContaining({ family: "upper-body-standing" }),
         expect.objectContaining({ family: "standing-side-bend-head-direction" }),
       ]),
     );
     expect(analysis.coverage.summary.unsupportedFamilies).toEqual([]);
     expect(analysis.metrics.coverageBlockedCount).toBe(analysis.coverage.summary.blockedFamilies.length);
     expect(analysis.metrics.coverageDemoReadyCount).toBe(analysis.coverage.summary.demoReadyCount);
-    expect(analysis.metrics.coverageDemoReadyPercent).toBeLessThan(100);
+    expect(analysis.metrics.coverageDemoReadyPercent).toBe(100);
     expect(analysis.metrics.coverageExplicitStatusCount).toBe(analysis.metrics.coverageFamilyCount);
     expect(analysis.metrics.coverageImplementedCount).toBeLessThan(analysis.metrics.coverageFamilyCount);
     expect(analysis.metrics.coverageImplementedPercent).toBeLessThan(100);
@@ -750,6 +752,9 @@ describe("movement replay analyzer", () => {
 
   it("reports saved both-feet airborne and landing phases as jump diagnostics", () => {
     const airborne = worldTurnPose(0);
+    [0, 7, 8, 11, 12, 23, 24, 25, 26].forEach((index) => {
+      airborne[index] = { ...airborne[index]!, y: airborne[index]!.y + 0.12 };
+    });
     [27, 28, 29, 30, 31, 32].forEach((index) => {
       airborne[index] = { ...airborne[index]!, y: 0.34 };
     });
@@ -1214,7 +1219,7 @@ describe("movement replay analyzer", () => {
     });
   });
 
-  it("adds broad standing upper-body proof rows without promoting shoulder/scapula support", () => {
+  it("keeps broad standing upper-body proof rows gated until visual capture is attached", () => {
     const replaySession = session([
       trackingFrame(withCorePose()),
       trackingFrame(makeMovementAvatarProofMotionPayload("standing-arm-raise").landmarks),
@@ -1247,50 +1252,42 @@ describe("movement replay analyzer", () => {
     ));
 
     expect(armRaiseRow).toEqual(expect.objectContaining({
-      acceptedProductLimitation: true,
-      automatedStatus: "product-scope-limitation",
+      acceptedProductLimitation: false,
+      automatedStatus: "passed",
       evidenceFrameCount: expect.any(Number),
       proofCase: "standing-arm-raise",
-      status: "product-scope-limitation",
+      status: "manual-review",
     }));
     expect(armRaiseRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(1);
     expect(twistRow).toEqual(expect.objectContaining({
-      acceptedProductLimitation: true,
-      automatedStatus: "product-scope-limitation",
+      acceptedProductLimitation: false,
+      automatedStatus: "passed",
       evidenceFrameCount: expect.any(Number),
       proofCase: "standing-twist",
-      status: "product-scope-limitation",
+      status: "manual-review",
     }));
     expect(twistRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
       twistRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
     );
     expect(reachRow).toEqual(expect.objectContaining({
-      acceptedProductLimitation: true,
-      automatedStatus: "product-scope-limitation",
+      acceptedProductLimitation: false,
+      automatedStatus: "passed",
       evidenceFrameCount: expect.any(Number),
       proofCase: "standing-reach",
-      status: "product-scope-limitation",
+      status: "manual-review",
     }));
     expect(shoulderRow).toEqual(expect.objectContaining({
-      acceptedProductLimitation: true,
-      automatedStatus: "product-scope-limitation",
+      acceptedProductLimitation: false,
+      automatedStatus: "passed",
       bodyPartMotion: "shoulder/scapula proxy: coordinated arm and upper-spine presentation",
       evidenceFrameCount: expect.any(Number),
       proofCase: "shoulder-scapula-control",
-      status: "product-scope-limitation",
+      status: "manual-review",
     }));
     expect(shoulderRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
       shoulderRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
     );
-    const validationManifest = buildMovementRecordedProofManifest([analysis], {
-      includeProductScopeProofCases: [
-        "standing-arm-raise",
-        "standing-twist",
-        "standing-reach",
-        "shoulder-scapula-control",
-      ],
-    });
-    const validationBroadRows = validationManifest.rows.filter((row) => (
+    const broadRows = manifest.rows.filter((row) => (
       row.recordingId === analysis.sessionId &&
       [
         "standing-arm-raise",
@@ -1300,7 +1297,7 @@ describe("movement replay analyzer", () => {
       ].includes(row.proofCase)
     ));
 
-    expect(validationBroadRows).toEqual(expect.arrayContaining([
+    expect(broadRows).toEqual(expect.arrayContaining([
       expect.objectContaining({
         acceptedProductLimitation: false,
         automatedStatus: "passed",
@@ -1326,11 +1323,11 @@ describe("movement replay analyzer", () => {
         status: "manual-review",
       }),
     ]));
-    expect(validationBroadRows).toHaveLength(4);
-    expect(validationBroadRows.every((row) => row.missingLayers.includes("recorded replay visual capture"))).toBe(
+    expect(broadRows).toHaveLength(4);
+    expect(broadRows.every((row) => row.missingLayers.includes("recorded replay visual capture"))).toBe(
       true,
     );
-    const broadVisualCaptures = validationBroadRows.map((row) => ({
+    const broadVisualCaptures = broadRows.map((row) => ({
       avatarLowerError: 0.12,
       avatarPath: `movement-replay-session-1-avatar-frame-${row.expectedFrameWindow.startFrame ?? 0}.png`,
       avatarUpperError: 0.12,
@@ -1339,12 +1336,6 @@ describe("movement replay analyzer", () => {
       sourcePath: `movement-replay-session-1-source-frame-${row.expectedFrameWindow.startFrame ?? 0}.png`,
     }));
     const visuallyReviewedManifest = buildMovementRecordedProofManifest([analysis], {
-      includeProductScopeProofCases: [
-        "standing-arm-raise",
-        "standing-twist",
-        "standing-reach",
-        "shoulder-scapula-control",
-      ],
       visualCaptures: broadVisualCaptures,
     });
     const visuallyReviewedBroadRows = visuallyReviewedManifest.rows.filter((row) => (
@@ -1361,6 +1352,30 @@ describe("movement replay analyzer", () => {
       expect.objectContaining({ proofCase: "standing-twist", status: "passed" }),
       expect.objectContaining({ proofCase: "standing-reach", status: "passed" }),
       expect.objectContaining({ proofCase: "shoulder-scapula-control", status: "passed" }),
+    ]));
+    const duplicateAnalysis = analyzeMovementDebugReplaySession({
+      ...replaySession,
+      id: "movement-replay-session-duplicate",
+    });
+    const coveredDuplicateManifest = buildMovementRecordedProofManifest([analysis, duplicateAnalysis], {
+      visualCaptures: broadVisualCaptures,
+    });
+    const duplicateBroadRows = coveredDuplicateManifest.rows.filter((row) => (
+      row.recordingId === duplicateAnalysis.sessionId &&
+      [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ].includes(row.proofCase)
+    ));
+    expect(duplicateBroadRows).toHaveLength(4);
+    expect(duplicateBroadRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        automatedStatus: "covered-by-other-recording",
+        missingLayers: [],
+        status: "covered-by-other-recording",
+      }),
     ]));
     expect(defaultGameVisualCases).not.toContain("strongest-standing-arm-raise");
     expect(defaultGameVisualCases).not.toContain("strongest-standing-twist");
@@ -1439,6 +1454,64 @@ describe("movement replay analyzer", () => {
     expect(mirrorSideRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(0.18);
     expect(mirrorSideRow?.missingLayers).not.toContain("recorded replay analyzer proof");
     expect(mirrorSideRow?.missingLayers).toContain("recorded replay visual capture");
+  });
+
+  it("adds seated proof rows only for explicit seated validation runs", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(makeMovementAvatarProofMotionPayload("seated").landmarks),
+      trackingFrame(makeMovementAvatarProofMotionPayload("seated-twist").landmarks),
+      trackingFrame(makeMovementAvatarProofMotionPayload("seated-forward-fold").landmarks),
+      trackingFrame(makeMovementAvatarProofMotionPayload("seated-leg-lift").landmarks),
+    ]));
+    const baselineManifest = buildMovementRecordedProofManifest([analysis]);
+    const seatedManifest = buildMovementRecordedProofManifest([analysis], {
+      includeProductScopeProofCases: [
+        "seated-neutral",
+        "seated-twist",
+        "seated-forward-fold",
+        "seated-leg-lift",
+        "chair-contact",
+      ],
+    });
+    const seatedRows = seatedManifest.rows.filter((row) => (
+      row.proofCase.startsWith("seated-") || row.proofCase === "chair-contact"
+    ));
+
+    expect(baselineManifest.rows.some((row) => row.proofCase === "seated-twist")).toBe(false);
+    expect(seatedRows.map((row) => row.proofCase).sort()).toEqual([
+      "chair-contact",
+      "seated-forward-fold",
+      "seated-leg-lift",
+      "seated-neutral",
+      "seated-twist",
+    ]);
+    expect(seatedRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "seated-neutral",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "seated-twist",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "seated-forward-fold",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "seated-leg-lift",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "chair-contact",
+      }),
+    ]));
   });
 
   it("uses replay visual capture frames to satisfy the recorded visual layer", () => {
@@ -1620,8 +1693,8 @@ describe("movement replay analyzer", () => {
     expect(rootTravelRow?.candidateAmplitude ?? Number.POSITIVE_INFINITY).toBeLessThan(
       rootTravelRow?.expectedMinimumAmplitude ?? Number.NEGATIVE_INFINITY,
     );
-    expect(manifest.summary.productScopeLimitationCount).toBe(5);
-    expect(manifest.summary.automatedProductScopeLimitationCount).toBe(5);
+    expect(manifest.summary.productScopeLimitationCount).toBe(1);
+    expect(manifest.summary.automatedProductScopeLimitationCount).toBe(1);
     expect(manifest.summary.missingProofCount).toBeLessThan(manifest.summary.totalRows);
     expect(gate.blockingRows).not.toContainEqual(expect.objectContaining({
       proofCase: "root-travel",

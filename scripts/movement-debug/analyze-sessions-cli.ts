@@ -31,6 +31,7 @@ type CliArgs = {
   createExport: boolean;
   exportPath: string | null;
   file: string | null;
+  includeSeatedTargets: boolean;
   includeStandingUpperBodyTargets: boolean;
   includeProductScopeProofCases: MovementRecordedProofCase[];
   limit: string;
@@ -58,6 +59,7 @@ function parseArgs(argv: string[]): CliArgs {
     createExport: false,
     exportPath: null,
     file: null,
+    includeSeatedTargets: false,
     includeStandingUpperBodyTargets: false,
     includeProductScopeProofCases: [],
     limit: "10",
@@ -111,6 +113,8 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--include-standing-upper-body-targets") {
       args.includeStandingUpperBodyTargets = true;
+    } else if (arg === "--include-seated-targets") {
+      args.includeSeatedTargets = true;
     } else if (arg === "--include-broad-upper-body-product-scope-proof") {
       args.includeProductScopeProofCases.push(
         "standing-arm-raise",
@@ -118,6 +122,16 @@ function parseArgs(argv: string[]): CliArgs {
         "standing-reach",
         "shoulder-scapula-control",
       );
+    } else if (arg === "--include-seated-product-scope-proof") {
+      args.includeProductScopeProofCases.push(
+        "seated-neutral",
+        "seated-twist",
+        "seated-forward-fold",
+        "seated-leg-lift",
+        "chair-contact",
+      );
+    } else if (arg === "--include-walking-product-scope-proof") {
+      args.includeProductScopeProofCases.push("root-travel");
     } else if (arg === "--include-product-scope-proof-case") {
       args.includeProductScopeProofCases.push(parseMovementRecordedProofCase(argv[index + 1] ?? ""));
       index += 1;
@@ -188,10 +202,22 @@ Options:
                      Include broad standing arm/reach/twist Game visual targets in
                      gamePath.visualProofFrames. This is opt-in so the default reviewed
                      Game visual gate remains stable.
+  --include-seated-targets
+                     Include seated chair/contact, twist, forward-fold, and leg-lift
+                     Game visual targets in gamePath.visualProofFrames. This is opt-in so
+                     the default reviewed Game visual gate remains stable.
   --include-broad-upper-body-product-scope-proof
                      Validation-only mode: let broad upper-body product-scope proof rows
                      resolve from analyzer/visual proof instead of normalizing them to
                      product-scope-limitation. Does not change coverage registry truth.
+  --include-seated-product-scope-proof
+                     Validation-only mode: add seated proof rows for neutral seated,
+                     seated twist, seated forward fold, seated leg lift, and chair/contact.
+                     Does not change coverage registry truth.
+  --include-walking-product-scope-proof
+                     Validation-only mode: let walking/root-travel proof rows resolve from
+                     analyzer/visual proof instead of normalizing them to product-scope-limitation.
+                     Does not change coverage registry truth.
   --include-product-scope-proof-case <case>
                      Validation-only mode for one product-scoped proof case. Can repeat.
   --strict           Exit non-zero when any error-level replay failure is found.
@@ -217,6 +243,11 @@ const MOVEMENT_RECORDED_PROOF_CASES = new Set<MovementRecordedProofCase>([
   "lower-body-out-of-frame",
   "root-turn",
   "root-travel",
+  "seated-neutral",
+  "seated-twist",
+  "seated-forward-fold",
+  "seated-leg-lift",
+  "chair-contact",
   "mirror-side-ownership",
   "scoring-message-events",
 ]);
@@ -903,6 +934,7 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
     : parseMovementDebugReplaySessions(rows);
   const analyses = analyzeMovementDebugReplaySessions(sessions, {
     gameVisualProofOptions: {
+      includeSeatedTargets: args.includeSeatedTargets,
       includeStandingUpperBodyTargets: args.includeStandingUpperBodyTargets,
     },
   });

@@ -38,11 +38,13 @@ function rootMotionFrame(): MovementRootMotionFrame {
     feet: {
       left: {
         contact: true,
+        confidence: 1,
         stepPhase: "planted",
         worldPosition: null,
       },
       right: {
         contact: true,
+        confidence: 1,
         stepPhase: "planted",
         worldPosition: null,
       },

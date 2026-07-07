@@ -221,6 +221,9 @@ describe("movement root motion", () => {
 
   it("labels both-feet airborne and landing phases as jump diagnostics", () => {
     const airborne = standingWorldPose();
+    [0, 7, 8, 11, 12, 23, 24, 25, 26].forEach((index) => {
+      airborne[index] = { ...airborne[index]!, y: airborne[index]!.y + 0.12 };
+    });
     [27, 28, 29, 30, 31, 32].forEach((index) => {
       airborne[index] = { ...airborne[index]!, y: 0.34 };
     });
@@ -249,6 +252,46 @@ describe("movement root motion", () => {
       shouldApply: true,
     });
     expect(landingResponse.heightOffset).toBeLessThan(0);
+  });
+
+  it("does not treat raised feet without root lift as jump flight", () => {
+    const raisedFeet = standingWorldPose();
+    [27, 28, 29, 30, 31, 32].forEach((index) => {
+      raisedFeet[index] = { ...raisedFeet[index]!, y: 0.34 };
+    });
+    const analysis = buildMovementRootMotionAnalysis([
+      frame(standingWorldPose()),
+      frame(raisedFeet),
+    ]);
+
+    expect(analysis.frames[1]?.feet.left.contact).toBe(false);
+    expect(analysis.frames[1]?.feet.right.contact).toBe(false);
+    expect(analysis.frames[1]?.intent.key).toBe("root-source-limited");
+    expect(analysis.frames[1]?.intent.summary).toContain("root did not lift enough");
+    expect(resolveMovementRootMotionJumpResponse(analysis.frames[1]!.intent)).toMatchObject({
+      owner: "jump-response-none",
+      shouldApply: false,
+    });
+  });
+
+  it("does not treat weak or hidden feet as jump flight", () => {
+    const weakFeet = standingWorldPose();
+    [27, 28, 29, 30, 31, 32].forEach((index) => {
+      weakFeet[index] = { ...weakFeet[index]!, y: 0.34, visibility: 0.1 };
+    });
+    const analysis = buildMovementRootMotionAnalysis([
+      frame(standingWorldPose()),
+      frame(weakFeet),
+    ]);
+
+    expect(analysis.frames[1]?.feet.left.contact).toBe(false);
+    expect(analysis.frames[1]?.feet.right.contact).toBe(false);
+    expect(analysis.frames[1]?.intent.key).toBe("root-source-limited");
+    expect(analysis.frames[1]?.intent.summary).toContain("Foot contact is not reliable enough");
+    expect(resolveMovementRootMotionJumpResponse(analysis.frames[1]!.intent)).toMatchObject({
+      owner: "jump-response-none",
+      shouldApply: false,
+    });
   });
 
   it("classifies image-only saved points as source-limited for physical path", () => {

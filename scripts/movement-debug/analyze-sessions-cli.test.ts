@@ -20,6 +20,7 @@ describe("movement replay analyzer CLI decision parsing", () => {
 
   it("validates product-scope proof-case names for explicit validation runs", () => {
     expect(parseMovementRecordedProofCase("standing-arm-raise")).toBe("standing-arm-raise");
+    expect(parseMovementRecordedProofCase("seated-forward-fold")).toBe("seated-forward-fold");
     expect(() => parseMovementRecordedProofCase("unknown-proof")).toThrow("Unknown product-scope proof case");
   });
 

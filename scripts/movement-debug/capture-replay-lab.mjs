@@ -20,6 +20,8 @@ Options:
   --out <dir>            Output directory. Defaults to ${defaultOutDir}
   --storage-state <file> Playwright storage state to reuse for auth
   --session <id-title-tail> Click the matching session before capture
+  --debug-session-json <file>
+                         Serve one exported Replay Lab session fixture in local/dev capture mode
   --frames <list|auto>   Comma-separated frame indexes, or auto. Defaults to auto
   --local-test-auth      Sign in through /local-test-auth before capture
   --role <role>          Local-test-auth role. Defaults to super-admin
@@ -33,6 +35,7 @@ function parseArgs(argv) {
   const args = {
     baseUrl: defaultBaseUrl,
     frames: "auto",
+    debugSessionJson: "",
     headed: false,
     localTestAuth: false,
     outDir: defaultOutDir,
@@ -58,6 +61,8 @@ function parseArgs(argv) {
       args.storageState = argv[++index] || "";
     } else if (arg === "--session") {
       args.session = argv[++index] || "";
+    } else if (arg === "--debug-session-json") {
+      args.debugSessionJson = argv[++index] || "";
     } else if (arg === "--frames") {
       args.frames = argv[++index] || "auto";
     } else if (arg === "--role") {
@@ -85,8 +90,12 @@ function sanitizeFilePart(value) {
   return String(value || "unknown").replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80);
 }
 
-function replayUrl(baseUrl) {
-  return `${baseUrl.replace(/\/$/, "")}/demos/movements/replay-lab`;
+function replayUrl(baseUrl, args) {
+  const url = new URL("/demos/movements/replay-lab", baseUrl.replace(/\/$/, ""));
+  if (args.debugSessionJson) {
+    url.searchParams.set("debugReplaySessionUrl", "/__movement-replay-session.json");
+  }
+  return url.toString();
 }
 
 function parseFrameSelection(value, frameCount) {
@@ -187,7 +196,14 @@ async function main() {
       await signInWithLocalTestAuth(page, args);
     }
 
-    await page.goto(replayUrl(args.baseUrl), { waitUntil: "domcontentloaded" });
+    if (args.debugSessionJson) {
+      await page.route("**/__movement-replay-session.json", (route) => route.fulfill({
+        contentType: "application/json",
+        path: path.resolve(args.debugSessionJson),
+      }));
+    }
+
+    await page.goto(replayUrl(args.baseUrl, args), { waitUntil: "domcontentloaded" });
 
     const currentUrl = new URL(page.url());
     if (currentUrl.pathname === "/login") {

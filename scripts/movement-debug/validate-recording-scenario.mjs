@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const defaultRecordingPlanPath = "tmp/movement-replay-lab/current-proof-recording-plan.reviewed.json";
 const defaultManifestPath = "tmp/movement-replay-lab/latest-recorded-proof-manifest.json";
+const supportRecordingPlanPaths = [
+  "tmp/movement-replay-lab/current-expansion-preview-sitting-recording-plan.json",
+  "tmp/movement-replay-lab/current-expansion-preview-walking-recording-plan.json",
+];
 
 function printHelp() {
   console.log(`Validate one fresh-recording scenario from a generated recording plan.
@@ -22,6 +27,7 @@ Options:
   --controlling-manifest <path>
                          Include unique counts from the reviewed controlling proof manifest.
   --recording-plan <p>   Generated recording-plan JSON. Defaults to ${defaultRecordingPlanPath}
+                         If omitted, known support recording plans are searched by scenario.
   --export <path>        Convex export ZIP/directory. Defaults to the scenario validation pointer.
   --out <path>           Override the scenario validation output path.
   --summary-out <path>   Write a JSON summary of validated scenario manifest counts.
@@ -44,6 +50,7 @@ export function parseValidateRecordingScenarioArgs(argv) {
     out: "",
     quiet: false,
     recordingPlanPath: defaultRecordingPlanPath,
+    recordingPlanPathExplicit: false,
     scenario: "",
     strict: false,
     strictManifest: false,
@@ -64,6 +71,7 @@ export function parseValidateRecordingScenarioArgs(argv) {
       args.scenario = argv[++index] || "";
     } else if (arg === "--recording-plan") {
       args.recordingPlanPath = argv[++index] || defaultRecordingPlanPath;
+      args.recordingPlanPathExplicit = true;
     } else if (arg === "--export") {
       args.exportPath = argv[++index] || "";
     } else if (arg === "--out") {
@@ -96,6 +104,10 @@ export function parseValidateRecordingScenarioArgs(argv) {
   return args;
 }
 
+function uniqueValues(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
 function normalizeScenarioId(value) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -126,6 +138,58 @@ export function selectRecordingValidationScenario(plan, scenarioId) {
     .filter(Boolean)
     .join(", ");
   throw new Error(`Scenario "${scenarioId}" was not found in the recording plan. Available scenarios: ${available || "none"}.`);
+}
+
+async function readRecordingPlanIfPresent(recordingPlanPath) {
+  if (!existsSync(recordingPlanPath)) return null;
+  return JSON.parse(await readFile(recordingPlanPath, "utf8"));
+}
+
+export async function resolveRecordingPlanForValidation(args, options = {}) {
+  if (args.recordingPlanPathExplicit || args.all) {
+    return {
+      plan: JSON.parse(await readFile(args.recordingPlanPath, "utf8")),
+      recordingPlanPath: args.recordingPlanPath,
+    };
+  }
+
+  const fallbackRecordingPlanPaths = options.supportRecordingPlanPaths ?? supportRecordingPlanPaths;
+  const candidates = uniqueValues([
+    args.recordingPlanPath,
+    ...fallbackRecordingPlanPaths,
+  ]);
+  const foundMatches = [];
+  const existingLabels = [];
+
+  for (const recordingPlanPath of candidates) {
+    const plan = await readRecordingPlanIfPresent(recordingPlanPath);
+    if (!plan) continue;
+    existingLabels.push(recordingPlanPath);
+    try {
+      const scenario = selectRecordingValidationScenario(plan, args.scenario);
+      foundMatches.push({ plan, recordingPlanPath, scenario });
+    } catch {
+      // Keep looking; missing scenarios are reported below with the searched plans.
+    }
+  }
+
+  if (foundMatches.length === 1) {
+    return {
+      plan: foundMatches[0].plan,
+      preselectedScenario: foundMatches[0].scenario,
+      recordingPlanPath: foundMatches[0].recordingPlanPath,
+    };
+  }
+
+  if (foundMatches.length > 1) {
+    throw new Error(`Scenario "${args.scenario}" matched multiple recording plans: ${foundMatches.map((match) => match.recordingPlanPath).join(", ")}. Pass --recording-plan to choose one.`);
+  }
+
+  if (existingLabels.length > 0) {
+    throw new Error(`Scenario "${args.scenario}" was not found in searched recording plans: ${existingLabels.join(", ")}. Pass --recording-plan if it lives elsewhere.`);
+  }
+
+  throw new Error(`No recording plan found. Expected ${args.recordingPlanPath}, or one of ${fallbackRecordingPlanPaths.join(", ")}. Generate the relevant support audit first, or pass --recording-plan.`);
 }
 
 function replaceFlagValue(argv, flag, value) {
@@ -412,13 +476,18 @@ function runAnalyzer(scriptPath, analyzerArgs, { quiet }) {
 
 async function main() {
   const args = parseValidateRecordingScenarioArgs(process.argv.slice(2));
-  const plan = JSON.parse(await readFile(args.recordingPlanPath, "utf8"));
+  const {
+    plan,
+    preselectedScenario,
+    recordingPlanPath,
+  } = await resolveRecordingPlanForValidation(args);
+  args.recordingPlanPath = recordingPlanPath;
   const controllingManifest = args.controllingManifestPath
     ? JSON.parse(await readFile(args.controllingManifestPath, "utf8"))
     : null;
   const scenarios = args.all
     ? [...(plan.captureScenarios ?? [])]
-    : [selectRecordingValidationScenario(plan, args.scenario)];
+    : [preselectedScenario ?? selectRecordingValidationScenario(plan, args.scenario)];
   if (scenarios.length === 0) {
     if (args.all) {
       const aggregate = aggregateScenarioValidationSummaries([], {

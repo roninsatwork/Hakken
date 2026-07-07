@@ -6,7 +6,10 @@ import path from "node:path";
 
 const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json";
 const defaultGameVisualPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.json";
+const defaultSupplementalBroadGameVisualPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.broad-upper-body.json";
 const defaultSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json";
+const defaultSupplementalBroadSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.broad-upper-body.codex-semantic-review.json";
+const defaultBroadCaptureContractPath = "tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json";
 const defaultBroadCaptureLabel = "movement-proof-upper-body-standing-broad-explicit";
 const BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "sonae-broad-upper-body-capture-contract/v1";
 const BROAD_UPPER_BODY_GAME_PROOF_CASES = [
@@ -16,6 +19,7 @@ const BROAD_UPPER_BODY_GAME_PROOF_CASES = [
 ];
 const BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS = [
   "initial-analysis",
+  "replay-session-export",
   "replay-proof-set",
   "replay-review",
   "reviewed-analysis",
@@ -87,10 +91,14 @@ Usage:
 Options:
   --manifest <file>          Reviewed proof manifest. Defaults to ${defaultManifestPath}
   --game-visual-plan <file>  Game visual target plan. Defaults to ${defaultGameVisualPlanPath}
+                             and auto-adds ${defaultSupplementalBroadGameVisualPlanPath} when present.
                              Can be repeated for supplemental focused plans.
   --semantic-review <file>   Game visual semantic review decisions. Defaults to ${defaultSemanticReviewPath}
+                             and auto-adds ${defaultSupplementalBroadSemanticReviewPath} when present.
                              Can be repeated for supplemental focused reviews.
   --capture-contract <file>  Use a generated broad capture contract for strict final merged audit inputs.
+  --capture-contract-preflight <file>
+                             Report whether a broad capture contract is ready for final strict audit.
   --candidate-review-out <file>
                              Write a Markdown checklist for ranked broad evidence candidates.
   --capture-guide-out <file>
@@ -100,6 +108,8 @@ Options:
   --capture-label <label>    Suggested fresh recording label for --capture-guide-out.
                              Defaults to ${defaultBroadCaptureLabel}
   --recording-id <id>        Optional saved Movement recording id to write into --capture-guide-out commands.
+  --recording-id-from-top-candidate
+                             Bind the generated guide/contract to the top product-scoped broad evidence candidate.
   --strict                   Exit non-zero when broad upper-body support is not ready.
   --json                     Print machine-readable JSON.
   --help                     Show this help.
@@ -109,7 +119,9 @@ Options:
 export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   const args = {
     gameVisualPlanPaths: [defaultGameVisualPlanPath],
+    gameVisualPlanPathsAreDefault: true,
     captureContractPath: null,
+    captureContractPreflightPath: null,
     captureContractOutPath: null,
     captureGuideOutPath: null,
     captureLabel: defaultBroadCaptureLabel,
@@ -117,7 +129,9 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
     json: false,
     manifestPath: defaultManifestPath,
     recordingId: null,
+    recordingIdFromTopCandidate: false,
     semanticReviewPaths: [defaultSemanticReviewPath],
+    semanticReviewPathsAreDefault: true,
     strict: false,
   };
   let sawExplicitGameVisualPlan = false;
@@ -133,17 +147,27 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
     } else if (arg === "--game-visual-plan") {
       if (!sawExplicitGameVisualPlan) {
         args.gameVisualPlanPaths = [];
+        args.gameVisualPlanPathsAreDefault = false;
         sawExplicitGameVisualPlan = true;
       }
       args.gameVisualPlanPaths.push(argv[++index] || defaultGameVisualPlanPath);
     } else if (arg === "--semantic-review") {
       if (!sawExplicitSemanticReview) {
         args.semanticReviewPaths = [];
+        args.semanticReviewPathsAreDefault = false;
         sawExplicitSemanticReview = true;
       }
       args.semanticReviewPaths.push(argv[++index] || defaultSemanticReviewPath);
     } else if (arg === "--capture-contract") {
       args.captureContractPath = argv[++index] || null;
+    } else if (arg === "--capture-contract-preflight") {
+      const maybePath = argv[index + 1];
+      if (maybePath && !maybePath.startsWith("--")) {
+        args.captureContractPreflightPath = maybePath;
+        index += 1;
+      } else {
+        args.captureContractPreflightPath = defaultBroadCaptureContractPath;
+      }
     } else if (arg === "--candidate-review-out") {
       args.candidateReviewOutPath = argv[++index] || null;
     } else if (arg === "--capture-guide-out") {
@@ -154,6 +178,8 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
       args.captureLabel = argv[++index] || defaultBroadCaptureLabel;
     } else if (arg === "--recording-id") {
       args.recordingId = argv[++index] || null;
+    } else if (arg === "--recording-id-from-top-candidate") {
+      args.recordingIdFromTopCandidate = true;
     } else if (arg === "--strict") {
       args.strict = true;
     } else if (arg === "--json") {
@@ -164,6 +190,36 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   }
 
   return args;
+}
+
+export function resolveUpperBodyStandingSupportAuditArtifactPaths(args, {
+  fileExists = existsSync,
+  rootDir = process.cwd(),
+} = {}) {
+  const appendIfDefaultAndPresent = ({
+    isDefault,
+    paths,
+    supplementalPath,
+  }) => {
+    if (!isDefault) return paths;
+    const resolvedPath = path.resolve(rootDir, supplementalPath);
+    if (!fileExists(resolvedPath)) return paths;
+    return paths.includes(supplementalPath) ? paths : [...paths, supplementalPath];
+  };
+
+  return {
+    ...args,
+    gameVisualPlanPaths: appendIfDefaultAndPresent({
+      isDefault: args.gameVisualPlanPathsAreDefault,
+      paths: args.gameVisualPlanPaths,
+      supplementalPath: defaultSupplementalBroadGameVisualPlanPath,
+    }),
+    semanticReviewPaths: appendIfDefaultAndPresent({
+      isDefault: args.semanticReviewPathsAreDefault,
+      paths: args.semanticReviewPaths,
+      supplementalPath: defaultSupplementalBroadSemanticReviewPath,
+    }),
+  };
 }
 
 export function mergeGameVisualPlans(plans) {
@@ -224,6 +280,7 @@ function recordingsWithPassedProofCases(groups, proofCases) {
   );
 
   return Array.from(recordingIds)
+    .filter(isNonEmptyString)
     .filter((recordingId) => proofCases.every((proofCase) => (
       passedRowsForCase(groups, proofCase).some((row) => row.recordingId === recordingId)
     )))
@@ -268,6 +325,7 @@ function recordingsWithProductScopedBroadEvidence(groups, proofCases) {
   );
 
   return Array.from(recordingIds)
+    .filter(isNonEmptyString)
     .filter((recordingId) => proofCases.every((proofCase) => (
       productScopedEvidenceRowsForCase(groups, proofCase)
         .some((row) => row.recordingId === recordingId)
@@ -283,6 +341,7 @@ function productScopedBroadEvidenceCandidates(groups, proofCases) {
   );
 
   return Array.from(recordingIds)
+    .filter(isNonEmptyString)
     .map((recordingId) => {
       const proofCaseEvidence = Object.fromEntries(
         proofCases.map((proofCase) => {
@@ -325,6 +384,7 @@ function broadPassedProofCandidates(groups, proofCases) {
   );
 
   return Array.from(recordingIds)
+    .filter(isNonEmptyString)
     .map((recordingId) => {
       const passedProofCases = proofCases.filter((proofCase) => (
         passedRowsForCase(groups, proofCase).some((row) => row.recordingId === recordingId)
@@ -474,7 +534,7 @@ export function auditUpperBodyStandingSupportReadiness({
 }
 
 function formatList(values) {
-  return values.length > 0 ? values.join(", ") : "none";
+  return Array.isArray(values) && values.length > 0 ? values.join(", ") : "none";
 }
 
 function formatEvidenceSummary(summary) {
@@ -487,7 +547,7 @@ function formatEvidenceSummary(summary) {
 }
 
 function formatCandidateSummary(candidates) {
-  return candidates
+  return (Array.isArray(candidates) ? candidates : [])
     .slice(0, 3)
     .map((candidate) => (
       `${candidate.recordingId} ${candidate.totalEvidenceFrameCount} frame(s)` +
@@ -508,6 +568,13 @@ function formatPassedProofCandidateSummary(candidates) {
         : ""}`
     ))
     .join("; ");
+}
+
+function topProductScopedCandidateHandoffCommand(candidates) {
+  const topCandidate = Array.isArray(candidates) ? candidates[0] : null;
+  return isNonEmptyString(topCandidate?.recordingId)
+    ? `npx -p node@22.13.0 npm run movement:upper-body-standing-capture-handoff -- --recording-id ${shellArg(topCandidate.recordingId)}`
+    : null;
 }
 
 function formatCandidateEvidence(candidate) {
@@ -602,6 +669,7 @@ function buildBroadCaptureWorkflow({
   const paths = {
     analysis: `tmp/movement-replay-lab/${safeLabel}-analysis.json`,
     manifest: `tmp/movement-replay-lab/${safeLabel}-analysis.proof-manifest.json`,
+    replaySession: `tmp/movement-replay-lab/${safeLabel}-replay-session.json`,
     replayCapture: `tmp/movement-replay-lab/captures/${safeLabel}-replay-proof-set`,
     replayReview: `tmp/movement-replay-lab/${safeLabel}-replay-proof-review.md`,
     replayReviewDecisions: `tmp/movement-replay-lab/${safeLabel}-replay-proof-review-decisions.template.json`,
@@ -619,8 +687,12 @@ function buildBroadCaptureWorkflow({
       command: `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids ${recordingIdValue} --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --out ${paths.analysis} --manifest-out ${paths.manifest}`,
     },
     {
+      id: "replay-session-export",
+      command: `npx -p node@22.13.0 npm run movement:replay:export-session -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-id ${recordingIdValue} --out ${paths.replaySession}`,
+    },
+    {
       id: "replay-proof-set",
-      command: `npx -p node@22.13.0 npm run movement:replay:proof-set -- --analysis ${paths.analysis} --manifest ${paths.manifest} --out ${paths.replayCapture} --base-url http://localhost:3100 --local-test-auth --secret sonae-local-test-auth`,
+      command: `npx -p node@22.13.0 npm run movement:replay:proof-set -- --analysis ${paths.analysis} --manifest ${paths.manifest} --out ${paths.replayCapture} --debug-session-json ${paths.replaySession} --base-url http://localhost:3100 --local-test-auth --secret sonae-local-test-auth`,
     },
     {
       id: "replay-review",
@@ -628,7 +700,7 @@ function buildBroadCaptureWorkflow({
     },
     {
       id: "reviewed-analysis",
-      command: `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids ${recordingIdValue} --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --visual-captures ${paths.replayCapture} --out ${paths.reviewedAnalysis} --manifest-out ${paths.reviewedManifest}`,
+      command: `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids ${recordingIdValue} --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --visual-captures ${paths.replayCapture} --review-decisions ${paths.replayReviewDecisions} --out ${paths.reviewedAnalysis} --manifest-out ${paths.reviewedManifest}`,
     },
     {
       id: "focused-game-visual-plan",
@@ -658,11 +730,22 @@ function buildBroadCaptureWorkflow({
 }
 
 export function formatBroadCaptureGuide(audit, {
+  captureContractPath = "<capture-contract-file>",
   captureLabel = defaultBroadCaptureLabel,
   recordingId = null,
 } = {}) {
   const workflow = buildBroadCaptureWorkflow({ captureLabel, recordingId });
   const commandById = Object.fromEntries(workflow.commands.map((command) => [command.id, command.command]));
+  const usesDefaultCaptureContract = captureContractPath === defaultBroadCaptureContractPath;
+  const contractPreflightCommand = usesDefaultCaptureContract
+    ? "npx -p node@22.13.0 npm run movement:upper-body-standing-capture-preflight"
+    : `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract-preflight ${captureContractPath}`;
+  const contractReadyCommand = usesDefaultCaptureContract
+    ? "npx -p node@22.13.0 npm run movement:upper-body-standing-capture-ready"
+    : `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract-preflight ${captureContractPath} --strict`;
+  const contractFinalAuditCommand = usesDefaultCaptureContract
+    ? "npx -p node@22.13.0 npm run movement:upper-body-standing-capture-final-audit"
+    : `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract ${captureContractPath}`;
 
   return [
     "# Broad Upper-Body Standing Explicit Capture Guide",
@@ -692,6 +775,10 @@ export function formatBroadCaptureGuide(audit, {
     "",
     "```bash",
     commandById["initial-analysis"],
+    "```",
+    "",
+    "```bash",
+    commandById["replay-session-export"],
     "```",
     "",
     "```bash",
@@ -728,8 +815,20 @@ export function formatBroadCaptureGuide(audit, {
     "",
     "If you generated a JSON capture contract, the final merged audit can load those paths directly:",
     "",
+    "Run the contract preflight first. It reports staged workflow progress, the next command if the workflow is partly complete, and whether the strict final audit is ready:",
+    "",
     "```bash",
-    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file>",
+    contractPreflightCommand,
+    "```",
+    "",
+    "Use the strict ready gate when automation should fail until the contract is ready:",
+    "",
+    "```bash",
+    contractReadyCommand,
+    "```",
+    "",
+    "```bash",
+    contractFinalAuditCommand,
     "```",
     "",
   ].join("\n");
@@ -756,6 +855,8 @@ export function formatBroadCaptureContract(audit, {
     missingBroadReadableGameCases: audit.missingBroadReadableGameCases,
     nextWorkflowAction: broadCaptureNextWorkflowAction(recordingId),
     paths: workflow.paths,
+    productScopedBroadEvidenceCandidates: audit.productScopedBroadEvidenceCandidates.slice(0, 3),
+    productScopedBroadEvidenceRecordingIds: audit.productScopedBroadEvidenceRecordingIds,
     recordingId,
     recordingIdPlaceholder: recordingId ? null : "<new-recording-id>",
     requiredGameProofCases: BROAD_UPPER_BODY_GAME_PROOF_CASES,
@@ -843,6 +944,35 @@ export function validateBroadCaptureContractShape(contract) {
         issues.push(`${prefix}.passedProofCaseCount to match passedProofCases length`);
       }
     });
+  }
+  if (Array.isArray(contract?.productScopedBroadEvidenceCandidates)) {
+    contract.productScopedBroadEvidenceCandidates.forEach((candidate, index) => {
+      const prefix = `expected productScopedBroadEvidenceCandidates[${index}]`;
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+        issues.push(`${prefix} object`);
+        return;
+      }
+      if (!isNonEmptyString(candidate.recordingId)) {
+        issues.push(`${prefix}.recordingId non-empty string`);
+      }
+      if (!Number.isInteger(candidate.totalEvidenceFrameCount)) {
+        issues.push(`${prefix}.totalEvidenceFrameCount integer`);
+      }
+      if (!Array.isArray(candidate.missingProductScopedEvidenceCases)) {
+        issues.push(`${prefix}.missingProductScopedEvidenceCases array`);
+      } else if (!candidate.missingProductScopedEvidenceCases.every((proofCase) => requiredRecordedProofCases.includes(proofCase))) {
+        issues.push(`${prefix}.missingProductScopedEvidenceCases to contain only required recorded proof cases`);
+      }
+      if (!candidate.proofCaseEvidence || typeof candidate.proofCaseEvidence !== "object" || Array.isArray(candidate.proofCaseEvidence)) {
+        issues.push(`${prefix}.proofCaseEvidence object`);
+      }
+    });
+  }
+  if (
+    Array.isArray(contract?.productScopedBroadEvidenceRecordingIds) &&
+    !contract.productScopedBroadEvidenceRecordingIds.every(isNonEmptyString)
+  ) {
+    issues.push("expected productScopedBroadEvidenceRecordingIds to contain non-empty strings");
   }
   const topLevelCaseDomains = {
     missingBroadGamePlanCases: requiredGameProofCases,
@@ -955,8 +1085,12 @@ export function validateBroadCaptureContractShape(contract) {
         paths: [paths.analysis, paths.manifest],
       },
       {
+        id: "replay-session-export",
+        paths: [paths.replaySession],
+      },
+      {
         id: "replay-proof-set",
-        paths: [paths.analysis, paths.manifest, paths.replayCapture],
+        paths: [paths.analysis, paths.manifest, paths.replaySession, paths.replayCapture],
       },
       {
         id: "replay-review",
@@ -964,7 +1098,7 @@ export function validateBroadCaptureContractShape(contract) {
       },
       {
         id: "reviewed-analysis",
-        paths: [paths.replayCapture, paths.reviewedAnalysis, paths.reviewedManifest],
+        paths: [paths.replayCapture, paths.replayReviewDecisions, paths.reviewedAnalysis, paths.reviewedManifest],
       },
       {
         id: "focused-game-visual-plan",
@@ -1018,11 +1152,13 @@ export function applyBroadCaptureContractArgs(args, contract) {
       defaultGameVisualPlanPath,
       paths.gameVisualPlan,
     ],
+    gameVisualPlanPathsAreDefault: false,
     manifestPath: paths.reviewedManifest,
     semanticReviewPaths: [
       defaultSemanticReviewPath,
       paths.semanticReviewDecisions,
     ],
+    semanticReviewPathsAreDefault: false,
     strict: true,
   };
 }
@@ -1105,6 +1241,224 @@ export function validateBroadCaptureContractGameVisualPlan(contract, gameVisualP
     }));
 }
 
+export function summarizeBroadCaptureContractWorkflowProgress(contract, {
+  fileExists = existsSync,
+  rootDir = process.cwd(),
+} = {}) {
+  const commands = Array.isArray(contract?.commands) ? contract.commands : [];
+  const paths = contract?.paths ?? {};
+  const artifactInDir = (dirPath, fileName) => (
+    typeof dirPath === "string" && dirPath.length > 0 ? `${dirPath}/${fileName}` : null
+  );
+  const resolveExists = (artifactPath) => (
+    typeof artifactPath === "string" &&
+    artifactPath.length > 0 &&
+    fileExists(path.resolve(rootDir, artifactPath))
+  );
+  const stages = [
+    {
+      commandId: "initial-analysis",
+      label: "initial explicit broad analysis",
+      requiredArtifacts: [
+        { key: "analysis", path: paths.analysis },
+        { key: "manifest", path: paths.manifest },
+      ],
+    },
+    {
+      commandId: "replay-session-export",
+      label: "Replay Lab session fixture export",
+      requiredArtifacts: [
+        { key: "replaySession", path: paths.replaySession },
+      ],
+    },
+    {
+      commandId: "replay-proof-set",
+      label: "Replay proof-set capture",
+      requiredArtifacts: [
+        { key: "replaySession", path: paths.replaySession },
+        { key: "replayCapture", path: artifactInDir(paths.replayCapture, "movement-replay-proof-set-manifest.json") },
+      ],
+    },
+    {
+      commandId: "replay-review",
+      label: "Replay proof review",
+      requiredArtifacts: [
+        { key: "replayReview", path: paths.replayReview },
+        { key: "replayReviewDecisions", path: paths.replayReviewDecisions },
+      ],
+    },
+    {
+      commandId: "reviewed-analysis",
+      label: "reviewed explicit broad analysis",
+      requiredArtifacts: [
+        { key: "reviewedAnalysis", path: paths.reviewedAnalysis },
+        { key: "reviewedManifest", path: paths.reviewedManifest },
+      ],
+    },
+    {
+      commandId: "focused-game-visual-plan",
+      label: "focused broad Game visual plan",
+      requiredArtifacts: [
+        { key: "gameVisualPlan", path: paths.gameVisualPlan },
+      ],
+    },
+    {
+      commandId: "focused-game-visual-capture",
+      label: "focused broad Game visual capture",
+      requiredArtifacts: [
+        { key: "gameCapture", path: artifactInDir(paths.gameCapture, "game-visual-proof-captures-manifest.json") },
+      ],
+    },
+    {
+      commandId: "focused-game-visual-review",
+      label: "focused broad Game visual review",
+      requiredArtifacts: [
+        { key: "gameReview", path: paths.gameReview },
+        { key: "gameReviewDecisions", path: paths.gameReviewDecisions },
+      ],
+    },
+    {
+      commandId: "fill-focused-semantic-review",
+      label: "filled focused semantic review decisions",
+      requiredArtifacts: [
+        { key: "semanticReviewDecisions", path: paths.semanticReviewDecisions },
+      ],
+    },
+  ].map((stage) => {
+    const missingArtifacts = stage.requiredArtifacts.filter(({ path: artifactPath }) => !resolveExists(artifactPath));
+    return {
+      ...stage,
+      command: commandById(commands, stage.commandId),
+      complete: missingArtifacts.length === 0,
+      missingArtifacts,
+    };
+  });
+  const nextStage = contract?.recordingId
+    ? stages.find((stage) => !stage.complete) ?? null
+    : null;
+  const recordingBound = isNonEmptyString(contract?.recordingId);
+  const recordingIdHandoffCommand = "npx -p node@22.13.0 npm run movement:upper-body-standing-capture-handoff -- --recording-id <new-recording-id>";
+
+  return {
+    nextCommand: nextStage?.command || (recordingBound ? null : recordingIdHandoffCommand),
+    nextCommandId: nextStage?.commandId ?? (recordingBound ? null : "bind-recording-id"),
+    nextStageLabel: nextStage?.label ?? (recordingBound ? "strict final audit" : "capture or tag one explicit broad upper-body recording"),
+    recordingBound,
+    stages,
+  };
+}
+
+export async function preflightBroadCaptureContractForFinalAudit(contract, {
+  fileExists = existsSync,
+  rootDir = process.cwd(),
+  readJson = async (artifactPath) => JSON.parse(await readFile(path.resolve(rootDir, artifactPath), "utf8")),
+} = {}) {
+  const shapeIssues = validateBroadCaptureContractShape(contract);
+  const workflowProgress = summarizeBroadCaptureContractWorkflowProgress(contract, { fileExists, rootDir });
+  const report = {
+    artifactPreflightStatus: "not-checked",
+    broadPassingRecordingIds: Array.isArray(contract?.broadPassingRecordingIds)
+      ? contract.broadPassingRecordingIds
+      : [],
+    captureWorkflowState: contract?.captureWorkflowState ?? null,
+    gameVisualPlanIssues: [],
+    missingBroadGamePlanCases: Array.isArray(contract?.missingBroadGamePlanCases)
+      ? contract.missingBroadGamePlanCases
+      : [],
+    missingBroadManifestProofCases: Array.isArray(contract?.missingBroadManifestProofCases)
+      ? contract.missingBroadManifestProofCases
+      : [],
+    missingBroadPassedProofCases: Array.isArray(contract?.missingBroadPassedProofCases)
+      ? contract.missingBroadPassedProofCases
+      : [],
+    missingBroadReadableGameCases: Array.isArray(contract?.missingBroadReadableGameCases)
+      ? contract.missingBroadReadableGameCases
+      : [],
+    missingArtifacts: [],
+    nextWorkflowAction: contract?.nextWorkflowAction ?? null,
+    productScopedBroadEvidenceCandidates: Array.isArray(contract?.productScopedBroadEvidenceCandidates)
+      ? contract.productScopedBroadEvidenceCandidates
+      : [],
+    productScopedBroadEvidenceRecordingIds: Array.isArray(contract?.productScopedBroadEvidenceRecordingIds)
+      ? contract.productScopedBroadEvidenceRecordingIds
+      : [],
+    readyForFinalAudit: false,
+    recordingId: contract?.recordingId ?? null,
+    semanticReviewIssues: [],
+    shapeIssues,
+    supportClaimStatus: contract?.supportClaimStatus ?? null,
+    workflowProgress,
+  };
+  if (shapeIssues.length > 0) {
+    return report;
+  }
+  if (!workflowProgress.recordingBound) {
+    report.artifactPreflightStatus = "waiting-for-recording-id";
+    return report;
+  }
+
+  report.missingArtifacts = validateBroadCaptureContractAuditArtifacts(contract, { fileExists, rootDir });
+  if (report.missingArtifacts.length > 0) {
+    report.artifactPreflightStatus = "missing-artifacts";
+    return report;
+  }
+  report.artifactPreflightStatus = "ready";
+
+  const focusedGameVisualPlan = await readJson(contract.paths.gameVisualPlan);
+  report.gameVisualPlanIssues = validateBroadCaptureContractGameVisualPlan(
+    contract,
+    focusedGameVisualPlan,
+  );
+  if (report.gameVisualPlanIssues.length > 0) {
+    return report;
+  }
+
+  const focusedSemanticReview = await readJson(contract.paths.semanticReviewDecisions);
+  report.semanticReviewIssues = validateBroadCaptureContractSemanticReview(
+    contract,
+    focusedSemanticReview,
+  );
+  report.readyForFinalAudit = report.semanticReviewIssues.length === 0;
+
+  return report;
+}
+
+export function formatBroadCaptureContractPreflight(report) {
+  const missingArtifactText = report.missingArtifacts
+    .map((artifact) => `${artifact.key}${artifact.path ? ` (${artifact.path})` : ""}: ${artifact.nextAction}`);
+  const gamePlanIssueText = report.gameVisualPlanIssues
+    .map((issue) => `${issue.proofCase}: ${issue.nextAction}`);
+  const semanticReviewIssueText = report.semanticReviewIssues
+    .map((issue) => `${issue.proofCase} (${formatList(issue.observedDecisions)}): ${issue.nextAction}`);
+  const stageSummary = report.workflowProgress?.stages
+    ?.map((stage) => `${stage.commandId}:${stage.complete ? "complete" : "missing " + stage.missingArtifacts.map((artifact) => artifact.key).join(",")}`) ?? [];
+
+  return [
+    `Broad upper-body capture-contract preflight: ${report.readyForFinalAudit ? "ready" : "blocked"}`,
+    `Workflow state: ${report.captureWorkflowState ?? "unknown"}.`,
+    `Recording id: ${report.recordingId ?? "none"}.`,
+    `Support claim status: ${report.supportClaimStatus ?? "unknown"}.`,
+    `Broad passing recording ids: ${formatList(report.broadPassingRecordingIds)}.`,
+    `Product-scoped broad evidence recording ids: ${formatList(report.productScopedBroadEvidenceRecordingIds)}.`,
+    `Top product-scoped broad evidence candidates: ${formatCandidateSummary(report.productScopedBroadEvidenceCandidates) || "none"}.`,
+    `Top candidate handoff command: ${topProductScopedCandidateHandoffCommand(report.productScopedBroadEvidenceCandidates) ?? "none"}.`,
+    `Missing broad passed proof cases: ${formatList(report.missingBroadPassedProofCases)}.`,
+    `Missing broad Game target-plan cases: ${formatList(report.missingBroadGamePlanCases)}.`,
+    `Missing broad readable Game cases: ${formatList(report.missingBroadReadableGameCases)}.`,
+    `Next action: ${report.nextWorkflowAction ?? "unknown"}.`,
+    `Next workflow stage: ${report.workflowProgress?.nextStageLabel ?? "unknown"}.`,
+    `Next workflow command id: ${report.workflowProgress?.nextCommandId ?? "none"}.`,
+    `Next workflow command: ${report.workflowProgress?.nextCommand ?? "none"}.`,
+    `Shape issues: ${formatList(report.shapeIssues)}.`,
+    `Workflow stages: ${formatList(stageSummary)}.`,
+    `Final-audit artifact check: ${report.artifactPreflightStatus ?? "unknown"}.`,
+    `Missing artifacts: ${formatList(missingArtifactText)}.`,
+    `Focused Game plan issues: ${formatList(gamePlanIssueText)}.`,
+    `Focused semantic review issues: ${formatList(semanticReviewIssueText)}.`,
+    `Strict final audit: ${report.readyForFinalAudit ? "ready to run" : "not ready"}.`,
+  ].join("\n");
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -1127,6 +1481,15 @@ function formatAudit(audit) {
 
 async function main() {
   let args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
+  if (args.captureContractPreflightPath) {
+    const captureContract = JSON.parse(await readFile(path.resolve(args.captureContractPreflightPath), "utf8"));
+    const preflight = await preflightBroadCaptureContractForFinalAudit(captureContract);
+    console.log(args.json ? JSON.stringify(preflight, null, 2) : formatBroadCaptureContractPreflight(preflight));
+    if (args.strict && !preflight.readyForFinalAudit) {
+      process.exitCode = 1;
+    }
+    return;
+  }
   if (args.captureContractPath) {
     const captureContract = JSON.parse(await readFile(path.resolve(args.captureContractPath), "utf8"));
     const contractShapeIssues = validateBroadCaptureContractShape(captureContract);
@@ -1168,6 +1531,7 @@ async function main() {
     }
     args = applyBroadCaptureContractArgs(args, captureContract);
   }
+  args = resolveUpperBodyStandingSupportAuditArtifactPaths(args);
   const manifest = JSON.parse(await readFile(path.resolve(args.manifestPath), "utf8"));
   const gameVisualPlan = mergeGameVisualPlans(await Promise.all(
     args.gameVisualPlanPaths.map(async (planPath) => (
@@ -1180,6 +1544,17 @@ async function main() {
     )),
   ));
   const audit = auditUpperBodyStandingSupportReadiness({ gameVisualPlan, manifest, semanticReview });
+  if (args.recordingIdFromTopCandidate) {
+    const topCandidate = audit.productScopedBroadEvidenceCandidates[0];
+    if (!isNonEmptyString(topCandidate?.recordingId)) {
+      throw new Error("No product-scoped broad evidence candidate is available to bind as recording id.");
+    }
+    args = {
+      ...args,
+      recordingId: topCandidate.recordingId,
+    };
+    console.error(`Resolved --recording-id-from-top-candidate to ${topCandidate.recordingId}`);
+  }
 
   if (args.candidateReviewOutPath) {
     const candidateReviewPath = path.resolve(args.candidateReviewOutPath);
@@ -1192,6 +1567,7 @@ async function main() {
     const captureGuidePath = path.resolve(args.captureGuideOutPath);
     await mkdir(path.dirname(captureGuidePath), { recursive: true });
     await writeFile(captureGuidePath, formatBroadCaptureGuide(audit, {
+      captureContractPath: args.captureContractOutPath || "<capture-contract-file>",
       captureLabel: args.captureLabel,
       recordingId: args.recordingId,
     }));

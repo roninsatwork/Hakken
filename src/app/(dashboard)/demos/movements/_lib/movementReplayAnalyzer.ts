@@ -54,7 +54,7 @@ import type {
   MovementStartReadiness,
   MovementStartReadinessState,
 } from "./movementSourceFrame";
-import type { MovementHeadMotionIntent } from "./movementTrackingCalibration";
+import type { MovementHeadMotionIntent, TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementReplayFailureCode =
   | "avatar_head_spine_diverged"
@@ -138,6 +138,7 @@ export type MovementReplayGamePathFrame = {
   rootMotionStepResponseOwner: string;
   rootMotionStepResponseSide: string;
   rightKneeLift: number;
+  seatedForwardFoldCandidateScore: number | null;
   shouldDrivePlayerLegRaise: boolean;
   shouldDrivePlayerSquat: boolean;
   sourceQuality: number;
@@ -539,6 +540,42 @@ function unique(values: string[]) {
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
+}
+
+function landmarkMidpoint(a: TrackingLandmark, b: TrackingLandmark) {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  };
+}
+
+function seatedForwardFoldCandidateScore(poseLandmarks?: TrackingLandmark[]) {
+  const nose = poseLandmarks?.[0];
+  const leftShoulder = poseLandmarks?.[11];
+  const rightShoulder = poseLandmarks?.[12];
+  const leftHip = poseLandmarks?.[23];
+  const rightHip = poseLandmarks?.[24];
+  const leftWrist = poseLandmarks?.[15];
+  const rightWrist = poseLandmarks?.[16];
+  if (!nose || !leftShoulder || !rightShoulder || !leftHip || !rightHip || !leftWrist || !rightWrist) {
+    return null;
+  }
+
+  const shoulderCenter = landmarkMidpoint(leftShoulder, rightShoulder);
+  const hipCenter = landmarkMidpoint(leftHip, rightHip);
+  const wristCenter = landmarkMidpoint(leftWrist, rightWrist);
+  const shoulderToHipStack = hipCenter.y - shoulderCenter.y;
+  const headDrop = nose.y - shoulderCenter.y;
+  const wristReach = wristCenter.y - hipCenter.y;
+  if (wristReach < -0.08) return 0;
+
+  return Math.max(
+    0,
+    Math.min(
+      headDrop / 0.08,
+      (0.22 - shoulderToHipStack) / 0.06,
+    ),
+  );
 }
 
 function normalizeAngle(angle: number) {
@@ -1003,6 +1040,7 @@ function compressReplayFailures(failures: MovementReplayFailure[]) {
 
 function toGamePathFrames(
   decisions: Array<MovementReplayCurrentDecision | undefined>,
+  samples: MovementDebugReplayFrame[],
 ): MovementReplayGamePathFrame[] {
   return decisions.flatMap((decision, frameIndex) => {
     if (!decision) return [];
@@ -1037,6 +1075,7 @@ function toGamePathFrames(
       rootMotionStepResponseOwner: stepResponse.owner,
       rootMotionStepResponseSide: stepResponse.side ?? "none",
       rightKneeLift: decision.retarget.rightKneeLift ?? 0,
+      seatedForwardFoldCandidateScore: seatedForwardFoldCandidateScore(samples[frameIndex]?.tracking.pose),
       shouldDrivePlayerLegRaise: decision.lowerBodyDrive.shouldDrivePlayerLegRaise,
       shouldDrivePlayerSquat: decision.lowerBodyDrive.shouldDrivePlayerSquat,
       sourceQuality: decision.retarget.sourceQuality ?? 0,
@@ -1609,7 +1648,7 @@ export function analyzeMovementDebugReplaySession(
     failures: finalFailures,
     gamePath: {
       calibrationQuality: gamePathSimulation.calibration?.quality ?? 0,
-      frames: toGamePathFrames(currentDecisions),
+      frames: toGamePathFrames(currentDecisions, frames),
       gameplayEvents,
       parity: {
         divergenceFrameCount: replayGamePathDivergences.length,

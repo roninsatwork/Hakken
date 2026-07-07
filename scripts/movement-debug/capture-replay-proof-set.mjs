@@ -21,6 +21,8 @@ Options:
   --manifest <file>      Recorded proof manifest JSON from movement:replay:analyze.
   --base-url <url>       App URL. Defaults to ${defaultBaseUrl}
   --out <dir>            Output directory. Defaults to ${defaultOutDir}
+  --debug-session-json <file>
+                         Serve one exported Replay Lab session fixture while capturing.
   --max-sessions <n>     Limit selected proof sessions. Defaults to all selected sessions.
   --root-only            Capture the legacy root-turn/root-path proof set instead of manifest visual-proof rows.
   --dry-run              Print selected capture jobs without opening a browser.
@@ -38,6 +40,7 @@ function parseArgs(argv) {
   const args = {
     analysisPath: defaultAnalysisPath,
     baseUrl: defaultBaseUrl,
+    debugSessionJson: "",
     dryRun: false,
     headed: false,
     includeBaseline: true,
@@ -73,6 +76,8 @@ function parseArgs(argv) {
       args.baseUrl = argv[++index] || args.baseUrl;
     } else if (arg === "--out") {
       args.outDir = argv[++index] || args.outDir;
+    } else if (arg === "--debug-session-json") {
+      args.debugSessionJson = argv[++index] || "";
     } else if (arg === "--max-sessions") {
       const parsed = Number.parseInt(argv[++index] || "", 10);
       args.maxSessions = Number.isFinite(parsed) && parsed > 0 ? parsed : args.maxSessions;
@@ -155,7 +160,28 @@ function visualProofRowsForAnalysis(manifest, analysis) {
   ));
 }
 
-function proofFramesForManifestRows(rows, frameCount) {
+function gameVisualProofFramesForManifestRows(rows, analysis) {
+  const visualProofFrames = Array.isArray(analysis.gamePath?.visualProofFrames)
+    ? analysis.gamePath.visualProofFrames
+    : [];
+  const requestedCases = new Set(rows.map((row) => row.proofCase).filter(Boolean));
+  const caseAliases = new Map([
+    ["standing-arm-raise", "strongest-standing-arm-raise"],
+    ["standing-reach", "strongest-standing-reach"],
+    ["standing-twist", "strongest-standing-twist"],
+  ]);
+
+  return visualProofFrames.flatMap((frame) => {
+    const frameCases = Array.isArray(frame.cases) ? frame.cases : [];
+    const matches = Array.from(requestedCases).some((proofCase) => (
+      frameCases.includes(proofCase) ||
+      frameCases.includes(caseAliases.get(proofCase))
+    ));
+    return matches && Number.isFinite(frame.frameIndex) ? [frame.frameIndex] : [];
+  });
+}
+
+function proofFramesForManifestRows(rows, frameCount, analysis) {
   const frames = rows.flatMap((row) => {
     const start = row.expectedFrameWindow?.startFrame;
     const end = row.expectedFrameWindow?.endFrame;
@@ -164,7 +190,10 @@ function proofFramesForManifestRows(rows, frameCount) {
     return [start, middle, end];
   });
 
-  return uniqueSortedFrames(frames, frameCount);
+  return uniqueSortedFrames([
+    ...frames,
+    ...gameVisualProofFramesForManifestRows(rows, analysis),
+  ], frameCount);
 }
 
 function proofKindForManifestRows(rows) {
@@ -200,6 +229,7 @@ function runCapture({
   ];
 
   if (args.storageState) captureArgs.push("--storage-state", args.storageState);
+  if (args.debugSessionJson) captureArgs.push("--debug-session-json", args.debugSessionJson);
   if (args.localTestAuth) captureArgs.push("--local-test-auth");
   if (args.role) captureArgs.push("--role", args.role);
   if (args.secret) captureArgs.push("--secret", args.secret);
@@ -257,7 +287,7 @@ async function main() {
     const { analysis, rows } = selection;
     const frameCount = Number(analysis.summary?.frameCount || 0);
     const frames = rows.length > 0
-      ? proofFramesForManifestRows(rows, frameCount)
+      ? proofFramesForManifestRows(rows, frameCount, analysis)
       : proofFramesForAnalysis(analysis);
     const rootCodes = Array.from(new Set(
       analysis.failures

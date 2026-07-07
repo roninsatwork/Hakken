@@ -60,6 +60,8 @@ export function recordingGapTriageDispositionForRow(row) {
       if (ratio >= 0.5) return "stronger-amplitude-rerecord";
       return "full-rerecord";
     }
+    case "no-candidate-amplitude":
+      return "no-readable-motion-rerecord";
     default:
       return "recording-review";
   }
@@ -84,6 +86,14 @@ function captureScenarioForRow(row) {
         movement: "Take large deliberate side steps or forward/back steps across the camera view, pausing at each end.",
         setup: "Full body visible with enough floor space to move across frame.",
         title: "Root travel",
+      };
+    case "seated-forward-fold":
+      return {
+        acceptance: "Analyzer should observe seated forward-fold amplitude while chair contact remains stable.",
+        id: "seated-forward-fold",
+        movement: "Start seated neutral, fold forward from the hips with head and shoulders clearly moving toward the knees, hold briefly, then return to seated neutral and repeat 2-3 times.",
+        setup: "Camera sees the seated body, chair, head, shoulders, hips, knees, feet, and chair contact throughout.",
+        title: "Seated forward fold",
       };
     case "root-turn":
       return {
@@ -130,6 +140,8 @@ export function recordingGapActionForRow(row) {
   switch (row.proofBlockerCode) {
     case "candidate-below-threshold":
       return "Capture a recording with larger, clearer movement amplitude for this proof case.";
+    case "no-candidate-amplitude":
+      return "Capture a recording with clear visible movement for this proof case; the current export had no measurable candidate amplitude.";
     case "mirror-side-not-isolated":
       return "Capture isolated left-side and right-side movement windows so mirror ownership can be proved without mixed-leg evidence.";
     case "far-camera-source-quality":
@@ -178,6 +190,12 @@ export function recordingGapCaptureProtocolForRow(row) {
         acceptance: `Analyzer should observe root path travel >= ${required} while the body stays visible and trackable.`,
         movement: "Take large, deliberate side steps or forward/back steps across the camera view, pause at each end, and repeat 2-3 times.",
         setup: "Start centered with the full body visible; leave enough floor space so the root visibly travels instead of just swaying.",
+      };
+    case "seated-forward-fold":
+      return {
+        acceptance: `Analyzer should observe seated forward-fold amplitude${required === "n/a" ? "" : ` >= ${required}`} while chair contact remains stable.`,
+        movement: "Start seated neutral, fold forward from the hips with head and shoulders clearly moving toward the knees, hold briefly, then return to seated neutral and repeat 2-3 times.",
+        setup: "Sit on a stable chair with head, shoulders, torso, hips, knees, feet, and the chair visible; keep the camera steady and avoid standing up during the fold.",
       };
     case "root-turn":
       return {
@@ -231,6 +249,7 @@ export function recordingGapPriorityForRow(row) {
 
   switch (row.proofBlockerCode) {
     case "candidate-below-threshold":
+    case "no-candidate-amplitude":
     case "mirror-side-not-isolated":
     case "far-camera-source-quality":
       return "recording-high";
@@ -246,10 +265,10 @@ export function recordingGapFreshRecordingLabelForScenario(scenario) {
   return scenario.freshRecordingLabel || `movement-proof-${scenario.id || "scenario"}`;
 }
 
-export function recordingGapScenarioValidationCommand(scenario) {
+export function recordingGapScenarioValidationCommand(scenario, options = {}) {
   return [
     "npx -p node@22.13.0 npm run movement:replay:analyze --",
-    ...recordingGapScenarioValidationArgs(scenario),
+    ...recordingGapScenarioValidationArgs(scenario, options),
   ].join(" ");
 }
 
@@ -259,15 +278,22 @@ export function recordingGapScenarioValidationOutputPath(scenario) {
   return `tmp/movement-replay-lab/${outStem}-scenario-reviewed-smoke.json`;
 }
 
-export function recordingGapScenarioQuickValidationCommand(scenario) {
+export function recordingGapScenarioQuickValidationCommand(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
-  return `npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario ${label} --quiet`;
+  const shouldIncludeRecordingPlan = options.omitRecordingPlanInQuickValidationCommand !== true;
+  return [
+    "npx -p node@22.13.0 npm run movement:replay:validate-scenario --",
+    shouldIncludeRecordingPlan && options.recordingPlanPath ? `--recording-plan ${options.recordingPlanPath}` : "",
+    `--scenario ${label}`,
+    "--quiet",
+  ].filter(Boolean).join(" ");
 }
 
-export function recordingGapScenarioQuickValidationSpec(scenario) {
+export function recordingGapScenarioQuickValidationSpec(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
   return {
     argvTemplate: [
+      ...(options.recordingPlanPath ? ["--recording-plan", options.recordingPlanPath] : []),
       "--scenario",
       label,
       "--quiet",
@@ -278,22 +304,24 @@ export function recordingGapScenarioQuickValidationSpec(scenario) {
   };
 }
 
-export function recordingGapAllScenariosQuickValidationCommand() {
+export function recordingGapAllScenariosQuickValidationCommand(options = {}) {
   return [
     "npx -p node@22.13.0 npm run movement:replay:validate-scenario --",
     "--all",
     "--quiet",
+    options.recordingPlanPath ? `--recording-plan ${options.recordingPlanPath}` : "",
     `--controlling-manifest ${reviewedValidationPaths.controllingManifestPath}`,
     `--summary-out ${reviewedValidationPaths.scenarioValidationSummaryPath}`,
     `--summary-markdown-out ${reviewedValidationPaths.scenarioValidationMarkdownSummaryPath}`,
-  ].join(" ");
+  ].filter(Boolean).join(" ");
 }
 
-export function recordingGapAllScenariosQuickValidationSpec() {
+export function recordingGapAllScenariosQuickValidationSpec(options = {}) {
   return {
     argvTemplate: [
       "--all",
       "--quiet",
+      ...(options.recordingPlanPath ? ["--recording-plan", options.recordingPlanPath] : []),
       "--controlling-manifest",
       reviewedValidationPaths.controllingManifestPath,
       "--summary-out",
@@ -309,21 +337,22 @@ export function recordingGapAllScenariosQuickValidationSpec() {
     },
     reviewedInputPaths: {
       controllingManifestPath: reviewedValidationPaths.controllingManifestPath,
-      recordingPlanPath: reviewedValidationPaths.recordingPlanPath,
+      recordingPlanPath: options.recordingPlanPath ?? reviewedValidationPaths.recordingPlanPath,
     },
   };
 }
 
-export function recordingGapScenarioValidationSpec(scenario) {
+export function recordingGapScenarioValidationSpec(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
   const outputPath = recordingGapScenarioValidationOutputPath(scenario);
+  const recordingPlanPath = options.recordingPlanPath ?? reviewedValidationPaths.recordingPlanPath;
 
   return {
     argvTemplate: [
       "--export",
       "<latest-export-path>",
       "--recording-plan",
-      reviewedValidationPaths.recordingPlanPath,
+      recordingPlanPath,
       "--recording-scenario",
       label,
       "--visual-captures",
@@ -341,7 +370,7 @@ export function recordingGapScenarioValidationSpec(scenario) {
     outputPath,
     recordingScenario: label,
     reviewedInputPaths: {
-      recordingPlanPath: reviewedValidationPaths.recordingPlanPath,
+      recordingPlanPath,
       reviewDecisionsPath: reviewedValidationPaths.reviewDecisionsPath,
       sourceLimitationDecisionsPath: reviewedValidationPaths.sourceLimitationDecisionsPath,
       visualCapturesPath: reviewedValidationPaths.visualCapturesPath,
@@ -349,11 +378,12 @@ export function recordingGapScenarioValidationSpec(scenario) {
   };
 }
 
-export function recordingGapScenarioValidationArgs(scenario) {
+export function recordingGapScenarioValidationArgs(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
+  const recordingPlanPath = options.recordingPlanPath ?? reviewedValidationPaths.recordingPlanPath;
   return [
     `--export "$(cat ${reviewedValidationPaths.latestExportPointerPath})"`,
-    `--recording-plan ${reviewedValidationPaths.recordingPlanPath}`,
+    `--recording-plan ${recordingPlanPath}`,
     `--recording-scenario ${label}`,
     `--visual-captures ${reviewedValidationPaths.visualCapturesPath}`,
     `--review-decisions ${reviewedValidationPaths.reviewDecisionsPath}`,
@@ -472,7 +502,7 @@ function recordingGapActionGroupsForRows(rows) {
     });
 }
 
-function recordingGapCaptureScenariosForRows(rows) {
+function recordingGapCaptureScenariosForRows(rows, options = {}) {
   const scenarios = new Map();
   for (const row of rows) {
     if (row.owner !== "recording") continue;
@@ -495,25 +525,25 @@ function recordingGapCaptureScenariosForRows(rows) {
       quickValidation: recordingGapScenarioQuickValidationSpec({
         ...scenario,
         freshRecordingLabel,
-      }),
+      }, options),
       quickValidationCommand: recordingGapScenarioQuickValidationCommand({
         ...scenario,
         freshRecordingLabel,
-      }),
+      }, options),
       recordingIds: Array.from(recordingIds).sort((left, right) => String(left).localeCompare(String(right))),
       rowCount: (existing?.rowCount ?? 0) + 1,
       validationArgs: recordingGapScenarioValidationArgs({
         ...scenario,
         freshRecordingLabel,
-      }),
+      }, options),
       validationCommand: recordingGapScenarioValidationCommand({
         ...scenario,
         freshRecordingLabel,
-      }),
+      }, options),
       validation: recordingGapScenarioValidationSpec({
         ...scenario,
         freshRecordingLabel,
-      }),
+      }, options),
       validationOutputPath: recordingGapScenarioValidationOutputPath({
         ...scenario,
         freshRecordingLabel,
@@ -527,18 +557,18 @@ function recordingGapCaptureScenariosForRows(rows) {
   });
 }
 
-export function recordingGapPlanForRows(rows) {
+export function recordingGapPlanForRows(rows, options = {}) {
   const actionRows = recordingGapRowsForRows(rows).map(recordingGapPlanRowForRow);
   const actionGroups = recordingGapActionGroupsForRows(actionRows);
-  const captureScenarios = recordingGapCaptureScenariosForRows(actionRows);
+  const captureScenarios = recordingGapCaptureScenariosForRows(actionRows, options);
   const recordingIds = Array.from(new Set(
     actionRows
       .map((row) => row.recordingId)
       .filter(Boolean),
   )).sort((left, right) => String(left).localeCompare(String(right)));
   const summary = {
-    allScenariosQuickValidation: recordingGapAllScenariosQuickValidationSpec(),
-    allScenariosQuickValidationCommand: recordingGapAllScenariosQuickValidationCommand(),
+    allScenariosQuickValidation: recordingGapAllScenariosQuickValidationSpec(options),
+    allScenariosQuickValidationCommand: recordingGapAllScenariosQuickValidationCommand(options),
     byBlockerCode: countBy(actionRows, "blockerCode"),
     byOwner: countBy(actionRows, "owner"),
     byProofCase: countBy(actionRows, "proofCase"),
@@ -561,8 +591,8 @@ export function recordingGapPlanForRows(rows) {
   };
 }
 
-export function recordingGapPlanForManifest(manifest) {
-  return recordingGapPlanForRows(manifest?.rows ?? []);
+export function recordingGapPlanForManifest(manifest, options = {}) {
+  return recordingGapPlanForRows(manifest?.rows ?? [], options);
 }
 
 export function formatRecordingGapCounts(counts) {

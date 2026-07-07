@@ -456,7 +456,12 @@ function isSeatedLegLift(poseLandmarks?: TrackingLandmark[]) {
 
   const leftLift = ((centers.hipCenter.y - leftKnee.y) * 0.35) + ((centers.hipCenter.y - leftAnkle.y) * 0.65);
   const rightLift = ((centers.hipCenter.y - rightKnee.y) * 0.35) + ((centers.hipCenter.y - rightAnkle.y) * 0.65);
-  return Math.abs(leftLift - rightLift) > 0.12 && Math.max(leftLift, rightLift) > 0;
+  const kneeHeightDelta = Math.abs(leftKnee.y - rightKnee.y);
+  const ankleHeightDelta = Math.abs(leftAnkle.y - rightAnkle.y);
+  return (
+    Math.abs(leftLift - rightLift) > 0.12 ||
+    (kneeHeightDelta > 0.12 && ankleHeightDelta > 0.12)
+  );
 }
 
 function isSeatedForwardFold(poseLandmarks?: TrackingLandmark[]) {
@@ -465,10 +470,22 @@ function isSeatedForwardFold(poseLandmarks?: TrackingLandmark[]) {
   const limbs = getLimbCenters(poseLandmarks);
   if (!centers || !nose || !limbs) return false;
 
+  const torsoHeight = Math.max(distance2D(centers.shoulderCenter, centers.hipCenter), 0.08);
+  const headDrop = nose.y - centers.shoulderCenter.y;
+  const shoulderToHipStack = centers.hipCenter.y - centers.shoulderCenter.y;
+  const wristReach = limbs.wristCenter.y - centers.hipCenter.y;
+  const relativeSeatedHinge =
+    headDrop > torsoHeight * 0.28 &&
+    shoulderToHipStack < 0.2 &&
+    wristReach > -torsoHeight * 0.12;
+
   return (
-    nose.y > centers.shoulderCenter.y + 0.08 &&
-    centers.shoulderCenter.y > 0.5 &&
-    limbs.wristCenter.y > centers.hipCenter.y + 0.06
+    relativeSeatedHinge ||
+    (
+      nose.y > centers.shoulderCenter.y + 0.08 &&
+      centers.shoulderCenter.y > 0.5 &&
+      limbs.wristCenter.y > centers.hipCenter.y + 0.06
+    )
   );
 }
 
@@ -878,18 +895,6 @@ export function resolveMovementExercisePose({
   }
 
   if (bodyOrientation.orientation === "seated") {
-    if (isSeatedTwist(poseLandmarks)) {
-      return buildExercisePoseDecision({
-        confidence: Math.min(bodyOrientation.confidence, bodySupport.confidence),
-        coverageFamilies: ["sitting", "props-contact", "yoga"],
-        disciplines: ["general", "mobility", "yoga"],
-        label: "Seated twist",
-        poseKey: "seated-twist",
-        programLabels: ["Seated spinal twist", "Chair seated twist"],
-        summary: "Seated support with visible shoulder/hip twist is detected; exact chair/pelvis IK is still approximate.",
-      });
-    }
-
     if (isSeatedForwardFold(poseLandmarks)) {
       return buildExercisePoseDecision({
         confidence: Math.min(bodyOrientation.confidence, bodySupport.confidence),
@@ -899,6 +904,18 @@ export function resolveMovementExercisePose({
         poseKey: "seated-forward-fold",
         programLabels: ["Seated forward fold", "Chair hamstring reach"],
         summary: "Seated forward-fold geometry is detected; exact pelvis hinge and chair contact remain approximate.",
+      });
+    }
+
+    if (isSeatedTwist(poseLandmarks)) {
+      return buildExercisePoseDecision({
+        confidence: Math.min(bodyOrientation.confidence, bodySupport.confidence),
+        coverageFamilies: ["sitting", "props-contact", "yoga"],
+        disciplines: ["general", "mobility", "yoga"],
+        label: "Seated twist",
+        poseKey: "seated-twist",
+        programLabels: ["Seated spinal twist", "Chair seated twist"],
+        summary: "Seated support with visible shoulder/hip twist is detected; exact chair/pelvis IK is still approximate.",
       });
     }
 

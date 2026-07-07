@@ -380,6 +380,12 @@ type LoadedReplayRecording = {
   session: MovementDebugReplaySession | null;
 };
 
+type ReplayLabRecording = MovementReplayRecordingSource & {
+  _id: Id<"movements">;
+  difficulty?: string;
+  spineGoal?: string | null;
+};
+
 function formatDuration(value?: number) {
   if (!value) return "--";
   if (value < 1000) return `${Math.round(value)}ms`;
@@ -417,15 +423,42 @@ export default function MovementReplayLabPage() {
   const [captureStatus, setCaptureStatus] = useState<string | null>(null);
   const [currentAvatarDebug, setCurrentAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
   const [currentAvatarVisual, setCurrentAvatarVisual] = useState<MovementTrackingDebugState["avatarVisual"]>();
+  const [debugReplaySession, setDebugReplaySession] = useState<MovementDebugReplaySession | null>(null);
+  const [debugReplayError, setDebugReplayError] = useState<string | null>(null);
 
   const recordings = useQuery(api.movements.listReplayAlignmentRecordings, { limit: 50 });
+  const debugRecordingId = debugReplaySession?.id as Id<"movements"> | undefined;
+  const debugRecording = useMemo<ReplayLabRecording | null>(() => {
+    if (!debugReplaySession || !debugRecordingId) return null;
+
+    return {
+      _id: debugRecordingId,
+      captureFps: debugReplaySession.fps,
+      createdAt: debugReplaySession.createdAt ?? debugReplaySession.startedAt,
+      difficulty: "debug",
+      durationMs: debugReplaySession.durationMs,
+      frameCount: debugReplaySession.sampleCount,
+      poseData: "debug-replay-session",
+      poseDataFormat: "legacy-inline-json",
+      spineGoal: debugReplaySession.trigger,
+      title: debugReplaySession.warningSummary ?? "Debug replay session",
+    };
+  }, [debugRecordingId, debugReplaySession]);
+  const replayRecordings = useMemo<ReplayLabRecording[] | undefined>(() => {
+    const savedRecordings = recordings as ReplayLabRecording[] | undefined;
+    if (!debugRecording) return savedRecordings;
+    return [debugRecording, ...(savedRecordings ?? []).filter((recording) => recording._id !== debugRecording._id)];
+  }, [debugRecording, recordings]);
   const activeRecordingId = selectedRecordingId;
   const recordingsToLoad = useMemo(() => {
-    if (!recordings) return [];
+    if (!replayRecordings) return [];
     const idsToLoad = new Set<string>(hasRunBatch ? selectedRecordingIds : []);
     if (activeRecordingId) idsToLoad.add(activeRecordingId);
-    return recordings.filter((recording) => idsToLoad.has(recording._id));
-  }, [activeRecordingId, hasRunBatch, recordings, selectedRecordingIds]);
+    return replayRecordings.filter((recording) => (
+      idsToLoad.has(recording._id) &&
+      recording._id !== debugRecordingId
+    ));
+  }, [activeRecordingId, debugRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
   const recordingsToLoadKey = useMemo(() => (
     recordingsToLoad
       .map((recording) => [
@@ -442,6 +475,56 @@ export default function MovementReplayLabPage() {
   useEffect(() => {
     loadedRecordingsRef.current = loadedRecordings;
   }, [loadedRecordings]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+
+    const debugReplaySessionUrl = new URLSearchParams(window.location.search).get("debugReplaySessionUrl");
+    if (!debugReplaySessionUrl) return;
+
+    let cancelled = false;
+    void fetch(debugReplaySessionUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Could not load debug replay session (${response.status}).`);
+        return response.json() as Promise<MovementDebugReplaySession>;
+      })
+      .then((session) => {
+        if (cancelled) return;
+        if (!session.id || !Array.isArray(session.samples)) {
+          throw new Error("Debug replay session must include an id and samples.");
+        }
+        setDebugReplayError(null);
+        setDebugReplaySession(session);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setDebugReplayError(error instanceof Error ? error.message : "Could not load debug replay session.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!debugReplaySession || !debugRecordingId) return;
+
+    setLoadedRecordings((current) => ({
+      ...current,
+      [debugRecordingId]: {
+        error: null,
+        isLoading: false,
+        session: debugReplaySession,
+      },
+    }));
+    setSelectedRecordingId(debugRecordingId);
+    setSelectedRecordingIds((previousIds) => (
+      previousIds.includes(debugRecordingId) ? previousIds : [debugRecordingId, ...previousIds]
+    ));
+    setHasRunBatch(true);
+    setFrameIndex(0);
+    setIsPlaying(false);
+  }, [debugRecordingId, debugReplaySession]);
 
   useEffect(() => {
     recordingsToLoadRef.current = recordingsToLoad;
@@ -998,7 +1081,7 @@ export default function MovementReplayLabPage() {
     ));
   };
   const selectLatestRecordings = () => {
-    const latestIds = recordings?.slice(0, 5).map((recording) => recording._id) ?? [];
+    const latestIds = replayRecordings?.slice(0, 5).map((recording) => recording._id) ?? [];
     resetRunState();
     setSelectedRecordingIds(latestIds);
     setFrameIndex(0);
@@ -1291,7 +1374,7 @@ export default function MovementReplayLabPage() {
               <button
                 type="button"
                 onClick={selectLatestRecordings}
-                disabled={!recordings || recordings.length === 0 || isRunInProgress}
+                disabled={!replayRecordings || replayRecordings.length === 0 || isRunInProgress}
                 className="h-8 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Select Latest 5
@@ -1323,15 +1406,15 @@ export default function MovementReplayLabPage() {
           </div>
 
           <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
-            {!recordings ? (
+            {!replayRecordings ? (
               <div className="min-w-[260px] rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
-                Loading saved recordings...
+                {debugReplayError ?? "Loading saved recordings..."}
               </div>
-            ) : recordings.length === 0 ? (
+            ) : replayRecordings.length === 0 ? (
               <div className="min-w-[260px] rounded-[8px] border border-border-dim bg-background/60 p-3 text-sm text-secondary">
-                No saved movement recordings found.
+                {debugReplayError ?? "No saved movement recordings found."}
               </div>
-            ) : recordings.map((recording) => {
+            ) : replayRecordings.map((recording) => {
               const selected = recording._id === activeRecordingId;
               const included = selectedRecordingIds.includes(recording._id);
               const recordingAnalysis = analysisByRecordingId.get(recording._id);

@@ -205,23 +205,45 @@ export function classifyMovementBodyOrientation(
   }
 
   if (kneeCenter && ankleCenter) {
+    const leftThighFoldEvidence = Math.max(
+      Math.abs(leftKnee.x - leftHip.x),
+      Math.abs((leftKnee.z ?? 0) - (leftHip.z ?? 0)),
+    );
+    const rightThighFoldEvidence = Math.max(
+      Math.abs(rightKnee.x - rightHip.x),
+      Math.abs((rightKnee.z ?? 0) - (rightHip.z ?? 0)),
+    );
+    const foldedThighEvidence = average([leftThighFoldEvidence, rightThighFoldEvidence]);
     const thighIsFolded =
       Math.abs(kneeCenter.y - hipCenter.y) < torsoHeight * 0.65 &&
-      average([
-        Math.abs(leftKnee.x - leftHip.x),
-        Math.abs(rightKnee.x - rightHip.x),
-      ]) > shoulderWidth * 0.28;
+      foldedThighEvidence > shoulderWidth * 0.28;
     const feetBelowKnees = ankleCenter.y > kneeCenter.y + torsoHeight * 0.22;
     const asymmetricKnees = Math.abs(leftKnee.y - rightKnee.y) > torsoHeight * 0.45;
     const wideStandingBase = Math.abs(leftAnkle.x - rightAnkle.x) > shoulderWidth * 2.1;
     const hipsAboveKnees = hipCenter.y < kneeCenter.y - torsoHeight * 0.08;
+    const seatedVariationFold =
+      thighIsFolded &&
+      feetBelowKnees &&
+      asymmetricKnees &&
+      foldedThighEvidence > shoulderWidth * 0.65;
 
-    if (torsoDy < 0 && hipsAboveKnees && thighIsFolded && feetBelowKnees && !asymmetricKnees && !wideStandingBase) {
+    if (
+      torsoDy < 0 &&
+      hipsAboveKnees &&
+      thighIsFolded &&
+      feetBelowKnees &&
+      (!asymmetricKnees || seatedVariationFold) &&
+      !wideStandingBase
+    ) {
       return buildDecision({
         confidence: average([coreConfidence, kneeCenter.visibility, ankleCenter.visibility]),
         coverageFamily: "sitting",
         orientation: "seated",
-        reasons: ["torso is upright while thighs are folded toward a seated position"],
+        reasons: [
+          seatedVariationFold
+            ? "torso is upright while folded thigh depth indicates a seated variation"
+            : "torso is upright while thighs are folded toward a seated position",
+        ],
       });
     }
 

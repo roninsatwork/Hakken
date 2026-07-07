@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import { classifyMovementBodyOrientation } from "./movementBodyOrientation";
 import {
   kneelingPoseFixture,
+  movementOrientationPoseWith,
   pronePoseFixture,
   quadrupedPoseFixture,
   seatedPoseFixture,
   sideLyingPoseFixture,
   supinePoseFixture,
 } from "./movementBodyOrientation.testFixtures";
-import { makeMovementAvatarProofPose } from "./movementAvatarProofFixtures";
+import {
+  makeMovementAvatarProofPose,
+  movementAvatarProofLandmark,
+} from "./movementAvatarProofFixtures";
 import { resolveMovementExercisePose } from "./movementExercisePose";
 import { resolveMovementSupportContacts } from "./movementSupportContact";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
@@ -51,6 +55,47 @@ describe("movementExercisePose", () => {
     expect(kneeling.poseKey).toBe("kneeling-floor");
     expect(kneeling.disciplines).toContain("yoga");
     expect(kneeling.programLabels).toContain("Yoga hero-pose setup");
+  });
+
+  it("labels relative seated hinge geometry as forward fold without requiring low-screen shoulders", () => {
+    const pose = exercisePoseFor(movementOrientationPoseWith({
+      0: movementAvatarProofLandmark(0.5, 0.57),
+      7: movementAvatarProofLandmark(0.46, 0.55),
+      8: movementAvatarProofLandmark(0.54, 0.55),
+      11: movementAvatarProofLandmark(0.39, 0.49),
+      12: movementAvatarProofLandmark(0.61, 0.49),
+      15: movementAvatarProofLandmark(0.35, 0.64),
+      16: movementAvatarProofLandmark(0.65, 0.64),
+      23: movementAvatarProofLandmark(0.43, 0.66),
+      24: movementAvatarProofLandmark(0.57, 0.66),
+      25: movementAvatarProofLandmark(0.31, 0.7),
+      26: movementAvatarProofLandmark(0.69, 0.7),
+      27: movementAvatarProofLandmark(0.3, 0.9),
+      28: movementAvatarProofLandmark(0.7, 0.9),
+    }));
+
+    expect(pose.poseKey).toBe("seated-forward-fold");
+    expect(pose.programLabels).toContain("Seated forward fold");
+  });
+
+  it("labels frontal seated leg-extension geometry as seated leg lift", () => {
+    const pose = exercisePoseFor(movementOrientationPoseWith({
+      0: movementAvatarProofLandmark(0.43, 0.08, -0.38),
+      7: movementAvatarProofLandmark(0.39, 0.1, -0.25),
+      8: movementAvatarProofLandmark(0.47, 0.1, -0.25),
+      11: movementAvatarProofLandmark(0.36, 0.21, -0.06),
+      12: movementAvatarProofLandmark(0.51, 0.21, -0.06),
+      23: movementAvatarProofLandmark(0.51, 0.47, -0.01),
+      24: movementAvatarProofLandmark(0.42, 0.5, 0.01),
+      25: movementAvatarProofLandmark(0.52, 0.49, -0.5),
+      26: movementAvatarProofLandmark(0.44, 0.74, -0.04),
+      27: movementAvatarProofLandmark(0.51, 0.75, -0.28),
+      28: movementAvatarProofLandmark(0.45, 0.93, 0.16),
+    }));
+
+    expect(pose.poseKey).toBe("seated-leg-lift");
+    expect(pose.coverageFamilies).toContain("sitting");
+    expect(pose.programLabels).toContain("Chair knee extension");
   });
 
   it("labels quadruped as yoga tabletop and Pilates all-fours", () => {

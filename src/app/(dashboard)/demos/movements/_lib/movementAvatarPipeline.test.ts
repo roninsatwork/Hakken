@@ -294,6 +294,7 @@ describe("movement avatar pipeline", () => {
     );
     const forwardFoldDecision = resolveDecision(makeMovementAvatarProofPose("seated-forward-fold"));
     const legLiftDecision = resolveDecision(makeMovementAvatarProofPose("seated-leg-lift"));
+    const neutralDecision = resolveDecision(makeMovementAvatarProofPose("seated"));
     const legPitch = (
       decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
       bone: "leftLowerLeg" | "rightLowerLeg",
@@ -302,6 +303,10 @@ describe("movement avatar pipeline", () => {
       decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
       bone: "chest" | "spine",
     ) => decision.supportPresentation.spineSpecs.find((spec) => spec.bone === bone)?.rotation.x ?? 0;
+    const proofSlerps = [
+      ...neutralDecision.supportPresentation.specs,
+      ...neutralDecision.supportPresentation.spineSpecs,
+    ].map((spec) => spec.slerp);
 
     expect(forwardFoldDecision.exercisePose.poseKey).toBe("seated-forward-fold");
     expect(forwardFoldDecision.supportPresentation.owner).toBe("support-presentation-seated-forward-fold");
@@ -313,6 +318,8 @@ describe("movement avatar pipeline", () => {
     expect(legPitch(legLiftDecision, "rightLowerLeg")).toBeGreaterThan(
       legPitch(legLiftDecision, "leftLowerLeg"),
     );
+    expect(proofSlerps.every((slerp) => slerp >= 0.86)).toBe(true);
+    expect(neutralDecision.supportPresentation.armSpecs.every((spec) => spec.slerp >= 0.86)).toBe(true);
   });
 
   it("uses multi-anchor body-plane contact locks for lying floor work", () => {

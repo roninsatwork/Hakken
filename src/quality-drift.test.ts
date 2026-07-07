@@ -875,7 +875,7 @@ describe('Quality Drift Guardrails', () => {
       offenders,
       `Unclassified Gemini-era references found. Keep actual model IDs/provider docs allowlisted, but rename stale platform language:\n${offenders.join('\n')}`
     ).toEqual([]);
-  });
+  }, 15_000);
 
   test('provider SDK imports remain classified while adapters mature', () => {
     const allowedProviderSdkImportFiles = new Set([

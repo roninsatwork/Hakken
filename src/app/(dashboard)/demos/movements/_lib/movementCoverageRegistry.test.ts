@@ -48,23 +48,43 @@ describe("movementCoverageRegistry", () => {
     expect(MOVEMENT_COVERAGE_FAMILIES).toEqual(expect.arrayContaining(originalChecklistFamilies));
   });
 
-  it("keeps remaining gaps explicit without marking diagnostic families demo-ready", () => {
+  it("keeps remaining gaps explicit while marking synthetic preview families demo-ready", () => {
     const summary = summarizeMovementCoverageRegistry();
 
     expect(MOVEMENT_COVERAGE_REGISTRY["props-contact"]).toMatchObject({
-      demoReady: false,
-      proofLevel: "diagnostic",
-      status: "diagnostic-only",
+      demoReady: true,
+      proofLevel: "synthetic",
+      status: "approximate",
     });
     expect(MOVEMENT_COVERAGE_REGISTRY["facing-occlusion"]).toMatchObject({
-      demoReady: false,
+      demoReady: true,
       proofLevel: "diagnostic",
       status: "diagnostic-only",
     });
     expect(summary.unsupportedFamilies).toEqual([]);
     expect(summary.unsupportedCount).toBe(0);
-    expect(summary.blockedFamilies).toEqual(expect.arrayContaining([
-      "facing-occlusion",
+    expect(summary.blockedFamilies).toEqual([]);
+    expect(summary.blockedFamilies).not.toContain("walking");
+    expect(summary.blockedFamilies).not.toEqual(expect.arrayContaining([
+      "pivot-weight-transfer",
+      "jump-hop",
+      "lunges",
+      "sitting",
+      "kneeling",
+      "lying-floor-work",
+      "quadruped",
+      "rolling-crawling",
+      "yoga",
+      "pilates",
+      "props-contact",
+    ]));
+    expect(summary.demoReadyCount).toBe(summary.familyCount);
+    expect(summary.demoReadyPercent).toBe(100);
+    expect(summary.implementedCount).toBeLessThan(summary.familyCount);
+    expect(summary.implementedPercent).toBeLessThan(100);
+    expect(summary.implementedFamilies).not.toContain("facing-occlusion");
+    expect(summary.implementedFamilies).toContain("walking");
+    expect(summary.implementedFamilies).toEqual(expect.arrayContaining([
       "walking",
       "pivot-weight-transfer",
       "jump-hop",
@@ -78,14 +98,7 @@ describe("movementCoverageRegistry", () => {
       "pilates",
       "props-contact",
     ]));
-    expect(summary.demoReadyCount).toBeLessThan(summary.familyCount);
-    expect(summary.demoReadyPercent).toBeLessThan(100);
-    expect(summary.implementedCount).toBeLessThan(summary.familyCount);
-    expect(summary.implementedPercent).toBeLessThan(100);
-    expect(summary.implementedFamilies).not.toContain("walking");
-    expect(summary.implementedFamilies).not.toContain("yoga");
     expect(summary.missingProofFamilies).toEqual(expect.arrayContaining([
-      "upper-body-standing",
       "sitting",
       "kneeling",
       "lying-floor-work",
@@ -94,10 +107,10 @@ describe("movementCoverageRegistry", () => {
       "yoga",
       "props-contact",
     ]));
-    expect(MOVEMENT_COVERAGE_REGISTRY.sitting.demoReady).toBe(false);
-    expect(MOVEMENT_COVERAGE_REGISTRY.kneeling.demoReady).toBe(false);
-    expect(MOVEMENT_COVERAGE_REGISTRY["lying-floor-work"].demoReady).toBe(false);
-    expect(MOVEMENT_COVERAGE_REGISTRY.quadruped.demoReady).toBe(false);
+    expect(MOVEMENT_COVERAGE_REGISTRY.sitting.demoReady).toBe(true);
+    expect(MOVEMENT_COVERAGE_REGISTRY.kneeling.demoReady).toBe(true);
+    expect(MOVEMENT_COVERAGE_REGISTRY["lying-floor-work"].demoReady).toBe(true);
+    expect(MOVEMENT_COVERAGE_REGISTRY.quadruped.demoReady).toBe(true);
     expect(summary.remainingGapCount).toBeGreaterThan(summary.familyCount);
     expect(summary.supportedCount + summary.approximateCount + summary.diagnosticOnlyCount + summary.unsupportedCount)
       .toBe(summary.familyCount);
@@ -106,20 +119,65 @@ describe("movementCoverageRegistry", () => {
   it("separates user-facing support from internal demo readiness", () => {
     const summary = summarizeMovementCoverageRegistry();
 
-    expect(summary.userFacingFamilies).toEqual(["upright", "standing-side-bend-head-direction", "squat-knee-lift"]);
-    expect(summary.userFacingCount).toBe(3);
-    expect(summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
+    expect(summary.userFacingFamilies).toEqual([
+      "upright",
       "upper-body-standing",
+      "standing-side-bend-head-direction",
+      "squat-knee-lift",
       "root-turn",
+    ]);
+    expect(summary.userFacingCount).toBe(5);
+    expect(summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
+      "facing-occlusion",
       "root-travel",
+      "walking",
+      "sitting",
+      "kneeling",
+      "lying-floor-work",
+      "quadruped",
+      "yoga",
+      "pilates",
     ]));
+    expect(summary.internalDemoOnlyFamilies).not.toContain("upper-body-standing");
     expect(summary.internalDemoOnlyFamilies).not.toContain("standing-side-bend-head-direction");
     expect(summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
+    expect(summary.internalDemoOnlyFamilies).not.toContain("root-turn");
     expect(summary.internalDemoOnlyCount).toBe(summary.internalDemoOnlyFamilies.length);
     summary.internalDemoOnlyFamilies.forEach((family) => {
       const entry = MOVEMENT_COVERAGE_REGISTRY[family];
       expect(entry.demoReady).toBe(true);
       expect(entry.proofLevel).not.toBe("full");
     });
+  });
+
+  it("keeps product claim language scoped to the support proof level", () => {
+    const summary = summarizeMovementCoverageRegistry();
+    const explicitInternalLanguage = /(internal|missing|before user-facing|non-user-facing|debug-only|diagnostic|does not include)/i;
+
+    summary.userFacingFamilies.forEach((family) => {
+      const entry = MOVEMENT_COVERAGE_REGISTRY[family];
+      expect(entry.status).toBe("supported");
+      expect(entry.proofLevel).toBe("full");
+      expect(entry.demoReady).toBe(true);
+    });
+
+    summary.internalDemoOnlyFamilies.forEach((family) => {
+      const entry = MOVEMENT_COVERAGE_REGISTRY[family];
+      const claimText = [entry.summary, ...entry.remainingGaps].join(" ");
+
+      expect(entry.status).not.toBe("supported");
+      expect(entry.proofLevel).not.toBe("full");
+      expect(entry.remainingGaps.length).toBeGreaterThan(0);
+      expect(claimText).toMatch(explicitInternalLanguage);
+      expect(claimText).not.toMatch(/\bfull\s+(?:human\s+)?movement\s+support\b/i);
+      expect(claimText).not.toMatch(/\bproduction\s+support\b/i);
+    });
+
+    expect(MOVEMENT_COVERAGE_REGISTRY["root-turn"].summary).toMatch(/does not include root travel or walking support/i);
+    expect(MOVEMENT_COVERAGE_REGISTRY["root-turn"].summary).not.toMatch(/\bloc(?:o)?motion support\b/i);
+    expect(MOVEMENT_COVERAGE_REGISTRY["upper-body-standing"].summary).toMatch(/\bstanding\b/i);
+    expect(MOVEMENT_COVERAGE_REGISTRY["upper-body-standing"].summary).not.toMatch(/\bfull-body\b/i);
+    expect(MOVEMENT_COVERAGE_REGISTRY.walking.summary).toMatch(/before user-facing/i);
+    expect(MOVEMENT_COVERAGE_REGISTRY.sitting.summary).toMatch(/before user-facing/i);
   });
 });

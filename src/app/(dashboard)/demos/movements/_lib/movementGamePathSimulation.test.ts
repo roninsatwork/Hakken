@@ -595,6 +595,42 @@ describe("movementGamePathSimulation", () => {
     expect(reachFrame?.supportPresentationArmSpecCount ?? 0).toBeGreaterThan(0);
   });
 
+  it("selects seated Game visual parity frames for the first expansion proof handoff", () => {
+    const proofFrames = selectMovementGameVisualParityProofFrames(
+      buildMovementGamePathSimulation(session([
+        frame(makeMovementAvatarProofPose("seated")),
+        frame(makeMovementAvatarProofPose("seated-twist")),
+        frame(makeMovementAvatarProofPose("seated-forward-fold")),
+        frame(makeMovementAvatarProofPose("seated-leg-lift")),
+      ])),
+      {
+        includeSeatedTargets: true,
+      },
+    );
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+    const chairContactFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-seated-chair-contact")
+    ));
+    const twistFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-seated-twist")
+    ));
+    const foldFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-seated-forward-fold")
+    ));
+    const legLiftFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-seated-leg-lift")
+    ));
+
+    expect(proofCases).toContain("strongest-seated-chair-contact");
+    expect(proofCases).toContain("strongest-seated-twist");
+    expect(proofCases).toContain("strongest-seated-forward-fold");
+    expect(proofCases).toContain("strongest-seated-leg-lift");
+    expect(chairContactFrame?.supportPresentationOwner).toMatch(/^support-presentation-seated/);
+    expect(twistFrame?.supportPresentationOwner).toBe("support-presentation-seated-twist");
+    expect(foldFrame?.supportPresentationOwner).toBe("support-presentation-seated-forward-fold");
+    expect(legLiftFrame?.supportPresentationOwner).toBe("support-presentation-seated-leg-lift");
+  });
+
   it("marks the first source/display semantic divergence for visual proof", () => {
     const simulation = buildMovementGamePathSimulation(session([frame(withCorePose())]));
     const motionFrame = simulation.motionFrames[0]!;

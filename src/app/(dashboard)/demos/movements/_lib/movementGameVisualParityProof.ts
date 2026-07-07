@@ -13,6 +13,10 @@ export type MovementGameVisualParityProofCase =
   | "strongest-root-travel"
   | "strongest-root-turn"
   | "strongest-side-bend"
+  | "strongest-seated-chair-contact"
+  | "strongest-seated-forward-fold"
+  | "strongest-seated-leg-lift"
+  | "strongest-seated-twist"
   | "strongest-squat"
   | "strongest-standing-arm-raise"
   | "strongest-standing-reach"
@@ -45,6 +49,7 @@ export type MovementGameVisualParityProofFrame = {
 };
 
 export type MovementGameVisualParityProofOptions = {
+  includeSeatedTargets?: boolean;
   includeStandingUpperBodyTargets?: boolean;
   maxFrames?: number;
   minKneeLift?: number;
@@ -142,6 +147,7 @@ export function selectMovementGameVisualParityProofFrames(
   options: MovementGameVisualParityProofOptions = {},
 ): MovementGameVisualParityProofFrame[] {
   const maxFrames = options.maxFrames ?? DEFAULT_MAX_FRAMES;
+  const includeSeatedTargets = options.includeSeatedTargets ?? false;
   const includeStandingUpperBodyTargets = options.includeStandingUpperBodyTargets ?? false;
   const minKneeLift = options.minKneeLift ?? DEFAULT_MIN_KNEE_LIFT;
   const minHeadDirection = options.minHeadDirection ?? DEFAULT_MIN_HEAD_DIRECTION;
@@ -293,13 +299,13 @@ export function selectMovementGameVisualParityProofFrames(
       simulation,
       (motionFrame) => {
         const presentation = motionFrame.avatarDisplayDecision.supportPresentation;
-        if (
-          presentation.owner !== "support-presentation-standing-arm-raise" &&
-          presentation.owner !== "support-presentation-standing-twist"
-        ) {
-          return 0;
+        if (presentation.owner === "support-presentation-standing-arm-raise") {
+          return presentation.armSpecs.length + 0.5;
         }
-        return presentation.armSpecs.length;
+        if (presentation.owner === "support-presentation-standing-twist") {
+          return presentation.armSpecs.length;
+        }
+        return 0;
       },
     );
     if (strongestStandingReach && strongestStandingReach.value >= minStandingReachArmSpecCount) {
@@ -307,6 +313,76 @@ export function selectMovementGameVisualParityProofFrames(
         strongestStandingReach.frameIndex,
         "strongest-standing-reach",
         "strongest displayed standing reach",
+      );
+    }
+  }
+
+  if (includeSeatedTargets) {
+    const strongestSeatedChairContact = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner.startsWith("support-presentation-seated")
+          ? 1 +
+            motionFrame.avatarDisplayDecision.supportPresentation.spineSpecs.length +
+            motionFrame.avatarDisplayDecision.supportPresentation.armSpecs.length
+          : 0
+      ),
+    );
+    if (strongestSeatedChairContact && strongestSeatedChairContact.value > 0) {
+      addFrame(
+        strongestSeatedChairContact.frameIndex,
+        "strongest-seated-chair-contact",
+        "strongest displayed seated chair/contact presentation",
+      );
+    }
+
+    const strongestSeatedTwist = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-seated-twist"
+          ? maxSupportPresentationSpineTwist(motionFrame)
+          : 0
+      ),
+    );
+    if (strongestSeatedTwist && strongestSeatedTwist.value > 0) {
+      addFrame(
+        strongestSeatedTwist.frameIndex,
+        "strongest-seated-twist",
+        "strongest displayed seated twist",
+      );
+    }
+
+    const strongestSeatedForwardFold = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-seated-forward-fold"
+          ? motionFrame.avatarDisplayDecision.supportPresentation.spineSpecs.length +
+            motionFrame.avatarDisplayDecision.supportPresentation.armSpecs.length
+          : 0
+      ),
+    );
+    if (strongestSeatedForwardFold && strongestSeatedForwardFold.value > 0) {
+      addFrame(
+        strongestSeatedForwardFold.frameIndex,
+        "strongest-seated-forward-fold",
+        "strongest displayed seated forward fold",
+      );
+    }
+
+    const strongestSeatedLegLift = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-seated-leg-lift"
+          ? motionFrame.avatarDisplayDecision.supportPresentation.armSpecs.length +
+            motionFrame.avatarDisplayDecision.supportPresentation.spineSpecs.length
+          : 0
+      ),
+    );
+    if (strongestSeatedLegLift && strongestSeatedLegLift.value > 0) {
+      addFrame(
+        strongestSeatedLegLift.frameIndex,
+        "strongest-seated-leg-lift",
+        "strongest displayed seated leg lift",
       );
     }
   }

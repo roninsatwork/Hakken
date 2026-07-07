@@ -38,6 +38,7 @@ export type MovementRootMotionVector = {
 
 export type MovementRootMotionFootFrame = {
   contact: boolean;
+  confidence: number;
   stepPhase: MovementRootMotionStepPhase;
   worldPosition: MovementRootMotionVector | null;
 };
@@ -324,6 +325,7 @@ function getFootFrame({
   if (!foot || foot.confidence < 0.25) {
     return {
       contact: false,
+      confidence: foot?.confidence ?? 0,
       stepPhase: "unknown",
       worldPosition: null,
     };
@@ -343,6 +345,7 @@ function getFootFrame({
 
   return {
     contact,
+    confidence: foot.confidence,
     stepPhase,
     worldPosition: foot.position,
   };
@@ -414,10 +417,30 @@ function buildRootMotionIntent({
   const rightLifting = frame.feet.right.stepPhase === "lifting";
   const leftLanding = frame.feet.left.stepPhase === "landing";
   const rightLanding = frame.feet.right.stepPhase === "landing";
-  const bothAirborne = !frame.feet.left.contact && !frame.feet.right.contact;
-  const bothLanding = leftLanding && rightLanding;
+  const hasReliableLeftFoot = Boolean(frame.feet.left.worldPosition) && frame.feet.left.confidence >= 0.45;
+  const hasReliableRightFoot = Boolean(frame.feet.right.worldPosition) && frame.feet.right.confidence >= 0.45;
+  const hasReliableFeet = hasReliableLeftFoot && hasReliableRightFoot;
+  const rootVerticalDelta = previousFrame ? frame.rootPosition.y - previousFrame.rootPosition.y : 0;
+  const hasJumpRootLift = rootVerticalDelta > 0.04
+    || (previousFrame?.intent.key === "jump-flight" && frame.rootPosition.y > 0.04);
+  const bothAirborne = hasReliableFeet && !frame.feet.left.contact && !frame.feet.right.contact && hasJumpRootLift;
+  const bothLanding = leftLanding && rightLanding && previousFrame?.intent.key === "jump-flight";
   const hasTravel = travelDistance >= 0.16;
   const hasTurn = turnAmount >= 0.35;
+
+  if (!hasReliableFeet) {
+    return {
+      confidence: Math.min(confidence, average([frame.feet.left.confidence, frame.feet.right.confidence])),
+      headingDelta,
+      key: "root-source-limited",
+      label: "Source-limited root motion",
+      plantedFoot,
+      summary: "Foot contact is not reliable enough to distinguish jump flight from hidden or weak feet.",
+      swingFoot,
+      travelDirection: "none",
+      travelDistance,
+    };
+  }
 
   if (bothLanding) {
     return {
@@ -441,6 +464,20 @@ function buildRootMotionIntent({
       label: "Jump flight",
       plantedFoot: "none",
       summary: "Both feet are away from floor contact, indicating a jump or hop flight phase.",
+      swingFoot: "both",
+      travelDirection,
+      travelDistance,
+    };
+  }
+
+  if (hasReliableFeet && !frame.feet.left.contact && !frame.feet.right.contact) {
+    return {
+      confidence,
+      headingDelta,
+      key: "root-source-limited",
+      label: "Source-limited root motion",
+      plantedFoot: "none",
+      summary: "Both feet are away from contact, but the root did not lift enough to prove jump flight.",
       swingFoot: "both",
       travelDirection,
       travelDistance,
@@ -691,11 +728,13 @@ function fallbackFrame(frameIndex: number): MovementRootMotionFrame {
     feet: {
       left: {
         contact: false,
+        confidence: 0,
         stepPhase: "unknown",
         worldPosition: null,
       },
       right: {
         contact: false,
+        confidence: 0,
         stepPhase: "unknown",
         worldPosition: null,
       },

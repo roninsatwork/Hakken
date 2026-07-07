@@ -49,6 +49,11 @@ export type MovementRecordedProofCase =
   | "lower-body-out-of-frame"
   | "root-turn"
   | "root-travel"
+  | "seated-neutral"
+  | "seated-twist"
+  | "seated-forward-fold"
+  | "seated-leg-lift"
+  | "chair-contact"
   | "mirror-side-ownership"
   | "scoring-message-events";
 
@@ -500,6 +505,49 @@ const PROOF_CASES: ProofCaseDefinition[] = [
   },
 ];
 
+const OPTIONAL_SEATED_PROOF_CASES: ProofCaseDefinition[] = [
+  {
+    avatarSide: "both",
+    bodyPartMotion: "neutral seated posture with visible chair/contact support",
+    directionSign: "neutral",
+    expectedMinimumAmplitude: null,
+    proofCase: "seated-neutral",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "seated torso twist while hips remain seated",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: 1,
+    proofCase: "seated-twist",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "seated forward fold",
+    directionSign: "positive",
+    expectedMinimumAmplitude: 1,
+    proofCase: "seated-forward-fold",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "unknown",
+    bodyPartMotion: "seated single-leg lift",
+    directionSign: "positive",
+    expectedMinimumAmplitude: 1,
+    proofCase: "seated-leg-lift",
+    sourceSide: "unknown",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "chair/contact seated support presentation",
+    directionSign: "neutral",
+    expectedMinimumAmplitude: 1,
+    proofCase: "chair-contact",
+    sourceSide: "both",
+  },
+];
+
 const ERROR_BY_PROOF_CASE: Partial<Record<MovementRecordedProofCase, string[]>> = {
   "head-direction": ["head-direction-reversed", "head-motion-missing"],
   "left-leg-raise": ["leg-lift-missing", "leg-lift-wrong-side", "leg-lift-collapsed-to-squat"],
@@ -613,6 +661,11 @@ function shoulderScapulaProxyScore(frame: MovementReplayAnalysis["gamePath"]["fr
   return frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount;
 }
 
+function seatedPresentationScore(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
+  if (!frame.supportPresentationOwner.startsWith("support-presentation-seated")) return 0;
+  return 1 + frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount;
+}
+
 function observedAmplitudeForCase({
   analysis,
   definition,
@@ -656,6 +709,31 @@ function observedAmplitudeForCase({
         analysis.gamePath.frames
           .filter((frame) => frames.has(frame.frameIndex))
           .map(shoulderScapulaProxyScore),
+      );
+    case "seated-neutral":
+    case "chair-contact":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map(seatedPresentationScore),
+      );
+    case "seated-twist":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount),
+      );
+    case "seated-forward-fold":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.seatedForwardFoldCandidateScore ?? 0),
+      );
+    case "seated-leg-lift":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount),
       );
     case "squat":
     case "far-squat":
@@ -734,6 +812,28 @@ function candidateAmplitudeForCase({
       );
     case "shoulder-scapula-control":
       return maxAbs(analysis.gamePath.frames.map(shoulderScapulaProxyScore));
+    case "seated-neutral":
+    case "chair-contact":
+      return maxAbs(analysis.gamePath.frames.map(seatedPresentationScore));
+    case "seated-twist":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frame.supportPresentationOwner === "support-presentation-seated-twist")
+          .map((frame) => frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount),
+      );
+    case "seated-forward-fold":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frame.supportPresentationOwner.startsWith("support-presentation-seated"))
+          .map((frame) => frame.seatedForwardFoldCandidateScore)
+          .filter((value): value is number => typeof value === "number" && Number.isFinite(value)),
+      );
+    case "seated-leg-lift":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frame.supportPresentationOwner === "support-presentation-seated-leg-lift")
+          .map((frame) => frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount),
+      );
     case "squat":
     case "far-squat":
       return maxAbs(
@@ -1023,6 +1123,41 @@ function indexesForCase(
     case "shoulder-scapula-control":
       return analysis.gamePath.frames
         .filter((frame) => shoulderScapulaProxyScore(frame) >= 5)
+        .map((frame) => frame.frameIndex);
+    case "seated-neutral":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          frame.exercisePoseKey === "chair-seated" &&
+          frame.supportPresentationOwner === "support-presentation-seated" &&
+          seatedPresentationScore(frame) >= 1
+        ))
+        .map((frame) => frame.frameIndex);
+    case "seated-twist":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          frame.exercisePoseKey === "seated-twist" &&
+          frame.supportPresentationOwner === "support-presentation-seated-twist" &&
+          frame.supportPresentationSpineSpecCount >= 1
+        ))
+        .map((frame) => frame.frameIndex);
+    case "seated-forward-fold":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          (frame.seatedForwardFoldCandidateScore ?? 0) >= 1 &&
+          frame.supportPresentationOwner.startsWith("support-presentation-seated")
+        ))
+        .map((frame) => frame.frameIndex);
+    case "seated-leg-lift":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          frame.exercisePoseKey === "seated-leg-lift" &&
+          frame.supportPresentationOwner === "support-presentation-seated-leg-lift" &&
+          frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount >= 1
+        ))
+        .map((frame) => frame.frameIndex);
+    case "chair-contact":
+      return analysis.gamePath.frames
+        .filter((frame) => seatedPresentationScore(frame) >= 1)
         .map((frame) => frame.frameIndex);
   }
 }
@@ -1399,11 +1534,21 @@ function coveredByOtherRecordingRow(
 
 const PRODUCT_SCOPE_LIMITED_PROOF_CASES = new Set<MovementRecordedProofCase>([
   "root-travel",
-  "standing-arm-raise",
-  "standing-reach",
-  "standing-twist",
-  "shoulder-scapula-control",
 ]);
+
+function activeProofCases({
+  includeProductScopeProofCases = [],
+}: {
+  includeProductScopeProofCases?: MovementRecordedProofCase[];
+} = {}) {
+  const included = new Set(includeProductScopeProofCases);
+  const optionalCases = OPTIONAL_SEATED_PROOF_CASES.filter((definition) => included.has(definition.proofCase));
+
+  return [
+    ...PROOF_CASES,
+    ...optionalCases,
+  ];
+}
 
 function productScopeLimitationRow(
   row: MovementRecordedProofManifestRow,
@@ -1438,7 +1583,10 @@ function normalizeCoveredMissingRows(
     PRODUCT_SCOPE_LIMITED_PROOF_CASES.has(row.proofCase) &&
       !includedProductScopeProofCases.has(row.proofCase)
       ? productScopeLimitationRow(row)
-      : row.status === "missing-proof" && coveredProofCases.has(row.proofCase)
+      : (
+        row.status === "missing-proof" ||
+        (row.status === "manual-review" && !row.manualReview)
+      ) && coveredProofCases.has(row.proofCase)
       ? coveredByOtherRecordingRow(row)
       : row
   ));
@@ -1452,8 +1600,11 @@ export function buildMovementRecordedProofManifest(
   const sourceLimitationDecisions = sourceLimitationDecisionMap(options.sourceLimitationDecisions ?? []);
   const visualCaptures = options.visualCaptures ?? [];
   const coverageSummary = analyses[0]?.coverage.summary;
+  const proofCaseDefinitions = activeProofCases({
+    includeProductScopeProofCases: options.includeProductScopeProofCases,
+  });
   const proofRows = analyses.flatMap((analysis) => (
-    PROOF_CASES.map((definition): MovementRecordedProofManifestRow => {
+    proofCaseDefinitions.map((definition): MovementRecordedProofManifestRow => {
       const indexes = indexesForCase(analysis, definition.proofCase);
       const failureCodes = Array.from(new Set(failureCodesForCase(analysis, definition.proofCase)));
       const rowVisualCaptures = visualCapturesForCase({
