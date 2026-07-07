@@ -505,12 +505,16 @@ export function summarizeGameVisualReviewConsistency(review, captureManifest) {
 }
 
 export function summarizeBroadUpperBodyCaptureContract(contract) {
+  const commands = Array.isArray(contract?.commands) ? contract.commands : [];
+  const finalAuditCommand = commands.find((command) => command.id === "merged-readiness-audit")?.command ?? "";
+
   return {
-    commandIds: (contract?.commands ?? []).map((command) => command.id),
+    commandIds: commands.map((command) => command.id),
     gameProofCases: Array.isArray(contract?.requiredGameProofCases)
       ? contract.requiredGameProofCases
       : [],
     hasRecordingPlaceholder: contract?.recordingIdPlaceholder === "<new-recording-id>",
+    hasStrictFinalAudit: /\s--strict(?:\s|$)/.test(finalAuditCommand),
     recordedProofCases: Array.isArray(contract?.requiredRecordedProofCases)
       ? contract.requiredRecordedProofCases
       : [],
@@ -813,6 +817,9 @@ export function buildMovementArchitectureGuardReport({
   if (!broadUpperBodyCaptureContract.hasRecordingPlaceholder) {
     proofFailures.push("expected broad upper-body capture contract to keep the default recording placeholder before a saved recording id exists");
   }
+  if (!broadUpperBodyCaptureContract.hasStrictFinalAudit) {
+    proofFailures.push("expected broad upper-body capture contract final audit command to include --strict");
+  }
 
   return {
     broadUpperBodyCaptureContract,
@@ -939,7 +946,7 @@ function formatReport(report) {
     `Replay/Game parity: ${report.replayGameParity.scoreMessageParityFrames} frames, score divergences ${report.replayGameParity.scoreMessageDivergenceFrames}, wrapper divergences ${report.replayGameParity.wrapperDivergenceFrames}, visual frames ${report.replayGameParity.visualProofFrames}`,
     `Coverage product truth: user-facing ${report.coverageProductTruth.userFacingFamilies.join(",") || "none"}, internal-demo-only ${report.coverageProductTruth.internalDemoOnlyFamilies.join(",") || "none"}`,
     `Squat/knee-lift support claim: ${report.squatKneeLiftSupportClaim.ok ? "passed" : "blocked"} (${report.squatKneeLiftSupportClaim.passingCandidateCount} reviewed bundle(s))`,
-    `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands`,
+    `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands, strict final audit ${report.broadUpperBodyCaptureContract.hasStrictFinalAudit ? "yes" : "no"}`,
     `Proof manifest: ${report.proofManifest.rowCount} rows, ${report.proofManifest.blockingRows} blocking, ${report.proofManifest.acceptedProductLimitationRows} accepted limitations`,
   ];
 

@@ -234,7 +234,7 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("--manifest tmp/movement-replay-lab/broad-explicit--analysis-reviewed.proof-manifest.json");
     expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
     expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
-    expect(captureGuide).toContain("--capture-contract <capture-contract-file>");
+    expect(captureGuide).toContain("--capture-contract <capture-contract-file> --strict");
 
     const recordingIdGuide = formatBroadCaptureGuide(audit, {
       captureLabel: "broad explicit!",
@@ -267,6 +267,7 @@ describe("upper body standing support readiness audit", () => {
     });
     expect(contract.commands[0].command).toContain("--recording-ids 'rec_123 upper'");
     expect(contract.commands.at(-1).command).toContain("movement:upper-body-standing-support-audit");
+    expect(contract.commands.at(-1).command).toContain("--strict");
   });
 
   it("parses CLI options", () => {

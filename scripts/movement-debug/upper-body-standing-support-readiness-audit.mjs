@@ -515,7 +515,7 @@ function buildBroadCaptureWorkflow({
     },
     {
       id: "merged-readiness-audit",
-      command: `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --manifest ${paths.reviewedManifest} --game-visual-plan tmp/movement-replay-lab/current-game-visual-proof-plan.json --game-visual-plan ${paths.gameVisualPlan} --semantic-review tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json --semantic-review ${paths.semanticReviewDecisions}`,
+      command: `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --manifest ${paths.reviewedManifest} --game-visual-plan tmp/movement-replay-lab/current-game-visual-proof-plan.json --game-visual-plan ${paths.gameVisualPlan} --semantic-review tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json --semantic-review ${paths.semanticReviewDecisions} --strict`,
     },
   ];
 
@@ -598,7 +598,7 @@ export function formatBroadCaptureGuide(audit, {
     "If you generated a JSON capture contract, the final merged audit can load those paths directly:",
     "",
     "```bash",
-    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file>",
+    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file> --strict",
     "```",
     "",
   ].join("\n");

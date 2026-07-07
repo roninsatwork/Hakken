@@ -516,7 +516,10 @@ describe("movement architecture guard", () => {
     expect(summarizeBroadUpperBodyCaptureContract({
       commands: [
         { id: "initial-analysis" },
-        { id: "merged-readiness-audit" },
+        {
+          command: "npm run movement:upper-body-standing-support-audit -- --strict",
+          id: "merged-readiness-audit",
+        },
       ],
       recordingIdPlaceholder: "<new-recording-id>",
       requiredGameProofCases: ["strongest-standing-arm-raise"],
@@ -526,8 +529,19 @@ describe("movement architecture guard", () => {
       commandIds: ["initial-analysis", "merged-readiness-audit"],
       gameProofCases: ["strongest-standing-arm-raise"],
       hasRecordingPlaceholder: true,
+      hasStrictFinalAudit: true,
       recordedProofCases: ["standing-arm-raise"],
       schema: "sonae-broad-upper-body-capture-contract/v1",
+    });
+    expect(summarizeBroadUpperBodyCaptureContract({
+      commands: [
+        {
+          command: "npm run movement:upper-body-standing-support-audit",
+          id: "merged-readiness-audit",
+        },
+      ],
+    })).toMatchObject({
+      hasStrictFinalAudit: false,
     });
   });
 
@@ -653,6 +667,7 @@ describe("movement architecture guard", () => {
         "strongest-standing-reach",
       ],
       hasRecordingPlaceholder: true,
+      hasStrictFinalAudit: true,
       recordedProofCases: [
         "standing-arm-raise",
         "standing-twist",
