@@ -317,6 +317,8 @@ describe("upper body standing support readiness audit", () => {
       recordingId: "rec_123 upper",
     });
     expect(contract).toMatchObject({
+      broadPassedProofCandidates: [],
+      broadPassingRecordingIds: [],
       broadReady: false,
       recordingId: "rec_123 upper",
       recordingIdPlaceholder: null,

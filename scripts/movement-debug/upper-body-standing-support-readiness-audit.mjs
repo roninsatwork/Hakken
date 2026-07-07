@@ -704,6 +704,8 @@ export function formatBroadCaptureContract(audit, {
   return {
     acceptanceChecklist: BROAD_UPPER_BODY_ACCEPTANCE_CHECKLIST,
     auditDecision: audit.decision,
+    broadPassedProofCandidates: audit.broadPassedProofCandidates,
+    broadPassingRecordingIds: audit.broadPassingRecordingIds,
     broadReady: audit.broadReady,
     captureProtocol: BROAD_UPPER_BODY_CAPTURE_PROTOCOL,
     commands: workflow.commands,
