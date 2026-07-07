@@ -11,6 +11,7 @@ import {
 } from "./movementGamePathSimulation";
 import {
   selectMovementGameVisualParityProofFrames,
+  type MovementGameVisualParityProofOptions,
   type MovementGameVisualParityProofFrame,
 } from "./movementGameVisualParityProof";
 import {
@@ -357,6 +358,10 @@ export type MovementReplayAnalysis = {
 };
 
 type MovementReplayCurrentDecision = MovementGamePathDecision;
+
+export type MovementReplayAnalyzerOptions = {
+  gameVisualProofOptions?: MovementGameVisualParityProofOptions;
+};
 
 const STRONG_CONFIDENCE = 0.65;
 const AVATAR_LOWER_BODY_DIRECTION_REVIEW_THRESHOLD = 0.52;
@@ -1241,6 +1246,7 @@ function getRootMotionFailures({
 
 export function analyzeMovementDebugReplaySession(
   session: MovementDebugReplaySession,
+  options: MovementReplayAnalyzerOptions = {},
 ): MovementReplayAnalysis {
   const failures: MovementReplayFailure[] = [];
   const frames = session.samples;
@@ -1253,7 +1259,10 @@ export function analyzeMovementDebugReplaySession(
     simulation: gamePathSimulation,
   });
   const scoreMessageParityFrames = buildReplayGameScoreMessageParityFrames(gamePathSimulation);
-  const gameVisualProofFrames = selectMovementGameVisualParityProofFrames(gamePathSimulation);
+  const gameVisualProofFrames = selectMovementGameVisualParityProofFrames(
+    gamePathSimulation,
+    options.gameVisualProofOptions,
+  );
   const outOfFrameCounts = frames.map((frame) => frame.poseBounds?.outOfFrameCount ?? 0);
   const retargetQualities = frames
     .map((frame, index) => currentDecisions[index]?.retarget.sourceQuality ?? frame.retarget?.sourceQuality)
@@ -1720,6 +1729,7 @@ export function analyzeMovementDebugReplaySession(
 
 export function analyzeMovementDebugReplaySessions(
   sessions: MovementDebugReplaySession[],
+  options: MovementReplayAnalyzerOptions = {},
 ): MovementReplayAnalysis[] {
-  return sessions.map(analyzeMovementDebugReplaySession);
+  return sessions.map((session) => analyzeMovementDebugReplaySession(session, options));
 }

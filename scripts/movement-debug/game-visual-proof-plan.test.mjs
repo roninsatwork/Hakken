@@ -51,17 +51,22 @@ describe("game visual proof plan", () => {
       "tmp/plan.json",
       "--base-url",
       "http://localhost:3100",
-      "--max-sessions",
-      "2",
-      "--max-frames-per-session",
-      "3",
-    ])).toMatchObject({
-      analysisPath: "tmp/analysis.json",
-      baseUrl: "http://localhost:3100",
-      maxFramesPerSession: 3,
-      maxSessions: 2,
-      outPath: "tmp/plan.json",
-    });
+        "--max-sessions",
+        "2",
+        "--max-frames-per-session",
+        "3",
+        "--proof-case",
+        "strongest-standing-arm-raise",
+        "--proof-case",
+        "strongest-standing-twist",
+      ])).toMatchObject({
+        analysisPath: "tmp/analysis.json",
+        baseUrl: "http://localhost:3100",
+        maxFramesPerSession: 3,
+        maxSessions: 2,
+        outPath: "tmp/plan.json",
+        proofCases: ["strongest-standing-arm-raise", "strongest-standing-twist"],
+      });
   });
 
   it("builds a machine-readable Game Studio visual target plan from replay analysis", () => {
@@ -123,5 +128,55 @@ describe("game visual proof plan", () => {
     });
     expect(plan.sessions[0]?.frames).toHaveLength(1);
     expect(plan.sessions[0]?.proofCases).toEqual(["baseline"]);
+  });
+
+  it("filters a focused plan to requested proof cases", () => {
+    const broadAnalysis = {
+      ...analysis,
+      gamePath: {
+        visualProofFrames: [
+          ...analysis.gamePath.visualProofFrames,
+          {
+            cases: ["strongest-standing-arm-raise", "strongest-standing-reach"],
+            displayLowerLabel: "neutral",
+            frameIndex: 32,
+            rawMovementStrength: 0.4,
+            readableMovementStrength: 0.55,
+            reasons: ["strongest displayed standing arm raise"],
+            scoreAllowed: true,
+            sourceLowerLabel: "neutral",
+          },
+          {
+            cases: ["strongest-standing-twist"],
+            displayLowerLabel: "neutral",
+            frameIndex: 40,
+            rawMovementStrength: 0.35,
+            readableMovementStrength: 0.52,
+            reasons: ["strongest displayed standing twist"],
+            scoreAllowed: true,
+            sourceLowerLabel: "neutral",
+          },
+        ],
+      },
+    };
+    const plan = gameVisualProofPlanForAnalyses([broadAnalysis], {
+      proofCases: ["strongest-standing-arm-raise", "strongest-standing-twist"],
+    });
+
+    expect(plan.summary).toMatchObject({
+      byProofCase: {
+        "strongest-standing-arm-raise": 1,
+        "strongest-standing-reach": 1,
+        "strongest-standing-twist": 1,
+      },
+      proofCases: [
+        "strongest-standing-arm-raise",
+        "strongest-standing-reach",
+        "strongest-standing-twist",
+      ],
+      requestedProofCases: ["strongest-standing-arm-raise", "strongest-standing-twist"],
+      targetFrameCount: 2,
+    });
+    expect(plan.sessions[0]?.frames.map((frame) => frame.frameIndex)).toEqual([32, 40]);
   });
 });

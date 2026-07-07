@@ -30,6 +30,7 @@ type CliArgs = {
   createExport: boolean;
   exportPath: string | null;
   file: string | null;
+  includeStandingUpperBodyTargets: boolean;
   limit: string;
   manifestOut: string | null;
   out: string | null;
@@ -55,6 +56,7 @@ function parseArgs(argv: string[]): CliArgs {
     createExport: false,
     exportPath: null,
     file: null,
+    includeStandingUpperBodyTargets: false,
     limit: "10",
     manifestOut: null,
     out: null,
@@ -104,6 +106,8 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--source-limitation-decisions") {
       args.sourceLimitationDecisionPath = argv[index + 1] ?? null;
       index += 1;
+    } else if (arg === "--include-standing-upper-body-targets") {
+      args.includeStandingUpperBodyTargets = true;
     } else if (arg === "--out") {
       args.out = argv[index + 1] ?? null;
       index += 1;
@@ -167,6 +171,10 @@ Options:
                      JSON manual review decisions to apply to visual manual-review proof rows.
   --source-limitation-decisions <path>
                      JSON source-limitation decisions to accept explicit product limitations.
+  --include-standing-upper-body-targets
+                     Include broad standing arm/reach/twist Game visual targets in
+                     gamePath.visualProofFrames. This is opt-in so the default reviewed
+                     Game visual gate remains stable.
   --strict           Exit non-zero when any error-level replay failure is found.
   --strict-manifest  Exit non-zero when the recorded proof manifest has failed,
                      missing-proof, manual-review, or unresolved source-data-limitation rows.
@@ -847,7 +855,11 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
   const sessions = args.source === "recordings"
     ? parseMovementReplayRecordings(rows, exportPath)
     : parseMovementDebugReplaySessions(rows);
-  const analyses = analyzeMovementDebugReplaySessions(sessions);
+  const analyses = analyzeMovementDebugReplaySessions(sessions, {
+    gameVisualProofOptions: {
+      includeStandingUpperBodyTargets: args.includeStandingUpperBodyTargets,
+    },
+  });
   const visualCaptures = readVisualCaptures(args.visualCapturePaths);
   const manualReviewDecisions = readManualReviewDecisions(args.reviewDecisionPath);
   const sourceLimitationDecisions = readSourceLimitationDecisions(args.sourceLimitationDecisionPath);

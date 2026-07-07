@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditUpperBodyStandingSupportReadiness,
+  mergeGameVisualPlans,
+  mergeSemanticReviews,
   parseUpperBodyStandingSupportReadinessAuditArgs,
 } from "./upper-body-standing-support-readiness-audit.mjs";
 
@@ -146,16 +148,65 @@ describe("upper body standing support readiness audit", () => {
       "tmp/manifest.json",
       "--game-visual-plan",
       "tmp/plan.json",
+      "--game-visual-plan",
+      "tmp/broad-plan.json",
       "--semantic-review",
       "tmp/review.json",
+      "--semantic-review",
+      "tmp/broad-review.json",
       "--strict",
       "--json",
     ])).toEqual({
-      gameVisualPlanPath: "tmp/plan.json",
+      gameVisualPlanPaths: ["tmp/plan.json", "tmp/broad-plan.json"],
       json: true,
       manifestPath: "tmp/manifest.json",
-      semanticReviewPath: "tmp/review.json",
+      semanticReviewPaths: ["tmp/review.json", "tmp/broad-review.json"],
       strict: true,
+    });
+  });
+
+  it("merges default and supplemental Game visual proof artifacts", () => {
+    expect(mergeGameVisualPlans([
+      {
+        summary: {
+          proofCases: ["strongest-side-bend", "strongest-head-direction"],
+        },
+      },
+      {
+        sessions: [
+          {
+            proofCases: ["strongest-standing-arm-raise"],
+          },
+        ],
+      },
+    ])).toEqual({
+      captures: [],
+      sessions: [
+        {
+          proofCases: ["strongest-standing-arm-raise"],
+        },
+      ],
+      summary: {
+        proofCases: [
+          "strongest-head-direction",
+          "strongest-side-bend",
+          "strongest-standing-arm-raise",
+        ],
+      },
+    });
+
+    expect(mergeSemanticReviews([
+      {
+        decisions: [decision("strongest-side-bend")],
+      },
+      {
+        decisions: [decision("strongest-standing-arm-raise")],
+      },
+    ])).toEqual({
+      decisions: [
+        decision("strongest-side-bend"),
+        decision("strongest-standing-arm-raise"),
+      ],
     });
   });
 });

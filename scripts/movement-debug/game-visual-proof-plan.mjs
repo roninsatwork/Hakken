@@ -19,6 +19,7 @@ Options:
   --base-url <url>                App URL for route hints. Defaults to ${defaultBaseUrl}
   --max-sessions <n>              Limit selected sessions. Defaults to all sessions with targets.
   --max-frames-per-session <n>    Limit visual target frames per selected session. Defaults to all target frames.
+  --proof-case <case>             Keep only frames matching this proof case. Can repeat.
   --help                          Show this help.
 `);
 }
@@ -36,6 +37,7 @@ export function parseGameVisualProofPlanArgs(argv) {
     maxFramesPerSession: Number.POSITIVE_INFINITY,
     maxSessions: Number.POSITIVE_INFINITY,
     outPath: defaultOutPath,
+    proofCases: [],
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -52,6 +54,8 @@ export function parseGameVisualProofPlanArgs(argv) {
       args.maxSessions = parsePositiveInteger(argv[++index], args.maxSessions);
     } else if (arg === "--max-frames-per-session") {
       args.maxFramesPerSession = parsePositiveInteger(argv[++index], args.maxFramesPerSession);
+    } else if (arg === "--proof-case") {
+      args.proofCases.push(argv[++index] || "");
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -112,16 +116,21 @@ function normalizeFrame(frame, options = {}) {
   };
 }
 
-function visualFramesForAnalysis(analysis, maxFramesPerSession) {
+function visualFramesForAnalysis(analysis, options = {}) {
   const frames = Array.isArray(analysis?.gamePath?.visualProofFrames)
     ? analysis.gamePath.visualProofFrames
     : [];
   const movementId = stringValue(analysis?.summary?.movementId, "");
+  const requestedProofCases = new Set(options.proofCases ?? []);
 
   return frames
     .map((frame) => normalizeFrame(frame, { baseUrl: analysis?.baseUrl, movementId }))
+    .filter((frame) => (
+      requestedProofCases.size === 0 ||
+      frame.cases.some((proofCase) => requestedProofCases.has(proofCase))
+    ))
     .sort((left, right) => left.frameIndex - right.frameIndex)
-    .slice(0, maxFramesPerSession);
+    .slice(0, options.maxFramesPerSession ?? Number.POSITIVE_INFINITY);
 }
 
 export function gameVisualProofPlanForAnalyses(analyses, options = {}) {
@@ -132,6 +141,7 @@ export function gameVisualProofPlanForAnalyses(analyses, options = {}) {
   const baseUrl = options.baseUrl || defaultBaseUrl;
   const maxFramesPerSession = options.maxFramesPerSession ?? Number.POSITIVE_INFINITY;
   const maxSessions = options.maxSessions ?? Number.POSITIVE_INFINITY;
+  const requestedProofCases = uniqueSorted(options.proofCases ?? []);
   const analysisWithVisualProofFrameFieldCount = analyses.filter((analysis) => (
     Array.isArray(analysis?.gamePath?.visualProofFrames)
   )).length;
@@ -141,10 +151,10 @@ export function gameVisualProofPlanForAnalyses(analyses, options = {}) {
       const movementId = stringValue(analysis?.summary?.movementId, "");
       const frames = visualFramesForAnalysis(
         { ...analysis, baseUrl },
-        maxFramesPerSession,
+        { maxFramesPerSession, proofCases: requestedProofCases },
       );
       if (frames.length === 0) return null;
-      const proofCases = uniqueSorted(frames.flatMap((frame) => frame.cases));
+      const sessionProofCases = uniqueSorted(frames.flatMap((frame) => frame.cases));
 
       return {
         captureMode: "game-studio-recorded-frame-injection-needed",
@@ -153,7 +163,7 @@ export function gameVisualProofPlanForAnalyses(analyses, options = {}) {
         movementId: movementId || null,
         nextAction: "Use these target frames to drive a focused Game Studio visual capture harness. Do not count them as visual proof until screenshots are attached and reviewed.",
         playRouteHint: routeHint(baseUrl, movementId, sessionId),
-        proofCases,
+        proofCases: sessionProofCases,
         recordingId: sessionId,
         targetFrameCount: frames.length,
       };
@@ -172,6 +182,7 @@ export function gameVisualProofPlanForAnalyses(analyses, options = {}) {
       maxSessions: Number.isFinite(maxSessions) ? maxSessions : null,
       movementIds: uniqueSorted(candidateSessions.map((session) => session.movementId).filter(Boolean)),
       proofCases: uniqueSorted(allCases),
+      requestedProofCases,
       recordingIds: candidateSessions.map((session) => session.recordingId),
       analysisWithVisualProofFrameFieldCount,
       selectedSessionCount: candidateSessions.length,
@@ -194,6 +205,7 @@ async function main() {
       baseUrl: args.baseUrl,
       maxFramesPerSession: args.maxFramesPerSession,
       maxSessions: args.maxSessions,
+      proofCases: args.proofCases,
     }),
     analysisPath: path.resolve(args.analysisPath),
     generatedAt: new Date().toISOString(),

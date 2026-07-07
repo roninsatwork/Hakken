@@ -1215,13 +1215,24 @@ describe("movement replay analyzer", () => {
   });
 
   it("adds broad standing upper-body proof rows without promoting shoulder/scapula support", () => {
-    const analysis = analyzeMovementDebugReplaySession(session([
+    const replaySession = session([
       trackingFrame(withCorePose()),
       trackingFrame(makeMovementAvatarProofMotionPayload("standing-arm-raise").landmarks),
       trackingFrame(makeMovementAvatarProofMotionPayload("standing-twist").landmarks),
       trackingFrame(withCorePose()),
-    ]));
+    ]);
+    const analysis = analyzeMovementDebugReplaySession(replaySession);
+    const broadVisualAnalysis = analyzeMovementDebugReplaySession(replaySession, {
+      gameVisualProofOptions: {
+        includeStandingUpperBodyTargets: true,
+        minStandingTwist: 0.01,
+      },
+    });
     const manifest = buildMovementRecordedProofManifest([analysis]);
+    const defaultGameVisualCases = analysis.gamePath.visualProofFrames.flatMap((proofFrame) => proofFrame.cases);
+    const broadGameVisualCases = broadVisualAnalysis.gamePath.visualProofFrames.flatMap((proofFrame) => (
+      proofFrame.cases
+    ));
     const armRaiseRow = manifest.rows.find((row) => (
       row.recordingId === analysis.sessionId && row.proofCase === "standing-arm-raise"
     ));
@@ -1266,6 +1277,14 @@ describe("movement replay analyzer", () => {
       proofCase: "shoulder-scapula-control",
       status: "product-scope-limitation",
     }));
+    expect(defaultGameVisualCases).not.toContain("strongest-standing-arm-raise");
+    expect(defaultGameVisualCases).not.toContain("strongest-standing-twist");
+    expect(defaultGameVisualCases).not.toContain("strongest-standing-reach");
+    expect(broadGameVisualCases).toEqual(expect.arrayContaining([
+      "strongest-standing-arm-raise",
+      "strongest-standing-twist",
+      "strongest-standing-reach",
+    ]));
   });
 
   it("explains far-squat candidate rejection when only regular squat proof exists", () => {

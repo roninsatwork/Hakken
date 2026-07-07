@@ -42,7 +42,9 @@ Usage:
 Options:
   --manifest <file>          Reviewed proof manifest. Defaults to ${defaultManifestPath}
   --game-visual-plan <file>  Game visual target plan. Defaults to ${defaultGameVisualPlanPath}
+                             Can be repeated for supplemental focused plans.
   --semantic-review <file>   Game visual semantic review decisions. Defaults to ${defaultSemanticReviewPath}
+                             Can be repeated for supplemental focused reviews.
   --strict                   Exit non-zero when broad upper-body support is not ready.
   --json                     Print machine-readable JSON.
   --help                     Show this help.
@@ -51,12 +53,14 @@ Options:
 
 export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   const args = {
-    gameVisualPlanPath: defaultGameVisualPlanPath,
+    gameVisualPlanPaths: [defaultGameVisualPlanPath],
     json: false,
     manifestPath: defaultManifestPath,
-    semanticReviewPath: defaultSemanticReviewPath,
+    semanticReviewPaths: [defaultSemanticReviewPath],
     strict: false,
   };
+  let sawExplicitGameVisualPlan = false;
+  let sawExplicitSemanticReview = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -66,9 +70,17 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
     } else if (arg === "--manifest") {
       args.manifestPath = argv[++index] || args.manifestPath;
     } else if (arg === "--game-visual-plan") {
-      args.gameVisualPlanPath = argv[++index] || args.gameVisualPlanPath;
+      if (!sawExplicitGameVisualPlan) {
+        args.gameVisualPlanPaths = [];
+        sawExplicitGameVisualPlan = true;
+      }
+      args.gameVisualPlanPaths.push(argv[++index] || defaultGameVisualPlanPath);
     } else if (arg === "--semantic-review") {
-      args.semanticReviewPath = argv[++index] || args.semanticReviewPath;
+      if (!sawExplicitSemanticReview) {
+        args.semanticReviewPaths = [];
+        sawExplicitSemanticReview = true;
+      }
+      args.semanticReviewPaths.push(argv[++index] || defaultSemanticReviewPath);
     } else if (arg === "--strict") {
       args.strict = true;
     } else if (arg === "--json") {
@@ -79,6 +91,26 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   }
 
   return args;
+}
+
+export function mergeGameVisualPlans(plans) {
+  const mergedSessions = plans.flatMap((plan) => Array.isArray(plan?.sessions) ? plan.sessions : []);
+  const mergedCaptures = plans.flatMap((plan) => Array.isArray(plan?.captures) ? plan.captures : []);
+  const proofCases = Array.from(new Set(plans.flatMap(planProofCases))).sort();
+
+  return {
+    captures: mergedCaptures,
+    sessions: mergedSessions,
+    summary: {
+      proofCases,
+    },
+  };
+}
+
+export function mergeSemanticReviews(reviews) {
+  return {
+    decisions: reviews.flatMap((review) => Array.isArray(review?.decisions) ? review.decisions : []),
+  };
 }
 
 function countByStatus(rows) {
@@ -220,8 +252,16 @@ function formatAudit(audit) {
 async function main() {
   const args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
   const manifest = JSON.parse(await readFile(path.resolve(args.manifestPath), "utf8"));
-  const gameVisualPlan = JSON.parse(await readFile(path.resolve(args.gameVisualPlanPath), "utf8"));
-  const semanticReview = JSON.parse(await readFile(path.resolve(args.semanticReviewPath), "utf8"));
+  const gameVisualPlan = mergeGameVisualPlans(await Promise.all(
+    args.gameVisualPlanPaths.map(async (planPath) => (
+      JSON.parse(await readFile(path.resolve(planPath), "utf8"))
+    )),
+  ));
+  const semanticReview = mergeSemanticReviews(await Promise.all(
+    args.semanticReviewPaths.map(async (reviewPath) => (
+      JSON.parse(await readFile(path.resolve(reviewPath), "utf8"))
+    )),
+  ));
   const audit = auditUpperBodyStandingSupportReadiness({ gameVisualPlan, manifest, semanticReview });
 
   console.log(args.json ? JSON.stringify(audit, null, 2) : formatAudit(audit));
