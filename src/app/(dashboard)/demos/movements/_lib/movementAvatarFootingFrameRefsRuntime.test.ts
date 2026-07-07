@@ -41,6 +41,7 @@ describe("movementAvatarFootingFrameRefsRuntime", () => {
     expect(result).toEqual({
       footLockCorrection: 0.24,
       footLockDrift: 0.42,
+      footLockState: nextFootLockState,
     });
   });
 

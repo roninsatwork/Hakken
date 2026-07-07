@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_WATCHED_FILES,
   buildMovementArchitectureGuardReport,
   evaluateSourcePurityRule,
   evaluateRouteBypassPurityRule,
@@ -126,6 +127,183 @@ const cleanManifest = {
 };
 
 describe("movement architecture guard", () => {
+  it("keeps renderer and ready-frame helpers under explicit watched-file caps", () => {
+    expect(DEFAULT_WATCHED_FILES).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        maxLines: 240,
+        path: "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
+      }),
+      expect.objectContaining({
+        maxLines: 260,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameOrchestrationRuntime.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 280,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameApplicationRuntime.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 260,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 430,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarTrackingDebugTelemetry.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 130,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarVisualTelemetry.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 60,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecisionTypes.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 140,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactAnchors.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 220,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecisionRuntime.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 250,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactCorrectionApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 180,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactObjectApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 220,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRestMappedSegmentApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 170,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlantedSquatIkSegmentApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 180,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRetargetSegmentMappingApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 190,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplicationSpecs.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 180,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplicationVrmAdapters.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 60,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationTypes.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 140,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadQuaternionApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 80,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadPositionApplication.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 150,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationRuntime.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 90,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationVrmAdapters.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarUpperBodyPoseDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 150,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpinePoseDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 120,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationPoseDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 90,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFootLockDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerDrive.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 130,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerSpineDriveShared.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 140,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarUpperBodyPlayerSpineDrive.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 130,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerSpineDriveRuntime.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 110,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRecordedSpineDrive.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 30,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplicationDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 170,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodySourceOwnerDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 130,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRetargetSegmentApplicationDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 150,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyStageDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 120,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyVisualDecision.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 20,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportPresentationEstimators.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 360,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFloorSupportPresentationEstimators.ts",
+      }),
+      expect.objectContaining({
+        maxLines: 210,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarStandingSupportPresentationEstimators.ts",
+      }),
+    ]));
+  });
+
   it("parses focused proof artifact overrides", () => {
     expect(parseMovementArchitectureGuardArgs([
       "--root",
@@ -378,8 +556,8 @@ describe("movement architecture guard", () => {
       captureManifest: cleanCaptureManifest,
       files: [
         {
-          lineCount: 604,
-          maxLines: 650,
+          lineCount: 220,
+          maxLines: 240,
           path: "VrmAvatar.tsx",
           reason: "renderer guard",
         },
@@ -457,8 +635,8 @@ describe("movement architecture guard", () => {
       },
       files: [
         {
-          lineCount: 700,
-          maxLines: 650,
+          lineCount: 260,
+          maxLines: 240,
           path: "VrmAvatar.tsx",
           reason: "renderer guard",
         },

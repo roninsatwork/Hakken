@@ -1,0 +1,95 @@
+import type { VRM } from "@pixiv/three-vrm";
+import type * as THREE from "three";
+import {
+  resolveMovementAvatarFrameTargetRuntime,
+  type MovementAvatarFrameTargetRuntimeDecision,
+} from "./movementAvatarFrameTargetRuntime";
+import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
+import {
+  createMovementAvatarRetargetFrameRuntimeAdapters,
+  type MovementAvatarRetargetFrameRuntimeAdapters,
+} from "./movementAvatarRetargetFrameRuntime";
+import type {
+  MovementAvatarRetargetBoneName,
+  MovementAvatarRetargetRestMap,
+} from "./movementAvatarRestPose";
+import type { MovementRetargetFrame } from "./movementRetargeting";
+import type { MovementAvatarTrackingProfile } from "./movementTrackingCalibration";
+import type {
+  VrmHandsPayload,
+  VrmSolverLandmark,
+} from "./vrmRigging";
+
+export type MovementAvatarFrameTargetRetargetOrchestrationRuntime = {
+  armTargetComposition: MovementAvatarFrameTargetRuntimeDecision["armTargetComposition"];
+  frameTargetRuntime: MovementAvatarFrameTargetRuntimeDecision;
+  lowerBodyAimTargets: MovementAvatarFrameTargetRuntimeDecision["lowerBodyTargetComposition"]["aimTargets"];
+  retargetFrameRuntimeAdapters: MovementAvatarRetargetFrameRuntimeAdapters;
+};
+
+export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
+  avatarRole,
+  avatarRoot,
+  currentRestMap,
+  hasWorldLandmarks,
+  imageLandmarks,
+  instructorSquatPresentationDepth,
+  lastGood,
+  lookupBone,
+  lowerBodyDrive,
+  lowerBodySegmentMotion,
+  profile,
+  retargetFrame,
+  rigHands,
+  shouldUseRetargetedUpperBody,
+  solverLandmarks,
+  targetSolverLandmarks,
+  vrm,
+}: {
+  avatarRole: "instructor" | "player";
+  avatarRoot: THREE.Object3D | null | undefined;
+  currentRestMap: MovementAvatarRetargetRestMap;
+  hasWorldLandmarks: boolean;
+  imageLandmarks: VrmSolverLandmark[];
+  instructorSquatPresentationDepth: number;
+  lastGood: Record<string, THREE.Quaternion>;
+  lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
+  lowerBodyDrive: MovementAvatarLowerBodyDrive;
+  lowerBodySegmentMotion: number;
+  profile?: MovementAvatarTrackingProfile;
+  retargetFrame: MovementRetargetFrame;
+  rigHands: VrmHandsPayload | undefined;
+  shouldUseRetargetedUpperBody: boolean;
+  solverLandmarks: VrmSolverLandmark[];
+  targetSolverLandmarks: VrmSolverLandmark[];
+  vrm: VRM | null | undefined;
+}): MovementAvatarFrameTargetRetargetOrchestrationRuntime {
+  const frameTargetRuntime = resolveMovementAvatarFrameTargetRuntime({
+    avatarRole,
+    imageLandmarks,
+    lowerBodyDrive,
+    rigHands,
+    solverLandmarks,
+    targetSolverLandmarks,
+  });
+
+  return {
+    armTargetComposition: frameTargetRuntime.armTargetComposition,
+    frameTargetRuntime,
+    lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
+    retargetFrameRuntimeAdapters: createMovementAvatarRetargetFrameRuntimeAdapters({
+      avatarRole,
+      avatarRoot,
+      currentRestMap,
+      hasWorldLandmarks,
+      instructorSquatPresentationDepth,
+      lastGood,
+      lookupBone,
+      lowerBodySegmentMotion,
+      profile,
+      retargetFrame,
+      shouldUseRetargetedUpperBody,
+      vrm,
+    }),
+  };
+}

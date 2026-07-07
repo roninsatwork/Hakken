@@ -36,6 +36,9 @@ Thumbs.db
 /test-results/
 /e2e/.auth/
 
+# Local scratch/proof outputs
+/tmp/
+
 # TypeScript incremental cache
 tsconfig.tsbuildinfo
 

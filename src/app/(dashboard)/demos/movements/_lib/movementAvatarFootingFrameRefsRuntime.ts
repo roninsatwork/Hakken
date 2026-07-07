@@ -9,6 +9,7 @@ type MovementAvatarMutableRef<T> = {
 export type MovementAvatarFootingFrameRefsRuntimeResult = {
   footLockCorrection: number;
   footLockDrift: number;
+  footLockState: MovementAvatarFootLockState;
 };
 
 export function applyMovementAvatarFootingFrameRefsRuntime({
@@ -26,5 +27,6 @@ export function applyMovementAvatarFootingFrameRefsRuntime({
   return {
     footLockCorrection: footingRuntime.footLockRuntimeApplication.appliedCorrection,
     footLockDrift: footingRuntime.footLockRuntimeApplication.drift,
+    footLockState: footingRuntime.nextFootLockState,
   };
 }

@@ -3,9 +3,49 @@ import path from "node:path";
 
 export const DEFAULT_WATCHED_FILES = [
   {
-    maxLines: 650,
+    maxLines: 240,
     path: "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
     reason: "avatar renderer should remain an orchestration adapter",
+  },
+  {
+    maxLines: 260,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameOrchestrationRuntime.ts",
+    reason: "ready-frame orchestration should stay a coordinator, not regain application ownership",
+  },
+  {
+    maxLines: 280,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameApplicationRuntime.ts",
+    reason: "ready-frame application handoff should stay focused on body/completion sequencing",
+  },
+  {
+    maxLines: 260,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.ts",
+    reason: "debug telemetry facade should not regain tracking or visual telemetry ownership",
+  },
+  {
+    maxLines: 430,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarTrackingDebugTelemetry.ts",
+    reason: "tracking debug telemetry should stay focused on label/state composition",
+  },
+  {
+    maxLines: 130,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarVisualTelemetry.ts",
+    reason: "visual telemetry should stay focused on VRM/retarget segment comparison",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportPresentationEstimators.ts",
+    reason: "support-presentation estimator entrypoint should stay a facade",
+  },
+  {
+    maxLines: 360,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFloorSupportPresentationEstimators.ts",
+    reason: "floor/seated support estimators should stay separate from standing support logic",
+  },
+  {
+    maxLines: 210,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarStandingSupportPresentationEstimators.ts",
+    reason: "standing/yoga/athletic support estimators should stay separate from floor support logic",
   },
   {
     maxLines: 130,
@@ -23,9 +63,179 @@ export const DEFAULT_WATCHED_FILES = [
     reason: "support-context composition should stay focused",
   },
   {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecision.ts",
+    reason: "support-contact lock decision entrypoint should stay a facade",
+  },
+  {
+    maxLines: 60,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecisionTypes.ts",
+    reason: "support-contact lock contracts should stay separate from anchor and resolver policy",
+  },
+  {
+    maxLines: 140,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactAnchors.ts",
+    reason: "support-contact anchor mapping should stay separate from lock resolver policy",
+  },
+  {
+    maxLines: 220,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactDecisionRuntime.ts",
+    reason: "support-contact lock resolver should stay separate from anchor mapping helpers",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.ts",
+    reason: "support-contact application entrypoint should stay a facade",
+  },
+  {
+    maxLines: 250,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactCorrectionApplication.ts",
+    reason: "support-contact correction math should stay separate from Three.js object mutation",
+  },
+  {
+    maxLines: 180,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactObjectApplication.ts",
+    reason: "support-contact object mutation should stay an adapter over pure correction decisions",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.ts",
+    reason: "segment application entrypoint should stay a facade",
+  },
+  {
+    maxLines: 220,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRestMappedSegmentApplication.ts",
+    reason: "rest-mapped segment application should stay separate from IK and retarget mapping policy",
+  },
+  {
+    maxLines: 170,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlantedSquatIkSegmentApplication.ts",
+    reason: "planted-squat IK segment application should stay separate from generic rest-map application",
+  },
+  {
+    maxLines: 180,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRetargetSegmentMappingApplication.ts",
+    reason: "retarget segment mapping should stay separate from IK and rest-map primitives",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplication.ts",
+    reason: "spine application entrypoint should stay a facade",
+  },
+  {
+    maxLines: 190,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplicationSpecs.ts",
+    reason: "spine application specs should stay separate from VRM bone mutation",
+  },
+  {
+    maxLines: 180,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpineApplicationVrmAdapters.ts",
+    reason: "spine VRM adapters should stay adapter-only",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplication.ts",
+    reason: "head application entrypoint should stay a facade",
+  },
+  {
+    maxLines: 60,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationTypes.ts",
+    reason: "head application contracts should stay separate from runtime and VRM adapters",
+  },
+  {
+    maxLines: 140,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadQuaternionApplication.ts",
+    reason: "head/neck quaternion application should stay separate from runtime sequencing",
+  },
+  {
+    maxLines: 80,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadPositionApplication.ts",
+    reason: "head position offset math should stay separate from quaternion and runtime sequencing",
+  },
+  {
+    maxLines: 150,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationRuntime.ts",
+    reason: "head application runtime should stay a sequencer over focused helpers",
+  },
+  {
+    maxLines: 90,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationVrmAdapters.ts",
+    reason: "head VRM adapters should stay adapter-only",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarUpperBodyPoseDecision.ts",
+    reason: "upper-body pose decision entrypoint should stay a facade",
+  },
+  {
+    maxLines: 150,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarSpinePoseDecision.ts",
+    reason: "spine pose policy should stay separate from head and foot-lock decisions",
+  },
+  {
+    maxLines: 120,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadApplicationPoseDecision.ts",
+    reason: "head application pose policy should stay separate from spine and foot-lock decisions",
+  },
+  {
+    maxLines: 90,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFootLockDecision.ts",
+    reason: "foot-lock policy should stay separate from spine and head decisions",
+  },
+  {
+    maxLines: 20,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerDrive.ts",
+    reason: "player drive entrypoint should stay a facade",
+  },
+  {
+    maxLines: 130,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerSpineDriveShared.ts",
+    reason: "player spine-drive shared helpers should stay separate from live and recorded drive policy",
+  },
+  {
+    maxLines: 140,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarUpperBodyPlayerSpineDrive.ts",
+    reason: "upper-body player spine fallback should stay separate from full-body player spine drive",
+  },
+  {
+    maxLines: 130,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPlayerSpineDriveRuntime.ts",
+    reason: "live player spine drive should stay separate from recorded spine presentation",
+  },
+  {
+    maxLines: 110,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRecordedSpineDrive.ts",
+    reason: "recorded spine presentation should stay separate from live player spine drive",
+  },
+  {
     maxLines: 180,
     path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipelineLowerBodyDecision.ts",
     reason: "lower-body/retarget context composition should stay focused",
+  },
+  {
+    maxLines: 30,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplicationDecision.ts",
+    reason: "lower-body application decision entrypoint should stay a facade",
+  },
+  {
+    maxLines: 170,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodySourceOwnerDecision.ts",
+    reason: "lower-body source/owner decisions should stay separate from stage and visual smoothing policy",
+  },
+  {
+    maxLines: 130,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarRetargetSegmentApplicationDecision.ts",
+    reason: "retarget segment application gating should stay separate from lower-body stage decisions",
+  },
+  {
+    maxLines: 150,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyStageDecision.ts",
+    reason: "lower-body stage decisions should stay separate from source-owner and visual smoothing policy",
+  },
+  {
+    maxLines: 120,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyVisualDecision.ts",
+    reason: "lower-body visual smoothing policy should stay separate from retarget and stage decisions",
   },
   {
     maxLines: 260,

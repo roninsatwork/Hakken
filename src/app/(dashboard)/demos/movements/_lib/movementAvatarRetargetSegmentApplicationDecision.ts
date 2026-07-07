@@ -1,0 +1,89 @@
+import type {
+  MovementAvatarRetargetSegmentApplicationDecision,
+  MovementAvatarRetargetSegmentType,
+} from "./movementAvatarPipeline";
+import type { MovementRetargetFrame, MovementRetargetSegmentName } from "./movementRetargeting";
+import {
+  DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+  type MovementAvatarTrackingProfile,
+} from "./movementTrackingCalibration";
+
+export function resolveMovementAvatarRetargetSegmentApplication({
+  avatarRole,
+  hasWorldLandmarks,
+  instructorSquatPresentationDepth,
+  lowerBodySegmentMotion,
+  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+  retargetFrame,
+  segmentName,
+  segmentType,
+  shouldUseRetargetedUpperBody,
+}: {
+  avatarRole: "instructor" | "player";
+  hasWorldLandmarks: boolean;
+  instructorSquatPresentationDepth: number;
+  lowerBodySegmentMotion: number;
+  profile?: MovementAvatarTrackingProfile;
+  retargetFrame: MovementRetargetFrame;
+  segmentName: MovementRetargetSegmentName;
+  segmentType: MovementAvatarRetargetSegmentType;
+  shouldUseRetargetedUpperBody: boolean;
+}): MovementAvatarRetargetSegmentApplicationDecision {
+  const isPlayer = avatarRole === "player";
+  const segment = retargetFrame.segments[segmentName];
+  const useReplayUpperBodySlerp = shouldUseRetargetedUpperBody && segmentType === "arm";
+  const slerp = segmentType === "foot"
+    ? (isPlayer ? profile.footSlerp : 0.36)
+    : segmentType === "arm"
+      ? segmentName.includes("UpperArm")
+        ? (useReplayUpperBodySlerp ? 0.72 : isPlayer ? profile.upperArmSlerp : 0.72)
+        : (useReplayUpperBodySlerp ? 0.78 : isPlayer ? profile.lowerArmSlerp : 0.78)
+      : segmentType === "spine"
+        ? (isPlayer ? 0.32 : 0.66)
+        : (isPlayer ? profile.legSlerp : 0.42);
+
+  const inactiveDecision = (
+    reason: MovementAvatarRetargetSegmentApplicationDecision["reason"],
+  ): MovementAvatarRetargetSegmentApplicationDecision => ({
+    reason,
+    shouldApply: false,
+    slerp,
+    zScale: hasWorldLandmarks ? 1 : 0.18,
+  });
+
+  if (!segment || segment.confidence < 0.3) return inactiveDecision("low-confidence");
+
+  const presentationSquatDepth = isPlayer
+    ? retargetFrame.squatDepth
+    : instructorSquatPresentationDepth;
+  const activeFootMotion = Math.max(
+    presentationSquatDepth,
+    lowerBodySegmentMotion,
+    retargetFrame.kneeLift.left,
+    retargetFrame.kneeLift.right,
+  );
+
+  if (!isPlayer && segmentType === "foot" && activeFootMotion < 0.22) {
+    return inactiveDecision("recorded-foot-low-motion");
+  }
+
+  if (!isPlayer && segmentType === "foot") {
+    const isLeftFoot = segmentName === "leftFoot";
+    const isPlanted = isLeftFoot
+      ? retargetFrame.contacts.leftFoot
+      : retargetFrame.contacts.rightFoot;
+    const kneeLift = isLeftFoot
+      ? retargetFrame.kneeLift.left
+      : retargetFrame.kneeLift.right;
+
+    if (isPlanted) return inactiveDecision("recorded-foot-planted");
+    if (kneeLift < 0.45) return inactiveDecision("recorded-foot-low-knee-lift");
+  }
+
+  return {
+    reason: "active",
+    shouldApply: true,
+    slerp,
+    zScale: hasWorldLandmarks ? 1 : 0.18,
+  };
+}
