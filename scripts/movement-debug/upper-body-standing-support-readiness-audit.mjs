@@ -747,6 +747,12 @@ export function validateBroadCaptureContractShape(contract) {
   if (!arraysEqual(requiredGameProofCases, BROAD_UPPER_BODY_GAME_PROOF_CASES)) {
     issues.push(`expected Game proof cases ${BROAD_UPPER_BODY_GAME_PROOF_CASES.join(",")}`);
   }
+  if (!Array.isArray(contract?.broadPassingRecordingIds)) {
+    issues.push("expected broadPassingRecordingIds array");
+  }
+  if (!Array.isArray(contract?.broadPassedProofCandidates)) {
+    issues.push("expected broadPassedProofCandidates array");
+  }
   if (!/\s--strict(?:\s|$)/.test(finalAuditCommand)) {
     issues.push("expected merged-readiness-audit command to include --strict");
   }

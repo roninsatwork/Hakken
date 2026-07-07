@@ -526,6 +526,8 @@ describe("movement architecture guard", () => {
       requiredRecordedProofCases: ["standing-arm-raise"],
       schema: "sonae-broad-upper-body-capture-contract/v1",
     })).toEqual({
+      broadPassedProofCandidateCount: 0,
+      broadPassingRecordingCount: 0,
       commandIds: ["initial-analysis", "merged-readiness-audit"],
       gameProofCases: ["strongest-standing-arm-raise"],
       hasRecordingPlaceholder: true,
@@ -541,6 +543,8 @@ describe("movement architecture guard", () => {
         },
       ],
     })).toMatchObject({
+      broadPassedProofCandidateCount: 0,
+      broadPassingRecordingCount: 0,
       hasStrictFinalAudit: false,
     });
   });

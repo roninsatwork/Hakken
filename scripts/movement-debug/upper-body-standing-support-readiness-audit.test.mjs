@@ -371,6 +371,8 @@ describe("upper body standing support readiness audit", () => {
       "expected command ids initial-analysis,replay-proof-set,replay-review,reviewed-analysis,focused-game-visual-plan,focused-game-visual-capture,focused-game-visual-review,merged-readiness-audit",
       "expected recorded proof cases standing-arm-raise,standing-twist,standing-reach,shoulder-scapula-control",
       "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",
+      "expected broadPassingRecordingIds array",
+      "expected broadPassedProofCandidates array",
       "expected merged-readiness-audit command to include --strict",
     ]);
   });
