@@ -213,6 +213,14 @@ Use this as the standing report for each section. Reopen any row when code inspe
 - Current source classification: 54 implementation files and 22 focused tests. They are real architecture-slice files, not generated proof output: VRM presentation/asset lifecycle, ready/body/final/pre-body/frame orchestration, frame entry/world/scene/target helpers, head/spine/player-drive/support-contact/segment/lower-body policy splits, telemetry splits, and their focused tests. The 22 focused tests pass under Node 22.13.0, typecheck passes, whitespace is clean, and the slice should be staged with the related tracked edits before moving to new movement-family proof.
 - The plan adherence answer remains: close for the standing/Game Studio architecture, incomplete for broader human movement support, and dependent on keeping proof artifacts honest rather than promoting approximate families to product support.
 
+2026-07-07 `squat-knee-lift` support-readiness audit:
+
+- Decision: keep `squat-knee-lift` internal/demo-only for now, but treat it as the best next family to promote after one deliberately scoped support-claim review. Do not promote it in `movementCoverageRegistry.ts` from this audit alone.
+- Existing proof is strong for the current standing demo: `squat` has 9/9 direct passed manifest rows; `left-leg-raise`, `right-leg-raise`, and `mirror-side-ownership` each have 4 direct passed rows with the remaining rows honestly marked `covered-by-other-recording`.
+- Game visual proof is also aligned: semantic review has 9/9 `strongest-squat`, 4/4 `strongest-left-leg-lift`, and 4/4 `strongest-right-leg-lift` readable-pass targets, with 0 readable-fail decisions.
+- Remaining blocker is not architecture or analyzer failure. It is product scope and wording: the family label says "Squat and knee lift", but the current proof is standing squat plus single-knee-lift/mirror-side ownership. Before making it user-facing, record or designate one clean support-claim scenario that intentionally combines neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one review bundle.
+- The fastest safe promotion path is: add that support-claim scenario or tag an existing recording if it already fits; run the focused scenario validator first; refresh the Game visual target plan only for affected squat/knee-lift frames if needed; then update coverage registry, architecture guard product-truth expectations, and user-facing docs in the same small slice.
+
 ## Always-Open Outstanding Tasks
 
 These tasks are intentionally allowed to reopen. A previously completed item should become open again whenever proof, code inspection, or client-visible behavior invalidates it.
@@ -403,13 +411,14 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 
 - [ ] Keep `movementCoverageRegistry.ts`, proof manifests, user-facing copy, and this plan aligned after every movement-family change.
 - [ ] Do not promote approximate, diagnostic-only, or synthetic proof families to support claims.
+- [ ] Promote `squat-knee-lift` only after a support-claim review explicitly covers neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one reviewed bundle.
 - [x] Automate coverage product-truth checks in `movement:architecture-guard` so reviewed analysis fails the fast gate if non-upright families become user-facing or if current internal/demo-only families stop being marked as missing full proof.
 - [ ] Keep `movement:architecture-guard` thresholds aligned with this plan whenever a watched module is intentionally split, merged, or scoped differently.
 - [ ] Before merge or push, run the local gate under Node 22.13.0 after `npm ci`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`.
 
 ## Recommended Next Slice
 
-The safest next slice is a `squat-knee-lift` support-readiness audit, not an immediate product-claim promotion and not a broad new movement-family expansion.
+The safest next slice is now a `squat-knee-lift` support-claim review bundle, not a broad new movement-family expansion.
 
 Why this is the best next gain:
 
@@ -420,10 +429,10 @@ Why this is the best next gain:
 
 Next concrete tasks:
 
-1. Add an explicit support-readiness note for `squat-knee-lift`: what proof exists, what still prevents a user-facing support claim, and what one extra recording/review would close the gap.
-2. Keep `movementCoverageRegistry.ts` unchanged until that audit says the support claim is safe; do not promote `squat-knee-lift` just because the current guard is green.
-3. If the audit finds the current proof sufficient, update the coverage guard, registry, and user-facing docs together in one small slice with focused proof/guard tests.
-4. If the audit finds a gap, capture or tag one isolated squat/knee-lift recording and run `npm run movement:replay:validate-scenario -- --scenario <fresh-recording-label> --quiet` first.
+1. Record or designate one clean support-claim scenario for `squat-knee-lift` that includes neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view.
+2. Run `npm run movement:replay:validate-scenario -- --scenario <fresh-recording-label> --quiet` first if a new recording is captured.
+3. Refresh focused Game visual proof only for affected squat/knee-lift targets if the scenario or motion-frame behavior changes.
+4. If the support-claim review passes, update `movementCoverageRegistry.ts`, architecture guard product-truth expectations, and user-facing docs together in one small slice with focused proof/guard tests.
 5. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
 
 Recent focused verification:
