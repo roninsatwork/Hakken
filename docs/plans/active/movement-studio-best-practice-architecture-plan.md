@@ -231,6 +231,13 @@ Use this as the standing report for each section. Reopen any row when code inspe
 - New command: `npm run movement:upper-body-standing-support-audit`. Run it without `--strict` while the expected state is blocked; use `--strict` only when intentionally trying to promote the family.
 - Fastest next gain: add upper-body Game visual target selection for side bend and head direction first, then rerun capture/review for those new targets. Only after that should a narrower user-facing claim be considered.
 
+2026-07-07 upper-body Game visual target-selection update:
+
+- Code capability added: `MovementMotionFrame` now carries source/display head targets from the shared head resolver, and `selectMovementGameVisualParityProofFrames` can emit `strongest-side-bend` and `strongest-head-direction` cases from display spine/head metrics.
+- Focused proof test added in `movementGamePathSimulation.test.ts` with real side-bend and head-up fixture motion.
+- Current reviewed artifact status is intentionally unchanged: the latest reviewed Game visual semantic file still has 37/37 readable-pass rows and no upper-body target screenshots yet.
+- Outstanding gap: regenerate the focused Game visual plan from fresh replay analysis, capture/review the newly emitted `strongest-side-bend` and `strongest-head-direction` frames, then rerun `movement:upper-body-standing-support-audit`.
+
 ## Always-Open Outstanding Tasks
 
 These tasks are intentionally allowed to reopen. A previously completed item should become open again whenever proof, code inspection, or client-visible behavior invalidates it.
@@ -429,27 +436,33 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 
 ## Recommended Next Slice
 
-The safest next slice is now upper-body Game visual target selection for side bend and head direction, not broad `upper-body-standing` promotion and not root travel promotion.
+The safest next slice is now the focused upper-body Game visual artifact refresh for side bend and head direction, not broad `upper-body-standing` promotion and not root travel promotion.
 
 Why this is the best next gain:
 
 1. Current reviewed proof has no active blockers: 117 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 9 product-scope-limitation, and 27 accepted limitations.
 2. `upper-body-standing` now has an executable readiness audit. It found 4 narrow side-bend/head-direction bundles but correctly blocks broad family support.
-3. The current Game visual proof selector has no upper-body-specific proof cases, so child-readable Game parity is the next missing layer for even a narrow side-bend/head-direction claim.
+3. The Game visual proof selector now has upper-body-specific proof cases, but the reviewed analysis/capture artifacts have not been refreshed to prove child-readable Game parity for those frames.
 4. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
 
 Next concrete tasks:
 
-1. Add `strongest-side-bend` and `strongest-head-direction` target selection to the Game visual parity proof plan using existing motion-frame spine/head metrics, with focused tests.
-2. Regenerate the focused Game visual plan and capture/review only the new affected upper-body targets.
-3. Update `movement:upper-body-standing-support-audit` requirements if the target names or proof semantics change.
+1. Regenerate replay analysis so the Game visual plan includes `strongest-side-bend` and `strongest-head-direction`.
+2. Capture/review only the new affected upper-body Game visual targets.
+3. Rerun `movement:upper-body-standing-support-audit` and keep it blocked unless it can cite reviewed Game readability rows for side bend and head direction.
 4. Keep `movementCoverageRegistry.ts` unchanged for `upper-body-standing` until the audit identifies one reviewed bundle and all required Game readability targets.
-5. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
+5. Update the architecture guard expected Game visual target count only after the refreshed reviewed artifact has 0 capture errors, 0 nonblank failures, and 0 readable-fail decisions.
 
 Recent focused verification:
 
+- `npx -p node@22.13.0 npm run test:run -- 'src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation.test.ts'` passed after adding shared motion-frame head targets and upper-body Game visual proof target selection: 1 file / 239 tests.
+- `npx -p node@22.13.0 npm run test:run -- 'src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadTarget.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation.test.ts'` passed after the final head-target threading adjustment: 3 files / 250 tests.
+- `npx -p node@22.13.0 npm run typecheck` passed.
+- `npx eslint 'src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.ts' 'src/app/(dashboard)/demos/movements/_lib/movementGameVisualParityProof.ts' 'src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation.test.ts'` passed.
+- `npx -p node@22.13.0 npm run movement:architecture-guard` passed against the current 37 reviewed Game visual targets, confirming the proof artifacts are still internally consistent but not yet refreshed for the new upper-body target cases.
+- `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit` passed as an expected blocked audit: code can now select side-bend/head-direction targets, but the reviewed target-plan/readability artifacts still have no `strongest-side-bend` or `strongest-head-direction` rows.
+- `git diff --check` passed.
 - `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/upper-body-standing-support-readiness-audit.test.mjs` passed: `verify:env` plus 1 file / 3 tests.
-- `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit` passed as an expected blocked audit: 4 narrow side-bend/head-direction bundles, missing broad arm/reach/twist/shoulder manifest proof, and missing broad upper-body Game readability targets.
 
 - `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/squat-knee-lift-support-claim-audit.test.mjs scripts/movement-debug/movement-architecture-guard.test.mjs 'src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts'` passed: `verify:env` plus 4 files / 58 tests.
 - `npx -p node@22.13.0 npm run movement:squat-knee-lift-support-audit -- --strict` passed with 2 reviewed bundles; selected `px75fgt11wbg0jvr17j6fc2dvd89trpm` as the first passing candidate.

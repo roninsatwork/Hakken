@@ -9,8 +9,10 @@ export type MovementGameVisualParityProofCase =
   | "first-tracking-help-frame"
   | "strongest-left-leg-lift"
   | "strongest-right-leg-lift"
+  | "strongest-head-direction"
   | "strongest-root-travel"
   | "strongest-root-turn"
+  | "strongest-side-bend"
   | "strongest-squat";
 
 export type MovementGameVisualParityProofFrame = {
@@ -18,6 +20,9 @@ export type MovementGameVisualParityProofFrame = {
   displayedMovementStrength: number;
   displayLowerLabel: string;
   frameIndex: number;
+  headPitch: number;
+  headRoll: number;
+  headYaw: number;
   leftKneeLift: number;
   mirrorMode: MovementMotionFrame["mirrorMode"];
   rawMovementStrength: number;
@@ -27,6 +32,7 @@ export type MovementGameVisualParityProofFrame = {
   rootHeadingYaw: number;
   rootTravelDistance: number;
   scoreAllowed: boolean;
+  sideBend: number;
   sourceLowerLabel: string;
   squatDepth: number;
 };
@@ -34,15 +40,19 @@ export type MovementGameVisualParityProofFrame = {
 export type MovementGameVisualParityProofOptions = {
   maxFrames?: number;
   minKneeLift?: number;
+  minHeadDirection?: number;
   minRootTravel?: number;
   minRootTurnYaw?: number;
+  minSideBend?: number;
   minSquatDepth?: number;
 };
 
 const DEFAULT_MAX_FRAMES = 12;
 const DEFAULT_MIN_KNEE_LIFT = 0.18;
+const DEFAULT_MIN_HEAD_DIRECTION = 0.08;
 const DEFAULT_MIN_ROOT_TRAVEL = 0.12;
 const DEFAULT_MIN_ROOT_TURN_YAW = 0.45;
+const DEFAULT_MIN_SIDE_BEND = 0.12;
 const DEFAULT_MIN_SQUAT_DEPTH = 0.18;
 
 function absolute(value: number | undefined) {
@@ -59,12 +69,16 @@ function metricFrame({
   rootMotion?: MovementRootMotionFrame;
 }): Omit<MovementGameVisualParityProofFrame, "cases" | "reasons"> {
   const displayDecision = motionFrame.avatarDisplayDecision;
+  const displayHeadDecision = motionFrame.avatarDisplayHeadTarget.headDecision;
   const sourceDecision = motionFrame.avatarDecision;
 
   return {
     displayedMovementStrength: motionFrame.readability.displayedMovementStrength,
     displayLowerLabel: displayDecision.lowerLabel,
     frameIndex,
+    headPitch: displayHeadDecision.headPitch,
+    headRoll: displayHeadDecision.headRoll,
+    headYaw: displayHeadDecision.headYaw,
     leftKneeLift: displayDecision.retargetFrame.kneeLift.left,
     mirrorMode: motionFrame.mirrorMode,
     rawMovementStrength: motionFrame.readability.rawMovementStrength,
@@ -73,6 +87,7 @@ function metricFrame({
     rootHeadingYaw: rootMotion?.headingYaw ?? 0,
     rootTravelDistance: rootMotion?.intent.travelDistance ?? 0,
     scoreAllowed: motionFrame.readability.scoreAllowed,
+    sideBend: displayDecision.spineDrive.sideBend,
     sourceLowerLabel: sourceDecision.lowerLabel,
     squatDepth: Math.max(
       displayDecision.lowerBodyIntent.squatDepth,
@@ -102,8 +117,10 @@ export function selectMovementGameVisualParityProofFrames(
 ): MovementGameVisualParityProofFrame[] {
   const maxFrames = options.maxFrames ?? DEFAULT_MAX_FRAMES;
   const minKneeLift = options.minKneeLift ?? DEFAULT_MIN_KNEE_LIFT;
+  const minHeadDirection = options.minHeadDirection ?? DEFAULT_MIN_HEAD_DIRECTION;
   const minRootTravel = options.minRootTravel ?? DEFAULT_MIN_ROOT_TRAVEL;
   const minRootTurnYaw = options.minRootTurnYaw ?? DEFAULT_MIN_ROOT_TURN_YAW;
+  const minSideBend = options.minSideBend ?? DEFAULT_MIN_SIDE_BEND;
   const minSquatDepth = options.minSquatDepth ?? DEFAULT_MIN_SQUAT_DEPTH;
   const frames = new Map<number, MovementGameVisualParityProofFrame>();
 
@@ -186,6 +203,26 @@ export function selectMovementGameVisualParityProofFrames(
   );
   if (strongestRightLegLift && strongestRightLegLift.value >= minKneeLift) {
     addFrame(strongestRightLegLift.frameIndex, "strongest-right-leg-lift", "strongest displayed right knee lift");
+  }
+
+  const strongestSideBend = findStrongestFrame(
+    simulation,
+    (motionFrame) => absolute(motionFrame.avatarDisplayDecision.spineDrive.sideBend),
+  );
+  if (strongestSideBend && strongestSideBend.value >= minSideBend) {
+    addFrame(strongestSideBend.frameIndex, "strongest-side-bend", "strongest displayed side bend");
+  }
+
+  const strongestHeadDirection = findStrongestFrame(
+    simulation,
+    (motionFrame) => Math.max(
+      absolute(motionFrame.avatarDisplayHeadTarget.headDecision.headPitch),
+      absolute(motionFrame.avatarDisplayHeadTarget.headDecision.headRoll),
+      absolute(motionFrame.avatarDisplayHeadTarget.headDecision.headYaw),
+    ),
+  );
+  if (strongestHeadDirection && strongestHeadDirection.value >= minHeadDirection) {
+    addFrame(strongestHeadDirection.frameIndex, "strongest-head-direction", "strongest displayed head direction");
   }
 
   const strongestRootTurn = findStrongestFrame(

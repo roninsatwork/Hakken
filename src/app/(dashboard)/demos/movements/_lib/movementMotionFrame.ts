@@ -7,6 +7,10 @@ import {
   mapMovementDisplaySide,
   type MovementMirrorMode,
 } from "./movementMirrorMapping";
+import {
+  resolveMovementAvatarHeadTarget,
+  type MovementAvatarHeadTargetDecision,
+} from "./movementAvatarHeadTarget";
 import type { MovementSourceFrame } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 import {
@@ -56,6 +60,8 @@ export type MovementMotionReadabilityTarget = {
 export type MovementMotionFrame = {
   avatarDecision: MovementAvatarPipelineDecision;
   avatarDisplayDecision: MovementAvatarPipelineDecision;
+  avatarDisplayHeadTarget: MovementAvatarHeadTargetDecision;
+  avatarHeadTarget: MovementAvatarHeadTargetDecision;
   bodyOrientation: MovementAvatarPipelineDecision["bodyOrientation"];
   cameraConfidence: MovementSourceFrame["cameraConfidence"];
   clamped: string[];
@@ -245,6 +251,26 @@ export function resolveMovementMotionFrame({
         },
         sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
   });
+  const avatarHeadTarget = resolveMovementAvatarHeadTarget({
+    avatarRole: pipelineInput.avatarRole,
+    avatarRootYaw: 0,
+    calibration: pipelineInput.calibration,
+    poseLandmarks: sourcePoseLandmarks,
+    profile: pipelineInput.avatarTrackingProfile,
+    shouldApplyLowerBody: avatarDecision.shouldApplyLowerBody,
+    shouldApplySpine: avatarDecision.spineDrive.shouldApplySpine,
+  });
+  const avatarDisplayHeadTarget = poseLandmarks === sourcePoseLandmarks
+    ? avatarHeadTarget
+    : resolveMovementAvatarHeadTarget({
+        avatarRole: pipelineInput.avatarRole,
+        avatarRootYaw: 0,
+        calibration: pipelineInput.calibration,
+        poseLandmarks,
+        profile: pipelineInput.avatarTrackingProfile,
+        shouldApplyLowerBody: avatarDisplayDecision.shouldApplyLowerBody,
+        shouldApplySpine: avatarDisplayDecision.spineDrive.shouldApplySpine,
+      });
   const readability = resolveMotionReadability({
     displayDecision: avatarDisplayDecision,
     previousMotionFrame,
@@ -255,6 +281,8 @@ export function resolveMovementMotionFrame({
   return {
     avatarDecision,
     avatarDisplayDecision,
+    avatarDisplayHeadTarget,
+    avatarHeadTarget,
     bodyOrientation: avatarDecision.bodyOrientation,
     cameraConfidence: sourceFrame.cameraConfidence,
     clamped: [],

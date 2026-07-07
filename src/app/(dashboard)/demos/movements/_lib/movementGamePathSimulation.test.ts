@@ -533,6 +533,36 @@ describe("movementGamePathSimulation", () => {
     expect(proofCases).toContain("strongest-root-travel");
   });
 
+  it("selects upper-body Game visual parity frames for side bend and head direction", () => {
+    const proofFrames = selectMovementGameVisualParityProofFrames(
+      buildMovementGamePathSimulation(session([
+        frame(withCorePose()),
+        frame(sideBendPose()),
+        frame(makeMovementAvatarProofPose("head-up")),
+      ])),
+      {
+        minHeadDirection: 0.02,
+        minSideBend: 0.12,
+      },
+    );
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+    const sideBendFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-side-bend")
+    ));
+    const headDirectionFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-head-direction")
+    ));
+
+    expect(proofCases).toContain("strongest-side-bend");
+    expect(proofCases).toContain("strongest-head-direction");
+    expect(Math.abs(sideBendFrame?.sideBend ?? 0)).toBeGreaterThan(0.12);
+    expect(Math.max(
+      Math.abs(headDirectionFrame?.headPitch ?? 0),
+      Math.abs(headDirectionFrame?.headRoll ?? 0),
+      Math.abs(headDirectionFrame?.headYaw ?? 0),
+    )).toBeGreaterThan(0.02);
+  });
+
   it("marks the first source/display semantic divergence for visual proof", () => {
     const simulation = buildMovementGamePathSimulation(session([frame(withCorePose())]));
     const motionFrame = simulation.motionFrames[0]!;
