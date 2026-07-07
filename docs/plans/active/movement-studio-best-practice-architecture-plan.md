@@ -409,14 +409,22 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 
 ## Recommended Next Slice
 
-The safest next slice is no longer root-travel recording capture, raw Game screenshot capture, visual target-selection repair, the paused-pose regression assertion, focused Node 22 reruns, the first frame-context renderer extraction, solved-frame readiness branching, frame scene preparation, lower-body frame callback plumbing, frame setup ref-threading, frame decision ref-threading, frame decision snapshot selection, frame preparation orchestration, lower-body frame-state ref-threading/orchestration, head-frame result ref-threading/orchestration, frame target/retarget-adapter orchestration, root-frame debug ref-threading, footing-frame ref-threading, support owner handoff, root-frame orchestration, upper-body frame orchestration, final-frame orchestration, root/hips locomotion orchestration, or another broad movement-family expansion. It is a proof-and-handoff hygiene slice first, then a very small renderer or helper-boundary extraction only if proof stays green:
+The safest next slice is a `squat-knee-lift` support-readiness audit, not an immediate product-claim promotion and not a broad new movement-family expansion.
 
-1. Reconcile the dirty worktree and untracked files so the next agent can tell implementation files, proof artifacts, and scratch output apart.
-2. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
-3. Keep Replay/Game score-message parity at 0 divergence frames while visual parity work proceeds.
-4. Keep the reviewed manifest at 0 blocking rows, while keeping accepted source-data and product-scope limitations separate from passes.
-5. Run `npm run movement:architecture-guard` as the cheap drift gate before choosing any further extraction.
-6. Prefer runtime ref lifecycle/threading or the next small frame-sequencing boundary, and name the exact proof cases it can regress before editing.
+Why this is the best next gain:
+
+1. Current reviewed proof has no active blockers: 117 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 9 product-scope-limitation, and 27 accepted limitations.
+2. `squat` has 9/9 direct passed rows, `left-leg-raise`, `right-leg-raise`, and `mirror-side-ownership` each have 4 direct passed rows with the remaining rows covered by other recordings, and Game visual proof includes strongest-squat plus left/right leg-lift target frames.
+3. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
+4. `upper-body-standing` should stay internal/demo-only until overhead arm/reach/shoulder-specific recorded proof exists; current side-bend and head-direction evidence is useful but not enough for the broader family label.
+
+Next concrete tasks:
+
+1. Add an explicit support-readiness note for `squat-knee-lift`: what proof exists, what still prevents a user-facing support claim, and what one extra recording/review would close the gap.
+2. Keep `movementCoverageRegistry.ts` unchanged until that audit says the support claim is safe; do not promote `squat-knee-lift` just because the current guard is green.
+3. If the audit finds the current proof sufficient, update the coverage guard, registry, and user-facing docs together in one small slice with focused proof/guard tests.
+4. If the audit finds a gap, capture or tag one isolated squat/knee-lift recording and run `npm run movement:replay:validate-scenario -- --scenario <fresh-recording-label> --quiet` first.
+5. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
 
 Recent focused verification:
 
@@ -660,6 +668,7 @@ Latest continuation check on 2026-07-07:
 - `npx -p node@22.13.0 npm run test:run -- <22 movementAvatar*Runtime focused tests>` passed: 22 files / 38 tests.
 - `npx -p node@22.13.0 npm run typecheck` passed after classifying the source files.
 - `git diff --check` passed after classifying the source files and ignoring local `tmp/` proof output.
+- `npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --all --quiet --controlling-manifest tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json --summary-out tmp/movement-replay-lab/current-scenario-validation-summary.json --summary-markdown-out tmp/movement-replay-lab/current-scenario-validation-summary.md` passed after the cleanup commit: 117 unique proof rows, 0 failed, 0 missing-proof, 0 manual-review, and no blockers.
 
 Additional checks from this audit:
 
