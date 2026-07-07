@@ -82,7 +82,7 @@ Options:
                              Can be repeated for supplemental focused plans.
   --semantic-review <file>   Game visual semantic review decisions. Defaults to ${defaultSemanticReviewPath}
                              Can be repeated for supplemental focused reviews.
-  --capture-contract <file>  Use a generated broad capture contract for the final merged audit inputs.
+  --capture-contract <file>  Use a generated broad capture contract for strict final merged audit inputs.
   --candidate-review-out <file>
                              Write a Markdown checklist for ranked broad evidence candidates.
   --capture-guide-out <file>
@@ -479,6 +479,14 @@ function arraysEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function commandById(commands, id) {
+  return commands.find((command) => command.id === id)?.command ?? "";
+}
+
+function commandIncludesAll(command, values) {
+  return values.every((value) => typeof value === "string" && value.length > 0 && command.includes(value));
+}
+
 function buildBroadCaptureWorkflow({
   captureLabel = defaultBroadCaptureLabel,
   recordingId = null,
@@ -613,7 +621,7 @@ export function formatBroadCaptureGuide(audit, {
     "If you generated a JSON capture contract, the final merged audit can load those paths directly:",
     "",
     "```bash",
-    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file> --strict",
+    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file>",
     "```",
     "",
   ].join("\n");
@@ -648,9 +656,8 @@ export function validateBroadCaptureContractShape(contract) {
   const commandIds = Array.isArray(contract?.commands)
     ? contract.commands.map((command) => command.id)
     : [];
-  const finalAuditCommand = Array.isArray(contract?.commands)
-    ? contract.commands.find((command) => command.id === "merged-readiness-audit")?.command ?? ""
-    : "";
+  const commands = Array.isArray(contract?.commands) ? contract.commands : [];
+  const finalAuditCommand = commandById(commands, "merged-readiness-audit");
   const requiredRecordedProofCases = Array.isArray(contract?.requiredRecordedProofCases)
     ? contract.requiredRecordedProofCases
     : [];
@@ -672,6 +679,55 @@ export function validateBroadCaptureContractShape(contract) {
   }
   if (!/\s--strict(?:\s|$)/.test(finalAuditCommand)) {
     issues.push("expected merged-readiness-audit command to include --strict");
+  }
+  const paths = contract?.paths ?? null;
+  if (paths && typeof paths === "object") {
+    const commandPathRequirements = [
+      {
+        id: "initial-analysis",
+        paths: [paths.analysis, paths.manifest],
+      },
+      {
+        id: "replay-proof-set",
+        paths: [paths.analysis, paths.manifest, paths.replayCapture],
+      },
+      {
+        id: "replay-review",
+        paths: [paths.manifest, paths.replayCapture, paths.replayReview, paths.replayReviewDecisions],
+      },
+      {
+        id: "reviewed-analysis",
+        paths: [paths.replayCapture, paths.reviewedAnalysis, paths.reviewedManifest],
+      },
+      {
+        id: "focused-game-visual-plan",
+        paths: [paths.reviewedAnalysis, paths.gameVisualPlan],
+      },
+      {
+        id: "focused-game-visual-capture",
+        paths: [paths.gameVisualPlan, paths.gameCapture],
+      },
+      {
+        id: "focused-game-visual-review",
+        paths: [paths.gameCapture, paths.gameReview, paths.gameReviewDecisions],
+      },
+      {
+        id: "merged-readiness-audit",
+        paths: [paths.reviewedManifest, paths.gameVisualPlan, paths.semanticReviewDecisions],
+      },
+    ];
+    commandPathRequirements.forEach(({ id, paths: expectedPaths }) => {
+      const missingPaths = expectedPaths
+        .filter((expectedPath) => (
+          typeof expectedPath !== "string" ||
+          expectedPath.length === 0 ||
+          !commandIncludesAll(commandById(commands, id), [expectedPath])
+        ))
+        .map((expectedPath) => expectedPath || "<missing>");
+      if (missingPaths.length > 0) {
+        issues.push(`expected ${id} command to reference contract path(s): ${missingPaths.join(",")}`);
+      }
+    });
   }
 
   return issues;

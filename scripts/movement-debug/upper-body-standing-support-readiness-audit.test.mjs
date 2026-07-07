@@ -235,7 +235,8 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("--manifest tmp/movement-replay-lab/broad-explicit--analysis-reviewed.proof-manifest.json");
     expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
     expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
-    expect(captureGuide).toContain("--capture-contract <capture-contract-file> --strict");
+    expect(captureGuide).toContain("--capture-contract <capture-contract-file>");
+    expect(captureGuide).not.toContain("--capture-contract <capture-contract-file> --strict");
 
     const recordingIdGuide = formatBroadCaptureGuide(audit, {
       captureLabel: "broad explicit!",
@@ -270,6 +271,22 @@ describe("upper body standing support readiness audit", () => {
     expect(contract.commands.at(-1).command).toContain("movement:upper-body-standing-support-audit");
     expect(contract.commands.at(-1).command).toContain("--strict");
     expect(validateBroadCaptureContractShape(contract)).toEqual([]);
+
+    const driftedContract = JSON.parse(JSON.stringify(contract));
+    driftedContract.commands = driftedContract.commands.map((command) => (
+      command.id === "focused-game-visual-plan"
+        ? {
+            ...command,
+            command: command.command.replace(
+              driftedContract.paths.gameVisualPlan,
+              "tmp/movement-replay-lab/drifted-game-visual-proof-plan.json",
+            ),
+          }
+        : command
+    ));
+    expect(validateBroadCaptureContractShape(driftedContract)).toContain(
+      "expected focused-game-visual-plan command to reference contract path(s): tmp/movement-replay-lab/broad-explicit--game-visual-proof-plan.json",
+    );
 
     expect(validateBroadCaptureContractShape({
       commands: [
