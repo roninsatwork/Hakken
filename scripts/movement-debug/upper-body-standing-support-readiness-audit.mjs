@@ -823,6 +823,21 @@ export function validateBroadCaptureContractSemanticReview(contract, semanticRev
     .filter(Boolean);
 }
 
+export function validateBroadCaptureContractGameVisualPlan(contract, gameVisualPlan) {
+  const requiredGameProofCases = Array.isArray(contract?.requiredGameProofCases)
+    ? contract.requiredGameProofCases
+    : BROAD_UPPER_BODY_GAME_PROOF_CASES;
+  const plannedProofCases = planProofCases(gameVisualPlan);
+
+  return requiredGameProofCases
+    .filter((proofCase) => !plannedProofCases.includes(proofCase))
+    .map((proofCase) => ({
+      plannedProofCases,
+      proofCase,
+      nextAction: "rerun focused-game-visual-plan from the capture contract so the broad Game proof case is captured and reviewed",
+    }));
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -855,6 +870,19 @@ async function main() {
         .map((artifact) => `${artifact.key}${artifact.path ? ` (${artifact.path})` : ""}: ${artifact.nextAction}`)
         .join("; ");
       throw new Error(`Broad capture contract is not ready for final audit: ${missingText}`);
+    }
+    const focusedGameVisualPlan = JSON.parse(
+      await readFile(path.resolve(captureContract.paths.gameVisualPlan), "utf8"),
+    );
+    const gameVisualPlanIssues = validateBroadCaptureContractGameVisualPlan(
+      captureContract,
+      focusedGameVisualPlan,
+    );
+    if (gameVisualPlanIssues.length > 0) {
+      const issueText = gameVisualPlanIssues
+        .map((issue) => `${issue.proofCase}: ${issue.nextAction}`)
+        .join("; ");
+      throw new Error(`Broad capture contract Game visual plan is not ready for final audit: ${issueText}`);
     }
     const focusedSemanticReview = JSON.parse(
       await readFile(path.resolve(captureContract.paths.semanticReviewDecisions), "utf8"),

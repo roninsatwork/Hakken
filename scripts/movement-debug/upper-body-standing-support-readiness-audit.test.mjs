@@ -10,6 +10,7 @@ import {
   mergeSemanticReviews,
   parseUpperBodyStandingSupportReadinessAuditArgs,
   validateBroadCaptureContractAuditArtifacts,
+  validateBroadCaptureContractGameVisualPlan,
   validateBroadCaptureContractSemanticReview,
   validateBroadCaptureContractShape,
 } from "./upper-body-standing-support-readiness-audit.mjs";
@@ -470,6 +471,50 @@ describe("upper body standing support readiness audit", () => {
         observedDecisions: [],
         proofCase: "strongest-standing-reach",
         nextAction: "run focused-game-visual-review and add this proof case to the semantic review decisions",
+      },
+    ]);
+  });
+
+  it("validates focused Game visual plan cases before a contract final audit", () => {
+    const contract = {
+      requiredGameProofCases: [
+        "strongest-standing-arm-raise",
+        "strongest-standing-twist",
+        "strongest-standing-reach",
+      ],
+    };
+
+    expect(validateBroadCaptureContractGameVisualPlan(contract, {
+      summary: {
+        proofCases: [
+          "strongest-standing-arm-raise",
+          "strongest-standing-twist",
+          "strongest-standing-reach",
+        ],
+      },
+    })).toEqual([]);
+
+    expect(validateBroadCaptureContractGameVisualPlan(contract, {
+      captures: [
+        {
+          target: {
+            cases: ["strongest-standing-arm-raise"],
+          },
+        },
+        {
+          target: {
+            cases: ["strongest-standing-twist"],
+          },
+        },
+      ],
+    })).toEqual([
+      {
+        plannedProofCases: [
+          "strongest-standing-arm-raise",
+          "strongest-standing-twist",
+        ],
+        proofCase: "strongest-standing-reach",
+        nextAction: "rerun focused-game-visual-plan from the capture contract so the broad Game proof case is captured and reviewed",
       },
     ]);
   });
