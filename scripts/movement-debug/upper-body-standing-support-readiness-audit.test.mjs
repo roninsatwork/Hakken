@@ -140,6 +140,13 @@ describe("upper body standing support readiness audit", () => {
 
     expect(audit).toMatchObject({
       broadPassingRecordingIds: ["recording-a"],
+      broadPassedProofCandidates: [
+        {
+          missingPassedProofCases: [],
+          passedProofCaseCount: 4,
+          recordingId: "recording-a",
+        },
+      ],
       broadReady: true,
       missingBroadGamePlanCases: [],
       missingBroadManifestProofCases: [],
@@ -177,6 +184,24 @@ describe("upper body standing support readiness audit", () => {
 
     expect(audit).toMatchObject({
       broadPassingRecordingIds: [],
+      broadPassedProofCandidates: [
+        {
+          missingPassedProofCases: [
+            "standing-reach",
+            "shoulder-scapula-control",
+          ],
+          passedProofCaseCount: 2,
+          recordingId: "recording-a",
+        },
+        {
+          missingPassedProofCases: [
+            "standing-arm-raise",
+            "standing-twist",
+          ],
+          passedProofCaseCount: 2,
+          recordingId: "recording-b",
+        },
+      ],
       broadReady: false,
       missingBroadGamePlanCases: [],
       missingBroadManifestProofCases: [],

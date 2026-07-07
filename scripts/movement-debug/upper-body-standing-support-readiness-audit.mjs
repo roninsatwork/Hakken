@@ -309,6 +309,39 @@ function productScopedBroadEvidenceCandidates(groups, proofCases) {
     });
 }
 
+function broadPassedProofCandidates(groups, proofCases) {
+  const recordingIds = new Set(
+    proofCases.flatMap((proofCase) => (
+      (groups[proofCase] ?? []).map((row) => row.recordingId)
+    )),
+  );
+
+  return Array.from(recordingIds)
+    .map((recordingId) => {
+      const passedProofCases = proofCases.filter((proofCase) => (
+        passedRowsForCase(groups, proofCase).some((row) => row.recordingId === recordingId)
+      ));
+      const missingPassedProofCases = proofCases.filter((proofCase) => !passedProofCases.includes(proofCase));
+
+      return {
+        missingPassedProofCases,
+        passedProofCaseCount: passedProofCases.length,
+        passedProofCases,
+        recordingId,
+      };
+    })
+    .filter((candidate) => candidate.passedProofCaseCount > 0)
+    .sort((left, right) => {
+      if (left.missingPassedProofCases.length !== right.missingPassedProofCases.length) {
+        return left.missingPassedProofCases.length - right.missingPassedProofCases.length;
+      }
+      if (left.passedProofCaseCount !== right.passedProofCaseCount) {
+        return right.passedProofCaseCount - left.passedProofCaseCount;
+      }
+      return left.recordingId.localeCompare(right.recordingId);
+    });
+}
+
 function planProofCases(gameVisualPlan) {
   return Array.isArray(gameVisualPlan?.summary?.proofCases)
     ? gameVisualPlan.summary.proofCases
@@ -367,6 +400,10 @@ export function auditUpperBodyStandingSupportReadiness({
 
   return {
     broadPassingRecordingIds,
+    broadPassedProofCandidates: broadPassedProofCandidates(
+      groups,
+      requirements.broadManifestProofCases,
+    ),
     broadReady,
     decision: broadReady
       ? "Upper-body standing can be considered for a scoped user-facing support claim."
@@ -418,6 +455,18 @@ function formatCandidateSummary(candidates) {
       `${candidate.recordingId} ${candidate.totalEvidenceFrameCount} frame(s)` +
       `${candidate.missingProductScopedEvidenceCases.length > 0
         ? ` missing ${candidate.missingProductScopedEvidenceCases.join(",")}`
+        : ""}`
+    ))
+    .join("; ");
+}
+
+function formatPassedProofCandidateSummary(candidates) {
+  return candidates
+    .slice(0, 3)
+    .map((candidate) => (
+      `${candidate.recordingId} ${candidate.passedProofCaseCount} passed case(s)` +
+      `${candidate.missingPassedProofCases.length > 0
+        ? ` missing ${candidate.missingPassedProofCases.join(",")}`
         : ""}`
     ))
     .join("; ");
@@ -847,6 +896,7 @@ function formatAudit(audit) {
     audit.decision,
     `Narrow recorded proof bundles: ${audit.narrowPassingRecordingIds.length} (${formatList(audit.narrowPassingRecordingIds)}).`,
     `Broad recorded proof bundles: ${audit.broadPassingRecordingIds.length} (${formatList(audit.broadPassingRecordingIds)}).`,
+    `Top broad passed-proof candidates: ${formatPassedProofCandidateSummary(audit.broadPassedProofCandidates) || "none"}.`,
     `Missing broad manifest proof definitions: ${formatList(audit.missingBroadManifestProofCases)}.`,
     `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}.`,
     `Missing narrow Game target-plan cases: ${formatList(audit.missingNarrowGamePlanCases)}.`,
