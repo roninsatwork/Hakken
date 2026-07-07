@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyBroadCaptureContractArgs,
   auditUpperBodyStandingSupportReadiness,
   formatBroadCaptureContract,
   formatBroadCaptureGuide,
@@ -232,6 +233,7 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("--manifest tmp/movement-replay-lab/broad-explicit--analysis-reviewed.proof-manifest.json");
     expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
     expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
+    expect(captureGuide).toContain("--capture-contract <capture-contract-file>");
 
     const recordingIdGuide = formatBroadCaptureGuide(audit, {
       captureLabel: "broad explicit!",
@@ -278,6 +280,8 @@ describe("upper body standing support readiness audit", () => {
       "tmp/review.json",
       "--semantic-review",
       "tmp/broad-review.json",
+      "--capture-contract",
+      "tmp/capture-contract-input.json",
       "--candidate-review-out",
       "tmp/candidate-review.md",
       "--capture-guide-out",
@@ -292,6 +296,7 @@ describe("upper body standing support readiness audit", () => {
       "--json",
     ])).toEqual({
       gameVisualPlanPaths: ["tmp/plan.json", "tmp/broad-plan.json"],
+      captureContractPath: "tmp/capture-contract-input.json",
       captureGuideOutPath: "tmp/capture-guide.md",
       captureLabel: "movement proof broad",
       candidateReviewOutPath: "tmp/candidate-review.md",
@@ -302,6 +307,36 @@ describe("upper body standing support readiness audit", () => {
       semanticReviewPaths: ["tmp/review.json", "tmp/broad-review.json"],
       strict: true,
     });
+  });
+
+  it("applies generated broad capture contract paths to final audit inputs", () => {
+    expect(applyBroadCaptureContractArgs({
+      gameVisualPlanPaths: ["tmp/default-plan.json"],
+      manifestPath: "tmp/default-manifest.json",
+      semanticReviewPaths: ["tmp/default-review.json"],
+    }, {
+      paths: {
+        gameVisualPlan: "tmp/focused-plan.json",
+        reviewedManifest: "tmp/reviewed-manifest.json",
+        semanticReviewDecisions: "tmp/focused-review.json",
+      },
+    })).toMatchObject({
+      gameVisualPlanPaths: [
+        "tmp/movement-replay-lab/current-game-visual-proof-plan.json",
+        "tmp/focused-plan.json",
+      ],
+      manifestPath: "tmp/reviewed-manifest.json",
+      semanticReviewPaths: [
+        "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
+        "tmp/focused-review.json",
+      ],
+    });
+
+    expect(() => applyBroadCaptureContractArgs({}, {
+      paths: {
+        gameVisualPlan: "tmp/focused-plan.json",
+      },
+    })).toThrow("Broad capture contract is missing path(s): reviewedManifest, semanticReviewDecisions");
   });
 
   it("merges default and supplemental Game visual proof artifacts", () => {

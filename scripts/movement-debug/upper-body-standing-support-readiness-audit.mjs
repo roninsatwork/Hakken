@@ -70,6 +70,7 @@ Options:
                              Can be repeated for supplemental focused plans.
   --semantic-review <file>   Game visual semantic review decisions. Defaults to ${defaultSemanticReviewPath}
                              Can be repeated for supplemental focused reviews.
+  --capture-contract <file>  Use a generated broad capture contract for the final merged audit inputs.
   --candidate-review-out <file>
                              Write a Markdown checklist for ranked broad evidence candidates.
   --capture-guide-out <file>
@@ -88,6 +89,7 @@ Options:
 export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   const args = {
     gameVisualPlanPaths: [defaultGameVisualPlanPath],
+    captureContractPath: null,
     captureContractOutPath: null,
     captureGuideOutPath: null,
     captureLabel: defaultBroadCaptureLabel,
@@ -120,6 +122,8 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
         sawExplicitSemanticReview = true;
       }
       args.semanticReviewPaths.push(argv[++index] || defaultSemanticReviewPath);
+    } else if (arg === "--capture-contract") {
+      args.captureContractPath = argv[++index] || null;
     } else if (arg === "--candidate-review-out") {
       args.candidateReviewOutPath = argv[++index] || null;
     } else if (arg === "--capture-guide-out") {
@@ -590,6 +594,12 @@ export function formatBroadCaptureGuide(audit, {
     commandById["merged-readiness-audit"],
     "```",
     "",
+    "If you generated a JSON capture contract, the final merged audit can load those paths directly:",
+    "",
+    "```bash",
+    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --capture-contract <capture-contract-file>",
+    "```",
+    "",
   ].join("\n");
 }
 
@@ -617,6 +627,32 @@ export function formatBroadCaptureContract(audit, {
   };
 }
 
+export function applyBroadCaptureContractArgs(args, contract) {
+  const paths = contract?.paths ?? {};
+  const requiredPaths = [
+    "reviewedManifest",
+    "gameVisualPlan",
+    "semanticReviewDecisions",
+  ];
+  const missingPaths = requiredPaths.filter((key) => typeof paths[key] !== "string" || paths[key].length === 0);
+  if (missingPaths.length > 0) {
+    throw new Error(`Broad capture contract is missing path(s): ${missingPaths.join(", ")}`);
+  }
+
+  return {
+    ...args,
+    gameVisualPlanPaths: [
+      defaultGameVisualPlanPath,
+      paths.gameVisualPlan,
+    ],
+    manifestPath: paths.reviewedManifest,
+    semanticReviewPaths: [
+      defaultSemanticReviewPath,
+      paths.semanticReviewDecisions,
+    ],
+  };
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -636,7 +672,11 @@ function formatAudit(audit) {
 }
 
 async function main() {
-  const args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
+  let args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
+  if (args.captureContractPath) {
+    const captureContract = JSON.parse(await readFile(path.resolve(args.captureContractPath), "utf8"));
+    args = applyBroadCaptureContractArgs(args, captureContract);
+  }
   const manifest = JSON.parse(await readFile(path.resolve(args.manifestPath), "utf8"));
   const gameVisualPlan = mergeGameVisualPlans(await Promise.all(
     args.gameVisualPlanPaths.map(async (planPath) => (
