@@ -733,6 +733,8 @@ export function formatBroadCaptureContract(audit, {
     broadReady: audit.broadReady,
     captureProtocol: BROAD_UPPER_BODY_CAPTURE_PROTOCOL,
     commands: workflow.commands,
+    missingBroadGamePlanCases: audit.missingBroadGamePlanCases,
+    missingBroadManifestProofCases: audit.missingBroadManifestProofCases,
     missingBroadPassedProofCases: audit.missingBroadPassedProofCases,
     missingBroadReadableGameCases: audit.missingBroadReadableGameCases,
     paths: workflow.paths,
@@ -812,6 +814,19 @@ export function validateBroadCaptureContractShape(contract) {
       }
     });
   }
+  const topLevelCaseDomains = {
+    missingBroadGamePlanCases: requiredGameProofCases,
+    missingBroadManifestProofCases: requiredRecordedProofCases,
+    missingBroadPassedProofCases: requiredRecordedProofCases,
+    missingBroadReadableGameCases: requiredGameProofCases,
+  };
+  Object.entries(topLevelCaseDomains).forEach(([key, allowedCases]) => {
+    if (!Array.isArray(contract?.[key])) {
+      issues.push(`expected ${key} array`);
+    } else if (!contract[key].every((proofCase) => allowedCases.includes(proofCase))) {
+      issues.push(`expected ${key} to contain only required proof cases`);
+    }
+  });
   if (typeof contract?.broadReady !== "boolean") {
     issues.push("expected broadReady boolean");
   }
@@ -855,6 +870,20 @@ export function validateBroadCaptureContractShape(contract) {
       supportClaimBlockers.requiresSinglePassingRecordingBundle !== (contract.broadPassingRecordingIds.length === 0)
     ) {
       issues.push("expected supportClaimBlockers.requiresSinglePassingRecordingBundle to match broadPassingRecordingIds");
+    }
+    if (
+      Array.isArray(contract?.missingBroadGamePlanCases) &&
+      Array.isArray(supportClaimBlockers.missingBroadGamePlanCases) &&
+      !arraysEqual(contract.missingBroadGamePlanCases, supportClaimBlockers.missingBroadGamePlanCases)
+    ) {
+      issues.push("expected supportClaimBlockers.missingBroadGamePlanCases to match missingBroadGamePlanCases");
+    }
+    if (
+      Array.isArray(contract?.missingBroadManifestProofCases) &&
+      Array.isArray(supportClaimBlockers.missingBroadManifestProofCases) &&
+      !arraysEqual(contract.missingBroadManifestProofCases, supportClaimBlockers.missingBroadManifestProofCases)
+    ) {
+      issues.push("expected supportClaimBlockers.missingBroadManifestProofCases to match missingBroadManifestProofCases");
     }
     if (
       Array.isArray(contract?.missingBroadPassedProofCases) &&
