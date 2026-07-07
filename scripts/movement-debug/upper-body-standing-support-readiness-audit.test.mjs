@@ -180,6 +180,22 @@ describe("upper body standing support readiness audit", () => {
       broadReady: false,
       missingBroadPassedProofCases: broadManifestProofCases,
       productScopedBroadEvidenceRecordingIds: ["recording-a"],
+      productScopedBroadEvidenceCandidates: [
+        {
+          missingProductScopedEvidenceCases: [],
+          recordingId: "recording-a",
+          totalEvidenceFrameCount: 48,
+        },
+        {
+          missingProductScopedEvidenceCases: [
+            "standing-twist",
+            "standing-reach",
+            "shoulder-scapula-control",
+          ],
+          recordingId: "recording-b",
+          totalEvidenceFrameCount: 12,
+        },
+      ],
       productScopedBroadEvidenceSummary: {
         "standing-arm-raise": {
           evidenceProductScopeCount: 2,

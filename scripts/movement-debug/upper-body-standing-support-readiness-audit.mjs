@@ -7,6 +7,15 @@ const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-reviewed.p
 const defaultGameVisualPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.json";
 const defaultSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json";
 
+const BROAD_UPPER_BODY_CAPTURE_PROTOCOL = [
+  "neutral standing baseline with full upper body visible",
+  "standing overhead arm raise with both shoulders and elbows visible",
+  "standing torso twist with shoulders visibly rotating against stable hips",
+  "standing forward/diagonal reach with clear arm extension",
+  "shoulder/scapula control segment with visible shoulder blade/upper-back intent",
+  "hold each shape for at least 2 seconds before returning to neutral",
+];
+
 export const UPPER_BODY_STANDING_SUPPORT_REQUIREMENTS = {
   broadManifestProofCases: [
     "standing-arm-raise",
@@ -202,6 +211,48 @@ function recordingsWithProductScopedBroadEvidence(groups, proofCases) {
     .sort();
 }
 
+function productScopedBroadEvidenceCandidates(groups, proofCases) {
+  const recordingIds = new Set(
+    proofCases.flatMap((proofCase) => (
+      (groups[proofCase] ?? []).map((row) => row.recordingId)
+    )),
+  );
+
+  return Array.from(recordingIds)
+    .map((recordingId) => {
+      const proofCaseEvidence = Object.fromEntries(
+        proofCases.map((proofCase) => {
+          const row = productScopedEvidenceRowsForCase(groups, proofCase)
+            .find((candidateRow) => candidateRow.recordingId === recordingId);
+          return [proofCase, {
+            evidenceFrameCount: row?.evidenceFrameCount ?? 0,
+            observedAmplitude: row?.observedAmplitude ?? null,
+          }];
+        }),
+      );
+      const missingProductScopedEvidenceCases = proofCases.filter((proofCase) => (
+        proofCaseEvidence[proofCase].evidenceFrameCount <= 0
+      ));
+
+      return {
+        missingProductScopedEvidenceCases,
+        proofCaseEvidence,
+        recordingId,
+        totalEvidenceFrameCount: Object.values(proofCaseEvidence)
+          .reduce((total, evidence) => total + evidence.evidenceFrameCount, 0),
+      };
+    })
+    .sort((left, right) => {
+      if (left.missingProductScopedEvidenceCases.length !== right.missingProductScopedEvidenceCases.length) {
+        return left.missingProductScopedEvidenceCases.length - right.missingProductScopedEvidenceCases.length;
+      }
+      if (left.totalEvidenceFrameCount !== right.totalEvidenceFrameCount) {
+        return right.totalEvidenceFrameCount - left.totalEvidenceFrameCount;
+      }
+      return left.recordingId.localeCompare(right.recordingId);
+    });
+}
+
 function planProofCases(gameVisualPlan) {
   return Array.isArray(gameVisualPlan?.summary?.proofCases)
     ? gameVisualPlan.summary.proofCases
@@ -274,6 +325,10 @@ export function auditUpperBodyStandingSupportReadiness({
       groups,
       requirements.broadManifestProofCases,
     ),
+    productScopedBroadEvidenceCandidates: productScopedBroadEvidenceCandidates(
+      groups,
+      requirements.broadManifestProofCases,
+    ),
     productScopedBroadEvidenceSummary: productScopedBroadEvidenceSummary(
       groups,
       requirements.broadManifestProofCases,
@@ -297,6 +352,18 @@ function formatEvidenceSummary(summary) {
     .join("; ");
 }
 
+function formatCandidateSummary(candidates) {
+  return candidates
+    .slice(0, 3)
+    .map((candidate) => (
+      `${candidate.recordingId} ${candidate.totalEvidenceFrameCount} frame(s)` +
+      `${candidate.missingProductScopedEvidenceCases.length > 0
+        ? ` missing ${candidate.missingProductScopedEvidenceCases.join(",")}`
+        : ""}`
+    ))
+    .join("; ");
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -310,6 +377,8 @@ function formatAudit(audit) {
     `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}.`,
     `Product-scoped broad evidence rows: ${formatEvidenceSummary(audit.productScopedBroadEvidenceSummary)}.`,
     `Recordings with product-scoped evidence for all broad cases: ${formatList(audit.productScopedBroadEvidenceRecordingIds)}.`,
+    `Top broad evidence candidates: ${formatCandidateSummary(audit.productScopedBroadEvidenceCandidates) || "none"}.`,
+    `Broad capture protocol if candidates are not acceptable: ${BROAD_UPPER_BODY_CAPTURE_PROTOCOL.join("; ")}.`,
   ].join("\n");
 }
 
