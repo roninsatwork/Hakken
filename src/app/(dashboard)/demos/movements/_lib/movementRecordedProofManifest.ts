@@ -37,6 +37,10 @@ export type MovementRecordedProofCase =
   | "standing"
   | "side-bend"
   | "head-direction"
+  | "standing-arm-raise"
+  | "standing-twist"
+  | "standing-reach"
+  | "shoulder-scapula-control"
   | "squat"
   | "far-squat"
   | "left-leg-raise"
@@ -383,6 +387,38 @@ const PROOF_CASES: ProofCaseDefinition[] = [
   },
   {
     avatarSide: "both",
+    bodyPartMotion: "standing overhead arm raise",
+    directionSign: "positive",
+    expectedMinimumAmplitude: 1,
+    proofCase: "standing-arm-raise",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "standing shoulder-to-hip twist",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: 0.08,
+    proofCase: "standing-twist",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "standing arm reach presentation",
+    directionSign: "positive",
+    expectedMinimumAmplitude: 1,
+    proofCase: "standing-reach",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
+    bodyPartMotion: "shoulder/scapula control",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: null,
+    proofCase: "shoulder-scapula-control",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "both",
     bodyPartMotion: "hip/root drop with bilateral leg bend",
     directionSign: "positive",
     expectedMinimumAmplitude: 0.22,
@@ -529,6 +565,12 @@ function directionSignForCase({
           .filter((frame) => frames.has(frame.frameIndex))
           .map((frame) => frame.spineSideBend),
       ));
+    case "standing-twist":
+      return signFromValue(averageSignedValue(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.spineTwist),
+      ));
     case "root-turn":
       return signFromValue(averageSignedValue(
         analysis.rootMotion.frames
@@ -586,6 +628,19 @@ function observedAmplitudeForCase({
           .filter((frame) => frames.has(frame.frameIndex))
           .map((frame) => frame.spineSideBend),
       );
+    case "standing-arm-raise":
+    case "standing-reach":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.supportPresentationArmSpecCount),
+      );
+    case "standing-twist":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.spineTwist),
+      );
     case "squat":
     case "far-squat":
       return maxAbs(
@@ -640,6 +695,27 @@ function candidateAmplitudeForCase({
       return maxAbs(analysis.head.frames.map((frame) => frame.rawYaw));
     case "side-bend":
       return maxAbs(analysis.gamePath.frames.map((frame) => frame.spineSideBend));
+    case "standing-arm-raise":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frame.supportPresentationOwner === "support-presentation-standing-arm-raise")
+          .map((frame) => frame.supportPresentationArmSpecCount),
+      );
+    case "standing-twist":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frame.supportPresentationOwner === "support-presentation-standing-twist")
+          .map((frame) => frame.spineTwist),
+      );
+    case "standing-reach":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => (
+            frame.supportPresentationOwner === "support-presentation-standing-arm-raise" ||
+            frame.supportPresentationOwner === "support-presentation-standing-twist"
+          ))
+          .map((frame) => frame.supportPresentationArmSpecCount),
+      );
     case "squat":
     case "far-squat":
       return maxAbs(
@@ -900,6 +976,34 @@ function indexesForCase(
         ))
         .map((frame) => frame.frameIndex);
     }
+    case "standing-arm-raise":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          frame.exercisePoseKey === "standing-arm-raise" &&
+          frame.supportPresentationOwner === "support-presentation-standing-arm-raise" &&
+          frame.supportPresentationArmSpecCount >= 1
+        ))
+        .map((frame) => frame.frameIndex);
+    case "standing-twist":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          frame.exercisePoseKey === "standing-twist" &&
+          frame.supportPresentationOwner === "support-presentation-standing-twist" &&
+          Math.abs(frame.spineTwist) >= 0.08
+        ))
+        .map((frame) => frame.frameIndex);
+    case "standing-reach":
+      return analysis.gamePath.frames
+        .filter((frame) => (
+          (
+            frame.supportPresentationOwner === "support-presentation-standing-arm-raise" ||
+            frame.supportPresentationOwner === "support-presentation-standing-twist"
+          ) &&
+          frame.supportPresentationArmSpecCount >= 1
+        ))
+        .map((frame) => frame.frameIndex);
+    case "shoulder-scapula-control":
+      return [];
   }
 }
 
@@ -1275,6 +1379,10 @@ function coveredByOtherRecordingRow(
 
 const PRODUCT_SCOPE_LIMITED_PROOF_CASES = new Set<MovementRecordedProofCase>([
   "root-travel",
+  "standing-arm-raise",
+  "standing-reach",
+  "standing-twist",
+  "shoulder-scapula-control",
 ]);
 
 function productScopeLimitationRow(
@@ -1305,10 +1413,10 @@ function normalizeCoveredMissingRows(
   );
 
   return rows.map((row) => (
-    row.status === "missing-proof" && coveredProofCases.has(row.proofCase)
+    PRODUCT_SCOPE_LIMITED_PROOF_CASES.has(row.proofCase)
+      ? productScopeLimitationRow(row)
+      : row.status === "missing-proof" && coveredProofCases.has(row.proofCase)
       ? coveredByOtherRecordingRow(row)
-      : row.status === "missing-proof" && PRODUCT_SCOPE_LIMITED_PROOF_CASES.has(row.proofCase)
-        ? productScopeLimitationRow(row)
       : row
   ));
 }

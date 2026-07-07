@@ -1214,6 +1214,60 @@ describe("movement replay analyzer", () => {
     });
   });
 
+  it("adds broad standing upper-body proof rows without promoting shoulder/scapula support", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(makeMovementAvatarProofMotionPayload("standing-arm-raise").landmarks),
+      trackingFrame(makeMovementAvatarProofMotionPayload("standing-twist").landmarks),
+      trackingFrame(withCorePose()),
+    ]));
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const armRaiseRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "standing-arm-raise"
+    ));
+    const twistRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "standing-twist"
+    ));
+    const reachRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "standing-reach"
+    ));
+    const shoulderRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "shoulder-scapula-control"
+    ));
+
+    expect(armRaiseRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      evidenceFrameCount: expect.any(Number),
+      proofCase: "standing-arm-raise",
+      status: "product-scope-limitation",
+    }));
+    expect(armRaiseRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(1);
+    expect(twistRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      evidenceFrameCount: expect.any(Number),
+      proofCase: "standing-twist",
+      status: "product-scope-limitation",
+    }));
+    expect(twistRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
+      twistRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
+    );
+    expect(reachRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      evidenceFrameCount: expect.any(Number),
+      proofCase: "standing-reach",
+      status: "product-scope-limitation",
+    }));
+    expect(shoulderRow).toEqual(expect.objectContaining({
+      acceptedProductLimitation: true,
+      automatedStatus: "product-scope-limitation",
+      proofCase: "shoulder-scapula-control",
+      status: "product-scope-limitation",
+    }));
+  });
+
   it("explains far-squat candidate rejection when only regular squat proof exists", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
       trackingFrame(withCorePose()),
@@ -1462,8 +1516,8 @@ describe("movement replay analyzer", () => {
     expect(rootTravelRow?.candidateAmplitude ?? Number.POSITIVE_INFINITY).toBeLessThan(
       rootTravelRow?.expectedMinimumAmplitude ?? Number.NEGATIVE_INFINITY,
     );
-    expect(manifest.summary.productScopeLimitationCount).toBe(1);
-    expect(manifest.summary.automatedProductScopeLimitationCount).toBe(1);
+    expect(manifest.summary.productScopeLimitationCount).toBe(5);
+    expect(manifest.summary.automatedProductScopeLimitationCount).toBe(5);
     expect(manifest.summary.missingProofCount).toBeLessThan(manifest.summary.totalRows);
     expect(gate.blockingRows).not.toContainEqual(expect.objectContaining({
       proofCase: "root-travel",

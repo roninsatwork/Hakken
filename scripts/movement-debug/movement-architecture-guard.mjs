@@ -622,12 +622,16 @@ export function buildMovementArchitectureGuardReport({
   ];
   const expectedProofStatusCounts = proofExpectations.proofStatusCounts ?? {
     "covered-by-other-recording": 26,
-    "product-scope-limitation": 9,
+    "product-scope-limitation": 45,
     "source-data-limitation": 18,
   };
-  const expectedAcceptedProductLimitationRows = proofExpectations.acceptedProductLimitationRows ?? 27;
+  const expectedAcceptedProductLimitationRows = proofExpectations.acceptedProductLimitationRows ?? 63;
   const expectedProductScopeProofCaseCounts = proofExpectations.productScopeProofCaseCounts ?? {
     "root-travel": 9,
+    "shoulder-scapula-control": 9,
+    "standing-arm-raise": 9,
+    "standing-reach": 9,
+    "standing-twist": 9,
   };
   const fileResults = files.map((file) => ({
     ...file,

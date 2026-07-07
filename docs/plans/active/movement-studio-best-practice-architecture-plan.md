@@ -21,8 +21,8 @@ The 2026-07-07 cheap architecture gate passed again under Node 22.13.0 during th
 - Replay/Game parity stayed at 11,383 score/message frames with 0 score divergences and 0 wrapper divergences.
 - Coverage product truth now has user-facing `upright`, `standing-side-bend-head-direction`, and `squat-knee-lift`, with broad `upper-body-standing`, `root-turn`, and `root-travel` still internal/demo-only.
 - The new `squat-knee-lift` support-claim audit passed with 2 reviewed bundles and is now part of the fast architecture guard whenever that family is user-facing.
-- The `upper-body-standing` readiness audit now gates the narrow `standing-side-bend-head-direction` claim too: narrow proof is ready with 4 reviewed bundles and no missing narrow Game readability cases, while broad upper-body remains blocked by missing arm/reach/twist/shoulder proof and Game targets.
-- The reviewed proof manifest stayed at 117 rows, 0 blockers, and 27 accepted limitations.
+- The `upper-body-standing` readiness audit now gates the narrow `standing-side-bend-head-direction` claim too: narrow proof is ready with 4 reviewed bundles and no missing narrow Game readability cases, while broad upper-body remains blocked by missing passed arm/reach/twist/shoulder rows and missing reviewed broad Game targets.
+- The reviewed proof manifest now has 153 rows, 0 blockers, and 63 accepted limitations. The added 36 broad upper-body rows are visible `product-scope-limitation` rows, not passes.
 
 The gaps that still matter most are boundaries and parity:
 
@@ -38,7 +38,7 @@ The gaps that still matter most are boundaries and parity:
 - The avatar frame body no longer carries mutable neutral/zero defaults for owner and retarget-output handoff values; upper-body, lower-body, and support helpers now pass explicit constants forward.
 - `movementAvatarPipeline.ts` is now a small compatibility facade plus final shared decision assembler: support-contact lock contracts, anchor mapping, and resolver policy; support-contact pure correction/application math; support-contact Three.js object mutation adapters; rest-mapped segment application; planted-squat IK segment application; retarget segment mapping application; spine spec orchestration; spine VRM adapters; player spine-drive shared helpers; upper-body player spine fallback; live player spine drive; recorded spine presentation; avatar application option policy; support-presentation family routing/builders; floor/seated support estimators; standing/yoga/athletic support estimators; standing fold/chair; athletic standing; yoga standing; seated; kneeling; quadruped; supine; prone; and side-body support-presentation pose decisions; retarget debug decisions; root-orientation policy; lower-body source bounds; player leg-raise hold; tracking fallback label composition; lower-body pose recipes; arm target decisions; upper-body/head/foot-lock policy; head decisions; lower-body target selection; lower-body source-owner policy; retarget-segment application gating; lower-body stage policy; lower-body visual smoothing policy; lower-body application plan resolution; lower-body aim/foot-plant application; lower-body rotation/pose application; and shared type contracts now live in focused modules while the pipeline preserves compatibility re-exports.
 - `movement:architecture-guard` now also checks coverage product truth, the `squat-knee-lift` support-claim audit, and the narrow side-bend/head-direction readiness gate, so current reviewed analysis must keep `upright`, `standing-side-bend-head-direction`, and `squat-knee-lift` user-facing, keep broad upper-body standing, root-turn, and root-travel internal/demo-only, and keep the reviewed bundle proof intact.
-- `movement:architecture-guard` now also checks proof-manifest honesty, so the current 26 `covered-by-other-recording`, 18 `source-data-limitation`, 9 root-travel `product-scope-limitation`, and 27 accepted-limitation rows cannot silently disappear into passes.
+- `movement:architecture-guard` now also checks proof-manifest honesty, so the current 26 `covered-by-other-recording`, 18 `source-data-limitation`, 45 `product-scope-limitation`, and 63 accepted-limitation rows cannot silently disappear into passes.
 - `movement:architecture-guard` now also checks Game visual analysis-to-capture and review-to-capture consistency, so stale captures or stale semantic decisions cannot pass if the reviewed analysis or capture manifest changes underneath them.
 - Accepted source-data and product-scope limitations are limitations, not passes.
 - Most non-upright movement families remain approximate, diagnostic, or synthetic-only.
@@ -46,12 +46,12 @@ The gaps that still matter most are boundaries and parity:
 
 Progress estimates:
 
-- Overall full human-movement engine: about 30%.
+- Overall full human-movement engine: about 31%.
 - Current standing/posture/Game Studio slice: 97%.
 - Architecture-hardening slice: 99%.
 - Current proof-closure slice: 100% for the reviewed gate.
 - Current Game parity proof slice: 98%; score/message parity is proved, deterministic Game visual-proof targets are present in the reviewed analysis, a machine-readable target plan exists, Game Studio has a debug-only recorded-frame injection route, exact-frame capture is verified, semantic review passes 49/49 selected frames, the capture manifest is checked against the current reviewed analysis for missing/stale/context-mismatched target rows, the semantic review is checked against the capture manifest for missing/stale/context-mismatched decision rows, the `squat-knee-lift` support-claim audit gates that product claim, the upper-body readiness audit gates the narrow side-bend/head-direction claim, and the current reviewed artifacts still show 11,383 score/message parity frames with 0 divergence frames. Keep this below 100% until the route remains stable after the untracked proof-artifact lifecycle is cleaned up and the parity artifacts are refreshed after any further motion/rendering changes.
-- Average progress across the 15 plan sections: about 83-84%.
+- Average progress across the 15 plan sections: about 84%.
 - Plan adherence for the current standing architecture: 96-97%.
 
 The headline answer to "how closely have they stuck to it": close enough that the foundation is recognizable, not close enough to relax. The current work should continue to be judged by proof manifests, focused visual capture, and renderer-boundary size, not by the number of extracted helper files.
@@ -90,14 +90,14 @@ Code and artifact areas inspected:
 
 Current proof snapshot:
 
-- 117 total proof rows.
+- 153 total proof rows.
 - 64 passed rows.
 - 26 covered-by-other-recording rows.
 - 0 missing-proof blockers.
 - 0 active manual-review rows.
-- 9 product-scope-limitation rows.
+- 45 product-scope-limitation rows.
 - 18 source-data-limitation rows.
-- 27 accepted source/product limitations.
+- 63 accepted source/product limitations.
 - 82 visual-capture rows.
 - 474 visual frame matches.
 - 0 visual-capture-missing rows.
@@ -204,7 +204,7 @@ Use this as the standing report for each section. Reopen any row when code inspe
 | Phase 11: Small Avatar Application Extraction | 99% | Many runtime helpers exist and are tested; `VrmAvatar.tsx` consumes route-provided motion frames, while VRM render-shell/name-label presentation, VRM asset loading/reset, frame entry/context/access/readiness, ready-frame orchestration, ready-frame body/completion application handoff, frame scene preparation, frame world-landmark/z-scale selection, solver-frame preparation/pose solving, pre-body frame preparation/lower-body-state/decision-snapshot/locomotion orchestration, frame target/retarget/body-application orchestration, frame debug telemetry, tracking-debug telemetry, visual telemetry, head-frame debug/application/ref-threading, head-frame debug input composition/orchestration, post-footing debug sequencing, post-frame debug telemetry writeback, root/hips locomotion orchestration, root-frame runtime orchestration/ref-threading, hips/floor frame setup, retarget rest-map frame adapters, upper-body frame runtime/orchestration, lower-body frame-state setup/ref-threading/orchestration, lower-body application/retarget orchestration/rest-map writeback, support-frame composition/orchestration, footing/hips/foot-lock orchestration/ref-threading, end-frame expression/hand writeback, final-frame orchestration, and post-lower-body frame completion orchestration now live outside the renderer. Footing now precedes head-debug writeback and returns the next foot-lock state explicitly, so foot-lock drift/correction telemetry is current in the same frame without relying on ref readback. Frame-output owner/retarget values are passed as explicit constants instead of mutable neutral/zero defaults, fallback smoothing is named, and lower-body frame-state setup uses the frame-access `avatarRole` value. Avatar pipeline decision assembly, lower-body source-owner/stage/visual policy, type contracts, non-retarget plan resolution, retarget plan resolution, pure execution, application-plan VRM-bone adapters, foot-plant VRM-bone adapters, aim/foot-plant, pure rotation/pose application, and rotation VRM-bone adapters are also separated from compatibility facades. | `VrmAvatar.tsx` is 195/240, ready-frame owners are 228/260 and 241/280, debug/tracking/visual telemetry are 217/260, 393/430, and 94/130, and lower-body decision policy files are 4/30, 135/170, 89/130, 116/150, and 84/120 under the fast architecture guard. Lower-body application and avatar pipeline are mostly watch-and-protect areas rather than the main extraction blockers. |
 | Phase 12: Shared Replay/Game Motion Contract | 94% | Game path simulation, replay analyzer, live/recorded hooks, route motion refs, visual captures, context-validated decisions, cleaner proof gap ownership, score/message parity proof, 49 Game visual-proof frame targets, a machine-readable Game visual target plan, debug-only recorded-frame Game route injection, frame-lock capture assertions, filled semantic decisions, analysis-to-capture consistency checks, and semantic-review-to-capture consistency checks pass for the current target set. | Keep the route/debug proof harness non-production and rerun visual parity after any motion-frame, display-mirror, or avatar-application change. |
 | Phase 13: Support Status Before New Families | 79% | Product truth is encoded in the coverage registry, replay proof metadata, and the fast architecture guard, with duplicate and out-of-scope proof gaps no longer counted as fresh recording work or silently converted to passes. | Approximate floor/yoga/Pilates/root-travel families must remain internal/debug until proof exists or product scope changes. |
-| Phase 14: Expand Movement Families In Order | 25% | Expansion order and coverage honesty are documented, and the first narrow upper-body family (`standing-side-bend-head-direction`) is now user-facing because recorded proof and Game readability both pass. | Most non-upright movement remains diagnostic, approximate, or synthetic-only; broad `upper-body-standing`, root travel, floor work, yoga/Pilates, walking, jumping, and props remain blocked or internal. |
+| Phase 14: Expand Movement Families In Order | 28% | Expansion order and coverage honesty are documented, the first narrow upper-body family (`standing-side-bend-head-direction`) is user-facing, and broad upper-body proof cases now exist as non-blocking product-scope rows. | Most non-upright movement remains diagnostic, approximate, or synthetic-only; broad `upper-body-standing`, root travel, floor work, yoga/Pilates, walking, jumping, and props remain blocked or internal. Broad arm/reach/twist Game targets are selectable in code but not yet in the reviewed 49-frame capture set. |
 
 2026-07-07 audit note: do not raise any section solely because `movement:architecture-guard` passed. The guard proves the current standing slice is disciplined; it does not prove broader human movement support, real child-readability outside the 49 selected Game visual frames, or production support for non-upright families.
 
@@ -213,7 +213,7 @@ Use this as the standing report for each section. Reopen any row when code inspe
 2026-07-07 follow-up checkout audit:
 
 - Direct code inspection still matches the architecture goal: `VrmAvatar.tsx` is a 195-line React/frame adapter, `MovementSourceFrame` remains raw source truth, `resolveMovementMotionFrame` keeps source and display decisions separate, `buildMovementGamePathSimulation` drives Game replay through `MovementSourceFrame` and `MovementMotionFrame`, and `movementCoverageRegistry.ts` now exposes `upright`, `standing-side-bend-head-direction`, and `squat-knee-lift` as user-facing full support.
-- The fast guard was rerun under Node 22.13.0 with no full video suite: 52 watched files stayed under cap, source purity stayed at 0 forbidden terms, route-bypass purity scanned 212 files with 0 forbidden terms, Game visual proof stayed 49/49 readable-pass, Replay/Game parity stayed at 11,383 frames with 0 score divergences and 0 wrapper divergences, coverage product truth was user-facing `upright,standing-side-bend-head-direction,squat-knee-lift` with `upper-body-standing,root-turn,root-travel` internal/demo-only, the squat/knee-lift support-claim audit passed with 2 reviewed bundles, the narrow side-bend/head-direction readiness gate passed with 4 reviewed bundles and 0 missing narrow Game cases, and the proof manifest stayed at 117 rows with 0 blocking rows and 27 accepted limitations.
+- The fast guard was rerun under Node 22.13.0 with no full video suite: 52 watched files stayed under cap, source purity stayed at 0 forbidden terms, route-bypass purity scanned 212 files with 0 forbidden terms, Game visual proof stayed 49/49 readable-pass, Replay/Game parity stayed at 11,383 frames with 0 score divergences and 0 wrapper divergences, coverage product truth was user-facing `upright,standing-side-bend-head-direction,squat-knee-lift` with `upper-body-standing,root-turn,root-travel` internal/demo-only, the squat/knee-lift support-claim audit passed with 2 reviewed bundles, the narrow side-bend/head-direction readiness gate passed with 4 reviewed bundles and 0 missing narrow Game cases, and the proof manifest now has 153 rows with 0 blocking rows and 63 accepted limitations.
 - Handoff hygiene is improved: `git ls-files --others --exclude-standard 'src/app/(dashboard)/demos/movements/**'` currently reports 0 untracked implementation/test files. Generated proof artifacts under `tmp/movement-replay-lab/**` remain local scratch hidden by the repo-level `/tmp/` ignore rule.
 - Current source classification: 54 implementation files and 22 focused tests were committed in the architecture slice. The new support-claim slice adds one focused audit script plus one focused test file, and promotes `squat-knee-lift` only after the executable audit passes.
 - The plan adherence answer remains: close for the standing/Game Studio architecture, incomplete for broader human movement support, and dependent on keeping proof artifacts honest rather than promoting approximate families to product support.
@@ -230,10 +230,10 @@ Use this as the standing report for each section. Reopen any row when code inspe
 
 - Decision: keep `upper-body-standing` internal/demo-only. Do not promote the family label yet.
 - Narrow recorded proof is real: the audit finds 4 reviewed recording bundles that pass `standing`, `side-bend`, and `head-direction` together: `px736zs97w9axrn39je7pfahc989q8jv`, `px75fgt11wbg0jvr17j6fc2dvd89trpm`, `px7fafa0wypmmc5rfz1nzmdvas88n6m0`, and `px7fmzw2v4yzex6yx3n9dchj0h89x7e3`.
-- Broad support is blocked because the manifest has no dedicated proof definitions or passed rows for `standing-arm-raise`, `standing-twist`, `standing-reach`, or `shoulder-scapula-control`.
+- Broad support is blocked because the manifest now has dedicated rows for `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control`, but they are current product-scope limitations with 0 passed broad proof cases.
 - Broad Game readability is still blocked for the full family because the current Game visual target plan and semantic review have no `strongest-standing-arm-raise`, `strongest-standing-twist`, or `strongest-standing-reach` cases.
 - New command: `npm run movement:upper-body-standing-support-audit`. Run it without `--strict` while the expected state is blocked; use `--strict` only when intentionally trying to promote the family.
-- Fastest next gain: decide whether to make a narrow side-bend/head-direction product claim, or add arm-raise/twist/reach proof definitions before attempting broad `upper-body-standing` promotion.
+- Fastest next gain: run a focused opt-in broad upper-body Game target plan/capture/review pass, then decide whether any broad rows should move out of product scope.
 
 2026-07-07 upper-body Game visual target-selection update:
 
@@ -241,7 +241,15 @@ Use this as the standing report for each section. Reopen any row when code inspe
 - Focused proof test added in `movementGamePathSimulation.test.ts` with real side-bend and head-up fixture motion.
 - Current reviewed artifact status is refreshed: the latest Game visual semantic file has 49/49 readable-pass rows, including `strongest-head-direction` 9/9 and `strongest-side-bend` 4/4.
 - The focused refresh captured 13 changed/new targets and merged them with 36 still-current captures; capture/review consistency is 49 analysis targets, 0 missing captures, 0 stale captures, and 0 context mismatches.
-- `movement:upper-body-standing-support-audit` no longer reports missing side-bend/head-direction Game readability. It remains blocked only because broad arm-raise, twist, reach, and shoulder-scapula proof is not defined or reviewed.
+- `movement:upper-body-standing-support-audit` no longer reports missing side-bend/head-direction Game readability. It remains blocked because broad arm-raise, twist, reach, and shoulder-scapula proof rows are product-scoped with 0 passed broad cases, and broad Game readability is not captured/reviewed.
+
+2026-07-07 broad upper-body proof-row definition update:
+
+- Code capability added: the recorded proof manifest now includes `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control` rows.
+- Current product decision: keep all four broad rows as accepted `product-scope-limitation` rows while broad `upper-body-standing` remains internal/demo-only. This keeps the gaps visible without turning candidate evidence into support claims.
+- `selectMovementGameVisualParityProofFrames` can now emit `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach` when explicitly called with `includeStandingUpperBodyTargets`. The default analyzer path keeps the reviewed 49-frame target set stable until those broad targets are captured and reviewed.
+- The reviewed analysis was refreshed from the local Convex export without the full video suite. It reports 153 proof rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 45 product-scope-limitation, 18 source-data-limitation, 63 accepted limitations, 49 Game visual proof frames, 11,383 Replay/Game score/message parity frames, and 0 divergences.
+- Phase 14 moves from about 25% to about 28% complete. This is a proof-infrastructure gain, not a support-claim gain: broad `upper-body-standing` is still blocked until broad rows pass and broad Game targets are captured/reviewed.
 
 2026-07-07 narrow standing side-bend/head-direction promotion:
 
@@ -262,6 +270,7 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 - [ ] Maintain 0 missing-proof, manual-review, failed, and blocking rows in `tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json`.
 - [ ] Run `npm run movement:architecture-guard` before and after meaningful movement architecture slices; reopen the relevant phase when it fails.
 - [ ] Keep the 9 `root-travel` rows as visible `product-scope-limitation` rows until root travel is intentionally moved into user-facing scope with dedicated recorded proof.
+- [ ] Keep the 36 broad upper-body rows as visible `product-scope-limitation` rows until `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control` have passed recorded proof and reviewed Game targets.
 - [ ] Keep `tmp/movement-replay-lab/current-proof-recording-plan.reviewed.json` at 0 action groups and 0 capture scenarios unless a new proof blocker appears.
 - [ ] Keep the 26 `covered-by-other-recording` rows visible in the manifest so duplicate non-target gaps do not reappear as false recording work.
 - [x] Automate proof-manifest limitation honesty in `movement:architecture-guard` so covered-by-other rows, source-data limitations, root-travel product-scope limitations, accepted limitations, and unresolved source-data limitation counts cannot silently drift.
@@ -451,25 +460,30 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 
 ## Recommended Next Slice
 
-The safest next slice is now broad upper-body proof definition, not another architecture extraction and not root travel promotion.
+The safest next slice is now a focused broad upper-body visual-proof capture/review pass, not another architecture extraction and not broad family promotion.
 
 Why this is the best next gain:
 
-1. Current reviewed proof has no active blockers: 117 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 9 product-scope-limitation, and 27 accepted limitations.
+1. Current reviewed proof has no active blockers: 153 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 45 product-scope-limitation, and 63 accepted limitations.
 2. The narrow `standing-side-bend-head-direction` claim is now promoted and guarded. `upper-body-standing` remains internal/demo-only.
-3. Broad `upper-body-standing` still lacks dedicated arm-raise, twist, reach, and shoulder-scapula proof definitions and Game readability targets.
-4. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
+3. Broad `upper-body-standing` now has explicit product-scope rows for arm raise, twist, reach, and shoulder/scapula, but it still has 0 passed broad proof cases.
+4. Broad Game target selection exists behind an explicit option, but `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach` are not yet part of the reviewed 49-frame capture set.
+5. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
 
 Next concrete tasks:
 
-1. Add proof definitions for `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control` before attempting broad `upper-body-standing` promotion.
-2. Add Game visual target selection for `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach`.
-3. Keep `movementCoverageRegistry.ts` unchanged for broad `upper-body-standing` until the audit identifies one reviewed bundle and all required broad Game readability targets.
-4. Keep the refreshed 49-target Game visual artifact set green after any motion-frame, display-mirror, or avatar-application change.
+1. Generate an opt-in broad upper-body Game visual target plan that includes `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach` without replacing the current 49-frame reviewed gate.
+2. Capture and semantically review only those new/changed broad upper-body targets, then merge them if readable.
+3. Decide whether any broad recorded rows should move from product-scope limitation to passed/manual-review, or whether better recordings are needed first.
+4. Keep `movementCoverageRegistry.ts` unchanged for broad `upper-body-standing` until the audit identifies one reviewed bundle and all required broad Game readability targets.
 5. Choose the next narrow family only after its proof can be guarded the same way; do not use a broad family label as a shortcut.
 
 Recent focused verification:
 
+- `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/upper-body-standing-support-readiness-audit.test.mjs scripts/movement-debug/movement-architecture-guard.test.mjs 'src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts'` passed after adding broad upper-body product-scope rows and opt-in Game target selection: `verify:env` plus 4 files / 295 tests.
+- `npx -p node@22.13.0 npm run movement:replay:analyze -- --export /Users/ants/Projects/Sonae/tmp/movement-replay-lab/runs/limit100-movement-recordings.convex-export.zip --recording-ids px71h2bsqg9xv8pxyffv5xgaed89wbx3,px72q2e5m8pw9gctaj11yh36a989wjt7,px736zs97w9axrn39je7pfahc989q8jv,px74tzfb514yq5zpm2mpt3fdkx89xr2z,px75fgt11wbg0jvr17j6fc2dvd89trpm,px7b0y1rcfbe1e1zanknsgefp986f1qs,px7ebpmfazdrtbad9bpefxnmp589xwj6,px7fafa0wypmmc5rfz1nzmdvas88n6m0,px7fmzw2v4yzex6yx3n9dchj0h89x7e3 --visual-captures tmp/movement-replay-lab/captures/current-proof-set --review-decisions tmp/movement-replay-lab/current-proof-review-decisions.codex-visual-review.json --source-limitation-decisions tmp/movement-replay-lab/current-proof-source-limitations.codex-product-limitations.json --out tmp/movement-replay-lab/current-analysis-reviewed.json` refreshed the reviewed analysis: 9 sessions, 0 failed, 49 Game visual targets, 153 proof rows, 0 blockers, 63 accepted limitations, 11,383 score/message parity frames, and 0 divergences.
+- `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit` passed as an expected blocked broad audit: missing broad manifest definitions are now `none`; broad passed proof cases are still `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control`; broad Game target-plan/readability cases are still missing.
+- `npx -p node@22.13.0 npm run movement:architecture-guard` passed after adding broad upper-body rows: user-facing `upright,standing-side-bend-head-direction,squat-knee-lift`, 49/49 Game visual readable-pass, 11,383 Replay/Game parity frames, 153 proof rows, 0 blockers, and 63 accepted limitations.
 - `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/upper-body-standing-support-readiness-audit.test.mjs scripts/movement-debug/movement-architecture-guard.test.mjs 'src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts'` passed after promoting the narrow standing side-bend/head-direction family: `verify:env` plus 4 files / 58 tests.
 - `npx -p node@22.13.0 npm run movement:replay:analyze -- --export /Users/ants/Projects/Sonae/tmp/movement-replay-lab/runs/limit100-movement-recordings.convex-export.zip --recording-ids px71h2bsqg9xv8pxyffv5xgaed89wbx3,px72q2e5m8pw9gctaj11yh36a989wjt7,px736zs97w9axrn39je7pfahc989q8jv,px74tzfb514yq5zpm2mpt3fdkx89xr2z,px75fgt11wbg0jvr17j6fc2dvd89trpm,px7b0y1rcfbe1e1zanknsgefp986f1qs,px7ebpmfazdrtbad9bpefxnmp589xwj6,px7fafa0wypmmc5rfz1nzmdvas88n6m0,px7fmzw2v4yzex6yx3n9dchj0h89x7e3 --visual-captures tmp/movement-replay-lab/captures/current-proof-set --review-decisions tmp/movement-replay-lab/current-proof-review-decisions.codex-visual-review.json --source-limitation-decisions tmp/movement-replay-lab/current-proof-source-limitations.codex-product-limitations.json --out tmp/movement-replay-lab/current-analysis-reviewed.json` refreshed the reviewed analysis: 9 sessions, 0 failed, 49 Game visual targets, 11,383 score/message parity frames, 0 divergences, 19/19 explicit coverage, 3 user-facing families, and manifest gate passed.
 - `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit` passed as an expected blocked broad audit: narrow side-bend/head-direction readiness is present with 4 bundles and no missing narrow Game cases; broad arm-raise, twist, reach, and shoulder-scapula proof remains missing.

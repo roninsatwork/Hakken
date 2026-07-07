@@ -140,6 +140,18 @@ const cleanManifest = {
       proofCase: "root-travel",
       status: "product-scope-limitation",
     })),
+    ...[
+      "standing-arm-raise",
+      "standing-twist",
+      "standing-reach",
+      "shoulder-scapula-control",
+    ].flatMap((proofCase) => (
+      Array.from({ length: 9 }, () => ({
+        acceptedProductLimitation: true,
+        proofCase,
+        status: "product-scope-limitation",
+      }))
+    )),
   ],
 };
 

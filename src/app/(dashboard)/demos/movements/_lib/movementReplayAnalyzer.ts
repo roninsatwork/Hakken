@@ -141,6 +141,7 @@ export type MovementReplayGamePathFrame = {
   shouldDrivePlayerSquat: boolean;
   sourceQuality: number;
   spineSideBend: number;
+  spineTwist: number;
   squatDepth: number;
   rootHeadingYaw: number;
   rootPathDistance: number;
@@ -1035,6 +1036,7 @@ function toGamePathFrames(
       shouldDrivePlayerSquat: decision.lowerBodyDrive.shouldDrivePlayerSquat,
       sourceQuality: decision.retarget.sourceQuality ?? 0,
       spineSideBend: decision.spineDrive.sideBend,
+      spineTwist: decision.spineDrive.twist,
       squatDepth: decision.retarget.squatDepth ?? 0,
       rootHeadingYaw: decision.rootMotion.headingYaw,
       rootPathDistance: Math.hypot(

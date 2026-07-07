@@ -563,6 +563,37 @@ describe("movementGamePathSimulation", () => {
     )).toBeGreaterThan(0.02);
   });
 
+  it("selects standing arm-raise, twist, and reach Game visual parity frames", () => {
+    const proofFrames = selectMovementGameVisualParityProofFrames(
+      buildMovementGamePathSimulation(session([
+        frame(withCorePose()),
+        frame(makeMovementAvatarProofPose("standing-arm-raise")),
+        frame(makeMovementAvatarProofPose("standing-twist")),
+      ])),
+      {
+        includeStandingUpperBodyTargets: true,
+        minStandingTwist: 0.01,
+      },
+    );
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+    const armRaiseFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-standing-arm-raise")
+    ));
+    const twistFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-standing-twist")
+    ));
+    const reachFrame = proofFrames.find((proofFrame) => (
+      proofFrame.cases.includes("strongest-standing-reach")
+    ));
+
+    expect(proofCases).toContain("strongest-standing-arm-raise");
+    expect(proofCases).toContain("strongest-standing-twist");
+    expect(proofCases).toContain("strongest-standing-reach");
+    expect(armRaiseFrame?.supportPresentationOwner).toBe("support-presentation-standing-arm-raise");
+    expect(twistFrame?.supportPresentationOwner).toBe("support-presentation-standing-twist");
+    expect(reachFrame?.supportPresentationArmSpecCount ?? 0).toBeGreaterThan(0);
+  });
+
   it("marks the first source/display semantic divergence for visual proof", () => {
     const simulation = buildMovementGamePathSimulation(session([frame(withCorePose())]));
     const motionFrame = simulation.motionFrames[0]!;

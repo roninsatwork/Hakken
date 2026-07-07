@@ -13,7 +13,10 @@ export type MovementGameVisualParityProofCase =
   | "strongest-root-travel"
   | "strongest-root-turn"
   | "strongest-side-bend"
-  | "strongest-squat";
+  | "strongest-squat"
+  | "strongest-standing-arm-raise"
+  | "strongest-standing-reach"
+  | "strongest-standing-twist";
 
 export type MovementGameVisualParityProofFrame = {
   cases: MovementGameVisualParityProofCase[];
@@ -35,9 +38,13 @@ export type MovementGameVisualParityProofFrame = {
   sideBend: number;
   sourceLowerLabel: string;
   squatDepth: number;
+  supportPresentationArmSpecCount: number;
+  supportPresentationOwner: string;
+  supportPresentationSpineSpecCount: number;
 };
 
 export type MovementGameVisualParityProofOptions = {
+  includeStandingUpperBodyTargets?: boolean;
   maxFrames?: number;
   minKneeLift?: number;
   minHeadDirection?: number;
@@ -45,6 +52,9 @@ export type MovementGameVisualParityProofOptions = {
   minRootTurnYaw?: number;
   minSideBend?: number;
   minSquatDepth?: number;
+  minStandingArmSpecCount?: number;
+  minStandingReachArmSpecCount?: number;
+  minStandingTwist?: number;
 };
 
 const DEFAULT_MAX_FRAMES = 12;
@@ -54,6 +64,9 @@ const DEFAULT_MIN_ROOT_TRAVEL = 0.12;
 const DEFAULT_MIN_ROOT_TURN_YAW = 0.45;
 const DEFAULT_MIN_SIDE_BEND = 0.12;
 const DEFAULT_MIN_SQUAT_DEPTH = 0.18;
+const DEFAULT_MIN_STANDING_ARM_SPEC_COUNT = 1;
+const DEFAULT_MIN_STANDING_REACH_ARM_SPEC_COUNT = 1;
+const DEFAULT_MIN_STANDING_TWIST = 0.08;
 
 function absolute(value: number | undefined) {
   return Math.abs(value ?? 0);
@@ -93,6 +106,9 @@ function metricFrame({
       displayDecision.lowerBodyIntent.squatDepth,
       displayDecision.retargetFrame.squatDepth,
     ),
+    supportPresentationArmSpecCount: displayDecision.supportPresentation.armSpecs.length,
+    supportPresentationOwner: displayDecision.supportPresentation.owner,
+    supportPresentationSpineSpecCount: displayDecision.supportPresentation.spineSpecs.length,
   };
 }
 
@@ -116,12 +132,17 @@ export function selectMovementGameVisualParityProofFrames(
   options: MovementGameVisualParityProofOptions = {},
 ): MovementGameVisualParityProofFrame[] {
   const maxFrames = options.maxFrames ?? DEFAULT_MAX_FRAMES;
+  const includeStandingUpperBodyTargets = options.includeStandingUpperBodyTargets ?? false;
   const minKneeLift = options.minKneeLift ?? DEFAULT_MIN_KNEE_LIFT;
   const minHeadDirection = options.minHeadDirection ?? DEFAULT_MIN_HEAD_DIRECTION;
   const minRootTravel = options.minRootTravel ?? DEFAULT_MIN_ROOT_TRAVEL;
   const minRootTurnYaw = options.minRootTurnYaw ?? DEFAULT_MIN_ROOT_TURN_YAW;
   const minSideBend = options.minSideBend ?? DEFAULT_MIN_SIDE_BEND;
   const minSquatDepth = options.minSquatDepth ?? DEFAULT_MIN_SQUAT_DEPTH;
+  const minStandingArmSpecCount = options.minStandingArmSpecCount ?? DEFAULT_MIN_STANDING_ARM_SPEC_COUNT;
+  const minStandingReachArmSpecCount =
+    options.minStandingReachArmSpecCount ?? DEFAULT_MIN_STANDING_REACH_ARM_SPEC_COUNT;
+  const minStandingTwist = options.minStandingTwist ?? DEFAULT_MIN_STANDING_TWIST;
   const frames = new Map<number, MovementGameVisualParityProofFrame>();
 
   const addFrame = (
@@ -223,6 +244,61 @@ export function selectMovementGameVisualParityProofFrames(
   );
   if (strongestHeadDirection && strongestHeadDirection.value >= minHeadDirection) {
     addFrame(strongestHeadDirection.frameIndex, "strongest-head-direction", "strongest displayed head direction");
+  }
+
+  if (includeStandingUpperBodyTargets) {
+    const strongestStandingArmRaise = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-standing-arm-raise"
+          ? motionFrame.avatarDisplayDecision.supportPresentation.armSpecs.length
+          : 0
+      ),
+    );
+    if (strongestStandingArmRaise && strongestStandingArmRaise.value >= minStandingArmSpecCount) {
+      addFrame(
+        strongestStandingArmRaise.frameIndex,
+        "strongest-standing-arm-raise",
+        "strongest displayed standing arm raise",
+      );
+    }
+
+    const strongestStandingTwist = findStrongestFrame(
+      simulation,
+      (motionFrame) => (
+        motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-standing-twist"
+          ? absolute(motionFrame.avatarDisplayDecision.spineDrive.twist)
+          : 0
+      ),
+    );
+    if (strongestStandingTwist && strongestStandingTwist.value >= minStandingTwist) {
+      addFrame(
+        strongestStandingTwist.frameIndex,
+        "strongest-standing-twist",
+        "strongest displayed standing twist",
+      );
+    }
+
+    const strongestStandingReach = findStrongestFrame(
+      simulation,
+      (motionFrame) => {
+        const presentation = motionFrame.avatarDisplayDecision.supportPresentation;
+        if (
+          presentation.owner !== "support-presentation-standing-arm-raise" &&
+          presentation.owner !== "support-presentation-standing-twist"
+        ) {
+          return 0;
+        }
+        return presentation.armSpecs.length;
+      },
+    );
+    if (strongestStandingReach && strongestStandingReach.value >= minStandingReachArmSpecCount) {
+      addFrame(
+        strongestStandingReach.frameIndex,
+        "strongest-standing-reach",
+        "strongest displayed standing reach",
+      );
+    }
   }
 
   const strongestRootTurn = findStrongestFrame(
