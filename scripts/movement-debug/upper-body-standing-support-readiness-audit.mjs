@@ -833,14 +833,17 @@ export function validateBroadCaptureContractShape(contract) {
   if (!supportClaimBlockers || typeof supportClaimBlockers !== "object" || Array.isArray(supportClaimBlockers)) {
     issues.push("expected supportClaimBlockers object");
   } else {
-    [
-      "missingBroadGamePlanCases",
-      "missingBroadManifestProofCases",
-      "missingBroadPassedProofCases",
-      "missingBroadReadableGameCases",
-    ].forEach((key) => {
+    const blockerCaseDomains = {
+      missingBroadGamePlanCases: requiredGameProofCases,
+      missingBroadManifestProofCases: requiredRecordedProofCases,
+      missingBroadPassedProofCases: requiredRecordedProofCases,
+      missingBroadReadableGameCases: requiredGameProofCases,
+    };
+    Object.entries(blockerCaseDomains).forEach(([key, allowedCases]) => {
       if (!Array.isArray(supportClaimBlockers[key])) {
         issues.push(`expected supportClaimBlockers.${key} array`);
+      } else if (!supportClaimBlockers[key].every((proofCase) => allowedCases.includes(proofCase))) {
+        issues.push(`expected supportClaimBlockers.${key} to contain only required proof cases`);
       }
     });
     if (typeof supportClaimBlockers.requiresSinglePassingRecordingBundle !== "boolean") {

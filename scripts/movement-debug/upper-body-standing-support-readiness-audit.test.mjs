@@ -390,6 +390,21 @@ describe("upper body standing support readiness audit", () => {
       "expected broadPassedProofCandidates[1] object",
     ]));
 
+    const malformedBlockerContract = JSON.parse(JSON.stringify(contract));
+    malformedBlockerContract.supportClaimBlockers = {
+      missingBroadGamePlanCases: ["unknown-game-case"],
+      missingBroadManifestProofCases: ["unknown-recorded-case"],
+      missingBroadPassedProofCases: ["unknown-recorded-case"],
+      missingBroadReadableGameCases: ["unknown-game-case"],
+      requiresSinglePassingRecordingBundle: true,
+    };
+    expect(validateBroadCaptureContractShape(malformedBlockerContract)).toEqual(expect.arrayContaining([
+      "expected supportClaimBlockers.missingBroadGamePlanCases to contain only required proof cases",
+      "expected supportClaimBlockers.missingBroadManifestProofCases to contain only required proof cases",
+      "expected supportClaimBlockers.missingBroadPassedProofCases to contain only required proof cases",
+      "expected supportClaimBlockers.missingBroadReadableGameCases to contain only required proof cases",
+    ]));
+
     expect(validateBroadCaptureContractShape({
       commands: [
         {
