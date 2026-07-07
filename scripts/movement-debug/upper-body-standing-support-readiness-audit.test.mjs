@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditUpperBodyStandingSupportReadiness,
+  formatBroadCaptureContract,
   formatBroadCaptureGuide,
   formatBroadCandidateReview,
   mergeGameVisualPlans,
@@ -239,6 +240,30 @@ describe("upper body standing support readiness audit", () => {
     expect(recordingIdGuide).toContain("recording id `rec_123 upper`");
     expect(recordingIdGuide).toContain("--recording-ids 'rec_123 upper'");
     expect(recordingIdGuide).not.toContain("--recording-ids <new-recording-id>");
+
+    const contract = formatBroadCaptureContract(audit, {
+      captureLabel: "broad explicit!",
+      recordingId: "rec_123 upper",
+    });
+    expect(contract).toMatchObject({
+      broadReady: false,
+      recordingId: "rec_123 upper",
+      recordingIdPlaceholder: null,
+      requiredGameProofCases: [
+        "strongest-standing-arm-raise",
+        "strongest-standing-twist",
+        "strongest-standing-reach",
+      ],
+      requiredRecordedProofCases: broadManifestProofCases,
+      safeLabel: "broad-explicit-",
+      schema: "sonae-broad-upper-body-capture-contract/v1",
+    });
+    expect(contract.commands).toHaveLength(8);
+    expect(contract.commands[0]).toMatchObject({
+      id: "initial-analysis",
+    });
+    expect(contract.commands[0].command).toContain("--recording-ids 'rec_123 upper'");
+    expect(contract.commands.at(-1).command).toContain("movement:upper-body-standing-support-audit");
   });
 
   it("parses CLI options", () => {
@@ -257,6 +282,8 @@ describe("upper body standing support readiness audit", () => {
       "tmp/candidate-review.md",
       "--capture-guide-out",
       "tmp/capture-guide.md",
+      "--capture-contract-out",
+      "tmp/capture-contract.json",
       "--capture-label",
       "movement proof broad",
       "--recording-id",
@@ -268,6 +295,7 @@ describe("upper body standing support readiness audit", () => {
       captureGuideOutPath: "tmp/capture-guide.md",
       captureLabel: "movement proof broad",
       candidateReviewOutPath: "tmp/candidate-review.md",
+      captureContractOutPath: "tmp/capture-contract.json",
       json: true,
       manifestPath: "tmp/manifest.json",
       recordingId: "rec_123",
