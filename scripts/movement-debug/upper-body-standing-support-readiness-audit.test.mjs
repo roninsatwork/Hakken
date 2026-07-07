@@ -36,6 +36,10 @@ const broadReadableGameCases = [
   "strongest-standing-twist",
   "strongest-standing-reach",
 ];
+const narrowReadableGameCases = [
+  "strongest-side-bend",
+  "strongest-head-direction",
+];
 
 describe("upper body standing support readiness audit", () => {
   it("blocks broad support when only narrow side-bend and head-direction proof exists", () => {
@@ -68,6 +72,36 @@ describe("upper body standing support readiness audit", () => {
       missingBroadManifestProofCases: broadManifestProofCases,
       missingBroadPassedProofCases: broadManifestProofCases,
       missingBroadReadableGameCases: broadReadableGameCases,
+      missingNarrowGamePlanCases: narrowReadableGameCases,
+      missingNarrowReadableGameCases: narrowReadableGameCases,
+      narrowPassingRecordingIds: ["recording-a"],
+      narrowReady: false,
+    });
+  });
+
+  it("marks a narrow side-bend/head-direction claim ready when recorded and Game readability proof exist", () => {
+    const audit = auditUpperBodyStandingSupportReadiness({
+      gameVisualPlan: {
+        summary: {
+          proofCases: narrowReadableGameCases,
+        },
+      },
+      manifest: {
+        rows: [
+          row("recording-a", "standing"),
+          row("recording-a", "side-bend"),
+          row("recording-a", "head-direction"),
+        ],
+      },
+      semanticReview: {
+        decisions: narrowReadableGameCases.map(decision),
+      },
+    });
+
+    expect(audit).toMatchObject({
+      broadReady: false,
+      missingNarrowGamePlanCases: [],
+      missingNarrowReadableGameCases: [],
       narrowPassingRecordingIds: ["recording-a"],
       narrowReady: true,
     });
@@ -99,6 +133,8 @@ describe("upper body standing support readiness audit", () => {
       missingBroadManifestProofCases: [],
       missingBroadPassedProofCases: [],
       missingBroadReadableGameCases: [],
+      missingNarrowGamePlanCases: [],
+      missingNarrowReadableGameCases: [],
       narrowPassingRecordingIds: ["recording-a"],
       narrowReady: true,
     });

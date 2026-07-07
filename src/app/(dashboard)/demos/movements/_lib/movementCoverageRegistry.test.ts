@@ -106,13 +106,14 @@ describe("movementCoverageRegistry", () => {
   it("separates user-facing support from internal demo readiness", () => {
     const summary = summarizeMovementCoverageRegistry();
 
-    expect(summary.userFacingFamilies).toEqual(["upright", "squat-knee-lift"]);
-    expect(summary.userFacingCount).toBe(2);
+    expect(summary.userFacingFamilies).toEqual(["upright", "standing-side-bend-head-direction", "squat-knee-lift"]);
+    expect(summary.userFacingCount).toBe(3);
     expect(summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
       "root-turn",
       "root-travel",
     ]));
+    expect(summary.internalDemoOnlyFamilies).not.toContain("standing-side-bend-head-direction");
     expect(summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
     expect(summary.internalDemoOnlyCount).toBe(summary.internalDemoOnlyFamilies.length);
     summary.internalDemoOnlyFamilies.forEach((family) => {

@@ -20,6 +20,7 @@ export type MovementCoverageProofLayer =
 export type MovementCoverageFamily =
   | "upright"
   | "upper-body-standing"
+  | "standing-side-bend-head-direction"
   | "squat-knee-lift"
   | "facing-occlusion"
   | "root-turn"
@@ -83,6 +84,7 @@ export type MovementCoverageSummary = {
 export const MOVEMENT_COVERAGE_FAMILIES: MovementCoverageFamily[] = [
   "upright",
   "upper-body-standing",
+  "standing-side-bend-head-direction",
   "squat-knee-lift",
   "facing-occlusion",
   "root-turn",
@@ -119,6 +121,15 @@ export const MOVEMENT_COVERAGE_REGISTRY: Record<MovementCoverageFamily, Movement
     remainingGaps: ["shoulder/scapula IK is approximate", "standing weight pressure is not solved"],
     status: "approximate",
     summary: "Standing upper-body bends, twists, overhead arm raises, reaches, and head/arm motion with upright assumptions.",
+  },
+  "standing-side-bend-head-direction": {
+    demoReady: true,
+    family: "standing-side-bend-head-direction",
+    label: "Standing side-bend and head direction",
+    proofLevel: "full",
+    remainingGaps: [],
+    status: "supported",
+    summary: "Reviewed standing side-bend and head-direction support with child-readable Game presentation.",
   },
   "squat-knee-lift": {
     demoReady: true,

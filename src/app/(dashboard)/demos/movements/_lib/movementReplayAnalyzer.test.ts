@@ -500,16 +500,19 @@ describe("movement replay analyzer", () => {
     ]));
     expect(analysis.coverage.summary.demoReadyCount).toBeLessThan(analysis.coverage.summary.familyCount);
     expect(analysis.coverage.summary.demoReadyPercent).toBeLessThan(100);
-    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright", "squat-knee-lift"]);
+    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright", "standing-side-bend-head-direction", "squat-knee-lift"]);
     expect(analysis.coverage.summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
     ]));
+    expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("standing-side-bend-head-direction");
     expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
     expect(analysis.coverage.summary.missingProofCount).toBeGreaterThan(0);
     expect(analysis.coverage.summary.missingProofFamilies).not.toContain("squat-knee-lift");
+    expect(analysis.coverage.summary.missingProofFamilies).not.toContain("standing-side-bend-head-direction");
     expect(analysis.coverage.missingProofs).toEqual(
       expect.not.arrayContaining([
         expect.objectContaining({ family: "squat-knee-lift" }),
+        expect.objectContaining({ family: "standing-side-bend-head-direction" }),
       ]),
     );
     expect(analysis.coverage.summary.unsupportedFamilies).toEqual([]);

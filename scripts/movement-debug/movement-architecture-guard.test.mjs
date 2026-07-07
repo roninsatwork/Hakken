@@ -26,6 +26,8 @@ const supportClaimVisualTargets = [
   { cases: ["strongest-left-leg-lift"], displayLowerLabel: "left-knee-raise", sourceLowerLabel: "right-knee-raise" },
   { cases: ["strongest-right-leg-lift"], displayLowerLabel: "right-knee-raise", sourceLowerLabel: "left-knee-raise" },
   { cases: ["first-source-display-divergence"], displayLowerLabel: "left-knee-raise", sourceLowerLabel: "right-knee-raise" },
+  { cases: ["strongest-side-bend"], displayLowerLabel: "neutral", sourceLowerLabel: "neutral" },
+  { cases: ["strongest-head-direction"], displayLowerLabel: "neutral", sourceLowerLabel: "neutral" },
 ];
 const expectedGameVisualProofFrames = 49;
 
@@ -89,7 +91,7 @@ const cleanAnalysis = [
       summary: {
         internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies,
         missingProofFamilies: expectedInternalDemoOnlyFamilies,
-        userFacingFamilies: ["upright", "squat-knee-lift"],
+        userFacingFamilies: ["upright", "standing-side-bend-head-direction", "squat-knee-lift"],
       },
     },
     gamePath: {
@@ -116,7 +118,7 @@ const cleanAnalysis = [
 
 const cleanManifest = {
   rows: [
-    ...["standing", "squat", "left-leg-raise", "right-leg-raise", "mirror-side-ownership"].map((proofCase) => ({
+    ...["standing", "squat", "left-leg-raise", "right-leg-raise", "mirror-side-ownership", "side-bend", "head-direction"].map((proofCase) => ({
       acceptedProductLimitation: false,
       proofCase,
       recordingId: "recording-a",
@@ -458,7 +460,7 @@ describe("movement architecture guard", () => {
       found: true,
       internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies,
       missingProofFamilies: expectedInternalDemoOnlyFamilies,
-      userFacingFamilies: ["upright", "squat-knee-lift"],
+      userFacingFamilies: ["upright", "standing-side-bend-head-direction", "squat-knee-lift"],
     });
   });
 
@@ -735,6 +737,7 @@ describe("movement architecture guard", () => {
       expect.stringContaining("user-facing movement families"),
       expect.stringContaining("internal-demo-only movement families"),
       expect.stringContaining("missing full proof"),
+      expect.stringContaining("standing side-bend/head-direction support audit"),
     ]));
   });
 });

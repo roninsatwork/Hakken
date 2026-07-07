@@ -66,7 +66,7 @@ Run the upper-body readiness audit before changing `upper-body-standing` support
 npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit
 ```
 
-This is expected to report `blocked` until broad arm/reach/twist/shoulder proof and upper-body Game visual target/review cases exist. Use `--strict` only when intentionally trying to promote the family.
+This is expected to report `blocked` for the broad `upper-body-standing` family until arm/reach/twist/shoulder proof and upper-body Game visual target/review cases exist. The narrow `standing-side-bend-head-direction` family is separately guarded by the same audit and the architecture guard while it remains user-facing. Use `--strict` only when intentionally trying to promote the broad family.
 
 Analyze recent stored sessions:
 

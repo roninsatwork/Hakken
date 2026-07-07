@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { auditSquatKneeLiftSupportClaim } from "./squat-knee-lift-support-claim-audit.mjs";
+import { auditUpperBodyStandingSupportReadiness } from "./upper-body-standing-support-readiness-audit.mjs";
 
 export const DEFAULT_WATCHED_FILES = [
   {
@@ -609,7 +610,11 @@ export function buildMovementArchitectureGuardReport({
   const expectedSemanticPasses = proofExpectations.semanticReadablePasses ?? DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT;
   const expectedVisualProofFrames = proofExpectations.visualProofFrames ?? DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT;
   const minimumParityFrames = proofExpectations.minimumScoreMessageParityFrames ?? 11000;
-  const expectedUserFacingFamilies = proofExpectations.userFacingFamilies ?? ["upright", "squat-knee-lift"];
+  const expectedUserFacingFamilies = proofExpectations.userFacingFamilies ?? [
+    "upright",
+    "standing-side-bend-head-direction",
+    "squat-knee-lift",
+  ];
   const expectedInternalDemoOnlyFamilies = proofExpectations.internalDemoOnlyFamilies ?? [
     "upper-body-standing",
     "root-turn",
@@ -635,6 +640,11 @@ export function buildMovementArchitectureGuardReport({
   const coverageProductTruth = summarizeCoverageProductTruth(analysis);
   const proofManifest = summarizeProofManifest(manifest);
   const squatKneeLiftSupportClaim = auditSquatKneeLiftSupportClaim({ manifest, semanticReview });
+  const upperBodyStandingSupport = auditUpperBodyStandingSupportReadiness({
+    gameVisualPlan: captureManifest,
+    manifest,
+    semanticReview,
+  });
   const proofFailures = [];
 
   if (semantic.readablePassCount !== expectedSemanticPasses || semantic.targetCount !== expectedSemanticPasses) {
@@ -726,6 +736,14 @@ export function buildMovementArchitectureGuardReport({
       proofFailures.push("expected squat-knee-lift support-claim audit to pass before user-facing promotion");
     }
   }
+  if (
+    expectedUserFacingFamilies.includes("standing-side-bend-head-direction") ||
+    coverageProductTruth.userFacingFamilies.includes("standing-side-bend-head-direction")
+  ) {
+    if (!upperBodyStandingSupport.narrowReady) {
+      proofFailures.push("expected standing side-bend/head-direction support audit to pass before user-facing promotion");
+    }
+  }
 
   return {
     coverageProductTruth,
@@ -741,6 +759,7 @@ export function buildMovementArchitectureGuardReport({
     semanticReview: semantic,
     sourcePurityResults,
     squatKneeLiftSupportClaim,
+    upperBodyStandingSupport,
     visualCaptureConsistency,
     visualReviewConsistency,
   };

@@ -26,6 +26,10 @@ export const UPPER_BODY_STANDING_SUPPORT_REQUIREMENTS = {
     "side-bend",
     "head-direction",
   ],
+  narrowReadableGameCases: [
+    "strongest-side-bend",
+    "strongest-head-direction",
+  ],
 };
 
 function printHelp() {
@@ -124,7 +128,10 @@ function recordingsWithPassedProofCases(groups, proofCases) {
 function planProofCases(gameVisualPlan) {
   return Array.isArray(gameVisualPlan?.summary?.proofCases)
     ? gameVisualPlan.summary.proofCases
-    : Array.from(new Set((gameVisualPlan?.sessions ?? []).flatMap((session) => session.proofCases ?? []))).sort();
+    : Array.from(new Set([
+        ...(gameVisualPlan?.sessions ?? []).flatMap((session) => session.proofCases ?? []),
+        ...(gameVisualPlan?.captures ?? []).flatMap((capture) => capture?.target?.cases ?? []),
+      ])).sort();
 }
 
 function reviewedReadableCases(semanticReview) {
@@ -155,6 +162,15 @@ export function auditUpperBodyStandingSupportReadiness({
     .filter((proofCase) => !visualPlanCases.includes(proofCase));
   const missingBroadReadableGameCases = requirements.broadReadableGameCases
     .filter((proofCase) => !readableCases.includes(proofCase));
+  const missingNarrowGamePlanCases = requirements.narrowReadableGameCases
+    .filter((proofCase) => !visualPlanCases.includes(proofCase));
+  const missingNarrowReadableGameCases = requirements.narrowReadableGameCases
+    .filter((proofCase) => !readableCases.includes(proofCase));
+  const narrowReady = (
+    narrowPassingRecordingIds.length > 0 &&
+    missingNarrowGamePlanCases.length === 0 &&
+    missingNarrowReadableGameCases.length === 0
+  );
 
   const broadReady = (
     missingBroadManifestProofCases.length === 0 &&
@@ -172,8 +188,10 @@ export function auditUpperBodyStandingSupportReadiness({
     missingBroadManifestProofCases,
     missingBroadPassedProofCases,
     missingBroadReadableGameCases,
+    missingNarrowGamePlanCases,
+    missingNarrowReadableGameCases,
     narrowPassingRecordingIds,
-    narrowReady: narrowPassingRecordingIds.length > 0,
+    narrowReady,
     proofCaseSummary: summaryByProofCase,
     readableCases,
     requirements,
@@ -192,6 +210,8 @@ function formatAudit(audit) {
     `Narrow recorded proof bundles: ${audit.narrowPassingRecordingIds.length} (${formatList(audit.narrowPassingRecordingIds)}).`,
     `Missing broad manifest proof definitions: ${formatList(audit.missingBroadManifestProofCases)}.`,
     `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}.`,
+    `Missing narrow Game target-plan cases: ${formatList(audit.missingNarrowGamePlanCases)}.`,
+    `Missing narrow readable Game cases: ${formatList(audit.missingNarrowReadableGameCases)}.`,
     `Missing broad Game target-plan cases: ${formatList(audit.missingBroadGamePlanCases)}.`,
     `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}.`,
   ].join("\n");
