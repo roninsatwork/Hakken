@@ -371,6 +371,25 @@ describe("upper body standing support readiness audit", () => {
       "expected supportClaimBlockers to be empty when broadReady is true",
     ]));
 
+    const malformedRetryStateContract = JSON.parse(JSON.stringify(contract));
+    malformedRetryStateContract.broadPassingRecordingIds = [""];
+    malformedRetryStateContract.broadPassedProofCandidates = [
+      {
+        missingPassedProofCases: ["unknown-proof-case"],
+        passedProofCaseCount: 2,
+        passedProofCases: ["standing-arm-raise"],
+        recordingId: "",
+      },
+      "not-a-candidate",
+    ];
+    expect(validateBroadCaptureContractShape(malformedRetryStateContract)).toEqual(expect.arrayContaining([
+      "expected broadPassingRecordingIds to contain non-empty strings",
+      "expected broadPassedProofCandidates[0].recordingId non-empty string",
+      "expected broadPassedProofCandidates[0].missingPassedProofCases to contain only required recorded proof cases",
+      "expected broadPassedProofCandidates[0].passedProofCaseCount to match passedProofCases length",
+      "expected broadPassedProofCandidates[1] object",
+    ]));
+
     expect(validateBroadCaptureContractShape({
       commands: [
         {

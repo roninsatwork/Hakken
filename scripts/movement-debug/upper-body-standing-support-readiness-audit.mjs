@@ -362,6 +362,10 @@ function broadSupportClaimBlockers(audit) {
   };
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+
 function planProofCases(gameVisualPlan) {
   return Array.isArray(gameVisualPlan?.summary?.proofCases)
     ? gameVisualPlan.summary.proofCases
@@ -771,9 +775,42 @@ export function validateBroadCaptureContractShape(contract) {
   }
   if (!Array.isArray(contract?.broadPassingRecordingIds)) {
     issues.push("expected broadPassingRecordingIds array");
+  } else if (!contract.broadPassingRecordingIds.every(isNonEmptyString)) {
+    issues.push("expected broadPassingRecordingIds to contain non-empty strings");
   }
   if (!Array.isArray(contract?.broadPassedProofCandidates)) {
     issues.push("expected broadPassedProofCandidates array");
+  } else {
+    contract.broadPassedProofCandidates.forEach((candidate, index) => {
+      const prefix = `expected broadPassedProofCandidates[${index}]`;
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+        issues.push(`${prefix} object`);
+        return;
+      }
+      if (!isNonEmptyString(candidate.recordingId)) {
+        issues.push(`${prefix}.recordingId non-empty string`);
+      }
+      if (!Number.isInteger(candidate.passedProofCaseCount)) {
+        issues.push(`${prefix}.passedProofCaseCount integer`);
+      }
+      [
+        "missingPassedProofCases",
+        "passedProofCases",
+      ].forEach((key) => {
+        if (!Array.isArray(candidate[key])) {
+          issues.push(`${prefix}.${key} array`);
+        } else if (!candidate[key].every((proofCase) => requiredRecordedProofCases.includes(proofCase))) {
+          issues.push(`${prefix}.${key} to contain only required recorded proof cases`);
+        }
+      });
+      if (
+        Number.isInteger(candidate.passedProofCaseCount) &&
+        Array.isArray(candidate.passedProofCases) &&
+        candidate.passedProofCaseCount !== candidate.passedProofCases.length
+      ) {
+        issues.push(`${prefix}.passedProofCaseCount to match passedProofCases length`);
+      }
+    });
   }
   if (typeof contract?.broadReady !== "boolean") {
     issues.push("expected broadReady boolean");
