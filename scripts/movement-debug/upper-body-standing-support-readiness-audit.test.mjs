@@ -336,6 +336,7 @@ describe("upper body standing support readiness audit", () => {
       gameVisualPlanPaths: ["tmp/default-plan.json"],
       manifestPath: "tmp/default-manifest.json",
       semanticReviewPaths: ["tmp/default-review.json"],
+      strict: false,
     }, {
       paths: {
         gameVisualPlan: "tmp/focused-plan.json",
@@ -352,6 +353,7 @@ describe("upper body standing support readiness audit", () => {
         "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
         "tmp/focused-review.json",
       ],
+      strict: true,
     });
 
     expect(() => applyBroadCaptureContractArgs({}, {

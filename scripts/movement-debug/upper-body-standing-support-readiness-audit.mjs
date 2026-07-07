@@ -700,6 +700,7 @@ export function applyBroadCaptureContractArgs(args, contract) {
       defaultSemanticReviewPath,
       paths.semanticReviewDecisions,
     ],
+    strict: true,
   };
 }
 
