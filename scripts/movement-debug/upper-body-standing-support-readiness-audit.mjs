@@ -6,6 +6,12 @@ import path from "node:path";
 const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json";
 const defaultGameVisualPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.json";
 const defaultSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json";
+const defaultBroadCaptureLabel = "movement-proof-upper-body-standing-broad-explicit";
+const BROAD_UPPER_BODY_GAME_PROOF_CASES = [
+  "strongest-standing-arm-raise",
+  "strongest-standing-twist",
+  "strongest-standing-reach",
+];
 
 const BROAD_UPPER_BODY_CAPTURE_PROTOCOL = [
   "neutral standing baseline with full upper body visible",
@@ -56,6 +62,10 @@ Options:
                              Can be repeated for supplemental focused reviews.
   --candidate-review-out <file>
                              Write a Markdown checklist for ranked broad evidence candidates.
+  --capture-guide-out <file>
+                             Write a Markdown guide for capturing and validating one explicit broad bundle.
+  --capture-label <label>    Suggested fresh recording label for --capture-guide-out.
+                             Defaults to ${defaultBroadCaptureLabel}
   --strict                   Exit non-zero when broad upper-body support is not ready.
   --json                     Print machine-readable JSON.
   --help                     Show this help.
@@ -65,6 +75,8 @@ Options:
 export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
   const args = {
     gameVisualPlanPaths: [defaultGameVisualPlanPath],
+    captureGuideOutPath: null,
+    captureLabel: defaultBroadCaptureLabel,
     candidateReviewOutPath: null,
     json: false,
     manifestPath: defaultManifestPath,
@@ -95,6 +107,10 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
       args.semanticReviewPaths.push(argv[++index] || defaultSemanticReviewPath);
     } else if (arg === "--candidate-review-out") {
       args.candidateReviewOutPath = argv[++index] || null;
+    } else if (arg === "--capture-guide-out") {
+      args.captureGuideOutPath = argv[++index] || null;
+    } else if (arg === "--capture-label") {
+      args.captureLabel = argv[++index] || defaultBroadCaptureLabel;
     } else if (arg === "--strict") {
       args.strict = true;
     } else if (arg === "--json") {
@@ -416,6 +432,74 @@ export function formatBroadCandidateReview(audit) {
   ].join("\n");
 }
 
+function shellValue(value) {
+  return String(value).replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCaptureLabel } = {}) {
+  const safeLabel = shellValue(captureLabel || defaultBroadCaptureLabel);
+  const analysisPath = `tmp/movement-replay-lab/${safeLabel}-analysis.json`;
+  const gameVisualPlanPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-plan.json`;
+  const gameCapturePath = `tmp/movement-replay-lab/captures/${safeLabel}-game-visual-proof`;
+  const gameReviewPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-review.md`;
+  const gameReviewDecisionsPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-review-decisions.template.json`;
+  const semanticReviewDecisionsPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-review-decisions.codex-semantic-review.json`;
+
+  return [
+    "# Broad Upper-Body Standing Explicit Capture Guide",
+    "",
+    "This guide is for one intentional broad upper-body bundle. It does not promote broad `upper-body-standing`; promotion still requires passed recorded proof rows and readable Game targets.",
+    "",
+    `Suggested recording label: \`${safeLabel}\``,
+    `Current audit decision: ${audit.decision}`,
+    `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}`,
+    `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}`,
+    "",
+    "## Capture Protocol",
+    "",
+    ...BROAD_UPPER_BODY_CAPTURE_PROTOCOL.map((item) => `- ${item}`),
+    "",
+    "## Acceptance Checklist",
+    "",
+    "- [ ] One recording contains neutral standing plus all broad segments in sequence.",
+    "- [ ] Both shoulders, elbows, upper torso, hips, knees, and feet remain visible.",
+    "- [ ] Arm raise, twist, reach, and shoulder/scapula intent each have a held readable peak.",
+    "- [ ] The analyzer produces non-product-scoped passed rows for `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control`.",
+    "- [ ] Focused broad Game captures are reviewed as readable for `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach`.",
+    "- [ ] The merged `movement:upper-body-standing-support-audit` passes before any coverage registry or product-copy change.",
+    "",
+    "## After Capture",
+    "",
+    "Replace `<new-recording-id>` with the saved Movement recording id for this explicit bundle.",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --out ${analysisPath}`,
+    "```",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:game-visual-plan -- --analysis ${analysisPath} --out ${gameVisualPlanPath} --base-url http://localhost:3100 ${BROAD_UPPER_BODY_GAME_PROOF_CASES.map((proofCase) => `--proof-case ${proofCase}`).join(" ")}`,
+    "```",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:game-visual-capture -- --base-url http://localhost:3100 --plan ${gameVisualPlanPath} --out ${gameCapturePath} --local-test-auth --secret sonae-local-test-auth`,
+    "```",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:game-visual-review -- --manifest ${gameCapturePath}/game-visual-proof-captures-manifest.json --out ${gameReviewPath} --decisions-out ${gameReviewDecisionsPath}`,
+    "```",
+    "",
+    "Fill the semantic review decisions, then run the merged readiness audit:",
+    "",
+    "```bash",
+    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --game-visual-plan tmp/movement-replay-lab/current-game-visual-proof-plan.json " +
+      `--game-visual-plan ${gameVisualPlanPath} ` +
+      "--semantic-review tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json " +
+      `--semantic-review ${semanticReviewDecisionsPath}`,
+    "```",
+    "",
+  ].join("\n");
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -454,6 +538,13 @@ async function main() {
     await mkdir(path.dirname(candidateReviewPath), { recursive: true });
     await writeFile(candidateReviewPath, formatBroadCandidateReview(audit));
     console.error(`Wrote ${candidateReviewPath}`);
+  }
+
+  if (args.captureGuideOutPath) {
+    const captureGuidePath = path.resolve(args.captureGuideOutPath);
+    await mkdir(path.dirname(captureGuidePath), { recursive: true });
+    await writeFile(captureGuidePath, formatBroadCaptureGuide(audit, { captureLabel: args.captureLabel }));
+    console.error(`Wrote ${captureGuidePath}`);
   }
 
   console.log(args.json ? JSON.stringify(audit, null, 2) : formatAudit(audit));

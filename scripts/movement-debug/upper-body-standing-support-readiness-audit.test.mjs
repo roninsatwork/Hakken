@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditUpperBodyStandingSupportReadiness,
+  formatBroadCaptureGuide,
   formatBroadCandidateReview,
   mergeGameVisualPlans,
   mergeSemanticReviews,
@@ -217,6 +218,14 @@ describe("upper body standing support readiness audit", () => {
     expect(review).toContain("standing-arm-raise: 12 frame(s), observed 2");
     expect(review).toContain("Capture Protocol");
     expect(review).toContain("Capture a new explicit broad upper-body bundle");
+
+    const captureGuide = formatBroadCaptureGuide(audit, { captureLabel: "broad explicit!" });
+    expect(captureGuide).toContain("# Broad Upper-Body Standing Explicit Capture Guide");
+    expect(captureGuide).toContain("Suggested recording label: `broad-explicit-`");
+    expect(captureGuide).toContain("--recording-ids <new-recording-id>");
+    expect(captureGuide).toContain("--include-standing-upper-body-targets");
+    expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
+    expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
   });
 
   it("parses CLI options", () => {
@@ -233,10 +242,16 @@ describe("upper body standing support readiness audit", () => {
       "tmp/broad-review.json",
       "--candidate-review-out",
       "tmp/candidate-review.md",
+      "--capture-guide-out",
+      "tmp/capture-guide.md",
+      "--capture-label",
+      "movement proof broad",
       "--strict",
       "--json",
     ])).toEqual({
       gameVisualPlanPaths: ["tmp/plan.json", "tmp/broad-plan.json"],
+      captureGuideOutPath: "tmp/capture-guide.md",
+      captureLabel: "movement proof broad",
       candidateReviewOutPath: "tmp/candidate-review.md",
       json: true,
       manifestPath: "tmp/manifest.json",
