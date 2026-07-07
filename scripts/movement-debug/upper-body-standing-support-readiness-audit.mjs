@@ -335,6 +335,7 @@ export function auditUpperBodyStandingSupportReadiness({
   const groups = rowsByProofCase(manifest);
   const summaryByProofCase = proofCaseSummary(manifest);
   const narrowPassingRecordingIds = recordingsWithPassedProofCases(groups, requirements.narrowManifestProofCases);
+  const broadPassingRecordingIds = recordingsWithPassedProofCases(groups, requirements.broadManifestProofCases);
   const presentProofCases = new Set(Object.keys(groups));
   const missingBroadManifestProofCases = requirements.broadManifestProofCases
     .filter((proofCase) => !presentProofCases.has(proofCase));
@@ -357,6 +358,7 @@ export function auditUpperBodyStandingSupportReadiness({
   );
 
   const broadReady = (
+    broadPassingRecordingIds.length > 0 &&
     missingBroadManifestProofCases.length === 0 &&
     missingBroadPassedProofCases.length === 0 &&
     missingBroadGamePlanCases.length === 0 &&
@@ -364,6 +366,7 @@ export function auditUpperBodyStandingSupportReadiness({
   );
 
   return {
+    broadPassingRecordingIds,
     broadReady,
     decision: broadReady
       ? "Upper-body standing can be considered for a scoped user-facing support claim."
@@ -843,6 +846,7 @@ function formatAudit(audit) {
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
     audit.decision,
     `Narrow recorded proof bundles: ${audit.narrowPassingRecordingIds.length} (${formatList(audit.narrowPassingRecordingIds)}).`,
+    `Broad recorded proof bundles: ${audit.broadPassingRecordingIds.length} (${formatList(audit.broadPassingRecordingIds)}).`,
     `Missing broad manifest proof definitions: ${formatList(audit.missingBroadManifestProofCases)}.`,
     `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}.`,
     `Missing narrow Game target-plan cases: ${formatList(audit.missingNarrowGamePlanCases)}.`,

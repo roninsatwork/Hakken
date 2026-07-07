@@ -139,6 +139,7 @@ describe("upper body standing support readiness audit", () => {
     });
 
     expect(audit).toMatchObject({
+      broadPassingRecordingIds: ["recording-a"],
       broadReady: true,
       missingBroadGamePlanCases: [],
       missingBroadManifestProofCases: [],
@@ -148,6 +149,39 @@ describe("upper body standing support readiness audit", () => {
       missingNarrowReadableGameCases: [],
       narrowPassingRecordingIds: ["recording-a"],
       narrowReady: true,
+    });
+  });
+
+  it("blocks broad support when broad passed proof cases are split across recordings", () => {
+    const audit = auditUpperBodyStandingSupportReadiness({
+      gameVisualPlan: {
+        summary: {
+          proofCases: broadReadableGameCases,
+        },
+      },
+      manifest: {
+        rows: [
+          row("recording-a", "standing"),
+          row("recording-a", "side-bend"),
+          row("recording-a", "head-direction"),
+          row("recording-a", "standing-arm-raise"),
+          row("recording-a", "standing-twist"),
+          row("recording-b", "standing-reach"),
+          row("recording-b", "shoulder-scapula-control"),
+        ],
+      },
+      semanticReview: {
+        decisions: broadReadableGameCases.map(decision),
+      },
+    });
+
+    expect(audit).toMatchObject({
+      broadPassingRecordingIds: [],
+      broadReady: false,
+      missingBroadGamePlanCases: [],
+      missingBroadManifestProofCases: [],
+      missingBroadPassedProofCases: [],
+      missingBroadReadableGameCases: [],
     });
   });
 
