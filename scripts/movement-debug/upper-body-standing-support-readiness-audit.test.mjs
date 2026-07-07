@@ -292,6 +292,8 @@ describe("upper body standing support readiness audit", () => {
     const captureGuide = formatBroadCaptureGuide(audit, { captureLabel: "broad explicit!" });
     expect(captureGuide).toContain("# Broad Upper-Body Standing Explicit Capture Guide");
     expect(captureGuide).toContain("Suggested recording label: `broad-explicit-`");
+    expect(captureGuide).toContain("Workflow state: waiting-for-recording-id");
+    expect(captureGuide).toContain("Next action: capture or tag one explicit broad upper-body recording, then regenerate this contract with --recording-id <id>");
     expect(captureGuide).toContain("--recording-ids <new-recording-id>");
     expect(captureGuide).toContain("pass `--recording-id <id>`");
     expect(captureGuide).toContain("--include-standing-upper-body-targets");
@@ -309,6 +311,8 @@ describe("upper body standing support readiness audit", () => {
       recordingId: "rec_123 upper",
     });
     expect(recordingIdGuide).toContain("recording id `rec_123 upper`");
+    expect(recordingIdGuide).toContain("Workflow state: recording-id-bound");
+    expect(recordingIdGuide).toContain("Next action: run initial-analysis after confirming the local export path and services are ready");
     expect(recordingIdGuide).toContain("--recording-ids 'rec_123 upper'");
     expect(recordingIdGuide).not.toContain("--recording-ids <new-recording-id>");
 
@@ -320,10 +324,12 @@ describe("upper body standing support readiness audit", () => {
       broadPassedProofCandidates: [],
       broadPassingRecordingIds: [],
       broadReady: false,
+      captureWorkflowState: "recording-id-bound",
       missingBroadGamePlanCases: [],
       missingBroadManifestProofCases: [],
       missingBroadPassedProofCases: broadManifestProofCases,
       missingBroadReadableGameCases: [],
+      nextWorkflowAction: "run initial-analysis after confirming the local export path and services are ready",
       recordingId: "rec_123 upper",
       recordingIdPlaceholder: null,
       requiredGameProofCases: [
@@ -374,6 +380,12 @@ describe("upper body standing support readiness audit", () => {
       "expected supportClaimStatus ready-for-scoped-support-review when broadReady is true",
       "expected supportClaimBlockers to be empty when broadReady is true",
     ]));
+
+    const inconsistentWorkflowContract = JSON.parse(JSON.stringify(contract));
+    inconsistentWorkflowContract.captureWorkflowState = "waiting-for-recording-id";
+    expect(validateBroadCaptureContractShape(inconsistentWorkflowContract)).toContain(
+      "expected captureWorkflowState to match recordingId presence",
+    );
 
     const malformedRetryStateContract = JSON.parse(JSON.stringify(contract));
     malformedRetryStateContract.broadPassingRecordingIds = [""];
@@ -436,6 +448,8 @@ describe("upper body standing support readiness audit", () => {
       "expected command ids initial-analysis,replay-proof-set,replay-review,reviewed-analysis,focused-game-visual-plan,focused-game-visual-capture,focused-game-visual-review,merged-readiness-audit",
       "expected recorded proof cases standing-arm-raise,standing-twist,standing-reach,shoulder-scapula-control",
       "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",
+      "expected captureWorkflowState waiting-for-recording-id|recording-id-bound",
+      "expected nextWorkflowAction non-empty string",
       "expected broadPassingRecordingIds array",
       "expected broadPassedProofCandidates array",
       "expected missingBroadGamePlanCases array",

@@ -28,6 +28,10 @@ const BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES = [
   "blocked-internal-demo-only",
   "ready-for-scoped-support-review",
 ];
+const BROAD_UPPER_BODY_CAPTURE_WORKFLOW_STATES = [
+  "waiting-for-recording-id",
+  "recording-id-bound",
+];
 
 const BROAD_UPPER_BODY_CAPTURE_PROTOCOL = [
   "neutral standing baseline with full upper body visible",
@@ -362,6 +366,16 @@ function broadSupportClaimBlockers(audit) {
   };
 }
 
+function broadCaptureWorkflowState(recordingId) {
+  return recordingId ? "recording-id-bound" : "waiting-for-recording-id";
+}
+
+function broadCaptureNextWorkflowAction(recordingId) {
+  return recordingId
+    ? "run initial-analysis after confirming the local export path and services are ready"
+    : "capture or tag one explicit broad upper-body recording, then regenerate this contract with --recording-id <id>";
+}
+
 function isNonEmptyString(value) {
   return typeof value === "string" && value.length > 0;
 }
@@ -656,6 +670,8 @@ export function formatBroadCaptureGuide(audit, {
     "This guide is for one intentional broad upper-body bundle. It does not promote broad `upper-body-standing`; promotion still requires passed recorded proof rows and readable Game targets.",
     "",
     `Suggested recording label: \`${workflow.safeLabel}\``,
+    `Workflow state: ${broadCaptureWorkflowState(recordingId)}`,
+    `Next action: ${broadCaptureNextWorkflowAction(recordingId)}`,
     `Current audit decision: ${audit.decision}`,
     `Missing broad passed proof cases: ${formatList(audit.missingBroadPassedProofCases)}`,
     `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}`,
@@ -732,11 +748,13 @@ export function formatBroadCaptureContract(audit, {
     broadPassingRecordingIds: audit.broadPassingRecordingIds,
     broadReady: audit.broadReady,
     captureProtocol: BROAD_UPPER_BODY_CAPTURE_PROTOCOL,
+    captureWorkflowState: broadCaptureWorkflowState(recordingId),
     commands: workflow.commands,
     missingBroadGamePlanCases: audit.missingBroadGamePlanCases,
     missingBroadManifestProofCases: audit.missingBroadManifestProofCases,
     missingBroadPassedProofCases: audit.missingBroadPassedProofCases,
     missingBroadReadableGameCases: audit.missingBroadReadableGameCases,
+    nextWorkflowAction: broadCaptureNextWorkflowAction(recordingId),
     paths: workflow.paths,
     recordingId,
     recordingIdPlaceholder: recordingId ? null : "<new-recording-id>",
@@ -774,6 +792,18 @@ export function validateBroadCaptureContractShape(contract) {
   }
   if (!arraysEqual(requiredGameProofCases, BROAD_UPPER_BODY_GAME_PROOF_CASES)) {
     issues.push(`expected Game proof cases ${BROAD_UPPER_BODY_GAME_PROOF_CASES.join(",")}`);
+  }
+  if (!BROAD_UPPER_BODY_CAPTURE_WORKFLOW_STATES.includes(contract?.captureWorkflowState)) {
+    issues.push(`expected captureWorkflowState ${BROAD_UPPER_BODY_CAPTURE_WORKFLOW_STATES.join("|")}`);
+  }
+  if (!isNonEmptyString(contract?.nextWorkflowAction)) {
+    issues.push("expected nextWorkflowAction non-empty string");
+  }
+  if (
+    BROAD_UPPER_BODY_CAPTURE_WORKFLOW_STATES.includes(contract?.captureWorkflowState) &&
+    contract.captureWorkflowState !== broadCaptureWorkflowState(contract?.recordingId)
+  ) {
+    issues.push("expected captureWorkflowState to match recordingId presence");
   }
   if (!Array.isArray(contract?.broadPassingRecordingIds)) {
     issues.push("expected broadPassingRecordingIds array");
