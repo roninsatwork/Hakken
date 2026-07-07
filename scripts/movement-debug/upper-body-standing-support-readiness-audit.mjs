@@ -66,6 +66,7 @@ Options:
                              Write a Markdown guide for capturing and validating one explicit broad bundle.
   --capture-label <label>    Suggested fresh recording label for --capture-guide-out.
                              Defaults to ${defaultBroadCaptureLabel}
+  --recording-id <id>        Optional saved Movement recording id to write into --capture-guide-out commands.
   --strict                   Exit non-zero when broad upper-body support is not ready.
   --json                     Print machine-readable JSON.
   --help                     Show this help.
@@ -80,6 +81,7 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
     candidateReviewOutPath: null,
     json: false,
     manifestPath: defaultManifestPath,
+    recordingId: null,
     semanticReviewPaths: [defaultSemanticReviewPath],
     strict: false,
   };
@@ -111,6 +113,8 @@ export function parseUpperBodyStandingSupportReadinessAuditArgs(argv) {
       args.captureGuideOutPath = argv[++index] || null;
     } else if (arg === "--capture-label") {
       args.captureLabel = argv[++index] || defaultBroadCaptureLabel;
+    } else if (arg === "--recording-id") {
+      args.recordingId = argv[++index] || null;
     } else if (arg === "--strict") {
       args.strict = true;
     } else if (arg === "--json") {
@@ -436,8 +440,16 @@ function shellValue(value) {
   return String(value).replace(/[^a-zA-Z0-9._-]/g, "-");
 }
 
-export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCaptureLabel } = {}) {
+function shellArg(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+export function formatBroadCaptureGuide(audit, {
+  captureLabel = defaultBroadCaptureLabel,
+  recordingId = null,
+} = {}) {
   const safeLabel = shellValue(captureLabel || defaultBroadCaptureLabel);
+  const recordingIdValue = recordingId ? shellArg(recordingId) : "<new-recording-id>";
   const analysisPath = `tmp/movement-replay-lab/${safeLabel}-analysis.json`;
   const manifestPath = `tmp/movement-replay-lab/${safeLabel}-analysis.proof-manifest.json`;
   const replayCapturePath = `tmp/movement-replay-lab/captures/${safeLabel}-replay-proof-set`;
@@ -477,10 +489,12 @@ export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCapt
     "",
     "## After Capture",
     "",
-    "Replace `<new-recording-id>` with the saved Movement recording id for this explicit bundle.",
+    recordingId
+      ? `This guide was generated for recording id \`${recordingId}\`, so the commands below are ready to run after checking paths and local services.`
+      : "Replace `<new-recording-id>` with the saved Movement recording id for this explicit bundle, or pass `--recording-id <id>` to generate executable commands after the recording is saved.",
     "",
     "```bash",
-    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --out ${analysisPath} --manifest-out ${manifestPath}`,
+    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids ${recordingIdValue} --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --out ${analysisPath} --manifest-out ${manifestPath}`,
     "```",
     "",
     "```bash",
@@ -494,7 +508,7 @@ export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCapt
     "Review the Replay proof checklist, then refresh the analysis with the visual captures:",
     "",
     "```bash",
-    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --visual-captures ${replayCapturePath} --out ${reviewedAnalysisPath} --manifest-out ${reviewedManifestPath}`,
+    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids ${recordingIdValue} --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --visual-captures ${replayCapturePath} --out ${reviewedAnalysisPath} --manifest-out ${reviewedManifestPath}`,
     "```",
     "",
     "```bash",
@@ -564,7 +578,10 @@ async function main() {
   if (args.captureGuideOutPath) {
     const captureGuidePath = path.resolve(args.captureGuideOutPath);
     await mkdir(path.dirname(captureGuidePath), { recursive: true });
-    await writeFile(captureGuidePath, formatBroadCaptureGuide(audit, { captureLabel: args.captureLabel }));
+    await writeFile(captureGuidePath, formatBroadCaptureGuide(audit, {
+      captureLabel: args.captureLabel,
+      recordingId: args.recordingId,
+    }));
     console.error(`Wrote ${captureGuidePath}`);
   }
 

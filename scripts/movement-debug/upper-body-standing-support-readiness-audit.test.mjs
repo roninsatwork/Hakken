@@ -223,6 +223,7 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("# Broad Upper-Body Standing Explicit Capture Guide");
     expect(captureGuide).toContain("Suggested recording label: `broad-explicit-`");
     expect(captureGuide).toContain("--recording-ids <new-recording-id>");
+    expect(captureGuide).toContain("pass `--recording-id <id>`");
     expect(captureGuide).toContain("--include-standing-upper-body-targets");
     expect(captureGuide).toContain("--include-broad-upper-body-product-scope-proof");
     expect(captureGuide).toContain("movement:replay:proof-set");
@@ -230,6 +231,14 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("--manifest tmp/movement-replay-lab/broad-explicit--analysis-reviewed.proof-manifest.json");
     expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
     expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
+
+    const recordingIdGuide = formatBroadCaptureGuide(audit, {
+      captureLabel: "broad explicit!",
+      recordingId: "rec_123 upper",
+    });
+    expect(recordingIdGuide).toContain("recording id `rec_123 upper`");
+    expect(recordingIdGuide).toContain("--recording-ids 'rec_123 upper'");
+    expect(recordingIdGuide).not.toContain("--recording-ids <new-recording-id>");
   });
 
   it("parses CLI options", () => {
@@ -250,6 +259,8 @@ describe("upper body standing support readiness audit", () => {
       "tmp/capture-guide.md",
       "--capture-label",
       "movement proof broad",
+      "--recording-id",
+      "rec_123",
       "--strict",
       "--json",
     ])).toEqual({
@@ -259,6 +270,7 @@ describe("upper body standing support readiness audit", () => {
       candidateReviewOutPath: "tmp/candidate-review.md",
       json: true,
       manifestPath: "tmp/manifest.json",
+      recordingId: "rec_123",
       semanticReviewPaths: ["tmp/review.json", "tmp/broad-review.json"],
       strict: true,
     });
