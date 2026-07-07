@@ -157,6 +157,51 @@ function recordingsWithPassedProofCases(groups, proofCases) {
     .sort();
 }
 
+function rowHasAnalyzerEvidence(row) {
+  if ((row?.evidenceFrameCount ?? 0) <= 0) return false;
+  const expectedMinimumAmplitude = row?.expectedMinimumAmplitude;
+  if (typeof expectedMinimumAmplitude !== "number" || !Number.isFinite(expectedMinimumAmplitude)) return true;
+  return (row?.observedAmplitude ?? Number.NEGATIVE_INFINITY) >= expectedMinimumAmplitude;
+}
+
+function productScopedEvidenceRowsForCase(groups, proofCase) {
+  return (groups[proofCase] ?? [])
+    .filter((row) => row.status === "product-scope-limitation" && rowHasAnalyzerEvidence(row));
+}
+
+function productScopedBroadEvidenceSummary(groups, proofCases) {
+  return Object.fromEntries(
+    proofCases.map((proofCase) => {
+      const rows = groups[proofCase] ?? [];
+      const evidenceRows = productScopedEvidenceRowsForCase(groups, proofCase);
+      const maxObservedAmplitude = evidenceRows.reduce((max, row) => (
+        Math.max(max, row.observedAmplitude ?? Number.NEGATIVE_INFINITY)
+      ), Number.NEGATIVE_INFINITY);
+
+      return [proofCase, {
+        evidenceProductScopeCount: evidenceRows.length,
+        maxObservedAmplitude: Number.isFinite(maxObservedAmplitude) ? maxObservedAmplitude : null,
+        productScopeCount: rows.filter((row) => row.status === "product-scope-limitation").length,
+      }];
+    }),
+  );
+}
+
+function recordingsWithProductScopedBroadEvidence(groups, proofCases) {
+  const recordingIds = new Set(
+    proofCases.flatMap((proofCase) => (
+      productScopedEvidenceRowsForCase(groups, proofCase).map((row) => row.recordingId)
+    )),
+  );
+
+  return Array.from(recordingIds)
+    .filter((recordingId) => proofCases.every((proofCase) => (
+      productScopedEvidenceRowsForCase(groups, proofCase)
+        .some((row) => row.recordingId === recordingId)
+    )))
+    .sort();
+}
+
 function planProofCases(gameVisualPlan) {
   return Array.isArray(gameVisualPlan?.summary?.proofCases)
     ? gameVisualPlan.summary.proofCases
@@ -225,6 +270,14 @@ export function auditUpperBodyStandingSupportReadiness({
     narrowPassingRecordingIds,
     narrowReady,
     proofCaseSummary: summaryByProofCase,
+    productScopedBroadEvidenceRecordingIds: recordingsWithProductScopedBroadEvidence(
+      groups,
+      requirements.broadManifestProofCases,
+    ),
+    productScopedBroadEvidenceSummary: productScopedBroadEvidenceSummary(
+      groups,
+      requirements.broadManifestProofCases,
+    ),
     readableCases,
     requirements,
     visualPlanCases,
@@ -233,6 +286,15 @@ export function auditUpperBodyStandingSupportReadiness({
 
 function formatList(values) {
   return values.length > 0 ? values.join(", ") : "none";
+}
+
+function formatEvidenceSummary(summary) {
+  return Object.entries(summary)
+    .map(([proofCase, value]) => (
+      `${proofCase} ${value.evidenceProductScopeCount}/${value.productScopeCount}` +
+      `${value.maxObservedAmplitude === null ? "" : ` max ${value.maxObservedAmplitude}`}`
+    ))
+    .join("; ");
 }
 
 function formatAudit(audit) {
@@ -246,6 +308,8 @@ function formatAudit(audit) {
     `Missing narrow readable Game cases: ${formatList(audit.missingNarrowReadableGameCases)}.`,
     `Missing broad Game target-plan cases: ${formatList(audit.missingBroadGamePlanCases)}.`,
     `Missing broad readable Game cases: ${formatList(audit.missingBroadReadableGameCases)}.`,
+    `Product-scoped broad evidence rows: ${formatEvidenceSummary(audit.productScopedBroadEvidenceSummary)}.`,
+    `Recordings with product-scoped evidence for all broad cases: ${formatList(audit.productScopedBroadEvidenceRecordingIds)}.`,
   ].join("\n");
 }
 

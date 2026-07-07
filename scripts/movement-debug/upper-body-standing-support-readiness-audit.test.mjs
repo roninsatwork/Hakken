@@ -7,11 +7,12 @@ import {
   parseUpperBodyStandingSupportReadinessAuditArgs,
 } from "./upper-body-standing-support-readiness-audit.mjs";
 
-function row(recordingId, proofCase, status = "passed") {
+function row(recordingId, proofCase, status = "passed", overrides = {}) {
   return {
     proofCase,
     recordingId,
     status,
+    ...overrides,
   };
 }
 
@@ -139,6 +140,58 @@ describe("upper body standing support readiness audit", () => {
       missingNarrowReadableGameCases: [],
       narrowPassingRecordingIds: ["recording-a"],
       narrowReady: true,
+    });
+  });
+
+  it("reports product-scoped broad evidence without treating it as passed proof", () => {
+    const productScopedEvidence = {
+      evidenceFrameCount: 12,
+      expectedMinimumAmplitude: 1,
+      observedAmplitude: 2,
+    };
+    const audit = auditUpperBodyStandingSupportReadiness({
+      gameVisualPlan: {
+        summary: {
+          proofCases: broadReadableGameCases,
+        },
+      },
+      manifest: {
+        rows: [
+          row("recording-a", "standing"),
+          row("recording-a", "side-bend"),
+          row("recording-a", "head-direction"),
+          ...broadManifestProofCases.map((proofCase) => (
+            row("recording-a", proofCase, "product-scope-limitation", productScopedEvidence)
+          )),
+          row("recording-b", "standing-arm-raise", "product-scope-limitation", productScopedEvidence),
+          row("recording-b", "standing-twist", "product-scope-limitation", {
+            evidenceFrameCount: 0,
+            expectedMinimumAmplitude: 1,
+            observedAmplitude: 0,
+          }),
+        ],
+      },
+      semanticReview: {
+        decisions: broadReadableGameCases.map(decision),
+      },
+    });
+
+    expect(audit).toMatchObject({
+      broadReady: false,
+      missingBroadPassedProofCases: broadManifestProofCases,
+      productScopedBroadEvidenceRecordingIds: ["recording-a"],
+      productScopedBroadEvidenceSummary: {
+        "standing-arm-raise": {
+          evidenceProductScopeCount: 2,
+          maxObservedAmplitude: 2,
+          productScopeCount: 2,
+        },
+        "standing-twist": {
+          evidenceProductScopeCount: 1,
+          maxObservedAmplitude: 2,
+          productScopeCount: 2,
+        },
+      },
     });
   });
 
