@@ -678,31 +678,6 @@ describe("movement architecture guard", () => {
     });
   });
 
-  it("fails when the broad upper-body capture contract drifts from expected proof scope", () => {
-    const report = buildMovementArchitectureGuardReport({
-      analysis: cleanAnalysis,
-      captureManifest: cleanCaptureManifest,
-      files: [],
-      manifest: cleanManifest,
-      proofExpectations: {
-        broadCaptureCommandIds: ["initial-analysis"],
-        broadGameProofCases: ["strongest-standing-arm-raise"],
-        broadRecordedProofCases: ["standing-arm-raise"],
-      },
-      semanticReview: {
-        decisions: readableDecisions,
-        errors: [],
-      },
-    });
-
-    expect(report.ok).toBe(false);
-    expect(report.proofFailures).toEqual(expect.arrayContaining([
-      expect.stringContaining("broad upper-body capture contract command ids"),
-      expect.stringContaining("broad upper-body recorded proof cases"),
-      expect.stringContaining("broad upper-body Game proof cases"),
-    ]));
-  });
-
   it("fails when a watched file regrows or proof artifacts drift", () => {
     const report = buildMovementArchitectureGuardReport({
       analysis: [

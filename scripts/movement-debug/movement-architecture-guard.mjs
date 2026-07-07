@@ -5,6 +5,7 @@ import { auditSquatKneeLiftSupportClaim } from "./squat-knee-lift-support-claim-
 import {
   auditUpperBodyStandingSupportReadiness,
   formatBroadCaptureContract,
+  validateBroadCaptureContractShape,
 } from "./upper-body-standing-support-readiness-audit.mjs";
 
 export const DEFAULT_WATCHED_FILES = [
@@ -272,28 +273,6 @@ export const DEFAULT_PROOF_PATHS = {
   semanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
 };
 export const DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT = 49;
-const DEFAULT_BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "sonae-broad-upper-body-capture-contract/v1";
-const DEFAULT_BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS = [
-  "initial-analysis",
-  "replay-proof-set",
-  "replay-review",
-  "reviewed-analysis",
-  "focused-game-visual-plan",
-  "focused-game-visual-capture",
-  "focused-game-visual-review",
-  "merged-readiness-audit",
-];
-const DEFAULT_BROAD_UPPER_BODY_RECORDED_PROOF_CASES = [
-  "standing-arm-raise",
-  "standing-twist",
-  "standing-reach",
-  "shoulder-scapula-control",
-];
-const DEFAULT_BROAD_UPPER_BODY_GAME_PROOF_CASES = [
-  "strongest-standing-arm-raise",
-  "strongest-standing-twist",
-  "strongest-standing-reach",
-];
 
 export const DEFAULT_SOURCE_PURITY_RULES = [
   {
@@ -676,14 +655,6 @@ export function buildMovementArchitectureGuardReport({
     "standing-reach": 9,
     "standing-twist": 9,
   };
-  const expectedBroadCaptureContractSchema = proofExpectations.broadCaptureContractSchema ??
-    DEFAULT_BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA;
-  const expectedBroadCaptureCommandIds = proofExpectations.broadCaptureCommandIds ??
-    DEFAULT_BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS;
-  const expectedBroadRecordedProofCases = proofExpectations.broadRecordedProofCases ??
-    DEFAULT_BROAD_UPPER_BODY_RECORDED_PROOF_CASES;
-  const expectedBroadGameProofCases = proofExpectations.broadGameProofCases ??
-    DEFAULT_BROAD_UPPER_BODY_GAME_PROOF_CASES;
   const fileResults = files.map((file) => ({
     ...file,
     ok: file.lineCount <= file.maxLines,
@@ -700,9 +671,8 @@ export function buildMovementArchitectureGuardReport({
     manifest,
     semanticReview,
   });
-  const broadUpperBodyCaptureContract = summarizeBroadUpperBodyCaptureContract(
-    formatBroadCaptureContract(upperBodyStandingSupport),
-  );
+  const defaultBroadUpperBodyCaptureContract = formatBroadCaptureContract(upperBodyStandingSupport);
+  const broadUpperBodyCaptureContract = summarizeBroadUpperBodyCaptureContract(defaultBroadUpperBodyCaptureContract);
   const proofFailures = [];
 
   if (semantic.readablePassCount !== expectedSemanticPasses || semantic.targetCount !== expectedSemanticPasses) {
@@ -802,23 +772,11 @@ export function buildMovementArchitectureGuardReport({
       proofFailures.push("expected standing side-bend/head-direction support audit to pass before user-facing promotion");
     }
   }
-  if (broadUpperBodyCaptureContract.schema !== expectedBroadCaptureContractSchema) {
-    proofFailures.push(`expected broad upper-body capture contract schema ${expectedBroadCaptureContractSchema}, got ${broadUpperBodyCaptureContract.schema}`);
-  }
-  if (JSON.stringify(broadUpperBodyCaptureContract.commandIds) !== JSON.stringify(expectedBroadCaptureCommandIds)) {
-    proofFailures.push(`expected broad upper-body capture contract command ids ${expectedBroadCaptureCommandIds.join(",")}, got ${broadUpperBodyCaptureContract.commandIds.join(",") || "none"}`);
-  }
-  if (JSON.stringify(broadUpperBodyCaptureContract.recordedProofCases) !== JSON.stringify(expectedBroadRecordedProofCases)) {
-    proofFailures.push(`expected broad upper-body recorded proof cases ${expectedBroadRecordedProofCases.join(",")}, got ${broadUpperBodyCaptureContract.recordedProofCases.join(",") || "none"}`);
-  }
-  if (JSON.stringify(broadUpperBodyCaptureContract.gameProofCases) !== JSON.stringify(expectedBroadGameProofCases)) {
-    proofFailures.push(`expected broad upper-body Game proof cases ${expectedBroadGameProofCases.join(",")}, got ${broadUpperBodyCaptureContract.gameProofCases.join(",") || "none"}`);
-  }
+  validateBroadCaptureContractShape(defaultBroadUpperBodyCaptureContract).forEach((issue) => {
+    proofFailures.push(`broad upper-body capture contract shape invalid: ${issue}`);
+  });
   if (!broadUpperBodyCaptureContract.hasRecordingPlaceholder) {
     proofFailures.push("expected broad upper-body capture contract to keep the default recording placeholder before a saved recording id exists");
-  }
-  if (!broadUpperBodyCaptureContract.hasStrictFinalAudit) {
-    proofFailures.push("expected broad upper-body capture contract final audit command to include --strict");
   }
 
   return {
