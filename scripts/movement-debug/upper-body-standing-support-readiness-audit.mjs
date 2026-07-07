@@ -775,8 +775,22 @@ export function validateBroadCaptureContractShape(contract) {
   if (!Array.isArray(contract?.broadPassedProofCandidates)) {
     issues.push("expected broadPassedProofCandidates array");
   }
+  if (typeof contract?.broadReady !== "boolean") {
+    issues.push("expected broadReady boolean");
+  }
   if (!BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES.includes(contract?.supportClaimStatus)) {
     issues.push(`expected supportClaimStatus ${BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES.join("|")}`);
+  }
+  if (
+    typeof contract?.broadReady === "boolean" &&
+    BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES.includes(contract?.supportClaimStatus)
+  ) {
+    const expectedStatus = contract.broadReady
+      ? "ready-for-scoped-support-review"
+      : "blocked-internal-demo-only";
+    if (contract.supportClaimStatus !== expectedStatus) {
+      issues.push(`expected supportClaimStatus ${expectedStatus} when broadReady is ${contract.broadReady}`);
+    }
   }
   const supportClaimBlockers = contract?.supportClaimBlockers;
   if (!supportClaimBlockers || typeof supportClaimBlockers !== "object" || Array.isArray(supportClaimBlockers)) {
@@ -794,6 +808,41 @@ export function validateBroadCaptureContractShape(contract) {
     });
     if (typeof supportClaimBlockers.requiresSinglePassingRecordingBundle !== "boolean") {
       issues.push("expected supportClaimBlockers.requiresSinglePassingRecordingBundle boolean");
+    }
+    if (
+      Array.isArray(contract?.broadPassingRecordingIds) &&
+      typeof supportClaimBlockers.requiresSinglePassingRecordingBundle === "boolean" &&
+      supportClaimBlockers.requiresSinglePassingRecordingBundle !== (contract.broadPassingRecordingIds.length === 0)
+    ) {
+      issues.push("expected supportClaimBlockers.requiresSinglePassingRecordingBundle to match broadPassingRecordingIds");
+    }
+    if (
+      Array.isArray(contract?.missingBroadPassedProofCases) &&
+      Array.isArray(supportClaimBlockers.missingBroadPassedProofCases) &&
+      !arraysEqual(contract.missingBroadPassedProofCases, supportClaimBlockers.missingBroadPassedProofCases)
+    ) {
+      issues.push("expected supportClaimBlockers.missingBroadPassedProofCases to match missingBroadPassedProofCases");
+    }
+    if (
+      Array.isArray(contract?.missingBroadReadableGameCases) &&
+      Array.isArray(supportClaimBlockers.missingBroadReadableGameCases) &&
+      !arraysEqual(contract.missingBroadReadableGameCases, supportClaimBlockers.missingBroadReadableGameCases)
+    ) {
+      issues.push("expected supportClaimBlockers.missingBroadReadableGameCases to match missingBroadReadableGameCases");
+    }
+    if (contract?.broadReady === true) {
+      const blockerCaseKeys = [
+        "missingBroadGamePlanCases",
+        "missingBroadManifestProofCases",
+        "missingBroadPassedProofCases",
+        "missingBroadReadableGameCases",
+      ];
+      const hasBlockingCases = blockerCaseKeys.some((key) => (
+        Array.isArray(supportClaimBlockers[key]) && supportClaimBlockers[key].length > 0
+      ));
+      if (hasBlockingCases || supportClaimBlockers.requiresSinglePassingRecordingBundle === true) {
+        issues.push("expected supportClaimBlockers to be empty when broadReady is true");
+      }
     }
   }
   if (!/\s--strict(?:\s|$)/.test(finalAuditCommand)) {

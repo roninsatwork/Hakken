@@ -364,6 +364,13 @@ describe("upper body standing support readiness audit", () => {
       "expected focused-game-visual-plan command to reference contract path(s): tmp/movement-replay-lab/broad-explicit--game-visual-proof-plan.json",
     );
 
+    const inconsistentContract = JSON.parse(JSON.stringify(contract));
+    inconsistentContract.broadReady = true;
+    expect(validateBroadCaptureContractShape(inconsistentContract)).toEqual(expect.arrayContaining([
+      "expected supportClaimStatus ready-for-scoped-support-review when broadReady is true",
+      "expected supportClaimBlockers to be empty when broadReady is true",
+    ]));
+
     expect(validateBroadCaptureContractShape({
       commands: [
         {
@@ -381,6 +388,7 @@ describe("upper body standing support readiness audit", () => {
       "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",
       "expected broadPassingRecordingIds array",
       "expected broadPassedProofCandidates array",
+      "expected broadReady boolean",
       "expected supportClaimStatus blocked-internal-demo-only|ready-for-scoped-support-review",
       "expected supportClaimBlockers object",
       "expected merged-readiness-audit command to include --strict",
