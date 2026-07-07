@@ -793,6 +793,36 @@ export function validateBroadCaptureContractAuditArtifacts(contract, {
     }));
 }
 
+export function validateBroadCaptureContractSemanticReview(contract, semanticReview) {
+  const requiredGameProofCases = Array.isArray(contract?.requiredGameProofCases)
+    ? contract.requiredGameProofCases
+    : BROAD_UPPER_BODY_GAME_PROOF_CASES;
+  const decisions = Array.isArray(semanticReview?.decisions) ? semanticReview.decisions : [];
+
+  return requiredGameProofCases
+    .map((proofCase) => {
+      const matchingDecisions = decisions.filter((decision) => (
+        Array.isArray(decision?.reviewContext?.cases) &&
+        decision.reviewContext.cases.includes(proofCase)
+      ));
+      if (matchingDecisions.some((decision) => decision.decision === "readable-pass")) {
+        return null;
+      }
+      const observedDecisions = Array.from(new Set(
+        matchingDecisions.map((decision) => decision.decision || "TODO"),
+      )).sort();
+
+      return {
+        observedDecisions,
+        proofCase,
+        nextAction: matchingDecisions.length === 0
+          ? "run focused-game-visual-review and add this proof case to the semantic review decisions"
+          : "review the focused Game capture and mark this proof case readable-pass only if the screenshot supports it",
+      };
+    })
+    .filter(Boolean);
+}
+
 function formatAudit(audit) {
   return [
     `Upper-body standing support-readiness audit: ${audit.broadReady ? "passed" : "blocked"}`,
@@ -825,6 +855,19 @@ async function main() {
         .map((artifact) => `${artifact.key}${artifact.path ? ` (${artifact.path})` : ""}: ${artifact.nextAction}`)
         .join("; ");
       throw new Error(`Broad capture contract is not ready for final audit: ${missingText}`);
+    }
+    const focusedSemanticReview = JSON.parse(
+      await readFile(path.resolve(captureContract.paths.semanticReviewDecisions), "utf8"),
+    );
+    const semanticReviewIssues = validateBroadCaptureContractSemanticReview(
+      captureContract,
+      focusedSemanticReview,
+    );
+    if (semanticReviewIssues.length > 0) {
+      const issueText = semanticReviewIssues
+        .map((issue) => `${issue.proofCase} (${formatList(issue.observedDecisions)}): ${issue.nextAction}`)
+        .join("; ");
+      throw new Error(`Broad capture contract semantic review is not ready for final audit: ${issueText}`);
     }
     args = applyBroadCaptureContractArgs(args, captureContract);
   }
