@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { auditSquatKneeLiftSupportClaim } from "./squat-knee-lift-support-claim-audit.mjs";
+
 export const DEFAULT_WATCHED_FILES = [
   {
     maxLines: 240,
@@ -606,10 +608,9 @@ export function buildMovementArchitectureGuardReport({
   const expectedSemanticPasses = proofExpectations.semanticReadablePasses ?? 37;
   const expectedVisualProofFrames = proofExpectations.visualProofFrames ?? 37;
   const minimumParityFrames = proofExpectations.minimumScoreMessageParityFrames ?? 11000;
-  const expectedUserFacingFamilies = proofExpectations.userFacingFamilies ?? ["upright"];
+  const expectedUserFacingFamilies = proofExpectations.userFacingFamilies ?? ["upright", "squat-knee-lift"];
   const expectedInternalDemoOnlyFamilies = proofExpectations.internalDemoOnlyFamilies ?? [
     "upper-body-standing",
-    "squat-knee-lift",
     "root-turn",
     "root-travel",
   ];
@@ -632,6 +633,7 @@ export function buildMovementArchitectureGuardReport({
   const parity = summarizeReplayGameParity(analysis);
   const coverageProductTruth = summarizeCoverageProductTruth(analysis);
   const proofManifest = summarizeProofManifest(manifest);
+  const squatKneeLiftSupportClaim = auditSquatKneeLiftSupportClaim({ manifest, semanticReview });
   const proofFailures = [];
 
   if (semantic.readablePassCount !== expectedSemanticPasses || semantic.targetCount !== expectedSemanticPasses) {
@@ -715,6 +717,14 @@ export function buildMovementArchitectureGuardReport({
   if (missingProofForInternal.length > 0) {
     proofFailures.push(`expected internal-demo-only families to remain missing full proof: ${missingProofForInternal.join(",")}`);
   }
+  if (
+    expectedUserFacingFamilies.includes("squat-knee-lift") ||
+    coverageProductTruth.userFacingFamilies.includes("squat-knee-lift")
+  ) {
+    if (!squatKneeLiftSupportClaim.ok) {
+      proofFailures.push("expected squat-knee-lift support-claim audit to pass before user-facing promotion");
+    }
+  }
 
   return {
     coverageProductTruth,
@@ -729,6 +739,7 @@ export function buildMovementArchitectureGuardReport({
     routeBypassPurityResults,
     semanticReview: semantic,
     sourcePurityResults,
+    squatKneeLiftSupportClaim,
     visualCaptureConsistency,
     visualReviewConsistency,
   };
@@ -837,6 +848,7 @@ function formatReport(report) {
     `Game visual review consistency: ${report.visualReviewConsistency.captureTargetCount} captures, ${report.visualReviewConsistency.missingDecisionKeys.length} missing decisions, ${report.visualReviewConsistency.staleDecisionKeys.length} stale decisions, ${report.visualReviewConsistency.contextMismatchCount} context mismatches`,
     `Replay/Game parity: ${report.replayGameParity.scoreMessageParityFrames} frames, score divergences ${report.replayGameParity.scoreMessageDivergenceFrames}, wrapper divergences ${report.replayGameParity.wrapperDivergenceFrames}, visual frames ${report.replayGameParity.visualProofFrames}`,
     `Coverage product truth: user-facing ${report.coverageProductTruth.userFacingFamilies.join(",") || "none"}, internal-demo-only ${report.coverageProductTruth.internalDemoOnlyFamilies.join(",") || "none"}`,
+    `Squat/knee-lift support claim: ${report.squatKneeLiftSupportClaim.ok ? "passed" : "blocked"} (${report.squatKneeLiftSupportClaim.passingCandidateCount} reviewed bundle(s))`,
     `Proof manifest: ${report.proofManifest.rowCount} rows, ${report.proofManifest.blockingRows} blocking, ${report.proofManifest.acceptedProductLimitationRows} accepted limitations`,
   ];
 

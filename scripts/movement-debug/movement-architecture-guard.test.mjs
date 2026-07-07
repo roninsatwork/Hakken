@@ -16,14 +16,22 @@ import {
 
 const expectedInternalDemoOnlyFamilies = [
   "upper-body-standing",
-  "squat-knee-lift",
   "root-turn",
   "root-travel",
 ];
 
+const supportClaimVisualTargets = [
+  { cases: ["baseline"], displayLowerLabel: "neutral", sourceLowerLabel: "neutral" },
+  { cases: ["strongest-squat"], displayLowerLabel: "squat", sourceLowerLabel: "squat" },
+  { cases: ["strongest-left-leg-lift"], displayLowerLabel: "left-knee-raise", sourceLowerLabel: "right-knee-raise" },
+  { cases: ["strongest-right-leg-lift"], displayLowerLabel: "right-knee-raise", sourceLowerLabel: "left-knee-raise" },
+  { cases: ["first-source-display-divergence"], displayLowerLabel: "left-knee-raise", sourceLowerLabel: "right-knee-raise" },
+];
+
 const visualCaptures = Array.from({ length: 37 }, (_, index) => {
   const recordingId = index < 20 ? "recording-a" : "recording-b";
-  const cases = [`case-${index}`];
+  const supportClaimTarget = supportClaimVisualTargets[index];
+  const cases = supportClaimTarget?.cases ?? [`case-${index}`];
   return {
     canvasPath: `tmp/captures/${recordingId}-${index}-canvas.png`,
     capturedDebugFrameIndex: index,
@@ -32,11 +40,11 @@ const visualCaptures = Array.from({ length: 37 }, (_, index) => {
     status: "captured",
     target: {
       cases,
-      displayLowerLabel: "squat",
+      displayLowerLabel: supportClaimTarget?.displayLowerLabel ?? "squat",
       frameIndex: index,
       movementId: recordingId,
       recordingId,
-      sourceLowerLabel: "squat",
+      sourceLowerLabel: supportClaimTarget?.sourceLowerLabel ?? "squat",
     },
   };
 });
@@ -80,7 +88,7 @@ const cleanAnalysis = [
       summary: {
         internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies,
         missingProofFamilies: expectedInternalDemoOnlyFamilies,
-        userFacingFamilies: ["upright"],
+        userFacingFamilies: ["upright", "squat-knee-lift"],
       },
     },
     gamePath: {
@@ -107,7 +115,13 @@ const cleanAnalysis = [
 
 const cleanManifest = {
   rows: [
-    ...Array.from({ length: 64 }, () => ({ acceptedProductLimitation: false, status: "passed" })),
+    ...["standing", "squat", "left-leg-raise", "right-leg-raise", "mirror-side-ownership"].map((proofCase) => ({
+      acceptedProductLimitation: false,
+      proofCase,
+      recordingId: "recording-a",
+      status: "passed",
+    })),
+    ...Array.from({ length: 59 }, () => ({ acceptedProductLimitation: false, status: "passed" })),
     ...Array.from({ length: 26 }, () => ({
       acceptedProductLimitation: false,
       proofCase: "side-bend",
@@ -385,7 +399,7 @@ describe("movement architecture guard", () => {
       staleDecisionKeys: ["stale:0:baseline"],
     });
     expect(staleReviewSummary.missingDecisionKeys).toEqual(expect.arrayContaining([
-      "recording-a:1:case-1",
+      "recording-a:1:strongest-squat",
       "recording-b:36:case-36",
     ]));
   });
@@ -422,9 +436,9 @@ describe("movement architecture guard", () => {
       captureTargetCount: 2,
       contextMismatchCount: 1,
       missingCaptureKeys: expect.arrayContaining([
-        "recording-a:1:case-1",
+        "recording-a:1:strongest-squat",
       ]),
-      staleCaptureKeys: ["stale-recording:1:case-1"],
+      staleCaptureKeys: ["stale-recording:1:strongest-squat"],
     });
   });
 
@@ -443,7 +457,7 @@ describe("movement architecture guard", () => {
       found: true,
       internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies,
       missingProofFamilies: expectedInternalDemoOnlyFamilies,
-      userFacingFamilies: ["upright"],
+      userFacingFamilies: ["upright", "squat-knee-lift"],
     });
   });
 

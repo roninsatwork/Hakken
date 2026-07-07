@@ -86,7 +86,6 @@ describe("movementCoverageRegistry", () => {
     expect(summary.implementedFamilies).not.toContain("yoga");
     expect(summary.missingProofFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
-      "squat-knee-lift",
       "sitting",
       "kneeling",
       "lying-floor-work",
@@ -107,14 +106,14 @@ describe("movementCoverageRegistry", () => {
   it("separates user-facing support from internal demo readiness", () => {
     const summary = summarizeMovementCoverageRegistry();
 
-    expect(summary.userFacingFamilies).toEqual(["upright"]);
-    expect(summary.userFacingCount).toBe(1);
+    expect(summary.userFacingFamilies).toEqual(["upright", "squat-knee-lift"]);
+    expect(summary.userFacingCount).toBe(2);
     expect(summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
-      "squat-knee-lift",
       "root-turn",
       "root-travel",
     ]));
+    expect(summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
     expect(summary.internalDemoOnlyCount).toBe(summary.internalDemoOnlyFamilies.length);
     summary.internalDemoOnlyFamilies.forEach((family) => {
       const entry = MOVEMENT_COVERAGE_REGISTRY[family];

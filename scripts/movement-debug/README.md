@@ -52,6 +52,14 @@ npx -p node@22.13.0 npm run movement:architecture-guard
 
 This checks the watched movement hotspots from the architecture plan, `MovementSourceFrame` source-truth purity, debug/preview route-bypass purity in core movement libs/hooks, coverage product-truth claims, the current Game visual semantic decisions, Game visual analysis-to-capture consistency, Game visual review-to-capture consistency, Replay/Game score-message parity, Game visual proof-frame count, and reviewed proof-manifest honesty. It is not a replacement for the full merge gate, but it is the cheapest way to catch `VrmAvatar`, pipeline facade, lower-body adapter, source/display contract, debug-route leakage, coverage-claim drift, stale Game visual captures or review decisions, hidden limitation-to-pass drift, or proof-artifact drift without running video captures.
 
+Run the focused squat/knee-lift support-claim audit when changing coverage claims or lower-body proof logic:
+
+```bash
+npx -p node@22.13.0 npm run movement:squat-knee-lift-support-audit -- --strict
+```
+
+This requires one reviewed recording bundle to cover neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view before `squat-knee-lift` remains user-facing full support. The architecture guard also checks this audit while the family is user-facing.
+
 Analyze recent stored sessions:
 
 ```bash

@@ -500,24 +500,16 @@ describe("movement replay analyzer", () => {
     ]));
     expect(analysis.coverage.summary.demoReadyCount).toBeLessThan(analysis.coverage.summary.familyCount);
     expect(analysis.coverage.summary.demoReadyPercent).toBeLessThan(100);
-    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright"]);
+    expect(analysis.coverage.summary.userFacingFamilies).toEqual(["upright", "squat-knee-lift"]);
     expect(analysis.coverage.summary.internalDemoOnlyFamilies).toEqual(expect.arrayContaining([
       "upper-body-standing",
-      "squat-knee-lift",
     ]));
+    expect(analysis.coverage.summary.internalDemoOnlyFamilies).not.toContain("squat-knee-lift");
     expect(analysis.coverage.summary.missingProofCount).toBeGreaterThan(0);
-    expect(analysis.coverage.summary.missingProofFamilies).toContain("squat-knee-lift");
+    expect(analysis.coverage.summary.missingProofFamilies).not.toContain("squat-knee-lift");
     expect(analysis.coverage.missingProofs).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "missing-proof",
-          family: "squat-knee-lift",
-          missingLayers: expect.arrayContaining([
-            "recorded replay analyzer proof",
-            "recorded replay visual capture",
-            "Game Studio parity proof",
-          ]),
-        }),
+      expect.not.arrayContaining([
+        expect.objectContaining({ family: "squat-knee-lift" }),
       ]),
     );
     expect(analysis.coverage.summary.unsupportedFamilies).toEqual([]);

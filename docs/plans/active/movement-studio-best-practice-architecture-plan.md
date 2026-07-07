@@ -8,7 +8,7 @@ Scope: keep Posture Studio / Game Studio movement code on a maintainable motion-
 
 The implementation is following the plan closely in shape, but it is not done and should not be treated as done. The other agent has moved the work in the right direction: live, recorded, and synthetic inputs now feed shared source/motion contracts; Game Studio routes pass motion frames into the avatars; scoring uses shared gameplay events; replay proof tooling is much stronger; and many avatar runtime helpers have been extracted.
 
-This is a current-checkout audit, not a merged-state audit. The branch is `dev`. This 2026-07-07 continuation started with a large dirty movement worktree already in place: tracked changes in this plan, the architecture guard, `VrmAvatar.tsx`, movement avatar facades, and several frame/debug helpers, plus many untracked movement helper/test files and untracked proof artifacts under `tmp/movement-replay-lab/**`. Treat the percentages below as the state of this checkout and re-audit after the helper files, proof artifacts, and documentation are either committed, intentionally left untracked, or cleaned up.
+This is a current-checkout audit, not a merged-state audit. The branch is `dev`. Earlier on 2026-07-07 this continuation started with a large dirty movement worktree, but the architecture helper/test slice has since been committed and `git ls-files --others --exclude-standard 'src/app/(dashboard)/demos/movements/**'` now reports 0 untracked movement source/test files. The remaining local proof artifacts under `tmp/movement-replay-lab/**` are ignored scratch. Treat the percentages below as the state of this checkout and re-audit after any further movement-family promotion, proof-artifact refresh, or documentation change.
 
 The 2026-07-07 cheap architecture gate passed again under Node 22.13.0 during this continuation:
 
@@ -19,7 +19,8 @@ The 2026-07-07 cheap architecture gate passed again under Node 22.13.0 during th
 - Game visual proof stayed at 37/37 readable-pass.
 - Game visual analysis-to-capture and review-to-capture consistency had 0 missing, stale, or context-mismatched rows.
 - Replay/Game parity stayed at 11,383 score/message frames with 0 score divergences and 0 wrapper divergences.
-- Coverage product truth stayed user-facing `upright` only, with `upper-body-standing`, `squat-knee-lift`, `root-turn`, and `root-travel` internal/demo-only.
+- Coverage product truth now has user-facing `upright` and `squat-knee-lift`, with `upper-body-standing`, `root-turn`, and `root-travel` still internal/demo-only.
+- The new `squat-knee-lift` support-claim audit passed with 2 reviewed bundles and is now part of the fast architecture guard whenever that family is user-facing.
 - The reviewed proof manifest stayed at 117 rows, 0 blockers, and 27 accepted limitations.
 
 The gaps that still matter most are boundaries and parity:
@@ -35,7 +36,7 @@ The gaps that still matter most are boundaries and parity:
 - Head-frame debug now runs after footing telemetry is resolved, and consumes the foot-lock state returned by footing orchestration, so the per-frame tracking debug state receives the actual foot-lock correction/drift instead of the pre-footing zero defaults or an implicit ref readback.
 - The avatar frame body no longer carries mutable neutral/zero defaults for owner and retarget-output handoff values; upper-body, lower-body, and support helpers now pass explicit constants forward.
 - `movementAvatarPipeline.ts` is now a small compatibility facade plus final shared decision assembler: support-contact lock contracts, anchor mapping, and resolver policy; support-contact pure correction/application math; support-contact Three.js object mutation adapters; rest-mapped segment application; planted-squat IK segment application; retarget segment mapping application; spine spec orchestration; spine VRM adapters; player spine-drive shared helpers; upper-body player spine fallback; live player spine drive; recorded spine presentation; avatar application option policy; support-presentation family routing/builders; floor/seated support estimators; standing/yoga/athletic support estimators; standing fold/chair; athletic standing; yoga standing; seated; kneeling; quadruped; supine; prone; and side-body support-presentation pose decisions; retarget debug decisions; root-orientation policy; lower-body source bounds; player leg-raise hold; tracking fallback label composition; lower-body pose recipes; arm target decisions; upper-body/head/foot-lock policy; head decisions; lower-body target selection; lower-body source-owner policy; retarget-segment application gating; lower-body stage policy; lower-body visual smoothing policy; lower-body application plan resolution; lower-body aim/foot-plant application; lower-body rotation/pose application; and shared type contracts now live in focused modules while the pipeline preserves compatibility re-exports.
-- `movement:architecture-guard` now also checks coverage product truth, so current reviewed analysis must keep only `upright` user-facing and keep upper-body standing, squat/knee-lift, root-turn, and root-travel families internal/demo-only until full proof or product scope changes.
+- `movement:architecture-guard` now also checks coverage product truth and the `squat-knee-lift` support-claim audit, so current reviewed analysis must keep `upright` plus `squat-knee-lift` user-facing, keep upper-body standing, root-turn, and root-travel internal/demo-only, and keep the squat/knee-lift reviewed bundle proof intact.
 - `movement:architecture-guard` now also checks proof-manifest honesty, so the current 26 `covered-by-other-recording`, 18 `source-data-limitation`, 9 root-travel `product-scope-limitation`, and 27 accepted-limitation rows cannot silently disappear into passes.
 - `movement:architecture-guard` now also checks Game visual analysis-to-capture and review-to-capture consistency, so stale captures or stale 37-row semantic decisions cannot pass if the reviewed analysis or capture manifest changes underneath them.
 - Accepted source-data and product-scope limitations are limitations, not passes.
@@ -45,10 +46,10 @@ The gaps that still matter most are boundaries and parity:
 Progress estimates:
 
 - Overall full human-movement engine: 25-30%.
-- Current standing/posture/Game Studio slice: 94%.
+- Current standing/posture/Game Studio slice: 96%.
 - Architecture-hardening slice: 99%.
 - Current proof-closure slice: 100% for the reviewed gate.
-- Current Game parity proof slice: 95%; score/message parity is proved, deterministic Game visual-proof targets are present in the reviewed analysis, a machine-readable target plan exists, Game Studio has a debug-only recorded-frame injection route, exact-frame capture is verified, semantic review passes 37/37 selected frames, the capture manifest is checked against the current reviewed analysis for missing/stale/context-mismatched target rows, the semantic review is checked against the capture manifest for missing/stale/context-mismatched decision rows, the focused route/planner/review tests plus typecheck were previously recorded under Node 22.13.0, and the current reviewed artifacts still show 11,383 score/message parity frames with 0 divergence frames. Keep this below 100% until the route remains stable after the untracked proof-artifact lifecycle is cleaned up and the parity artifacts are refreshed after any further motion/rendering changes.
+- Current Game parity proof slice: 96%; score/message parity is proved, deterministic Game visual-proof targets are present in the reviewed analysis, a machine-readable target plan exists, Game Studio has a debug-only recorded-frame injection route, exact-frame capture is verified, semantic review passes 37/37 selected frames, the capture manifest is checked against the current reviewed analysis for missing/stale/context-mismatched target rows, the semantic review is checked against the capture manifest for missing/stale/context-mismatched decision rows, the `squat-knee-lift` support-claim audit now gates that product claim, the focused route/planner/review/tests plus typecheck were previously recorded under Node 22.13.0, and the current reviewed artifacts still show 11,383 score/message parity frames with 0 divergence frames. Keep this below 100% until the route remains stable after the untracked proof-artifact lifecycle is cleaned up and the parity artifacts are refreshed after any further motion/rendering changes.
 - Average progress across the 15 plan sections: about 82%.
 - Plan adherence for the current standing architecture: 96-97%.
 
@@ -207,19 +208,19 @@ Use this as the standing report for each section. Reopen any row when code inspe
 
 2026-07-07 follow-up checkout audit:
 
-- Direct code inspection still matches the architecture goal: `VrmAvatar.tsx` is a 195-line React/frame adapter, `MovementSourceFrame` remains raw source truth, `resolveMovementMotionFrame` keeps source and display decisions separate, `buildMovementGamePathSimulation` drives Game replay through `MovementSourceFrame` and `MovementMotionFrame`, and `movementCoverageRegistry.ts` exposes only `upright` as user-facing full support.
-- The fast guard was rerun under Node 22.13.0 with no full video suite: 52 watched files stayed under cap, source purity stayed at 0 forbidden terms, route-bypass purity scanned 212 files with 0 forbidden terms, Game visual proof stayed 37/37 readable-pass, Replay/Game parity stayed at 11,383 frames with 0 score divergences and 0 wrapper divergences, and the proof manifest stayed at 117 rows with 0 blocking rows and 27 accepted limitations.
-- Handoff hygiene is improved but still open: `git ls-files --others --exclude-standard` currently reports 76 untracked implementation/test files under `src/app/(dashboard)/demos/movements/**`. The 410 generated proof artifacts under `tmp/movement-replay-lab/**` are classified as local scratch and hidden by the repo-level `/tmp/` ignore rule. Do not treat the branch as stable until the 76 source/test files are intentionally committed, parked, or removed by their owner.
-- Current source classification: 54 implementation files and 22 focused tests. They are real architecture-slice files, not generated proof output: VRM presentation/asset lifecycle, ready/body/final/pre-body/frame orchestration, frame entry/world/scene/target helpers, head/spine/player-drive/support-contact/segment/lower-body policy splits, telemetry splits, and their focused tests. The 22 focused tests pass under Node 22.13.0, typecheck passes, whitespace is clean, and the slice should be staged with the related tracked edits before moving to new movement-family proof.
+- Direct code inspection still matches the architecture goal: `VrmAvatar.tsx` is a 195-line React/frame adapter, `MovementSourceFrame` remains raw source truth, `resolveMovementMotionFrame` keeps source and display decisions separate, `buildMovementGamePathSimulation` drives Game replay through `MovementSourceFrame` and `MovementMotionFrame`, and `movementCoverageRegistry.ts` now exposes `upright` plus `squat-knee-lift` as user-facing full support.
+- The fast guard was rerun under Node 22.13.0 with no full video suite: 52 watched files stayed under cap, source purity stayed at 0 forbidden terms, route-bypass purity scanned 212 files with 0 forbidden terms, Game visual proof stayed 37/37 readable-pass, Replay/Game parity stayed at 11,383 frames with 0 score divergences and 0 wrapper divergences, coverage product truth was user-facing `upright,squat-knee-lift` with `upper-body-standing,root-turn,root-travel` internal/demo-only, the squat/knee-lift support-claim audit passed with 2 reviewed bundles, and the proof manifest stayed at 117 rows with 0 blocking rows and 27 accepted limitations.
+- Handoff hygiene is improved: `git ls-files --others --exclude-standard 'src/app/(dashboard)/demos/movements/**'` currently reports 0 untracked implementation/test files. Generated proof artifacts under `tmp/movement-replay-lab/**` remain local scratch hidden by the repo-level `/tmp/` ignore rule.
+- Current source classification: 54 implementation files and 22 focused tests were committed in the architecture slice. The new support-claim slice adds one focused audit script plus one focused test file, and promotes `squat-knee-lift` only after the executable audit passes.
 - The plan adherence answer remains: close for the standing/Game Studio architecture, incomplete for broader human movement support, and dependent on keeping proof artifacts honest rather than promoting approximate families to product support.
 
 2026-07-07 `squat-knee-lift` support-readiness audit:
 
-- Decision: keep `squat-knee-lift` internal/demo-only for now, but treat it as the best next family to promote after one deliberately scoped support-claim review. Do not promote it in `movementCoverageRegistry.ts` from this audit alone.
+- Decision update: `squat-knee-lift` is now promoted to user-facing full support because a follow-up support-claim audit found 2 reviewed recording bundles that satisfy the claim requirements.
 - Existing proof is strong for the current standing demo: `squat` has 9/9 direct passed manifest rows; `left-leg-raise`, `right-leg-raise`, and `mirror-side-ownership` each have 4 direct passed rows with the remaining rows honestly marked `covered-by-other-recording`.
 - Game visual proof is also aligned: semantic review has 9/9 `strongest-squat`, 4/4 `strongest-left-leg-lift`, and 4/4 `strongest-right-leg-lift` readable-pass targets, with 0 readable-fail decisions.
-- Remaining blocker is not architecture or analyzer failure. It is product scope and wording: the family label says "Squat and knee lift", but the current proof is standing squat plus single-knee-lift/mirror-side ownership. Before making it user-facing, record or designate one clean support-claim scenario that intentionally combines neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one review bundle.
-- The fastest safe promotion path is: add that support-claim scenario or tag an existing recording if it already fits; run the focused scenario validator first; refresh the Game visual target plan only for affected squat/knee-lift frames if needed; then update coverage registry, architecture guard product-truth expectations, and user-facing docs in the same small slice.
+- The support-claim audit requires one reviewed recording bundle to contain neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view. It currently passes with 2 bundles and selected `px75fgt11wbg0jvr17j6fc2dvd89trpm` as the first passing candidate.
+- `movementCoverageRegistry.ts`, `movementReplayAnalyzer` coverage tests, the architecture guard product-truth expectations, and the new `movement:squat-knee-lift-support-audit` command were updated together. Reopen this row if the audit drops below 1 passing bundle, Game visual semantic review loses readable-pass coverage, or product copy expands beyond standing squat plus single-knee-lift support.
 
 ## Always-Open Outstanding Tasks
 
@@ -411,31 +412,36 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 
 - [ ] Keep `movementCoverageRegistry.ts`, proof manifests, user-facing copy, and this plan aligned after every movement-family change.
 - [ ] Do not promote approximate, diagnostic-only, or synthetic proof families to support claims.
-- [ ] Promote `squat-knee-lift` only after a support-claim review explicitly covers neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one reviewed bundle.
-- [x] Automate coverage product-truth checks in `movement:architecture-guard` so reviewed analysis fails the fast gate if non-upright families become user-facing or if current internal/demo-only families stop being marked as missing full proof.
+- [x] Promote `squat-knee-lift` only after a support-claim review explicitly covers neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one reviewed bundle. Reopen if `npm run movement:squat-knee-lift-support-audit -- --strict` fails or if the product claim expands beyond this scoped support.
+- [x] Automate coverage product-truth checks in `movement:architecture-guard` so reviewed analysis fails the fast gate if user-facing families drift from `upright,squat-knee-lift`, if current internal/demo-only families stop being marked as missing full proof, or if the squat/knee-lift support-claim audit stops passing.
 - [ ] Keep `movement:architecture-guard` thresholds aligned with this plan whenever a watched module is intentionally split, merged, or scoped differently.
 - [ ] Before merge or push, run the local gate under Node 22.13.0 after `npm ci`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`.
 
 ## Recommended Next Slice
 
-The safest next slice is now a `squat-knee-lift` support-claim review bundle, not a broad new movement-family expansion.
+The safest next slice is now an `upper-body-standing` support-readiness audit, not a broad new movement-family expansion and not root travel promotion.
 
 Why this is the best next gain:
 
 1. Current reviewed proof has no active blockers: 117 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 9 product-scope-limitation, and 27 accepted limitations.
-2. `squat` has 9/9 direct passed rows, `left-leg-raise`, `right-leg-raise`, and `mirror-side-ownership` each have 4 direct passed rows with the remaining rows covered by other recordings, and Game visual proof includes strongest-squat plus left/right leg-lift target frames.
+2. `squat-knee-lift` is now promoted with an executable support-claim audit, so the next gain should move to the next closest internal/demo-only family instead of repeatedly rechecking the same claim.
 3. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
 4. `upper-body-standing` should stay internal/demo-only until overhead arm/reach/shoulder-specific recorded proof exists; current side-bend and head-direction evidence is useful but not enough for the broader family label.
 
 Next concrete tasks:
 
-1. Record or designate one clean support-claim scenario for `squat-knee-lift` that includes neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view.
-2. Run `npm run movement:replay:validate-scenario -- --scenario <fresh-recording-label> --quiet` first if a new recording is captured.
-3. Refresh focused Game visual proof only for affected squat/knee-lift targets if the scenario or motion-frame behavior changes.
-4. If the support-claim review passes, update `movementCoverageRegistry.ts`, architecture guard product-truth expectations, and user-facing docs together in one small slice with focused proof/guard tests.
+1. Audit `upper-body-standing` proof by separating narrow claims that are already strong, such as side bend and head direction, from broader claims that still need overhead arm, reach, twist, and shoulder/scapula proof.
+2. Add an executable support-readiness audit only if the existing proof can name a narrow user-facing claim without overpromising the broader family label.
+3. Keep `movementCoverageRegistry.ts` unchanged for `upper-body-standing` until that audit identifies one reviewed bundle and all required Game readability targets.
+4. Keep `root-travel` product-scoped until its 9 limitation rows are intentionally replaced by dedicated recorded proof and visual review.
 5. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
 
 Recent focused verification:
+
+- `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/squat-knee-lift-support-claim-audit.test.mjs scripts/movement-debug/movement-architecture-guard.test.mjs 'src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts'` passed: `verify:env` plus 4 files / 58 tests.
+- `npx -p node@22.13.0 npm run movement:squat-knee-lift-support-audit -- --strict` passed with 2 reviewed bundles; selected `px75fgt11wbg0jvr17j6fc2dvd89trpm` as the first passing candidate.
+- `npx -p node@22.13.0 npm run movement:architecture-guard` passed after the promotion: user-facing `upright,squat-knee-lift`, internal/demo-only `upper-body-standing,root-turn,root-travel`, 37/37 Game visual readable-pass, 11,383 Replay/Game parity frames, 0 divergences, 117 proof rows, 0 blockers, and 27 accepted limitations.
+- `git diff --check` passed for the support-claim promotion slice.
 
 - `npx -p node@22.13.0 npm run test:run -- 'src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadFrameDebugRuntime.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementAvatarHeadFrameRuntime.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.test.ts'` passed after extracting head-frame debug input composition: `verify:env` plus 3 files / 16 tests.
 - `npx -p node@22.13.0 npm run typecheck` passed after extracting head-frame debug input composition.
