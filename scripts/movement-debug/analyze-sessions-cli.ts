@@ -20,6 +20,7 @@ import {
   buildMovementRecordedProofManifest,
   summarizeMovementRecordedProofGate,
   type MovementRecordedManualReviewDecision,
+  type MovementRecordedProofCase,
   type MovementRecordedSourceLimitationDecision,
   type MovementRecordedVisualCaptureFrame,
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordedProofManifest";
@@ -31,6 +32,7 @@ type CliArgs = {
   exportPath: string | null;
   file: string | null;
   includeStandingUpperBodyTargets: boolean;
+  includeProductScopeProofCases: MovementRecordedProofCase[];
   limit: string;
   manifestOut: string | null;
   out: string | null;
@@ -57,6 +59,7 @@ function parseArgs(argv: string[]): CliArgs {
     exportPath: null,
     file: null,
     includeStandingUpperBodyTargets: false,
+    includeProductScopeProofCases: [],
     limit: "10",
     manifestOut: null,
     out: null,
@@ -108,6 +111,16 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--include-standing-upper-body-targets") {
       args.includeStandingUpperBodyTargets = true;
+    } else if (arg === "--include-broad-upper-body-product-scope-proof") {
+      args.includeProductScopeProofCases.push(
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      );
+    } else if (arg === "--include-product-scope-proof-case") {
+      args.includeProductScopeProofCases.push(parseMovementRecordedProofCase(argv[index + 1] ?? ""));
+      index += 1;
     } else if (arg === "--out") {
       args.out = argv[index + 1] ?? null;
       index += 1;
@@ -175,11 +188,44 @@ Options:
                      Include broad standing arm/reach/twist Game visual targets in
                      gamePath.visualProofFrames. This is opt-in so the default reviewed
                      Game visual gate remains stable.
+  --include-broad-upper-body-product-scope-proof
+                     Validation-only mode: let broad upper-body product-scope proof rows
+                     resolve from analyzer/visual proof instead of normalizing them to
+                     product-scope-limitation. Does not change coverage registry truth.
+  --include-product-scope-proof-case <case>
+                     Validation-only mode for one product-scoped proof case. Can repeat.
   --strict           Exit non-zero when any error-level replay failure is found.
   --strict-manifest  Exit non-zero when the recorded proof manifest has failed,
                      missing-proof, manual-review, or unresolved source-data-limitation rows.
                      covered-by-other-recording and product-scope-limitation rows are non-blocking.
 `);
+}
+
+const MOVEMENT_RECORDED_PROOF_CASES = new Set<MovementRecordedProofCase>([
+  "standing",
+  "side-bend",
+  "head-direction",
+  "standing-arm-raise",
+  "standing-twist",
+  "standing-reach",
+  "shoulder-scapula-control",
+  "squat",
+  "far-squat",
+  "left-leg-raise",
+  "right-leg-raise",
+  "weak-feet",
+  "lower-body-out-of-frame",
+  "root-turn",
+  "root-travel",
+  "mirror-side-ownership",
+  "scoring-message-events",
+]);
+
+export function parseMovementRecordedProofCase(value: string): MovementRecordedProofCase {
+  if (MOVEMENT_RECORDED_PROOF_CASES.has(value as MovementRecordedProofCase)) {
+    return value as MovementRecordedProofCase;
+  }
+  throw new Error(`Unknown product-scope proof case: ${value}`);
 }
 
 function convexDataTable(table: string, limit: string): unknown {
@@ -864,6 +910,7 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
   const manualReviewDecisions = readManualReviewDecisions(args.reviewDecisionPath);
   const sourceLimitationDecisions = readSourceLimitationDecisions(args.sourceLimitationDecisionPath);
   const proofManifest = buildMovementRecordedProofManifest(analyses, {
+    includeProductScopeProofCases: Array.from(new Set(args.includeProductScopeProofCases)),
     manualReviewDecisions,
     sourceLimitationDecisions,
     visualCaptures,
@@ -877,6 +924,13 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
   );
   if (proofManifest.summary.acceptedProductLimitationCount > 0) {
     console.log(`Accepted product limitations: ${proofManifest.summary.acceptedProductLimitationCount} row(s).`);
+  }
+  if (args.includeProductScopeProofCases.length > 0) {
+    console.log(
+      `Validation included product-scope proof case(s): ${
+        Array.from(new Set(args.includeProductScopeProofCases)).join(", ")
+      }.`,
+    );
   }
   if (args.visualCapturePaths.length > 0) {
     console.log(`Replay visual captures: ${visualCaptures.length} frame(s) loaded.`);

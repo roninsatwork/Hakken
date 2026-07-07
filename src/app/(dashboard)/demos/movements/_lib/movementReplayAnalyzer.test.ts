@@ -1282,6 +1282,86 @@ describe("movement replay analyzer", () => {
     expect(shoulderRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
       shoulderRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
     );
+    const validationManifest = buildMovementRecordedProofManifest([analysis], {
+      includeProductScopeProofCases: [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ],
+    });
+    const validationBroadRows = validationManifest.rows.filter((row) => (
+      row.recordingId === analysis.sessionId &&
+      [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ].includes(row.proofCase)
+    ));
+
+    expect(validationBroadRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        acceptedProductLimitation: false,
+        automatedStatus: "passed",
+        proofCase: "standing-arm-raise",
+        status: "manual-review",
+      }),
+      expect.objectContaining({
+        acceptedProductLimitation: false,
+        automatedStatus: "passed",
+        proofCase: "standing-twist",
+        status: "manual-review",
+      }),
+      expect.objectContaining({
+        acceptedProductLimitation: false,
+        automatedStatus: "passed",
+        proofCase: "standing-reach",
+        status: "manual-review",
+      }),
+      expect.objectContaining({
+        acceptedProductLimitation: false,
+        automatedStatus: "passed",
+        proofCase: "shoulder-scapula-control",
+        status: "manual-review",
+      }),
+    ]));
+    expect(validationBroadRows).toHaveLength(4);
+    expect(validationBroadRows.every((row) => row.missingLayers.includes("recorded replay visual capture"))).toBe(
+      true,
+    );
+    const broadVisualCaptures = validationBroadRows.map((row) => ({
+      avatarLowerError: 0.12,
+      avatarPath: `movement-replay-session-1-avatar-frame-${row.expectedFrameWindow.startFrame ?? 0}.png`,
+      avatarUpperError: 0.12,
+      frameIndex: row.expectedFrameWindow.startFrame ?? 0,
+      recordingId: analysis.sessionId,
+      sourcePath: `movement-replay-session-1-source-frame-${row.expectedFrameWindow.startFrame ?? 0}.png`,
+    }));
+    const visuallyReviewedManifest = buildMovementRecordedProofManifest([analysis], {
+      includeProductScopeProofCases: [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ],
+      visualCaptures: broadVisualCaptures,
+    });
+    const visuallyReviewedBroadRows = visuallyReviewedManifest.rows.filter((row) => (
+      row.recordingId === analysis.sessionId &&
+      [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ].includes(row.proofCase)
+    ));
+    expect(visuallyReviewedBroadRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ proofCase: "standing-arm-raise", status: "passed" }),
+      expect.objectContaining({ proofCase: "standing-twist", status: "passed" }),
+      expect.objectContaining({ proofCase: "standing-reach", status: "passed" }),
+      expect.objectContaining({ proofCase: "shoulder-scapula-control", status: "passed" }),
+    ]));
     expect(defaultGameVisualCases).not.toContain("strongest-standing-arm-raise");
     expect(defaultGameVisualCases).not.toContain("strongest-standing-twist");
     expect(defaultGameVisualCases).not.toContain("strongest-standing-reach");

@@ -149,6 +149,7 @@ export type MovementRecordedSourceLimitationDecision = {
 };
 
 export type MovementRecordedProofManifestOptions = {
+  includeProductScopeProofCases?: MovementRecordedProofCase[];
   manualReviewDecisions?: MovementRecordedManualReviewDecision[];
   sourceLimitationDecisions?: MovementRecordedSourceLimitationDecision[];
   visualCaptures?: MovementRecordedVisualCaptureFrame[];
@@ -1424,15 +1425,18 @@ function productScopeLimitationRow(
 
 function normalizeCoveredMissingRows(
   rows: MovementRecordedProofManifestRow[],
+  includeProductScopeProofCases: MovementRecordedProofCase[] = [],
 ): MovementRecordedProofManifestRow[] {
   const coveredProofCases = new Set(
     rows
       .filter((row) => row.status === "passed")
       .map((row) => row.proofCase),
   );
+  const includedProductScopeProofCases = new Set(includeProductScopeProofCases);
 
   return rows.map((row) => (
-    PRODUCT_SCOPE_LIMITED_PROOF_CASES.has(row.proofCase)
+    PRODUCT_SCOPE_LIMITED_PROOF_CASES.has(row.proofCase) &&
+      !includedProductScopeProofCases.has(row.proofCase)
       ? productScopeLimitationRow(row)
       : row.status === "missing-proof" && coveredProofCases.has(row.proofCase)
       ? coveredByOtherRecordingRow(row)
@@ -1698,7 +1702,7 @@ export function buildMovementRecordedProofManifest(
       };
     })
   ));
-  const rows = normalizeCoveredMissingRows(proofRows);
+  const rows = normalizeCoveredMissingRows(proofRows, options.includeProductScopeProofCases);
   const blockingRows = getBlockingRows(rows);
 
   return {

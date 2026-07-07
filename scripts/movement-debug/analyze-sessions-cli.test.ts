@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterMovementReplayRowsByIds,
   parseManualReviewDecisions,
+  parseMovementRecordedProofCase,
   parseMovementReplayRecordingPlanIds,
   parseMovementReplayTargetIds,
   parseSourceLimitationDecisions,
@@ -15,6 +16,11 @@ describe("movement replay analyzer CLI decision parsing", () => {
       # ignored comment
       recording-3 recording-2
     `)).toEqual(["recording-1", "recording-2", "recording-3"]);
+  });
+
+  it("validates product-scope proof-case names for explicit validation runs", () => {
+    expect(parseMovementRecordedProofCase("standing-arm-raise")).toBe("standing-arm-raise");
+    expect(() => parseMovementRecordedProofCase("unknown-proof")).toThrow("Unknown product-scope proof case");
   });
 
   it("filters replay rows to exact requested ids and fails on missing rows", () => {

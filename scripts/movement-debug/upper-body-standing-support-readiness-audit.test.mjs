@@ -224,6 +224,10 @@ describe("upper body standing support readiness audit", () => {
     expect(captureGuide).toContain("Suggested recording label: `broad-explicit-`");
     expect(captureGuide).toContain("--recording-ids <new-recording-id>");
     expect(captureGuide).toContain("--include-standing-upper-body-targets");
+    expect(captureGuide).toContain("--include-broad-upper-body-product-scope-proof");
+    expect(captureGuide).toContain("movement:replay:proof-set");
+    expect(captureGuide).toContain("movement:replay:review");
+    expect(captureGuide).toContain("--manifest tmp/movement-replay-lab/broad-explicit--analysis-reviewed.proof-manifest.json");
     expect(captureGuide).toContain("--proof-case strongest-standing-arm-raise");
     expect(captureGuide).toContain("movement:upper-body-standing-support-audit");
   });

@@ -439,6 +439,12 @@ function shellValue(value) {
 export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCaptureLabel } = {}) {
   const safeLabel = shellValue(captureLabel || defaultBroadCaptureLabel);
   const analysisPath = `tmp/movement-replay-lab/${safeLabel}-analysis.json`;
+  const manifestPath = `tmp/movement-replay-lab/${safeLabel}-analysis.proof-manifest.json`;
+  const replayCapturePath = `tmp/movement-replay-lab/captures/${safeLabel}-replay-proof-set`;
+  const replayReviewPath = `tmp/movement-replay-lab/${safeLabel}-replay-proof-review.md`;
+  const replayReviewDecisionsPath = `tmp/movement-replay-lab/${safeLabel}-replay-proof-review-decisions.template.json`;
+  const reviewedAnalysisPath = `tmp/movement-replay-lab/${safeLabel}-analysis-reviewed.json`;
+  const reviewedManifestPath = `tmp/movement-replay-lab/${safeLabel}-analysis-reviewed.proof-manifest.json`;
   const gameVisualPlanPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-plan.json`;
   const gameCapturePath = `tmp/movement-replay-lab/captures/${safeLabel}-game-visual-proof`;
   const gameReviewPath = `tmp/movement-replay-lab/${safeLabel}-game-visual-proof-review.md`;
@@ -465,6 +471,7 @@ export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCapt
     "- [ ] Both shoulders, elbows, upper torso, hips, knees, and feet remain visible.",
     "- [ ] Arm raise, twist, reach, and shoulder/scapula intent each have a held readable peak.",
     "- [ ] The analyzer produces non-product-scoped passed rows for `standing-arm-raise`, `standing-twist`, `standing-reach`, and `shoulder-scapula-control`.",
+    "- [ ] Replay proof-set screenshots are captured and reviewed for all broad recorded rows that start as visual manual-review rows.",
     "- [ ] Focused broad Game captures are reviewed as readable for `strongest-standing-arm-raise`, `strongest-standing-twist`, and `strongest-standing-reach`.",
     "- [ ] The merged `movement:upper-body-standing-support-audit` passes before any coverage registry or product-copy change.",
     "",
@@ -473,11 +480,25 @@ export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCapt
     "Replace `<new-recording-id>` with the saved Movement recording id for this explicit bundle.",
     "",
     "```bash",
-    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --out ${analysisPath}`,
+    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --out ${analysisPath} --manifest-out ${manifestPath}`,
     "```",
     "",
     "```bash",
-    `npx -p node@22.13.0 npm run movement:game-visual-plan -- --analysis ${analysisPath} --out ${gameVisualPlanPath} --base-url http://localhost:3100 ${BROAD_UPPER_BODY_GAME_PROOF_CASES.map((proofCase) => `--proof-case ${proofCase}`).join(" ")}`,
+    `npx -p node@22.13.0 npm run movement:replay:proof-set -- --analysis ${analysisPath} --manifest ${manifestPath} --out ${replayCapturePath} --base-url http://localhost:3100 --local-test-auth --secret sonae-local-test-auth`,
+    "```",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:replay:review -- --manifest ${manifestPath} --captures ${replayCapturePath} --out ${replayReviewPath} --decisions-out ${replayReviewDecisionsPath}`,
+    "```",
+    "",
+    "Review the Replay proof checklist, then refresh the analysis with the visual captures:",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-ids <new-recording-id> --include-standing-upper-body-targets --include-broad-upper-body-product-scope-proof --visual-captures ${replayCapturePath} --out ${reviewedAnalysisPath} --manifest-out ${reviewedManifestPath}`,
+    "```",
+    "",
+    "```bash",
+    `npx -p node@22.13.0 npm run movement:game-visual-plan -- --analysis ${reviewedAnalysisPath} --out ${gameVisualPlanPath} --base-url http://localhost:3100 ${BROAD_UPPER_BODY_GAME_PROOF_CASES.map((proofCase) => `--proof-case ${proofCase}`).join(" ")}`,
     "```",
     "",
     "```bash",
@@ -491,7 +512,7 @@ export function formatBroadCaptureGuide(audit, { captureLabel = defaultBroadCapt
     "Fill the semantic review decisions, then run the merged readiness audit:",
     "",
     "```bash",
-    "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --game-visual-plan tmp/movement-replay-lab/current-game-visual-proof-plan.json " +
+    `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit -- --manifest ${reviewedManifestPath} --game-visual-plan tmp/movement-replay-lab/current-game-visual-proof-plan.json ` +
       `--game-visual-plan ${gameVisualPlanPath} ` +
       "--semantic-review tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json " +
       `--semantic-review ${semanticReviewDecisionsPath}`,
