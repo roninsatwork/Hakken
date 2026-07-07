@@ -39,6 +39,7 @@ export type MovementGameVisualParityProofFrame = {
   sourceLowerLabel: string;
   squatDepth: number;
   supportPresentationArmSpecCount: number;
+  supportPresentationMaxSpineTwist: number;
   supportPresentationOwner: string;
   supportPresentationSpineSpecCount: number;
 };
@@ -66,10 +67,18 @@ const DEFAULT_MIN_SIDE_BEND = 0.12;
 const DEFAULT_MIN_SQUAT_DEPTH = 0.18;
 const DEFAULT_MIN_STANDING_ARM_SPEC_COUNT = 1;
 const DEFAULT_MIN_STANDING_REACH_ARM_SPEC_COUNT = 1;
-const DEFAULT_MIN_STANDING_TWIST = 0.08;
+const DEFAULT_MIN_STANDING_TWIST = 0.42;
 
 function absolute(value: number | undefined) {
   return Math.abs(value ?? 0);
+}
+
+function maxSupportPresentationSpineTwist(motionFrame: MovementMotionFrame) {
+  return Math.max(
+    0,
+    ...motionFrame.avatarDisplayDecision.supportPresentation.spineSpecs
+      .map((spec) => absolute(spec.rotation.y)),
+  );
 }
 
 function metricFrame({
@@ -107,6 +116,7 @@ function metricFrame({
       displayDecision.retargetFrame.squatDepth,
     ),
     supportPresentationArmSpecCount: displayDecision.supportPresentation.armSpecs.length,
+    supportPresentationMaxSpineTwist: maxSupportPresentationSpineTwist(motionFrame),
     supportPresentationOwner: displayDecision.supportPresentation.owner,
     supportPresentationSpineSpecCount: displayDecision.supportPresentation.spineSpecs.length,
   };
@@ -267,7 +277,7 @@ export function selectMovementGameVisualParityProofFrames(
       simulation,
       (motionFrame) => (
         motionFrame.avatarDisplayDecision.supportPresentation.owner === "support-presentation-standing-twist"
-          ? absolute(motionFrame.avatarDisplayDecision.spineDrive.twist)
+          ? maxSupportPresentationSpineTwist(motionFrame)
           : 0
       ),
     );

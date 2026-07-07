@@ -877,6 +877,10 @@ describe("movement avatar pipeline", () => {
       decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
       bone: "leftUpperArm" | "rightUpperArm",
     ) => decision.supportPresentation.armSpecs.find((spec) => spec.bone === bone)?.rotation.x ?? 0;
+    const armSide = (
+      decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
+      bone: "leftUpperArm" | "rightUpperArm",
+    ) => decision.supportPresentation.armSpecs.find((spec) => spec.bone === bone)?.rotation.z ?? 0;
     const spineTwist = (
       decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
       bone: "chest" | "spine",
@@ -914,6 +918,9 @@ describe("movement avatar pipeline", () => {
     expect(standingTwistDecision.supportPresentation.owner).toBe("support-presentation-standing-twist");
     expect(standingTwistDecision.supportPresentation.standingPose.key).toBe("standingTwist");
     expect(standingTwistDecision.supportPresentation.standingPose.twistDepth).toBeGreaterThan(0);
+    expect(armSide(standingTwistDecision, "rightUpperArm")).toBeLessThan(-0.8);
+    expect(armSide(standingTwistDecision, "leftUpperArm")).toBeGreaterThan(0.8);
+    expect(spineTwist(standingTwistDecision, "chest")).toBeGreaterThan(0.45);
     expect(spineTwist(standingTwistDecision, "chest")).toBeGreaterThan(
       spineTwist(standingTwistDecision, "spine"),
     );

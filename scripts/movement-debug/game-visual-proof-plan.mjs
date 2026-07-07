@@ -113,6 +113,7 @@ function normalizeFrame(frame, options = {}) {
     scoreAllowed: Boolean(frame?.scoreAllowed),
     sourceLowerLabel: stringValue(frame?.sourceLowerLabel, "unknown"),
     squatDepth: numberValue(frame?.squatDepth),
+    supportPresentationMaxSpineTwist: numberValue(frame?.supportPresentationMaxSpineTwist),
   };
 }
 

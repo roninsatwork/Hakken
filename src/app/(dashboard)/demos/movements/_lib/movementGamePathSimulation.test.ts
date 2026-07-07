@@ -591,6 +591,7 @@ describe("movementGamePathSimulation", () => {
     expect(proofCases).toContain("strongest-standing-reach");
     expect(armRaiseFrame?.supportPresentationOwner).toBe("support-presentation-standing-arm-raise");
     expect(twistFrame?.supportPresentationOwner).toBe("support-presentation-standing-twist");
+    expect(twistFrame?.supportPresentationMaxSpineTwist ?? 0).toBeGreaterThan(0.45);
     expect(reachFrame?.supportPresentationArmSpecCount ?? 0).toBeGreaterThan(0);
   });
 

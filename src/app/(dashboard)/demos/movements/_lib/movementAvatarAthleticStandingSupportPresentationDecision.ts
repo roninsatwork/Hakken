@@ -140,10 +140,10 @@ export function resolveMovementAvatarAthleticStandingSupportPresentationPose({
 
     return decision({
       armSpecs: [
-        armSpec("rightUpperArm", { x: 0.08, y: 0, z: -0.62 }, 0.16),
-        armSpec("leftUpperArm", { x: 0.08, y: 0, z: 0.62 }, 0.16),
-        armSpec("rightLowerArm", { x: 0.02, y: 0, z: -0.08 }, 0.14),
-        armSpec("leftLowerArm", { x: 0.02, y: 0, z: 0.08 }, 0.14),
+        armSpec("rightUpperArm", { x: 0.02, y: -0.12 * twistDepth, z: -0.86 }, 0.2),
+        armSpec("leftUpperArm", { x: 0.02, y: 0.12 * twistDepth, z: 0.86 }, 0.2),
+        armSpec("rightLowerArm", { x: 0, y: -0.06 * twistDepth, z: -0.1 }, 0.18),
+        armSpec("leftLowerArm", { x: 0, y: 0.06 * twistDepth, z: 0.1 }, 0.18),
       ],
       owner: "support-presentation-standing-twist",
       specs: [
@@ -156,10 +156,10 @@ export function resolveMovementAvatarAthleticStandingSupportPresentationPose({
       ],
       standingPose: movementAvatarStandingPose({ key: "standingTwist", twistDepth }),
       spineSpecs: [
-        spineSpec("hips", { x: 0, y: 0.04 * twistDepth, z: 0.02 * twistDepth }, 0.14),
-        spineSpec("spine", { x: 0.02, y: 0.18 * twistDepth, z: 0.06 * twistDepth }, 0.16),
-        spineSpec("chest", { x: 0.02, y: 0.3 * twistDepth, z: 0.08 * twistDepth }, 0.16),
-        spineSpec("upperChest", { x: 0, y: 0.18 * twistDepth, z: 0.04 * twistDepth }, 0.14),
+        spineSpec("hips", { x: 0, y: 0.08 * twistDepth, z: 0.03 * twistDepth }, 0.16),
+        spineSpec("spine", { x: 0.02, y: 0.42 * twistDepth, z: 0.1 * twistDepth }, 0.2),
+        spineSpec("chest", { x: 0.02, y: 0.68 * twistDepth, z: 0.12 * twistDepth }, 0.22),
+        spineSpec("upperChest", { x: 0, y: 0.48 * twistDepth, z: 0.08 * twistDepth }, 0.2),
       ],
     });
   }
