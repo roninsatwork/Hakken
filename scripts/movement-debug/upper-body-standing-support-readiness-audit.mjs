@@ -24,6 +24,10 @@ const BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS = [
   "focused-game-visual-review",
   "merged-readiness-audit",
 ];
+const BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES = [
+  "blocked-internal-demo-only",
+  "ready-for-scoped-support-review",
+];
 
 const BROAD_UPPER_BODY_CAPTURE_PROTOCOL = [
   "neutral standing baseline with full upper body visible",
@@ -340,6 +344,22 @@ function broadPassedProofCandidates(groups, proofCases) {
       }
       return left.recordingId.localeCompare(right.recordingId);
     });
+}
+
+function broadSupportClaimStatus(audit) {
+  return audit.broadReady
+    ? "ready-for-scoped-support-review"
+    : "blocked-internal-demo-only";
+}
+
+function broadSupportClaimBlockers(audit) {
+  return {
+    missingBroadGamePlanCases: audit.missingBroadGamePlanCases,
+    missingBroadManifestProofCases: audit.missingBroadManifestProofCases,
+    missingBroadPassedProofCases: audit.missingBroadPassedProofCases,
+    missingBroadReadableGameCases: audit.missingBroadReadableGameCases,
+    requiresSinglePassingRecordingBundle: audit.broadPassingRecordingIds.length === 0,
+  };
 }
 
 function planProofCases(gameVisualPlan) {
@@ -718,6 +738,8 @@ export function formatBroadCaptureContract(audit, {
     requiredRecordedProofCases: audit.requirements.broadManifestProofCases,
     safeLabel: workflow.safeLabel,
     schema: BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA,
+    supportClaimBlockers: broadSupportClaimBlockers(audit),
+    supportClaimStatus: broadSupportClaimStatus(audit),
   };
 }
 
@@ -752,6 +774,27 @@ export function validateBroadCaptureContractShape(contract) {
   }
   if (!Array.isArray(contract?.broadPassedProofCandidates)) {
     issues.push("expected broadPassedProofCandidates array");
+  }
+  if (!BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES.includes(contract?.supportClaimStatus)) {
+    issues.push(`expected supportClaimStatus ${BROAD_UPPER_BODY_SUPPORT_CLAIM_STATUSES.join("|")}`);
+  }
+  const supportClaimBlockers = contract?.supportClaimBlockers;
+  if (!supportClaimBlockers || typeof supportClaimBlockers !== "object" || Array.isArray(supportClaimBlockers)) {
+    issues.push("expected supportClaimBlockers object");
+  } else {
+    [
+      "missingBroadGamePlanCases",
+      "missingBroadManifestProofCases",
+      "missingBroadPassedProofCases",
+      "missingBroadReadableGameCases",
+    ].forEach((key) => {
+      if (!Array.isArray(supportClaimBlockers[key])) {
+        issues.push(`expected supportClaimBlockers.${key} array`);
+      }
+    });
+    if (typeof supportClaimBlockers.requiresSinglePassingRecordingBundle !== "boolean") {
+      issues.push("expected supportClaimBlockers.requiresSinglePassingRecordingBundle boolean");
+    }
   }
   if (!/\s--strict(?:\s|$)/.test(finalAuditCommand)) {
     issues.push("expected merged-readiness-audit command to include --strict");

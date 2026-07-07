@@ -330,6 +330,14 @@ describe("upper body standing support readiness audit", () => {
       requiredRecordedProofCases: broadManifestProofCases,
       safeLabel: "broad-explicit-",
       schema: "sonae-broad-upper-body-capture-contract/v1",
+      supportClaimBlockers: {
+        missingBroadGamePlanCases: [],
+        missingBroadManifestProofCases: [],
+        missingBroadPassedProofCases: broadManifestProofCases,
+        missingBroadReadableGameCases: [],
+        requiresSinglePassingRecordingBundle: true,
+      },
+      supportClaimStatus: "blocked-internal-demo-only",
     });
     expect(contract.commands).toHaveLength(8);
     expect(contract.commands[0]).toMatchObject({
@@ -373,6 +381,8 @@ describe("upper body standing support readiness audit", () => {
       "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",
       "expected broadPassingRecordingIds array",
       "expected broadPassedProofCandidates array",
+      "expected supportClaimStatus blocked-internal-demo-only|ready-for-scoped-support-review",
+      "expected supportClaimBlockers object",
       "expected merged-readiness-audit command to include --strict",
     ]);
   });
