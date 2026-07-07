@@ -490,6 +490,14 @@ export function formatBroadCandidateReview(audit) {
         ? candidate.missingProductScopedEvidenceCases.join(", ")
         : "none"} | ${formatCandidateEvidence(candidate)} |`
     ));
+  const passedProofCandidateRows = audit.broadPassedProofCandidates
+    .slice(0, 3)
+    .map((candidate, index) => (
+      `| ${index + 1} | \`${candidate.recordingId}\` | ${candidate.passedProofCaseCount} | ` +
+      `${candidate.missingPassedProofCases.length > 0
+        ? candidate.missingPassedProofCases.join(", ")
+        : "none"} | ${candidate.passedProofCases.join(", ") || "none"} |`
+    ));
 
   return [
     "# Broad Upper-Body Standing Candidate Review",
@@ -505,6 +513,14 @@ export function formatBroadCandidateReview(audit) {
     "| Rank | Recording | Evidence frames | Missing evidence cases | Evidence detail |",
     "| ---: | --- | ---: | --- | --- |",
     ...(candidateRows.length > 0 ? candidateRows : ["| n/a | none | 0 | n/a | n/a |"]),
+    "",
+    "## Top Passed-Proof Candidates",
+    "",
+    "| Rank | Recording | Passed cases | Missing passed cases | Passed detail |",
+    "| ---: | --- | ---: | --- | --- |",
+    ...(passedProofCandidateRows.length > 0
+      ? passedProofCandidateRows
+      : ["| n/a | none | 0 | n/a | n/a |"]),
     "",
     "## Reviewer Decision",
     "",

@@ -208,6 +208,10 @@ describe("upper body standing support readiness audit", () => {
       missingBroadPassedProofCases: [],
       missingBroadReadableGameCases: [],
     });
+
+    const review = formatBroadCandidateReview(audit);
+    expect(review).toContain("## Top Passed-Proof Candidates");
+    expect(review).toContain("| 1 | `recording-a` | 2 | standing-reach, shoulder-scapula-control | standing-arm-raise, standing-twist |");
   });
 
   it("reports product-scoped broad evidence without treating it as passed proof", () => {
@@ -281,6 +285,7 @@ describe("upper body standing support readiness audit", () => {
     expect(review).toContain("# Broad Upper-Body Standing Candidate Review");
     expect(review).toContain("`recording-a`");
     expect(review).toContain("standing-arm-raise: 12 frame(s), observed 2");
+    expect(review).toContain("## Top Passed-Proof Candidates");
     expect(review).toContain("Capture Protocol");
     expect(review).toContain("Capture a new explicit broad upper-body bundle");
 
