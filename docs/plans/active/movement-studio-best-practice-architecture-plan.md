@@ -222,6 +222,15 @@ Use this as the standing report for each section. Reopen any row when code inspe
 - The support-claim audit requires one reviewed recording bundle to contain neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view. It currently passes with 2 bundles and selected `px75fgt11wbg0jvr17j6fc2dvd89trpm` as the first passing candidate.
 - `movementCoverageRegistry.ts`, `movementReplayAnalyzer` coverage tests, the architecture guard product-truth expectations, and the new `movement:squat-knee-lift-support-audit` command were updated together. Reopen this row if the audit drops below 1 passing bundle, Game visual semantic review loses readable-pass coverage, or product copy expands beyond standing squat plus single-knee-lift support.
 
+2026-07-07 `upper-body-standing` support-readiness audit:
+
+- Decision: keep `upper-body-standing` internal/demo-only. Do not promote the family label yet.
+- Narrow recorded proof is real: the audit finds 4 reviewed recording bundles that pass `standing`, `side-bend`, and `head-direction` together: `px736zs97w9axrn39je7pfahc989q8jv`, `px75fgt11wbg0jvr17j6fc2dvd89trpm`, `px7fafa0wypmmc5rfz1nzmdvas88n6m0`, and `px7fmzw2v4yzex6yx3n9dchj0h89x7e3`.
+- Broad support is blocked because the manifest has no dedicated proof definitions or passed rows for `standing-arm-raise`, `standing-twist`, `standing-reach`, or `shoulder-scapula-control`.
+- Broad Game readability is also blocked because the current Game visual target plan and semantic review have no `strongest-side-bend`, `strongest-head-direction`, `strongest-standing-arm-raise`, `strongest-standing-twist`, or `strongest-standing-reach` cases.
+- New command: `npm run movement:upper-body-standing-support-audit`. Run it without `--strict` while the expected state is blocked; use `--strict` only when intentionally trying to promote the family.
+- Fastest next gain: add upper-body Game visual target selection for side bend and head direction first, then rerun capture/review for those new targets. Only after that should a narrower user-facing claim be considered.
+
 ## Always-Open Outstanding Tasks
 
 These tasks are intentionally allowed to reopen. A previously completed item should become open again whenever proof, code inspection, or client-visible behavior invalidates it.
@@ -413,30 +422,34 @@ These tasks are intentionally allowed to reopen. A previously completed item sho
 - [ ] Keep `movementCoverageRegistry.ts`, proof manifests, user-facing copy, and this plan aligned after every movement-family change.
 - [ ] Do not promote approximate, diagnostic-only, or synthetic proof families to support claims.
 - [x] Promote `squat-knee-lift` only after a support-claim review explicitly covers neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view in one reviewed bundle. Reopen if `npm run movement:squat-knee-lift-support-audit -- --strict` fails or if the product claim expands beyond this scoped support.
+- [x] Add an executable `upper-body-standing` support-readiness audit and keep the family internal/demo-only while broad arm/reach/twist/shoulder proof and upper-body Game readability targets are missing.
 - [x] Automate coverage product-truth checks in `movement:architecture-guard` so reviewed analysis fails the fast gate if user-facing families drift from `upright,squat-knee-lift`, if current internal/demo-only families stop being marked as missing full proof, or if the squat/knee-lift support-claim audit stops passing.
 - [ ] Keep `movement:architecture-guard` thresholds aligned with this plan whenever a watched module is intentionally split, merged, or scoped differently.
 - [ ] Before merge or push, run the local gate under Node 22.13.0 after `npm ci`: `npm run verify:env`, `npm run lint:all`, `npm run check`, `npm run build`, and `git diff --check`.
 
 ## Recommended Next Slice
 
-The safest next slice is now an `upper-body-standing` support-readiness audit, not a broad new movement-family expansion and not root travel promotion.
+The safest next slice is now upper-body Game visual target selection for side bend and head direction, not broad `upper-body-standing` promotion and not root travel promotion.
 
 Why this is the best next gain:
 
 1. Current reviewed proof has no active blockers: 117 rows, 64 passed, 0 failed, 0 missing-proof, 0 manual-review, 9 product-scope-limitation, and 27 accepted limitations.
-2. `squat-knee-lift` is now promoted with an executable support-claim audit, so the next gain should move to the next closest internal/demo-only family instead of repeatedly rechecking the same claim.
-3. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
-4. `upper-body-standing` should stay internal/demo-only until overhead arm/reach/shoulder-specific recorded proof exists; current side-bend and head-direction evidence is useful but not enough for the broader family label.
+2. `upper-body-standing` now has an executable readiness audit. It found 4 narrow side-bend/head-direction bundles but correctly blocks broad family support.
+3. The current Game visual proof selector has no upper-body-specific proof cases, so child-readable Game parity is the next missing layer for even a narrow side-bend/head-direction claim.
+4. `root-travel` should stay scoped out because its 9 rows are intentionally `product-scope-limitation`.
 
 Next concrete tasks:
 
-1. Audit `upper-body-standing` proof by separating narrow claims that are already strong, such as side bend and head direction, from broader claims that still need overhead arm, reach, twist, and shoulder/scapula proof.
-2. Add an executable support-readiness audit only if the existing proof can name a narrow user-facing claim without overpromising the broader family label.
-3. Keep `movementCoverageRegistry.ts` unchanged for `upper-body-standing` until that audit identifies one reviewed bundle and all required Game readability targets.
-4. Keep `root-travel` product-scoped until its 9 limitation rows are intentionally replaced by dedicated recorded proof and visual review.
+1. Add `strongest-side-bend` and `strongest-head-direction` target selection to the Game visual parity proof plan using existing motion-frame spine/head metrics, with focused tests.
+2. Regenerate the focused Game visual plan and capture/review only the new affected upper-body targets.
+3. Update `movement:upper-body-standing-support-audit` requirements if the target names or proof semantics change.
+4. Keep `movementCoverageRegistry.ts` unchanged for `upper-body-standing` until the audit identifies one reviewed bundle and all required Game readability targets.
 5. Keep `tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json` at 37 readable passes after any motion-frame, display-mirror, or avatar-application change.
 
 Recent focused verification:
+
+- `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/upper-body-standing-support-readiness-audit.test.mjs` passed: `verify:env` plus 1 file / 3 tests.
+- `npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit` passed as an expected blocked audit: 4 narrow side-bend/head-direction bundles, missing broad arm/reach/twist/shoulder manifest proof, and missing broad upper-body Game readability targets.
 
 - `npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/squat-knee-lift-support-claim-audit.test.mjs scripts/movement-debug/movement-architecture-guard.test.mjs 'src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry.test.ts' 'src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts'` passed: `verify:env` plus 4 files / 58 tests.
 - `npx -p node@22.13.0 npm run movement:squat-knee-lift-support-audit -- --strict` passed with 2 reviewed bundles; selected `px75fgt11wbg0jvr17j6fc2dvd89trpm` as the first passing candidate.

@@ -60,6 +60,14 @@ npx -p node@22.13.0 npm run movement:squat-knee-lift-support-audit -- --strict
 
 This requires one reviewed recording bundle to cover neutral standing, clear squat, left-only knee lift, right-only knee lift, mirror-side readability, and child-readable Game view before `squat-knee-lift` remains user-facing full support. The architecture guard also checks this audit while the family is user-facing.
 
+Run the upper-body readiness audit before changing `upper-body-standing` support claims:
+
+```bash
+npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit
+```
+
+This is expected to report `blocked` until broad arm/reach/twist/shoulder proof and upper-body Game visual target/review cases exist. Use `--strict` only when intentionally trying to promote the family.
+
 Analyze recent stored sessions:
 
 ```bash
