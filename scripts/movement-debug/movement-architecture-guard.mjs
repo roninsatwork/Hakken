@@ -495,6 +495,7 @@ export function summarizeBroadUpperBodyCaptureContract(contract) {
       ? contract.broadPassingRecordingIds.length
       : 0,
     commandIds: commands.map((command) => command.id),
+    captureWorkflowState: contract?.captureWorkflowState ?? "unknown",
     gameProofCases: Array.isArray(contract?.requiredGameProofCases)
       ? contract.requiredGameProofCases
       : [],
@@ -911,7 +912,7 @@ function formatReport(report) {
     `Replay/Game parity: ${report.replayGameParity.scoreMessageParityFrames} frames, score divergences ${report.replayGameParity.scoreMessageDivergenceFrames}, wrapper divergences ${report.replayGameParity.wrapperDivergenceFrames}, visual frames ${report.replayGameParity.visualProofFrames}`,
     `Coverage product truth: user-facing ${report.coverageProductTruth.userFacingFamilies.join(",") || "none"}, internal-demo-only ${report.coverageProductTruth.internalDemoOnlyFamilies.join(",") || "none"}`,
     `Squat/knee-lift support claim: ${report.squatKneeLiftSupportClaim.ok ? "passed" : "blocked"} (${report.squatKneeLiftSupportClaim.passingCandidateCount} reviewed bundle(s))`,
-    `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands, strict final audit ${report.broadUpperBodyCaptureContract.hasStrictFinalAudit ? "yes" : "no"}, status ${report.broadUpperBodyCaptureContract.supportClaimStatus}, passing bundles ${report.broadUpperBodyCaptureContract.broadPassingRecordingCount}, passed-proof candidates ${report.broadUpperBodyCaptureContract.broadPassedProofCandidateCount}`,
+    `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands, strict final audit ${report.broadUpperBodyCaptureContract.hasStrictFinalAudit ? "yes" : "no"}, status ${report.broadUpperBodyCaptureContract.supportClaimStatus}, workflow ${report.broadUpperBodyCaptureContract.captureWorkflowState}, passing bundles ${report.broadUpperBodyCaptureContract.broadPassingRecordingCount}, passed-proof candidates ${report.broadUpperBodyCaptureContract.broadPassedProofCandidateCount}`,
     `Proof manifest: ${report.proofManifest.rowCount} rows, ${report.proofManifest.blockingRows} blocking, ${report.proofManifest.acceptedProductLimitationRows} accepted limitations`,
   ];
 

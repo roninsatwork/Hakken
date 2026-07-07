@@ -521,6 +521,7 @@ describe("movement architecture guard", () => {
           id: "merged-readiness-audit",
         },
       ],
+      captureWorkflowState: "waiting-for-recording-id",
       recordingIdPlaceholder: "<new-recording-id>",
       requiredGameProofCases: ["strongest-standing-arm-raise"],
       requiredRecordedProofCases: ["standing-arm-raise"],
@@ -529,6 +530,7 @@ describe("movement architecture guard", () => {
     })).toEqual({
       broadPassedProofCandidateCount: 0,
       broadPassingRecordingCount: 0,
+      captureWorkflowState: "waiting-for-recording-id",
       commandIds: ["initial-analysis", "merged-readiness-audit"],
       gameProofCases: ["strongest-standing-arm-raise"],
       hasRecordingPlaceholder: true,
@@ -547,6 +549,7 @@ describe("movement architecture guard", () => {
     })).toMatchObject({
       broadPassedProofCandidateCount: 0,
       broadPassingRecordingCount: 0,
+      captureWorkflowState: "unknown",
       hasStrictFinalAudit: false,
       supportClaimStatus: "unknown",
     });
