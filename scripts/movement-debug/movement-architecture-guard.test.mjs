@@ -7,6 +7,7 @@ import {
   evaluateRouteBypassPurityRule,
   parseMovementArchitectureGuardArgs,
   summarizeCoverageProductTruth,
+  summarizeBroadUpperBodyCaptureContract,
   summarizeGameVisualCaptureConsistency,
   summarizeGameSemanticReview,
   summarizeGameVisualReviewConsistency,
@@ -511,6 +512,25 @@ describe("movement architecture guard", () => {
     });
   });
 
+  it("summarizes broad upper-body capture contracts", () => {
+    expect(summarizeBroadUpperBodyCaptureContract({
+      commands: [
+        { id: "initial-analysis" },
+        { id: "merged-readiness-audit" },
+      ],
+      recordingIdPlaceholder: "<new-recording-id>",
+      requiredGameProofCases: ["strongest-standing-arm-raise"],
+      requiredRecordedProofCases: ["standing-arm-raise"],
+      schema: "sonae-broad-upper-body-capture-contract/v1",
+    })).toEqual({
+      commandIds: ["initial-analysis", "merged-readiness-audit"],
+      gameProofCases: ["strongest-standing-arm-raise"],
+      hasRecordingPlaceholder: true,
+      recordedProofCases: ["standing-arm-raise"],
+      schema: "sonae-broad-upper-body-capture-contract/v1",
+    });
+  });
+
   it("checks source-frame purity for forbidden display and presentation terms", () => {
     expect(evaluateSourcePurityRule({
       content: "export type Source = { landmarks: TrackingLandmark[] }",
@@ -616,6 +636,56 @@ describe("movement architecture guard", () => {
 
     expect(report.ok).toBe(true);
     expect(report.proofFailures).toEqual([]);
+    expect(report.broadUpperBodyCaptureContract).toMatchObject({
+      commandIds: [
+        "initial-analysis",
+        "replay-proof-set",
+        "replay-review",
+        "reviewed-analysis",
+        "focused-game-visual-plan",
+        "focused-game-visual-capture",
+        "focused-game-visual-review",
+        "merged-readiness-audit",
+      ],
+      gameProofCases: [
+        "strongest-standing-arm-raise",
+        "strongest-standing-twist",
+        "strongest-standing-reach",
+      ],
+      hasRecordingPlaceholder: true,
+      recordedProofCases: [
+        "standing-arm-raise",
+        "standing-twist",
+        "standing-reach",
+        "shoulder-scapula-control",
+      ],
+      schema: "sonae-broad-upper-body-capture-contract/v1",
+    });
+  });
+
+  it("fails when the broad upper-body capture contract drifts from expected proof scope", () => {
+    const report = buildMovementArchitectureGuardReport({
+      analysis: cleanAnalysis,
+      captureManifest: cleanCaptureManifest,
+      files: [],
+      manifest: cleanManifest,
+      proofExpectations: {
+        broadCaptureCommandIds: ["initial-analysis"],
+        broadGameProofCases: ["strongest-standing-arm-raise"],
+        broadRecordedProofCases: ["standing-arm-raise"],
+      },
+      semanticReview: {
+        decisions: readableDecisions,
+        errors: [],
+      },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.proofFailures).toEqual(expect.arrayContaining([
+      expect.stringContaining("broad upper-body capture contract command ids"),
+      expect.stringContaining("broad upper-body recorded proof cases"),
+      expect.stringContaining("broad upper-body Game proof cases"),
+    ]));
   });
 
   it("fails when a watched file regrows or proof artifacts drift", () => {

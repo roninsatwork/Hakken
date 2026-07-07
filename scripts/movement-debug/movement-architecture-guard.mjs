@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { auditSquatKneeLiftSupportClaim } from "./squat-knee-lift-support-claim-audit.mjs";
-import { auditUpperBodyStandingSupportReadiness } from "./upper-body-standing-support-readiness-audit.mjs";
+import {
+  auditUpperBodyStandingSupportReadiness,
+  formatBroadCaptureContract,
+} from "./upper-body-standing-support-readiness-audit.mjs";
 
 export const DEFAULT_WATCHED_FILES = [
   {
@@ -269,6 +272,28 @@ export const DEFAULT_PROOF_PATHS = {
   semanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
 };
 export const DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT = 49;
+const DEFAULT_BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "sonae-broad-upper-body-capture-contract/v1";
+const DEFAULT_BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS = [
+  "initial-analysis",
+  "replay-proof-set",
+  "replay-review",
+  "reviewed-analysis",
+  "focused-game-visual-plan",
+  "focused-game-visual-capture",
+  "focused-game-visual-review",
+  "merged-readiness-audit",
+];
+const DEFAULT_BROAD_UPPER_BODY_RECORDED_PROOF_CASES = [
+  "standing-arm-raise",
+  "standing-twist",
+  "standing-reach",
+  "shoulder-scapula-control",
+];
+const DEFAULT_BROAD_UPPER_BODY_GAME_PROOF_CASES = [
+  "strongest-standing-arm-raise",
+  "strongest-standing-twist",
+  "strongest-standing-reach",
+];
 
 export const DEFAULT_SOURCE_PURITY_RULES = [
   {
@@ -479,6 +504,20 @@ export function summarizeGameVisualReviewConsistency(review, captureManifest) {
   };
 }
 
+export function summarizeBroadUpperBodyCaptureContract(contract) {
+  return {
+    commandIds: (contract?.commands ?? []).map((command) => command.id),
+    gameProofCases: Array.isArray(contract?.requiredGameProofCases)
+      ? contract.requiredGameProofCases
+      : [],
+    hasRecordingPlaceholder: contract?.recordingIdPlaceholder === "<new-recording-id>",
+    recordedProofCases: Array.isArray(contract?.requiredRecordedProofCases)
+      ? contract.requiredRecordedProofCases
+      : [],
+    schema: contract?.schema ?? "unknown",
+  };
+}
+
 export function summarizeReplayGameParity(analysis) {
   const sessions = Array.isArray(analysis) ? analysis : [];
   return sessions.reduce((summary, session) => {
@@ -633,6 +672,14 @@ export function buildMovementArchitectureGuardReport({
     "standing-reach": 9,
     "standing-twist": 9,
   };
+  const expectedBroadCaptureContractSchema = proofExpectations.broadCaptureContractSchema ??
+    DEFAULT_BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA;
+  const expectedBroadCaptureCommandIds = proofExpectations.broadCaptureCommandIds ??
+    DEFAULT_BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS;
+  const expectedBroadRecordedProofCases = proofExpectations.broadRecordedProofCases ??
+    DEFAULT_BROAD_UPPER_BODY_RECORDED_PROOF_CASES;
+  const expectedBroadGameProofCases = proofExpectations.broadGameProofCases ??
+    DEFAULT_BROAD_UPPER_BODY_GAME_PROOF_CASES;
   const fileResults = files.map((file) => ({
     ...file,
     ok: file.lineCount <= file.maxLines,
@@ -649,6 +696,9 @@ export function buildMovementArchitectureGuardReport({
     manifest,
     semanticReview,
   });
+  const broadUpperBodyCaptureContract = summarizeBroadUpperBodyCaptureContract(
+    formatBroadCaptureContract(upperBodyStandingSupport),
+  );
   const proofFailures = [];
 
   if (semantic.readablePassCount !== expectedSemanticPasses || semantic.targetCount !== expectedSemanticPasses) {
@@ -748,8 +798,24 @@ export function buildMovementArchitectureGuardReport({
       proofFailures.push("expected standing side-bend/head-direction support audit to pass before user-facing promotion");
     }
   }
+  if (broadUpperBodyCaptureContract.schema !== expectedBroadCaptureContractSchema) {
+    proofFailures.push(`expected broad upper-body capture contract schema ${expectedBroadCaptureContractSchema}, got ${broadUpperBodyCaptureContract.schema}`);
+  }
+  if (JSON.stringify(broadUpperBodyCaptureContract.commandIds) !== JSON.stringify(expectedBroadCaptureCommandIds)) {
+    proofFailures.push(`expected broad upper-body capture contract command ids ${expectedBroadCaptureCommandIds.join(",")}, got ${broadUpperBodyCaptureContract.commandIds.join(",") || "none"}`);
+  }
+  if (JSON.stringify(broadUpperBodyCaptureContract.recordedProofCases) !== JSON.stringify(expectedBroadRecordedProofCases)) {
+    proofFailures.push(`expected broad upper-body recorded proof cases ${expectedBroadRecordedProofCases.join(",")}, got ${broadUpperBodyCaptureContract.recordedProofCases.join(",") || "none"}`);
+  }
+  if (JSON.stringify(broadUpperBodyCaptureContract.gameProofCases) !== JSON.stringify(expectedBroadGameProofCases)) {
+    proofFailures.push(`expected broad upper-body Game proof cases ${expectedBroadGameProofCases.join(",")}, got ${broadUpperBodyCaptureContract.gameProofCases.join(",") || "none"}`);
+  }
+  if (!broadUpperBodyCaptureContract.hasRecordingPlaceholder) {
+    proofFailures.push("expected broad upper-body capture contract to keep the default recording placeholder before a saved recording id exists");
+  }
 
   return {
+    broadUpperBodyCaptureContract,
     coverageProductTruth,
     fileResults,
     ok: fileResults.every((file) => file.ok) &&
@@ -873,6 +939,7 @@ function formatReport(report) {
     `Replay/Game parity: ${report.replayGameParity.scoreMessageParityFrames} frames, score divergences ${report.replayGameParity.scoreMessageDivergenceFrames}, wrapper divergences ${report.replayGameParity.wrapperDivergenceFrames}, visual frames ${report.replayGameParity.visualProofFrames}`,
     `Coverage product truth: user-facing ${report.coverageProductTruth.userFacingFamilies.join(",") || "none"}, internal-demo-only ${report.coverageProductTruth.internalDemoOnlyFamilies.join(",") || "none"}`,
     `Squat/knee-lift support claim: ${report.squatKneeLiftSupportClaim.ok ? "passed" : "blocked"} (${report.squatKneeLiftSupportClaim.passingCandidateCount} reviewed bundle(s))`,
+    `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands`,
     `Proof manifest: ${report.proofManifest.rowCount} rows, ${report.proofManifest.blockingRows} blocking, ${report.proofManifest.acceptedProductLimitationRows} accepted limitations`,
   ];
 
