@@ -1274,9 +1274,14 @@ describe("movement replay analyzer", () => {
     expect(shoulderRow).toEqual(expect.objectContaining({
       acceptedProductLimitation: true,
       automatedStatus: "product-scope-limitation",
+      bodyPartMotion: "shoulder/scapula proxy: coordinated arm and upper-spine presentation",
+      evidenceFrameCount: expect.any(Number),
       proofCase: "shoulder-scapula-control",
       status: "product-scope-limitation",
     }));
+    expect(shoulderRow?.observedAmplitude ?? 0).toBeGreaterThanOrEqual(
+      shoulderRow?.expectedMinimumAmplitude ?? Number.POSITIVE_INFINITY,
+    );
     expect(defaultGameVisualCases).not.toContain("strongest-standing-arm-raise");
     expect(defaultGameVisualCases).not.toContain("strongest-standing-twist");
     expect(defaultGameVisualCases).not.toContain("strongest-standing-reach");

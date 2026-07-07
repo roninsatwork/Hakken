@@ -411,9 +411,9 @@ const PROOF_CASES: ProofCaseDefinition[] = [
   },
   {
     avatarSide: "both",
-    bodyPartMotion: "shoulder/scapula control",
+    bodyPartMotion: "shoulder/scapula proxy: coordinated arm and upper-spine presentation",
     directionSign: "unknown",
-    expectedMinimumAmplitude: null,
+    expectedMinimumAmplitude: 5,
     proofCase: "shoulder-scapula-control",
     sourceSide: "both",
   },
@@ -603,6 +603,15 @@ function mirrorSideOwnershipIndexes(analysis: MovementReplayAnalysis) {
     .map((frame) => frame.frameIndex);
 }
 
+function shoulderScapulaProxyScore(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
+  const isBroadUpperBodyPresentation = (
+    frame.supportPresentationOwner === "support-presentation-standing-arm-raise" ||
+    frame.supportPresentationOwner === "support-presentation-standing-twist"
+  );
+  if (!isBroadUpperBodyPresentation) return 0;
+  return frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount;
+}
+
 function observedAmplitudeForCase({
   analysis,
   definition,
@@ -640,6 +649,12 @@ function observedAmplitudeForCase({
         analysis.gamePath.frames
           .filter((frame) => frames.has(frame.frameIndex))
           .map((frame) => frame.spineTwist),
+      );
+    case "shoulder-scapula-control":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map(shoulderScapulaProxyScore),
       );
     case "squat":
     case "far-squat":
@@ -716,6 +731,8 @@ function candidateAmplitudeForCase({
           ))
           .map((frame) => frame.supportPresentationArmSpecCount),
       );
+    case "shoulder-scapula-control":
+      return maxAbs(analysis.gamePath.frames.map(shoulderScapulaProxyScore));
     case "squat":
     case "far-squat":
       return maxAbs(
@@ -1003,7 +1020,9 @@ function indexesForCase(
         ))
         .map((frame) => frame.frameIndex);
     case "shoulder-scapula-control":
-      return [];
+      return analysis.gamePath.frames
+        .filter((frame) => shoulderScapulaProxyScore(frame) >= 5)
+        .map((frame) => frame.frameIndex);
   }
 }
 
