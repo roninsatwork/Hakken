@@ -8,10 +8,21 @@ const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-reviewed.p
 const defaultGameVisualPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.json";
 const defaultSemanticReviewPath = "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json";
 const defaultBroadCaptureLabel = "movement-proof-upper-body-standing-broad-explicit";
+const BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA = "sonae-broad-upper-body-capture-contract/v1";
 const BROAD_UPPER_BODY_GAME_PROOF_CASES = [
   "strongest-standing-arm-raise",
   "strongest-standing-twist",
   "strongest-standing-reach",
+];
+const BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS = [
+  "initial-analysis",
+  "replay-proof-set",
+  "replay-review",
+  "reviewed-analysis",
+  "focused-game-visual-plan",
+  "focused-game-visual-capture",
+  "focused-game-visual-review",
+  "merged-readiness-audit",
 ];
 
 const BROAD_UPPER_BODY_CAPTURE_PROTOCOL = [
@@ -464,6 +475,10 @@ function shellArg(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
+function arraysEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 function buildBroadCaptureWorkflow({
   captureLabel = defaultBroadCaptureLabel,
   recordingId = null,
@@ -624,8 +639,42 @@ export function formatBroadCaptureContract(audit, {
     requiredGameProofCases: BROAD_UPPER_BODY_GAME_PROOF_CASES,
     requiredRecordedProofCases: audit.requirements.broadManifestProofCases,
     safeLabel: workflow.safeLabel,
-    schema: "sonae-broad-upper-body-capture-contract/v1",
+    schema: BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA,
   };
+}
+
+export function validateBroadCaptureContractShape(contract) {
+  const issues = [];
+  const commandIds = Array.isArray(contract?.commands)
+    ? contract.commands.map((command) => command.id)
+    : [];
+  const finalAuditCommand = Array.isArray(contract?.commands)
+    ? contract.commands.find((command) => command.id === "merged-readiness-audit")?.command ?? ""
+    : "";
+  const requiredRecordedProofCases = Array.isArray(contract?.requiredRecordedProofCases)
+    ? contract.requiredRecordedProofCases
+    : [];
+  const requiredGameProofCases = Array.isArray(contract?.requiredGameProofCases)
+    ? contract.requiredGameProofCases
+    : [];
+
+  if (contract?.schema !== BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA) {
+    issues.push(`expected schema ${BROAD_UPPER_BODY_CAPTURE_CONTRACT_SCHEMA}`);
+  }
+  if (!arraysEqual(commandIds, BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS)) {
+    issues.push(`expected command ids ${BROAD_UPPER_BODY_CAPTURE_COMMAND_IDS.join(",")}`);
+  }
+  if (!arraysEqual(requiredRecordedProofCases, UPPER_BODY_STANDING_SUPPORT_REQUIREMENTS.broadManifestProofCases)) {
+    issues.push(`expected recorded proof cases ${UPPER_BODY_STANDING_SUPPORT_REQUIREMENTS.broadManifestProofCases.join(",")}`);
+  }
+  if (!arraysEqual(requiredGameProofCases, BROAD_UPPER_BODY_GAME_PROOF_CASES)) {
+    issues.push(`expected Game proof cases ${BROAD_UPPER_BODY_GAME_PROOF_CASES.join(",")}`);
+  }
+  if (!/\s--strict(?:\s|$)/.test(finalAuditCommand)) {
+    issues.push("expected merged-readiness-audit command to include --strict");
+  }
+
+  return issues;
 }
 
 export function applyBroadCaptureContractArgs(args, contract) {
@@ -709,6 +758,10 @@ async function main() {
   let args = parseUpperBodyStandingSupportReadinessAuditArgs(process.argv.slice(2));
   if (args.captureContractPath) {
     const captureContract = JSON.parse(await readFile(path.resolve(args.captureContractPath), "utf8"));
+    const contractShapeIssues = validateBroadCaptureContractShape(captureContract);
+    if (contractShapeIssues.length > 0) {
+      throw new Error(`Broad capture contract is not valid for final audit: ${contractShapeIssues.join("; ")}`);
+    }
     const missingContractArtifacts = validateBroadCaptureContractAuditArtifacts(captureContract);
     if (missingContractArtifacts.length > 0) {
       const missingText = missingContractArtifacts

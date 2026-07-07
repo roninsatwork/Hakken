@@ -10,6 +10,7 @@ import {
   mergeSemanticReviews,
   parseUpperBodyStandingSupportReadinessAuditArgs,
   validateBroadCaptureContractAuditArtifacts,
+  validateBroadCaptureContractShape,
 } from "./upper-body-standing-support-readiness-audit.mjs";
 
 function row(recordingId, proofCase, status = "passed", overrides = {}) {
@@ -268,6 +269,25 @@ describe("upper body standing support readiness audit", () => {
     expect(contract.commands[0].command).toContain("--recording-ids 'rec_123 upper'");
     expect(contract.commands.at(-1).command).toContain("movement:upper-body-standing-support-audit");
     expect(contract.commands.at(-1).command).toContain("--strict");
+    expect(validateBroadCaptureContractShape(contract)).toEqual([]);
+
+    expect(validateBroadCaptureContractShape({
+      commands: [
+        {
+          command: "npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit",
+          id: "merged-readiness-audit",
+        },
+      ],
+      requiredGameProofCases: ["strongest-standing-arm-raise"],
+      requiredRecordedProofCases: ["standing-arm-raise"],
+      schema: "old-contract/v0",
+    })).toEqual([
+      "expected schema sonae-broad-upper-body-capture-contract/v1",
+      "expected command ids initial-analysis,replay-proof-set,replay-review,reviewed-analysis,focused-game-visual-plan,focused-game-visual-capture,focused-game-visual-review,merged-readiness-audit",
+      "expected recorded proof cases standing-arm-raise,standing-twist,standing-reach,shoulder-scapula-control",
+      "expected Game proof cases strongest-standing-arm-raise,strongest-standing-twist,strongest-standing-reach",
+      "expected merged-readiness-audit command to include --strict",
+    ]);
   });
 
   it("parses CLI options", () => {
