@@ -165,6 +165,12 @@ If a capture run fails with "no frames were available", it is usually a transien
 
 Goal: a new VRM follows well with zero hand-authored constants.
 
+Progress log:
+
+- **Step 1 done (2026-07-09):** `measureMovementAvatarRig` (`movementAvatarRestPose.ts`) walks the same normalized bind pose as the rest map and records hip height, averaged leg/arm chain lengths, and hips→head torso length. Exposed as `MovementAvatarRigMeasurements | null` on the new `rigMeasurementsRef` runtime ref, populated in `resetMovementAvatarRuntimeRefs` at VRM load. Returns null for rigs missing hips/head or both leg/arm chains.
+- **Step 2, floorCorrection knobs done (2026-07-09):** `getCalibratedFloorCorrection` now derives scale = `hipHeight / (calibration.floorY − hipCenter.y)` and limit = `0.4 × hipHeight` when measurements exist; profile knobs are the fallback for unmeasured rigs and degenerate calibrations (`hipToFloor ≤ 0.2`). Derived scale for `VIPE_Hero__1793.vrm` lands in the same range as the hand-tuned 1.55–1.7 values, confirming those knobs were encoding exactly this ratio. Golden captures: 0 cells worse; px7fmzw2 (the strongest floor-drift recording) improved — spine 0.137→0.112, lower 0.044→0.029, foot 0.143→0.132.
+- Remaining in step 2: `squatHipDropScale`/`squatHipDropLimit` (leg length), `headPitchOffset` (rest head orientation); then steps 3–5.
+
 Recipe (each step is one change-loop iteration):
 
 1. **Build a rig-measurement reader.** At VRM load, next to `buildMovementAvatarRetargetRestMap` (`movementAvatarRestPose.ts` — it already walks the humanoid bind pose), compute: hip height (hips bone world y), leg length (upperLeg->foot), torso length (hips->head), arm length. Expose as a `MovementAvatarRigMeasurements` object on the runtime refs.
