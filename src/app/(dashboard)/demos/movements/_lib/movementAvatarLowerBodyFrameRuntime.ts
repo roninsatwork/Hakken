@@ -51,7 +51,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   retargetFrame,
   shouldApplyLowerBody,
   shouldHoldPlayerSquatPose,
-  solvedLowerBodySources,
   squatFlexionBendBoost,
   storeLastGoodQuaternion,
   updateWorldMatrix,
@@ -62,7 +61,7 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   balancedPlantedSquatDepth: number;
   boneEaseOptions: Pick<
     MovementAvatarBoneEaseOptionsDecision,
-    "lowerBodyNeutralSlerp" | "singleLegRaiseSlerp" | "solvedLowerBodySlerp" | "squatFlexionSlerp"
+    "lowerBodyNeutralSlerp" | "singleLegRaiseSlerp" | "squatFlexionSlerp"
   >;
   currentFeetOwner: string;
   currentLowerBodyOwner: string;
@@ -80,7 +79,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   retargetFrame: MovementRetargetFrame;
   shouldApplyLowerBody: boolean;
   shouldHoldPlayerSquatPose: boolean;
-  solvedLowerBodySources: MovementAvatarLowerBodyRigRotationSources;
   squatFlexionBendBoost?: number;
   storeLastGoodQuaternion?: (boneName: string, quaternion: THREE.Quaternion) => void;
   updateWorldMatrix: () => void;
@@ -171,8 +169,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         lookupBone,
         plan: retargetApplicationPlan,
         singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,
-        solvedLowerBodySlerp: boneEaseOptions.solvedLowerBodySlerp,
-        solvedLowerBodySources,
         squatFlexionBendBoost,
         squatFlexionSlerp: boneEaseOptions.squatFlexionSlerp,
         storeLastGood: storeLastGoodQuaternion,

@@ -722,20 +722,6 @@ export function applyVrmArmRelaxedPoseToBones({
   });
 }
 
-export function applyVrmHandNeutralPoseToBones({
-  lookupBone,
-  side,
-  slerp,
-}: {
-  lookupBone: (boneName: string) => VrmQuaternionBoneLike | null | undefined;
-  side: MovementHandSide;
-  slerp: number;
-}) {
-  return applyVrmNamedRotationTargetsToBones({
-    lookupBone,
-    targets: resolveVrmHandNeutralRotationTargets({ side, slerp }),
-  });
-}
 
 export function applyVrmArmLastGoodPoseToBones({
   lastGood,

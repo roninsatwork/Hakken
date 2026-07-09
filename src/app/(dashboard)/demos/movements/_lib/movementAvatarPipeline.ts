@@ -51,7 +51,6 @@ export {
   resolveMovementAvatarLowerBodyNeutralPose,
   resolveMovementAvatarPlantedSquatIkPose,
   resolveMovementAvatarSingleLegRaisePose,
-  resolveMovementAvatarSolvedLowerBodyPose,
   resolveMovementAvatarSquatFlexionPose,
 } from "./movementAvatarLowerBodyPoseDecision";
 export {

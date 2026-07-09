@@ -11,7 +11,6 @@ import type {
 import {
   applyMovementAvatarLowerBodyNeutralPoseApplicationToVrmBones,
   applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones,
-  applyMovementAvatarSolvedLowerBodyPoseApplicationToVrmBones,
   applyMovementAvatarSquatFlexionPoseApplicationToVrmBones,
 } from "./movementAvatarLowerBodyRotationVrmAdapters";
 import { applyMovementAvatarInstructorFootPlantRequestsToVrmBones } from "./movementAvatarLowerBodyFootPlantVrmAdapters";
@@ -98,8 +97,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   lookupBone,
   plan,
   singleLegRaiseSlerp,
-  solvedLowerBodySlerp,
-  solvedLowerBodySources,
   squatFlexionBendBoost,
   squatFlexionSlerp,
   storeLastGood,
@@ -113,8 +110,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   plan: MovementAvatarLowerBodyRetargetApplicationPlan;
   singleLegRaiseSlerp: number;
-  solvedLowerBodySlerp: number;
-  solvedLowerBodySources: MovementAvatarLowerBodyRigRotationSources;
   squatFlexionBendBoost?: number;
   squatFlexionSlerp: number;
   storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
@@ -132,15 +127,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
       });
     },
     applyPlantedSquatIk,
-    applySolvedLowerBody: (depth) => {
-      applyMovementAvatarSolvedLowerBodyPoseApplicationToVrmBones({
-        depth,
-        lookupBone,
-        slerp: solvedLowerBodySlerp,
-        sources: solvedLowerBodySources,
-        storeLastGood,
-      });
-    },
     applySquatFlexion: (depth) => {
       applyMovementAvatarSquatFlexionPoseApplicationToVrmBones({
         bendBoost: squatFlexionBendBoost,

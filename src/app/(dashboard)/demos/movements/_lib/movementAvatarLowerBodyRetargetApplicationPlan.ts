@@ -14,7 +14,6 @@ export type MovementAvatarLowerBodyRetargetApplicationPlan = {
   plantedSquatIkDepth: number;
   plantInstructorFeet: Array<"left" | "right">;
   shouldApplyLegacyAim: boolean;
-  solvedLowerBodyDepth: number | null;
   squatFlexionDepth: number | null;
 };
 
@@ -99,9 +98,6 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
   stageDecision: MovementAvatarLowerBodyApplicationStageDecision;
 }): MovementAvatarLowerBodyRetargetApplicationPlan {
   const isPlayer = avatarRole === "player";
-  const solvedLowerBodyDepth = appliedDecision.shouldUseLegacyLowerBody
-    ? isPlayer ? lowerBodyDrive.liveSquatDepth : instructorSquatPresentationDepth
-    : null;
   const plantedSquatIkDepth = isPlayer
     ? playerSquatPresentationDepth
     : appliedDecision.shouldUseLegacyLowerBody && balancedPlantedSquatDepth > 0
@@ -127,7 +123,6 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
     plantedSquatIkDepth,
     plantInstructorFeet,
     shouldApplyLegacyAim: retargetAppliedLowerBody < 4 || appliedDecision.shouldUsePlayerFootFallback,
-    solvedLowerBodyDepth,
     squatFlexionDepth,
   };
 }

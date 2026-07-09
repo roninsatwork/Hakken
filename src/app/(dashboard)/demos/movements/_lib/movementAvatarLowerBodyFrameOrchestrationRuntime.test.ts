@@ -75,7 +75,6 @@ describe("movementAvatarLowerBodyFrameOrchestrationRuntime", () => {
       boneEaseOptions: {
         lowerBodyNeutralSlerp: 0.2,
         singleLegRaiseSlerp: 0.2,
-        solvedLowerBodySlerp: 0.2,
         squatFlexionSlerp: 0.2,
       },
       currentFeetOwner: "neutral",
@@ -97,12 +96,6 @@ describe("movementAvatarLowerBodyFrameOrchestrationRuntime", () => {
       scene: new THREE.Object3D(),
       shouldApplyLowerBody: false,
       shouldHoldPlayerSquatPose: false,
-      solvedLowerBodySources: {
-        LeftLowerLeg: undefined,
-        LeftUpperLeg: undefined,
-        RightLowerLeg: undefined,
-        RightUpperLeg: undefined,
-      },
       squatFlexionBendBoost: 1,
     });
 

@@ -16,7 +16,6 @@ import {
   applyVrmNamedRotationTargetToBones,
   applyVrmNamedRotationTargets,
   applyVrmNamedRotationTargetsToBones,
-  applyVrmHandNeutralPoseToBones,
   applyVrmStoredRotationTargetToBone,
   createVrmNormalizedBoneLookup,
   createVrmImageSolverLandmarks,
@@ -481,27 +480,6 @@ describe("vrmRigging", () => {
     ]);
   });
 
-  it("applies relaxed arm and neutral hand targets through shared bone lookup", () => {
-    const bones = new Map<string, { quaternion: THREE.Quaternion }>();
-    bones.set("leftUpperArm", { quaternion: new THREE.Quaternion() });
-    bones.set("leftLowerArm", { quaternion: new THREE.Quaternion() });
-    bones.set("leftHand", { quaternion: new THREE.Quaternion() });
-
-    const relaxed = applyVrmArmRelaxedPoseToBones({
-      lookupBone: (boneName) => bones.get(boneName) ?? null,
-      side: "left",
-      slerp: 0.35,
-    });
-    const neutralHand = applyVrmHandNeutralPoseToBones({
-      lookupBone: (boneName) => bones.get(boneName) ?? null,
-      side: "left",
-      slerp: 0.8,
-    });
-
-    expect(relaxed).toEqual({ applied: 3 });
-    expect(neutralHand).toEqual({ applied: 1 });
-    expect(bones.get("leftUpperArm")?.quaternion.w).toBeLessThan(1);
-  });
 
   it("applies last-good arm targets through shared bone lookup and stored rotations", () => {
     const storedUpperArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.25, 0, 0));

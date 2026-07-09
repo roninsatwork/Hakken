@@ -185,10 +185,8 @@ export type MovementAvatarHipsApplicationDecision = {
 export type MovementAvatarBoneEaseOptionsDecision = {
   armRelaxedSlerp: number;
   demoFallbackSlerp: number;
-  handNeutralSlerp: number;
   lowerBodyNeutralSlerp: number;
   singleLegRaiseSlerp: number;
-  solvedLowerBodySlerp: number;
   squatFlexionSlerp: number;
 };
 

@@ -18,8 +18,6 @@ import {
   applyMovementAvatarSingleLegRaisePoseApplication,
   applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones,
   applyMovementAvatarSolvedLowerBodyRotationSpecs,
-  applyMovementAvatarSolvedLowerBodyPoseApplication,
-  applyMovementAvatarSolvedLowerBodyPoseApplicationToVrmBones,
   applyMovementAvatarSquatFlexionPoseApplication,
   applyMovementAvatarSquatFlexionPoseApplicationToVrmBones,
   applyMovementAvatarSupportPresentationRotationSpecs,
@@ -371,141 +369,8 @@ describe("movement avatar legacy lower-body aim requests", () => {
 
 
 
-  it("executes retarget post-plan lower-body overlays in shared order", () => {
-    const events: string[] = [];
 
-    const result = applyMovementAvatarLowerBodyRetargetPostPlanApplication({
-      applyLegRaise: (side, depth) => {
-        events.push(`leg-raise:${side}:${depth}`);
-      },
-      applyPlantedSquatIk: (depth) => {
-        events.push(`planted-ik:${depth}`);
-        return depth + 0.1;
-      },
-      applySolvedLowerBody: (depth) => {
-        events.push(`solved:${depth}`);
-      },
-      applySquatFlexion: (depth) => {
-        events.push(`squat-flexion:${depth}`);
-      },
-      plan: {
-        legRaiseOverlay: { depth: 0.7, side: "left" },
-        plantedSquatIkDepth: 0.4,
-        plantInstructorFeet: ["right", "left"],
-        shouldApplyLegacyAim: true,
-        solvedLowerBodyDepth: 0.5,
-        squatFlexionDepth: 0.6,
-      },
-      plantInstructorFeet: (sides) => {
-        events.push(`plant:${sides.join(",")}`);
-      },
-    });
 
-    expect(result).toEqual({
-      appliedLegRaiseOverlay: true,
-      appliedSolvedLowerBody: true,
-      appliedSquatFlexion: true,
-      plantedSquatIkDepth: 0.5,
-    });
-    expect(events).toEqual([
-      "solved:0.5",
-      "planted-ik:0.4",
-      "squat-flexion:0.6",
-      "leg-raise:left:0.7",
-      "plant:right,left",
-    ]);
-  });
-
-  it("executes retarget post-plan overlays directly against VRM bones", () => {
-    const bones = {
-      leftFoot: new THREE.Object3D(),
-      leftLowerLeg: new THREE.Object3D(),
-      leftToes: new THREE.Object3D(),
-      leftUpperLeg: new THREE.Object3D(),
-      rightFoot: new THREE.Object3D(),
-      rightLowerLeg: new THREE.Object3D(),
-      rightToes: new THREE.Object3D(),
-      rightUpperLeg: new THREE.Object3D(),
-    };
-    const result = applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones({
-      applyPlantedSquatIk: (depth) => depth + 0.1,
-      contacts: {
-        leftFoot: true,
-        rightFoot: true,
-      },
-      currentFeetOwner: "recorded-retarget",
-      isPlayer: false,
-      lookupBone: (bone) => bones[bone as keyof typeof bones],
-      plan: {
-        legRaiseOverlay: { depth: 0.7, side: "left" },
-        plantedSquatIkDepth: 0.4,
-        plantInstructorFeet: ["right", "left"],
-        shouldApplyLegacyAim: true,
-        solvedLowerBodyDepth: 0.5,
-        squatFlexionDepth: 0.6,
-      },
-      singleLegRaiseSlerp: 1,
-      solvedLowerBodySlerp: 1,
-      solvedLowerBodySources: {
-        LeftLowerLeg: { x: -0.2, y: 0, z: 0 },
-        LeftUpperLeg: { x: 0.3, y: 0, z: 0 },
-        RightLowerLeg: { x: -0.2, y: 0, z: 0 },
-        RightUpperLeg: { x: 0.3, y: 0, z: 0 },
-      },
-      squatFlexionBendBoost: 0.32,
-      squatFlexionSlerp: 1,
-      storeLastGood: () => {},
-    });
-
-    expect(result).toMatchObject({
-      appliedLegRaiseOverlay: true,
-      appliedSolvedLowerBody: true,
-      appliedSquatFlexion: true,
-      feetOwner: "recorded-retarget+planted-flat",
-      plantedSquatIkDepth: 0.5,
-    });
-    expect(bones.rightUpperLeg.quaternion.w).toBeLessThan(1);
-    expect(bones.leftUpperLeg.quaternion.w).toBeLessThan(1);
-  });
-
-  it("skips optional retarget post-plan overlays when absent", () => {
-    const events: string[] = [];
-
-    const result = applyMovementAvatarLowerBodyRetargetPostPlanApplication({
-      applyLegRaise: (side, depth) => {
-        events.push(`leg-raise:${side}:${depth}`);
-      },
-      applyPlantedSquatIk: (depth) => {
-        events.push(`planted-ik:${depth}`);
-        return depth;
-      },
-      applySolvedLowerBody: (depth) => {
-        events.push(`solved:${depth}`);
-      },
-      applySquatFlexion: (depth) => {
-        events.push(`squat-flexion:${depth}`);
-      },
-      plan: {
-        legRaiseOverlay: null,
-        plantedSquatIkDepth: 0.2,
-        plantInstructorFeet: [],
-        shouldApplyLegacyAim: false,
-        solvedLowerBodyDepth: null,
-        squatFlexionDepth: null,
-      },
-      plantInstructorFeet: (sides) => {
-        events.push(`plant:${sides.join(",")}`);
-      },
-    });
-
-    expect(result).toEqual({
-      appliedLegRaiseOverlay: false,
-      appliedSolvedLowerBody: false,
-      appliedSquatFlexion: false,
-      plantedSquatIkDepth: 0.2,
-    });
-    expect(events).toEqual(["planted-ik:0.2", "plant:"]);
-  });
 
   it("accumulates lower-body retarget segment counts and marks feet ownership", () => {
     expect(applyMovementAvatarLowerBodyRetargetSegmentCounts({
@@ -764,55 +629,7 @@ describe("movement avatar legacy lower-body aim requests", () => {
     expect(appliedSources).toEqual(["RightUpperLeg", "RightLowerLeg"]);
   });
 
-  it("resolves and executes solved lower-body pose application", () => {
-    const appliedSources: string[] = [];
 
-    const result = applyMovementAvatarSolvedLowerBodyPoseApplication({
-      applyRotation: (spec) => {
-        appliedSources.push(spec.source);
-      },
-      depth: 0.7,
-      slerp: 0.44,
-    });
-
-    expect(result.applied).toBe(4);
-    expect(appliedSources).toEqual([
-      "RightUpperLeg",
-      "LeftUpperLeg",
-      "RightLowerLeg",
-      "LeftLowerLeg",
-    ]);
-  });
-
-  it("applies solved lower-body pose application directly to VRM bones", () => {
-    const bones = {
-      leftLowerLeg: new THREE.Object3D(),
-      leftUpperLeg: new THREE.Object3D(),
-      rightLowerLeg: new THREE.Object3D(),
-      rightUpperLeg: new THREE.Object3D(),
-    };
-    const stored: string[] = [];
-
-    const result = applyMovementAvatarSolvedLowerBodyPoseApplicationToVrmBones({
-      depth: 0.7,
-      lookupBone: (bone) => bones[bone as keyof typeof bones],
-      slerp: 1,
-      sources: {
-        LeftLowerLeg: { x: 0.2, y: 0, z: 0 },
-        LeftUpperLeg: { x: 0.3, y: 0, z: 0 },
-        RightLowerLeg: { x: 0.4, y: 0, z: 0 },
-        RightUpperLeg: { x: 0.5, y: 0, z: 0 },
-      },
-      storeLastGood: (bone) => {
-        stored.push(bone);
-      },
-    });
-
-    expect(result.applied).toBe(4);
-    expect(stored).toEqual([]);
-    expect(bones.rightUpperLeg.quaternion.w).toBeLessThan(1);
-    expect(bones.leftLowerLeg.quaternion.w).toBeLessThan(1);
-  });
 
   it("executes mixed support presentation rotation specs through the supplied renderer callback", () => {
     const specs = [
@@ -1035,38 +852,7 @@ describe("movement avatar lower-body retarget application plan", () => {
     expect(plan.shouldApplyLegacyAim).toBe(true);
   });
 
-  it("keeps solved lower-body and planted IK depths explicit for player fallback", () => {
-    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
-      appliedDecision: appliedDecision({ shouldUseLegacyLowerBody: true }),
-      avatarRole: "player",
-      balancedPlantedSquatDepth: 0.4,
-      instructorSquatPresentationDepth: 0.33,
-      lowerBodyDrive: drive({ liveSquatDepth: 0.52 }),
-      playerSquatPresentationDepth: 0.47,
-      retargetAppliedLowerBody: 4,
-      stageDecision: stage("retarget"),
-    });
 
-    expect(plan.solvedLowerBodyDepth).toBe(0.52);
-    expect(plan.plantedSquatIkDepth).toBe(0.47);
-    expect(plan.squatFlexionDepth).toBe(0.47);
-  });
-
-  it("uses instructor squat presentation only when recorded fallback needs it", () => {
-    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
-      appliedDecision: appliedDecision({ shouldUseLegacyLowerBody: true }),
-      avatarRole: "instructor",
-      balancedPlantedSquatDepth: 0.36,
-      instructorSquatPresentationDepth: 0.41,
-      lowerBodyDrive: drive({ liveSquatDepth: 0.66 }),
-      playerSquatPresentationDepth: 0,
-      retargetAppliedLowerBody: 4,
-      stageDecision: stage("retarget"),
-    });
-
-    expect(plan.solvedLowerBodyDepth).toBe(0.41);
-    expect(plan.plantedSquatIkDepth).toBe(0.41);
-  });
 
   it("lets solved player leg-raise retarget own the pose instead of adding a canned overlay", () => {
     const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
@@ -1100,58 +886,5 @@ describe("movement avatar lower-body retarget application plan", () => {
     expect(plan.legRaiseOverlay).toEqual({ depth: 0.63, side: "right" });
   });
 
-  it("packages retarget lower-body owner with the shared retarget application plan", () => {
-    const application = resolveMovementAvatarLowerBodyRetargetDecisionApplication({
-      appliedDecision: appliedDecision({
-        lowerBodyOwner: "retarget-owner",
-        shouldUseLegacyLowerBody: true,
-      }),
-      avatarRole: "player",
-      balancedPlantedSquatDepth: 0.2,
-      instructorSquatPresentationDepth: 0.3,
-      lowerBodyDrive: drive({ liveSquatDepth: 0.55, playerLegRaiseDepth: 0.44 }),
-      playerSquatPresentationDepth: 0.47,
-      retargetAppliedLowerBody: 2,
-      stageDecision: stage("retarget", { anchoredPlayerLegRaiseSide: "left" }),
-    });
 
-    expect(application.lowerBodyOwner).toBe("retarget-owner");
-    expect(application.retargetApplicationPlan).toMatchObject({
-      legRaiseOverlay: { depth: 0.44, side: "left" },
-      plantedSquatIkDepth: 0.47,
-      shouldApplyLegacyAim: true,
-      solvedLowerBodyDepth: 0.55,
-      squatFlexionDepth: 0.47,
-    });
-  });
-
-  it("composes the applied retarget decision and application plan from shared inputs", () => {
-    const application = resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput({
-      appliedFootSegments: 2,
-      appliedLegSegments: 4,
-      appliedLowerBodySegments: 6,
-      avatarRole: "player",
-      balancedPlantedSquatDepth: 0,
-      instructorSquatPresentationDepth: 0,
-      lowerBodyDrive: drive({ liveSquatDepth: 0.58, shouldDrivePlayerSquat: true }),
-      lowerBodySegmentMotion: 0.7,
-      lowerBodyTrackingReady: true,
-      playerRetargetLowerBodyMotion: 0.7,
-      playerSquatPresentationDepth: 0.5,
-      retargetFrame: retargetFrame(),
-      shouldApplyLowerBody: true,
-      shouldHoldPlayerSquatPose: false,
-      stageDecision: stage("retarget"),
-    });
-
-    expect(application.appliedDecision.retargetOwnsLowerBody).toBe(true);
-    expect(application.lowerBodyOwner).toBe("player-stable-squat");
-    expect(application.feetOwner).toBe("recorded-retarget");
-    expect(application.retargetApplicationPlan).toMatchObject({
-      plantedSquatIkDepth: 0.5,
-      shouldApplyLegacyAim: false,
-      solvedLowerBodyDepth: null,
-      squatFlexionDepth: null,
-    });
-  });
 });

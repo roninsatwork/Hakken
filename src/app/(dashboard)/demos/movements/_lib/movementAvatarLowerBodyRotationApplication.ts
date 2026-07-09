@@ -8,7 +8,6 @@ import type {
 import {
   resolveMovementAvatarLowerBodyNeutralPose,
   resolveMovementAvatarSingleLegRaisePose,
-  resolveMovementAvatarSolvedLowerBodyPose,
   resolveMovementAvatarSquatFlexionPose,
 } from "./movementAvatarPipeline";
 import type { VrmRigRotation } from "./vrmRigging";
@@ -141,20 +140,3 @@ export function applyMovementAvatarSingleLegRaisePoseApplication({
   });
 }
 
-export function applyMovementAvatarSolvedLowerBodyPoseApplication({
-  applyRotation,
-  depth,
-  slerp,
-}: {
-  applyRotation: (spec: MovementAvatarRigRotationSpec) => void;
-  depth: number;
-  slerp: number;
-}) {
-  return applyMovementAvatarSolvedLowerBodyRotationSpecs({
-    apply: applyRotation,
-    specs: resolveMovementAvatarSolvedLowerBodyPose({
-      depth,
-      slerp,
-    }),
-  });
-}

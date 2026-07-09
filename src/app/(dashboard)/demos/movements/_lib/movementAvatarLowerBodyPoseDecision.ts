@@ -28,55 +28,6 @@ export function resolveMovementAvatarLowerBodyNeutralPose({
   ];
 }
 
-export function resolveMovementAvatarSolvedLowerBodyPose({
-  depth,
-  slerp,
-}: {
-  depth: number;
-  slerp: number;
-}): MovementAvatarRigRotationSpec[] {
-  const flexDepth = smoothstep(depth, 0.08, 0.88);
-  if (flexDepth <= 0.001) return [];
-
-  const scale = 1 + flexDepth * 1.05;
-  const upperLegLimit = 1.15 + flexDepth * 0.35;
-  const lowerLegLimit = 1.45 + flexDepth * 0.35;
-
-  return [
-    {
-      bone: "rightUpperLeg",
-      limits: { x: upperLegLimit, y: 0.8, z: 0.8 },
-      remember: false,
-      scale,
-      slerp,
-      source: "RightUpperLeg",
-    },
-    {
-      bone: "leftUpperLeg",
-      limits: { x: upperLegLimit, y: 0.8, z: 0.8 },
-      remember: false,
-      scale,
-      slerp,
-      source: "LeftUpperLeg",
-    },
-    {
-      bone: "rightLowerLeg",
-      limits: { x: lowerLegLimit, y: 0.6, z: 0.6 },
-      remember: false,
-      scale,
-      slerp,
-      source: "RightLowerLeg",
-    },
-    {
-      bone: "leftLowerLeg",
-      limits: { x: lowerLegLimit, y: 0.6, z: 0.6 },
-      remember: false,
-      scale,
-      slerp,
-      source: "LeftLowerLeg",
-    },
-  ];
-}
 
 
 export function resolveMovementAvatarSquatFlexionPose({

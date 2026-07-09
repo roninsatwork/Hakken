@@ -84,7 +84,6 @@ function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): Movement
 const boneEaseOptions = {
   lowerBodyNeutralSlerp: 1,
   singleLegRaiseSlerp: 1,
-  solvedLowerBodySlerp: 1,
   squatFlexionSlerp: 1,
 };
 
@@ -115,7 +114,6 @@ function applyRuntime(
     retargetFrame: retargetFrame(),
     shouldApplyLowerBody: true,
     shouldHoldPlayerSquatPose: false,
-    solvedLowerBodySources: {},
     updateWorldMatrix: () => {},
     ...overrides,
   });

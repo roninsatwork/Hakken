@@ -147,9 +147,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     scene,
     shouldApplyLowerBody,
     shouldHoldPlayerSquatPose,
-    // The Kalidokit solved-lower-body path is retired: empty sources make the
-    // solved plan mode hold while the retarget plan modes own the legs.
-    solvedLowerBodySources: {},
     squatFlexionBendBoost,
   });
 

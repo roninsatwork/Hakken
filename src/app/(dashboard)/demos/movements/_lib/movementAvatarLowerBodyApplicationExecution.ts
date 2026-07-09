@@ -76,14 +76,12 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlan({
 export function applyMovementAvatarLowerBodyRetargetPostPlanApplication({
   applyLegRaise,
   applyPlantedSquatIk,
-  applySolvedLowerBody,
   applySquatFlexion,
   plan,
   plantInstructorFeet,
 }: {
   applyLegRaise: (side: "left" | "right", depth: number) => void;
   applyPlantedSquatIk: (depth: number) => number;
-  applySolvedLowerBody: (depth: number) => void;
   applySquatFlexion: (depth: number) => void;
   plan: MovementAvatarLowerBodyRetargetApplicationPlan;
   plantInstructorFeet: (sides: MovementAvatarInstructorFootPlantSide[]) => void;
@@ -92,10 +90,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplication({
   let appliedSquatFlexion = false;
   let appliedLegRaiseOverlay = false;
 
-  if (plan.solvedLowerBodyDepth !== null) {
-    applySolvedLowerBody(plan.solvedLowerBodyDepth);
-    appliedSolvedLowerBody = true;
-  }
 
   const plantedSquatIkDepth = applyPlantedSquatIk(plan.plantedSquatIkDepth);
 

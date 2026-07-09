@@ -93,10 +93,8 @@ export function resolveMovementAvatarBoneEaseOptions({
   return {
     armRelaxedSlerp: isPlayer ? 0.16 : 0.1,
     demoFallbackSlerp: isPlayer ? 0.18 : 0.12,
-    handNeutralSlerp: isPlayer ? 0.48 : 0.32,
     lowerBodyNeutralSlerp: isPlayer ? 0.12 : 0.08,
     singleLegRaiseSlerp: isPlayer ? 0.72 : 0.58,
-    solvedLowerBodySlerp: isPlayer ? 0.62 : 0.54,
     squatFlexionSlerp: isPlayer ? 0.84 : 0.62,
   };
 }

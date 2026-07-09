@@ -115,7 +115,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       currentFeetOwner: "neutral",
       currentLowerBodyOwner: "neutral",
       retargetFrameRuntimeAdapters,
-      solvedLowerBodySources: {},
     }));
     expect(result).toMatchObject({
       footOwner: "retarget-feet",

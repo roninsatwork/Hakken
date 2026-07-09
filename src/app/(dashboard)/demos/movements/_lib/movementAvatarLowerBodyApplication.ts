@@ -35,7 +35,6 @@ export {
   applyMovementAvatarLowerBodyNeutralPoseApplication,
   applyMovementAvatarLowerBodyRotationSpecs,
   applyMovementAvatarSingleLegRaisePoseApplication,
-  applyMovementAvatarSolvedLowerBodyPoseApplication,
   applyMovementAvatarSolvedLowerBodyRotationSpecs,
   applyMovementAvatarSquatFlexionPoseApplication,
   applyMovementAvatarSupportPresentationRotationSpecs,
@@ -44,7 +43,6 @@ export {
   applyMovementAvatarLowerBodyNeutralPoseApplicationToVrmBones,
   applyMovementAvatarLowerBodyRotationSpecsToVrmBones,
   applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones,
-  applyMovementAvatarSolvedLowerBodyPoseApplicationToVrmBones,
   applyMovementAvatarSquatFlexionPoseApplicationToVrmBones,
   applyMovementAvatarSupportPresentationRotationSpecsToVrmBones,
 } from "./movementAvatarLowerBodyRotationVrmAdapters";

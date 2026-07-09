@@ -30,7 +30,6 @@ import {
   resolveMovementAvatarRawHeadDecision,
   resolveMovementAvatarRetargetSegmentApplication,
   resolveMovementAvatarSingleLegRaisePose,
-  resolveMovementAvatarSolvedLowerBodyPose,
   resolveMovementAvatarSpineApplyOptions,
   resolveMovementAvatarSpineNeutralPose,
   resolveMovementAvatarSpineSolverPose,
@@ -1606,19 +1605,15 @@ describe("movementGamePathSimulation", () => {
     expect(resolveMovementAvatarBoneEaseOptions({ avatarRole: "player" })).toEqual({
       armRelaxedSlerp: 0.16,
       demoFallbackSlerp: 0.18,
-      handNeutralSlerp: 0.48,
       lowerBodyNeutralSlerp: 0.12,
       singleLegRaiseSlerp: 0.72,
-      solvedLowerBodySlerp: 0.62,
       squatFlexionSlerp: 0.84,
     });
     expect(resolveMovementAvatarBoneEaseOptions({ avatarRole: "instructor" })).toEqual({
       armRelaxedSlerp: 0.1,
       demoFallbackSlerp: 0.12,
-      handNeutralSlerp: 0.32,
       lowerBodyNeutralSlerp: 0.08,
       singleLegRaiseSlerp: 0.58,
-      solvedLowerBodySlerp: 0.54,
       squatFlexionSlerp: 0.62,
     });
   });
@@ -1641,37 +1636,6 @@ describe("movementGamePathSimulation", () => {
     });
   });
 
-  it("resolves solved lower-body retarget recipes outside avatar application", () => {
-    const specs = resolveMovementAvatarSolvedLowerBodyPose({
-      depth: 0.72,
-      slerp: 0.62,
-    });
-
-    expect(specs).toHaveLength(4);
-    expect(specs.map((spec) => spec.source)).toEqual([
-      "RightUpperLeg",
-      "LeftUpperLeg",
-      "RightLowerLeg",
-      "LeftLowerLeg",
-    ]);
-    expect(specs[0]).toMatchObject({
-      bone: "rightUpperLeg",
-      limits: {
-        x: expect.any(Number),
-        y: 0.8,
-        z: 0.8,
-      },
-      remember: false,
-      slerp: 0.62,
-    });
-    expect(specs[0]!.scale).toBeGreaterThan(1.5);
-    expect(specs[0]!.limits.x).toBeGreaterThan(1.3);
-    expect(specs[2]!.limits).toMatchObject({ y: 0.6, z: 0.6 });
-    expect(resolveMovementAvatarSolvedLowerBodyPose({
-      depth: 0.02,
-      slerp: 0.62,
-    })).toEqual([]);
-  });
 
 
   it("resolves squat flexion bone rotations outside avatar application", () => {
