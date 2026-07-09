@@ -95,6 +95,13 @@ Progress log:
 - Note: `armTargetComposition` (elbow/wrist targets, frontBias, safeZScale) is still *computed* because the debug fallback labels and analyzer read `armTargets` telemetry — the computation is now application-dead and goes in the 2c sweep along with the fallback-label rationalization.
 - Remaining: 2b single clock (stop the Kalidokit pose re-solve in `VrmAvatar`'s `useFrame`; keep Kalidokit hands), 2c owner-flag and dead-plumbing sweep, 2d smoothing consolidation.
 
+Measured input for 2b (headless decision sweep over the exported recordings, 692 sampled frames):
+
+- The Kalidokit `riggedPose` has exactly three remaining consumers: the spine "solver torso" fallback (`sources: riggedPose.Hips/.Spine`), the solved-lower-body sources (`riggedPose` legs), and the `if (riggedPose)` ready gate in the frame orchestration.
+- `recorded-solver` owns the torso on **~15% of frames** (102/692) — whenever the angle-based spine drive gates off. Removing the solve therefore needs a torso hold/segment-ownership answer for those frames, not just deletion. The spine *segment* retarget still applies on those frames (it runs unconditionally since 2a), so the gap is chest/upperChest/hips rotations only.
+- The solved-lower-body owner never fires on the golden recordings (owners seen: `player-lower-body-neutral`, `player-retarget`, `retarget-legacy-fallback`, `player-stable-squat`, `neutral`) — its removal is low-risk for recorded replays.
+- Suggested 2b order: (1) make `riggedPose` optional so solve failure is non-fatal and the ready gate keys on prepared landmarks; (2) replace solver-torso fallback with hold + spine-segment ownership, re-score; (3) drop solved-lower-body sources, re-score; (4) delete `solveVrmPose` call and the `*3.0`/640x480 solver-landmark scaffolding (`createVrmImageSolverLandmarks`), keep `solveVrmHand`.
+
 1. Extend the rest-mapped solver (`movementAvatarRestPose.ts` + `movementAvatarRestMappedSegmentApplication.ts`) to own the full body: arms, spine, and head, fed by world-landmark segment directions. It already implements the correct math (rest-direction → desired-direction world rotation, converted to local via parent).
 2. Retire the Kalidokit pose path (`solveVrmPose` and the re-solve inside `VrmAvatar`'s `useFrame`) and the aim-vector limb path (`movementAvatarAimApplication.ts`, `movementAvatarArmApplication.ts`). Keep Kalidokit hand solving if finger tracking is retained. Keep planted-foot IK — that is the one place IK belongs.
 3. Delete the owner-arbitration flags and their decision plumbing: `shouldUseRetargetedUpperBody`, `retargetOwnsLowerBody`, `shouldUseLegacyLowerBody`, `feetOwner`, `lowerBodyOwner`, `torsoOwner`, and `movementAvatarLegacyDecision.ts` once nothing consumes it.
