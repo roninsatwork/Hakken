@@ -33,13 +33,11 @@ export type MovementAvatarBodyFrameOrchestrationRuntimeResult = {
 
 export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   activeSpineDrive,
-  armAvatarRole,
   avatarRole,
   avatarRoot,
   balancedPlantedSquatDepth,
   boneEaseOptions,
   currentRestMap,
-  imageLandmarks,
   instructorSquatPresentationDepth,
   lastGoodQuaternionRef,
   leftArmDecision,
@@ -54,32 +52,28 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   recordedLowerBodySourceReliable,
   retargetAvatarRestRef,
   retargetFrame,
-  rigHands,
   rightArmDecision,
   scene,
   shouldApplyLowerBody,
   shouldApplySolverTorso,
   shouldHoldPlayerSquatPose,
-  solverLandmarks,
   squatFlexionBendBoost,
   targetSolverLandmarks,
   torsoTrackingReady,
   vrm,
 }: {
   activeSpineDrive: MovementAvatarUpperBodyFrameOrchestrationInput["activeSpineDrive"];
-  armAvatarRole?: MovementAvatarFrameTargetRetargetInput["avatarRole"];
   avatarRole: MovementAvatarFrameTargetRetargetInput["avatarRole"];
   avatarRoot: MovementAvatarFrameTargetRetargetInput["avatarRoot"];
   balancedPlantedSquatDepth: MovementAvatarLowerBodyFrameOrchestrationInput["balancedPlantedSquatDepth"];
   boneEaseOptions: MovementAvatarUpperBodyFrameOrchestrationInput["boneEaseOptions"] &
     MovementAvatarLowerBodyFrameOrchestrationInput["boneEaseOptions"];
   currentRestMap: MovementAvatarFrameTargetRetargetInput["currentRestMap"];
-  imageLandmarks: MovementAvatarFrameTargetRetargetInput["imageLandmarks"];
   instructorSquatPresentationDepth: number;
   lastGoodQuaternionRef: MovementAvatarUpperBodyFrameOrchestrationInput["lastGoodQuaternionRef"];
   leftArmDecision: MovementAvatarUpperBodyFrameOrchestrationInput["leftArmDecision"];
   lookupBone: MovementAvatarUpperBodyFrameOrchestrationInput["lookupBone"];
-  lowerBodyDrive: MovementAvatarFrameTargetRetargetInput["lowerBodyDrive"];
+  lowerBodyDrive: MovementAvatarLowerBodyFrameOrchestrationInput["lowerBodyDrive"];
   lowerBodySegmentMotion: MovementAvatarFrameTargetRetargetInput["lowerBodySegmentMotion"];
   lowerBodyTarget: MovementAvatarLowerBodyFrameOrchestrationInput["lowerBodyTarget"];
   lowerBodyTrackingReady: MovementAvatarLowerBodyFrameOrchestrationInput["lowerBodyTrackingReady"];
@@ -89,33 +83,26 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   recordedLowerBodySourceReliable: MovementAvatarLowerBodyFrameOrchestrationInput["recordedLowerBodySourceReliable"];
   retargetAvatarRestRef: MovementAvatarLowerBodyFrameOrchestrationInput["retargetAvatarRestRef"];
   retargetFrame: MovementAvatarFrameTargetRetargetInput["retargetFrame"];
-  rigHands: MovementAvatarFrameTargetRetargetInput["rigHands"];
   rightArmDecision: MovementAvatarUpperBodyFrameOrchestrationInput["rightArmDecision"];
   scene: Pick<THREE.Object3D, "updateMatrixWorld">;
   shouldApplyLowerBody: MovementAvatarLowerBodyFrameOrchestrationInput["shouldApplyLowerBody"];
   shouldApplySolverTorso: MovementAvatarUpperBodyFrameOrchestrationInput["shouldApplySolverTorso"];
   shouldHoldPlayerSquatPose: MovementAvatarLowerBodyFrameOrchestrationInput["shouldHoldPlayerSquatPose"];
-  solverLandmarks: MovementAvatarFrameTargetRetargetInput["solverLandmarks"];
   squatFlexionBendBoost: MovementAvatarLowerBodyFrameOrchestrationInput["squatFlexionBendBoost"];
   targetSolverLandmarks: MovementAvatarFrameTargetRetargetInput["targetSolverLandmarks"];
   torsoTrackingReady: MovementAvatarUpperBodyFrameOrchestrationInput["torsoTrackingReady"];
   vrm: MovementAvatarFrameTargetRetargetInput["vrm"];
 }): MovementAvatarBodyFrameOrchestrationRuntimeResult {
   const targetRetargetOrchestrationRuntime = resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
-    armAvatarRole,
     avatarRole,
     avatarRoot,
     currentRestMap,
-    imageLandmarks,
     instructorSquatPresentationDepth,
     lastGood: lastGoodQuaternionRef.current,
     lookupBone,
-    lowerBodyDrive,
     lowerBodySegmentMotion,
     profile,
     retargetFrame,
-    rigHands,
-      solverLandmarks,
     targetSolverLandmarks,
     vrm,
   });

@@ -2,7 +2,6 @@ import type * as THREE from "three";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import type {
   MovementAvatarBoneEaseOptionsDecision,
-  MovementAvatarLegacyLowerBodyAimOptionsDecision,
 } from "./movementAvatarPipeline";
 import { applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones } from "./movementAvatarInactiveLowerBodyRuntime";
 import {
@@ -11,7 +10,6 @@ import {
   applyMovementAvatarLowerBodyRetargetSegmentCounts,
   resolveMovementAvatarLowerBodyApplicationPlan,
   resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
-  type MovementAvatarLegacyLowerBodyAimTargets,
   type MovementAvatarLowerBodyRetargetSegmentCounts,
   type MovementAvatarLowerBodyRigRotationSources,
 } from "./movementAvatarLowerBodyApplication";

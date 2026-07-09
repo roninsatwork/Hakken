@@ -3,7 +3,6 @@ import { applyMovementAvatarLowerBodyFrameRuntime } from "./movementAvatarLowerB
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import type {
   MovementAvatarLowerBodyApplicationStageDecision,
-  MovementAvatarLegacyLowerBodyAimOptionsDecision,
 } from "./movementAvatarPipeline";
 import type { MovementAvatarLowerBodyTargetDecision } from "./movementAvatarTarget";
 import type { MovementRetargetFrame } from "./movementRetargeting";

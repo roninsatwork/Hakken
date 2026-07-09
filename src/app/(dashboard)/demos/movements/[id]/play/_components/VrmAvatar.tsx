@@ -129,7 +129,6 @@ export default function VrmAvatar({
       payload,
       rigBlendshapes,
       rigHands,
-      solverLandmarks,
       targetSolverLandmarks,
     } = frameEntryRuntime.readyFrameRuntime.solvedFrameRuntime;
 
@@ -170,7 +169,6 @@ export default function VrmAvatar({
         rigHands,
         scene: vrm.scene,
         setupStateRef,
-        solverLandmarks,
         targetSolverLandmarks,
         trackingDebugRef,
         vrm,

@@ -89,15 +89,6 @@ function target(
   };
 }
 
-function landmark(id: number) {
-  return {
-    visibility: 0.9,
-    x: id,
-    y: id + 0.1,
-    z: id + 0.2,
-  };
-}
-
 function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): MovementRetargetFrame {
   return {
     contacts: {

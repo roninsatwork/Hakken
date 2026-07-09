@@ -6,6 +6,7 @@ import { resolveMovementAvatarFrameWorldRuntime } from "./movementAvatarFrameWor
 import { applyMovementAvatarPreBodyFrameOrchestrationRuntime } from "./movementAvatarPreBodyFrameOrchestrationRuntime";
 import type { MovementCalibration, MovementTrackingDebugState } from "./movementTrackingCalibration";
 import type { MovementRetargetSourceModel } from "./movementRetargeting";
+import type { VrmHandsPayload } from "./vrmRigging";
 
 type MovementAvatarBodyFrameInput = Parameters<typeof applyMovementAvatarBodyFrameOrchestrationRuntime>[0];
 type MovementAvatarCompletionInput = Parameters<typeof applyMovementAvatarFrameCompletionOrchestrationRuntime>[0];
@@ -52,7 +53,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   rigHands,
   scene,
   scenePreparationRuntime,
-  solverLandmarks,
   targetSolverLandmarks,
   trackingDebugRef,
   vrm,
@@ -66,7 +66,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   boneEaseOptions: MovementAvatarBodyFrameInput["boneEaseOptions"];
   faceLandmarks: MovementAvatarCompletionInput["faceLandmarks"];
   frameWorldRuntime: MovementAvatarFrameWorldRuntime;
-  imageLandmarks: MovementAvatarBodyFrameInput["imageLandmarks"] & MovementAvatarCompletionInput["poseLandmarks"];
+  imageLandmarks: MovementAvatarCompletionInput["poseLandmarks"];
   isPlayer: boolean;
   lastGoodQuaternionRef: MovementAvatarBodyFrameInput["lastGoodQuaternionRef"];
   lookupBone: MovementAvatarBodyFrameInput["lookupBone"] & MovementAvatarCompletionInput["lookupBone"];
@@ -79,10 +79,9 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName: MovementAvatarCompletionInput["profileName"];
   retargetAvatarRestRef: MovementAvatarBodyFrameInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
-  rigHands: MovementAvatarBodyFrameInput["rigHands"] & MovementAvatarCompletionInput["hands"];
+  rigHands: VrmHandsPayload | null | undefined;
   scene: MovementAvatarBodyFrameInput["scene"] & MovementAvatarCompletionInput["scene"];
   scenePreparationRuntime: MovementAvatarFrameScenePreparationRuntime;
-  solverLandmarks: MovementAvatarBodyFrameInput["solverLandmarks"];
   targetSolverLandmarks: MovementAvatarBodyFrameInput["targetSolverLandmarks"];
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   vrm: VRM;
@@ -121,9 +120,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     exerciseTransition,
     motionFrameInput,
   } = framePreparationRuntime;
-  const armAvatarRole = motionFrameInput.sourceOrigin === "recorded-replay"
-    ? "instructor"
-    : avatarRole;
   const { legRaiseHoldDecision } = lowerBodyFrameStateOrchestrationRuntime;
   const {
     calibratedFloorCorrection,
@@ -134,13 +130,11 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
 
   const bodyFrameOrchestrationRuntime = applyMovementAvatarBodyFrameOrchestrationRuntime({
     activeSpineDrive,
-    armAvatarRole,
     avatarRole,
     avatarRoot,
     balancedPlantedSquatDepth,
     boneEaseOptions,
     currentRestMap: retargetAvatarRestRef.current,
-    imageLandmarks,
     instructorSquatPresentationDepth,
     lastGoodQuaternionRef,
     leftArmDecision,
@@ -155,13 +149,11 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     recordedLowerBodySourceReliable,
     retargetAvatarRestRef,
     retargetFrame,
-    rigHands,
     rightArmDecision,
     scene,
     shouldApplyLowerBody,
     shouldApplySolverTorso,
     shouldHoldPlayerSquatPose,
-    solverLandmarks,
     squatFlexionBendBoost: profile.squatLegBendBoost,
     targetSolverLandmarks,
     torsoTrackingReady,
@@ -202,7 +194,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     faceLandmarks,
     footOwner,
     frameTargetRuntime,
-    hands: rigHands,
+    hands: rigHands ?? undefined,
     hasManualCalibration: Boolean(manualCalibration),
     hipsApplication,
     hipsNode,

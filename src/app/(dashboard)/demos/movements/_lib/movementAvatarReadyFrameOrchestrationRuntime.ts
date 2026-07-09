@@ -83,7 +83,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   rigHands,
   scene,
   setupStateRef,
-  solverLandmarks,
   targetSolverLandmarks,
   trackingDebugRef,
   vrm,
@@ -128,7 +127,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   scene: MovementAvatarFrameScenePreparationInput["scene"] &
     MovementAvatarReadyFrameApplicationInput["scene"];
   setupStateRef: MovementAvatarPreBodyInput["setupStateRef"];
-  solverLandmarks: MovementAvatarReadyFrameApplicationInput["solverLandmarks"];
   targetSolverLandmarks: MovementAvatarReadyFrameApplicationInput["targetSolverLandmarks"];
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   vrm: VRM;
@@ -148,7 +146,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     exerciseTransitionStateRef,
     faceLandmarks,
     forceStandby,
-    hands: rigHands,
+    hands: rigHands ?? undefined,
     history: liveRootMotionHistory,
     instructorLowerBodyStabilityRef,
     isLivePlayer: isPlayer,
@@ -208,7 +206,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     rigHands,
     scene,
     scenePreparationRuntime,
-    solverLandmarks,
     targetSolverLandmarks,
     trackingDebugRef,
     vrm,

@@ -1,7 +1,6 @@
 import { resolveMovementAvatarPlantedSquatIkOptions } from "./movementAvatarApplicationOptions";
 import type {
   MovementAvatarBoneRotationSpec,
-  MovementAvatarLegacyLowerBodyAimSpec,
   MovementAvatarPlantedSquatIkPoseDecision,
   MovementAvatarRigRotationSpec,
 } from "./movementAvatarPipeline";
