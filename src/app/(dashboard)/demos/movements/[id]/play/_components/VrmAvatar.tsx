@@ -79,6 +79,7 @@ export default function VrmAvatar({
     resetRefs,
     retargetAvatarRestRef,
     retargetSourceModelRef,
+    rigMeasurementsRef,
     rootMotionFrameRef,
     setupStateRef,
   } = runtimeRefs;
@@ -167,6 +168,7 @@ export default function VrmAvatar({
         retargetAvatarRestRef,
         retargetSourceModelRef,
         rigHands,
+        rigMeasurements: rigMeasurementsRef.current,
         scene: vrm.scene,
         setupStateRef,
         targetSolverLandmarks,

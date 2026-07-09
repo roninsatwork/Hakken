@@ -79,6 +79,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   providedRetargetSourceModel,
   recordedRootMotionFrame,
   retargetAvatarRestRef,
+  rigMeasurements,
   retargetSourceModelRef,
   rigHands,
   scene,
@@ -123,6 +124,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   recordedRootMotionFrame: MovementRootMotionFrame | null;
   retargetAvatarRestRef: MovementAvatarReadyFrameApplicationInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
+  rigMeasurements: MovementAvatarPreBodyInput["rigMeasurements"];
   rigHands: MovementAvatarReadyFrameApplicationInput["rigHands"];
   scene: MovementAvatarFrameScenePreparationInput["scene"] &
     MovementAvatarReadyFrameApplicationInput["scene"];
@@ -161,6 +163,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     providedRetargetSourceModel,
     recordedRootMotionFrame,
     retargetSourceModelRef,
+    rigMeasurements,
     setupStateRef,
     trackingDebugRef,
     worldPoseForLocomotion: frameWorldRuntime.worldPoseForLocomotion,

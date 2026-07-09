@@ -795,19 +795,35 @@ export function getCalibratedFloorCorrection({
   currentFloorY,
   floorConfidence,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+  rigMeasurements = null,
 }: {
   calibration?: MovementCalibration | null;
   currentFloorY?: number | null;
   floorConfidence: number;
   profile?: MovementAvatarTrackingProfile;
+  rigMeasurements?: { hipHeight: number } | null;
 }) {
   if (!calibration || currentFloorY === undefined || currentFloorY === null) return 0;
   if (floorConfidence < 0.35) return 0;
 
+  // The scale converts a normalized-image floor drift into avatar-world
+  // units: the source's calibrated hip-to-floor span corresponds to the
+  // rig's hip height. The hand-authored profile knobs remain the fallback
+  // for rigs without measurements or degenerate calibrations (hips near
+  // the floor at calibration time would blow the ratio up).
+  const hipToFloor = calibration.floorY - calibration.hipCenter.y;
+  const canDerive = rigMeasurements !== null && hipToFloor > 0.2;
+  const scale = canDerive
+    ? rigMeasurements.hipHeight / hipToFloor
+    : profile.floorCorrectionScale;
+  const limit = canDerive
+    ? rigMeasurements.hipHeight * 0.4
+    : profile.floorCorrectionLimit;
+
   return clamp(
-    (currentFloorY - calibration.floorY) * profile.floorCorrectionScale,
-    -profile.floorCorrectionLimit,
-    profile.floorCorrectionLimit,
+    (currentFloorY - calibration.floorY) * scale,
+    -limit,
+    limit,
   );
 }
 

@@ -15,11 +15,13 @@ export function resolveMovementAvatarFloorRuntime({
   calibration,
   poseLandmarks,
   profile,
+  rigMeasurements,
   shouldUseCalibratedFloorCorrection,
 }: {
   calibration: MovementCalibration | null;
   poseLandmarks: VrmSolverLandmark[];
   profile: MovementAvatarTrackingProfile;
+  rigMeasurements: { hipHeight: number } | null;
   shouldUseCalibratedFloorCorrection: boolean;
 }): MovementAvatarFloorRuntimeDecision {
   const currentFloorY = Math.max(
@@ -42,6 +44,7 @@ export function resolveMovementAvatarFloorRuntime({
           currentFloorY,
           floorConfidence,
           profile,
+          rigMeasurements,
         })
       : 0,
     currentFloorY,

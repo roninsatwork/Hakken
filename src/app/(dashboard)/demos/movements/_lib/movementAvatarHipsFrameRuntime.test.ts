@@ -53,6 +53,7 @@ describe("movementAvatarHipsFrameRuntime", () => {
         32: { y: 1.05, visibility: 0.95 },
       }),
       profile,
+      rigMeasurements: null,
       shouldApplyLowerBody: true,
     });
 
@@ -74,6 +75,7 @@ describe("movementAvatarHipsFrameRuntime", () => {
         27: { y: 1.1, visibility: 0.9 },
       }),
       profile,
+      rigMeasurements: null,
       shouldApplyLowerBody: true,
     });
 

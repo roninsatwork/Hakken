@@ -26,6 +26,7 @@ export function resolveMovementAvatarHipsFrameRuntime({
   playerSquatPresentationDepth,
   poseLandmarks,
   profile,
+  rigMeasurements,
   shouldApplyLowerBody,
 }: {
   avatarRole: "instructor" | "player";
@@ -35,6 +36,7 @@ export function resolveMovementAvatarHipsFrameRuntime({
   playerSquatPresentationDepth: number;
   poseLandmarks: VrmSolverLandmark[];
   profile: MovementAvatarTrackingProfile;
+  rigMeasurements: { hipHeight: number } | null;
   shouldApplyLowerBody: boolean;
 }): MovementAvatarHipsFrameRuntimeDecision {
   const hipsPositionOptions = resolveMovementAvatarHipsPositionOptions({
@@ -46,6 +48,7 @@ export function resolveMovementAvatarHipsFrameRuntime({
     calibration,
     poseLandmarks,
     profile,
+    rigMeasurements,
     shouldUseCalibratedFloorCorrection: hipsPositionOptions.shouldUseCalibratedFloorCorrection,
   });
   const hipsApplication = resolveMovementAvatarHipsApplication({

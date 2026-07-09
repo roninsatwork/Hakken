@@ -55,6 +55,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
   positionOffset,
   profile,
   recordedRootMotionFrame,
+  rigMeasurements,
   rootOrientation,
   shouldApplyLowerBody,
   trackingDebugRef,
@@ -76,6 +77,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
   positionOffset: readonly [number, number, number];
   profile: MovementAvatarTrackingProfile;
   recordedRootMotionFrame: MovementRootMotionFrame | null;
+  rigMeasurements: { hipHeight: number } | null;
   rootOrientation: MovementAvatarRootOrientationDecision;
   shouldApplyLowerBody: boolean;
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
@@ -90,6 +92,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
     playerSquatPresentationDepth,
     poseLandmarks,
     profile,
+    rigMeasurements,
     shouldApplyLowerBody,
   });
   const calibratedFloorCorrection = hipsFrameRuntime.floorRuntime.calibratedFloorCorrection;

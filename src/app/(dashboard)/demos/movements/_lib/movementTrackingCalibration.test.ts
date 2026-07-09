@@ -356,6 +356,37 @@ describe("movementTrackingCalibration", () => {
     });
   });
 
+  it("derives floor correction scale and limit from rig hip height when measured", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const hipToFloor = calibration.floorY - calibration.hipCenter.y;
+    const rigMeasurements = { hipHeight: 0.9 };
+    const drift = 0.1;
+
+    expect(getCalibratedFloorCorrection({
+      calibration,
+      currentFloorY: calibration.floorY + drift,
+      floorConfidence: 0.9,
+      rigMeasurements,
+    })).toBeCloseTo(Math.min(drift * (0.9 / hipToFloor), 0.9 * 0.4));
+
+    // Large drift clamps at 40% of hip height instead of the profile limit.
+    expect(getCalibratedFloorCorrection({
+      calibration,
+      currentFloorY: calibration.floorY + 2,
+      floorConfidence: 0.9,
+      rigMeasurements,
+    })).toBeCloseTo(0.9 * 0.4);
+
+    // Degenerate calibrations (hips at the floor) fall back to profile knobs.
+    const seated = { ...calibration, hipCenter: { ...calibration.hipCenter, y: calibration.floorY - 0.1 } };
+    expect(getCalibratedFloorCorrection({
+      calibration: seated,
+      currentFloorY: seated.floorY + drift,
+      floorConfidence: 0.9,
+      rigMeasurements,
+    })).toBeCloseTo(drift * 1.6);
+  });
+
   it("returns a bounded floor correction from calibration drift", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
 

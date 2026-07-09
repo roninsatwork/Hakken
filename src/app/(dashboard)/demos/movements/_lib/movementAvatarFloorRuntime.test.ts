@@ -30,6 +30,7 @@ describe("movementAvatarFloorRuntime", () => {
         32: { y: 1.05, visibility: 0.95 },
       }),
       profile,
+      rigMeasurements: null,
       shouldUseCalibratedFloorCorrection: true,
     });
 
@@ -46,6 +47,7 @@ describe("movementAvatarFloorRuntime", () => {
         27: { y: 1.1, visibility: 0.9 },
       }),
       profile,
+      rigMeasurements: null,
       shouldUseCalibratedFloorCorrection: false,
     });
 
@@ -67,6 +69,7 @@ describe("movementAvatarFloorRuntime", () => {
         32: { y: 1.1, visibility: 0.2 },
       }),
       profile,
+      rigMeasurements: null,
       shouldUseCalibratedFloorCorrection: true,
     });
 

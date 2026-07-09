@@ -72,6 +72,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
   profile,
   providedRetargetSourceModel,
   recordedRootMotionFrame,
+  rigMeasurements,
   retargetSourceModelRef,
   setupStateRef,
   trackingDebugRef,
@@ -101,6 +102,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
   profile: MovementAvatarLocomotionFrameInput["profile"];
   providedRetargetSourceModel: MovementAvatarFramePreparationInput["providedRetargetSourceModel"];
   recordedRootMotionFrame: MovementAvatarLocomotionFrameInput["recordedRootMotionFrame"];
+  rigMeasurements: MovementAvatarLocomotionFrameInput["rigMeasurements"];
   retargetSourceModelRef: MovementAvatarFramePreparationInput["retargetSourceModelRef"];
   setupStateRef: MovementAvatarFramePreparationInput["setupStateRef"];
   trackingDebugRef: MovementAvatarLocomotionFrameInput["trackingDebugRef"];
@@ -156,6 +158,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
     positionOffset,
     profile,
     recordedRootMotionFrame,
+    rigMeasurements,
     rootOrientation: decisionSnapshotRuntime.rootOrientation,
     shouldApplyLowerBody: decisionSnapshotRuntime.shouldApplyLowerBody,
     trackingDebugRef,
