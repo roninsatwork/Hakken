@@ -1,7 +1,7 @@
 # Replay Avatar-Follow Correction Plan
 
 Last reviewed: 2026-07-09
-Status: active engineering plan, not yet started.
+Status: Phases 0-2 complete; Phase 3 next. See the Handoff runbook section before changing avatar code.
 Scope: fix the root causes that make the replay/posture studio avatar hard to keep following recorded movement, then reduce the movement engine's structural overhead so future tuning is cheap.
 
 ## Why this plan exists
@@ -119,15 +119,59 @@ Phase 2 exit status: **complete.** One solver (rest-mapped world-direction segme
 
 Exit criteria: exactly one solver produces limb/spine/head rotations; `VrmAvatar` contains no solver calls; owner flags gone; scores at or better than Phase 1.
 
+## Handoff runbook — read this before changing any avatar code
+
+The working discipline that kept Phases 0–2 safe. Follow it exactly; do not batch multiple behavioural changes between re-scores.
+
+**Environment (one-time per machine):**
+
+1. Node 22.13+ and `npm ci`; `npm run verify:env` must pass.
+2. Start the dev app with test auth: use the `next-dev-test-auth` config in `.claude/launch.json` (it runs `LOCAL_TEST_AUTH_ENABLED=1 npm run dev`). Convex is a cloud dev deployment — you do not need `convex:dev` unless you change `convex/` functions.
+3. The capture secret: `export LOCAL_TEST_AUTH_SECRET="$(npx convex env get LOCAL_TEST_AUTH_SECRET)"`.
+4. The golden recordings live in the `movements` Convex table; the local export cache is `tmp/movement-replay-lab/export/` (first analyzer run creates it).
+
+**The change loop (every behavioural change):**
+
+```bash
+# 1. Before touching code: capture the reference run
+npm run movement:replay:analyze -- --limit 5 --out tmp/movement-replay-lab/ref.json --manifest-out tmp/movement-replay-lab/ref.proof-manifest.json
+npm run movement:replay:proof-set -- --analysis tmp/movement-replay-lab/ref.json --manifest tmp/movement-replay-lab/ref.proof-manifest.json --local-test-auth --out tmp/movement-replay-lab/captures-before
+
+# 2. Make ONE focused change; npm run typecheck; npx vitest run "src/app/(dashboard)/demos/movements/"
+
+# 3. Re-capture and compare (exits non-zero on regression; tolerance 0.01 per cell)
+npm run movement:replay:proof-set -- --analysis tmp/movement-replay-lab/ref.json --manifest tmp/movement-replay-lab/ref.proof-manifest.json --local-test-auth --out tmp/movement-replay-lab/captures-after
+node scripts/movement-debug/aggregate-follow-errors.mjs tmp/movement-replay-lab/captures-before tmp/movement-replay-lab/captures-after
+
+# 4. Zero regressions (or an explicitly justified trade recorded in this doc) -> commit. Otherwise fix or revert.
+```
+
+If a capture run fails with "no frames were available", it is usually a transient Convex load timeout — retry once before investigating.
+
+**Traps that have already bitten once — do not rediscover them:**
+
+- **Mirroring conventions differ by space.** Image landmarks mirror with `x -> 1 - x`; world landmarks (hip-centred metres) mirror with `x -> -x`. Mixing them corrupts directions silently.
+- **Application order is load-bearing.** The spine *segment* retarget must apply **after** the angle-based spine drive (it refines; the drive must not overwrite it). Getting this backwards doubled spine error and was only caught by the re-score.
+- **Foot scores have run-to-run capture variance** (~±0.02). A single worse foot cell in an otherwise clean run is noise; re-run before reacting.
+- **The headless `visualMatchScore` under-reports** since world landmarks landed (its `visualMotionCoverage` heuristic was tuned for exaggerated image-z angles). The capture-backed per-region errors are the authoritative metric.
+- **World landmarks are camera-axis-aligned, not gravity-aligned.** Any new "world direction applied to a bone" needs the tilt correction (`resolveMovementAvatarCameraTiltCorrection`, keyed off `retargetFrame.neutralSpineDirection`) or it bakes the webcam's pitch into the avatar.
+- **The live player path has no calibration model in most webcam framings.** Segment directions must never require one (see commit `6b96ade`); the analyzer probes `uncalibrated_arms_would_freeze` / `spine_vertical_reference_missing` guard this.
+- **Run vitest from the repo root** — running it from `_lib/` picks up the wrong config.
+- Recorded replays cannot prove the live webcam path end-to-end; before client demos do a 2-minute live check in the play screen (arms follow, nod direction, torso lean).
+
 ## Phase 3 — Derive calibration from the rig
 
 Goal: a new VRM follows well with zero hand-authored constants.
 
-1. At VRM load, read bone lengths, hip height, arm span, and rest orientations from the `@pixiv/three-vrm` humanoid (the rest-map builder already reads the bind pose — extend it) and derive scale, floor-correction, and hip-drop parameters from those measurements.
-2. Shrink `movementAvatarProfiles.ts` to genuinely aesthetic overrides only; target zero required entries per avatar. Success test: drop in a VRM that has never been profiled and confirm acceptable follow on the golden recordings.
-3. Collapse the ~30-knob default tracking profile to the constants that survived Phases 1-2, each with a comment stating the constraint it encodes.
+Recipe (each step is one change-loop iteration):
 
-Exit criteria: unprofiled-VRM test passes; per-avatar profile blocks removed or empty; remaining constants enumerated and justified.
+1. **Build a rig-measurement reader.** At VRM load, next to `buildMovementAvatarRetargetRestMap` (`movementAvatarRestPose.ts` — it already walks the humanoid bind pose), compute: hip height (hips bone world y), leg length (upperLeg->foot), torso length (hips->head), arm length. Expose as a `MovementAvatarRigMeasurements` object on the runtime refs.
+2. **Replace the geometric profile knobs one at a time,** re-scoring after each: `floorCorrectionScale`/`floorCorrectionLimit` (derivable from hip height vs the source's hip-to-floor ratio), `squatHipDropScale`/`squatHipDropLimit` (leg length), `headPitchOffset` (rest head orientation). The slerp-style knobs (`headSlerp`, `legSlerp`, `footSlerp`) are smoothing, not geometry — unify them across avatars the way arm slerps were unified in 2c (fixed values, commit `bbdd273`) rather than deriving them.
+3. **Shrink `movementAvatarProfiles.ts`** toward zero required entries. Success test: load a VRM that has no profile block and confirm golden-recording scores comparable to `VIPE_Hero__1793.vrm`. (The replay lab hardcodes that avatar at `replay-lab/page.tsx` — parameterise it or temporarily swap the URL for this test.)
+4. **Collapse `DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE`** (`movementTrackingCalibration.ts:248`) to the survivors, each with a comment stating the constraint it encodes.
+5. **Foot ownership rationalization (deferred from 2c).** Feet are the weakest region (0.15–0.31). Start by measuring, not changing: count how often each instructor foot gate (`activeFootMotion < 0.22`, planted, `kneeLift < 0.45` in `movementAvatarRetargetSegmentApplicationDecision.ts`) blocks application on the goldens, then decide whether feet should follow world segment directions whenever confident-and-unplanted. Expect interaction with the planted-foot lock and floor clearance — watch `avatarFollowLeftFootClearance` in the capture diagnostics.
+
+Exit criteria: unprofiled-VRM test passes; per-avatar profile blocks removed or empty; remaining constants enumerated and justified; foot error meaningfully reduced or the blocker documented.
 
 ## Phase 4 — Structural cleanup
 
