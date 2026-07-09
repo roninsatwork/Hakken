@@ -116,9 +116,6 @@ describe("movementAvatarFrameTargetRetargetOrchestrationRuntime", () => {
       vrm,
     });
 
-    expect(runtime.lowerBodyAimTargets.rightToe).toEqual(
-      runtime.frameTargetRuntime.lowerBodyTargetComposition.rightToeTarget,
-    );
     expect(runtime.retargetFrameRuntimeAdapters.getRestMap()).toBe(currentRestMap);
 
     const retargetApplication = runtime.retargetFrameRuntimeAdapters.applyRetargetMappings([

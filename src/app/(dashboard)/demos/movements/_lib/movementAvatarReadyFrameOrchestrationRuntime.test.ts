@@ -96,7 +96,6 @@ describe("movementAvatarReadyFrameOrchestrationRuntime", () => {
       worldPoseForSetup: "world-pose-setup",
     } as never);
     vi.mocked(resolveMovementAvatarFrameScenePreparationRuntime).mockReturnValue({
-      fallbackSlerp: 0.3,
       hipsNode: "hips-node",
       updatedSceneMatrixWorld: true,
     } as never);
@@ -198,14 +197,11 @@ describe("movementAvatarReadyFrameOrchestrationRuntime", () => {
     }));
     expect(applyMovementAvatarBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       currentRestMap: "rest-map",
-      fallbackSlerp: 0.3,
-      zScale: 1,
     }));
     expect(applyMovementAvatarFrameCompletionOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       avatarName: "Player",
       currentLowerBodyOwner: "lower-body",
       footOwner: "feet",
-      zScale: 1,
     }));
     expect(result.status).toBe("ready");
   });

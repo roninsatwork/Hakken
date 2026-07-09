@@ -17,10 +17,6 @@ export type {
 export {
   applyMovementAvatarInstructorFootPlantPose,
   applyMovementAvatarInstructorFootPlantRequests,
-  applyMovementAvatarLegacyLowerBodyAimRequests,
-  applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones,
-  resolveMovementAvatarLegacyLowerBodyAimRequests,
-  resolveMovementAvatarLowerBodyRetargetAimRequests,
 } from "./movementAvatarLowerBodyAimApplication";
 export {
   applyMovementAvatarLowerBodyNonRetargetApplicationPlan,

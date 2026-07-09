@@ -82,19 +82,6 @@ function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): Movement
   };
 }
 
-const lowerBodyAimOptions: MovementAvatarLegacyLowerBodyAimOptionsDecision = {
-  foot: {
-    minVectorLengthSq: 0.0001,
-    slerpOverride: 0.2,
-    visibilityThreshold: 0.2,
-  },
-  leg: {
-    minVectorLengthSq: 0.0001,
-    slerpOverride: 0.2,
-    visibilityThreshold: 0.2,
-  },
-};
-
 const boneEaseOptions = {
   lowerBodyNeutralSlerp: 1,
   singleLegRaiseSlerp: 1,
@@ -117,18 +104,8 @@ function applyRuntime(
     boneEaseOptions,
     currentFeetOwner: "neutral",
     currentLowerBodyOwner: "neutral",
-    fallbackSlerp: 0.5,
     instructorSquatPresentationDepth: 0,
     lookupBone: () => null,
-    lowerBodyAimOptions,
-    lowerBodyAimTargets: {
-      leftAnkle: null,
-      leftKnee: null,
-      leftToe: null,
-      rightAnkle: null,
-      rightKnee: null,
-      rightToe: null,
-    },
     lowerBodyDrive: drive(),
     lowerBodySegmentMotion: 0,
     lowerBodyTarget: target(null),
@@ -140,9 +117,7 @@ function applyRuntime(
     shouldApplyLowerBody: true,
     shouldHoldPlayerSquatPose: false,
     solvedLowerBodySources: {},
-    targetSolverLandmarks: [],
     updateWorldMatrix: () => {},
-    zScale: 0.1,
     ...overrides,
   });
 }

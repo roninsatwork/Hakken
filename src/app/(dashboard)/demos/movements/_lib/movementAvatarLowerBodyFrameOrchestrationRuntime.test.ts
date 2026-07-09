@@ -80,11 +80,9 @@ describe("movementAvatarLowerBodyFrameOrchestrationRuntime", () => {
       },
       currentFeetOwner: "neutral",
       currentLowerBodyOwner: "neutral",
-      fallbackSlerp: 0.5,
       instructorSquatPresentationDepth: 0,
       lastGoodQuaternionRef,
       lookupBone: () => null,
-      lowerBodyAimTargets: {} as never,
       lowerBodyDrive: lowerBodyDrive(),
       lowerBodySegmentMotion: 0,
       lowerBodyTarget: {} as never,
@@ -106,8 +104,6 @@ describe("movementAvatarLowerBodyFrameOrchestrationRuntime", () => {
         RightUpperLeg: undefined,
       },
       squatFlexionBendBoost: 1,
-      targetSolverLandmarks: [],
-      zScale: 1,
     });
 
     expect(result.lowerBodyFrameRuntime.retargetAppliedLowerBody).toBe(0);

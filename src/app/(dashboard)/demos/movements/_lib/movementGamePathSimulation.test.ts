@@ -18,8 +18,6 @@ import {
   resolveMovementAvatarHipsApplication,
   resolveMovementAvatarHipsPositionOptions,
   resolveMovementAvatarInactiveLowerBodyDecision,
-  resolveMovementAvatarLegacyLowerBodyAimOptions,
-  resolveMovementAvatarLegacyLowerBodyAimPose,
   resolveMovementAvatarLowerBodyApplicationStage,
   resolveMovementAvatarLowerBodyNeutralPose,
   resolveMovementAvatarLowerBodyTargetSelections,
@@ -1395,43 +1393,6 @@ describe("movementGamePathSimulation", () => {
 
 
 
-  it("resolves legacy lower-body aim options for player and recorded roles", () => {
-    const profile = {
-      ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
-      footSlerp: 0.41,
-      footVisibility: 0.22,
-      legSlerp: 0.52,
-      legStoreVisibility: 0.44,
-      legVisibility: 0.18,
-    };
-    const playerOptions = resolveMovementAvatarLegacyLowerBodyAimOptions({
-      avatarRole: "player",
-      profile,
-    });
-    const recordedOptions = resolveMovementAvatarLegacyLowerBodyAimOptions({
-      avatarRole: "instructor",
-      profile,
-    });
-
-    expect(playerOptions.leg).toMatchObject({
-      slerpOverride: 0.52,
-      storeVisibilityThreshold: 0.44,
-      visibilityThreshold: 0.18,
-    });
-    expect(playerOptions.foot).toMatchObject({
-      slerpOverride: 0.41,
-      visibilityThreshold: 0.22,
-    });
-    expect(recordedOptions.leg).toMatchObject({
-      slerpOverride: 0.36,
-      storeVisibilityThreshold: 0.6,
-      visibilityThreshold: 0.2,
-    });
-    expect(recordedOptions.foot).toMatchObject({
-      slerpOverride: 0.32,
-      visibilityThreshold: 0.2,
-    });
-  });
 
   it("resolves lower-body target selections with role-specific endpoint thresholds", () => {
     const pose = withCorePose();
@@ -1715,54 +1676,6 @@ describe("movementGamePathSimulation", () => {
     })).toEqual([]);
   });
 
-  it("resolves legacy lower-body aim recipes outside avatar application", () => {
-    const specs = resolveMovementAvatarLegacyLowerBodyAimPose();
-
-    expect(specs).toEqual([
-      {
-        bone: "rightUpperLeg",
-        child: "rightLowerLeg",
-        options: "leg",
-        source: { index: 24, type: "landmark" },
-        target: "rightKnee",
-      },
-      {
-        bone: "rightLowerLeg",
-        child: "rightFoot",
-        options: "leg",
-        source: { target: "rightKnee", type: "target" },
-        target: "rightAnkle",
-      },
-      {
-        bone: "leftUpperLeg",
-        child: "leftLowerLeg",
-        options: "leg",
-        source: { index: 23, type: "landmark" },
-        target: "leftKnee",
-      },
-      {
-        bone: "leftLowerLeg",
-        child: "leftFoot",
-        options: "leg",
-        source: { target: "leftKnee", type: "target" },
-        target: "leftAnkle",
-      },
-      {
-        bone: "rightFoot",
-        child: "rightToes",
-        options: "foot",
-        source: { index: 30, type: "landmark" },
-        target: "rightToe",
-      },
-      {
-        bone: "leftFoot",
-        child: "leftToes",
-        options: "foot",
-        source: { index: 29, type: "landmark" },
-        target: "leftToe",
-      },
-    ]);
-  });
 
   it("resolves squat flexion bone rotations outside avatar application", () => {
     const specs = resolveMovementAvatarSquatFlexionPose({

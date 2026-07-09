@@ -5,7 +5,6 @@ import type {
   MovementAvatarLegacyLowerBodyAimSpec,
 } from "./movementAvatarPipeline";
 import {
-  resolveMovementAvatarLegacyLowerBodyAimPose,
   resolveMovementAvatarPlantedFootOwner,
 } from "./movementAvatarPipeline";
 import type {
@@ -88,102 +87,6 @@ export function applyMovementAvatarInstructorFootPlantPose({
   };
 }
 
-export function resolveMovementAvatarLegacyLowerBodyAimRequests({
-  options,
-  pose = resolveMovementAvatarLegacyLowerBodyAimPose(),
-  targets,
-  targetSolverLandmarks,
-}: {
-  options: MovementAvatarLegacyLowerBodyAimOptionsDecision;
-  pose?: MovementAvatarLegacyLowerBodyAimSpec[];
-  targets: MovementAvatarLegacyLowerBodyAimTargets;
-  targetSolverLandmarks: Array<MovementAvatarLowerBodyAimLandmark | null | undefined>;
-}): MovementAvatarLegacyLowerBodyAimRequest[] {
-  return pose.map((spec) => ({
-    bone: spec.bone,
-    child: spec.child,
-    options: options[spec.options],
-    source: spec.source.type === "landmark"
-      ? targetSolverLandmarks[spec.source.index]
-      : targets[spec.source.target],
-    target: targets[spec.target],
-  }));
-}
 
-export function resolveMovementAvatarLowerBodyRetargetAimRequests({
-  options,
-  retargetApplicationPlan,
-  targets,
-  targetSolverLandmarks,
-}: {
-  options: MovementAvatarLegacyLowerBodyAimOptionsDecision;
-  retargetApplicationPlan: Pick<MovementAvatarLowerBodyRetargetApplicationPlan, "shouldApplyLegacyAim">;
-  targets: MovementAvatarLegacyLowerBodyAimTargets;
-  targetSolverLandmarks: Array<MovementAvatarLowerBodyAimLandmark | null | undefined>;
-}): MovementAvatarLegacyLowerBodyAimRequest[] {
-  if (!retargetApplicationPlan.shouldApplyLegacyAim) return [];
 
-  return resolveMovementAvatarLegacyLowerBodyAimRequests({
-    options,
-    targets,
-    targetSolverLandmarks,
-  });
-}
 
-export function applyMovementAvatarLegacyLowerBodyAimRequests({
-  apply,
-  requests,
-}: {
-  apply: (request: MovementAvatarLegacyLowerBodyAimRequest) => void;
-  requests: MovementAvatarLegacyLowerBodyAimRequest[];
-}) {
-  requests.forEach((request) => {
-    apply(request);
-  });
-
-  return {
-    applied: requests.length,
-  };
-}
-
-export function applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones({
-  fallbackSlerp,
-  getLastGoodQuaternion,
-  lookupBone,
-  requests,
-  storeLastGoodQuaternion,
-  zScale,
-}: {
-  fallbackSlerp: number;
-  getLastGoodQuaternion?: (boneName: string) => THREE.Quaternion | null | undefined;
-  lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
-  requests: MovementAvatarLegacyLowerBodyAimRequest[];
-  storeLastGoodQuaternion?: (boneName: string, quaternion: THREE.Quaternion) => void;
-  zScale: number;
-}): MovementAvatarLegacyLowerBodyAimRequestApplicationResult {
-  let applied = 0;
-
-  requests.forEach((request) => {
-    const result = applyMovementAvatarAimVectorToObjects({
-      boneName: request.bone,
-      childName: request.child,
-      frontBias: request.options.frontBias,
-      getLastGoodQuaternion,
-      lookupBone,
-      minVectorLengthSq: request.options.minVectorLengthSq,
-      slerp: request.options.slerpOverride ?? fallbackSlerp,
-      start: request.source,
-      storeLastGoodQuaternion,
-      storeVisibilityThreshold: request.options.storeVisibilityThreshold,
-      target: request.target,
-      visibilityThreshold: request.options.visibilityThreshold,
-      zScale,
-    });
-
-    if (result.applied) applied += 1;
-  });
-
-  return {
-    applied,
-  };
-}

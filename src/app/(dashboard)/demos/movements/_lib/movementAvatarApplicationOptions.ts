@@ -12,30 +12,6 @@ import {
 } from "./movementTrackingCalibration";
 
 
-export function resolveMovementAvatarLegacyLowerBodyAimOptions({
-  avatarRole,
-  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
-}: {
-  avatarRole: "instructor" | "player";
-  profile?: MovementAvatarTrackingProfile;
-}): MovementAvatarLegacyLowerBodyAimOptionsDecision {
-  const isPlayer = avatarRole === "player";
-  const leg = {
-    minVectorLengthSq: 0.00002,
-    slerpOverride: isPlayer ? profile.legSlerp : 0.36,
-    storeVisibilityThreshold: isPlayer ? profile.legStoreVisibility : 0.6,
-    visibilityThreshold: isPlayer ? profile.legVisibility : 0.2,
-  };
-
-  return {
-    foot: {
-      ...leg,
-      slerpOverride: isPlayer ? profile.footSlerp : 0.32,
-      visibilityThreshold: isPlayer ? profile.footVisibility : 0.2,
-    },
-    leg,
-  };
-}
 
 export function resolveMovementAvatarPlantedSquatIkOptions({
   avatarRole,

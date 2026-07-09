@@ -39,7 +39,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   balancedPlantedSquatDepth,
   boneEaseOptions,
   currentRestMap,
-  fallbackSlerp,
   imageLandmarks,
   instructorSquatPresentationDepth,
   lastGoodQuaternionRef,
@@ -67,7 +66,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   targetSolverLandmarks,
   torsoTrackingReady,
   vrm,
-  zScale,
 }: {
   activeSpineDrive: MovementAvatarUpperBodyFrameOrchestrationInput["activeSpineDrive"];
   armAvatarRole?: MovementAvatarFrameTargetRetargetInput["avatarRole"];
@@ -77,7 +75,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   boneEaseOptions: MovementAvatarUpperBodyFrameOrchestrationInput["boneEaseOptions"] &
     MovementAvatarLowerBodyFrameOrchestrationInput["boneEaseOptions"];
   currentRestMap: MovementAvatarFrameTargetRetargetInput["currentRestMap"];
-  fallbackSlerp: MovementAvatarLowerBodyFrameOrchestrationInput["fallbackSlerp"];
   imageLandmarks: MovementAvatarFrameTargetRetargetInput["imageLandmarks"];
   instructorSquatPresentationDepth: number;
   lastGoodQuaternionRef: MovementAvatarUpperBodyFrameOrchestrationInput["lastGoodQuaternionRef"];
@@ -105,7 +102,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   targetSolverLandmarks: MovementAvatarFrameTargetRetargetInput["targetSolverLandmarks"];
   torsoTrackingReady: MovementAvatarUpperBodyFrameOrchestrationInput["torsoTrackingReady"];
   vrm: MovementAvatarFrameTargetRetargetInput["vrm"];
-  zScale: MovementAvatarLowerBodyFrameOrchestrationInput["zScale"];
 }): MovementAvatarBodyFrameOrchestrationRuntimeResult {
   const targetRetargetOrchestrationRuntime = resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
     armAvatarRole,
@@ -128,7 +124,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   });
   const {
     frameTargetRuntime,
-    lowerBodyAimTargets,
     retargetFrameRuntimeAdapters,
   } = targetRetargetOrchestrationRuntime;
 
@@ -151,11 +146,9 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     boneEaseOptions,
     currentFeetOwner: "neutral",
     currentLowerBodyOwner: "neutral",
-    fallbackSlerp,
     instructorSquatPresentationDepth,
     lastGoodQuaternionRef,
     lookupBone,
-    lowerBodyAimTargets,
     lowerBodyDrive,
     lowerBodySegmentMotion,
     lowerBodyTarget,
@@ -174,8 +167,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     // solved plan mode hold while the retarget plan modes own the legs.
     solvedLowerBodySources: {},
     squatFlexionBendBoost,
-    targetSolverLandmarks,
-    zScale,
   });
 
   return {

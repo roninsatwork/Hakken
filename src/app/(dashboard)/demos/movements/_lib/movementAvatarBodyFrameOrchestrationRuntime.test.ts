@@ -36,7 +36,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
     vi.mocked(resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime).mockReturnValue({
       armTargetComposition,
       frameTargetRuntime,
-      lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
       retargetFrameRuntimeAdapters,
     } as never);
     vi.mocked(applyMovementAvatarUpperBodyFrameOrchestrationRuntime).mockReturnValue({
@@ -66,7 +65,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       balancedPlantedSquatDepth: 0.2,
       boneEaseOptions: "bone-ease-options",
       currentRestMap: "current-rest-map",
-      fallbackSlerp: 0.35,
       imageLandmarks: "image-landmarks",
       instructorSquatPresentationDepth: 0.1,
       lastGoodQuaternionRef: {
@@ -104,7 +102,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       targetSolverLandmarks: "target-solver-landmarks",
       torsoTrackingReady: true,
       vrm: "vrm",
-      zScale: 1,
     } as never);
 
     expect(resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
@@ -119,7 +116,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
     expect(applyMovementAvatarLowerBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       currentFeetOwner: "neutral",
       currentLowerBodyOwner: "neutral",
-      lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
       retargetFrameRuntimeAdapters,
       solvedLowerBodySources: {},
     }));

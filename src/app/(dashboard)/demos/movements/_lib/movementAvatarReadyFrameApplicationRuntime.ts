@@ -131,7 +131,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     hipsFrameRuntime: { hipsApplication, hipsPositionOptions },
     stepResponse,
   } = locomotionFrameOrchestrationRuntime;
-  const { fallbackSlerp, hipsNode } = scenePreparationRuntime;
+  const { hipsNode } = scenePreparationRuntime;
 
   const bodyFrameOrchestrationRuntime = applyMovementAvatarBodyFrameOrchestrationRuntime({
     activeSpineDrive,
@@ -141,7 +141,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     balancedPlantedSquatDepth,
     boneEaseOptions,
     currentRestMap: retargetAvatarRestRef.current,
-    fallbackSlerp,
     imageLandmarks,
     instructorSquatPresentationDepth,
     lastGoodQuaternionRef,
@@ -169,7 +168,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     targetSolverLandmarks,
     torsoTrackingReady,
     vrm,
-    zScale: frameWorldRuntime.lowerBodyZScale,
   });
   const {
     footOwner,

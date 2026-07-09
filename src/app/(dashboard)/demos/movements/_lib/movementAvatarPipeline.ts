@@ -10,7 +10,6 @@ export {
   resolveMovementAvatarBoneEaseOptions,
   resolveMovementAvatarHipsApplication,
   resolveMovementAvatarHipsPositionOptions,
-  resolveMovementAvatarLegacyLowerBodyAimOptions,
   resolveMovementAvatarPlantedSquatIkOptions,
 } from "./movementAvatarApplicationOptions";
 export {
@@ -49,7 +48,6 @@ export type {
   MovementAvatarTrackingFallbackLabelsDecision,
 } from "./movementAvatarTrackingFallbackLabels";
 export {
-  resolveMovementAvatarLegacyLowerBodyAimPose,
   resolveMovementAvatarLowerBodyNeutralPose,
   resolveMovementAvatarPlantedSquatIkPose,
   resolveMovementAvatarSingleLegRaisePose,

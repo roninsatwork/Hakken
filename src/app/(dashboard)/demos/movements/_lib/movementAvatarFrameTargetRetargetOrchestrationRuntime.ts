@@ -22,7 +22,6 @@ import type {
 
 export type MovementAvatarFrameTargetRetargetOrchestrationRuntime = {
   frameTargetRuntime: MovementAvatarFrameTargetRuntimeDecision;
-  lowerBodyAimTargets: MovementAvatarFrameTargetRuntimeDecision["lowerBodyTargetComposition"]["aimTargets"];
   retargetFrameRuntimeAdapters: MovementAvatarRetargetFrameRuntimeAdapters;
 };
 
@@ -75,7 +74,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
 
   return {
     frameTargetRuntime,
-    lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
     retargetFrameRuntimeAdapters: createMovementAvatarRetargetFrameRuntimeAdapters({
       avatarRole,
       avatarRoot,

@@ -4,7 +4,7 @@ import {
   type MovementAvatarLowerBodyFrameRuntimeResult,
 } from "./movementAvatarLowerBodyFrameRuntime";
 import { createMovementAvatarLowerBodyFrameCallbacksRuntime } from "./movementAvatarLowerBodyFrameCallbacksRuntime";
-import { resolveMovementAvatarLegacyLowerBodyAimOptions } from "./movementAvatarPipeline";
+import type { MovementAvatarTrackingProfile } from "./movementTrackingCalibration";
 import type { MovementAvatarRetargetFrameRuntimeAdapters } from "./movementAvatarRetargetFrameRuntime";
 import type { MovementAvatarRetargetRestMap } from "./movementAvatarRestPose";
 
@@ -33,13 +33,11 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
   MovementAvatarLowerBodyFrameRuntimeInput,
   | "applyPlantedSquatIk"
   | "applyRetargetMappings"
-  | "getLastGoodQuaternion"
-  | "lowerBodyAimOptions"
   | "storeLastGoodQuaternion"
   | "updateWorldMatrix"
 > & {
   lastGoodQuaternionRef: MovementAvatarMutableRef<Record<string, THREE.Quaternion>>;
-  profile: Parameters<typeof resolveMovementAvatarLegacyLowerBodyAimOptions>[0]["profile"];
+  profile: MovementAvatarTrackingProfile | undefined;
   retargetAvatarRestRef: MovementAvatarMutableRef<MovementAvatarRetargetRestMap>;
   retargetFrameRuntimeAdapters: MovementAvatarRetargetFrameRuntimeAdapters;
   scene: Pick<THREE.Object3D, "updateMatrixWorld">;
@@ -52,13 +50,8 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
     ...input,
     applyPlantedSquatIk: retargetFrameRuntimeAdapters.applyPlantedSquatIk,
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
-    getLastGoodQuaternion: lowerBodyFrameCallbacks.getLastGoodQuaternion,
     kneeRaiseLowerLegBoost: profile?.kneeRaiseLowerLegBoost,
     kneeRaiseUpperLegBoost: profile?.kneeRaiseUpperLegBoost,
-    lowerBodyAimOptions: resolveMovementAvatarLegacyLowerBodyAimOptions({
-      avatarRole: input.avatarRole,
-      profile,
-    }),
     storeLastGoodQuaternion: lowerBodyFrameCallbacks.storeLastGoodQuaternion,
     updateWorldMatrix: lowerBodyFrameCallbacks.updateWorldMatrix,
   });

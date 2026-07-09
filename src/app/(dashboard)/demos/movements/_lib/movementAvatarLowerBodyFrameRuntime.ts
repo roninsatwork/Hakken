@@ -6,12 +6,10 @@ import type {
 } from "./movementAvatarPipeline";
 import { applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones } from "./movementAvatarInactiveLowerBodyRuntime";
 import {
-  applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones,
   applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones,
   applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones,
   applyMovementAvatarLowerBodyRetargetSegmentCounts,
   resolveMovementAvatarLowerBodyApplicationPlan,
-  resolveMovementAvatarLowerBodyRetargetAimRequests,
   resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
   type MovementAvatarLegacyLowerBodyAimTargets,
   type MovementAvatarLowerBodyRetargetSegmentCounts,
@@ -41,14 +39,10 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   boneEaseOptions,
   currentFeetOwner,
   currentLowerBodyOwner,
-  fallbackSlerp,
-  getLastGoodQuaternion,
   instructorSquatPresentationDepth,
   kneeRaiseLowerLegBoost,
   kneeRaiseUpperLegBoost,
   lookupBone,
-  lowerBodyAimOptions,
-  lowerBodyAimTargets,
   lowerBodyDrive,
   lowerBodySegmentMotion,
   lowerBodyTarget,
@@ -62,9 +56,7 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   solvedLowerBodySources,
   squatFlexionBendBoost,
   storeLastGoodQuaternion,
-  targetSolverLandmarks,
   updateWorldMatrix,
-  zScale,
 }: {
   applyPlantedSquatIk: (depth: number) => number;
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => MovementAvatarLowerBodyRetargetSegmentCounts;
@@ -76,14 +68,10 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   >;
   currentFeetOwner: string;
   currentLowerBodyOwner: string;
-  fallbackSlerp: number;
-  getLastGoodQuaternion?: (boneName: string) => THREE.Quaternion | null | undefined;
   instructorSquatPresentationDepth: number;
   kneeRaiseLowerLegBoost?: number;
   kneeRaiseUpperLegBoost?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
-  lowerBodyAimOptions: MovementAvatarLegacyLowerBodyAimOptionsDecision;
-  lowerBodyAimTargets: MovementAvatarLegacyLowerBodyAimTargets;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   lowerBodySegmentMotion: number;
   lowerBodyTarget: MovementAvatarLowerBodyTargetDecision;
@@ -97,9 +85,7 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   solvedLowerBodySources: MovementAvatarLowerBodyRigRotationSources;
   squatFlexionBendBoost?: number;
   storeLastGoodQuaternion?: (boneName: string, quaternion: THREE.Quaternion) => void;
-  targetSolverLandmarks: Array<{ x: number; y: number; z: number; visibility: number } | null | undefined>;
   updateWorldMatrix: () => void;
-  zScale: number;
 }): MovementAvatarLowerBodyFrameRuntimeResult {
   let footOwner = currentFeetOwner;
   let lowerBodyOwner = currentLowerBodyOwner;
@@ -175,19 +161,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         lowerBodyOwner = `player-${retargetApplicationPlan.legRaiseOverlay.side}-leg-raise`;
       }
 
-      applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones({
-        fallbackSlerp,
-        getLastGoodQuaternion,
-        lookupBone,
-        requests: resolveMovementAvatarLowerBodyRetargetAimRequests({
-          options: lowerBodyAimOptions,
-          retargetApplicationPlan,
-          targets: lowerBodyAimTargets,
-          targetSolverLandmarks,
-        }),
-        storeLastGoodQuaternion,
-        zScale,
-      });
       footOwner = retargetDecisionApplication.feetOwner;
 
       const retargetPostPlanApplication = applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones({

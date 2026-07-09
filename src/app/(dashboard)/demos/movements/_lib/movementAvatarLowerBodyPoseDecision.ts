@@ -79,52 +79,6 @@ export function resolveMovementAvatarSolvedLowerBodyPose({
   ];
 }
 
-export function resolveMovementAvatarLegacyLowerBodyAimPose(): MovementAvatarLegacyLowerBodyAimSpec[] {
-  return [
-    {
-      bone: "rightUpperLeg",
-      child: "rightLowerLeg",
-      options: "leg",
-      source: { index: 24, type: "landmark" },
-      target: "rightKnee",
-    },
-    {
-      bone: "rightLowerLeg",
-      child: "rightFoot",
-      options: "leg",
-      source: { target: "rightKnee", type: "target" },
-      target: "rightAnkle",
-    },
-    {
-      bone: "leftUpperLeg",
-      child: "leftLowerLeg",
-      options: "leg",
-      source: { index: 23, type: "landmark" },
-      target: "leftKnee",
-    },
-    {
-      bone: "leftLowerLeg",
-      child: "leftFoot",
-      options: "leg",
-      source: { target: "leftKnee", type: "target" },
-      target: "leftAnkle",
-    },
-    {
-      bone: "rightFoot",
-      child: "rightToes",
-      options: "foot",
-      source: { index: 30, type: "landmark" },
-      target: "rightToe",
-    },
-    {
-      bone: "leftFoot",
-      child: "leftToes",
-      options: "foot",
-      source: { index: 29, type: "landmark" },
-      target: "leftToe",
-    },
-  ];
-}
 
 export function resolveMovementAvatarSquatFlexionPose({
   bendBoost = 0.32,

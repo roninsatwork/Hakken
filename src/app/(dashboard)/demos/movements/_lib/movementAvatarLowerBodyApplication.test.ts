@@ -5,8 +5,6 @@ import {
   applyMovementAvatarInstructorFootPlantRequestsToVrmBones,
   applyMovementAvatarInstructorFootPlantPose,
   applyMovementAvatarInstructorFootPlantPoseToVrmBones,
-  applyMovementAvatarLegacyLowerBodyAimRequests,
-  applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones,
   applyMovementAvatarLowerBodyNeutralPoseApplication,
   applyMovementAvatarLowerBodyNeutralPoseApplicationToVrmBones,
   applyMovementAvatarLowerBodyNonRetargetApplicationPlan,
@@ -26,9 +24,7 @@ import {
   applyMovementAvatarSquatFlexionPoseApplicationToVrmBones,
   applyMovementAvatarSupportPresentationRotationSpecs,
   applyMovementAvatarSupportPresentationRotationSpecsToVrmBones,
-  resolveMovementAvatarLegacyLowerBodyAimRequests,
   resolveMovementAvatarLowerBodyApplicationPlan,
-  resolveMovementAvatarLowerBodyRetargetAimRequests,
   resolveMovementAvatarLowerBodyRetargetApplicationPlan,
   resolveMovementAvatarLowerBodyRetargetDecisionApplication,
   resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
@@ -380,187 +376,9 @@ describe("movement avatar lower-body application plan", () => {
 });
 
 describe("movement avatar legacy lower-body aim requests", () => {
-  it("resolves landmark and target sources into concrete aim requests", () => {
-    const targetSolverLandmarks = Array.from({ length: 33 }, (_, index) => landmark(index));
-    const targets = {
-      leftAnkle: landmark(129),
-      leftKnee: landmark(123),
-      leftToe: landmark(131),
-      rightAnkle: landmark(130),
-      rightKnee: landmark(124),
-      rightToe: landmark(132),
-    };
-    const legOptions = {
-      minVectorLengthSq: 0.01,
-      slerpOverride: 0.3,
-      visibilityThreshold: 0.2,
-    };
-    const footOptions = {
-      minVectorLengthSq: 0.02,
-      slerpOverride: 0.2,
-      visibilityThreshold: 0.3,
-    };
 
-    const requests = resolveMovementAvatarLegacyLowerBodyAimRequests({
-      options: {
-        foot: footOptions,
-        leg: legOptions,
-      },
-      targets,
-      targetSolverLandmarks,
-    });
 
-    expect(requests).toHaveLength(6);
-    expect(requests[0]).toMatchObject({
-      bone: "rightUpperLeg",
-      child: "rightLowerLeg",
-      options: legOptions,
-      source: targetSolverLandmarks[24],
-      target: targets.rightKnee,
-    });
-    expect(requests[1]).toMatchObject({
-      bone: "rightLowerLeg",
-      child: "rightFoot",
-      options: legOptions,
-      source: targets.rightKnee,
-      target: targets.rightAnkle,
-    });
-    expect(requests[4]).toMatchObject({
-      bone: "rightFoot",
-      child: "rightToes",
-      options: footOptions,
-      source: targetSolverLandmarks[30],
-      target: targets.rightToe,
-    });
-  });
 
-  it("only returns legacy aim requests when the retarget plan asks for fallback aim", () => {
-    const targetSolverLandmarks = Array.from({ length: 33 }, (_, index) => landmark(index));
-    const targets = {
-      leftAnkle: landmark(129),
-      leftKnee: landmark(123),
-      leftToe: landmark(131),
-      rightAnkle: landmark(130),
-      rightKnee: landmark(124),
-      rightToe: landmark(132),
-    };
-    const options = {
-      foot: {
-        minVectorLengthSq: 0.02,
-        slerpOverride: 0.2,
-        visibilityThreshold: 0.3,
-      },
-      leg: {
-        minVectorLengthSq: 0.01,
-        slerpOverride: 0.3,
-        visibilityThreshold: 0.2,
-      },
-    };
-
-    expect(resolveMovementAvatarLowerBodyRetargetAimRequests({
-      options,
-      retargetApplicationPlan: { shouldApplyLegacyAim: false },
-      targets,
-      targetSolverLandmarks,
-    })).toEqual([]);
-
-    expect(resolveMovementAvatarLowerBodyRetargetAimRequests({
-      options,
-      retargetApplicationPlan: { shouldApplyLegacyAim: true },
-      targets,
-      targetSolverLandmarks,
-    })).toHaveLength(6);
-  });
-
-  it("executes legacy aim requests through the supplied renderer callback", () => {
-    const requests = [
-      {
-        bone: "rightUpperLeg",
-        child: "rightLowerLeg",
-        options: {
-          minVectorLengthSq: 0.01,
-          slerpOverride: 0.3,
-          visibilityThreshold: 0.2,
-        },
-        source: landmark(24),
-        target: landmark(124),
-      },
-      {
-        bone: "rightLowerLeg",
-        child: "rightFoot",
-        options: {
-          minVectorLengthSq: 0.01,
-          slerpOverride: 0.3,
-          visibilityThreshold: 0.2,
-        },
-        source: landmark(124),
-        target: landmark(130),
-      },
-    ] as const;
-    const appliedBones: string[] = [];
-
-    const result = applyMovementAvatarLegacyLowerBodyAimRequests({
-      apply: (request) => {
-        appliedBones.push(request.bone);
-      },
-      requests: [...requests],
-    });
-
-    expect(result.applied).toBe(2);
-    expect(appliedBones).toEqual(["rightUpperLeg", "rightLowerLeg"]);
-  });
-
-  it("applies legacy aim requests directly to VRM bones", () => {
-    const parent = new THREE.Object3D();
-    const rightUpperLeg = new THREE.Object3D();
-    const rightLowerLeg = new THREE.Object3D();
-    parent.add(rightUpperLeg);
-    rightUpperLeg.add(rightLowerLeg);
-    rightLowerLeg.position.set(0, -1, 0);
-    parent.updateMatrixWorld(true);
-    const stored: string[] = [];
-
-    const result = applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones({
-      fallbackSlerp: 1,
-      lookupBone: (bone) => {
-        if (bone === "rightUpperLeg") return rightUpperLeg;
-        if (bone === "rightLowerLeg") return rightLowerLeg;
-        return null;
-      },
-      requests: [
-        {
-          bone: "rightUpperLeg",
-          child: "rightLowerLeg",
-          options: {
-            minVectorLengthSq: 0.01,
-            slerpOverride: 1,
-            visibilityThreshold: 0.2,
-          },
-          source: landmark(24),
-          target: landmark(124),
-        },
-        {
-          bone: "leftUpperLeg",
-          child: "leftLowerLeg",
-          options: {
-            minVectorLengthSq: 0.01,
-            slerpOverride: 1,
-            visibilityThreshold: 0.2,
-          },
-          source: landmark(23),
-          target: landmark(123),
-        },
-      ],
-      storeLastGoodQuaternion: (bone) => {
-        stored.push(bone);
-      },
-      zScale: 0.1,
-    });
-
-    expect(result.applied).toBe(1);
-    expect(stored).toEqual(["rightUpperLeg"]);
-    expect(rightUpperLeg.quaternion.w).toBeLessThan(1);
-  });
 
   it("executes retarget post-plan lower-body overlays in shared order", () => {
     const events: string[] = [];
