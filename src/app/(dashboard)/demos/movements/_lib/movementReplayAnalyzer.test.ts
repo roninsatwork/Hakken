@@ -8,7 +8,11 @@ import {
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import { buildMovementReplaySessionFromRecording } from "./movementRecordingReplay";
 import { resolveMovementGameplayEventFrameSummary } from "./movementGameplayEvents";
-import { analyzeMovementDebugReplaySession } from "./movementReplayAnalyzer";
+import {
+  analyzeMovementDebugReplaySession,
+  getLivePlayerPathFailures,
+} from "./movementReplayAnalyzer";
+import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import {
   buildMovementRecordedProofManifest,
   movementRecordedProofDecisionReviewContextForRow,
@@ -2261,5 +2265,88 @@ describe("movement replay analyzer", () => {
     expect(gate.blockingRowsByProofCase).toEqual(manifest.summary.blockingRowsByProofCase);
     expect(gate.blockingRowsByStatus).toEqual(manifest.summary.blockingRowsByStatus);
     expect(gate.summary).toContain("Recorded proof manifest gate blocked");
+  });
+});
+
+describe("getLivePlayerPathFailures", () => {
+  const uprightPose = () => {
+    const pose = Array.from({ length: 33 }, (_, index) => ({
+      x: 0.45 + index * 0.002,
+      y: 0.45,
+      z: 0,
+      visibility: 0.9,
+    }));
+    pose[11] = { x: 0.38, y: 0.44, z: 0, visibility: 0.9 };
+    pose[12] = { x: 0.62, y: 0.44, z: 0, visibility: 0.9 };
+    pose[13] = { x: 0.34, y: 0.56, z: 0, visibility: 0.9 };
+    pose[14] = { x: 0.66, y: 0.56, z: 0, visibility: 0.9 };
+    pose[15] = { x: 0.32, y: 0.68, z: 0, visibility: 0.9 };
+    pose[16] = { x: 0.68, y: 0.68, z: 0, visibility: 0.9 };
+    pose[23] = { x: 0.42, y: 0.68, z: 0, visibility: 0.9 };
+    pose[24] = { x: 0.58, y: 0.68, z: 0, visibility: 0.9 };
+    pose[25] = { x: 0.44, y: 0.82, z: 0, visibility: 0.85 };
+    pose[26] = { x: 0.56, y: 0.82, z: 0, visibility: 0.85 };
+    pose[27] = { x: 0.44, y: 0.94, z: 0, visibility: 0.8 };
+    pose[28] = { x: 0.56, y: 0.94, z: 0, visibility: 0.8 };
+    pose[31] = { x: 0.43, y: 0.97, z: 0, visibility: 0.8 };
+    pose[32] = { x: 0.57, y: 0.97, z: 0, visibility: 0.8 };
+    return pose;
+  };
+
+  it("passes a healthy session: arms solve without calibration and the vertical reference exists", () => {
+    const pose = uprightPose();
+    const model = buildMovementRetargetSourceModel({ poseLandmarks: pose });
+    expect(model).not.toBeNull();
+
+    const failures = getLivePlayerPathFailures({
+      retargetSourceModel: model,
+      session: session([frame({ tracking: { pose, worldPose: [] } })]),
+    });
+
+    expect(failures).toEqual([]);
+  });
+
+  it("flags frames whose visible arms cannot solve segments without calibration", () => {
+    // Degenerate pose: arm landmarks visible but coincident, so segments
+    // cannot solve — the live player's arms would freeze in hold-last-good.
+    const pose = uprightPose();
+    [11, 12, 13, 14, 15, 16].forEach((index) => {
+      pose[index] = { x: 0.5, y: 0.5, z: 0, visibility: 0.9 };
+    });
+
+    const failures = getLivePlayerPathFailures({
+      retargetSourceModel: null,
+      session: session([frame({ tracking: { pose, worldPose: [] } })]),
+    });
+
+    expect(failures).toMatchObject([
+      { code: "uncalibrated_arms_would_freeze", severity: "error" },
+    ]);
+  });
+
+  it("flags a calibrated session whose spine has no vertical reference", () => {
+    // World-space model + image-only frames: the space mismatch strips the
+    // neutral spine direction, so the spine cannot apply or tilt-correct.
+    const pose = uprightPose();
+    const worldPose = Array.from({ length: 33 }, (_, index) => ({
+      x: (pose[index]!.x - 0.5) * 1.2,
+      y: (pose[index]!.y - 0.68) * 1.6,
+      z: 0,
+      visibility: 0.9,
+    }));
+    const worldModel = buildMovementRetargetSourceModel({
+      poseLandmarks: pose,
+      worldPoseLandmarks: worldPose,
+    });
+    expect(worldModel?.space).toBe("world");
+
+    const failures = getLivePlayerPathFailures({
+      retargetSourceModel: worldModel,
+      session: session([frame({ tracking: { pose, worldPose: [] } })]),
+    });
+
+    expect(failures).toMatchObject([
+      { code: "spine_vertical_reference_missing", severity: "error" },
+    ]);
   });
 });

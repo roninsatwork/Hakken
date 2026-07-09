@@ -46,6 +46,10 @@ import {
 } from "./movementAvatarPipeline";
 import { resolveMovementAvatarHeadTarget } from "./movementAvatarHeadTarget";
 import {
+  solveMovementRetargetFrame,
+  type MovementRetargetSourceModel,
+} from "./movementRetargeting";
+import {
   resolveMovementRootMotionJumpResponse,
   resolveMovementRootMotionStepResponse,
   type MovementRootMotionFrame,
@@ -96,6 +100,8 @@ export type MovementReplayFailureCode =
   | "squat_hold_too_sticky"
   | "squat_not_detected"
   | "stand_recovery_missing"
+  | "spine_vertical_reference_missing"
+  | "uncalibrated_arms_would_freeze"
   | "visual_match_low"
   | "world_landmarks_missing";
 
@@ -1748,6 +1754,91 @@ function getRootMotionFailures({
   return failures;
 }
 
+const LIVE_PLAYER_PROBE_FRAME_STRIDE = 10;
+const LIVE_PLAYER_PROBE_ARM_VISIBILITY = 0.5;
+
+/**
+ * Probes the live-player failure modes the lab cannot see from calibrated
+ * replay decisions alone: a live webcam session has no retarget source model
+ * until calibration succeeds, and its world landmarks follow the camera axes.
+ * These checks run the same frames the way the live path would see them.
+ */
+export function getLivePlayerPathFailures({
+  retargetSourceModel,
+  session,
+}: {
+  retargetSourceModel: MovementRetargetSourceModel | null;
+  session: MovementDebugReplaySession;
+}): MovementReplayFailure[] {
+  const failures: MovementReplayFailure[] = [];
+  let armVisibleSamples = 0;
+  let armFrozenSamples = 0;
+  let firstFrozenFrameIndex: number | undefined;
+  let verticalReferenceSamples = 0;
+  let verticalReferenceMissing = 0;
+  let firstMissingReferenceFrameIndex: number | undefined;
+
+  session.samples.forEach((sample, frameIndex) => {
+    if (frameIndex % LIVE_PLAYER_PROBE_FRAME_STRIDE !== 0) return;
+    const pose = sample.tracking.pose;
+    if (pose.length < 33) return;
+
+    const worldPose = sample.tracking.worldPose.length >= 33 ? sample.tracking.worldPose : null;
+    const armLandmarksVisible = [11, 12, 13, 14].every(
+      (index) => (pose[index]?.visibility ?? 0) >= LIVE_PLAYER_PROBE_ARM_VISIBILITY,
+    );
+
+    if (armLandmarksVisible) {
+      armVisibleSamples += 1;
+      const uncalibratedFrame = solveMovementRetargetFrame({
+        calibration: null,
+        poseLandmarks: pose,
+        worldPoseLandmarks: worldPose,
+      });
+      const solvedArmSegments = (["leftUpperArm", "leftLowerArm", "rightUpperArm", "rightLowerArm"] as const)
+        .filter((name) => (uncalibratedFrame.segments[name]?.confidence ?? 0) >= 0.3)
+        .length;
+      if (solvedArmSegments < 2) {
+        armFrozenSamples += 1;
+        firstFrozenFrameIndex ??= frameIndex;
+      }
+    }
+
+    if (retargetSourceModel) {
+      verticalReferenceSamples += 1;
+      const calibratedFrame = solveMovementRetargetFrame({
+        calibration: retargetSourceModel,
+        poseLandmarks: pose,
+        worldPoseLandmarks: worldPose,
+      });
+      if (!calibratedFrame.neutralSpineDirection) {
+        verticalReferenceMissing += 1;
+        firstMissingReferenceFrameIndex ??= frameIndex;
+      }
+    }
+  });
+
+  if (armVisibleSamples > 0 && armFrozenSamples > 0) {
+    failures.push({
+      code: "uncalibrated_arms_would_freeze",
+      detail: `${armFrozenSamples}/${armVisibleSamples} sampled frames with visible arms solve fewer than 2 arm segments without a calibration model; live arms would freeze in hold-last-good.`,
+      frameIndex: firstFrozenFrameIndex,
+      severity: "error",
+    });
+  }
+
+  if (verticalReferenceSamples > 0 && verticalReferenceMissing > 0) {
+    failures.push({
+      code: "spine_vertical_reference_missing",
+      detail: `${verticalReferenceMissing}/${verticalReferenceSamples} sampled frames lack a neutral spine direction despite a calibration model; the spine segment cannot apply or tilt-correct.`,
+      frameIndex: firstMissingReferenceFrameIndex,
+      severity: "error",
+    });
+  }
+
+  return failures;
+}
+
 export function analyzeMovementDebugReplaySession(
   session: MovementDebugReplaySession,
   options: MovementReplayAnalyzerOptions = {},
@@ -1929,6 +2020,10 @@ export function analyzeMovementDebugReplaySession(
 
   getRootMotionFailures({
     rootMotionFrames: rootMotionAnalysis.frames,
+    session,
+  }).forEach((failure) => pushFailure(failures, failure));
+  getLivePlayerPathFailures({
+    retargetSourceModel: gamePathSimulation.retargetSourceModel,
     session,
   }).forEach((failure) => pushFailure(failures, failure));
   getHeadRootFailures(headFrames).forEach((failure) => pushFailure(failures, failure));
