@@ -25,6 +25,14 @@ export type MovementRetargetSegment = {
   length: number;
 };
 
+/**
+ * Space the segment directions live in.
+ * - "image": normalized screen landmarks; z is MediaPipe's relative image depth and
+ *   must be damped with a small zScale before touching avatar bones.
+ * - "world": MediaPipe metric world landmarks; z is real depth and applies at scale 1.
+ */
+export type MovementRetargetSpace = "image" | "world";
+
 export type MovementRetargetSourceModel = {
   calibratedAt: number;
   floorY: number;
@@ -34,9 +42,12 @@ export type MovementRetargetSourceModel = {
     right: number;
   };
   shoulderCenter: MovementRetargetVector;
+  /** Space of `segments` directions. Absent means "image" (pre-world-landmark data). */
+  space?: MovementRetargetSpace;
   torsoHeight: number;
   quality: number;
   segments: Partial<Record<MovementRetargetSegmentName, MovementRetargetSegment>>;
+  worldTorsoHeight?: number;
 };
 
 export type MovementRetargetFrame = {
@@ -55,6 +66,8 @@ export type MovementRetargetFrame = {
     right: number;
   };
   segments: Partial<Record<MovementRetargetSegmentName, MovementRetargetSegment>>;
+  /** Space of `segments` directions. Absent means "image" (pre-world-landmark data). */
+  space?: MovementRetargetSpace;
   squatDepth: number;
 };
 
@@ -118,11 +131,14 @@ function getSegment(
   poseLandmarks: TrackingLandmark[],
   name: MovementRetargetSegmentName,
   scale: number,
+  directionLandmarks: TrackingLandmark[] = poseLandmarks,
 ): MovementRetargetSegment | null {
   const [startIndex, endIndex] = SEGMENT_LANDMARKS[name];
-  const start = poseLandmarks[startIndex];
-  const end = poseLandmarks[endIndex];
-  if (!start || !end) return null;
+  const start = directionLandmarks[startIndex];
+  const end = directionLandmarks[endIndex];
+  const confidenceStart = poseLandmarks[startIndex];
+  const confidenceEnd = poseLandmarks[endIndex];
+  if (!start || !end || !confidenceStart || !confidenceEnd) return null;
 
   const rawVector = {
     x: end.x - start.x,
@@ -134,7 +150,7 @@ function getSegment(
   if (length <= 0.00001) return null;
 
   return {
-    confidence: Math.min(visibility(start), visibility(end)),
+    confidence: Math.min(visibility(confidenceStart), visibility(confidenceEnd)),
     direction: normalizeVector(rawVector),
     length,
   };
@@ -218,12 +234,30 @@ function getFloorRelativeHipDrop({
   return Math.min(floorDistanceDrop, bodyRatioDrop);
 }
 
-function buildSegments(poseLandmarks: TrackingLandmark[], scale: number) {
+function buildSegments(
+  poseLandmarks: TrackingLandmark[],
+  scale: number,
+  directionLandmarks: TrackingLandmark[] = poseLandmarks,
+) {
   return SEGMENT_NAMES.reduce<MovementRetargetSourceModel["segments"]>((segments, name) => {
-    const segment = getSegment(poseLandmarks, name, scale);
+    const segment = getSegment(poseLandmarks, name, scale, directionLandmarks);
     if (segment) segments[name] = segment;
     return segments;
   }, {});
+}
+
+const MIN_WORLD_TORSO_HEIGHT = 0.05;
+
+function getUsableWorldPose(worldPoseLandmarks?: TrackingLandmark[] | null) {
+  if (!worldPoseLandmarks || worldPoseLandmarks.length < 33) return null;
+
+  const centers = getCenters(worldPoseLandmarks);
+  if (!centers || centers.torsoHeight < MIN_WORLD_TORSO_HEIGHT) return null;
+
+  return {
+    torsoHeight: centers.torsoHeight,
+    worldPoseLandmarks,
+  };
 }
 
 function average(values: number[]) {
@@ -270,10 +304,14 @@ function getRawKneeLift({
 function getLowerBodySegmentMotionDepth({
   calibration,
   segments,
+  segmentsSpace = "image",
 }: {
   calibration: MovementRetargetSourceModel;
   segments: MovementRetargetFrame["segments"];
+  segmentsSpace?: MovementRetargetSpace;
 }) {
+  if ((calibration.space ?? "image") !== segmentsSpace) return 0;
+
   return LOWER_BODY_MOTION_SEGMENTS.reduce((maxMotion, name) => {
     const neutralSegment = calibration.segments[name];
     const frameSegment = segments[name];
@@ -290,9 +328,11 @@ function getLowerBodySegmentMotionDepth({
 export function buildMovementRetargetSourceModel({
   now = Date.now(),
   poseLandmarks,
+  worldPoseLandmarks,
 }: {
   now?: number;
   poseLandmarks: TrackingLandmark[];
+  worldPoseLandmarks?: TrackingLandmark[] | null;
 }): MovementRetargetSourceModel | null {
   const centers = getCenters(poseLandmarks);
   if (!centers || centers.torsoHeight < 0.08) return null;
@@ -304,6 +344,8 @@ export function buildMovementRetargetSourceModel({
 
   if (quality < 0.55) return null;
   if (uprightRatio < 0.78) return null;
+
+  const usableWorldPose = getUsableWorldPose(worldPoseLandmarks);
 
   return {
     calibratedAt: now,
@@ -322,16 +364,23 @@ export function buildMovementRetargetSourceModel({
       }),
     },
     quality,
-    segments: buildSegments(poseLandmarks, centers.torsoHeight),
+    segments: usableWorldPose
+      ? buildSegments(poseLandmarks, usableWorldPose.torsoHeight, usableWorldPose.worldPoseLandmarks)
+      : buildSegments(poseLandmarks, centers.torsoHeight),
     shoulderCenter: centers.shoulderCenter,
+    space: usableWorldPose ? "world" : "image",
     torsoHeight: centers.torsoHeight,
+    worldTorsoHeight: usableWorldPose?.torsoHeight,
   };
 }
 
 export function averageMovementRetargetSourceModels(
-  models: MovementRetargetSourceModel[],
+  inputModels: MovementRetargetSourceModel[],
 ): MovementRetargetSourceModel | null {
-  if (models.length === 0) return null;
+  if (inputModels.length === 0) return null;
+
+  const space = inputModels[0].space ?? "image";
+  const models = inputModels.filter((model) => (model.space ?? "image") === space);
 
   const averagedSegments = SEGMENT_NAMES.reduce<MovementRetargetSourceModel["segments"]>(
     (segments, name) => {
@@ -347,6 +396,10 @@ export function averageMovementRetargetSourceModels(
     {},
   );
 
+  const worldTorsoHeights = models
+    .map((model) => model.worldTorsoHeight)
+    .filter((value): value is number => typeof value === "number");
+
   return {
     calibratedAt: models[models.length - 1]?.calibratedAt ?? Date.now(),
     floorY: average(models.map((model) => model.floorY)),
@@ -358,16 +411,20 @@ export function averageMovementRetargetSourceModels(
     quality: average(models.map((model) => model.quality)),
     segments: averagedSegments,
     shoulderCenter: averageVector(models.map((model) => model.shoulderCenter)),
+    space,
     torsoHeight: average(models.map((model) => model.torsoHeight)),
+    worldTorsoHeight: worldTorsoHeights.length > 0 ? average(worldTorsoHeights) : undefined,
   };
 }
 
 export function solveMovementRetargetFrame({
   calibration,
   poseLandmarks,
+  worldPoseLandmarks,
 }: {
   calibration: MovementRetargetSourceModel | null | undefined;
   poseLandmarks: TrackingLandmark[];
+  worldPoseLandmarks?: TrackingLandmark[] | null;
 }): MovementRetargetFrame {
   const fallback: MovementRetargetFrame = {
     contacts: {
@@ -385,14 +442,25 @@ export function solveMovementRetargetFrame({
       right: 0,
     },
     segments: {},
+    space: "image",
     squatDepth: 0,
   };
 
   const centers = getCenters(poseLandmarks);
   if (!calibration || !centers) return fallback;
 
+  const usableWorldPose = (calibration.space ?? "image") === "world"
+    ? getUsableWorldPose(worldPoseLandmarks)
+    : null;
+  const segmentSpace: MovementRetargetSpace = usableWorldPose ? "world" : "image";
   const sourceQuality = getBodyQuality(poseLandmarks);
-  const segments = buildSegments(poseLandmarks, calibration.torsoHeight);
+  const segments = usableWorldPose
+    ? buildSegments(
+        poseLandmarks,
+        calibration.worldTorsoHeight ?? usableWorldPose.torsoHeight,
+        usableWorldPose.worldPoseLandmarks,
+      )
+    : buildSegments(poseLandmarks, calibration.torsoHeight);
   const solvedSegments = SEGMENT_NAMES.filter((name) => (segments[name]?.confidence ?? 0) >= 0.3);
   const heldSegments = SEGMENT_NAMES.filter((name) => !solvedSegments.includes(name));
   const hipConfidence = averageVisibility(poseLandmarks, [23, 24]);
@@ -431,6 +499,7 @@ export function solveMovementRetargetFrame({
   const lowerBodySegmentMotionDepth = getLowerBodySegmentMotionDepth({
     calibration,
     segments,
+    segmentsSpace: segmentSpace,
   });
   const symmetricKneeLift = Math.abs(leftKneeLift - rightKneeLift) < 0.16
     ? Math.min(leftKneeLift, rightKneeLift)
@@ -478,8 +547,20 @@ export function solveMovementRetargetFrame({
       right: rightKneeLift,
     },
     segments,
+    space: segmentSpace,
     squatDepth,
   };
+}
+
+/**
+ * zScale to convert this frame's segment directions into avatar world space.
+ * World-space directions carry real metric depth; image-space z must stay damped.
+ */
+export function getMovementRetargetSegmentZScale(
+  frame: Pick<MovementRetargetFrame, "space">,
+  imageZScale: number,
+) {
+  return (frame.space ?? "image") === "world" ? 1 : imageZScale;
 }
 
 export function getBalancedPlantedSquatDepth(frame: MovementRetargetFrame) {
@@ -515,5 +596,6 @@ export function getRecordedLowerBodySegmentMotionDepth({
   return getLowerBodySegmentMotionDepth({
     calibration,
     segments: frame.segments,
+    segmentsSpace: frame.space ?? "image",
   });
 }

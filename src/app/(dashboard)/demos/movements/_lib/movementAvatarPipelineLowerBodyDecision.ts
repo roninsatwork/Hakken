@@ -46,6 +46,7 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   retargetSourceModel,
   shouldHoldPlayerSquatPose,
   torsoTrackingReady,
+  worldPoseLandmarks,
 }: {
   bodyConfidence: MovementAvatarPipelineDecision["bodyConfidence"];
   calibration: MovementAvatarPipelineInput["calibration"];
@@ -54,6 +55,7 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   retargetSourceModel: MovementAvatarPipelineInput["retargetSourceModel"];
   shouldHoldPlayerSquatPose: boolean;
   torsoTrackingReady: boolean;
+  worldPoseLandmarks?: MovementAvatarPipelineInput["source"]["worldPoseLandmarks"];
 }): MovementAvatarPipelineLowerBodyDecision {
   const lowerBodyIntent = getMovementLowerBodyIntent({
     calibration,
@@ -62,6 +64,7 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   const retargetFrame = solveMovementRetargetFrame({
     calibration: retargetSourceModel,
     poseLandmarks,
+    worldPoseLandmarks,
   });
   const lowerBodySourceBounds = getMovementAvatarLowerBodySourceBounds(poseLandmarks);
   const rawLowerBodyTrackingReady = isMovementAvatarLowerBodyTrackingReady({

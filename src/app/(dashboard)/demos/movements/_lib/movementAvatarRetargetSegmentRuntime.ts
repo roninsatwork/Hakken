@@ -23,7 +23,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   avatarRole,
   canApply = true,
   currentRestMap,
-  hasWorldLandmarks,
   instructorSquatPresentationDepth,
   lookupBone,
   lowerBodySegmentMotion,
@@ -37,7 +36,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   avatarRole: "instructor" | "player";
   canApply?: boolean;
   currentRestMap: MovementAvatarRetargetRestMap;
-  hasWorldLandmarks: boolean;
   instructorSquatPresentationDepth: number;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
   lowerBodySegmentMotion: number;
@@ -53,7 +51,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
     apply: (mapping) => {
       const segmentApplicationDecision = resolveMovementAvatarRetargetSegmentApplication({
         avatarRole,
-        hasWorldLandmarks,
         instructorSquatPresentationDepth,
         lowerBodySegmentMotion,
         profile,
@@ -88,7 +85,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
 export function applyMovementAvatarRetargetSegmentRuntimeFrame({
   avatarRole,
   currentRestMap,
-  hasWorldLandmarks,
   instructorSquatPresentationDepth,
   lastGood,
   lookupBone,
@@ -101,7 +97,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
 }: {
   avatarRole: "instructor" | "player";
   currentRestMap: MovementAvatarRetargetRestMap;
-  hasWorldLandmarks: boolean;
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -116,7 +111,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
     avatarRole,
     canApply: Boolean(vrm),
     currentRestMap,
-    hasWorldLandmarks,
     instructorSquatPresentationDepth,
     lookupBone,
     lowerBodySegmentMotion,

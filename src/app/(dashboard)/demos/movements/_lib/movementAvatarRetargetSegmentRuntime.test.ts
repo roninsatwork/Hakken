@@ -75,7 +75,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
     const result = applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
       avatarRole: "instructor",
       currentRestMap: {},
-      hasWorldLandmarks: true,
       instructorSquatPresentationDepth: 0.55,
       lookupBone: (boneName) => bones.get(boneName) ?? null,
       lowerBodySegmentMotion: 0.55,
@@ -109,7 +108,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
       avatarRole: "player",
       canApply: false,
       currentRestMap: existingRestMap,
-      hasWorldLandmarks: false,
       instructorSquatPresentationDepth: 0,
       lookupBone: () => null,
       lowerBodySegmentMotion: 0,
@@ -151,7 +149,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
     const result = applyMovementAvatarRetargetSegmentRuntimeFrame({
       avatarRole: "instructor",
       currentRestMap: {},
-      hasWorldLandmarks: true,
       instructorSquatPresentationDepth: 0.55,
       lastGood,
       lookupBone: (boneName) => bones.get(boneName) ?? null,

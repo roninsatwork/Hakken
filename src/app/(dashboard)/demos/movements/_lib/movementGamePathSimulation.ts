@@ -170,8 +170,13 @@ export function buildMovementGamePathSimulation(
 
   const calibration = buildSimulationCalibration(landmarkFrames);
   const retargetSourceModel = averageMovementRetargetSourceModels(
-    landmarkFrames
-      .map((poseLandmarks) => buildMovementRetargetSourceModel({ poseLandmarks }))
+    preparedFrames
+      .map((frame) => frame?.pose
+        ? buildMovementRetargetSourceModel({
+            poseLandmarks: frame.pose,
+            worldPoseLandmarks: frame.worldPose ?? null,
+          })
+        : null)
       .filter(isNonNull),
   );
 

@@ -1125,7 +1125,12 @@ export default function MovementReplayLabPage() {
     if (currentPoseLandmarks.length < 33) return null;
 
     const calibration = replayPlayerCalibration ?? buildMovementCalibration({ poseLandmarks: currentPoseLandmarks });
-    const source = { poseLandmarks: currentPoseLandmarks };
+    const source = {
+      poseLandmarks: currentPoseLandmarks,
+      worldPoseLandmarks: currentFrame && currentFrame.tracking.worldPose.length >= 33
+        ? currentFrame.tracking.worldPose
+        : null,
+    };
     const replayDecision = resolveMovementAvatarReplayDecision({
       avatarRole: "player",
       calibration,
@@ -1148,7 +1153,7 @@ export default function MovementReplayLabPage() {
       replay,
       studio,
     };
-  }, [currentPoseLandmarks, replayPlayerCalibration, replayRetargetSourceModel]);
+  }, [currentFrame, currentPoseLandmarks, replayPlayerCalibration, replayRetargetSourceModel]);
   const liveCurrentFrameFailures = useMemo<MovementReplayFailure[]>(() => {
     const failures: MovementReplayFailure[] = [];
     const upperBodyError = currentAvatarVisual?.averageUpperBodyDirectionError;

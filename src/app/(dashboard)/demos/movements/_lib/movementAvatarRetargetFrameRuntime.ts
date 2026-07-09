@@ -23,7 +23,6 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   avatarRole,
   avatarRoot,
   currentRestMap,
-  hasWorldLandmarks,
   instructorSquatPresentationDepth,
   lastGood,
   lookupBone,
@@ -36,7 +35,6 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
   currentRestMap: MovementAvatarRetargetRestMap;
-  hasWorldLandmarks: boolean;
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -66,7 +64,6 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
       const application = applyMovementAvatarRetargetSegmentRuntimeFrame({
         avatarRole,
         currentRestMap: restMap,
-        hasWorldLandmarks,
         instructorSquatPresentationDepth,
         lastGood,
         lookupBone,

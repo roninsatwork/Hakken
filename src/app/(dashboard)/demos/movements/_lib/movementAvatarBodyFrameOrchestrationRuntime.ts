@@ -116,7 +116,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     avatarRole,
     avatarRoot,
     currentRestMap,
-    hasWorldLandmarks,
     imageLandmarks,
     instructorSquatPresentationDepth,
     lastGood: lastGoodQuaternionRef.current,

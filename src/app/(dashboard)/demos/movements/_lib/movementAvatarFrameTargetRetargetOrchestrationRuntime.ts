@@ -32,7 +32,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   avatarRole,
   avatarRoot,
   currentRestMap,
-  hasWorldLandmarks,
   imageLandmarks,
   instructorSquatPresentationDepth,
   lastGood,
@@ -51,7 +50,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
   currentRestMap: MovementAvatarRetargetRestMap;
-  hasWorldLandmarks: boolean;
   imageLandmarks: VrmSolverLandmark[];
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
@@ -84,7 +82,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
       avatarRole,
       avatarRoot,
       currentRestMap,
-      hasWorldLandmarks,
       instructorSquatPresentationDepth,
       lastGood,
       lookupBone,

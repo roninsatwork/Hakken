@@ -7,7 +7,10 @@ import {
   resolveMovementAvatarRetargetSegmentWorldDirection,
 } from "./movementAvatarSegmentApplication";
 import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootWorldRuntime";
-import type { MovementRetargetFrame } from "./movementRetargeting";
+import {
+  getMovementRetargetSegmentZScale,
+  type MovementRetargetFrame,
+} from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
 
 function compactVector(vector: THREE.Vector3) {
@@ -32,6 +35,8 @@ export function buildMovementAvatarVisualTelemetry({
   zScale: number;
 }): MovementTrackingDebugState["avatarVisual"] {
   vrm.scene.updateMatrixWorld(true);
+
+  const segmentZScale = getMovementRetargetSegmentZScale(retargetFrame, zScale);
 
   const lowerBodySourceErrors: number[] = [];
   const upperBodySourceErrors: number[] = [];
@@ -60,7 +65,7 @@ export function buildMovementAvatarVisualTelemetry({
         reason: "active",
         shouldApply: true,
         slerp: 0,
-        zScale,
+        zScale: segmentZScale,
       },
     })?.desiredWorldDirection ?? null;
     const sourceError = sourceDirection

@@ -1159,6 +1159,7 @@ function buildReplayGameWrapperFrames({
 
     const source = {
       poseLandmarks: frame.tracking.pose,
+      worldPoseLandmarks: frame.tracking.worldPose.length >= 33 ? frame.tracking.worldPose : null,
     };
     const replayDecision = resolveMovementAvatarReplayDecision({
       avatarRole: "player",

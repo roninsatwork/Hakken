@@ -110,6 +110,24 @@ const getMirroredInstructorMotionLandmarks = (
   return landmarks;
 };
 
+// World landmarks are hip-centred metres, so facing-player mirroring negates x
+// instead of the image-space 1 - x flip.
+const getMirroredInstructorWorldLandmarks = (
+  value: MovementInstructorMotionRef,
+): InstructorPoseLandmark[] | null => {
+  if (!value || Array.isArray(value)) return null;
+
+  const worldLandmarks = value.worldLandmarks;
+  if (!worldLandmarks || worldLandmarks.length < 33) return null;
+
+  const landmarks = withDepth(worldLandmarks)
+    .map((landmark) => normalizeVrmLandmark(landmark));
+
+  mirrorVrmLandmarkArray(landmarks, (x) => -x);
+
+  return landmarks;
+};
+
 function getRetargetNeutralScore(model: MovementRetargetSourceModel) {
   const neutralKneeLift = (model.neutralKneeLift.left + model.neutralKneeLift.right) / 2;
   const torsoSideBend = Math.abs(model.shoulderCenter.x - model.hipCenter.x);
@@ -129,6 +147,7 @@ export function buildInstructorRetargetSourceModel(
     const model = buildMovementRetargetSourceModel({
       now: index,
       poseLandmarks,
+      worldPoseLandmarks: getMirroredInstructorWorldLandmarks(frame),
     });
     if (!model) return;
 
@@ -153,6 +172,7 @@ function toRetargetFrameAnalysis(
   const retargetFrame = solveMovementRetargetFrame({
     calibration: retargetSourceModel,
     poseLandmarks,
+    worldPoseLandmarks: getMirroredInstructorWorldLandmarks(frame),
   });
 
   return {

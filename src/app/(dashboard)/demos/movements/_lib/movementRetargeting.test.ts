@@ -310,4 +310,87 @@ describe("movementRetargeting", () => {
     expect(frame.kneeLift.right).toBe(0);
     expect(getRecordedLowerBodySegmentMotionDepth({ calibration, frame })).toBeGreaterThan(0.3);
   });
+
+  describe("world-landmark segment solving", () => {
+    // Metric hip-centred world pose matching withCorePose() proportions, standing upright.
+    const makeWorldPose = (): TrackingLandmark[] => {
+      const world = Array.from({ length: 33 }, () => ({ x: 0, y: 0, z: 0, visibility: 0.9 }));
+      const set = (index: number, x: number, y: number, z = 0) => {
+        world[index] = { x, y, z, visibility: 0.9 };
+      };
+      set(0, 0, -0.62);
+      set(7, -0.09, -0.58);
+      set(8, 0.09, -0.58);
+      set(11, -0.18, -0.46);
+      set(12, 0.18, -0.46);
+      set(13, -0.24, -0.2);
+      set(14, 0.24, -0.2);
+      set(15, -0.27, 0.02);
+      set(16, 0.27, 0.02);
+      set(23, -0.09, 0);
+      set(24, 0.09, 0);
+      set(25, -0.1, 0.42);
+      set(26, 0.1, 0.42);
+      set(27, -0.1, 0.82);
+      set(28, 0.1, 0.82);
+      set(29, -0.11, 0.86, 0.03);
+      set(30, 0.11, 0.86, 0.03);
+      set(31, -0.1, 0.88, -0.08);
+      set(32, 0.1, 0.88, -0.08);
+      return world;
+    };
+
+    it("solves segment directions from world landmarks with real depth", () => {
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+      expect(calibration?.space).toBe("world");
+
+      // Raise the right shin forward: knee stays, ankle moves toward the camera.
+      const worldPose = makeWorldPose();
+      worldPose[28] = { x: 0.1, y: 0.5, z: -0.35, visibility: 0.9 };
+
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: worldPose,
+      });
+
+      expect(frame.space).toBe("world");
+      const shin = frame.segments.rightShin;
+      expect(shin).toBeDefined();
+      // The forward (negative z) component must dominate — image-space solving would flatten it.
+      expect(Math.abs(shin!.direction.z)).toBeGreaterThan(0.6);
+    });
+
+    it("falls back to image segments when a frame lacks world landmarks", () => {
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: withCorePose(),
+      });
+
+      expect(frame.space).toBe("image");
+      // Cross-space direction comparison must not report phantom motion.
+      expect(getRecordedLowerBodySegmentMotionDepth({ calibration, frame })).toBe(0);
+    });
+
+    it("keeps image space when calibration was built without world landmarks", () => {
+      const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+      expect(calibration?.space).toBe("image");
+
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+
+      expect(frame.space).toBe("image");
+    });
+  });
 });

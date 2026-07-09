@@ -61,6 +61,7 @@ export function resolveMovementAvatarFrameSetupRuntime({
       now,
       poseLandmarks,
       providedModel: providedRetargetSourceModel,
+      worldPoseLandmarks,
     }),
     nextSetupState: setupTarget.nextState,
   };

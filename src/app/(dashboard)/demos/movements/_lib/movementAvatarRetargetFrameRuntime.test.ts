@@ -71,7 +71,6 @@ describe("movementAvatarRetargetFrameRuntime", () => {
       avatarRole: "instructor",
       avatarRoot: scene,
       currentRestMap: {},
-      hasWorldLandmarks: true,
       instructorSquatPresentationDepth: 0.55,
       lastGood,
       lookupBone: (boneName) => bones.get(boneName) ?? null,

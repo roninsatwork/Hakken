@@ -96,6 +96,7 @@ export function useMovementTrackingCalibration({
       const retargetSample = buildMovementRetargetSourceModel({
         poseLandmarks,
         now: Date.now(),
+        worldPoseLandmarks: payload?.worldLandmarks ?? null,
       });
       if (retargetSample) {
         retargetSamples.push(retargetSample);

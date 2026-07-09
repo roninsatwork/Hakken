@@ -1389,7 +1389,6 @@ describe("movementGamePathSimulation", () => {
   it("skips recorded foot retargeting while a foot is planted", () => {
     const decision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "instructor",
-      hasWorldLandmarks: false,
       instructorSquatPresentationDepth: 0.3,
       lowerBodySegmentMotion: 0.3,
       retargetFrame: retargetFrame({
@@ -1411,11 +1410,11 @@ describe("movementGamePathSimulation", () => {
   it("allows recorded foot retargeting for lifted active feet", () => {
     const decision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "instructor",
-      hasWorldLandmarks: true,
       instructorSquatPresentationDepth: 0.3,
       lowerBodySegmentMotion: 0.3,
       retargetFrame: retargetFrame({
         kneeLift: { left: 0.7, right: 0 },
+        space: "world",
       }),
       segmentName: "leftFoot",
       segmentType: "foot",
@@ -1438,7 +1437,6 @@ describe("movementGamePathSimulation", () => {
     };
     const rightArmDecision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "player",
-      hasWorldLandmarks: false,
       instructorSquatPresentationDepth: 0,
       lowerBodySegmentMotion: 0,
       profile,
@@ -1449,7 +1447,6 @@ describe("movementGamePathSimulation", () => {
     });
     const legDecision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "player",
-      hasWorldLandmarks: false,
       instructorSquatPresentationDepth: 0,
       lowerBodySegmentMotion: 0,
       profile,

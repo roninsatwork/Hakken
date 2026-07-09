@@ -29,6 +29,7 @@ export type MovementAvatarSourceOrigin = "replay" | "studio";
 
 export type MovementAvatarSource = {
   poseLandmarks: TrackingLandmark[];
+  worldPoseLandmarks?: TrackingLandmark[] | null;
   hands?: MovementHandsForConfidence;
 };
 

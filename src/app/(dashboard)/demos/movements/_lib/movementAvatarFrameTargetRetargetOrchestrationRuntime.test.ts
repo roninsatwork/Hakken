@@ -102,7 +102,6 @@ describe("movementAvatarFrameTargetRetargetOrchestrationRuntime", () => {
       avatarRole: "instructor",
       avatarRoot: scene,
       currentRestMap,
-      hasWorldLandmarks: true,
       imageLandmarks,
       instructorSquatPresentationDepth: 0.55,
       lastGood,

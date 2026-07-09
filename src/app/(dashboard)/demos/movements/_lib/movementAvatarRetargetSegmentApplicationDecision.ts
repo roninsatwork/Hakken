@@ -2,7 +2,11 @@ import type {
   MovementAvatarRetargetSegmentApplicationDecision,
   MovementAvatarRetargetSegmentType,
 } from "./movementAvatarPipeline";
-import type { MovementRetargetFrame, MovementRetargetSegmentName } from "./movementRetargeting";
+import {
+  getMovementRetargetSegmentZScale,
+  type MovementRetargetFrame,
+  type MovementRetargetSegmentName,
+} from "./movementRetargeting";
 import {
   DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   type MovementAvatarTrackingProfile,
@@ -10,7 +14,6 @@ import {
 
 export function resolveMovementAvatarRetargetSegmentApplication({
   avatarRole,
-  hasWorldLandmarks,
   instructorSquatPresentationDepth,
   lowerBodySegmentMotion,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
@@ -20,7 +23,6 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   shouldUseRetargetedUpperBody,
 }: {
   avatarRole: "instructor" | "player";
-  hasWorldLandmarks: boolean;
   instructorSquatPresentationDepth: number;
   lowerBodySegmentMotion: number;
   profile?: MovementAvatarTrackingProfile;
@@ -30,6 +32,7 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   shouldUseRetargetedUpperBody: boolean;
 }): MovementAvatarRetargetSegmentApplicationDecision {
   const isPlayer = avatarRole === "player";
+  const zScale = getMovementRetargetSegmentZScale(retargetFrame, 0.18);
   const segment = retargetFrame.segments[segmentName];
   const useReplayUpperBodySlerp = shouldUseRetargetedUpperBody && segmentType === "arm";
   const slerp = segmentType === "foot"
@@ -48,7 +51,7 @@ export function resolveMovementAvatarRetargetSegmentApplication({
     reason,
     shouldApply: false,
     slerp,
-    zScale: hasWorldLandmarks ? 1 : 0.18,
+    zScale,
   });
 
   if (!segment || segment.confidence < 0.3) return inactiveDecision("low-confidence");
@@ -84,6 +87,6 @@ export function resolveMovementAvatarRetargetSegmentApplication({
     reason: "active",
     shouldApply: true,
     slerp,
-    zScale: hasWorldLandmarks ? 1 : 0.18,
+    zScale,
   };
 }

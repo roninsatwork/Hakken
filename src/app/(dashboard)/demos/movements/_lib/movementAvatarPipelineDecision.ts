@@ -80,6 +80,7 @@ export function resolveMovementAvatarPipelineDecision({
     retargetSourceModel,
     shouldHoldPlayerSquatPose,
     torsoTrackingReady,
+    worldPoseLandmarks: source.worldPoseLandmarks,
   });
   const {
     bodySupport,

@@ -238,9 +238,12 @@ export function resolveMovementMotionFrame({
     source: {
       hands: sourceFrame.landmarks.hands,
       poseLandmarks: sourcePoseLandmarks,
+      worldPoseLandmarks: sourceFrame.landmarks.worldPose,
     },
     sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
   });
+  // The display decision runs on mirrored landmarks; only pass world landmarks that
+  // were mirrored alongside them, never the unmirrored source world pose.
   const avatarDisplayDecision = poseLandmarks === sourcePoseLandmarks
     ? avatarDecision
     : resolveMovementAvatarPipelineDecision({
@@ -248,6 +251,7 @@ export function resolveMovementMotionFrame({
         source: {
           hands: sourceFrame.landmarks.hands,
           poseLandmarks,
+          worldPoseLandmarks: displayWorldPoseLandmarks,
         },
         sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
   });
