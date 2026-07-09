@@ -56,7 +56,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   retargetAvatarRestRef,
   retargetFrame,
   rigHands,
-  riggedPose,
   rightArmDecision,
   scene,
   shouldApplyLowerBody,
@@ -95,7 +94,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   retargetAvatarRestRef: MovementAvatarLowerBodyFrameOrchestrationInput["retargetAvatarRestRef"];
   retargetFrame: MovementAvatarFrameTargetRetargetInput["retargetFrame"];
   rigHands: MovementAvatarFrameTargetRetargetInput["rigHands"];
-  riggedPose: MovementAvatarUpperBodyFrameOrchestrationInput["riggedPose"];
   rightArmDecision: MovementAvatarUpperBodyFrameOrchestrationInput["rightArmDecision"];
   scene: Pick<THREE.Object3D, "updateMatrixWorld">;
   shouldApplyLowerBody: MovementAvatarLowerBodyFrameOrchestrationInput["shouldApplyLowerBody"];
@@ -142,7 +140,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     leftArmDecision,
     lookupBone,
     retargetFrameRuntimeAdapters,
-    riggedPose,
     rightArmDecision,
     shouldApplySolverTorso,
     torsoTrackingReady,
@@ -173,12 +170,9 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     scene,
     shouldApplyLowerBody,
     shouldHoldPlayerSquatPose,
-    solvedLowerBodySources: {
-      LeftLowerLeg: riggedPose.LeftLowerLeg,
-      LeftUpperLeg: riggedPose.LeftUpperLeg,
-      RightLowerLeg: riggedPose.RightLowerLeg,
-      RightUpperLeg: riggedPose.RightUpperLeg,
-    },
+    // The Kalidokit solved-lower-body path is retired: empty sources make the
+    // solved plan mode hold while the retarget plan modes own the legs.
+    solvedLowerBodySources: {},
     squatFlexionBendBoost,
     targetSolverLandmarks,
     zScale,

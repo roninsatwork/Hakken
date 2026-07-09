@@ -15,7 +15,6 @@ import {
   applyMovementAvatarUpperBodyRuntimeToVrmBones,
   type MovementAvatarUpperBodyRuntimeApplication,
 } from "./movementAvatarUpperBodyRuntime";
-import type { MovementAvatarSpineSolverSources } from "./movementAvatarSpineApplication";
 
 export type MovementAvatarUpperBodyFrameRuntimeResult = {
   retargetAppliedUpperBody: number;
@@ -32,7 +31,6 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   lookupBone,
   rightArmDecision,
   shouldApplySolverTorso,
-  sources,
   torsoTrackingReady,
 }: {
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
@@ -44,7 +42,6 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
   rightArmDecision: MovementAvatarArmDecision;
   shouldApplySolverTorso: boolean;
-  sources: MovementAvatarSpineSolverSources;
   torsoTrackingReady: boolean;
 }): MovementAvatarUpperBodyFrameRuntimeResult {
   // The rest-mapped segment retarget owns arms and spine. Per-segment
@@ -64,7 +61,6 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
     rightArmDecision,
     rightArmRetargetApplied: rightArmRetarget.applied > 0,
     shouldApplySolverTorso,
-    sources,
     spineApplyOptions: resolveMovementAvatarSpineApplyOptions({
       avatarRole,
       shouldApplySpine: activeSpineDrive.shouldApplySpine,

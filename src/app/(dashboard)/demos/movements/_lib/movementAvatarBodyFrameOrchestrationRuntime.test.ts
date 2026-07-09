@@ -115,19 +115,13 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
     }));
     expect(applyMovementAvatarUpperBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       retargetFrameRuntimeAdapters,
-      riggedPose: expect.objectContaining({ LeftLowerLeg: leftLowerLeg }),
     }));
     expect(applyMovementAvatarLowerBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       currentFeetOwner: "neutral",
       currentLowerBodyOwner: "neutral",
       lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
       retargetFrameRuntimeAdapters,
-      solvedLowerBodySources: {
-        LeftLowerLeg: leftLowerLeg,
-        LeftUpperLeg: leftUpperLeg,
-        RightLowerLeg: rightLowerLeg,
-        RightUpperLeg: rightUpperLeg,
-      },
+      solvedLowerBodySources: {},
     }));
     expect(result).toMatchObject({
       footOwner: "retarget-feet",

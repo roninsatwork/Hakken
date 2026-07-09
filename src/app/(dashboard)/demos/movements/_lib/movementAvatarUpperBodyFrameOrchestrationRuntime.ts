@@ -4,7 +4,6 @@ import {
   type MovementAvatarUpperBodyFrameRuntimeResult,
 } from "./movementAvatarUpperBodyFrameRuntime";
 import type { MovementAvatarRetargetFrameRuntimeAdapters } from "./movementAvatarRetargetFrameRuntime";
-import type { VrmRiggedPose } from "./vrmRigging";
 
 type MovementAvatarMutableRef<T> = {
   current: T;
@@ -20,24 +19,18 @@ export type MovementAvatarUpperBodyFrameOrchestrationRuntimeResult = {
 export function applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
   lastGoodQuaternionRef,
   retargetFrameRuntimeAdapters,
-  riggedPose,
   ...input
 }: Omit<
   MovementAvatarUpperBodyFrameRuntimeInput,
-  "applyRetargetMappings" | "lastGood" | "sources"
+  "applyRetargetMappings" | "lastGood"
 > & {
   lastGoodQuaternionRef: MovementAvatarMutableRef<Record<string, THREE.Quaternion>>;
   retargetFrameRuntimeAdapters: Pick<MovementAvatarRetargetFrameRuntimeAdapters, "applyRetargetMappings">;
-  riggedPose: VrmRiggedPose;
 }): MovementAvatarUpperBodyFrameOrchestrationRuntimeResult {
   const upperBodyFrameRuntime = applyMovementAvatarUpperBodyFrameRuntime({
     ...input,
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
     lastGood: lastGoodQuaternionRef.current,
-    sources: {
-      hips: riggedPose.Hips?.rotation,
-      spine: riggedPose.Spine,
-    },
   });
 
   return {

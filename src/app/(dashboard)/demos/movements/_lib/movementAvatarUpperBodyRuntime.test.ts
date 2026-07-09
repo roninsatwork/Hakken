@@ -96,7 +96,6 @@ describe("movementAvatarUpperBodyRuntime", () => {
       rightArmDecision: armDecision("right"),
       rightArmRetargetApplied: true,
       shouldApplySolverTorso: true,
-      sources: {},
       spineApplyOptions: spineApplyOptions(),
       torsoTrackingReady: true,
     });
@@ -133,7 +132,6 @@ describe("movementAvatarUpperBodyRuntime", () => {
       }),
       rightArmRetargetApplied: false,
       shouldApplySolverTorso: true,
-      sources: {},
       spineApplyOptions: spineApplyOptions(true),
       torsoTrackingReady: false,
     });

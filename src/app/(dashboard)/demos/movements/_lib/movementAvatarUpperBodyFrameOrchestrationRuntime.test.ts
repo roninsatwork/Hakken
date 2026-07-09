@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { MovementAvatarArmDecision } from "./movementAvatarPipeline";
 import type { MovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
 import { applyMovementAvatarUpperBodyFrameOrchestrationRuntime } from "./movementAvatarUpperBodyFrameOrchestrationRuntime";
-import type { VrmRiggedPose } from "./vrmRigging";
 
 function armDecision(side: "left" | "right"): MovementAvatarArmDecision {
   return {
@@ -52,13 +51,6 @@ describe("movementAvatarUpperBodyFrameOrchestrationRuntime", () => {
     const lastGoodQuaternionRef = {
       current: {} as Record<string, THREE.Quaternion>,
     };
-    const riggedPose: VrmRiggedPose = {
-      Hips: {
-        rotation: { x: 0.1, y: 0, z: 0 },
-      },
-      Spine: { x: 0.2, y: 0, z: 0 },
-    };
-
     const result = applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
       activeSpineDrive: spineDrive(),
       avatarRole: "instructor",
@@ -71,7 +63,6 @@ describe("movementAvatarUpperBodyFrameOrchestrationRuntime", () => {
       retargetFrameRuntimeAdapters: {
         applyRetargetMappings,
       },
-      riggedPose,
       rightArmDecision: armDecision("right"),
       shouldApplySolverTorso: true,
       torsoTrackingReady: true,

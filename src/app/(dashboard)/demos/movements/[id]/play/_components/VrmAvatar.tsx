@@ -169,7 +169,6 @@ export default function VrmAvatar({
         recordedRootMotionFrame: rootMotionFrameRef.current,
         retargetAvatarRestRef,
         retargetSourceModelRef,
-        riggedPose,
         rigHands,
         scene: vrm.scene,
         setupStateRef,

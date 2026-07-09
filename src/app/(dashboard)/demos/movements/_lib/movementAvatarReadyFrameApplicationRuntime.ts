@@ -49,7 +49,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName,
   retargetAvatarRestRef,
   retargetSourceModelRef,
-  riggedPose,
   rigHands,
   scene,
   scenePreparationRuntime,
@@ -80,7 +79,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName: MovementAvatarCompletionInput["profileName"];
   retargetAvatarRestRef: MovementAvatarBodyFrameInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
-  riggedPose: MovementAvatarBodyFrameInput["riggedPose"];
   rigHands: MovementAvatarBodyFrameInput["rigHands"] & MovementAvatarCompletionInput["hands"];
   scene: MovementAvatarBodyFrameInput["scene"] & MovementAvatarCompletionInput["scene"];
   scenePreparationRuntime: MovementAvatarFrameScenePreparationRuntime;
@@ -160,7 +158,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     retargetAvatarRestRef,
     retargetFrame,
     rigHands,
-    riggedPose,
     rightArmDecision,
     scene,
     shouldApplyLowerBody,

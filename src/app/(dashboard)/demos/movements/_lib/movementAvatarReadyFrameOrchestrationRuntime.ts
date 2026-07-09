@@ -80,7 +80,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   recordedRootMotionFrame,
   retargetAvatarRestRef,
   retargetSourceModelRef,
-  riggedPose,
   rigHands,
   scene,
   setupStateRef,
@@ -125,7 +124,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   recordedRootMotionFrame: MovementRootMotionFrame | null;
   retargetAvatarRestRef: MovementAvatarReadyFrameApplicationInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
-  riggedPose: MovementAvatarReadyFrameApplicationInput["riggedPose"];
   rigHands: MovementAvatarReadyFrameApplicationInput["rigHands"];
   scene: MovementAvatarFrameScenePreparationInput["scene"] &
     MovementAvatarReadyFrameApplicationInput["scene"];
@@ -207,7 +205,6 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     profileName,
     retargetAvatarRestRef,
     retargetSourceModelRef,
-    riggedPose,
     rigHands,
     scene,
     scenePreparationRuntime,

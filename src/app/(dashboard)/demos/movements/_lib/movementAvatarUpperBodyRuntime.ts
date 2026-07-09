@@ -7,7 +7,6 @@ import {
 } from "./movementAvatarArmApplication";
 import {
   applyMovementAvatarSpinePoseApplicationToVrmBones,
-  type MovementAvatarSpineSolverSources,
 } from "./movementAvatarSpineApplication";
 
 export type MovementAvatarUpperBodyRuntimeApplication = {
@@ -28,7 +27,6 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   rightArmDecision,
   rightArmRetargetApplied,
   shouldApplySolverTorso,
-  sources,
   spineApplyOptions,
   torsoTrackingReady,
 }: {
@@ -42,7 +40,6 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   rightArmDecision: MovementAvatarArmDecision;
   rightArmRetargetApplied: boolean;
   shouldApplySolverTorso: boolean;
-  sources: MovementAvatarSpineSolverSources;
   spineApplyOptions: MovementAvatarSpineApplyOptionsDecision;
   torsoTrackingReady: boolean;
 }): MovementAvatarUpperBodyRuntimeApplication {
@@ -51,7 +48,9 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
     avatarRole,
     lookupBone,
     shouldApplySolverTorso,
-    sources,
+    // The Kalidokit solver torso is retired: with no solver sources the solver
+    // branch holds the torso and the spine segment retarget refines it after.
+    sources: {},
     spineApplyOptions,
     storeLastGood: (bone, quaternion) => {
       lastGood[bone] = quaternion;

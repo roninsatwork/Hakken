@@ -75,7 +75,6 @@ describe("movementAvatarUpperBodyFrameRuntime", () => {
       lookupBone: (boneName) => boneMap.get(boneName) ?? null,
       rightArmDecision: armDecision("right"),
       shouldApplySolverTorso: true,
-      sources: {},
       torsoTrackingReady: true,
     });
 
@@ -113,7 +112,6 @@ describe("movementAvatarUpperBodyFrameRuntime", () => {
       lookupBone: () => null,
       rightArmDecision: armDecision("right"),
       shouldApplySolverTorso: true,
-      sources: {},
       torsoTrackingReady: false,
     });
 
