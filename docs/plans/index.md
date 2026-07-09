@@ -43,6 +43,7 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Posture Studio Pre-Demo Polish Plan](./active/posture-studio-pre-demo-polish-plan.md)
 - [Posture Studio Skeleton Observability Plan](./active/posture-studio-skeleton-observability-plan.md)
 - [Posture Studio Spine Intelligence Plan](./active/posture-studio-spine-intelligence-plan.md)
+- [Replay Avatar-Follow Correction Plan](./active/replay-avatar-follow-correction-plan.md)
 - [Replay Lab Visual Acceptance Tightening Plan](./active/replay-lab-visual-acceptance-tightening-plan.md)
 - [Replay Studio Avatar-Follow Observability Plan](./active/replay-studio-avatar-follow-observability-plan.md)
 - [Roadmap And Debt](./active/roadmap-and-debt.md)
