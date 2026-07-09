@@ -128,14 +128,12 @@ export default function VrmAvatar({
       mirrorPlayerDisplay,
       payload,
       rigBlendshapes,
-      riggedPose,
       rigHands,
       solverLandmarks,
       targetSolverLandmarks,
     } = frameEntryRuntime.readyFrameRuntime.solvedFrameRuntime;
 
-    if (riggedPose) {
-      applyMovementAvatarReadyFrameOrchestrationRuntime({
+    applyMovementAvatarReadyFrameOrchestrationRuntime({
         applyDemoFallbackPose,
         avatarBaseY: AVATAR_BASE_Y,
         avatarName: name,
@@ -177,8 +175,7 @@ export default function VrmAvatar({
         trackingDebugRef,
         vrm,
         worldLandmarks: payload?.worldLandmarks,
-      });
-    }
+    });
   });
 
   return (

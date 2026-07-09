@@ -102,24 +102,11 @@ describe("movementAvatarSolverRuntime", () => {
         pose,
       },
       showPausedPose: false,
-      solvePose: (kalidokitSolverLandmarks, imageLandmarks) => ({
-        Hips: {
-          position: { x: 0, y: 1, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-        },
-        Spine: {
-          x: imageLandmarks[11]?.x ?? 0,
-          y: kalidokitSolverLandmarks[11]?.y ?? 0,
-          z: 0,
-        },
-      }),
       usesPlayerMotionPath: true,
     });
 
     expect(runtime.status).toBe("ready");
     if (runtime.status !== "ready") return;
-    expect(runtime.riggedPose.Spine?.x).toBeCloseTo(0.88);
-    expect(runtime.riggedPose.Spine?.y).toBeCloseTo(-0.46875);
     expect(runtime.imageLandmarks).toBe(runtime.displayPreparedInput.imageLandmarks);
     expect(runtime.faceLandmarks).toBe(runtime.displayPreparedInput.faceLandmarks);
     expect(runtime.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
@@ -128,29 +115,4 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtime.targetSolverLandmarks).not.toBe(runtime.rawPreparedInput.solverLandmarks);
   });
 
-  it("returns solve-failed when pose solving throws", () => {
-    expect(resolveMovementAvatarSolvedFrameRuntime({
-      isPlaying: true,
-      motionRef: buildPose(),
-      showPausedPose: false,
-      solvePose: () => {
-        throw new Error("solver failed");
-      },
-      usesPlayerMotionPath: false,
-    })).toEqual({
-      status: "solve-failed",
-    });
-  });
-
-  it("returns empty-pose when pose solving produces no rig", () => {
-    expect(resolveMovementAvatarSolvedFrameRuntime({
-      isPlaying: true,
-      motionRef: buildPose(),
-      showPausedPose: false,
-      solvePose: () => null,
-      usesPlayerMotionPath: false,
-    })).toEqual({
-      status: "empty-pose",
-    });
-  });
 });

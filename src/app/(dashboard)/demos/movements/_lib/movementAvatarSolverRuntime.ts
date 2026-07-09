@@ -2,17 +2,11 @@ import {
   createVrmImageSolverLandmarks,
   getVrmMotionLandmarks,
   prepareVrmSolverInput,
-  solveVrmPose,
   type VrmMotionPayload,
   type VrmMotionRef,
-  type VrmRiggedPose,
 } from "./vrmRigging";
 
 type MovementAvatarPreparedSolverInput = ReturnType<typeof prepareVrmSolverInput>;
-type MovementAvatarPoseSolver = (
-  kalidokitSolverLandmarks: MovementAvatarPreparedSolverInput["kalidokitSolverLandmarks"],
-  imageLandmarks: MovementAvatarPreparedSolverInput["imageLandmarks"],
-) => VrmRiggedPose | null;
 
 export type MovementAvatarSolverRuntimeInput = {
   displayPreparedInput: MovementAvatarPreparedSolverInput;
@@ -68,7 +62,7 @@ export function resolveMovementAvatarSolverRuntimeInput({
 
 export type MovementAvatarSolvedFrameRuntime =
   | {
-    status: "empty-pose" | "missing-input" | "solve-failed";
+    status: "missing-input";
   }
   | {
     displayPreparedInput: MovementAvatarPreparedSolverInput;
@@ -80,7 +74,6 @@ export type MovementAvatarSolvedFrameRuntime =
     rawPreparedInput: MovementAvatarPreparedSolverInput;
     rigBlendshapes: MovementAvatarPreparedSolverInput["rigBlendshapes"];
     rigHands: MovementAvatarPreparedSolverInput["rigHands"];
-    riggedPose: VrmRiggedPose;
     solverLandmarks: MovementAvatarPreparedSolverInput["solverLandmarks"];
     status: "ready";
     targetSolverLandmarks: MovementAvatarPreparedSolverInput["solverLandmarks"];
@@ -90,13 +83,11 @@ export function resolveMovementAvatarSolvedFrameRuntime({
   isPlaying,
   motionRef,
   showPausedPose,
-  solvePose = solveVrmPose,
   usesPlayerMotionPath,
 }: {
   isPlaying: boolean;
   motionRef: VrmMotionRef;
   showPausedPose: boolean;
-  solvePose?: MovementAvatarPoseSolver;
   usesPlayerMotionPath: boolean;
 }): MovementAvatarSolvedFrameRuntime {
   const solverRuntimeInput = resolveMovementAvatarSolverRuntimeInput({
@@ -125,25 +116,7 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     rigHands,
     rigBlendshapes,
   } = displayPreparedInput;
-  const {
-    solverLandmarks,
-    kalidokitSolverLandmarks,
-  } = rawPreparedInput;
-
-  let riggedPose: VrmRiggedPose | null;
-  try {
-    riggedPose = solvePose(kalidokitSolverLandmarks, imageLandmarks);
-  } catch {
-    return {
-      status: "solve-failed",
-    };
-  }
-
-  if (!riggedPose) {
-    return {
-      status: "empty-pose",
-    };
-  }
+  const { solverLandmarks } = rawPreparedInput;
 
   return {
     displayPreparedInput,
@@ -155,7 +128,6 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     rawPreparedInput,
     rigBlendshapes,
     rigHands,
-    riggedPose,
     solverLandmarks,
     status: "ready",
     targetSolverLandmarks,

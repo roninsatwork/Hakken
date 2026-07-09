@@ -13,7 +13,6 @@ function readySolvedFrame(): Extract<MovementAvatarSolvedFrameRuntime, { status:
     rawPreparedInput: {} as never,
     rigBlendshapes: null as never,
     rigHands: null as never,
-    riggedPose: {},
     solverLandmarks: [],
     status: "ready",
     targetSolverLandmarks: [],
@@ -27,21 +26,6 @@ describe("movementAvatarReadyFrameRuntime", () => {
       solvedFrameRuntime: { status: "missing-input" },
     })).toEqual({
       status: "fallback-demo-pose",
-    });
-  });
-
-  it("skips frames when solving failed or produced no pose", () => {
-    expect(resolveMovementAvatarReadyFrameRuntime({
-      hasHumanoid: true,
-      solvedFrameRuntime: { status: "solve-failed" },
-    })).toEqual({
-      status: "skip-frame",
-    });
-    expect(resolveMovementAvatarReadyFrameRuntime({
-      hasHumanoid: true,
-      solvedFrameRuntime: { status: "empty-pose" },
-    })).toEqual({
-      status: "skip-frame",
     });
   });
 
