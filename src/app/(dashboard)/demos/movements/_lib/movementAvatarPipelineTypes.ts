@@ -148,20 +148,6 @@ export type MovementAvatarLowerBodyTargetSelectionsDecision = {
   rightToe: MovementTrackingEndpointSelection;
 };
 
-export type MovementAvatarAimOptionsDecision = {
-  frontBias?: number;
-  minVectorLengthSq: number;
-  slerpOverride: number;
-  storeVisibilityThreshold?: number;
-  visibilityThreshold: number;
-  zScale?: number;
-};
-
-export type MovementAvatarLegacyLowerBodyAimOptionsDecision = {
-  foot: MovementAvatarAimOptionsDecision;
-  leg: MovementAvatarAimOptionsDecision;
-};
-
 export type MovementAvatarPlantedSquatIkOptionsDecision = {
   footSlerp: number;
   legSlerp: number;
@@ -211,14 +197,6 @@ export type MovementAvatarLowerBodyRigSourceBoneName =
   | "LeftUpperLeg"
   | "RightLowerLeg"
   | "RightUpperLeg";
-
-export type MovementAvatarLegacyLowerBodyAimTargetName =
-  | "leftAnkle"
-  | "leftKnee"
-  | "leftToe"
-  | "rightAnkle"
-  | "rightKnee"
-  | "rightToe";
 
 export type MovementAvatarBoneRotationSpec = {
   bone: MovementAvatarLowerBodyBoneName;
@@ -327,22 +305,6 @@ export type MovementAvatarRigRotationSpec = {
   scale: number;
   slerp: number;
   source: MovementAvatarLowerBodyRigSourceBoneName;
-};
-
-export type MovementAvatarLegacyLowerBodyAimSpec = {
-  bone: MovementAvatarLowerBodyBoneName;
-  child: MovementAvatarLowerBodyChildBoneName;
-  options: "foot" | "leg";
-  source:
-    | {
-        index: number;
-        type: "landmark";
-      }
-    | {
-        target: MovementAvatarLegacyLowerBodyAimTargetName;
-        type: "target";
-      };
-  target: MovementAvatarLegacyLowerBodyAimTargetName;
 };
 
 export type MovementAvatarBasisDirection = {

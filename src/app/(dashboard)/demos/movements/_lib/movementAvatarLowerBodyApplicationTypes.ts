@@ -1,30 +1,3 @@
-import type {
-  MovementAvatarAimOptionsDecision,
-  MovementAvatarLegacyLowerBodyAimSpec,
-  MovementAvatarLegacyLowerBodyAimTargetName,
-} from "./movementAvatarPipeline";
-
-export type MovementAvatarLowerBodyAimLandmark = {
-  x: number;
-  y: number;
-  z: number;
-  visibility: number;
-};
-
-export type MovementAvatarLegacyLowerBodyAimTargets = Record<
-  MovementAvatarLegacyLowerBodyAimTargetName,
-  MovementAvatarLowerBodyAimLandmark | null | undefined
->;
-
-export type MovementAvatarLegacyLowerBodyAimRequest = Pick<
-  MovementAvatarLegacyLowerBodyAimSpec,
-  "bone" | "child"
-> & {
-  options: MovementAvatarAimOptionsDecision;
-  source: MovementAvatarLowerBodyAimLandmark | null | undefined;
-  target: MovementAvatarLowerBodyAimLandmark | null | undefined;
-};
-
 export type MovementAvatarLowerBodyNonRetargetApplicationResult = {
   feetOwner: string | null;
   handled: boolean;
@@ -69,6 +42,3 @@ export type MovementAvatarInstructorFootPlantRequestsToVrmBonesResult = {
   feetOwner: string;
 };
 
-export type MovementAvatarLegacyLowerBodyAimRequestApplicationResult = {
-  applied: number;
-};

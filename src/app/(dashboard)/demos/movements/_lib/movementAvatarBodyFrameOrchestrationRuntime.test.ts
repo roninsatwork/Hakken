@@ -18,14 +18,9 @@ vi.mock("./movementAvatarLowerBodyFrameOrchestrationRuntime", () => ({
 
 describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
   it("composes target retarget, upper-body, and lower-body frame handoffs", () => {
-    const armTargetComposition = {
-      armTargets: {},
-    };
     const frameTargetRuntime = {
       lowerBodyTargetComposition: {
-        aimTargets: {
-          leftToe: "left-toe-aim",
-        },
+        leftToeTarget: "left-toe-target",
       },
     };
     const retargetFrameRuntimeAdapters = {
@@ -34,7 +29,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       getRestMap: vi.fn(),
     };
     vi.mocked(resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime).mockReturnValue({
-      armTargetComposition,
       frameTargetRuntime,
       retargetFrameRuntimeAdapters,
     } as never);

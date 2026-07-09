@@ -837,23 +837,6 @@ function appliedDecision(
 }
 
 describe("movement avatar lower-body retarget application plan", () => {
-  it("requests legacy aim when too few retargeted lower-body segments apply", () => {
-    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
-      appliedDecision: appliedDecision(),
-      avatarRole: "player",
-      balancedPlantedSquatDepth: 0,
-      instructorSquatPresentationDepth: 0,
-      lowerBodyDrive: drive(),
-      playerSquatPresentationDepth: 0,
-      retargetAppliedLowerBody: 3,
-      stageDecision: stage("retarget"),
-    });
-
-    expect(plan.shouldApplyLegacyAim).toBe(true);
-  });
-
-
-
   it("lets solved player leg-raise retarget own the pose instead of adding a canned overlay", () => {
     const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
       appliedDecision: appliedDecision(),

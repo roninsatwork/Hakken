@@ -13,7 +13,6 @@ export type MovementAvatarLowerBodyRetargetApplicationPlan = {
   } | null;
   plantedSquatIkDepth: number;
   plantInstructorFeet: Array<"left" | "right">;
-  shouldApplyLegacyAim: boolean;
   squatFlexionDepth: number | null;
 };
 
@@ -122,7 +121,6 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
     legRaiseOverlay,
     plantedSquatIkDepth,
     plantInstructorFeet,
-    shouldApplyLegacyAim: retargetAppliedLowerBody < 4 || appliedDecision.shouldUsePlayerFootFallback,
     squatFlexionDepth,
   };
 }

@@ -1,5 +1,4 @@
 import type { MovementAvatarLowerBodyTargetSelectionsDecision } from "./movementAvatarPipeline";
-import type { MovementAvatarLegacyLowerBodyAimTargets } from "./movementAvatarLowerBodyApplicationTypes";
 import {
   selectMovementKneeTarget,
   selectMovementTrackingEndpoint,
@@ -8,7 +7,6 @@ import {
 import type { VrmSolverLandmark } from "./vrmRigging";
 
 export type MovementAvatarLowerBodyTargetSelectionCompositionDecision = {
-  aimTargets: MovementAvatarLegacyLowerBodyAimTargets;
   leftAnkleTarget: VrmSolverLandmark | undefined;
   leftKneeTarget: VrmSolverLandmark | undefined;
   leftToeTarget: VrmSolverLandmark | undefined;
@@ -79,14 +77,6 @@ export function resolveMovementAvatarLowerBodyTargetSelectionComposition({
   const rightToeTarget = (selections.rightToe.target as VrmSolverLandmark | null) ?? targetSolverLandmarks[32];
 
   return {
-    aimTargets: {
-      leftAnkle: leftAnkleTarget,
-      leftKnee: leftKneeTarget,
-      leftToe: leftToeTarget,
-      rightAnkle: rightAnkleTarget,
-      rightKnee: rightKneeTarget,
-      rightToe: rightToeTarget,
-    },
     leftAnkleTarget,
     leftKneeTarget,
     leftToeTarget,
