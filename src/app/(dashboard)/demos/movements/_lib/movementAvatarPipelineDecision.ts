@@ -71,7 +71,6 @@ export function resolveMovementAvatarPipelineDecision({
     retargetSolvedLegs,
     shouldApplyLowerBody,
     shouldApplySolverTorso,
-    shouldUseRetargetedUpperBody,
   } = resolveMovementAvatarPipelineLowerBodyDecision({
     bodyConfidence,
     calibration,
@@ -162,7 +161,6 @@ export function resolveMovementAvatarPipelineDecision({
     rightArm,
     shouldApplyLowerBody,
     shouldApplySolverTorso,
-    shouldUseRetargetedUpperBody,
     spineDrive,
     torsoOwner,
     torsoTrackingReady,

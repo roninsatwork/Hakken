@@ -111,7 +111,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     shouldApplyLowerBody,
     shouldApplySolverTorso,
     shouldHoldPlayerSquatPose,
-    shouldUseRetargetedUpperBody,
     torsoTrackingReady,
     visualRootDrop,
   } = decisionSnapshotRuntime;
@@ -162,7 +161,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     shouldApplyLowerBody,
     shouldApplySolverTorso,
     shouldHoldPlayerSquatPose,
-    shouldUseRetargetedUpperBody,
     solverLandmarks,
     squatFlexionBendBoost: profile.squatLegBendBoost,
     targetSolverLandmarks,

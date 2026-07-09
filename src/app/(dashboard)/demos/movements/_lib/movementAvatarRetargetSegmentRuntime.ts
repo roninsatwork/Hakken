@@ -30,7 +30,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   profile,
   refreshRestMap,
   retargetFrame,
-  shouldUseRetargetedUpperBody,
   storeLastGood,
 }: {
   avatarRole: "instructor" | "player";
@@ -43,7 +42,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   profile?: MovementAvatarTrackingProfile;
   refreshRestMap: () => MovementAvatarRetargetRestMap;
   retargetFrame: MovementRetargetFrame;
-  shouldUseRetargetedUpperBody: boolean;
   storeLastGood?: (boneName: MovementAvatarRetargetBoneName, quaternion: THREE.Quaternion) => void;
 }): MovementAvatarRetargetSegmentRuntimeApplication {
   let restMap = currentRestMap;
@@ -57,8 +55,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
         retargetFrame,
         segmentName: mapping.segment,
         segmentType: mapping.type,
-        shouldUseRetargetedUpperBody,
-      });
+            });
       const application = applyMovementAvatarRetargetSegmentMappingToVrmBones({
         canApply,
         currentRestMap: restMap,
@@ -92,7 +89,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
   mappings,
   profile,
   retargetFrame,
-  shouldUseRetargetedUpperBody,
   vrm,
 }: {
   avatarRole: "instructor" | "player";
@@ -104,7 +100,6 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
   mappings: MovementAvatarRetargetBoneMapping[];
   profile?: MovementAvatarTrackingProfile;
   retargetFrame: MovementRetargetFrame;
-  shouldUseRetargetedUpperBody: boolean;
   vrm: VRM | null | undefined;
 }): MovementAvatarRetargetSegmentRuntimeApplication {
   return applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
@@ -118,8 +113,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
     profile,
     refreshRestMap: () => vrm ? buildMovementAvatarRetargetRestMap(vrm) : currentRestMap,
     retargetFrame,
-    shouldUseRetargetedUpperBody,
-    storeLastGood: (lastGoodBoneName, quaternion) => {
+      storeLastGood: (lastGoodBoneName, quaternion) => {
       lastGood[lastGoodBoneName] = quaternion;
     },
   });

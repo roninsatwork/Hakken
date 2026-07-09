@@ -96,7 +96,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       shouldApplyLowerBody: true,
       shouldApplySolverTorso: true,
       shouldHoldPlayerSquatPose: false,
-      shouldUseRetargetedUpperBody: true,
       solverLandmarks: "solver-landmarks",
       squatFlexionBendBoost: 1.2,
       targetSolverLandmarks: "target-solver-landmarks",
@@ -108,7 +107,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       currentRestMap: "current-rest-map",
       lastGood: "last-good-quaternions",
       lowerBodySegmentMotion: 0.7,
-      shouldUseRetargetedUpperBody: true,
     }));
     expect(applyMovementAvatarUpperBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       retargetFrameRuntimeAdapters,

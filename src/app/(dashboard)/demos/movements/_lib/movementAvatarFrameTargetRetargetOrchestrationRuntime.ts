@@ -39,7 +39,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   profile,
   retargetFrame,
   rigHands,
-  shouldUseRetargetedUpperBody,
   solverLandmarks,
   targetSolverLandmarks,
   vrm,
@@ -57,7 +56,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   profile?: MovementAvatarTrackingProfile;
   retargetFrame: MovementRetargetFrame;
   rigHands: VrmHandsPayload | undefined;
-  shouldUseRetargetedUpperBody: boolean;
   solverLandmarks: VrmSolverLandmark[];
   targetSolverLandmarks: VrmSolverLandmark[];
   vrm: VRM | null | undefined;
@@ -84,8 +82,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
       lowerBodySegmentMotion,
       profile,
       retargetFrame,
-      shouldUseRetargetedUpperBody,
-      vrm,
+          vrm,
     }),
   };
 }

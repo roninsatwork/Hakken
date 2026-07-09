@@ -35,7 +35,6 @@ export type MovementAvatarPipelineLowerBodyDecision = Pick<
   | "retargetSolvedLegs"
   | "shouldApplyLowerBody"
   | "shouldApplySolverTorso"
-  | "shouldUseRetargetedUpperBody"
 >;
 
 export function resolveMovementAvatarPipelineLowerBodyDecision({
@@ -88,7 +87,6 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   const shouldApplySolverTorso =
     lowerBodyDrive.shouldApplySolverTorso ||
     (!isPlayer && torsoTrackingReady && retargetFrame.debug.sourceQuality >= 0.45);
-  const shouldUseRetargetedUpperBody = retargetFrame.debug.sourceQuality >= 0.45;
   const lowerBodySegmentMotion = getRecordedLowerBodySegmentMotionDepth({
     calibration: retargetSourceModel,
     frame: retargetFrame,
@@ -133,6 +131,5 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
     retargetSolvedLegs,
     shouldApplyLowerBody,
     shouldApplySolverTorso,
-    shouldUseRetargetedUpperBody,
   };
 }

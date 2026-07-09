@@ -20,7 +20,6 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   retargetFrame,
   segmentName,
   segmentType,
-  shouldUseRetargetedUpperBody,
 }: {
   avatarRole: "instructor" | "player";
   instructorSquatPresentationDepth: number;
@@ -29,18 +28,14 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   retargetFrame: MovementRetargetFrame;
   segmentName: MovementRetargetSegmentName;
   segmentType: MovementAvatarRetargetSegmentType;
-  shouldUseRetargetedUpperBody: boolean;
 }): MovementAvatarRetargetSegmentApplicationDecision {
   const isPlayer = avatarRole === "player";
   const zScale = getMovementRetargetSegmentZScale(retargetFrame, 0.18);
   const segment = retargetFrame.segments[segmentName];
-  const useReplayUpperBodySlerp = shouldUseRetargetedUpperBody && segmentType === "arm";
   const slerp = segmentType === "foot"
     ? (isPlayer ? profile.footSlerp : 0.36)
     : segmentType === "arm"
-      ? segmentName.includes("UpperArm")
-        ? (useReplayUpperBodySlerp ? 0.72 : isPlayer ? profile.upperArmSlerp : 0.72)
-        : (useReplayUpperBodySlerp ? 0.78 : isPlayer ? profile.lowerArmSlerp : 0.78)
+      ? segmentName.includes("UpperArm") ? 0.72 : 0.78
       : segmentType === "spine"
         ? (isPlayer ? 0.32 : 0.66)
         : (isPlayer ? profile.legSlerp : 0.42);

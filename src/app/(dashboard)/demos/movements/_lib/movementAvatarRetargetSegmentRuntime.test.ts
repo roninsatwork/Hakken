@@ -84,7 +84,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
       ],
       refreshRestMap: restMap,
       retargetFrame: retargetFrame(),
-      shouldUseRetargetedUpperBody: false,
       storeLastGood: (boneName) => {
         stored.push(boneName);
       },
@@ -118,7 +117,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
       retargetFrame: retargetFrame({
         segments: {},
       }),
-      shouldUseRetargetedUpperBody: false,
     });
 
     expect(result.applied).toBe(0);
@@ -155,7 +153,6 @@ describe("movementAvatarRetargetSegmentRuntime", () => {
       lowerBodySegmentMotion: 0.55,
       mappings: [MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!],
       retargetFrame: retargetFrame(),
-      shouldUseRetargetedUpperBody: false,
       vrm,
     });
 

@@ -1324,7 +1324,6 @@ describe("movementGamePathSimulation", () => {
       }),
       segmentName: "leftFoot",
       segmentType: "foot",
-      shouldUseRetargetedUpperBody: false,
     });
 
     expect(decision).toMatchObject({
@@ -1345,7 +1344,6 @@ describe("movementGamePathSimulation", () => {
       }),
       segmentName: "leftFoot",
       segmentType: "foot",
-      shouldUseRetargetedUpperBody: false,
     });
 
     expect(decision).toMatchObject({
@@ -1370,7 +1368,6 @@ describe("movementGamePathSimulation", () => {
       retargetFrame: retargetFrame(),
       segmentName: "rightUpperArm",
       segmentType: "arm",
-      shouldUseRetargetedUpperBody: false,
     });
     const legDecision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "player",
@@ -1384,10 +1381,10 @@ describe("movementGamePathSimulation", () => {
       }),
       segmentName: "leftThigh",
       segmentType: "leg",
-      shouldUseRetargetedUpperBody: false,
     });
 
-    expect(rightArmDecision.slerp).toBe(0.51);
+    // Arms use the unified segment slerp; only legs remain profile-tuned.
+    expect(rightArmDecision.slerp).toBe(0.72);
     expect(legDecision.slerp).toBe(0.43);
   });
 

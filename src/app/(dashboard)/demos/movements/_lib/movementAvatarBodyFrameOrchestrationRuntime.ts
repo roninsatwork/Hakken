@@ -60,7 +60,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   shouldApplyLowerBody,
   shouldApplySolverTorso,
   shouldHoldPlayerSquatPose,
-  shouldUseRetargetedUpperBody,
   solverLandmarks,
   squatFlexionBendBoost,
   targetSolverLandmarks,
@@ -96,7 +95,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   shouldApplyLowerBody: MovementAvatarLowerBodyFrameOrchestrationInput["shouldApplyLowerBody"];
   shouldApplySolverTorso: MovementAvatarUpperBodyFrameOrchestrationInput["shouldApplySolverTorso"];
   shouldHoldPlayerSquatPose: MovementAvatarLowerBodyFrameOrchestrationInput["shouldHoldPlayerSquatPose"];
-  shouldUseRetargetedUpperBody: boolean;
   solverLandmarks: MovementAvatarFrameTargetRetargetInput["solverLandmarks"];
   squatFlexionBendBoost: MovementAvatarLowerBodyFrameOrchestrationInput["squatFlexionBendBoost"];
   targetSolverLandmarks: MovementAvatarFrameTargetRetargetInput["targetSolverLandmarks"];
@@ -117,8 +115,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     profile,
     retargetFrame,
     rigHands,
-    shouldUseRetargetedUpperBody,
-    solverLandmarks,
+      solverLandmarks,
     targetSolverLandmarks,
     vrm,
   });

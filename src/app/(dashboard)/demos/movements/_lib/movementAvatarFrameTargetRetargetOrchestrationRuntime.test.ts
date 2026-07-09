@@ -110,7 +110,6 @@ describe("movementAvatarFrameTargetRetargetOrchestrationRuntime", () => {
       lowerBodySegmentMotion: 0.55,
       retargetFrame: retargetFrame(),
       rigHands: undefined,
-      shouldUseRetargetedUpperBody: false,
       solverLandmarks: imageLandmarks,
       targetSolverLandmarks,
       vrm,

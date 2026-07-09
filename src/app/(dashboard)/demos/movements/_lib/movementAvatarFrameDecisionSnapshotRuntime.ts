@@ -20,7 +20,6 @@ export type MovementAvatarFrameDecisionSnapshotRuntime = {
   shouldApplyLowerBody: MovementAvatarLowerBodyFrameStateRuntime["shouldApplyLowerBody"];
   shouldApplySolverTorso: MovementAvatarLowerBodyFrameStateRuntime["shouldApplySolverTorso"];
   shouldHoldPlayerSquatPose: MovementAvatarLowerBodyFrameStateRuntime["shouldHoldPlayerSquatPose"];
-  shouldUseRetargetedUpperBody: MovementAvatarPipelineDecision["shouldUseRetargetedUpperBody"];
   torsoTrackingReady: MovementAvatarPipelineDecision["torsoTrackingReady"];
   visualRootDrop: MovementAvatarLowerBodyFrameStateRuntime["visualRootDrop"];
 };
@@ -51,7 +50,6 @@ export function resolveMovementAvatarFrameDecisionSnapshotRuntime({
     shouldApplyLowerBody: lowerBodyFrameStateRuntime.shouldApplyLowerBody,
     shouldApplySolverTorso: lowerBodyFrameStateRuntime.shouldApplySolverTorso,
     shouldHoldPlayerSquatPose: lowerBodyFrameStateRuntime.shouldHoldPlayerSquatPose,
-    shouldUseRetargetedUpperBody: avatarDecision.shouldUseRetargetedUpperBody,
     torsoTrackingReady: avatarDecision.torsoTrackingReady,
     visualRootDrop: lowerBodyFrameStateRuntime.visualRootDrop,
   };

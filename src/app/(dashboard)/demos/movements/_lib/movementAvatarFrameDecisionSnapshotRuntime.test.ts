@@ -16,7 +16,6 @@ describe("movementAvatarFrameDecisionSnapshotRuntime", () => {
       retargetFrame,
       rightArm: { side: "right" },
       rootOrientation: { yaw: 0.25 },
-      shouldUseRetargetedUpperBody: true,
       spineDrive: { mode: "solver" },
       torsoTrackingReady: true,
     } as unknown as MovementAvatarPipelineDecision;

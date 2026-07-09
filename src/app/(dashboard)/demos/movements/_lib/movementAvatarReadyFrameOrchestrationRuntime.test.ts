@@ -139,7 +139,6 @@ describe("movementAvatarReadyFrameOrchestrationRuntime", () => {
         shouldApplyLowerBody: true,
         shouldApplySolverTorso: true,
         shouldHoldPlayerSquatPose: false,
-        shouldUseRetargetedUpperBody: true,
         torsoTrackingReady: true,
         visualRootDrop: 0.6,
       },

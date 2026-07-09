@@ -29,7 +29,6 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   lowerBodySegmentMotion,
   profile,
   retargetFrame,
-  shouldUseRetargetedUpperBody,
   vrm,
 }: {
   avatarRole: "instructor" | "player";
@@ -41,7 +40,6 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   lowerBodySegmentMotion: number;
   profile?: MovementAvatarTrackingProfile;
   retargetFrame: MovementRetargetFrame;
-  shouldUseRetargetedUpperBody: boolean;
   vrm: VRM | null | undefined;
 }): MovementAvatarRetargetFrameRuntimeAdapters {
   let restMap = currentRestMap;
@@ -71,8 +69,7 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
         mappings,
         profile,
         retargetFrame,
-        shouldUseRetargetedUpperBody,
-        vrm,
+              vrm,
       });
       restMap = application.restMap;
 

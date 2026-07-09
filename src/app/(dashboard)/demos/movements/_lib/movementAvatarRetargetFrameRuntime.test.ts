@@ -76,7 +76,6 @@ describe("movementAvatarRetargetFrameRuntime", () => {
       lookupBone: (boneName) => bones.get(boneName) ?? null,
       lowerBodySegmentMotion: 0.55,
       retargetFrame: retargetFrame(),
-      shouldUseRetargetedUpperBody: false,
       vrm,
     });
 

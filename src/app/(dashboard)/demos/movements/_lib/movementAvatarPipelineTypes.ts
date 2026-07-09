@@ -453,7 +453,6 @@ export type MovementAvatarPipelineDecision = {
   rightArm: MovementAvatarArmDecision;
   shouldApplyLowerBody: boolean;
   shouldApplySolverTorso: boolean;
-  shouldUseRetargetedUpperBody: boolean;
   spineDrive: MovementAvatarPlayerSpineDrive;
   torsoOwner: string;
   torsoTrackingReady: boolean;
