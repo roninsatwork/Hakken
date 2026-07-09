@@ -2,28 +2,18 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import type { MovementAvatarArmDecision } from "./movementAvatarPipeline";
 import type { MovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
-import type { VrmSolverLandmark } from "./vrmRigging";
 import { applyMovementAvatarUpperBodyRuntimeToVrmBones } from "./movementAvatarUpperBodyRuntime";
 
-function landmark(index: number): VrmSolverLandmark {
-  return {
-    visibility: 0.9,
-    x: index,
-    y: index + 0.1,
-    z: index + 0.2,
-  };
-}
-
-function landmarks() {
-  return Array.from({ length: 33 }, (_, index) => landmark(index));
-}
-
-function armDecision(side: "left" | "right"): MovementAvatarArmDecision {
+function armDecision(
+  side: "left" | "right",
+  overrides: Partial<MovementAvatarArmDecision> = {},
+): MovementAvatarArmDecision {
   return {
     endpointConfidence: 0.9,
     isTrackingReady: true,
     side,
     unreadyFallback: "relax",
+    ...overrides,
   };
 }
 
@@ -91,85 +81,66 @@ function bones() {
 }
 
 describe("movementAvatarUpperBodyRuntime", () => {
-  it("applies active spine and tracked arms through one runtime boundary", () => {
+  it("applies spine and leaves retargeted arms untouched", () => {
     const boneMap = bones();
     const lastGood: Record<string, THREE.Quaternion> = {};
 
     const result = applyMovementAvatarUpperBodyRuntimeToVrmBones({
       activeSpineDrive: spineDrive(),
       armRelaxedSlerp: 0.35,
-      armTargets: {
-        leftElbowTarget: landmark(13),
-        leftFrontBodyArmBias: -0.2,
-        leftWristTarget: landmark(15),
-        playerArmLandmarks: landmarks(),
-        playerSafeArmZScale: 0.2,
-        rightElbowTarget: landmark(14),
-        rightFrontBodyArmBias: 0.2,
-        rightWristTarget: landmark(16),
-      },
       avatarRole: "player",
-      fallbackZScale: 1,
-      handNeutralSlerp: 0.22,
       lastGood,
       leftArmDecision: armDecision("left"),
+      leftArmRetargetApplied: true,
       lookupBone: (boneName) => boneMap.get(boneName) ?? null,
       rightArmDecision: armDecision("right"),
+      rightArmRetargetApplied: true,
       shouldApplySolverTorso: true,
-      shouldUseRetargetedUpperBody: false,
       sources: {},
       spineApplyOptions: spineApplyOptions(),
       torsoTrackingReady: true,
     });
 
     expect(result.spine).toEqual({ applied: 4, mode: "active" });
-    expect(result.rightArm.mode).toBe("tracked-aim");
-    expect(result.leftArm.mode).toBe("tracked-aim");
+    expect(result.rightArm).toEqual({ handled: false, mode: "retargeted" });
+    expect(result.leftArm).toEqual({ handled: false, mode: "retargeted" });
     expect(result.recordedSpineRetargetCount).toBe(0);
     expect(boneMap.get("upperChest")?.quaternion.w).toBeLessThan(1);
-    expect(Object.keys(lastGood).sort()).toEqual([
-      "leftUpperArm",
-      "rightUpperArm",
-    ]);
+    // Retargeted arms must not be perturbed by the fallback application.
+    expect(boneMap.get("leftUpperArm")?.quaternion.w).toBe(1);
+    expect(boneMap.get("rightUpperArm")?.quaternion.w).toBe(1);
   });
 
-  it("reports recorded spine retarget count while local arms are skipped", () => {
+  it("holds the last good arm pose when the retarget misses but tracking is ready", () => {
+    const boneMap = bones();
+    const storedQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.8));
+    const lastGood: Record<string, THREE.Quaternion> = {
+      leftLowerArm: storedQuaternion.clone(),
+      leftUpperArm: storedQuaternion.clone(),
+    };
+
     const result = applyMovementAvatarUpperBodyRuntimeToVrmBones({
-      activeSpineDrive: {
-        ...spineDrive(),
-        shouldApplySpine: false,
-      },
+      activeSpineDrive: spineDrive(),
       armRelaxedSlerp: 0.35,
-      armTargets: {
-        leftElbowTarget: landmark(13),
-        leftFrontBodyArmBias: -0.2,
-        leftWristTarget: landmark(15),
-        playerArmLandmarks: landmarks(),
-        playerSafeArmZScale: 0.2,
-        rightElbowTarget: landmark(14),
-        rightFrontBodyArmBias: 0.2,
-        rightWristTarget: landmark(16),
-      },
-      avatarRole: "instructor",
-      fallbackZScale: 0.1,
-      handNeutralSlerp: 0.22,
-      lastGood: {},
+      avatarRole: "player",
+      lastGood,
       leftArmDecision: armDecision("left"),
-      lookupBone: () => null,
-      rightArmDecision: armDecision("right"),
+      leftArmRetargetApplied: false,
+      lookupBone: (boneName) => boneMap.get(boneName) ?? null,
+      rightArmDecision: armDecision("right", {
+        isTrackingReady: false,
+        unreadyFallback: "relax",
+      }),
+      rightArmRetargetApplied: false,
       shouldApplySolverTorso: true,
-      shouldUseRetargetedUpperBody: true,
       sources: {},
       spineApplyOptions: spineApplyOptions(true),
       torsoTrackingReady: false,
     });
 
     expect(result.recordedSpineRetargetCount).toBe(1);
-    expect(result.rightArm).toMatchObject({
-      appliedAimRequests: 0,
-      handled: false,
-      mode: "retarget-skipped",
-    });
-    expect(result.leftArm.mode).toBe("retarget-skipped");
+    expect(result.leftArm).toEqual({ handled: true, mode: "hold-last-good" });
+    expect(result.rightArm).toEqual({ handled: true, mode: "relax" });
+    expect(boneMap.get("leftUpperArm")?.quaternion.w).toBeLessThan(1);
   });
 });

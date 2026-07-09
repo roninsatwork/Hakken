@@ -42,6 +42,21 @@ export const MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS: MovementAvatarRetargetB
 export const MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS =
   MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS;
 
+export const MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS =
+  MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS.filter(
+    (mapping) => mapping.type === "arm" && mapping.segment.startsWith("left"),
+  );
+
+export const MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS =
+  MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS.filter(
+    (mapping) => mapping.type === "arm" && mapping.segment.startsWith("right"),
+  );
+
+export const MOVEMENT_AVATAR_SPINE_RETARGET_MAPPINGS =
+  MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS.filter(
+    (mapping) => mapping.type === "spine",
+  );
+
 export const MOVEMENT_AVATAR_VISUAL_MAPPINGS = [
   ...MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS,
   ...MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,

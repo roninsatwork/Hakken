@@ -40,7 +40,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   boneEaseOptions,
   currentRestMap,
   fallbackSlerp,
-  hasWorldLandmarks,
   imageLandmarks,
   instructorSquatPresentationDepth,
   lastGoodQuaternionRef,
@@ -80,7 +79,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     MovementAvatarLowerBodyFrameOrchestrationInput["boneEaseOptions"];
   currentRestMap: MovementAvatarFrameTargetRetargetInput["currentRestMap"];
   fallbackSlerp: MovementAvatarLowerBodyFrameOrchestrationInput["fallbackSlerp"];
-  hasWorldLandmarks: boolean;
   imageLandmarks: MovementAvatarFrameTargetRetargetInput["imageLandmarks"];
   instructorSquatPresentationDepth: number;
   lastGoodQuaternionRef: MovementAvatarUpperBodyFrameOrchestrationInput["lastGoodQuaternionRef"];
@@ -131,7 +129,6 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     vrm,
   });
   const {
-    armTargetComposition,
     frameTargetRuntime,
     lowerBodyAimTargets,
     retargetFrameRuntimeAdapters,
@@ -139,20 +136,15 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
 
   const upperBodyFrameOrchestrationRuntime = applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
     activeSpineDrive,
-    armTargetComposition,
-    armAvatarRole,
     avatarRole,
     boneEaseOptions,
-    hasWorldLandmarks,
     lastGoodQuaternionRef,
     leftArmDecision,
     lookupBone,
-    profile,
     retargetFrameRuntimeAdapters,
     riggedPose,
     rightArmDecision,
     shouldApplySolverTorso,
-    shouldUseRetargetedUpperBody,
     torsoTrackingReady,
   });
 

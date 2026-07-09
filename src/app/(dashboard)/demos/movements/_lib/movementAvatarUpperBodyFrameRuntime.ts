@@ -4,13 +4,13 @@ import type {
   MovementAvatarBoneEaseOptionsDecision,
 } from "./movementAvatarPipeline";
 import { resolveMovementAvatarSpineApplyOptions } from "./movementAvatarPipeline";
-import type { MovementAvatarArmTargetCompositionDecision } from "./movementAvatarArmTarget";
 import type { MovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
 import {
-  MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
+  MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS,
+  MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS,
+  MOVEMENT_AVATAR_SPINE_RETARGET_MAPPINGS,
   type MovementAvatarRetargetBoneMapping,
 } from "./movementAvatarRestPose";
-import type { MovementAvatarTrackingProfile } from "./movementTrackingCalibration";
 import {
   applyMovementAvatarUpperBodyRuntimeToVrmBones,
   type MovementAvatarUpperBodyRuntimeApplication,
@@ -25,65 +25,45 @@ export type MovementAvatarUpperBodyFrameRuntimeResult = {
 export function applyMovementAvatarUpperBodyFrameRuntime({
   activeSpineDrive,
   applyRetargetMappings,
-  armTargetComposition,
-  armAvatarRole,
   avatarRole,
   boneEaseOptions,
-  fallbackZScale,
   lastGood,
   leftArmDecision,
   lookupBone,
-  profile,
   rightArmDecision,
   shouldApplySolverTorso,
-  shouldUseRetargetedUpperBody,
   sources,
   torsoTrackingReady,
 }: {
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => { applied: number };
-  armTargetComposition: MovementAvatarArmTargetCompositionDecision;
-  armAvatarRole?: "instructor" | "player";
   avatarRole: "instructor" | "player";
-  boneEaseOptions: Pick<
-    MovementAvatarBoneEaseOptionsDecision,
-    "armRelaxedSlerp" | "handNeutralSlerp"
-  >;
-  fallbackZScale: number;
+  boneEaseOptions: Pick<MovementAvatarBoneEaseOptionsDecision, "armRelaxedSlerp">;
   lastGood: Record<string, THREE.Quaternion>;
   leftArmDecision: MovementAvatarArmDecision;
   lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
-  profile?: MovementAvatarTrackingProfile;
   rightArmDecision: MovementAvatarArmDecision;
   shouldApplySolverTorso: boolean;
-  shouldUseRetargetedUpperBody: boolean;
   sources: MovementAvatarSpineSolverSources;
   torsoTrackingReady: boolean;
 }): MovementAvatarUpperBodyFrameRuntimeResult {
+  // The rest-mapped segment retarget owns arms and spine. Per-segment
+  // confidence gates application; arms that could not solve fall back to
+  // hold-last-good / relax inside the upper-body runtime.
+  const leftArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS);
+  const rightArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS);
+
   const upperBodyRuntimeApplication = applyMovementAvatarUpperBodyRuntimeToVrmBones({
     activeSpineDrive,
     armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
-    armTargets: {
-      leftElbowTarget: armTargetComposition.leftElbowTarget,
-      leftFrontBodyArmBias: armTargetComposition.leftFrontBodyArmBias,
-      leftWristTarget: armTargetComposition.leftWristTarget,
-      playerArmLandmarks: armTargetComposition.playerArmLandmarks,
-      playerSafeArmZScale: armTargetComposition.playerSafeArmZScale,
-      rightElbowTarget: armTargetComposition.rightElbowTarget,
-      rightFrontBodyArmBias: armTargetComposition.rightFrontBodyArmBias,
-      rightWristTarget: armTargetComposition.rightWristTarget,
-    },
-    armAvatarRole,
     avatarRole,
-    fallbackZScale,
-    handNeutralSlerp: boneEaseOptions.handNeutralSlerp,
     lastGood,
     leftArmDecision,
+    leftArmRetargetApplied: leftArmRetarget.applied > 0,
     lookupBone,
-    profile,
     rightArmDecision,
+    rightArmRetargetApplied: rightArmRetarget.applied > 0,
     shouldApplySolverTorso,
-    shouldUseRetargetedUpperBody,
     sources,
     spineApplyOptions: resolveMovementAvatarSpineApplyOptions({
       avatarRole,
@@ -91,17 +71,17 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
     }),
     torsoTrackingReady,
   });
-  let retargetAppliedUpperBody = upperBodyRuntimeApplication.recordedSpineRetargetCount;
 
-  if (shouldUseRetargetedUpperBody) {
-    const upperBodyRetargetCounts = applyRetargetMappings(
-      MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
-    );
-    retargetAppliedUpperBody += upperBodyRetargetCounts.applied;
-  }
+  // The spine segment refines the angle-based spine drive, so it must apply
+  // after the spine pose application — not be overwritten by it.
+  const spineRetarget = applyRetargetMappings(MOVEMENT_AVATAR_SPINE_RETARGET_MAPPINGS);
 
   return {
-    retargetAppliedUpperBody,
+    retargetAppliedUpperBody:
+      upperBodyRuntimeApplication.recordedSpineRetargetCount +
+      leftArmRetarget.applied +
+      rightArmRetarget.applied +
+      spineRetarget.applied,
     upperBodyRuntimeApplication,
   };
 }

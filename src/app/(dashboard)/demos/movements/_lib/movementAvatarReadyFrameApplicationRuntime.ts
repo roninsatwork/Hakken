@@ -144,7 +144,6 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     boneEaseOptions,
     currentRestMap: retargetAvatarRestRef.current,
     fallbackSlerp,
-    hasWorldLandmarks: frameWorldRuntime.hasWorldLandmarks,
     imageLandmarks,
     instructorSquatPresentationDepth,
     lastGoodQuaternionRef,

@@ -67,7 +67,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       boneEaseOptions: "bone-ease-options",
       currentRestMap: "current-rest-map",
       fallbackSlerp: 0.35,
-      hasWorldLandmarks: true,
       imageLandmarks: "image-landmarks",
       instructorSquatPresentationDepth: 0.1,
       lastGoodQuaternionRef: {
@@ -115,7 +114,6 @@ describe("movementAvatarBodyFrameOrchestrationRuntime", () => {
       shouldUseRetargetedUpperBody: true,
     }));
     expect(applyMovementAvatarUpperBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
-      armTargetComposition,
       retargetFrameRuntimeAdapters,
       riggedPose: expect.objectContaining({ LeftLowerLeg: leftLowerLeg }),
     }));

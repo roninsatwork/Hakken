@@ -191,7 +191,6 @@ describe("movementAvatarReadyFrameOrchestrationRuntime", () => {
     expect(applyMovementAvatarBodyFrameOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({
       currentRestMap: "rest-map",
       fallbackSlerp: 0.3,
-      hasWorldLandmarks: true,
       zScale: 1,
     }));
     expect(applyMovementAvatarFrameCompletionOrchestrationRuntime).toHaveBeenCalledWith(expect.objectContaining({

@@ -18,16 +18,14 @@ export type MovementAvatarUpperBodyFrameOrchestrationRuntimeResult = {
 };
 
 export function applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
-  hasWorldLandmarks,
   lastGoodQuaternionRef,
   retargetFrameRuntimeAdapters,
   riggedPose,
   ...input
 }: Omit<
   MovementAvatarUpperBodyFrameRuntimeInput,
-  "applyRetargetMappings" | "fallbackZScale" | "lastGood" | "sources"
+  "applyRetargetMappings" | "lastGood" | "sources"
 > & {
-  hasWorldLandmarks: boolean;
   lastGoodQuaternionRef: MovementAvatarMutableRef<Record<string, THREE.Quaternion>>;
   retargetFrameRuntimeAdapters: Pick<MovementAvatarRetargetFrameRuntimeAdapters, "applyRetargetMappings">;
   riggedPose: VrmRiggedPose;
@@ -35,7 +33,6 @@ export function applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
   const upperBodyFrameRuntime = applyMovementAvatarUpperBodyFrameRuntime({
     ...input,
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
-    fallbackZScale: hasWorldLandmarks ? 1 : 0.1,
     lastGood: lastGoodQuaternionRef.current,
     sources: {
       hips: riggedPose.Hips?.rotation,

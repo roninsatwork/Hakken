@@ -1,286 +1,136 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
+import type { MovementAvatarArmDecision } from "./movementAvatarPipeline";
 import {
-  applyMovementAvatarArmAimRequestToVrmBones,
   applyMovementAvatarArmApplication,
   applyMovementAvatarArmApplicationToVrmBones,
 } from "./movementAvatarArmApplication";
-import type { MovementAvatarArmDecision } from "./movementAvatarPipeline";
-import type { VrmSolverLandmark } from "./vrmRigging";
 
-function landmark(index: number): VrmSolverLandmark {
-  return {
-    visibility: 0.9,
-    x: index,
-    y: index + 0.1,
-    z: index + 0.2,
-  };
-}
-
-function armDecision(
-  overrides: Partial<MovementAvatarArmDecision> = {},
-): MovementAvatarArmDecision {
+function armDecision(overrides: Partial<MovementAvatarArmDecision> = {}): MovementAvatarArmDecision {
   return {
     endpointConfidence: 0.9,
     isTrackingReady: true,
-    side: "right",
+    side: "left",
     unreadyFallback: "relax",
     ...overrides,
   };
 }
 
-function applicationInput(
-  overrides: Partial<Parameters<typeof applyMovementAvatarArmApplication>[0]> = {},
-): Parameters<typeof applyMovementAvatarArmApplication>[0] {
-  return {
-    applyAim: () => {},
-    applyHandNeutral: () => {},
-    armDecision: armDecision(),
-    avatarRole: "player",
-    elbowTarget: landmark(14),
-    frontBias: 0.2,
-    holdLastGood: () => {},
-    playerArmLandmarks: Array.from({ length: 33 }, (_, index) => landmark(index)),
-    relax: () => {},
-    safeZScale: 0.24,
-    shouldUseRetargetedUpperBody: false,
-    side: "right",
-    wristTarget: landmark(16),
-    ...overrides,
-  };
-}
+describe("applyMovementAvatarArmApplication", () => {
+  it("leaves retargeted arms alone", () => {
+    const calls: string[] = [];
 
-describe("movement avatar arm application", () => {
-  it("skips local arm application when retargeted upper body owns the branch", () => {
-    const events: string[] = [];
-
-    const result = applyMovementAvatarArmApplication(applicationInput({
-      applyAim: () => {
-        events.push("aim");
-      },
-      shouldUseRetargetedUpperBody: true,
-    }));
-
-    expect(result).toEqual({
-      appliedAimRequests: 0,
-      handled: false,
-      mode: "retarget-skipped",
+    const result = applyMovementAvatarArmApplication({
+      armDecision: armDecision(),
+      holdLastGood: () => calls.push("hold"),
+      relax: () => calls.push("relax"),
+      retargetApplied: true,
+      side: "left",
     });
-    expect(events).toEqual([]);
+
+    expect(result).toEqual({ handled: false, mode: "retargeted" });
+    expect(calls).toEqual([]);
   });
 
-  it("applies tracked arm aim requests and neutral hand easing", () => {
-    const events: string[] = [];
+  it("holds the last good pose when the retarget misses but tracking is ready", () => {
+    const calls: string[] = [];
 
-    const result = applyMovementAvatarArmApplication(applicationInput({
-      applyAim: (request) => {
-        events.push(`${request.bone}->${request.child}:${request.options.frontBias}`);
-      },
-      applyHandNeutral: (side) => {
-        events.push(`hand-neutral:${side}`);
-      },
-      frontBias: 0.2,
-      side: "right",
-    }));
-
-    expect(result).toEqual({
-      appliedAimRequests: 2,
-      handled: true,
-      mode: "tracked-aim",
+    const result = applyMovementAvatarArmApplication({
+      armDecision: armDecision(),
+      holdLastGood: () => calls.push("hold"),
+      relax: () => calls.push("relax"),
+      retargetApplied: false,
+      side: "left",
     });
-    expect(events).toEqual([
-      "rightUpperArm->rightLowerArm:0.18000000000000002",
-      "rightLowerArm->rightHand:0.22999999999999998",
-      "hand-neutral:right",
-    ]);
+
+    expect(result).toEqual({ handled: true, mode: "hold-last-good" });
+    expect(calls).toEqual(["hold"]);
   });
 
-  it("holds last-good rotations for unready arms when requested", () => {
-    const events: string[] = [];
+  it("holds the last good pose for the hold-last-good unready fallback", () => {
+    const calls: string[] = [];
 
-    const result = applyMovementAvatarArmApplication(applicationInput({
+    const result = applyMovementAvatarArmApplication({
       armDecision: armDecision({
         isTrackingReady: false,
-        side: "left",
         unreadyFallback: "hold-last-good",
       }),
-      holdLastGood: (side) => {
-        events.push(`hold:${side}`);
-      },
-      side: "left",
-    }));
-
-    expect(result).toEqual({
-      appliedAimRequests: 0,
-      handled: true,
-      mode: "hold-last-good",
-    });
-    expect(events).toEqual(["hold:left"]);
-  });
-
-  it("relaxes unready arms when no last-good hold is requested", () => {
-    const events: string[] = [];
-
-    const result = applyMovementAvatarArmApplication(applicationInput({
-      armDecision: armDecision({
-        isTrackingReady: false,
-        unreadyFallback: "relax",
-      }),
-      relax: (side) => {
-        events.push(`relax:${side}`);
-      },
-    }));
-
-    expect(result).toEqual({
-      appliedAimRequests: 0,
-      handled: true,
-      mode: "relax",
-    });
-    expect(events).toEqual(["relax:right"]);
-  });
-
-  it("applies arm aim requests directly to VRM bones", () => {
-    const parent = new THREE.Object3D();
-    const rightUpperArm = new THREE.Object3D();
-    const rightLowerArm = new THREE.Object3D();
-    parent.add(rightUpperArm);
-    rightUpperArm.add(rightLowerArm);
-    rightLowerArm.position.set(0, -1, 0);
-    parent.updateMatrixWorld(true);
-    const stored: string[] = [];
-
-    const result = applyMovementAvatarArmAimRequestToVrmBones({
-      fallbackZScale: 0.1,
-      lookupBone: (boneName) => {
-        if (boneName === "rightUpperArm") return rightUpperArm;
-        if (boneName === "rightLowerArm") return rightLowerArm;
-        return null;
-      },
-      request: {
-        bone: "rightUpperArm",
-        child: "rightLowerArm",
-        options: {
-          frontBias: 0.2,
-          minVectorLengthSq: 0.01,
-          slerpOverride: 1,
-          visibilityThreshold: 0.2,
-        },
-        source: landmark(12),
-        target: landmark(14),
-      },
-      storeLastGoodQuaternion: (boneName) => {
-        stored.push(boneName);
-      },
+      holdLastGood: () => calls.push("hold"),
+      relax: () => calls.push("relax"),
+      retargetApplied: false,
+      side: "right",
     });
 
-    expect(result).toEqual({ applied: true });
-    expect(stored).toEqual(["rightUpperArm"]);
-    expect(rightUpperArm.quaternion.w).toBeLessThan(1);
+    expect(result).toEqual({ handled: true, mode: "hold-last-good" });
+    expect(calls).toEqual(["hold"]);
   });
 
-  it("skips arm aim requests when VRM lookup misses", () => {
-    expect(applyMovementAvatarArmAimRequestToVrmBones({
-      fallbackZScale: 0.1,
-      lookupBone: () => null,
-      request: {
-        bone: "rightUpperArm",
-        child: "rightLowerArm",
-        options: {
-          minVectorLengthSq: 0.01,
-          slerpOverride: 1,
-          visibilityThreshold: 0.2,
-        },
-        source: landmark(12),
-        target: landmark(14),
-      },
-    })).toEqual({ applied: false });
-  });
+  it("relaxes the arm when tracking is unready with the relax fallback", () => {
+    const calls: string[] = [];
 
-  it("applies tracked arm application directly to VRM bones", () => {
-    const parent = new THREE.Object3D();
-    const rightUpperArm = new THREE.Object3D();
-    const rightLowerArm = new THREE.Object3D();
-    const rightHand = new THREE.Object3D();
-    parent.add(rightUpperArm);
-    rightUpperArm.add(rightLowerArm);
-    rightLowerArm.add(rightHand);
-    rightLowerArm.position.set(0, -1, 0);
-    rightHand.position.set(0, -1, 0);
-    parent.updateMatrixWorld(true);
-    const bones: Record<string, THREE.Object3D> = {
-      rightHand,
-      rightLowerArm,
-      rightUpperArm,
-    };
-    const lastGood: Record<string, THREE.Quaternion> = {};
+    const result = applyMovementAvatarArmApplication({
+      armDecision: armDecision({ isTrackingReady: false }),
+      holdLastGood: () => calls.push("hold"),
+      relax: () => calls.push("relax"),
+      retargetApplied: false,
+      side: "right",
+    });
+
+    expect(result).toEqual({ handled: true, mode: "relax" });
+    expect(calls).toEqual(["relax"]);
+  });
+});
+
+describe("applyMovementAvatarArmApplicationToVrmBones", () => {
+  function bones() {
+    const root = new THREE.Object3D();
+    const boneMap = new Map<string, THREE.Object3D>();
+    ["leftHand", "leftLowerArm", "leftUpperArm", "rightHand", "rightLowerArm", "rightUpperArm"]
+      .forEach((boneName) => {
+        const bone = new THREE.Object3D();
+        boneMap.set(boneName, bone);
+        root.add(bone);
+      });
+    root.updateMatrixWorld(true);
+    return boneMap;
+  }
+
+  it("applies the stored last-good quaternions to the arm bones", () => {
+    const boneMap = bones();
+    const stored = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.7));
 
     const result = applyMovementAvatarArmApplicationToVrmBones({
       armDecision: armDecision(),
-      armRelaxedSlerp: 0.35,
-      avatarRole: "player",
-      elbowTarget: landmark(14),
-      fallbackZScale: 0.1,
-      frontBias: 0.2,
-      handNeutralSlerp: 0.8,
-      lastGood,
-      lookupBone: (boneName) => bones[boneName],
-      playerArmLandmarks: Array.from({ length: 33 }, (_, index) => landmark(index)),
-      safeZScale: 0.24,
-      shouldUseRetargetedUpperBody: false,
-      side: "right",
-      wristTarget: landmark(16),
+      armRelaxedSlerp: 0.3,
+      lastGood: {
+        leftLowerArm: stored.clone(),
+        leftUpperArm: stored.clone(),
+      },
+      lookupBone: (boneName) => boneMap.get(boneName) ?? null,
+      retargetApplied: false,
+      side: "left",
     });
 
-    expect(result).toEqual({
-      appliedAimRequests: 2,
-      handled: true,
-      mode: "tracked-aim",
-    });
-    expect(lastGood.rightUpperArm).toBeInstanceOf(THREE.Quaternion);
-    expect(lastGood.rightLowerArm).toBeInstanceOf(THREE.Quaternion);
-    expect(rightUpperArm.quaternion.w).toBeLessThan(1);
+    expect(result.mode).toBe("hold-last-good");
+    // Hold eases toward the stored pose rather than snapping.
+    const upperArm = boneMap.get("leftUpperArm")!;
+    expect(upperArm.quaternion.w).toBeLessThan(1);
+    expect(upperArm.quaternion.angleTo(stored)).toBeLessThan(0.7);
   });
 
-  it("applies last-good fallback directly to VRM bones for unready arms", () => {
-    const leftUpperArm = new THREE.Object3D();
-    const leftLowerArm = new THREE.Object3D();
-    const leftHand = new THREE.Object3D();
-    const storedUpperArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0));
-    const bones: Record<string, THREE.Object3D> = {
-      leftHand,
-      leftLowerArm,
-      leftUpperArm,
-    };
+  it("eases toward the relaxed pose when tracking is unready", () => {
+    const boneMap = bones();
 
     const result = applyMovementAvatarArmApplicationToVrmBones({
-      armDecision: armDecision({
-        isTrackingReady: false,
-        side: "left",
-        unreadyFallback: "hold-last-good",
-      }),
-      armRelaxedSlerp: 0.35,
-      avatarRole: "player",
-      elbowTarget: undefined,
-      fallbackZScale: 0.1,
-      frontBias: 0.2,
-      handNeutralSlerp: 0.8,
-      lastGood: {
-        leftUpperArm: storedUpperArm,
-      },
-      lookupBone: (boneName) => bones[boneName],
-      playerArmLandmarks: Array.from({ length: 33 }, (_, index) => landmark(index)),
-      safeZScale: 0.24,
-      shouldUseRetargetedUpperBody: false,
-      side: "left",
-      wristTarget: undefined,
+      armDecision: armDecision({ isTrackingReady: false }),
+      armRelaxedSlerp: 0.5,
+      lastGood: {},
+      lookupBone: (boneName) => boneMap.get(boneName) ?? null,
+      retargetApplied: false,
+      side: "right",
     });
 
-    expect(result).toEqual({
-      appliedAimRequests: 0,
-      handled: true,
-      mode: "hold-last-good",
-    });
-    expect(leftUpperArm.quaternion.w).toBeLessThan(1);
-    expect(leftLowerArm.quaternion.w).toBe(1);
+    expect(result.mode).toBe("relax");
+    expect(boneMap.get("rightUpperArm")?.quaternion.w).toBeLessThan(1);
   });
 });

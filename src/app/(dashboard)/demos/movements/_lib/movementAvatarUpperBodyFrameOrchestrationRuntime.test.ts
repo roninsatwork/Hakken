@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import type { MovementAvatarArmDecision } from "./movementAvatarPipeline";
-import type { MovementAvatarArmTargetCompositionDecision } from "./movementAvatarArmTarget";
 import type { MovementAvatarPlayerSpineDrive } from "./movementAvatarPlayerDrive";
 import { applyMovementAvatarUpperBodyFrameOrchestrationRuntime } from "./movementAvatarUpperBodyFrameOrchestrationRuntime";
 import type { VrmRiggedPose } from "./vrmRigging";
@@ -12,33 +11,6 @@ function armDecision(side: "left" | "right"): MovementAvatarArmDecision {
     isTrackingReady: true,
     side,
     unreadyFallback: "relax",
-  };
-}
-
-function armTargetComposition(): MovementAvatarArmTargetCompositionDecision {
-  return {
-    armTargets: {
-      left: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "left-wrist",
-        wristTarget: null,
-      },
-      right: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "right-wrist",
-        wristTarget: null,
-      },
-    },
-    leftElbowTarget: undefined,
-    leftFrontBodyArmBias: 0,
-    leftWristTarget: undefined,
-    playerArmLandmarks: [],
-    playerSafeArmZScale: 0.2,
-    rightElbowTarget: undefined,
-    rightFrontBodyArmBias: 0,
-    rightWristTarget: undefined,
   };
 }
 
@@ -60,7 +32,7 @@ function spineDrive(): MovementAvatarPlayerSpineDrive {
 }
 
 describe("movementAvatarUpperBodyFrameOrchestrationRuntime", () => {
-  it("wires retarget adapters, last-good ref, fallback scale, and rigged-pose sources", () => {
+  it("wires retarget adapters, last-good ref, and rigged-pose sources", () => {
     const spine = new THREE.Object3D();
     const chest = new THREE.Object3D();
     const hips = new THREE.Object3D();
@@ -89,13 +61,10 @@ describe("movementAvatarUpperBodyFrameOrchestrationRuntime", () => {
 
     const result = applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
       activeSpineDrive: spineDrive(),
-      armTargetComposition: armTargetComposition(),
       avatarRole: "instructor",
       boneEaseOptions: {
         armRelaxedSlerp: 0.35,
-        handNeutralSlerp: 0.22,
       },
-      hasWorldLandmarks: false,
       lastGoodQuaternionRef,
       leftArmDecision: armDecision("left"),
       lookupBone: (boneName) => boneMap.get(boneName) ?? null,
@@ -105,13 +74,13 @@ describe("movementAvatarUpperBodyFrameOrchestrationRuntime", () => {
       riggedPose,
       rightArmDecision: armDecision("right"),
       shouldApplySolverTorso: true,
-      shouldUseRetargetedUpperBody: true,
       torsoTrackingReady: true,
     });
 
-    expect(applyRetargetMappings).toHaveBeenCalledTimes(1);
-    expect(result.retargetAppliedUpperBody).toBe(3);
-    expect(result.upperBodyFrameRuntime.retargetAppliedUpperBody).toBe(3);
+    // One call per mapping group: left arm, right arm, spine.
+    expect(applyRetargetMappings).toHaveBeenCalledTimes(3);
+    expect(result.retargetAppliedUpperBody).toBe(7);
+    expect(result.upperBodyFrameRuntime.retargetAppliedUpperBody).toBe(7);
     expect(result.upperBodyFrameRuntime.upperBodyRuntimeApplication.recordedSpineRetargetCount).toBe(1);
     expect(result.upperBodyFrameRuntime.upperBodyRuntimeApplication.spine.applied).toBeGreaterThan(0);
   });
