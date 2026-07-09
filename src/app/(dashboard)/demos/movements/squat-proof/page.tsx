@@ -84,7 +84,7 @@ function buildProofMotionFrame({
     manualCalibration: usesExplicitCalibration ? trackingCalibration : null,
     poseLandmarks: displayPreparedInput.imageLandmarks,
     previousState: setupState,
-    worldPoseLandmarks: hasWorldPose ? displayPreparedInput.solverLandmarks : undefined,
+    worldPoseLandmarks: displayPreparedInput.solverLandmarks ?? undefined,
   });
   const activeCalibration = setupTarget.activeCalibration;
 
@@ -94,7 +94,7 @@ function buildProofMotionFrame({
       avatarRole: "player",
       calibration: activeCalibration,
       displayPoseLandmarks: displayPreparedInput.imageLandmarks,
-      displayWorldPoseLandmarks: hasWorldPose ? displayPreparedInput.solverLandmarks : [],
+      displayWorldPoseLandmarks: displayPreparedInput.solverLandmarks ?? [],
       mirrorMode: "facing-player",
       retargetSourceModel,
       sourceFrame: buildMovementSourceFrame({

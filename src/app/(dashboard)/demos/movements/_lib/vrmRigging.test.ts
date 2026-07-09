@@ -18,7 +18,6 @@ import {
   applyVrmNamedRotationTargetsToBones,
   applyVrmStoredRotationTargetToBone,
   createVrmNormalizedBoneLookup,
-  createVrmImageSolverLandmarks,
   lookupVrmNormalizedBone,
   normalizeVrmLandmark,
   prepareVrmHandLandmarks,
@@ -154,7 +153,7 @@ describe("vrmRigging", () => {
       y: 0.8,
       visibility: 0.92,
     });
-    expect(prepared.solverLandmarks[26]).toMatchObject({
+    expect(prepared.solverLandmarks?.[26]).toMatchObject({
       x: -0.25,
       y: 0.7,
       visibility: 0.91,
@@ -162,32 +161,6 @@ describe("vrmRigging", () => {
     expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.3);
     expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.7);
   });
-
-  it("creates image-space solver landmarks around the hips", () => {
-    const landmarks = makeLandmarks().map((landmark, index) => ({
-      ...landmark,
-      y: index === 23 || index === 24 ? 0.5 : landmark.y,
-      z: 0.05,
-    }));
-
-    landmarks[23] = { x: 0.4, y: 0.5, z: 0, visibility: 0.9 };
-    landmarks[24] = { x: 0.6, y: 0.5, z: 0, visibility: 0.8 };
-    landmarks[16] = { x: 0.8, y: 0.2, z: 0.1, visibility: 0.7 };
-
-    const prepared = createVrmImageSolverLandmarks(
-      landmarks.map((landmark) => normalizeVrmLandmark(landmark)),
-    );
-
-    expect(prepared[16]).toMatchObject({
-      x: 0.9000000000000001,
-      y: -0.8999999999999999,
-      z: 0.30000000000000004,
-      visibility: 0.7,
-    });
-  });
-
-
-
 
   it("prepares hand landmarks with optional x mirroring", () => {
     const prepared = prepareVrmHandLandmarks({

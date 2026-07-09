@@ -55,7 +55,7 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtimeInput?.payload).toEqual({ faceLandmarks, pose });
     expect(runtimeInput?.mirrorPlayerDisplay).toBe(false);
     expect(runtimeInput?.displayPreparedInput).toBe(runtimeInput?.rawPreparedInput);
-    expect(runtimeInput?.targetSolverLandmarks).toBe(runtimeInput?.rawPreparedInput.solverLandmarks);
+    expect(runtimeInput?.targetSolverLandmarks).toBe(runtimeInput?.rawPreparedInput.imageLandmarks);
     expect(runtimeInput?.displayPreparedInput.forceStandby).toBe(true);
     expect(runtimeInput?.displayPreparedInput.imageLandmarks[11].visibility).toBe(0);
     expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
@@ -78,7 +78,7 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtimeInput?.displayPreparedInput).not.toBe(runtimeInput?.rawPreparedInput);
     expect(runtimeInput?.rawPreparedInput.imageLandmarks[11].x).toBeCloseTo(0.11);
     expect(runtimeInput?.displayPreparedInput.imageLandmarks[11].x).toBeCloseTo(0.88);
-    expect(runtimeInput?.targetSolverLandmarks).not.toBe(runtimeInput?.rawPreparedInput.solverLandmarks);
+    expect(runtimeInput?.targetSolverLandmarks).toBe(runtimeInput?.displayPreparedInput.imageLandmarks);
   });
 
   it("returns explicit missing-input status for unsolved frames with too few landmarks", () => {
@@ -110,9 +110,8 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtime.imageLandmarks).toBe(runtime.displayPreparedInput.imageLandmarks);
     expect(runtime.faceLandmarks).toBe(runtime.displayPreparedInput.faceLandmarks);
     expect(runtime.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
-    expect(runtime.solverLandmarks).toBe(runtime.rawPreparedInput.solverLandmarks);
     expect(runtime.rigHands).toBe(runtime.displayPreparedInput.rigHands);
-    expect(runtime.targetSolverLandmarks).not.toBe(runtime.rawPreparedInput.solverLandmarks);
+    expect(runtime.targetSolverLandmarks).toBe(runtime.displayPreparedInput.imageLandmarks);
   });
 
 });

@@ -13,7 +13,6 @@ function readySolvedFrame(): Extract<MovementAvatarSolvedFrameRuntime, { status:
     rawPreparedInput: {} as never,
     rigBlendshapes: null as never,
     rigHands: null as never,
-    solverLandmarks: [],
     status: "ready",
     targetSolverLandmarks: [],
   };

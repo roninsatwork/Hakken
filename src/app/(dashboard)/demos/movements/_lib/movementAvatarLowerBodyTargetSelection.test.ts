@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { resolveMovementAvatarLowerBodyTargetSelectionComposition } from "./movementAvatarLowerBodyTargetSelection";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import {
-  createVrmImageSolverLandmarks,
   normalizeVrmLandmark,
   type VrmSolverLandmark,
 } from "./vrmRigging";
@@ -29,8 +28,7 @@ describe("movement avatar lower-body target selection composition", () => {
   });
 
   it("keeps player display landmarks on the explicit target solver side", () => {
-    const imageLandmarks = solverLandmarks();
-    const targetSolverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
+    const targetSolverLandmarks = solverLandmarks();
     const target = resolveMovementAvatarLowerBodyTargetSelectionComposition({
       avatarRole: "player",
       targetSolverLandmarks,

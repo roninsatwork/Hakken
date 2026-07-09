@@ -38,6 +38,6 @@ export function resolveMovementDisplayLandmarkFrame({
   return {
     hasWorldPose,
     pose: prepared.imageLandmarks,
-    worldPose: hasWorldPose ? prepared.solverLandmarks : [],
+    worldPose: prepared.solverLandmarks ?? [],
   };
 }

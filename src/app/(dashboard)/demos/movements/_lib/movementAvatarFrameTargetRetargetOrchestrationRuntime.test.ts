@@ -11,7 +11,6 @@ import {
 } from "./movementAvatarRestPose";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import {
-  createVrmImageSolverLandmarks,
   normalizeVrmLandmark,
   type VrmSolverLandmark,
 } from "./vrmRigging";
@@ -71,8 +70,7 @@ function retargetFrame(): MovementRetargetFrame {
 
 describe("movementAvatarFrameTargetRetargetOrchestrationRuntime", () => {
   it("composes target selections and retarget frame adapters together", () => {
-    const imageLandmarks = solverLandmarks();
-    const targetSolverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
+    const targetSolverLandmarks = solverLandmarks();
     const scene = new THREE.Object3D();
     const rightUpperLeg = new THREE.Object3D();
     const rightLowerLeg = new THREE.Object3D();

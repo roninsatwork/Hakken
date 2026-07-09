@@ -1,5 +1,4 @@
 import {
-  createVrmImageSolverLandmarks,
   getVrmMotionLandmarks,
   prepareVrmSolverInput,
   type VrmMotionPayload,
@@ -13,7 +12,7 @@ export type MovementAvatarSolverRuntimeInput = {
   mirrorPlayerDisplay: boolean;
   payload: VrmMotionPayload | null;
   rawPreparedInput: MovementAvatarPreparedSolverInput;
-  targetSolverLandmarks: MovementAvatarPreparedSolverInput["solverLandmarks"];
+  targetSolverLandmarks: MovementAvatarPreparedSolverInput["imageLandmarks"];
 };
 
 export function resolveMovementAvatarSolverRuntimeInput({
@@ -55,8 +54,8 @@ export function resolveMovementAvatarSolverRuntimeInput({
     payload,
     rawPreparedInput,
     targetSolverLandmarks: mirrorPlayerDisplay
-      ? createVrmImageSolverLandmarks(displayPreparedInput.imageLandmarks)
-      : rawPreparedInput.solverLandmarks,
+      ? displayPreparedInput.solverLandmarks ?? displayPreparedInput.imageLandmarks
+      : rawPreparedInput.solverLandmarks ?? rawPreparedInput.imageLandmarks,
   };
 }
 
@@ -74,9 +73,8 @@ export type MovementAvatarSolvedFrameRuntime =
     rawPreparedInput: MovementAvatarPreparedSolverInput;
     rigBlendshapes: MovementAvatarPreparedSolverInput["rigBlendshapes"];
     rigHands: MovementAvatarPreparedSolverInput["rigHands"];
-    solverLandmarks: MovementAvatarPreparedSolverInput["solverLandmarks"];
     status: "ready";
-    targetSolverLandmarks: MovementAvatarPreparedSolverInput["solverLandmarks"];
+    targetSolverLandmarks: MovementAvatarPreparedSolverInput["imageLandmarks"];
   };
 
 export function resolveMovementAvatarSolvedFrameRuntime({
@@ -116,7 +114,6 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     rigHands,
     rigBlendshapes,
   } = displayPreparedInput;
-  const { solverLandmarks } = rawPreparedInput;
 
   return {
     displayPreparedInput,
@@ -128,7 +125,6 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     rawPreparedInput,
     rigBlendshapes,
     rigHands,
-    solverLandmarks,
     status: "ready",
     targetSolverLandmarks,
   };

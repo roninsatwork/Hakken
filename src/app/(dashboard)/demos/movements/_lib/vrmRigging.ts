@@ -296,23 +296,20 @@ export function prepareVrmSolverInput({
   };
 
   const imageLandmarks = rawLandmarks.map(format);
-  let solverLandmarks: VrmSolverLandmark[];
+  // World landmarks only; there is no image-space fallback because every
+  // consumer either requires genuine world data or falls back to
+  // imageLandmarks itself.
+  const solverLandmarks: VrmSolverLandmark[] | null =
+    payload?.worldLandmarks ? payload.worldLandmarks.map(format) : null;
   let faceLandmarks = payload?.faceLandmarks?.map(format);
   let rigHands = payload?.hands;
   let rigBlendshapes = payload?.blendshapes;
 
-  if (payload?.worldLandmarks) {
-    solverLandmarks = payload.worldLandmarks.map(format);
-  } else {
-    solverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
-  }
-
-  const kalidokitSolverLandmarks = solverLandmarks.map((lm) => ({ ...lm }));
-
   if (shouldMirror) {
     mirrorVrmLandmarkArray(imageLandmarks, (x) => 1 - x);
-    mirrorVrmLandmarkArray(solverLandmarks, (x) => -x);
-    mirrorVrmLandmarkArray(kalidokitSolverLandmarks, (x) => -x);
+    if (solverLandmarks) {
+      mirrorVrmLandmarkArray(solverLandmarks, (x) => -x);
+    }
 
     if (payload?.hands) {
       rigHands = mirrorHandsPayload(payload.hands);
@@ -332,30 +329,9 @@ export function prepareVrmSolverInput({
     forceStandby,
     imageLandmarks,
     solverLandmarks,
-    kalidokitSolverLandmarks,
     rigHands,
     rigBlendshapes,
   };
-}
-
-export function createVrmImageSolverLandmarks(
-  imageLandmarks: VrmSolverLandmark[],
-): VrmSolverLandmark[] {
-  const leftHip = imageLandmarks[23];
-  const rightHip = imageLandmarks[24];
-
-  if (!leftHip || !rightHip) return imageLandmarks.map((lm) => ({ ...lm }));
-
-  const hipX = (leftHip.x + rightHip.x) / 2;
-  const hipY = (leftHip.y + rightHip.y) / 2;
-
-  return imageLandmarks.map((lm) => ({
-    x: (lm.x - hipX) * 3.0,
-    y: (lm.y - hipY) * 3.0,
-    z: lm.z * 3.0,
-    visibility: lm.visibility || 0,
-    isSnapped: lm.isSnapped,
-  }));
 }
 
 
