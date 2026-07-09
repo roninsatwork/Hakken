@@ -85,9 +85,15 @@ Known follow-ups moved to later phases:
 
 Exit criteria status: limb *segment* directions no longer use image z when world data exists ✅; follow-error improved on segment-driven regions ✅; aim-path constants deferred to Phase 2 by design.
 
-## Phase 2 — One solver, one clock
+## Phase 2 — One solver, one clock — IN PROGRESS (2a done 2026-07-09)
 
 Goal: remove the per-frame arbitration between competing solvers and the duplicate solve inside the render loop.
+
+Progress log:
+
+- **2a (done, commit `76d9538`): arms are rest-mapped-solver-owned unconditionally.** The tracked-aim arm path no longer executes: `movementAvatarArmApplication.ts` now only knows `retargeted | hold-last-good | relax`. The body-wide `sourceQuality >= 0.45` gate no longer decides arm ownership (it was dominated by lower-body visibility). Application order preserved for the spine: segment retarget still applies after the angle-based spine drive (getting this wrong doubled spine error; caught by the golden re-score and fixed). Golden-recording follow errors: unchanged to slightly better across all 25 region cells vs Phase 1.
+- Note: `armTargetComposition` (elbow/wrist targets, frontBias, safeZScale) is still *computed* because the debug fallback labels and analyzer read `armTargets` telemetry — the computation is now application-dead and goes in the 2c sweep along with the fallback-label rationalization.
+- Remaining: 2b single clock (stop the Kalidokit pose re-solve in `VrmAvatar`'s `useFrame`; keep Kalidokit hands), 2c owner-flag and dead-plumbing sweep, 2d smoothing consolidation.
 
 1. Extend the rest-mapped solver (`movementAvatarRestPose.ts` + `movementAvatarRestMappedSegmentApplication.ts`) to own the full body: arms, spine, and head, fed by world-landmark segment directions. It already implements the correct math (rest-direction → desired-direction world rotation, converted to local via parent).
 2. Retire the Kalidokit pose path (`solveVrmPose` and the re-solve inside `VrmAvatar`'s `useFrame`) and the aim-vector limb path (`movementAvatarAimApplication.ts`, `movementAvatarArmApplication.ts`). Keep Kalidokit hand solving if finger tracking is retained. Keep planted-foot IK — that is the one place IK belongs.
