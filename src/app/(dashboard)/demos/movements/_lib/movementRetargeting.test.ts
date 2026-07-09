@@ -362,6 +362,8 @@ describe("movementRetargeting", () => {
       expect(shin).toBeDefined();
       // The forward (negative z) component must dominate — image-space solving would flatten it.
       expect(Math.abs(shin!.direction.z)).toBeGreaterThan(0.6);
+      // The calibrated neutral spine rides along as the vertical reference.
+      expect(frame.neutralSpineDirection).toEqual(calibration!.segments.spine?.direction);
     });
 
     it("falls back to image segments when a frame lacks world landmarks", () => {

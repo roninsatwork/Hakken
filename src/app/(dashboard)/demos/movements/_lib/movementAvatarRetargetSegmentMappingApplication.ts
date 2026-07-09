@@ -114,6 +114,31 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   };
 }
 
+const AVATAR_WORLD_UP = new THREE.Vector3(0, 1, 0);
+
+/**
+ * Source landmark axes follow the camera, not gravity. The calibrated neutral
+ * spine is the vertical reference: rotating every desired direction by the
+ * quaternion that maps that neutral onto world-up cancels camera tilt.
+ */
+function resolveMovementAvatarCameraTiltCorrection({
+  retargetFrame,
+  zScale,
+}: {
+  retargetFrame: MovementRetargetFrame;
+  zScale: number;
+}): THREE.Quaternion | null {
+  if (!retargetFrame.neutralSpineDirection) return null;
+
+  const neutralSpine = movementSourceSegmentToAvatarWorldDirection(
+    retargetFrame.neutralSpineDirection,
+    zScale,
+  );
+  if (!neutralSpine) return null;
+
+  return new THREE.Quaternion().setFromUnitVectors(neutralSpine, AVATAR_WORLD_UP);
+}
+
 export function resolveMovementAvatarRetargetSegmentWorldDirection({
   mapping,
   retargetFrame,
@@ -128,11 +153,28 @@ export function resolveMovementAvatarRetargetSegmentWorldDirection({
   const segment = retargetFrame.segments[mapping.segment];
   if (!segment) return null;
 
+  // Legs and feet are co-driven by squat/leg-raise/planted-IK appliers that
+  // operate in the raw camera frame, so only the upper body is tilt-corrected.
+  const cameraTiltCorrection = mapping.type === "spine" || mapping.type === "arm"
+    ? resolveMovementAvatarCameraTiltCorrection({
+        retargetFrame,
+        zScale: segmentApplicationDecision.zScale,
+      })
+    : null;
+
+  // The spine has no meaning without a vertical reference: applying it raw
+  // bakes the webcam's tilt into the avatar's torso and head.
+  if (mapping.type === "spine" && !cameraTiltCorrection) return null;
+
   const desiredWorldDirection = movementSourceSegmentToAvatarWorldDirection(
     segment.direction,
     segmentApplicationDecision.zScale,
   );
   if (!desiredWorldDirection) return null;
+
+  if (cameraTiltCorrection) {
+    desiredWorldDirection.applyQuaternion(cameraTiltCorrection);
+  }
 
   return {
     bone: mapping.bone,

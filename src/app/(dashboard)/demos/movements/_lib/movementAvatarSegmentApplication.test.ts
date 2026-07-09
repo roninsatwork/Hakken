@@ -361,6 +361,57 @@ describe("movement avatar segment application", () => {
     expect(rightLowerLeg.quaternion.w).toBeLessThan(1);
   });
 
+  it("cancels camera tilt using the calibrated neutral spine as vertical", () => {
+    // Camera pitched down ~15deg: the neutral spine reads tilted in source
+    // space. The correction must bring it back to world-up and counter-rotate
+    // every other segment identically.
+    const tilt = 15 * (Math.PI / 180);
+    const tiltedNeutralSpine = { x: 0, y: -Math.cos(tilt), z: -Math.sin(tilt) };
+    const frame: MovementRetargetFrame = {
+      ...retargetFrame(),
+      neutralSpineDirection: tiltedNeutralSpine,
+      segments: {
+        spine: {
+          confidence: 0.9,
+          direction: tiltedNeutralSpine,
+          length: 1,
+        },
+      },
+      space: "world",
+    };
+
+    const spec = resolveMovementAvatarRetargetSegmentWorldDirection({
+      mapping: { bone: "spine", child: "chest", segment: "spine", type: "spine" },
+      retargetFrame: frame,
+      segmentApplicationDecision: { ...segmentDecision(), zScale: 1 },
+    });
+
+    expect(spec).not.toBeNull();
+    // A neutral pose under a tilted camera must resolve to a vertical spine.
+    expect(spec!.desiredWorldDirection.y).toBeCloseTo(1, 5);
+    expect(spec!.desiredWorldDirection.z).toBeCloseTo(0, 5);
+  });
+
+  it("skips the spine segment without a calibrated vertical reference", () => {
+    const frame: MovementRetargetFrame = {
+      ...retargetFrame(),
+      segments: {
+        spine: {
+          confidence: 0.9,
+          direction: { x: 0, y: -0.97, z: -0.26 },
+          length: 1,
+        },
+      },
+      space: "world",
+    };
+
+    expect(resolveMovementAvatarRetargetSegmentWorldDirection({
+      mapping: { bone: "spine", child: "chest", segment: "spine", type: "spine" },
+      retargetFrame: frame,
+      segmentApplicationDecision: { ...segmentDecision(), zScale: 1 },
+    })).toBeNull();
+  });
+
   it("builds retarget segment world-direction application specs", () => {
     const spec = resolveMovementAvatarRetargetSegmentWorldDirection({
       mapping: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!,

@@ -65,6 +65,13 @@ export type MovementRetargetFrame = {
     left: number;
     right: number;
   };
+  /**
+   * The calibrated neutral spine direction in the same space as `segments`.
+   * MediaPipe world landmarks are camera-axis-aligned, not gravity-aligned, so
+   * appliers use this as the vertical reference to cancel camera tilt.
+   * Absent when no calibration model exists or spaces mismatch.
+   */
+  neutralSpineDirection?: MovementRetargetVector;
   segments: Partial<Record<MovementRetargetSegmentName, MovementRetargetSegment>>;
   /** Space of `segments` directions. Absent means "image" (pre-world-landmark data). */
   space?: MovementRetargetSpace;
@@ -567,6 +574,9 @@ export function solveMovementRetargetFrame({
       left: leftKneeLift,
       right: rightKneeLift,
     },
+    neutralSpineDirection: (calibration.space ?? "image") === segmentSpace
+      ? calibration.segments.spine?.direction
+      : undefined,
     segments,
     space: segmentSpace,
     squatDepth,
