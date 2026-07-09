@@ -7,6 +7,10 @@ import {
   resolveMovementAvatarSupportContactLocks,
   type MovementAvatarSupportContactLockDecision,
 } from "./movementAvatarSupportContactDecision";
+import {
+  hasDeepKneelingSupportBase,
+  hasWideSeatedSupportBase,
+} from "./movementAvatarPipelineSupportEvidence";
 import { resolveMovementAvatarSupportPresentationPose } from "./movementAvatarSupportPresentationDecision";
 import type { MovementAvatarSupportPresentationDecision } from "./movementAvatarPipelineTypes";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
@@ -22,24 +26,61 @@ export type MovementAvatarPipelineSupportDecision = {
 
 export function resolveMovementAvatarPipelineSupportDecision({
   bodyOrientation,
+  preferFeetFloorForActiveLowerBody = false,
   poseLandmarks,
 }: {
   bodyOrientation: MovementBodyOrientationDecision;
+  preferFeetFloorForActiveLowerBody?: boolean;
   poseLandmarks: TrackingLandmark[];
 }): MovementAvatarPipelineSupportDecision {
-  const bodySupport = resolveMovementSupportContacts({
+  const initialBodySupport = resolveMovementSupportContacts({
     bodyOrientation,
     poseLandmarks,
   });
-  const exercisePose = resolveMovementExercisePose({
+  const initialExercisePose = resolveMovementExercisePose({
     bodyOrientation,
-    bodySupport,
+    bodySupport: initialBodySupport,
     poseLandmarks,
   });
-  const supportIntent = resolveMovementSupportIntent({
-    bodySupport,
-    exercisePose,
-  });
+  const shouldUseStandingSupport =
+    preferFeetFloorForActiveLowerBody &&
+    (
+      (
+        bodyOrientation.orientation === "seated" &&
+        initialExercisePose.poseKey === "chair-seated" &&
+        !hasWideSeatedSupportBase(poseLandmarks)
+      ) ||
+      (
+        bodyOrientation.orientation === "kneeling" &&
+        initialExercisePose.poseKey === "kneeling-floor" &&
+        !hasDeepKneelingSupportBase(poseLandmarks)
+      )
+    );
+  const supportBodyOrientation = shouldUseStandingSupport
+    ? {
+        ...bodyOrientation,
+        coverageFamily: "upright" as const,
+        orientation: "upright" as const,
+        reasons: [
+          ...bodyOrientation.reasons,
+          "active standing lower-body evidence keeps inferred chair support on foot anchors",
+        ],
+      }
+    : bodyOrientation;
+  const bodySupport = shouldUseStandingSupport
+    ? resolveMovementSupportContacts({
+        bodyOrientation: supportBodyOrientation,
+        poseLandmarks,
+      })
+    : initialBodySupport;
+  const exercisePose = shouldUseStandingSupport
+    ? resolveMovementExercisePose({
+        bodyOrientation: supportBodyOrientation,
+        bodySupport,
+        poseLandmarks,
+      })
+    : initialExercisePose;
+  const supportIntent = resolveMovementSupportIntent({ bodySupport, exercisePose });
   const supportConstraint = resolveMovementSupportConstraint({
     exercisePose,
     supportIntent,

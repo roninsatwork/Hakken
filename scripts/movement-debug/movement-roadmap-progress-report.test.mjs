@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildMovementRoadmapProgressReport,
+  formatMovementRoadmapProgressReport,
   parseMovementRoadmapProgressReportArgs,
   parseSectionProgressRows,
 } from "./movement-roadmap-progress-report.mjs";
@@ -43,6 +44,7 @@ function matrixFixture() {
   return {
     blockedUserFacingFamilies: [],
     familyCount: 19,
+    futureFamilyShapeFailures: [],
     internalFamilyCount: 14,
     productionFamilySupportPercent: 26,
     rows: [
@@ -82,6 +84,7 @@ describe("movement roadmap progress report", () => {
     expect(report).toMatchObject({
       matrix: {
         familyCount: 19,
+        futureFamilyShapeFailures: [],
         internalFamilyCount: 14,
         productionFamilySupportPercent: 26,
         userFacingCount: 5,
@@ -113,6 +116,35 @@ describe("movement roadmap progress report", () => {
     expect(report.failures).toEqual(expect.arrayContaining([
       "expected overall full human-movement progress to stay below section average until production support catches up, got 90% vs about 90%",
     ]));
+  });
+
+  it("blocks progress reports when future-family matrix shape rows drift", () => {
+    const report = buildMovementRoadmapProgressReport({
+      matrix: {
+        ...matrixFixture(),
+        futureFamilyShapeFailures: [
+          "quadruped must remain internal-preview until a dedicated promotion audit is ready",
+        ],
+      },
+      planText: planFixture(),
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.failures).toEqual(expect.arrayContaining([
+      "future-family support matrix shape drift: quadruped must remain internal-preview until a dedicated promotion audit is ready",
+    ]));
+  });
+
+  it("formats future-family shape failure counts in Markdown output", () => {
+    const report = buildMovementRoadmapProgressReport({
+      matrix: matrixFixture(),
+      planText: planFixture(),
+    });
+    const text = formatMovementRoadmapProgressReport(report);
+
+    expect(text).toContain("Movement-family production support: 5/19 (26%)");
+    expect(text).toContain("Future-family shape failures: 0");
+    expect(text).toContain("- facing-occlusion: recorded proof; next: Record facing-occlusion.");
   });
 
   it("parses CLI options", () => {

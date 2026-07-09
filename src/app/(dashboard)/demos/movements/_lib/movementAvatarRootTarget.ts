@@ -63,6 +63,17 @@ function scaleRootMotionZOffset(z: number) {
   return z * ROOT_MOTION_POSITION_SCALE * (z < 0 ? ROOT_MOTION_BACKWARD_POSITION_SCALE : 1);
 }
 
+function shouldApplyMovementAvatarRootHeading(rootMotion: MovementRootMotionFrame | null) {
+  if (!rootMotion || rootMotion.debug.source !== "world-landmarks") return false;
+  if (rootMotion.headingConfidence < ROOT_MOTION_HEADING_CONFIDENCE) return false;
+
+  return rootMotion.intent.key === "root-travel"
+    || rootMotion.intent.key === "turn-and-travel"
+    || rootMotion.intent.key === "turn-on-spot"
+    || rootMotion.intent.key === "left-foot-pivot"
+    || rootMotion.intent.key === "right-foot-pivot";
+}
+
 export function resolveMovementAvatarRootTarget({
   avatarBaseY,
   avatarRootVisualLerp,
@@ -79,10 +90,7 @@ export function resolveMovementAvatarRootTarget({
   visualRootDrop: number;
 }): MovementAvatarRootTargetDecision {
   const shouldApplyRootMotion = rootMotion?.debug.source === "world-landmarks";
-  const rootHeadingYaw =
-    shouldApplyRootMotion && rootMotion.headingConfidence >= ROOT_MOTION_HEADING_CONFIDENCE
-      ? rootMotion.headingYaw
-      : 0;
+  const rootHeadingYaw = shouldApplyMovementAvatarRootHeading(rootMotion) ? rootMotion!.headingYaw : 0;
   const targetYaw = Math.PI + rootHeadingYaw;
   const rootPosition =
     shouldApplyRootMotion && rootMotion.rootPositionConfidence >= ROOT_MOTION_POSITION_CONFIDENCE

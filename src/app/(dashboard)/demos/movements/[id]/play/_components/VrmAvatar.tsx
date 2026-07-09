@@ -122,6 +122,7 @@ export default function VrmAvatar({
 
     const {
       displayPreparedInput,
+      faceLandmarks,
       forceStandby,
       imageLandmarks,
       mirrorPlayerDisplay,
@@ -146,7 +147,7 @@ export default function VrmAvatar({
         boneEaseOptions,
         displayPreparedInput: displayPreparedInput.solverLandmarks,
         exerciseTransitionStateRef,
-        faceLandmarks: payload?.faceLandmarks,
+        faceLandmarks,
         fallbackPoseSlerp: AVATAR_FRAME_FALLBACK_SLERP,
         forceStandby,
         imageLandmarks,

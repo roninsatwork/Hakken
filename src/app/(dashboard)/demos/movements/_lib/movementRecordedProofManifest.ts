@@ -47,6 +47,9 @@ export type MovementRecordedProofCase =
   | "right-leg-raise"
   | "weak-feet"
   | "lower-body-out-of-frame"
+  | "facing-occlusion-recovery"
+  | "side-swap-recovery"
+  | "self-occlusion-recovery"
   | "root-turn"
   | "root-travel"
   | "seated-neutral"
@@ -100,6 +103,7 @@ export type MovementRecordedVisualCaptureErrorSummary = {
 
 export type MovementRecordedVisualCaptureDiagnosticsSummary = {
   avatarLowerError: MovementRecordedVisualCaptureErrorSummary;
+  avatarPlantedFootClearance: MovementRecordedVisualCaptureErrorSummary;
   avatarUpperError: MovementRecordedVisualCaptureErrorSummary;
 };
 
@@ -127,6 +131,7 @@ export type MovementRecordedProofDecisionReviewContext = {
 export type MovementRecordedVisualCaptureFrame = {
   avatarLowerError: number | null;
   avatarPath: string | null;
+  avatarPlantedFootClearance?: number | null;
   avatarUpperError: number | null;
   frameIndex: number;
   recordingId: string;
@@ -548,6 +553,33 @@ const OPTIONAL_SEATED_PROOF_CASES: ProofCaseDefinition[] = [
   },
 ];
 
+const OPTIONAL_FACING_OCCLUSION_PROOF_CASES: ProofCaseDefinition[] = [
+  {
+    avatarSide: "n/a",
+    bodyPartMotion: "facing fallback and root-heading recovery",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: 0.45,
+    proofCase: "facing-occlusion-recovery",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "n/a",
+    bodyPartMotion: "left/right side-swap recovery",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: 0.45,
+    proofCase: "side-swap-recovery",
+    sourceSide: "both",
+  },
+  {
+    avatarSide: "n/a",
+    bodyPartMotion: "brief self-occlusion with recovered tracking",
+    directionSign: "unknown",
+    expectedMinimumAmplitude: 0.35,
+    proofCase: "self-occlusion-recovery",
+    sourceSide: "both",
+  },
+];
+
 const ERROR_BY_PROOF_CASE: Partial<Record<MovementRecordedProofCase, string[]>> = {
   "head-direction": ["head-direction-reversed", "head-motion-missing"],
   "left-leg-raise": ["leg-lift-missing", "leg-lift-wrong-side", "leg-lift-collapsed-to-squat"],
@@ -647,9 +679,21 @@ function mirrorSideOwnershipIndexes(analysis: MovementReplayAnalysis) {
     .filter((frame) => {
       const leftRaised = frame.leftKneeLift >= 0.18;
       const rightRaised = frame.rightKneeLift >= 0.18;
-      return leftRaised !== rightRaised;
+      return isStandingLegProofFrame(frame) && leftRaised !== rightRaised;
     })
     .map((frame) => frame.frameIndex);
+}
+
+function isStandingLegProofFrame(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
+  return frame.supportIntentKey === "feet-floor" &&
+    !frame.supportPresentationOwner.includes("seated") &&
+    !frame.exercisePoseKey.includes("seated") &&
+    !frame.exercisePoseKey.includes("chair") &&
+    (
+      frame.lowerLabel.includes("knee-raise") ||
+      frame.lowerOwner.includes("leg-raise")
+    ) &&
+    frame.sourceQuality >= 0.75;
 }
 
 function shoulderScapulaProxyScore(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
@@ -664,6 +708,12 @@ function shoulderScapulaProxyScore(frame: MovementReplayAnalysis["gamePath"]["fr
 function seatedPresentationScore(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
   if (!frame.supportPresentationOwner.startsWith("support-presentation-seated")) return 0;
   return 1 + frame.supportPresentationArmSpecCount + frame.supportPresentationSpineSpecCount;
+}
+
+function selfOcclusionRecoveryScore(frame: MovementReplayAnalysis["gamePath"]["frames"][number]) {
+  if (!frame.lowerBodyTrackingReady) return 0;
+  if (frame.sourceQuality <= 0 || frame.sourceQuality >= 0.75) return 0;
+  return 1 - frame.sourceQuality;
 }
 
 function observedAmplitudeForCase({
@@ -761,6 +811,7 @@ function observedAmplitudeForCase({
           .map((frame) => Math.max(frame.leftKneeLift, frame.rightKneeLift)),
       );
     case "root-turn":
+    case "facing-occlusion-recovery":
       return maxAbs(
         analysis.rootMotion.frames
           .filter((frame) => frames.has(frame.frameIndex))
@@ -771,6 +822,18 @@ function observedAmplitudeForCase({
         analysis.gamePath.frames
           .filter((frame) => frames.has(frame.frameIndex))
           .map((frame) => frame.rootPathDistance),
+      );
+    case "side-swap-recovery":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map((frame) => frame.rootMotionHeadingDelta),
+      );
+    case "self-occlusion-recovery":
+      return maxAbs(
+        analysis.gamePath.frames
+          .filter((frame) => frames.has(frame.frameIndex))
+          .map(selfOcclusionRecoveryScore),
       );
     default:
       return null;
@@ -846,9 +909,14 @@ function candidateAmplitudeForCase({
     case "mirror-side-ownership":
       return maxAbs(analysis.gamePath.frames.map((frame) => Math.max(frame.leftKneeLift, frame.rightKneeLift)));
     case "root-turn":
+    case "facing-occlusion-recovery":
       return maxAbs(analysis.rootMotion.frames.map((frame) => frame.headingYaw));
     case "root-travel":
       return maxAbs(analysis.gamePath.frames.map((frame) => frame.rootPathDistance));
+    case "side-swap-recovery":
+      return maxAbs(analysis.gamePath.frames.map((frame) => frame.rootMotionHeadingDelta));
+    case "self-occlusion-recovery":
+      return maxAbs(analysis.gamePath.frames.map(selfOcclusionRecoveryScore));
     default:
       return null;
   }
@@ -1047,11 +1115,11 @@ function indexesForCase(
         .map((frame) => frame.frameIndex);
     case "left-leg-raise":
       return analysis.gamePath.frames
-        .filter((frame) => frame.leftKneeLift >= 0.18)
+        .filter((frame) => isStandingLegProofFrame(frame) && frame.leftKneeLift >= 0.18)
         .map((frame) => frame.frameIndex);
     case "right-leg-raise":
       return analysis.gamePath.frames
-        .filter((frame) => frame.rightKneeLift >= 0.18)
+        .filter((frame) => isStandingLegProofFrame(frame) && frame.rightKneeLift >= 0.18)
         .map((frame) => frame.frameIndex);
     case "mirror-side-ownership":
       return mirrorSideOwnershipIndexes(analysis);
@@ -1074,6 +1142,18 @@ function indexesForCase(
     case "root-turn":
       return analysis.rootMotion.frames
         .filter((frame) => Math.abs(frame.headingYaw) >= 0.65)
+        .map((frame) => frame.frameIndex);
+    case "facing-occlusion-recovery":
+      return analysis.rootMotion.frames
+        .filter((frame) => Math.abs(frame.headingYaw) >= 0.45)
+        .map((frame) => frame.frameIndex);
+    case "side-swap-recovery":
+      return analysis.gamePath.frames
+        .filter((frame) => Math.abs(frame.rootMotionHeadingDelta) >= 0.45)
+        .map((frame) => frame.frameIndex);
+    case "self-occlusion-recovery":
+      return analysis.gamePath.frames
+        .filter((frame) => selfOcclusionRecoveryScore(frame) >= 0.35)
         .map((frame) => frame.frameIndex);
     case "root-travel":
       return analysis.gamePath.frames
@@ -1231,7 +1311,7 @@ function visualCapturesForCase({
 
 function summarizeVisualCaptureErrors(
   captures: MovementRecordedVisualCaptureFrame[],
-  key: "avatarLowerError" | "avatarUpperError",
+  key: "avatarLowerError" | "avatarPlantedFootClearance" | "avatarUpperError",
 ): MovementRecordedVisualCaptureErrorSummary {
   const values = captures
     .map((capture) => capture[key])
@@ -1257,6 +1337,7 @@ function visualCaptureDiagnosticsForCaptures(
 ): MovementRecordedVisualCaptureDiagnosticsSummary {
   return {
     avatarLowerError: summarizeVisualCaptureErrors(captures, "avatarLowerError"),
+    avatarPlantedFootClearance: summarizeVisualCaptureErrors(captures, "avatarPlantedFootClearance"),
     avatarUpperError: summarizeVisualCaptureErrors(captures, "avatarUpperError"),
   };
 }
@@ -1283,7 +1364,13 @@ function statusForCase({
   ) {
     return evidenceFrameCount > 0 ? "source-data-limitation" : "missing-proof";
   }
-  if (proofCase === "mirror-side-ownership" || proofCase === "side-bend") {
+  if (
+    proofCase === "mirror-side-ownership" ||
+    proofCase === "side-bend" ||
+    proofCase === "facing-occlusion-recovery" ||
+    proofCase === "side-swap-recovery" ||
+    proofCase === "self-occlusion-recovery"
+  ) {
     return evidenceFrameCount > 0 ? "manual-review" : "missing-proof";
   }
   if (automatedStatus === "missing-proof") return "missing-proof";
@@ -1334,7 +1421,13 @@ function automatedStatusForCase({
   ) {
     return evidenceFrameCount > 0 ? "source-data-limitation" : "missing-proof";
   }
-  if (proofCase === "mirror-side-ownership" || proofCase === "side-bend") {
+  if (
+    proofCase === "mirror-side-ownership" ||
+    proofCase === "side-bend" ||
+    proofCase === "facing-occlusion-recovery" ||
+    proofCase === "side-swap-recovery" ||
+    proofCase === "self-occlusion-recovery"
+  ) {
     return evidenceFrameCount > 0 ? "passed" : "missing-proof";
   }
   if (automatedProofLayersMissing(missingLayers).length > 0) return "missing-proof";
@@ -1543,10 +1636,14 @@ function activeProofCases({
 } = {}) {
   const included = new Set(includeProductScopeProofCases);
   const optionalCases = OPTIONAL_SEATED_PROOF_CASES.filter((definition) => included.has(definition.proofCase));
+  const optionalFacingOcclusionCases = OPTIONAL_FACING_OCCLUSION_PROOF_CASES.filter((definition) => (
+    included.has(definition.proofCase)
+  ));
 
   return [
     ...PROOF_CASES,
     ...optionalCases,
+    ...optionalFacingOcclusionCases,
   ];
 }
 

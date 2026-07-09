@@ -76,11 +76,10 @@ export function resolveMovementAvatarHeadApplicationPose({
 }
 
 export function resolveMovementAvatarHeadBonePitch({
-  avatarRole,
   headPitch,
 }: {
   avatarRole: "instructor" | "player";
   headPitch: number;
 }) {
-  return avatarRole === "player" ? -headPitch : headPitch;
+  return headPitch;
 }

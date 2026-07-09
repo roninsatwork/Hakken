@@ -252,7 +252,7 @@ export default function MovementSquatProofPage() {
           key={mode}
           landmarksRef={livePoseRef}
           motionFrameRef={motionFrameRef}
-          positionOffset={[4.2, 0, 0]}
+          positionOffset={[6.2, 0, 0]}
           isPlayer
           isPlaying
           trackingCalibration={usesExplicitCalibration ? trackingCalibration : null}
@@ -264,7 +264,7 @@ export default function MovementSquatProofPage() {
         <MovementSourceSkeleton
           color="#a8d5ba"
           landmarksRef={livePoseRef}
-          positionOffset={[-4.2, 0, 0]}
+          positionOffset={[2.4, 0, 0]}
         />
       </MovementMatchScene>
 

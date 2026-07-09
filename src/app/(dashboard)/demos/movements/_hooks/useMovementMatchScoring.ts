@@ -12,6 +12,8 @@ import {
 import {
   buildMovementSpineModel,
   compareMovementSpineModels,
+  evaluateMovementSpineReadiness,
+  type MovementSpineReadiness,
 } from "../_lib/movementSpineMetrics";
 import type { MovementSpineGoal } from "../_lib/movementTypes";
 import {
@@ -61,6 +63,7 @@ const GAMEPLAY_FEEDBACK_TEXT: Record<MovementGameplayMessage, string> = {
 
 type MovementMatchHudFrame = {
   spineCue: string;
+  spineReadiness: MovementSpineReadiness["status"];
   spineScore: number;
   sync: number;
 };
@@ -120,8 +123,22 @@ export function resolveMovementMatchHudFrame({
 
   return {
     spineCue: spineMatch.cue,
+    spineReadiness: spineMatch.playerReadiness.status,
     spineScore: spineMatch.score,
     sync: syncResult.sync,
+  };
+}
+
+export function resolveMovementPlayerSpineHudFrame(
+  playerMotionFrame: MovementMotionFrame,
+): Pick<MovementMatchHudFrame, "spineCue" | "spineReadiness" | "spineScore"> | null {
+  const model = buildMovementSpineModel(playerMotionFrame.source.landmarks.pose);
+  const readiness = evaluateMovementSpineReadiness(model);
+
+  return {
+    spineCue: readiness.cue,
+    spineReadiness: readiness.status,
+    spineScore: Math.round(model?.neutralStackScore ?? 0),
   };
 }
 
@@ -141,6 +158,7 @@ export function useMovementMatchScoring({
   const [hudSync, setHudSync] = useState(0);
   const [hudSpine, setHudSpine] = useState(0);
   const [hudSpineCue, setHudSpineCue] = useState("Waiting for spine tracking.");
+  const [hudSpineReadiness, setHudSpineReadiness] = useState<MovementSpineReadiness["status"]>("blocked");
   const [finalSpineScore, setFinalSpineScore] = useState(0);
   const [finalSpineCue, setFinalSpineCue] = useState("Review the spine guide and try one calmer pass.");
   const scoreRef = useRef(0);
@@ -242,6 +260,7 @@ export function useMovementMatchScoring({
           setHudSync(Math.round(hudFrame.sync));
           setHudSpine(hudFrame.spineScore);
           setHudSpineCue(hudFrame.spineCue);
+          setHudSpineReadiness(hudFrame.spineReadiness);
         }
       }
     };
@@ -258,6 +277,56 @@ export function useMovementMatchScoring({
     isScoringEnabled,
     playerMotionFrameRef,
     setIsPlaying,
+    spineGoal,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    let animationFrameId: number;
+
+    const idleHudLoop = () => {
+      if (!active) return;
+      animationFrameId = requestAnimationFrame(idleHudLoop);
+      if (isPlaying) return;
+
+      const playerMotionFrame = playerMotionFrameRef?.current ?? null;
+      if (!playerMotionFrame) return;
+
+      const instructorMotionFrame = instructorMotionFrameRef?.current ?? null;
+      const hudFrame = instructorMotionFrame
+        ? resolveMovementMatchHudFrame({
+            instructorMotionFrame,
+            playerMotionFrame,
+            spineGoal,
+          })
+        : resolveMovementPlayerSpineHudFrame(playerMotionFrame);
+      if (!hudFrame) return;
+
+      const now = performance.now();
+      if (now - lastHudUpdateRef.current <= 150) return;
+
+      lastHudUpdateRef.current = now;
+      const syncValue = "sync" in hudFrame && typeof hudFrame.sync === "number"
+        ? hudFrame.sync
+        : null;
+      if (syncValue !== null) {
+        syncRef.current = syncValue;
+        setHudSync(Math.round(syncValue));
+      }
+      setHudSpine(hudFrame.spineScore);
+      setHudSpineCue(hudFrame.spineCue);
+      setHudSpineReadiness(hudFrame.spineReadiness);
+    };
+
+    animationFrameId = requestAnimationFrame(idleHudLoop);
+    return () => {
+      active = false;
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [
+    instructorMotionFrameRef,
+    isPlaying,
+    playerMotionFrameRef,
     spineGoal,
   ]);
 
@@ -279,6 +348,7 @@ export function useMovementMatchScoring({
     setHudSync(0);
     setHudSpine(0);
     setHudSpineCue("Waiting for spine tracking.");
+    setHudSpineReadiness("blocked");
     setFeedbackMsg(null);
   }, []);
 
@@ -292,6 +362,7 @@ export function useMovementMatchScoring({
     hudSync,
     hudSpine,
     hudSpineCue,
+    hudSpineReadiness,
     syncRef,
     resetScoring,
   };

@@ -58,12 +58,12 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
   const canUsePlayerRetargetLegRaise =
     sourceOwnerDecision?.canUsePlayerRetargetLegRaise ?? false;
 
-  if (anchoredPlayerLegRaiseSide && !canUsePlayerRetargetLegRaise) {
+  if (anchoredPlayerLegRaiseSide) {
     return {
       anchoredPlayerLegRaiseSide,
       canUsePlayerRetargetLegRaise,
       feetOwner: sourceOwnerDecision?.feetOwner ?? "neutral",
-      lowerBodyOwner: sourceOwnerDecision?.lowerBodyOwner ?? playerLegRaiseOwner ?? "player-leg-raise",
+      lowerBodyOwner: playerLegRaiseOwner ?? sourceOwnerDecision?.lowerBodyOwner ?? "player-leg-raise",
       stage: "player-leg-raise",
     };
   }

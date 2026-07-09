@@ -5,6 +5,7 @@ import type { MovementAvatarSolvedFrameRuntime } from "./movementAvatarSolverRun
 function readySolvedFrame(): Extract<MovementAvatarSolvedFrameRuntime, { status: "ready" }> {
   return {
     displayPreparedInput: {} as never,
+    faceLandmarks: undefined,
     forceStandby: false,
     imageLandmarks: [],
     mirrorPlayerDisplay: false,

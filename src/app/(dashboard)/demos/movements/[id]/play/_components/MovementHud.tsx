@@ -15,11 +15,13 @@ type MovementHudProps = {
   hudSync: number;
   hudSpine?: number;
   hudSpineCue?: string;
+  hudSpineReadiness?: "blocked" | "needs-attention" | "ready";
   isPlaying: boolean;
   isVisionReady: boolean;
   isTrackingCalibrated: boolean;
   isPreviewMode?: boolean;
   isCalibrating: boolean;
+  setupRecoveryCue?: string | null;
   visionStatus: MediaPipeVisionStatus;
   visionError: string | null;
   isCameraReady?: boolean;
@@ -45,11 +47,13 @@ export default function MovementHud({
   hudSync,
   hudSpine = 0,
   hudSpineCue = "Waiting for spine tracking.",
+  hudSpineReadiness = "blocked",
   isPlaying,
   isVisionReady,
   isTrackingCalibrated,
   isPreviewMode = false,
   isCalibrating,
+  setupRecoveryCue = null,
   visionStatus,
   visionError,
   isCameraReady = false,
@@ -107,9 +111,27 @@ export default function MovementHud({
     ? "Get Ready"
     : startReadinessStatus === "checking-visibility"
       ? "Checking Setup"
+      : startReadinessStatus === "blocked"
+        ? "Check Setup"
       : isPlaying
         ? "Guided Practice"
         : "Studio Ready";
+  const spineReadinessLabel = hudSpineReadiness === "ready"
+    ? "Spine ready"
+    : hudSpineReadiness === "needs-attention"
+      ? "Check spine"
+      : "Spine blocked";
+  const spineReadinessClass = hudSpineReadiness === "ready"
+    ? "border-[#a8d5ba]/30 bg-[#a8d5ba]/12 text-[#dff8e8]"
+    : hudSpineReadiness === "needs-attention"
+      ? "border-[#f6ccbe]/30 bg-[#f6ccbe]/12 text-[#ffe5da]"
+      : "border-red-300/25 bg-red-300/10 text-red-100";
+  const spineRecoveryText = hudSpineReadiness === "ready"
+    ? null
+    : hudSpineReadiness === "needs-attention"
+      ? "Keep head, shoulders, and hips visible."
+      : "Step back until head, shoulders, and hips are visible.";
+  const setupRecoveryText = setupRecoveryCue ?? spineRecoveryText;
 
   return (
     <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>
@@ -171,10 +193,27 @@ export default function MovementHud({
               <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
                 {readinessLabel}
               </span>
-              {hudSpine > 0 && (
-                <span className="mt-1 max-w-[300px] truncate text-[11px] font-bold text-[#d7eef4]">
-                  {hudSpineCue}
-                </span>
+              {(hudSpine > 0 || setupRecoveryText) && (
+                <div className="mt-1 flex max-w-[320px] flex-col gap-1">
+                  {hudSpine > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] ${spineReadinessClass}`}>
+                        {spineReadinessLabel}
+                      </span>
+                      <span className="max-w-[220px] truncate text-[11px] font-bold text-[#d7eef4]">
+                        {hudSpineCue}
+                      </span>
+                    </div>
+                  ) : null}
+                  {setupRecoveryText ? (
+                    <span
+                      className="max-w-[300px] truncate text-[10px] font-bold text-white/60"
+                      data-testid="movement-hud-setup-recovery-cue"
+                    >
+                      {setupRecoveryText}
+                    </span>
+                  ) : null}
+                </div>
               )}
               {visionError && (
                 <button
@@ -223,12 +262,23 @@ export default function MovementHud({
           </div>
           <div className="flex flex-col">
             <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#a8d5ba]">Posture Sync</Typography>
-            <Typography className="text-4xl font-black text-white">{hudSync}%</Typography>
+            <Typography className="text-4xl font-black text-white" data-testid="movement-hud-posture-sync">
+              {hudSync}%
+            </Typography>
           </div>
           <div className="h-10 w-px bg-white/15" />
           <div className="flex flex-col">
             <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#f6ccbe]">Spine</Typography>
             <Typography className="text-4xl font-black text-white">{hudSpine}%</Typography>
+            <Typography className={`mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] ${
+              hudSpineReadiness === "ready"
+                ? "text-[#a8d5ba]"
+                : hudSpineReadiness === "needs-attention"
+                  ? "text-[#f6ccbe]"
+                  : "text-red-100"
+            }`}>
+              {spineReadinessLabel}
+            </Typography>
           </div>
         </div>
       </div>

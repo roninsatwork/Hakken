@@ -98,21 +98,27 @@ export function applyMovementAvatarSquatFlexionPoseApplicationToVrmBones({
 
 export function applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones({
   depth,
+  lowerLegBoost,
   lookupBone,
   side,
   slerp,
+  upperLegBoost,
 }: {
   depth: number;
+  lowerLegBoost?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   side: "left" | "right";
   slerp: number;
+  upperLegBoost?: number;
 }) {
   return applyMovementAvatarLowerBodyRotationSpecsToVrmBones({
     lookupBone,
     specs: resolveMovementAvatarSingleLegRaisePose({
       depth,
+      lowerLegBoost,
       side,
       slerp,
+      upperLegBoost,
     }),
   });
 }

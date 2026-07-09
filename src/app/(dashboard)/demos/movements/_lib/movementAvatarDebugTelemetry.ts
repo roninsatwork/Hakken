@@ -5,6 +5,7 @@ import {
 import type { MovementAvatarRootTransformApplication } from "./movementAvatarRootApplication";
 import type { MovementAvatarRootTargetDecision } from "./movementAvatarRootTarget";
 import { buildMovementAvatarVisualTelemetry } from "./movementAvatarVisualTelemetry";
+import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootWorldRuntime";
 import type {
   MovementRetargetFrame,
 } from "./movementRetargeting";
@@ -100,7 +101,9 @@ export function applyMovementAvatarFootLockDebugToTrackingState({
 export function applyMovementAvatarPostFrameDebugTelemetry({
   avatarName,
   avatarRole,
+  floorY,
   footLock,
+  footWorldSnapshot,
   frameUpdatedAt,
   registryWindow,
   retargetFrame,
@@ -110,11 +113,13 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  floorY?: number;
   footLock: {
     correction: number;
     drift: number;
     strength: number;
   };
+  footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   frameUpdatedAt: number;
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
@@ -125,6 +130,8 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   let nextState: MovementTrackingDebugState = {
     ...state,
     avatarVisual: buildMovementAvatarVisualTelemetry({
+      floorY,
+      footWorldSnapshot,
       retargetFrame,
       vrm,
       zScale,
@@ -154,7 +161,9 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
 export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   avatarName,
   avatarRole,
+  floorY,
   footLock,
+  footWorldSnapshot,
   frameUpdatedAt,
   registryWindow,
   retargetFrame,
@@ -164,11 +173,13 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  floorY?: number;
   footLock: {
     correction: number;
     drift: number;
     strength: number;
   };
+  footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   frameUpdatedAt: number;
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
@@ -181,7 +192,9 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   return applyMovementAvatarPostFrameDebugTelemetry({
     avatarName,
     avatarRole,
+    floorY,
     footLock,
+    footWorldSnapshot,
     frameUpdatedAt,
     registryWindow,
     retargetFrame,

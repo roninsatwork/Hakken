@@ -82,6 +82,15 @@ export function resolveMovementAvatarLowerBodyApplicationPlan({
   }
 
   if (stageDecision.stage === "player-leg-raise" && stageDecision.anchoredPlayerLegRaiseSide) {
+    if (stageDecision.canUsePlayerRetargetLegRaise) {
+      return {
+        feetOwner: lowerBodyTarget.feetOwner,
+        lowerBodyOwner: lowerBodyTarget.lowerBodyOwner,
+        mode: "retarget",
+        stageDecision,
+      };
+    }
+
     return {
       depth: lowerBodyDrive.playerLegRaiseDepth,
       feetOwner: stageDecision.feetOwner,

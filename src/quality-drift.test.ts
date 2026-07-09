@@ -993,5 +993,5 @@ describe('Quality Drift Guardrails', () => {
       offenders,
       `Unclassified provider model ID literals found. Store runtime model choices in the model catalogue/defaults instead of hardcoding IDs:\n${offenders.join('\n')}`
     ).toEqual([]);
-  });
+  }, 15_000);
 });

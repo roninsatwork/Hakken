@@ -159,7 +159,7 @@ describe("walking support readiness audit", () => {
     expect(formatWalkingSupportReadiness(audit)).toContain("- root-travel: candidate-below-threshold; searched 1 recording; best candidate 0.003/0.160 (2%); blockers candidate-below-threshold:1; Capture a recording with larger, clearer movement amplitude for this proof case.");
     expect(formatWalkingSupportReadiness(audit)).toContain("Recording gap plan: 1 row(s); 1 action group(s); 1 capture scenario(s); 1 fresh recording(s) minimum");
     expect(formatWalkingSupportReadiness(audit)).toContain("Fresh recording scenario: movement-proof-root-travel");
-    expect(formatWalkingSupportReadiness(audit)).toContain("Quick validation: npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario movement-proof-root-travel --quiet");
+    expect(formatWalkingSupportReadiness(audit)).toContain("Quick validation: npm run movement:proof:validate:root-travel");
     expect(formatWalkingSupportReadiness(audit)).toContain("Next recording targets: root-travel");
   });
 

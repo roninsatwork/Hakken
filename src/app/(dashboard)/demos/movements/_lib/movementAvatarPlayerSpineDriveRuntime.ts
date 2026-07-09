@@ -4,6 +4,7 @@ import type { MovementLandmark } from "./movementTypes";
 import { resolveUpperBodyPlayerSpineDrive } from "./movementAvatarUpperBodyPlayerSpineDrive";
 import {
   average,
+  capRecordedPresentationSideBend,
   clamp,
   NEUTRAL_PLAYER_SPINE_DRIVE,
   visibility,
@@ -55,10 +56,16 @@ export function resolveMovementAvatarPlayerSpineDrive({
 
   const neutralSideBend = calibration.shoulderCenter.x - calibration.hipCenter.x;
   const neutralLean = calibration.shoulderCenter.y - calibration.hipCenter.y;
+  const neutralDepthLean = calibration.shoulderCenter.z - calibration.hipCenter.z;
   const sideBend = clamp((spineModel.torsoSideBend - neutralSideBend) / 0.16, -1, 1);
+  const presentationSideBend = capRecordedPresentationSideBend(sideBend);
   const forwardLean = clamp((spineModel.torsoLean - neutralLean) / 0.18, -1, 1);
+  const depthLean = clamp((spineModel.torsoDepthLean - neutralDepthLean) / 0.18, -1, 1);
+  const presentationForwardLean = Math.abs(depthLean) > Math.abs(forwardLean)
+    ? depthLean
+    : forwardLean;
   const twist = clamp(spineModel.shoulderHipRotation / 0.65, -1, 1);
-  const activity = Math.max(Math.abs(sideBend), Math.abs(forwardLean), Math.abs(twist));
+  const activity = Math.max(Math.abs(sideBend), Math.abs(forwardLean), Math.abs(depthLean), Math.abs(twist));
   const owner = activity >= 0.06 ? "player-spine-model" : "player-spine-neutral";
 
   return {
@@ -67,24 +74,24 @@ export function resolveMovementAvatarPlayerSpineDrive({
     owner,
     rotations: {
       hips: {
-        x: forwardLean * 0.04,
+        x: -presentationForwardLean * 0.08,
         y: twist * 0.04,
-        z: -sideBend * 0.06,
+        z: presentationSideBend * 0.6,
       },
       spine: {
-        x: forwardLean * 0.12,
+        x: -presentationForwardLean * 0.32,
         y: twist * 0.08,
-        z: -sideBend * 0.22,
+        z: presentationSideBend * 0.95,
       },
       chest: {
-        x: forwardLean * 0.16,
+        x: -presentationForwardLean * 0.52,
         y: twist * 0.12,
-        z: -sideBend * 0.34,
+        z: presentationSideBend * 1.35,
       },
       upperChest: {
-        x: forwardLean * 0.1,
+        x: -presentationForwardLean * 0.38,
         y: twist * 0.1,
-        z: -sideBend * 0.28,
+        z: presentationSideBend * 1.1,
       },
     },
     shouldApplySpine: true,

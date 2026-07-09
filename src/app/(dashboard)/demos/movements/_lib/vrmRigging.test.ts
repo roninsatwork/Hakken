@@ -88,9 +88,19 @@ describe("vrmRigging", () => {
   });
 
   it("mirrors instructor hands and blendshape side names", () => {
+    const faceLandmarks = Array.from({ length: 264 }, () => ({
+      x: 0.5,
+      y: 0.5,
+      z: 0,
+      visibility: 0.9,
+    }));
+    faceLandmarks[1] = { x: 0.58, y: 0.44, z: 0, visibility: 0.9 };
+    faceLandmarks[33] = { x: 0.44, y: 0.42, z: 0, visibility: 0.9 };
+    faceLandmarks[263] = { x: 0.57, y: 0.46, z: 0, visibility: 0.9 };
     const prepared = prepareVrmSolverInput({
       rawLandmarks: makeLandmarks(),
       payload: {
+        faceLandmarks,
         hands: {
           left: { landmarks: [], worldLandmarks: [{ x: 0.3, y: 0.4, z: 0.1 }] },
           right: { landmarks: [], worldLandmarks: [{ x: 0.7, y: 0.4, z: 0.1 }] },
@@ -106,6 +116,12 @@ describe("vrmRigging", () => {
 
     expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.3);
     expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.7);
+    expect(prepared.faceLandmarks?.[1]?.x).toBeCloseTo(0.42);
+    expect(prepared.faceLandmarks?.[1]?.y).toBeCloseTo(0.44);
+    expect(prepared.faceLandmarks?.[33]?.x).toBeCloseTo(0.43);
+    expect(prepared.faceLandmarks?.[33]?.y).toBeCloseTo(0.46);
+    expect(prepared.faceLandmarks?.[263]?.x).toBeCloseTo(0.56);
+    expect(prepared.faceLandmarks?.[263]?.y).toBeCloseTo(0.42);
     expect(prepared.rigBlendshapes?.map((blendshape) => blendshape.categoryName)).toEqual([
       "eyeBlinkRight",
       "mouthSmileLeft",

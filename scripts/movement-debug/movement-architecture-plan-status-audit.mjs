@@ -86,7 +86,8 @@ export function auditMovementArchitecturePlanStatus({
     `User-facing supported families: ${matrix.userFacingCount}/${matrix.familyCount}.`,
     `Non-user-facing internal families: ${matrix.internalFamilyCount}/${matrix.familyCount}.`,
     `Movement-family preview coverage slice: 100% testable preview/diagnostic coverage, ${matrix.productionFamilySupportPercent}% user-facing production support.`,
-    `production family support, and ${matrix.blockedUserFacingFamilies.length} blocked current user-facing families`,
+    `production family support, ${matrix.blockedUserFacingFamilies.length} blocked current user-facing families`,
+    "futureFamilyShapeFailures: []",
     ...familyBacktickList(userFacingFamilies),
     ...familyBacktickList(internalFamilies),
   ];
@@ -109,10 +110,14 @@ export function auditMovementArchitecturePlanStatus({
   forbiddenCurrentBoardSubstrings(section, forbiddenSubstrings).forEach((forbidden) => {
     failures.push(`stale current-board text is still present: ${forbidden}`);
   });
+  (matrix.futureFamilyShapeFailures ?? []).forEach((failure) => {
+    failures.push(`support matrix future-family shape drift: ${failure}`);
+  });
 
   return {
     expected: {
       blockedUserFacingFamilies: matrix.blockedUserFacingFamilies,
+      futureFamilyShapeFailures: matrix.futureFamilyShapeFailures ?? [],
       internalFamilyCount: matrix.internalFamilyCount,
       productionFamilySupportPercent: matrix.productionFamilySupportPercent,
       userFacingCount: matrix.userFacingCount,
@@ -139,6 +144,10 @@ async function buildCurrentSupportMatrix() {
     analysis: await readRequiredJson(paths.analysisPath, "reviewed analysis"),
     broadGameVisualPlan: await readJsonIfPresent(paths.broadGamePlanPath),
     broadSemanticReview: await readJsonIfPresent(paths.broadReviewPath),
+    facingAnalysis: await readJsonIfPresent(paths.facingAnalysisPath),
+    facingGameVisualPlan: await readJsonIfPresent(paths.facingGamePlanPath) ?? {},
+    facingManifest: await readJsonIfPresent(paths.facingManifestPath),
+    facingSemanticReview: await readJsonIfPresent(paths.facingReviewPath) ?? {},
     gameCaptureManifest: await readRequiredJson(paths.gameCaptureManifestPath, "Game capture manifest"),
     manifest: await readRequiredJson(paths.manifestPath, "reviewed proof manifest"),
     semanticReview: await readRequiredJson(paths.gameReviewPath, "Game semantic review"),
@@ -148,12 +157,13 @@ async function buildCurrentSupportMatrix() {
   });
 }
 
-function formatAudit(audit) {
+export function formatAudit(audit) {
   const lines = [
     `Movement architecture plan status audit: ${audit.ok ? "passed" : "blocked"}`,
     `Expected user-facing support: ${audit.expected.userFacingCount}/19 (${audit.expected.productionFamilySupportPercent}%)`,
     `Expected internal families: ${audit.expected.internalFamilyCount}/19`,
     `Blocked current user-facing families: ${audit.expected.blockedUserFacingFamilies.join(", ") || "none"}`,
+    `Future-family shape failures: ${audit.expected.futureFamilyShapeFailures.length}`,
   ];
 
   if (audit.failures.length > 0) {

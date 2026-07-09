@@ -208,4 +208,37 @@ describe("movementAvatarLowerBodyFrameRuntime", () => {
     expect(result.footOwner).not.toBe("neutral");
     expect(result.lowerBodyOwner).not.toBe("neutral");
   });
+
+  it("reports player retarget ownership when complete solved leg retarget owns a leg raise", () => {
+    const result = applyRuntime({
+      applyRetargetMappings: () => ({
+        applied: 6,
+        feet: 2,
+        legs: 4,
+      }),
+      lowerBodyDrive: drive({
+        playerLegRaiseDepth: 0.334,
+        playerLegRaiseSide: "right",
+        playerLowerBodyState: "right-leg-raise",
+        shouldDrivePlayerLegRaise: true,
+      }),
+      lowerBodySegmentMotion: 0.35,
+      lowerBodyTarget: target(stage("player-leg-raise", {
+        anchoredPlayerLegRaiseSide: "right",
+        canUsePlayerRetargetLegRaise: true,
+        feetOwner: "player-leg-raise-planted-flat",
+        lowerBodyOwner: "player-right-leg-raise",
+      }), {
+        feetOwner: "player-leg-raise-planted-flat",
+        lowerBodyOwner: "player-right-leg-raise",
+      }),
+      playerRetargetLowerBodyMotion: 0.35,
+      retargetFrame: retargetFrame({
+        kneeLift: { left: 0, right: 0.334 },
+      }),
+    });
+
+    expect(result.lowerBodyOwner).toBe("player-retarget");
+    expect(result.footOwner).toBe("player-leg-raise-planted-flat");
+  });
 });

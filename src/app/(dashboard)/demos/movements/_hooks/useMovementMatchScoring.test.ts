@@ -22,6 +22,7 @@ import {
 } from "../_lib/movementGameplayScoring";
 import {
   resolveMovementMatchHudFrame,
+  resolveMovementPlayerSpineHudFrame,
 } from "./useMovementMatchScoring";
 
 function proofPose(mode: Parameters<typeof makeMovementAvatarProofMotionPayload>[0]) {
@@ -102,6 +103,7 @@ describe("resolveMovementMatchHudFrame", () => {
 
     expect(hudFrame).not.toBeNull();
     expect(hudFrame?.sync).toBeGreaterThan(85);
+    expect(hudFrame?.spineReadiness).toBe("ready");
     expect(hudFrame?.spineScore).toBeGreaterThan(85);
   });
 
@@ -132,6 +134,22 @@ describe("resolveMovementMatchHudFrame", () => {
       feedbackMessage: "great-effort",
       scoreDeltaTotal: 15,
     });
+  });
+
+  it("resolves paused player spine readiness without instructor playback", () => {
+    const playerMotionFrame = motionFrameFor({
+      avatarRole: "player",
+      poseLandmarks: proofPose("weak-spine-standing"),
+    });
+
+    const hudFrame = resolveMovementPlayerSpineHudFrame(playerMotionFrame);
+
+    expect(hudFrame).toEqual({
+      spineCue: "Bring shoulders and hips into view.",
+      spineReadiness: "blocked",
+      spineScore: expect.any(Number),
+    });
+    expect(hudFrame?.spineScore).toBeLessThan(25);
   });
 });
 

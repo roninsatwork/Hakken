@@ -117,20 +117,26 @@ export function applyMovementAvatarSquatFlexionPoseApplication({
 export function applyMovementAvatarSingleLegRaisePoseApplication({
   applyRotation,
   depth,
+  lowerLegBoost,
   side,
   slerp,
+  upperLegBoost,
 }: {
   applyRotation: (spec: MovementAvatarBoneRotationSpec) => void;
   depth: number;
+  lowerLegBoost?: number;
   side: "left" | "right";
   slerp: number;
+  upperLegBoost?: number;
 }) {
   return applyMovementAvatarLowerBodyRotationSpecs({
     apply: applyRotation,
     specs: resolveMovementAvatarSingleLegRaisePose({
       depth,
+      lowerLegBoost,
       side,
       slerp,
+      upperLegBoost,
     }),
   });
 }

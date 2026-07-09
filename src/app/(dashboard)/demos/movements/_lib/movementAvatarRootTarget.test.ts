@@ -102,6 +102,33 @@ describe("movement avatar root target", () => {
     expect(target.targetZ).toBeCloseTo(-2.7);
   });
 
+  it("holds forward-facing root heading for stationary side bends", () => {
+    const target = resolveMovementAvatarRootTarget({
+      avatarBaseY: -2.8,
+      avatarRootVisualLerp: 0.2,
+      positionOffset: [0.2, 0, -0.3],
+      rootMotion: rootMotionFrame({
+        headingYaw: -0.61,
+        intent: {
+          confidence: 0.99,
+          headingDelta: 0,
+          key: "root-stationary",
+          label: "Stationary root",
+          plantedFoot: "both",
+          summary: "stationary",
+          swingFoot: "none",
+          travelDirection: "none",
+          travelDistance: 0,
+        },
+      }),
+      rootOrientation: uprightRootOrientation,
+      visualRootDrop: 0,
+    });
+
+    expect(target.rootHeadingYaw).toBe(0);
+    expect(target.targetYaw).toBe(Math.PI);
+  });
+
   it("ignores image-space root travel while preserving root-motion intent responses", () => {
     const target = resolveMovementAvatarRootTarget({
       avatarBaseY: -2.8,

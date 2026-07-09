@@ -26,6 +26,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   activeSpineDrive,
   applyRetargetMappings,
   armTargetComposition,
+  armAvatarRole,
   avatarRole,
   boneEaseOptions,
   fallbackZScale,
@@ -42,6 +43,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => { applied: number };
   armTargetComposition: MovementAvatarArmTargetCompositionDecision;
+  armAvatarRole?: "instructor" | "player";
   avatarRole: "instructor" | "player";
   boneEaseOptions: Pick<
     MovementAvatarBoneEaseOptionsDecision,
@@ -71,6 +73,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
       rightFrontBodyArmBias: armTargetComposition.rightFrontBodyArmBias,
       rightWristTarget: armTargetComposition.rightWristTarget,
     },
+    armAvatarRole,
     avatarRole,
     fallbackZScale,
     handNeutralSlerp: boneEaseOptions.handNeutralSlerp,

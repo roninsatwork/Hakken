@@ -18,7 +18,9 @@ export type MovementAvatarPostFrameDebugRuntimeResult = {
 export function applyMovementAvatarPostFrameDebugRuntime({
   avatarName,
   avatarRole,
+  floorY,
   footLock,
+  footWorldSnapshot,
   frameUpdatedAt,
   registryWindow = typeof window === "undefined"
     ? undefined
@@ -30,7 +32,9 @@ export function applyMovementAvatarPostFrameDebugRuntime({
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  floorY?: number;
   footLock: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footLock"];
+  footWorldSnapshot?: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footWorldSnapshot"];
   frameUpdatedAt: number;
   registryWindow?: (Window & MovementAvatarRetargetDebugRegistryWindow) | undefined;
   retargetFrame: MovementRetargetFrame;
@@ -48,7 +52,9 @@ export function applyMovementAvatarPostFrameDebugRuntime({
   const trackingDebugState = applyMovementAvatarOptionalPostFrameDebugTelemetry({
     avatarName,
     avatarRole,
+    floorY,
     footLock,
+    footWorldSnapshot,
     frameUpdatedAt,
     registryWindow,
     retargetFrame,

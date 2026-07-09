@@ -4,6 +4,7 @@ import {
   buildLiveMovementSourceFrame,
   buildRecordedMovementSourceFrame,
   buildSyntheticMovementSourceFrame,
+  getMovementCameraConfidenceRecoveryCue,
   resolveMovementCameraConfidence,
   resolveMovementStartGateDecision,
   resolveMovementStartReadiness,
@@ -84,6 +85,43 @@ function weakFeetPose() {
   return pose;
 }
 
+function comfortableCameraPose() {
+  const pose = withCorePose();
+  [27, 28].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: 0.88 };
+  });
+  [29, 30].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: 0.9 };
+  });
+  [31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: 0.92 };
+  });
+  return pose;
+}
+
+function weakHeadPose() {
+  const pose = comfortableCameraPose();
+  [0, 7, 8].forEach((index) => {
+    pose[index] = { ...pose[index]!, visibility: 0.08 };
+  });
+  return pose;
+}
+
+function croppedFeetPose() {
+  const pose = withCorePose();
+  [31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: 0.99 };
+  });
+  return pose;
+}
+
+function farCameraPose() {
+  return withCorePose().map((landmark) => ({
+    ...landmark,
+    y: 0.48 + (landmark.y - 0.48) * 0.3,
+  }));
+}
+
 function replayFrame(pose: TrackingLandmark[]): MovementDebugReplayFrame {
   return {
     bodyConfidence: {},
@@ -127,6 +165,43 @@ describe("movement source frame contracts", () => {
     });
   });
 
+  it("snapshots source payloads so later adapter mutation cannot rewrite source truth", () => {
+    const pose = comfortableCameraPose();
+    const worldPose = pose.map((landmark) => ({ ...landmark, z: (landmark.z ?? 0) + 0.1 }));
+    const hands = {
+      left: { landmarks: [{ x: 0.2, y: 0.3, z: 0.1, visibility: 0.8 }] },
+    };
+    const blendshapes = [{ categoryName: "mouthSmileLeft", score: 0.7 }];
+    const sourceFrame = buildLiveMovementSourceFrame({
+      blendshapes,
+      capturedAt: 1200,
+      hands,
+      poseLandmarks: pose,
+      worldPoseLandmarks: worldPose,
+    });
+
+    pose[0] = { x: 0.99, y: 0.99, z: 0.99, visibility: 0.01 };
+    worldPose[0] = { x: 0.88, y: 0.88, z: 0.88, visibility: 0.02 };
+    hands.left!.landmarks![0] = { x: 0.77, y: 0.77, z: 0.77, visibility: 0.03 };
+    blendshapes[0] = { categoryName: "jawOpen", score: 1 };
+
+    expect(sourceFrame.landmarks.pose).not.toBe(pose);
+    expect(sourceFrame.landmarks.worldPose).not.toBe(worldPose);
+    expect(sourceFrame.landmarks.hands).not.toBe(hands);
+    expect(sourceFrame.landmarks.blendshapes).not.toBe(blendshapes);
+    expect(sourceFrame.landmarks.pose[0]).toMatchObject({ x: 0.5, y: 0.28, visibility: 0.9 });
+    expect(sourceFrame.landmarks.worldPose[0]).toMatchObject({ x: 0.5, y: 0.28, z: 0.1 });
+    expect(sourceFrame.landmarks.hands?.left?.landmarks?.[0]).toMatchObject({
+      x: 0.2,
+      y: 0.3,
+      z: 0.1,
+      visibility: 0.8,
+    });
+    expect(sourceFrame.landmarks.blendshapes).toEqual([
+      { categoryName: "mouthSmileLeft", score: 0.7 },
+    ]);
+  });
+
   it("separates camera confidence from start readiness", () => {
     const confidence = resolveMovementCameraConfidence({
       capturedAt: 2000,
@@ -149,6 +224,42 @@ describe("movement source frame contracts", () => {
     expect(fullBodyReadiness.promptEvents).toContain("show-your-feet");
     expect(upperBodyReadiness.state).toBe("ready");
     expect(upperBodyReadiness.canStartGame).toBe(true);
+  });
+
+  it("returns camera recovery cues for weak, cropped, and distant frames", () => {
+    expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
+      capturedAt: 2100,
+      poseLandmarks: comfortableCameraPose(),
+    }))).toBeNull();
+    expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
+      capturedAt: 2200,
+      poseLandmarks: weakFeetPose(),
+    }))).toMatchObject({
+      event: "show-your-feet",
+      message: "Show both feet.",
+      state: "partial",
+    });
+    expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
+      capturedAt: 2300,
+      poseLandmarks: croppedFeetPose(),
+    }))).toMatchObject({
+      event: "step-back",
+      message: "Step back so your whole body is visible.",
+    });
+    expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
+      capturedAt: 2400,
+      poseLandmarks: farCameraPose(),
+    }))).toMatchObject({
+      event: "step-closer",
+      message: "Step closer so movement stays readable.",
+    });
+    expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
+      capturedAt: 2500,
+      poseLandmarks: weakHeadPose(),
+    }))).toMatchObject({
+      message: "Keep head, shoulders, and hips in view.",
+      state: "uncertain",
+    });
   });
 
   it("blocks start during countdown and calibration without marking the source lost", () => {
@@ -194,6 +305,37 @@ describe("movement source frame contracts", () => {
       canStart: true,
       state: "ready",
       target: "game",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: ready,
+      spineReadinessStatus: "needs-attention",
+      target: "game",
+    })).toMatchObject({
+      blockedReasons: ["spine-needs-attention"],
+      canStart: false,
+      promptEvents: ["hold-still-for-calibration"],
+      state: "blocked",
+      target: "game",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: ready,
+      spineReadinessStatus: "blocked",
+      target: "game",
+    })).toMatchObject({
+      blockedReasons: ["spine-blocked"],
+      canStart: false,
+      promptEvents: ["hold-still-for-calibration"],
+      state: "blocked",
+      target: "game",
+    });
+    expect(resolveMovementStartGateDecision({
+      readiness: ready,
+      spineReadinessStatus: "needs-attention",
+      target: "recording",
+    })).toMatchObject({
+      canStart: true,
+      state: "ready",
+      target: "recording",
     });
     expect(resolveMovementStartGateDecision({
       readiness: ready,

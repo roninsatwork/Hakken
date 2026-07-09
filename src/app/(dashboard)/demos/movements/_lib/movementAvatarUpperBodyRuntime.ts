@@ -34,6 +34,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   activeSpineDrive,
   armRelaxedSlerp,
   armTargets,
+  armAvatarRole,
   avatarRole,
   fallbackZScale,
   handNeutralSlerp,
@@ -51,6 +52,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
   armRelaxedSlerp: number;
   armTargets: MovementAvatarUpperBodyRuntimeArmTargets;
+  armAvatarRole?: "instructor" | "player";
   avatarRole: "instructor" | "player";
   fallbackZScale: number;
   handNeutralSlerp: number;
@@ -65,6 +67,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   spineApplyOptions: MovementAvatarSpineApplyOptionsDecision;
   torsoTrackingReady: boolean;
 }): MovementAvatarUpperBodyRuntimeApplication {
+  const resolvedArmAvatarRole = armAvatarRole ?? avatarRole;
   const spine = applyMovementAvatarSpinePoseApplicationToVrmBones({
     activeSpineDrive,
     avatarRole,
@@ -81,7 +84,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   const rightArm = applyMovementAvatarArmApplicationToVrmBones({
     armDecision: rightArmDecision,
     armRelaxedSlerp,
-    avatarRole,
+    avatarRole: resolvedArmAvatarRole,
     elbowTarget: armTargets.rightElbowTarget,
     fallbackZScale,
     frontBias: armTargets.rightFrontBodyArmBias,
@@ -99,7 +102,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   const leftArm = applyMovementAvatarArmApplicationToVrmBones({
     armDecision: leftArmDecision,
     armRelaxedSlerp,
-    avatarRole,
+    avatarRole: resolvedArmAvatarRole,
     elbowTarget: armTargets.leftElbowTarget,
     fallbackZScale,
     frontBias: armTargets.leftFrontBodyArmBias,

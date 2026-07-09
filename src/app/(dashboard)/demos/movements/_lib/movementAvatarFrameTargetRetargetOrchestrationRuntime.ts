@@ -28,6 +28,7 @@ export type MovementAvatarFrameTargetRetargetOrchestrationRuntime = {
 };
 
 export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
+  armAvatarRole,
   avatarRole,
   avatarRoot,
   currentRestMap,
@@ -46,6 +47,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   targetSolverLandmarks,
   vrm,
 }: {
+  armAvatarRole?: "instructor" | "player";
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
   currentRestMap: MovementAvatarRetargetRestMap;
@@ -65,6 +67,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   vrm: VRM | null | undefined;
 }): MovementAvatarFrameTargetRetargetOrchestrationRuntime {
   const frameTargetRuntime = resolveMovementAvatarFrameTargetRuntime({
+    armAvatarRole,
     avatarRole,
     imageLandmarks,
     lowerBodyDrive,

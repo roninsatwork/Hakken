@@ -278,6 +278,27 @@ function mirrorBlendshapeSides(blendshapes: VrmBlendshapeCategory[]) {
   });
 }
 
+const VRM_FACE_MIRROR_INDEX_PAIRS = [
+  [33, 263],
+] as const;
+
+function mirrorFaceLandmarksForDisplay(faceLandmarks: VrmSolverLandmark[]) {
+  const mirroredFaceLandmarks = faceLandmarks.map((landmark) => ({
+    ...landmark,
+    x: 1 - landmark.x,
+  }));
+
+  VRM_FACE_MIRROR_INDEX_PAIRS.forEach(([leftIndex, rightIndex]) => {
+    const left = mirroredFaceLandmarks[leftIndex];
+    const right = mirroredFaceLandmarks[rightIndex];
+    if (!left || !right) return;
+    mirroredFaceLandmarks[leftIndex] = right;
+    mirroredFaceLandmarks[rightIndex] = left;
+  });
+
+  return mirroredFaceLandmarks;
+}
+
 export function prepareVrmSolverInput({
   rawLandmarks,
   payload,
@@ -297,6 +318,7 @@ export function prepareVrmSolverInput({
 
   const imageLandmarks = rawLandmarks.map(format);
   let solverLandmarks: VrmSolverLandmark[];
+  let faceLandmarks = payload?.faceLandmarks?.map(format);
   let rigHands = payload?.hands;
   let rigBlendshapes = payload?.blendshapes;
 
@@ -320,9 +342,14 @@ export function prepareVrmSolverInput({
     if (payload?.blendshapes) {
       rigBlendshapes = mirrorBlendshapeSides(payload.blendshapes);
     }
+
+    if (faceLandmarks) {
+      faceLandmarks = mirrorFaceLandmarksForDisplay(faceLandmarks);
+    }
   }
 
   return {
+    faceLandmarks,
     forceStandby,
     imageLandmarks,
     solverLandmarks,

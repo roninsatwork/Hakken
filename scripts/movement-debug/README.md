@@ -50,7 +50,7 @@ Run the fast architecture/proof drift guard before and after movement architectu
 npx -p node@22.13.0 npm run movement:architecture-guard
 ```
 
-This checks the watched movement hotspots from the architecture plan, `MovementSourceFrame` source-truth purity, debug/preview route-bypass purity in core movement libs/hooks, coverage product-truth claims, the coverage-registry support-claim audit command, the all-family support readiness matrix, the architecture plan current-board status, the roadmap progress report, the current Game visual semantic decisions, Game visual analysis-to-capture consistency, Game visual review-to-capture consistency, Replay/Game score-message parity, Game visual proof-frame count, reviewed proof-manifest honesty, and the broad upper-body capture-contract proof scope. It is not a replacement for the full merge gate, but it is the cheapest way to catch `VrmAvatar`, pipeline facade, lower-body adapter, source/display contract, debug-route leakage, coverage-claim drift, stale plan percentages, stale Game visual captures or review decisions, hidden limitation-to-pass drift, support-matrix drift, or proof-artifact drift without running video captures.
+This checks the watched movement hotspots from the architecture plan, `MovementSourceFrame` source-truth purity, debug/preview route-bypass purity in core movement libs/hooks, coverage product-truth claims, the coverage-registry support-claim audit command, the all-family support readiness matrix, the architecture plan current-board status, the roadmap progress report, the outstanding-task/doc-hygiene audit, the current Game visual semantic decisions, Game visual analysis-to-capture consistency, Game visual review-to-capture consistency, Replay/Game score-message parity, Game visual proof-frame count, reviewed proof-manifest honesty, and the broad upper-body capture-contract proof scope. It is not a replacement for the full merge gate, but it is the cheapest way to catch `VrmAvatar`, pipeline facade, lower-body adapter, source/display contract, debug-route leakage, coverage-claim drift, stale plan percentages, stale historical plan wording, stale Game visual captures or review decisions, hidden limitation-to-pass drift, support-matrix drift, or proof-artifact drift without running video captures.
 
 Run the all-family support readiness matrix when updating roadmap percentages, product copy, or support claims:
 
@@ -58,7 +58,15 @@ Run the all-family support readiness matrix when updating roadmap percentages, p
 npx -p node@22.13.0 npm run movement:support-readiness-matrix -- --no-write
 ```
 
-This reads the reviewed analysis, reviewed manifest, Game captures/review, focused seated artifacts, and the supplemental broad upper-body Game proof when present. It prints all 19 movement families with category, readiness, blockers, and next action, and separately reports production family support as `5/19 (26%)` for the current artifacts. Use `movement:support-readiness-matrix:strict` when automation should fail if any current user-facing family loses its support proof.
+This reads the reviewed analysis, reviewed manifest, Game captures/review, focused seated artifacts, and the supplemental broad upper-body Game proof when present. It prints all 19 movement families with category, readiness, blockers, and next action, and separately reports production family support as `5/19 (26%)` for the current artifacts. It also reports `futureFamilyShapeFailures`; this must stay empty so all 10 source-backed future-family shapes remain surfaced as internal-preview blocked matrix rows. Use `movement:support-readiness-matrix:strict` when automation should fail if any current user-facing family loses its support proof or if future-family shape rows drift out of the matrix.
+
+Run the future-family support-audit shape check when editing generic internal preview family promotion requirements:
+
+```bash
+npx -p node@22.13.0 npm run movement:future-family-support-audit-shapes -- --strict
+```
+
+This validates the first-pass recorded proof cases, Game visual cases, acceptable support copy, and fallback/non-promotion rule for the 10 internal preview families that do not yet have dedicated support-audit scripts. It is not a promotion gate by itself; the support-readiness matrix uses these shapes to keep those rows concrete while still blocked until real recorded proof, Game proof, semantic review, strict aliases, and architecture-guard readiness signals exist. If a future-family shape row disappears from the matrix, stops being internal-preview, or loses its blocker details, `movement:support-readiness-matrix:strict` reports future-family shape drift.
 
 Run the architecture plan status audit when updating roadmap percentages or support counts:
 
@@ -66,7 +74,7 @@ Run the architecture plan status audit when updating roadmap percentages or supp
 npx -p node@22.13.0 npm run movement:architecture-plan-status-audit -- --strict
 ```
 
-This compares the plan's Current Standing Board with the computed support readiness matrix and blocks stale current-board claims such as `4/19`, `15/19`, or `21%` production support after a promotion. The architecture guard also runs this audit, so documentation drift now fails the cheap movement guard.
+This compares the plan's Current Standing Board with the computed support readiness matrix and blocks stale current-board claims such as `4/19`, `15/19`, or `21%` production support after a promotion. It also requires the current board to keep `futureFamilyShapeFailures: []` visible and fails if the support matrix reports future-family shape drift. The architecture guard also runs this audit, so documentation drift now fails the cheap movement guard.
 
 Run the roadmap progress report when explaining section progress versus overall progress:
 
@@ -74,7 +82,7 @@ Run the roadmap progress report when explaining section progress versus overall 
 npx -p node@22.13.0 npm run movement:roadmap-progress-report -- --strict
 ```
 
-This parses the plan's 15 section-progress rows, compares the current overall estimate with the computed section average, and prints the support-matrix product truth beside it. By default it also writes ignored handoff artifacts to `tmp/movement-replay-lab/current-roadmap-progress-report.json` and `tmp/movement-replay-lab/current-roadmap-progress-report.md`; add `-- --no-write` for a read-only check. It is the quick answer for why the overall human-movement estimate can be lower than the section average while production support is still only `5/19 (26%)`. The architecture guard also runs this report.
+This parses the plan's 15 section-progress rows, compares the current overall estimate with the computed section average, and prints the support-matrix product truth beside it, including `futureFamilyShapeFailures`. By default it also writes ignored handoff artifacts to `tmp/movement-replay-lab/current-roadmap-progress-report.json` and `tmp/movement-replay-lab/current-roadmap-progress-report.md`; add `-- --no-write` for a read-only check. It is the quick answer for why the overall human-movement estimate can be lower than the section average while production support is still only `5/19 (26%)`, and it blocks strict progress reports when future-family shape rows drift. The architecture guard also runs this report.
 
 Run the outstanding-task audit when editing the plan's task board or recommended next slice:
 
@@ -82,7 +90,24 @@ Run the outstanding-task audit when editing the plan's task board or recommended
 npx -p node@22.13.0 npm run movement:outstanding-tasks-audit -- --strict
 ```
 
-This keeps the Always-Open Outstanding Tasks section from going empty or stale, and it checks that the Recommended Next Slice keeps `root-turn` in the current user-facing list while still scoping it to standing root orientation only. The architecture guard also runs this audit.
+This keeps the Always-Open Outstanding Tasks section from going empty or stale, checks that the Recommended Next Slice keeps `root-turn` in the current user-facing list while still scoping it to standing root orientation only, requires the Proof Artifact Policy, Current Handoff Inventory, Recent focused verification, and Historical Log Boundary, and keeps the 10 future-family audit shapes visible. It also blocks stale historical proof-count/current-label wording so older dated logs do not read like product truth. The architecture guard also runs this audit.
+
+Run the pre-commit handoff audit before staging or committing the current movement slice:
+
+```bash
+npx -p node@22.13.0 npm run movement:precommit-handoff-audit
+```
+
+This checks the Current Handoff Inventory against Git source-control state. It blocks when tracked docs/package/guard files reference support-audit source candidates that are still untracked, when source/test candidates are accidentally ignored, or when a staged dependency set splits aliases/imports from the source files they need. Use `movement:precommit-handoff-audit:strict` for the commit gate; it is expected to pass when the seven current support-audit/test source candidates are tracked and staged with the dependent movement script/docs changes.
+
+Run the current workplan finish gate before handing movement proof work back:
+
+```bash
+npx -p node@22.13.0 npm run movement:today-finish-gate
+```
+
+This runs the architecture guard, support-readiness matrix, roadmap progress report, architecture-plan status audit, outstanding-task audit, and queue-only next-proof capture preflight. It is expected to pass while the next proof families remain promotion-blocked, as long as the two active capture lanes, the facing/occlusion product-truth decision handoff, and policy docs are current.
+The finish gate also runs the future-family support-audit shape check so generic internal preview rows cannot drift back into vague prose.
 
 Run the coverage-registry claim audit when editing movement family support copy:
 
@@ -130,9 +155,9 @@ Run the upper-body readiness audit before changing `upper-body-standing` support
 npx -p node@22.13.0 npm run movement:upper-body-standing-support-audit
 ```
 
-This is expected to report `blocked` for the broad `upper-body-standing` family until one reviewed recording bundle passes arm/reach/twist/shoulder proof and upper-body Game visual target/review cases exist. While blocked, it prints the top broad passed-proof candidates and their missing cases so partial or split proof cannot look like support readiness. The narrow `standing-side-bend-head-direction` family is separately guarded by the same audit and the architecture guard while it remains user-facing. Use `--strict` only when intentionally trying to promote the broad family.
-By default the audit loads the stable 49-frame Game review and auto-adds the current supplemental broad upper-body Game plan/review when those files exist. Pass repeated `--game-visual-plan` and `--semantic-review` paths only when auditing a custom focused proof set.
-Add `--candidate-review-out tmp/movement-replay-lab/current-upper-body-standing-broad-candidate-review.md` to write a Markdown checklist for the ranked broad evidence candidates, ranked broad passed-proof candidates, and fallback capture protocol. That checklist is decision support only: broad `upper-body-standing` remains internal/demo-only until recorded proof rows are no longer product-scoped and the audit passes.
+This should pass for the current scoped broad `upper-body-standing` claim while one reviewed bundle still proves arm/reach/twist/shoulder rows and the upper-body Game visual target/review cases remain readable. It also guards the narrow `standing-side-bend-head-direction` family while it remains user-facing. Use `--strict` when automation should fail if the scoped broad or narrow support evidence is lost.
+By default the audit loads the stable current Game review and auto-adds the current supplemental broad upper-body Game plan/review when those files exist. Pass repeated `--game-visual-plan` and `--semantic-review` paths only when auditing a custom focused proof set.
+Add `--candidate-review-out tmp/movement-replay-lab/current-upper-body-standing-broad-candidate-review.md` to write a Markdown checklist for ranked broad evidence candidates, ranked broad passed-proof candidates, and fallback capture protocol. That checklist is decision support and regression context; current product truth still comes from the default audit, coverage registry, support-readiness matrix, and architecture guard.
 Add `--capture-guide-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-guide.md` after deciding existing candidates are not enough. The guide writes the explicit broad capture protocol plus the post-capture analyzer, focused Game visual plan/capture/review, and merged readiness-audit commands. Add `--capture-contract-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json` to write the same proof cases, paths, commands, broad passing recording ids, and broad passed-proof candidates as machine-readable JSON. After the contract's reviewed manifest and focused review files exist, run the final merged audit with `--capture-contract <file>` to load those contract paths directly and hard-fail if broad support is still blocked; contract mode is strict by default, validates the contract schema, proof-case scope, command chain, command artifact paths, focused Game visual plan proof cases, strict final audit, and focused semantic-review readable-pass decisions, then names any missing artifact, stale focused plan, or unreviewed focused Game case plus the next workflow action. Use `--capture-label <label>` to customize the scratch output names, and pass `--recording-id <id>` after the recording exists to write executable commands instead of `<new-recording-id>` placeholders.
 Use the shortcut below to regenerate the current candidate review, capture guide, and JSON contract together:
 
@@ -160,7 +185,7 @@ Preflight the generated JSON contract before treating it as a final-audit handof
 npx -p node@22.13.0 npm run movement:upper-body-standing-capture-preflight
 ```
 
-The preflight reports support status, broad passing recording ids, product-scoped broad evidence candidate ids, the top candidate handoff command, missing broad recorded/Game proof cases, shape issues, staged workflow progress, the next workflow command id and command when a recording-bound contract is partly complete, missing reviewed/focused artifacts, missing focused Game proof cases, and missing readable semantic decisions without running the final strict support audit. Add `-- --strict` when this should fail the shell until the contract is ready for the final audit.
+The preflight reports contract-snapshot support status, broad passing recording ids, product-scoped broad evidence candidate ids, the top candidate handoff command, snapshot missing broad recorded/Game proof cases, shape issues, staged workflow progress, the next workflow command id and command when a recording-bound contract is partly complete, missing reviewed/focused artifacts, missing focused Game proof cases, and missing readable semantic decisions without running the final strict support audit. Add `-- --strict` when this should fail the shell until the contract is ready for the final audit; use the strict final audit as the recomputed support-readiness source of truth.
 When the contract is still waiting for a recording id, the next workflow command is the recording-id handoff template.
 Final-audit artifact checks stay in `waiting-for-recording-id` state until the contract is bound to a saved recording id, so pre-capture status output does not confuse missing post-capture files with the current blocker.
 Generated capture guides use these shortcut commands for the default contract path, and fall back to explicit path-aware `movement:upper-body-standing-support-audit -- --capture-contract...` commands for custom contract files.
@@ -307,7 +332,7 @@ When reviewing against the current proof gate, include the reviewed visual captu
 npx -p node@22.13.0 npm run movement:replay:analyze -- --export "$(cat tmp/movement-replay-lab/runs/latest-export-path.txt)" --recording-plan tmp/movement-replay-lab/current-proof-recording-plan.reviewed.json --recording-scenario movement-proof-root-travel --visual-captures tmp/movement-replay-lab/captures/current-proof-set --review-decisions tmp/movement-replay-lab/current-proof-review-decisions.codex-visual-review.json --source-limitation-decisions tmp/movement-replay-lab/current-proof-source-limitations.codex-product-limitations.json --out tmp/movement-replay-lab/root-travel-scenario-reviewed-smoke.json
 ```
 
-The shorter validation runner reads the selected scenario's structured `validation` object from the plan, resolves `tmp/movement-replay-lab/runs/latest-export-path.txt`, runs the same reviewed-state analyzer command, and prints the resulting proof-manifest counts. Add `--quiet` for the compact summary-only path, or `--dry-run` when you only want to inspect the exact command. If `--recording-plan` is omitted, the runner first checks the reviewed recording plan, then auto-discovers known seated/walking support recording plans by scenario label so support-audit quick commands such as `movement-proof-seated-forward-fold` and `movement-proof-root-travel` work without memorizing the generated plan path:
+The shorter validation runner reads the selected scenario's structured `validation` object from the plan, resolves `tmp/movement-replay-lab/runs/latest-export-path.txt`, runs the same reviewed-state analyzer command, and prints the resulting proof-manifest counts. Add `--quiet` for the compact summary-only path, or `--dry-run` when you only want to inspect the exact command. If `--recording-plan` is omitted, the runner first checks the reviewed recording plan, then auto-discovers known facing/occlusion, root-travel/walking, and seated support recording plans by scenario label so support-audit quick commands such as `movement-proof-facing-occlusion-recovery`, `movement-proof-root-travel`, and `movement-proof-seated-forward-fold` work without memorizing the generated plan path:
 
 ```bash
 npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario movement-proof-root-travel --quiet
@@ -321,16 +346,28 @@ npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --all --quiet -
 
 The all-scenario validation summaries include the controlling reviewed manifest first for unique blocker counts, then row-occurrence totals because capture scenarios overlap.
 
-For the current expansion work queue, `movement:next-proof-readiness` runs the seated and walking support-readiness audits together, rewrites their support recording plans, and prints the two concise next validation commands. The JSON and Markdown summaries also include the fresh recording label, proof cases, support recording-plan path, validation output path, and setup/movement/acceptance protocol for each next scenario. Use this as the quick handoff check before recording or validating the next seated forward-fold/root-travel proof:
+## Proof Artifact Policy
+
+Keep compact proof summaries in tracked documentation. Keep raw/generated proof artifacts under `tmp/movement-replay-lab/**` as ignored scratch by default.
+
+Tracked docs may name commands, dates, proof counts, selected bundle ids, blocker counts, capture protocols, validation aliases, and accepted product/source limitations. Do not commit raw capture images, replay proof-set folders, generated reviewed-analysis JSON, generated Game visual plans, generated review templates, or generated recording plans by default. Promote a small reviewed artifact bundle only after an explicit product/engineering decision names the exact files and stale-context checks.
+
+For the current expansion work queue, `movement:next-proof-readiness` runs the facing/occlusion, root-travel, seated, and walking support-readiness audits together, rewrites their support recording plans, and prints the concise next validation aliases and review/promotion candidates. The JSON and Markdown summaries also include the fresh recording label, proof cases, support recording-plan path, validation output path, and setup/movement/acceptance protocol for each next scenario. Use this as the quick handoff check before recording or validating the next root-travel or seated forward-fold proof, or before making the facing/occlusion product-truth decision:
 
 ```bash
 npx -p node@22.13.0 npm run movement:next-proof-readiness
 ```
 
-Use the strict shortcut when a promotion workflow should stop until both seated and walking proof are ready:
+Use the strict shortcut when a promotion workflow should stop until facing/occlusion, root-travel, seated, and walking proof are ready:
 
 ```bash
 npx -p node@22.13.0 npm run movement:next-proof-readiness:strict
+```
+
+Use the queue-only preflight shortcut immediately before a capture session. It succeeds while these families are still promotion-blocked, but fails if the expected two recording labels or required handoff fields drift:
+
+```bash
+npx -p node@22.13.0 npm run movement:next-proof-capture-queue
 ```
 
 After running one or more scenario smokes, summarize their proof manifests with:
@@ -372,6 +409,14 @@ npx -p node@22.13.0 npm run movement:replay:capture -- --frames auto
 ```
 
 If the capture script redirects to `/login`, either pass an authenticated Playwright storage state with `--storage-state`, or run the app with local test auth enabled and pass `--local-test-auth`.
+
+Gate avatar-follow reliability after Replay visual captures are attached:
+
+```bash
+npx -p node@22.13.0 npm run movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json
+```
+
+The gate blocks supported proof recordings when Replay visual capture frames are missing, visual match is below 85%, average avatar lower/upper direction error exceeds the analyzer thresholds, lower-body owner flicker exceeds the analyzer threshold, or hard root/seated cases pass without capture-backed visual proof.
 
 ## Browser Viewer
 

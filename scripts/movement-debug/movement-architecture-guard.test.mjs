@@ -17,6 +17,7 @@ import {
   summarizePhase14ScriptContracts,
   summarizeProofManifest,
   summarizeReplayGameParity,
+  supportRecordingPlansForGuardReport,
   summarizeUserFacingSupportAuditGateReadiness,
   summarizeUserFacingSupportAuditGates,
 } from "./movement-architecture-guard.mjs";
@@ -75,12 +76,21 @@ const seatedGameProofCases = [
 const expectedGameVisualProofFrames = 50;
 const cleanPackageJson = {
   scripts: {
+    "movement:expansion-preview-handoff:facing-occlusion": "node scripts/movement-debug/movement-expansion-preview-handoff.mjs --family facing-occlusion --out tmp/movement-replay-lab/current-facing-occlusion-handoff.json --guide-out tmp/movement-replay-lab/current-facing-occlusion-handoff.md",
     "movement:expansion-preview-handoff:sitting": "node scripts/movement-debug/movement-expansion-preview-handoff.mjs --family sitting --out tmp/movement-replay-lab/current-expansion-preview-sitting-handoff.json --guide-out tmp/movement-replay-lab/current-expansion-preview-sitting-handoff.md",
     "movement:expansion-preview-handoff:sitting:best-partial": "node scripts/movement-debug/movement-expansion-preview-handoff.mjs --family sitting --recording-id-from-best-partial --out tmp/movement-replay-lab/current-expansion-preview-sitting-handoff.best-partial.json --guide-out tmp/movement-replay-lab/current-expansion-preview-sitting-handoff.best-partial.md",
     "movement:expansion-preview-handoff:walking": "node scripts/movement-debug/movement-expansion-preview-handoff.mjs --family walking --out tmp/movement-replay-lab/current-expansion-preview-walking-handoff.json --guide-out tmp/movement-replay-lab/current-expansion-preview-walking-handoff.md",
     "movement:expansion-preview-handoff:walking:best-partial": "node scripts/movement-debug/movement-expansion-preview-handoff.mjs --family walking --recording-id-from-best-partial --game-visual-plan tmp/movement-replay-lab/current-expansion-preview-walking-game-visual-proof-plan.json --out tmp/movement-replay-lab/current-expansion-preview-walking-handoff.best-partial.json --guide-out tmp/movement-replay-lab/current-expansion-preview-walking-handoff.best-partial.md",
     "movement:next-proof-readiness": "node scripts/movement-debug/next-proof-readiness.mjs",
     "movement:next-proof-readiness:strict": "node scripts/movement-debug/next-proof-readiness.mjs --strict",
+    "movement:next-proof-capture-queue": "node scripts/movement-debug/next-proof-readiness.mjs --no-write --capture-queue-only --capture-queue-strict --capture-preflight-strict",
+    "movement:replay-studio-verdict-gate": "npm run movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json",
+    "movement:future-family-support-audit-shapes": "node scripts/movement-debug/future-family-support-audit-shapes.mjs",
+    "movement:future-family-support-audit-shapes:strict": "node scripts/movement-debug/future-family-support-audit-shapes.mjs --strict",
+    "movement:today-finish-gate": "npm run movement:architecture-guard && npm run movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json && npm run movement:support-readiness-matrix -- --no-write --json && npm run movement:future-family-support-audit-shapes:strict -- --json && npm run movement:roadmap-progress-report:strict -- --no-write --json && npm run movement:architecture-plan-status-audit:strict -- --json && npm run movement:outstanding-tasks-audit:strict -- --json && npm run movement:next-proof-capture-queue",
+    "movement:proof:validate:facing-occlusion": "node scripts/movement-debug/validate-recording-scenario.mjs --scenario movement-proof-facing-occlusion-recovery --quiet",
+    "movement:proof:validate:root-travel": "node scripts/movement-debug/validate-recording-scenario.mjs --scenario movement-proof-root-travel --quiet",
+    "movement:proof:validate:seated-forward-fold": "node scripts/movement-debug/validate-recording-scenario.mjs --scenario movement-proof-seated-forward-fold --quiet",
     "movement:support-readiness-matrix": "node scripts/movement-debug/movement-support-readiness-matrix.mjs",
     "movement:support-readiness-matrix:strict": "node scripts/movement-debug/movement-support-readiness-matrix.mjs --strict",
     "movement:architecture-plan-status-audit": "node scripts/movement-debug/movement-architecture-plan-status-audit.mjs",
@@ -89,12 +99,20 @@ const cleanPackageJson = {
     "movement:roadmap-progress-report:strict": "node scripts/movement-debug/movement-roadmap-progress-report.mjs --strict",
     "movement:outstanding-tasks-audit": "node scripts/movement-debug/movement-outstanding-tasks-audit.mjs",
     "movement:outstanding-tasks-audit:strict": "node scripts/movement-debug/movement-outstanding-tasks-audit.mjs --strict",
+    "movement:precommit-handoff-audit": "node scripts/movement-debug/movement-outstanding-tasks-audit.mjs --precommit-handoff",
+    "movement:precommit-handoff-audit:strict": "node scripts/movement-debug/movement-outstanding-tasks-audit.mjs --precommit-handoff --strict",
     "movement:coverage-registry-claim-audit": "npm run test:run -- 'src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry.test.ts'",
+    "movement:facing-occlusion-support-audit": "node scripts/movement-debug/facing-occlusion-support-readiness-audit.mjs",
+    "movement:facing-occlusion-support-audit:strict": "node scripts/movement-debug/facing-occlusion-support-readiness-audit.mjs --strict",
     "movement:replay:export-session": "node scripts/movement-debug/export-replay-session.mjs",
     "movement:root-turn-support-audit": "node scripts/movement-debug/root-turn-support-claim-audit.mjs",
+    "movement:root-travel-support-audit": "node scripts/movement-debug/root-travel-support-readiness-audit.mjs",
+    "movement:root-travel-support-audit:strict": "node scripts/movement-debug/root-travel-support-readiness-audit.mjs --strict",
     "movement:sitting-support-audit": "node scripts/movement-debug/sitting-support-readiness-audit.mjs",
+    "movement:sitting-support-audit:strict": "node scripts/movement-debug/sitting-support-readiness-audit.mjs --strict",
     "movement:squat-knee-lift-support-audit": "node scripts/movement-debug/squat-knee-lift-support-claim-audit.mjs",
     "movement:walking-support-audit": "node scripts/movement-debug/walking-support-readiness-audit.mjs",
+    "movement:walking-support-audit:strict": "node scripts/movement-debug/walking-support-readiness-audit.mjs --strict",
     "movement:upper-body-standing-capture-final-audit": "node scripts/movement-debug/upper-body-standing-support-readiness-audit.mjs --capture-contract tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json",
     "movement:upper-body-standing-capture-handoff": "node scripts/movement-debug/upper-body-standing-support-readiness-audit.mjs --candidate-review-out tmp/movement-replay-lab/current-upper-body-standing-broad-candidate-review.md --capture-guide-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-guide.md --capture-contract-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json",
     "movement:upper-body-standing-capture-handoff:top-candidate": "node scripts/movement-debug/upper-body-standing-support-readiness-audit.mjs --recording-id-from-top-candidate --candidate-review-out tmp/movement-replay-lab/current-upper-body-standing-broad-candidate-review.md --capture-guide-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-guide.md --capture-contract-out tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json",
@@ -267,6 +285,36 @@ const partialSittingSemanticReview = {
     },
   })),
 };
+const focusedFacingGameVisualPlan = {
+  summary: {
+    proofCases: [
+      "strongest-facing-occlusion-recovery",
+      "strongest-side-swap-recovery",
+    ],
+  },
+};
+const focusedFacingSemanticReview = {
+  decisions: focusedFacingGameVisualPlan.summary.proofCases.map((proofCase) => ({
+    decision: "readable-pass",
+    reviewContext: {
+      cases: [proofCase],
+    },
+  })),
+};
+const focusedFacingManifest = {
+  rows: [
+    "facing-occlusion-recovery",
+    "side-swap-recovery",
+    "self-occlusion-recovery",
+  ].map((proofCase) => ({
+    automatedStatus: "passed",
+    evidenceFrameCount: 1,
+    proofBlockerCode: "manual-review-pending",
+    proofCase,
+    recordingId: "px72q2e5m8pw9gctaj11yh36a989wjt7",
+    status: "manual-review",
+  })),
+};
 const sectionProgressPercents = [92, 87, 75, 75, 99, 76, 94, 98, 84, 90, 80, 99, 98, 99, 94];
 const outstandingTaskFixtureText = [
   "Maintain 0 missing-proof, manual-review, failed, and blocking rows",
@@ -274,10 +322,24 @@ const outstandingTaskFixtureText = [
   "Capture or identify a real seated recording",
   "For `sitting`, cover the remaining `seated-forward-fold` case",
   "Capture or identify a real walking/root-travel bundle",
+  "Decide deliberately whether proof-ready `facing-occlusion` should stay diagnostic-only or become a user-facing support claim; ensure production support moves intentionally from 5/19",
   "Keep the refreshed 50-frame Game visual capture/review set current",
   "Before committing or handing off the current movement slice",
+  "classify the seven support-audit/test files as source/test candidates",
   ...Array.from({ length: 18 }, (_, index) => `Keep placeholder open task ${index}`),
 ];
+const futureFamilyAuditShapeRows = [
+  "pivot-weight-transfer",
+  "jump-hop",
+  "lunges",
+  "kneeling",
+  "lying-floor-work",
+  "quadruped",
+  "rolling-crawling",
+  "yoga",
+  "pilates",
+  "props-contact",
+].map((family) => `| \`${family}\` | Required recorded proof cases before promotion. | Required Game visual cases before promotion. | Acceptable user-facing claim after proof. | Fallback / non-promotion rule. |`);
 
 function currentPlanBoardText({
   internalCount = 14,
@@ -301,11 +363,11 @@ Current movement-family coverage:
 
 Current proof snapshot from the cheap gates run in this audit:
 
-- \`movement:support-readiness-matrix -- --no-write --json\` passes as the all-family status cross-check: 19 families total, ${userFacingCount} user-facing production-supported families, ${internalCount} internal preview/diagnostic families, ${productionPercent}% production family support, and 0 blocked current user-facing families.
+- \`movement:support-readiness-matrix -- --no-write --json\` passes as the all-family status cross-check: 19 families total, ${userFacingCount} user-facing production-supported families, ${internalCount} internal preview/diagnostic families, ${productionPercent}% production family support, 0 blocked current user-facing families, and \`futureFamilyShapeFailures: []\`.
 
 Current progress estimates:
 
-- Overall full human-movement engine: about 70%.
+- Overall full human-movement engine: about 73%.
 - Current standing/posture/Game Studio slice: 98%.
 - Architecture-hardening slice: 99%.
 - Current proof-closure slice: 100%.
@@ -317,6 +379,40 @@ Current progress estimates:
 - Walking validation lane: 41% toward promotion.
 - Average progress across the 15 plan sections: about 90%.
 - Plan adherence for the current standing architecture: 97%.
+
+## Proof Artifact Policy
+
+Default policy: keep compact proof summaries in tracked documentation, and keep raw/generated proof artifacts under \`tmp/movement-replay-lab/**\` as ignored scratch.
+
+Do not commit raw capture images by default.
+Promote a small reviewed artifact bundle only after an explicit product/engineering decision names exact durable files.
+Reopen this policy if a gate starts depending on ignored scratch files that cannot be regenerated.
+
+## Current Handoff Inventory
+
+- Newly staged support-audit/test files are source candidates, not scratch proof artifacts: \`scripts/movement-debug/facing-occlusion-support-readiness-audit.mjs\`, \`scripts/movement-debug/facing-occlusion-support-readiness-audit.test.mjs\`, \`scripts/movement-debug/future-family-support-audit-shapes.mjs\`, \`scripts/movement-debug/future-family-support-audit-shapes.test.mjs\`, \`scripts/movement-debug/root-travel-support-readiness-audit.mjs\`, \`scripts/movement-debug/root-travel-support-readiness-audit.test.mjs\`, and \`scripts/movement-debug/recording-gap-plan.test.mjs\`.
+- Tracked movement-slice edits currently cluster around documentation/runbook updates, npm movement aliases, architecture/outstanding-task guards, support-readiness matrix and next-proof queue logic, recording-gap planning, focused support audits, Replay/Game proof-manifest and visual-parity tests, plus small lint cleanups.
+- Scratch proof output remains \`tmp/movement-replay-lab/**\` by default.
+- Before commit, classify every untracked file as either tracked source/test code or ignored generated proof output.
+- \`git ls-files\` lists all seven paths.
+- Before any final commit or PR, rerun the audit after staging the dependent tracked files too.
+
+Commit-readiness checklist for this movement slice:
+
+1. Run \`git status --short\` before commit.
+2. before commit, it must list all seven files if tracked aliases/imports still reference them.
+3. Source/test \`.mjs\` files should not be ignored.
+4. Run \`git diff --cached --name-only\` before committing.
+
+## Future Family Audit Shapes
+
+| Family | Required recorded proof cases before promotion | Required Game visual cases before promotion | Acceptable user-facing claim after proof | Fallback / non-promotion rule |
+| --- | --- | --- | --- | --- |
+${futureFamilyAuditShapeRows.join("\n")}
+
+Generic promotion checklist for each future family:
+
+1. Add opt-in proof-manifest rows first.
 
 ## Executive Verdict
 
@@ -339,11 +435,43 @@ Next concrete tasks:
 3. Treat \`root-travel\`, floor/yoga/Pilates, walking, jumping, props/contact, sitting, kneeling, and rolling/crawling as non-user-facing until proof exists; keep \`root-turn\` scoped to standing root orientation only.
 4. Keep the next recording/review target explicit: seated forward fold.
 5. Capture or identify a real walking/root-travel bundle with \`movement-proof-root-travel\`.
-6. Keep the refreshed 50-target Game visual proof set current.
-7. Decide whether to keep compact summaries only; do not commit raw \`tmp/movement-replay-lab/**\` captures by default.
-8. Pick the next family only after writing its support-claim audit shape first.
-9. Before merge or push, run the repo local gate under Node 22.13.0.
+6. Make a deliberate product-truth decision for proof-ready \`facing-occlusion\`; if it stays diagnostic, keep the support-matrix blocker \`coverage product truth is still internal diagnostic\`.
+7. Keep the refreshed 50-target Game visual proof set current.
+8. Follow the Proof Artifact Policy: keep compact summaries only, and keep raw/generated \`tmp/movement-replay-lab/**\` artifacts as ignored scratch by default.
+9. Pick the next family only after writing its support-claim audit shape first.
+10. Before merge or push, run the repo local gate under Node 22.13.0.
+
+Recent focused verification:
+
+- 2026-07-08 current documentation and proof gate: \`npx -p node@22.13.0 npm run movement:today-finish-gate\` passed.
+- Current proof snapshot: 50/50 Game visual targets captured and reviewed as \`readable-pass\`, 5/19 user-facing production-supported families, and 14/19 internal preview/diagnostic families.
+- Current blocked lanes: \`facing-occlusion\` is proof-ready for review but remains diagnostic-only until a deliberate product-truth decision.
+
+## Verification Notes
+
+- support-matrix Markdown sync: current matrix reports ${userFacingCount}/19 production families and ${internalCount}/19 internal families.
+- roadmap Markdown sync: current progress is 73% overall and about 90% section average.
+- architecture-plan status text sync: current board matches the strict status audit.
+- Future-family shape failures: 0.
+
+## Historical Log Boundary
+
+Everything below this heading is dated context. It is not the authoritative current product-support state. For current support truth, use the Current Standing Board and 2026-07-08 verification notes.
+
+Earlier verification run
 `;
+}
+
+function currentRunbookText() {
+  return [
+    "Run the outstanding-task audit when editing the plan's task board or recommended next slice.",
+    "It requires the Proof Artifact Policy, Current Handoff Inventory, Recent focused verification, and Historical Log Boundary.",
+    "It also blocks stale historical proof-count/current-label wording so older dated logs do not read like product truth.",
+    "The pre-commit handoff audit is expected to pass when the seven current support-audit/test source candidates are tracked and staged with the dependent movement script/docs changes.",
+    "The queue-only preflight fails if the expected two recording labels drift.",
+    "This should pass for the current scoped broad `upper-body-standing` claim while reviewed bundle proof remains readable.",
+    "Use this before making the facing/occlusion product-truth decision.",
+  ].join("\n");
 }
 
 function buildCleanGuardReport(overrides = {}) {
@@ -363,6 +491,9 @@ function buildCleanGuardReport(overrides = {}) {
       })),
     },
     captureManifest: cleanCaptureManifest,
+    facingGameVisualPlan: focusedFacingGameVisualPlan,
+    facingManifest: focusedFacingManifest,
+    facingSemanticReview: focusedFacingSemanticReview,
     files: [
       {
         lineCount: 220,
@@ -374,6 +505,7 @@ function buildCleanGuardReport(overrides = {}) {
     manifest: cleanManifest,
     packageJson: cleanPackageJson,
     planText: currentPlanBoardText(),
+    runbookText: currentRunbookText(),
     semanticReview: {
       decisions: readableDecisions,
       errors: [],
@@ -581,6 +713,8 @@ describe("movement architecture guard", () => {
 
   it("tracks which movement families have user-facing support audit gates", () => {
     expect(USER_FACING_SUPPORT_AUDIT_FAMILIES).toEqual([
+      "facing-occlusion",
+      "root-travel",
       "root-turn",
       "sitting",
       "squat-knee-lift",
@@ -590,6 +724,10 @@ describe("movement architecture guard", () => {
       "walking",
     ]);
     expect(USER_FACING_SUPPORT_AUDIT_GATES).toMatchObject({
+      "facing-occlusion": {
+        readinessKey: "facingOcclusionSupport.ready",
+        scriptName: "movement:facing-occlusion-support-audit",
+      },
       "sitting": {
         readinessKey: "sittingSupport.ready",
         scriptName: "movement:sitting-support-audit",
@@ -601,6 +739,10 @@ describe("movement architecture guard", () => {
       "root-turn": {
         readinessKey: "rootTurnSupportClaim.ok",
         scriptName: "movement:root-turn-support-audit",
+      },
+      "root-travel": {
+        readinessKey: "rootTravelSupport.ready",
+        scriptName: "movement:root-travel-support-audit",
       },
       "standing-side-bend-head-direction": {
         readinessKey: "upperBodyStandingSupport.narrowReady",
@@ -627,15 +769,22 @@ describe("movement architecture guard", () => {
         expect.objectContaining({
           family: "walking",
           hasInternalDemoOnlyFailure: true,
+          hasInternalStrictScript: true,
           hasSingleTarget: true,
           hasUserFacingFailure: true,
           ok: true,
+          strictCommand: "node scripts/movement-debug/walking-support-readiness-audit.mjs --strict",
+          strictScriptContractTracked: true,
+          strictScriptHasStrictFlag: true,
+          strictScriptName: "movement:walking-support-audit:strict",
         }),
         expect.objectContaining({
           family: "upright",
+          hasInternalStrictScript: true,
           hasSingleTarget: true,
           hasUserFacingFailure: true,
           ok: true,
+          strictScriptName: null,
         }),
       ]),
       ok: true,
@@ -653,10 +802,52 @@ describe("movement architecture guard", () => {
       gateResults: expect.arrayContaining([
         expect.objectContaining({
           family: "walking",
+          hasInternalStrictScript: true,
           ok: false,
           readinessKey: "walkingSupport.ready",
           scriptContractTracked: true,
           scriptName: "movement:walking-support-audit",
+          strictScriptName: "movement:walking-support-audit:strict",
+        }),
+      ]),
+    });
+
+    const packageJsonMissingWalkingStrictGate = {
+      scripts: {
+        ...cleanPackageJson.scripts,
+      },
+    };
+    delete packageJsonMissingWalkingStrictGate.scripts["movement:walking-support-audit:strict"];
+
+    expect(summarizeUserFacingSupportAuditGates(packageJsonMissingWalkingStrictGate)).toMatchObject({
+      ok: false,
+      gateResults: expect.arrayContaining([
+        expect.objectContaining({
+          family: "walking",
+          hasInternalStrictScript: false,
+          ok: false,
+          strictCommand: undefined,
+          strictScriptContractTracked: true,
+          strictScriptHasStrictFlag: false,
+          strictScriptName: "movement:walking-support-audit:strict",
+        }),
+      ]),
+    });
+
+    expect(summarizeUserFacingSupportAuditGates({
+      scripts: {
+        ...cleanPackageJson.scripts,
+        "movement:walking-support-audit:strict": "node scripts/movement-debug/walking-support-readiness-audit.mjs",
+      },
+    })).toMatchObject({
+      ok: false,
+      gateResults: expect.arrayContaining([
+        expect.objectContaining({
+          family: "walking",
+          hasInternalStrictScript: true,
+          ok: false,
+          strictScriptHasStrictFlag: false,
+          strictScriptName: "movement:walking-support-audit:strict",
         }),
       ]),
     });
@@ -671,10 +862,12 @@ describe("movement architecture guard", () => {
         expect.objectContaining({
           command: "node scripts/movement-debug/sitting-support-readiness-audit.mjs",
           family: "new-family",
+          hasInternalStrictScript: true,
           hasSingleTarget: true,
           ok: false,
           readinessKey: null,
           scriptContractTracked: true,
+          strictScriptName: null,
         }),
       ],
     });
@@ -690,10 +883,12 @@ describe("movement architecture guard", () => {
         expect.objectContaining({
           command: "node scripts/movement-debug/sitting-support-readiness-audit.mjs",
           family: "new-family",
+          hasInternalStrictScript: true,
           hasSingleTarget: true,
           ok: false,
           readinessKey: "newFamilySupport.ready",
           scriptContractTracked: false,
+          strictScriptName: null,
         }),
       ],
     });
@@ -761,7 +956,9 @@ describe("movement architecture guard", () => {
       expectedUserFacingFamilies: ["upright", "upper-body-standing", "standing-side-bend-head-direction", "squat-knee-lift", "root-turn"],
       readinessByKey: {
         "coverageProductTruth.found": true,
+        "facingOcclusionSupport.ready": false,
         "rootTurnSupportClaim.ok": true,
+        "rootTravelSupport.ready": false,
         "sittingSupport.ready": false,
         "squatKneeLiftSupportClaim.ok": true,
         "upperBodyStandingSupport.broadReady": true,
@@ -769,8 +966,8 @@ describe("movement architecture guard", () => {
         "walkingSupport.ready": false,
       },
     })).toMatchObject({
-      internalBlockedGateCount: 2,
-      internalBlockedOkCount: 2,
+      internalBlockedGateCount: 4,
+      internalBlockedOkCount: 4,
       ok: true,
       promotionReadyCount: 5,
       unusedReadinessKeys: [],
@@ -889,7 +1086,9 @@ describe("movement architecture guard", () => {
       expectedUserFacingFamilies: ["upright", "upper-body-standing", "standing-side-bend-head-direction", "squat-knee-lift", "root-turn", "walking"],
       readinessByKey: {
         "coverageProductTruth.found": true,
+        "facingOcclusionSupport.ready": false,
         "sittingSupport.ready": false,
+        "rootTurnSupportClaim.ok": true,
         "squatKneeLiftSupportClaim.ok": true,
         "upperBodyStandingSupport.broadReady": true,
         "upperBodyStandingSupport.narrowReady": true,
@@ -921,6 +1120,14 @@ describe("movement architecture guard", () => {
       "tmp/manifest.json",
       "--semantic-review",
       "tmp/semantic.json",
+      "--facing-analysis",
+      "tmp/facing-analysis.json",
+      "--facing-manifest",
+      "tmp/facing-manifest.json",
+      "--facing-game-visual-plan",
+      "tmp/facing-plan.json",
+      "--facing-semantic-review",
+      "tmp/facing-review.json",
       "--sitting-game-visual-plan",
       "tmp/sitting-plan.json",
       "--sitting-manifest",
@@ -933,6 +1140,10 @@ describe("movement architecture guard", () => {
         broadGameVisualPlan: "tmp/movement-replay-lab/current-game-visual-proof-plan.broad-upper-body.json",
         broadSemanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.broad-upper-body.codex-semantic-review.json",
         captureManifest: "tmp/capture-manifest.json",
+        facingAnalysis: "tmp/facing-analysis.json",
+        facingGameVisualPlan: "tmp/facing-plan.json",
+        facingManifest: "tmp/facing-manifest.json",
+        facingSemanticReview: "tmp/facing-review.json",
         manifest: "tmp/manifest.json",
         semanticReview: "tmp/semantic.json",
         sittingGameVisualPlan: "tmp/sitting-plan.json",
@@ -1275,6 +1486,38 @@ describe("movement architecture guard", () => {
     expect(summarizePhase14ScriptContracts({
       scripts: {
         ...cleanPackageJson.scripts,
+        "movement:root-travel-support-audit:strict": "node scripts/movement-debug/root-travel-support-readiness-audit.mjs",
+      },
+    })).toMatchObject({
+      ok: false,
+      scriptResults: expect.arrayContaining([
+        expect.objectContaining({
+          missingFragments: ["--strict"],
+          ok: false,
+          scriptName: "movement:root-travel-support-audit:strict",
+        }),
+      ]),
+    });
+
+    expect(summarizePhase14ScriptContracts({
+      scripts: {
+        ...cleanPackageJson.scripts,
+        "movement:proof:validate:root-travel": "node scripts/movement-debug/validate-recording-scenario.mjs --scenario movement-proof-seated-forward-fold --quiet",
+      },
+    })).toMatchObject({
+      ok: false,
+      scriptResults: expect.arrayContaining([
+        expect.objectContaining({
+          missingFragments: ["--scenario movement-proof-root-travel"],
+          ok: false,
+          scriptName: "movement:proof:validate:root-travel",
+        }),
+      ]),
+    });
+
+    expect(summarizePhase14ScriptContracts({
+      scripts: {
+        ...cleanPackageJson.scripts,
         "movement:support-readiness-matrix:strict": "node scripts/movement-debug/movement-support-readiness-matrix.mjs",
       },
     })).toMatchObject({
@@ -1370,6 +1613,9 @@ describe("movement architecture guard", () => {
         })),
       },
       captureManifest: cleanCaptureManifest,
+      facingGameVisualPlan: focusedFacingGameVisualPlan,
+      facingManifest: focusedFacingManifest,
+      facingSemanticReview: focusedFacingSemanticReview,
       files: [
         {
           lineCount: 220,
@@ -1381,6 +1627,7 @@ describe("movement architecture guard", () => {
       manifest: cleanManifest,
       packageJson: cleanPackageJson,
       planText: currentPlanBoardText(),
+      runbookText: currentRunbookText(),
       semanticReview: {
         decisions: readableDecisions,
         errors: [],
@@ -1427,8 +1674,8 @@ describe("movement architecture guard", () => {
       ]),
     });
     expect(report.userFacingSupportAuditGateReadiness).toMatchObject({
-      internalBlockedGateCount: 2,
-      internalBlockedOkCount: 2,
+      internalBlockedGateCount: 4,
+      internalBlockedOkCount: 4,
       ok: true,
       promotionReadyCount: 5,
     });
@@ -1438,6 +1685,7 @@ describe("movement architecture guard", () => {
     });
     expect(report.supportReadinessMatrix).toMatchObject({
       blockedUserFacingFamilies: [],
+      futureFamilyShapeFailures: [],
       productionFamilySupportPercent: 26,
       ready: true,
       userFacingCount: 5,
@@ -1454,14 +1702,35 @@ describe("movement architecture guard", () => {
     expect(report.roadmapProgress).toMatchObject({
       ok: true,
       progress: {
-        overallPercent: 70,
+        overallPercent: 73,
         sectionAverageNearestFive: 90,
       },
     });
     expect(report.outstandingTasks).toMatchObject({
       ok: true,
-      recommendedTaskCount: 9,
-      uncheckedTaskCount: 25,
+      recommendedTaskCount: 10,
+      uncheckedTaskCount: 27,
+    });
+    expect(report.nextProofReadiness).toMatchObject({
+      blockedFamilies: ["facing-occlusion", "root-travel", "sitting", "walking"],
+      capturePreflight: {
+        failureCount: 0,
+        itemCount: 2,
+        ok: true,
+      },
+      captureQueue: [
+        expect.objectContaining({
+          families: ["root-travel", "walking"],
+          freshRecordingLabel: "movement-proof-root-travel",
+          quickValidationScriptCommand: "npm run movement:proof:validate:root-travel",
+        }),
+        expect.objectContaining({
+          families: ["sitting"],
+          freshRecordingLabel: "movement-proof-seated-forward-fold",
+          quickValidationScriptCommand: "npm run movement:proof:validate:seated-forward-fold",
+        }),
+      ],
+      ready: false,
     });
     expect(report.walkingSupport).toMatchObject({
       missingAnalyzerProofCases: ["root-travel"],
@@ -1474,6 +1743,12 @@ describe("movement architecture guard", () => {
           recordingId: "walking-product-scoped-candidate",
         }),
       ],
+    });
+    expect(report.rootTravelSupport).toMatchObject({
+      family: "root-travel",
+      missingAnalyzerProofCases: ["root-travel"],
+      productScopedRecordedProofCases: ["root-travel"],
+      ready: false,
     });
     expect(report.sittingSupport).toMatchObject({
       missingAnalyzerProofCases: ["seated-forward-fold"],
@@ -1489,16 +1764,22 @@ describe("movement architecture guard", () => {
       ],
     });
     expect(formatReport(report)).toContain(
-      "Support readiness matrix: ready, production families 5/19 (26%), blocked user-facing 0",
+      "Support readiness matrix: ready, production families 5/19 (26%), blocked user-facing 0, future-family shape failures 0",
     );
     expect(formatReport(report)).toContain(
       "Architecture plan status: passed, current board 5/19 (26%), internal 14/19",
     );
     expect(formatReport(report)).toContain(
-      "Roadmap progress: ready, overall 70%, section average about 90%, production families 5/19 (26%)",
+      "Roadmap progress: ready, overall 73%, section average about 90%, production families 5/19 (26%)",
     );
     expect(formatReport(report)).toContain(
-      "Outstanding tasks: ready, unchecked 25, recommended next 9",
+      "Outstanding tasks: ready, unchecked 27, recommended next 10, future family shapes 10",
+    );
+    expect(formatReport(report)).toContain(
+      "Next proof capture queue: 2 recording(s): movement-proof-root-travel for root-travel+walking (npm run movement:proof:validate:root-travel); movement-proof-seated-forward-fold for sitting (npm run movement:proof:validate:seated-forward-fold)",
+    );
+    expect(formatReport(report)).toContain(
+      "Next proof capture preflight: ready",
     );
     expect(formatReport(report)).toContain(
       "Root-turn support claim: passed (1 reviewed bundle(s))",
@@ -1510,7 +1791,13 @@ describe("movement architecture guard", () => {
       "Sitting support best candidate: seated-best-partial (analyzer 4, passed 4, missing analyzer seated-forward-fold, missing passed seated-forward-fold)",
     );
     expect(formatReport(report)).toContain(
-      "Sitting support next recording: movement-proof-seated-forward-fold (npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario movement-proof-seated-forward-fold --quiet)",
+      "Sitting support next recording: movement-proof-seated-forward-fold (npm run movement:proof:validate:seated-forward-fold)",
+    );
+    expect(formatReport(report)).toContain(
+      "Root-travel support audit: blocked, missing analyzer 1, product-scoped 1, candidates 1",
+    );
+    expect(formatReport(report)).toContain(
+      "Root-travel support next recording: movement-proof-root-travel (npm run movement:proof:validate:root-travel)",
     );
     expect(formatReport(report)).toContain(
       "Walking support blockers: analyzer root-travel, recorded passed root-travel, Game plan/readability strongest-root-travel",
@@ -1519,7 +1806,10 @@ describe("movement architecture guard", () => {
       "Walking support best candidate: walking-product-scoped-candidate (evidence 0, passed 0, product-scoped root-travel, missing passed root-travel)",
     );
     expect(formatReport(report)).toContain(
-      "Walking support next recording: movement-proof-root-travel (npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario movement-proof-root-travel --quiet)",
+      "Walking support next recording: movement-proof-root-travel (npm run movement:proof:validate:root-travel)",
+    );
+    expect(formatReport(report)).toContain(
+      "User-facing support audit gate integrity: 9/9 registered families, 9/9 schema-valid, 9/9 readiness-wired, 4/4 strict aliases, 0 unused readiness keys",
     );
     expect(report.broadUpperBodyCaptureContract).toMatchObject({
       commandIds: [
@@ -1546,6 +1836,79 @@ describe("movement architecture guard", () => {
       recordedProofCases: broadUpperBodyRecordedProofCases,
       schema: "sonae-broad-upper-body-capture-contract/v1",
     });
+  });
+
+  it("selects all support recording plans and keeps the fullest shared walking/root-travel plan", () => {
+    const sharedWalkingPath = "tmp/movement-replay-lab/current-expansion-preview-walking-recording-plan.json";
+    const plans = supportRecordingPlansForGuardReport({
+      facingOcclusionSupport: {
+        recordingGap: {
+          plan: {
+            label: "facing",
+            summary: { totalRows: 3 },
+          },
+          planPath: "tmp/movement-replay-lab/current-facing-occlusion-recording-plan.json",
+        },
+      },
+      rootTravelSupport: {
+        recordingGap: {
+          plan: {
+            label: "root-travel",
+            summary: { totalRows: 9 },
+          },
+          planPath: sharedWalkingPath,
+        },
+      },
+      sittingSupport: {
+        recordingGap: {
+          plan: {
+            label: "sitting",
+            summary: { totalRows: 1 },
+          },
+          planPath: "tmp/movement-replay-lab/current-expansion-preview-sitting-recording-plan.json",
+        },
+      },
+      walkingSupport: {
+        recordingGap: {
+          plan: {
+            label: "walking",
+            summary: { totalRows: 1 },
+          },
+          planPath: sharedWalkingPath,
+        },
+      },
+    });
+
+    expect(Array.from(plans.keys()).sort()).toEqual([
+      "tmp/movement-replay-lab/current-expansion-preview-sitting-recording-plan.json",
+      "tmp/movement-replay-lab/current-expansion-preview-walking-recording-plan.json",
+      "tmp/movement-replay-lab/current-facing-occlusion-recording-plan.json",
+    ]);
+    expect(plans.get(sharedWalkingPath)).toMatchObject({
+      label: "root-travel",
+      summary: { totalRows: 9 },
+    });
+  });
+
+  it("uses focused facing Game proof artifacts in the architecture guard support audit", () => {
+    const report = buildCleanGuardReport({
+      facingGameVisualPlan: focusedFacingGameVisualPlan,
+      facingSemanticReview: focusedFacingSemanticReview,
+    });
+
+    expect(report.facingOcclusionSupport).toMatchObject({
+      missingGamePlanCases: [],
+      missingReadableGameCases: [],
+      missingRecordedEvidenceRequirements: [
+        "recorded fallback/readability proof",
+        "side-swap recovery evidence",
+        "self-occlusion recovery evidence",
+      ],
+      ready: false,
+    });
+    expect(formatReport(report)).toContain(
+      "Facing/occlusion support audit: blocked, missing recorded evidence 3, missing Game plan/readability 0",
+    );
   });
 
   it("fails when the architecture plan current board drifts from the support matrix", () => {
@@ -1593,6 +1956,66 @@ describe("movement architecture guard", () => {
     expect(report.proofFailures).toEqual(expect.arrayContaining([
       "expected support audit gate for walking to reference an existing npm script or built-in guard",
       "expected Phase 14 script movement:walking-support-audit to include scripts/movement-debug/walking-support-readiness-audit.mjs",
+    ]));
+  });
+
+  it("fails the architecture guard when an internal support audit gate has no strict script alias", () => {
+    const packageJsonMissingWalkingStrictGate = {
+      scripts: {
+        ...cleanPackageJson.scripts,
+      },
+    };
+    delete packageJsonMissingWalkingStrictGate.scripts["movement:walking-support-audit:strict"];
+
+    const report = buildCleanGuardReport({
+      packageJson: packageJsonMissingWalkingStrictGate,
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.userFacingSupportAuditGates).toMatchObject({
+      ok: false,
+      gateResults: expect.arrayContaining([
+        expect.objectContaining({
+          family: "walking",
+          hasInternalStrictScript: false,
+          ok: false,
+          strictScriptName: "movement:walking-support-audit:strict",
+        }),
+      ]),
+    });
+    expect(report.proofFailures).toEqual(expect.arrayContaining([
+      "expected internal-demo-only support audit gate for walking to define a strict npm script alias",
+      "expected strict support audit gate for walking to include --strict",
+      "expected Phase 14 script movement:walking-support-audit:strict to include scripts/movement-debug/walking-support-readiness-audit.mjs,--strict",
+    ]));
+  });
+
+  it("fails the architecture guard when an internal support audit strict alias does not run strict mode", () => {
+    const report = buildCleanGuardReport({
+      packageJson: {
+        scripts: {
+          ...cleanPackageJson.scripts,
+          "movement:walking-support-audit:strict": "node scripts/movement-debug/walking-support-readiness-audit.mjs",
+        },
+      },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.userFacingSupportAuditGates).toMatchObject({
+      ok: false,
+      gateResults: expect.arrayContaining([
+        expect.objectContaining({
+          family: "walking",
+          hasInternalStrictScript: true,
+          ok: false,
+          strictScriptHasStrictFlag: false,
+          strictScriptName: "movement:walking-support-audit:strict",
+        }),
+      ]),
+    });
+    expect(report.proofFailures).toEqual(expect.arrayContaining([
+      "expected strict support audit gate for walking to include --strict",
+      "expected Phase 14 script movement:walking-support-audit:strict to include --strict",
     ]));
   });
 
@@ -1822,6 +2245,54 @@ describe("movement architecture guard", () => {
     ]));
   });
 
+  it("fails the architecture guard when the next-proof capture queue drifts", () => {
+    const report = buildCleanGuardReport({
+      proofExpectations: {
+        nextProofCaptureLabels: [
+          "movement-proof-facing-occlusion-recovery",
+          "movement-proof-root-travel",
+          "movement-proof-seated-forward-fold",
+        ],
+      },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.proofFailures).toEqual(expect.arrayContaining([
+      "expected next-proof capture queue movement-proof-facing-occlusion-recovery,movement-proof-root-travel,movement-proof-seated-forward-fold, got movement-proof-root-travel,movement-proof-seated-forward-fold",
+    ]));
+  });
+
+  it("fails the architecture guard when a future-family shape row leaves internal preview", () => {
+    const internalDemoOnlyFamiliesWithoutQuadruped = expectedInternalDemoOnlyFamilies
+      .filter((family) => family !== "quadruped");
+    const report = buildCleanGuardReport({
+      analysis: [
+        {
+          ...cleanAnalysis[0],
+          coverage: {
+            summary: {
+              internalDemoOnlyFamilies: internalDemoOnlyFamiliesWithoutQuadruped,
+              missingProofFamilies: expectedInternalDemoOnlyFamilies,
+              userFacingFamilies: ["upright", "upper-body-standing", "standing-side-bend-head-direction", "squat-knee-lift", "root-turn"],
+            },
+          },
+        },
+        cleanAnalysis[1],
+      ],
+      proofExpectations: {
+        internalDemoOnlyFamilies: internalDemoOnlyFamiliesWithoutQuadruped,
+      },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.supportReadinessMatrix.futureFamilyShapeFailures).toContain(
+      "quadruped must remain internal-preview until a dedicated promotion audit is ready",
+    );
+    expect(report.proofFailures).toEqual(expect.arrayContaining([
+      "expected support readiness matrix to pass for current user-facing families, blocked future-family shape drift: quadruped must remain internal-preview until a dedicated promotion audit is ready",
+    ]));
+  });
+
   it("blocks walking promotion until the walking support audit is ready", () => {
     const report = buildMovementArchitectureGuardReport({
       analysis: [
@@ -2037,13 +2508,13 @@ describe("movement architecture guard", () => {
       manifest: cleanManifest,
       packageJson: cleanPackageJson,
       proofExpectations: {
-        internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies.filter((family) => family !== "root-travel"),
+        internalDemoOnlyFamilies: expectedInternalDemoOnlyFamilies.filter((family) => family !== "pivot-weight-transfer"),
         userFacingFamilies: [
           "upright",
           "upper-body-standing",
           "standing-side-bend-head-direction",
           "squat-knee-lift",
-          "root-travel",
+          "pivot-weight-transfer",
         ],
       },
       semanticReview: {
@@ -2073,7 +2544,7 @@ describe("movement architecture guard", () => {
 
     expect(report.ok).toBe(false);
     expect(report.proofFailures).toEqual(expect.arrayContaining([
-      "expected user-facing movement families to have dedicated support audit gates: root-travel",
+      "expected user-facing movement families to have dedicated support audit gates: pivot-weight-transfer",
     ]));
   });
 
@@ -2212,7 +2683,7 @@ describe("movement architecture guard", () => {
       expect.stringContaining("unresolved source-data limitation rows"),
       expect.stringContaining("product-scope proof case root-travel"),
       expect.stringContaining("user-facing movement families"),
-      expect.stringContaining("dedicated support audit gates"),
+      expect.stringContaining("root-travel support audit"),
       expect.stringContaining("internal-demo-only movement families"),
       expect.stringContaining("missing full proof"),
       expect.stringContaining("standing side-bend/head-direction support audit"),

@@ -124,6 +124,9 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     exerciseTransition,
     motionFrameInput,
   } = framePreparationRuntime;
+  const armAvatarRole = motionFrameInput.sourceOrigin === "recorded-replay"
+    ? "instructor"
+    : avatarRole;
   const { legRaiseHoldDecision } = lowerBodyFrameStateOrchestrationRuntime;
   const {
     calibratedFloorCorrection,
@@ -134,6 +137,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
 
   const bodyFrameOrchestrationRuntime = applyMovementAvatarBodyFrameOrchestrationRuntime({
     activeSpineDrive,
+    armAvatarRole,
     avatarRole,
     avatarRoot,
     balancedPlantedSquatDepth,

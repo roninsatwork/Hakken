@@ -4,7 +4,10 @@ import {
   resolveMovementGameplayEventFrameSummary,
   resolveMovementGameplayEvents,
 } from "./movementGameplayEvents";
-import { mirrorMovementLandmarksForDisplay } from "./movementMirrorMapping";
+import {
+  buildMovementSideOwnershipProof,
+  mirrorMovementLandmarksForDisplay,
+} from "./movementMirrorMapping";
 import {
   buildLiveMovementSourceFrame,
   buildRecordedMovementSourceFrame,
@@ -72,6 +75,24 @@ function squatPose() {
   return pose;
 }
 
+function singleLegRaisePose() {
+  const pose = withCorePose();
+  pose[23] = { ...pose[23]!, y: 0.73 };
+  pose[24] = { ...pose[24]!, y: 0.73 };
+  pose[25] = { ...pose[25]!, y: 0.58 };
+  pose[27] = { ...pose[27]!, y: 0.72 };
+  pose[31] = { ...pose[31]!, y: 0.73 };
+  return pose;
+}
+
+function sideLegRaisePose() {
+  const pose = withCorePose();
+  pose[25] = { ...pose[25]!, x: 0.27, y: 0.78 };
+  pose[27] = { ...pose[27]!, x: 0.22, y: 0.9 };
+  pose[31] = { ...pose[31]!, x: 0.21, y: 0.92 };
+  return pose;
+}
+
 function weakTrackingPose() {
   return withCorePose().map((landmark) => ({
     ...landmark,
@@ -99,7 +120,9 @@ describe("movementMotionFrame", () => {
     expect(motionFrame.cameraConfidence).toBe(sourceFrame.cameraConfidence);
     expect(motionFrame.startReadiness).toBe(sourceFrame.startReadiness);
     expect(motionFrame.mirrorMode).toBe("same-side");
-    expect(motionFrame.displayLandmarks.pose).toBe(active);
+    expect(motionFrame.displayLandmarks.pose).toBe(sourceFrame.landmarks.pose);
+    expect(motionFrame.displayLandmarks.pose).not.toBe(active);
+    expect(motionFrame.displayLandmarks.pose[23]?.y).toBe(active[23]?.y);
     expect(motionFrame.truthSkeleton.sourceStatus).toBe("raw");
     expect(motionFrame.truthSkeleton.centers.hip?.x).toBeCloseTo(0.5);
     expect(motionFrame.avatarDecision.lowerBodyIntent.label).toBe("squat");
@@ -124,6 +147,50 @@ describe("movementMotionFrame", () => {
     expect(motionFrame.avatarDecision.bodyConfidence.torso).toBeGreaterThan(0.8);
   });
 
+  it("drives a player single-leg raise without switching into squat", () => {
+    const neutral = withCorePose();
+    const active = singleLegRaisePose();
+    const sourceFrame = buildLiveMovementSourceFrame({
+      capturedAt: 1200,
+      poseLandmarks: active,
+    });
+    const motionFrame = resolveMovementMotionFrame({
+      avatarRole: "player",
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      mirrorMode: "same-side",
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+      sourceFrame,
+    });
+
+    expect(motionFrame.avatarDecision.lowerBodyIntent.label).toBe("left-knee-raise");
+    expect(motionFrame.avatarDecision.lowerBodyIntent.squatDepth).toBe(0);
+    expect(motionFrame.avatarDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
+    expect(motionFrame.avatarDecision.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
+    expect(motionFrame.avatarDecision.lowerOwner).toBe("player-retarget");
+  });
+
+  it("drives a player side leg extension as the moving leg", () => {
+    const neutral = withCorePose();
+    const active = sideLegRaisePose();
+    const sourceFrame = buildLiveMovementSourceFrame({
+      capturedAt: 1300,
+      poseLandmarks: active,
+    });
+    const motionFrame = resolveMovementMotionFrame({
+      avatarRole: "player",
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      mirrorMode: "same-side",
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+      sourceFrame,
+    });
+
+    expect(motionFrame.avatarDecision.lowerBodyIntent.label).toBe("left-knee-raise");
+    expect(motionFrame.avatarDecision.lowerBodyIntent.squatDepth).toBe(0);
+    expect(motionFrame.avatarDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
+    expect(motionFrame.avatarDecision.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
+    expect(motionFrame.avatarDecision.lowerOwner).toBe("player-retarget");
+  });
+
   it("keeps source truth separate from display-adapted landmarks", () => {
     const sourcePose = withCorePose();
     const displayPose = sourcePose.map((landmark) => ({
@@ -143,13 +210,49 @@ describe("movementMotionFrame", () => {
       sourceFrame,
     });
 
-    expect(motionFrame.source.landmarks.pose).toBe(sourcePose);
+    expect(motionFrame.source.landmarks.pose).not.toBe(sourcePose);
+    expect(motionFrame.source.landmarks.pose[0]?.x).toBe(sourcePose[0]?.x);
     expect(motionFrame.displayLandmarks.pose).toBe(displayPose);
     expect(motionFrame.mirrorMode).toBe("facing-player");
     expect(motionFrame.display.sideMap).toEqual({
       sourceLeft: "avatarRight",
       sourceRight: "avatarLeft",
     });
+  });
+
+  it("proves source/display side ownership through the shared motion frame", () => {
+    const sourcePose = squatPose();
+    const displayPose = mirrorMovementLandmarksForDisplay(sourcePose, {
+      mapX: (x) => 1 - x,
+      mirrorMode: "facing-player",
+    });
+    const sourceFrame = buildSyntheticMovementSourceFrame({
+      capturedAt: 2500,
+      poseLandmarks: sourcePose,
+    });
+    const motionFrame = resolveMovementMotionFrame({
+      avatarRole: "player",
+      calibration: buildMovementCalibration({ poseLandmarks: withCorePose() }),
+      displayPoseLandmarks: displayPose,
+      mirrorMode: "facing-player",
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() }),
+      sourceFrame,
+    });
+    const proofRows = buildMovementSideOwnershipProof({
+      displayLandmarks: motionFrame.displayLandmarks.pose,
+      mapX: (x) => 1 - x,
+      mirrorMode: motionFrame.display.mirrorMode,
+      sourceLandmarks: motionFrame.source.landmarks.pose,
+    });
+
+    expect(motionFrame.display.sideMap).toEqual({
+      sourceLeft: "avatarRight",
+      sourceRight: "avatarLeft",
+    });
+    expect(proofRows.every((row) => row.sourceLeftAvatarSide === "avatarRight")).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightAvatarSide === "avatarLeft")).toBe(true);
+    expect(proofRows.every((row) => row.sourceLeftMatchesDisplay)).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightMatchesDisplay)).toBe(true);
   });
 
   it("uses source landmarks for canonical movement decisions and display landmarks only for avatar display decisions", () => {
@@ -248,8 +351,13 @@ describe("movementMotionFrame", () => {
     });
 
     expect(mirroredMotionFrame.source.sourceOrigin).toBe("recorded-replay");
-    expect(mirroredMotionFrame.source.landmarks.pose).toBe(sourcePose);
+    expect(mirroredMotionFrame.source.landmarks.pose).not.toBe(sourcePose);
+    expect(mirroredMotionFrame.source.landmarks.pose[0]?.x).toBe(sourcePose[0]?.x);
     expect(mirroredMotionFrame.displayLandmarks.pose).toBe(displayPose);
+    expect(mirroredMotionFrame.avatarHeadTarget.headDecision.shouldApplyPlayerHeadMotion).toBe(false);
+    expect(mirroredMotionFrame.avatarHeadTarget.applicationPose.headPositionOffset).toBeNull();
+    expect(mirroredMotionFrame.avatarDisplayHeadTarget.headDecision.shouldApplyPlayerHeadMotion).toBe(false);
+    expect(mirroredMotionFrame.avatarDisplayHeadTarget.applicationPose.headPositionOffset).toBeNull();
     expect(movementDecisionSemanticSnapshot(mirroredMotionFrame.avatarDisplayDecision)).toEqual(
       movementDecisionSemanticSnapshot(mirroredMotionFrame.avatarDecision),
     );

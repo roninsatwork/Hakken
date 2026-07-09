@@ -2,6 +2,10 @@ import { applyMovementAvatarFinalFrameOrchestrationRuntime } from "./movementAva
 import { applyMovementAvatarFootingFrameOrchestrationRuntime } from "./movementAvatarFootingFrameOrchestrationRuntime";
 import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrameOrchestrationRuntime";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrameOrchestrationRuntime";
+import {
+  partialSupportContactLocks,
+  supportContactAnchor,
+} from "./movementAvatarSupportContactAnchors";
 
 type MovementAvatarSupportFrameOrchestrationInput =
   Parameters<typeof applyMovementAvatarSupportFrameOrchestrationRuntime>[0];
@@ -37,18 +41,50 @@ function resolveMovementAvatarFrameCompletionNow(getNow: (() => number) | undefi
   return getNow ? getNow() : performance.now();
 }
 
+function activeTorsoFeetFloorContactLocks(
+  contactLocks: MovementAvatarSupportFrameOrchestrationInput["contactLocks"],
+) {
+  if (contactLocks.owner !== "support-contact-locks-standing-foot-lock") return contactLocks;
+
+  return partialSupportContactLocks({
+    anchors: [
+      supportContactAnchor("rightFoot", "right foot to floor", "floor", 0, 1),
+      supportContactAnchor("leftFoot", "left foot to floor", "floor", 0, 1),
+    ],
+    maxCorrection: 0.9,
+    owner: "support-contact-feet-floor-active-torso",
+    rootCorrectionScale: 1,
+    slerp: 1,
+  });
+}
+
 export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
   input: MovementAvatarFrameCompletionOrchestrationRuntimeInput,
 ): MovementAvatarFrameCompletionOrchestrationRuntimeResult {
   const floorY = -2.75 + input.calibratedFloorCorrection;
+  const hasActiveSpineDrive = input.avatarDecision.spineDrive.shouldApplySpine;
+  const supportPresentation =
+    hasActiveSpineDrive || (input.lowerBodyTrackingReady && input.shouldApplyLowerBody)
+    ? {
+      ...input.supportPresentation,
+      armSpecs: hasActiveSpineDrive ? [] : input.supportPresentation.armSpecs,
+      specs: hasActiveSpineDrive || (input.lowerBodyTrackingReady && input.shouldApplyLowerBody)
+        ? []
+        : input.supportPresentation.specs,
+      spineSpecs: hasActiveSpineDrive ? [] : input.supportPresentation.spineSpecs,
+    }
+    : input.supportPresentation;
+  const contactLocks = hasActiveSpineDrive
+    ? activeTorsoFeetFloorContactLocks(input.contactLocks)
+    : input.contactLocks;
   const supportFrameOrchestrationRuntime = applyMovementAvatarSupportFrameOrchestrationRuntime({
     avatarRoot: input.avatarRoot,
-    contactLocks: input.contactLocks,
+    contactLocks,
     currentLowerBodyOwner: input.currentLowerBodyOwner,
     floorY,
     lookupBone: input.lookupBone,
     scene: input.scene,
-    supportPresentation: input.supportPresentation,
+    supportPresentation,
   });
   const { lowerBodyOwner, supportContactTelemetry } = supportFrameOrchestrationRuntime;
 
@@ -67,6 +103,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     retargetFrame: input.retargetFrame,
     scene: input.scene,
     shouldApplyLowerBody: input.shouldApplyLowerBody,
+    shouldLockActiveTorso: input.avatarDecision.spineDrive.shouldApplySpine,
     shouldHoldPlayerSquatPose: input.shouldHoldPlayerSquatPose,
     stepResponse: input.stepResponse,
   });
@@ -119,7 +156,9 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     avatarRole: input.avatarRole,
     blendshapes: input.blendshapes,
     expressionManager: input.expressionManager,
+    floorY,
     footLock: footingRuntime.footLockDebug,
+    footWorldSnapshot: footingRuntime.footWorldSnapshot,
     frameUpdatedAt: resolveMovementAvatarFrameCompletionNow(input.getNow),
     hands: input.hands,
     isPlayer: input.isPlayer,

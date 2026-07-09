@@ -53,6 +53,7 @@ export function applyMovementAvatarFootingFrameRuntime({
   rightFoot,
   scene,
   shouldApplyLowerBody,
+  shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
   stepResponse,
 }: {
@@ -71,10 +72,11 @@ export function applyMovementAvatarFootingFrameRuntime({
   rightFoot: THREE.Object3D | null | undefined;
   scene: THREE.Object3D | null | undefined;
   shouldApplyLowerBody: boolean;
+  shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
   stepResponse: MovementRootMotionStepResponseDecision;
 }): MovementAvatarFootingFrameRuntimeResult {
-  const footWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
+  const initialFootWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
     avatarRoot,
     leftFoot,
     rightFoot,
@@ -86,18 +88,19 @@ export function applyMovementAvatarFootingFrameRuntime({
     hipsApplication,
     hipsNode,
     hipsPositionOptions,
-    lowestFootY: footWorldSnapshot.lowestFootY,
+    lowestFootY: initialFootWorldSnapshot.lowestFootY,
   });
   const footLockRuntimeApplication = applyMovementAvatarFootLockRuntimeFrame({
     avatarRole,
     avatarRoot,
-    currentLeft: footWorldSnapshot.left,
-    currentRight: footWorldSnapshot.right,
+    currentLeft: initialFootWorldSnapshot.left,
+    currentRight: initialFootWorldSnapshot.right,
     lowerBodyDrive,
     lowerBodyTrackingReady,
     previousState: previousFootLockState,
     retargetFrame,
     shouldApplyLowerBody,
+    shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
   });
   const rootStepApplication = applyMovementAvatarRootStepRuntimeResponse({
@@ -105,6 +108,12 @@ export function applyMovementAvatarFootingFrameRuntime({
     rightFoot,
     scene,
     stepResponse,
+  });
+  const footWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
+    avatarRoot,
+    leftFoot,
+    rightFoot,
+    scene,
   });
 
   return {

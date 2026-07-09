@@ -172,6 +172,14 @@ function withWeakFeetPose() {
   return pose;
 }
 
+function withWeakFeetVisibility(pose: TrackingLandmark[]) {
+  return pose.map((landmark, index) => (
+    [27, 28, 29, 30, 31, 32].includes(index)
+      ? { ...landmark, visibility: 0.05 }
+      : landmark
+  ));
+}
+
 function withLostTrackingPose() {
   return withCorePose().map((landmark) => ({
     ...landmark,
@@ -390,15 +398,48 @@ describe("movement replay analyzer", () => {
       "partial",
       "lost",
     ]);
+    expect(analysis.gamePath.sourceFrames[0]).toMatchObject({
+      startReadinessMessage: "Step back so your whole body is visible.",
+      startReadinessState: "ready",
+    });
     expect(analysis.gamePath.sourceFrames[1]).toMatchObject({
       cameraHelpEvents: expect.arrayContaining(["show-your-feet"]),
+      cameraRecoveryCueEvent: "show-your-feet",
+      cameraRecoveryCueMessage: "Show both feet.",
+      cameraRecoveryCueState: "partial",
       scoreAllowed: true,
+      startReadinessMessage: "Show both feet.",
       startReadinessState: "blocked",
+      truthSkeletonRecoveryCueGroup: "feet",
+      truthSkeletonRecoveryCueMessage: "Step back until both feet are visible.",
+      truthSkeletonRecoveryCueState: "blocked",
+      truthSkeletonState: "blocked",
+      truthSkeletonWeakestGroup: "feet",
     });
+    expect(analysis.replayStudio.frames[1]?.failures.map((failure) => failure.code)).toContain(
+      "source-not-trustworthy",
+    );
+    expect(analysis.replayStudio.frames[1]?.failures.map((failure) => failure.code)).not.toContain(
+      "visual-proof-missing",
+    );
+    expect(analysis.replayStudio.session.worstFrames.map((frame) => frame.frameIndex)).not.toContain(1);
+    expect(analysis.gamePath.sourceFrames[1]?.truthSkeletonReasons).toEqual(
+      expect.arrayContaining(["feet-weak", "weak-feet"]),
+    );
+    expect(analysis.gamePath.sourceFrames[1]?.truthSkeletonGroupConfidence.feet).toBeLessThan(0.2);
     expect(analysis.gamePath.sourceFrames[2]).toMatchObject({
       cameraHelpEvents: expect.arrayContaining(["move-where-i-can-see-you"]),
+      cameraRecoveryCueEvent: "move-where-i-can-see-you",
+      cameraRecoveryCueMessage: "Move where I can see you.",
+      cameraRecoveryCueReasons: expect.arrayContaining(["torso-weak", "head-weak"]),
+      cameraRecoveryCueState: "lost",
       scoreAllowed: false,
+      startReadinessMessage: "Move where I can see you.",
       startReadinessState: "blocked",
+      truthSkeletonRecoveryCueGroup: "arms",
+      truthSkeletonRecoveryCueMessage: "Keep hands and elbows in frame.",
+      truthSkeletonState: "blocked",
+      truthSkeletonWeakestGroup: "arms",
     });
     expect(analysis.gamePath.sourceFrames[2]?.blockedReasons).toEqual(
       expect.arrayContaining(["camera-lost"]),
@@ -408,10 +449,41 @@ describe("movement replay analyzer", () => {
     expect(analysis.metrics.cameraConfidenceLostFrameCount).toBe(1);
     expect(analysis.metrics.cameraConfidenceUncertainFrameCount).toBe(0);
     expect(analysis.metrics.cameraHelpEventCount).toBeGreaterThanOrEqual(2);
+    expect(analysis.metrics.cameraRecoveryCueFrameCount).toBe(3);
     expect(analysis.metrics.cameraScoreAllowedFrameCount).toBe(2);
+    expect(analysis.metrics.truthSkeletonBlockedFrameCount).toBe(2);
+    expect(analysis.metrics.truthSkeletonPartialFrameCount).toBe(0);
+    expect(analysis.metrics.truthSkeletonReadyFrameCount).toBe(1);
+    expect(analysis.metrics.truthSkeletonRecoveryCueFrameCount).toBe(2);
     expect(analysis.metrics.startReadinessBlockedFrameCount).toBe(2);
     expect(analysis.metrics.startReadinessCanStartGameFrameCount).toBe(1);
     expect(analysis.metrics.startReadinessReadyFrameCount).toBe(1);
+    expect(analysis.gamePath.startReadinessMessageSummary).toEqual([
+      {
+        blockedFrameCount: 1,
+        canStartGameFrameCount: 0,
+        count: 1,
+        firstFrameIndex: 1,
+        message: "Show both feet.",
+        readyFrameCount: 0,
+      },
+      {
+        blockedFrameCount: 1,
+        canStartGameFrameCount: 0,
+        count: 1,
+        firstFrameIndex: 2,
+        message: "Move where I can see you.",
+        readyFrameCount: 0,
+      },
+      {
+        blockedFrameCount: 0,
+        canStartGameFrameCount: 1,
+        count: 1,
+        firstFrameIndex: 0,
+        message: "Step back so your whole body is visible.",
+        readyFrameCount: 1,
+      },
+    ]);
     expect(analysis.metrics.gameplayTrackingUncertaintyEventCount).toBeGreaterThan(0);
 
     const lostFrameGameEvents = analysis.gamePath.gameplayEvents[2];
@@ -727,6 +799,31 @@ describe("movement replay analyzer", () => {
     );
   });
 
+  it("keeps source-blocked root reviews out of Avatar Follow root-motion blockers", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withWeakFeetVisibility(worldTurnPose(0))),
+      trackingFrame(withWeakFeetVisibility(worldTurnPose(Math.PI))),
+    ]));
+    const rootReview = analysis.failures.find((failure) => failure.code === "root_turn_detected");
+    const replayStudioFailures = analysis.replayStudio.frames[rootReview?.frameIndex ?? -1]?.failures ?? [];
+
+    expect(rootReview).toMatchObject({
+      code: "root_turn_detected",
+      frameIndex: 1,
+      severity: "warning",
+    });
+    expect(analysis.gamePath.sourceFrames[1]).toMatchObject({
+      startReadinessState: "blocked",
+    });
+    expect(replayStudioFailures.map((failure) => failure.code)).toContain(
+      "source-not-trustworthy",
+    );
+    expect(replayStudioFailures.map((failure) => failure.code)).not.toContain(
+      "root-motion-wrong",
+    );
+    expect(analysis.replayStudio.session.worstFrames.map((frame) => frame.frameIndex)).not.toContain(1);
+  });
+
   it("flags saved X/Z path points for avatar root travel visual review", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
       trackingFrame(worldTurnPose(0)),
@@ -999,23 +1096,65 @@ describe("movement replay analyzer", () => {
 
   it("flags excessive lower-body owner flicker", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
-      frame(),
-      frame({
-        fallbacks: {
-          lowerBody: "squat-auto d0.4",
-          owners: "head player-calibrated; torso player-spine-model; lower player-stable-squat; feet recorded-retarget",
-        },
-      }),
-      frame(),
       frame({
         fallbacks: {
           lowerBody: "right-knee-raise-auto r0.5",
           owners: "head player-calibrated; torso player-spine-model; lower player-right-leg-raise; feet neutral",
         },
       }),
+      frame({
+        fallbacks: {
+          lowerBody: "squat-auto d0.4",
+          owners: "head player-calibrated; torso player-spine-model; lower player-stable-squat; feet recorded-retarget",
+        },
+      }),
+      frame({
+        fallbacks: {
+          lowerBody: "right-knee-raise-auto r0.5",
+          owners: "head player-calibrated; torso player-spine-model; lower player-right-leg-raise; feet neutral",
+        },
+      }),
+      frame({
+        fallbacks: {
+          lowerBody: "squat-auto d0.4",
+          owners: "head player-calibrated; torso player-spine-model; lower player-stable-squat; feet recorded-retarget",
+        },
+      }),
     ]));
 
     expect(analysis.failures.map((failure) => failure.code)).toContain("lower_body_owner_flicker");
+  });
+
+  it("ignores neutral lower-body owner churn when computing Avatar Follow flicker", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      frame({
+        fallbacks: {
+          lowerBody: "neutral-stance",
+          owners: "head player-calibrated; torso player-spine-model; lower player-lower-body-neutral; feet neutral",
+        },
+      }),
+      frame({
+        fallbacks: {
+          lowerBody: "neutral-stance",
+          owners: "head player-calibrated; torso player-spine-model; lower player-retarget; feet recorded-retarget",
+        },
+      }),
+      frame({
+        fallbacks: {
+          lowerBody: "neutral-stance",
+          owners: "head player-calibrated; torso player-spine-model; lower player-lower-body-neutral; feet neutral",
+        },
+      }),
+      frame({
+        fallbacks: {
+          lowerBody: "neutral-stance",
+          owners: "head player-calibrated; torso player-spine-model; lower player-retarget; feet recorded-retarget",
+        },
+      }),
+    ]));
+
+    expect(analysis.metrics.lowerBodyOwnerTransitions).toBe(0);
+    expect(analysis.failures.map((failure) => failure.code)).not.toContain("lower_body_owner_flicker");
   });
 
   it("flags avatar output divergence when final VRM bones do not match the source", () => {
@@ -1052,6 +1191,55 @@ describe("movement replay analyzer", () => {
     expect(analysis.failures.map((failure) => failure.code)).toContain("avatar_output_diverged");
     expect(analysis.metrics.avatarVisualFrameCount).toBe(1);
     expect(analysis.metrics.averageAvatarLowerBodyDirectionError).toBeCloseTo(0.68);
+  });
+
+  it("hard-fails active leg-raise frames when the rendered avatar lower body lags behind", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      frame({
+        avatarVisual: {
+          averageLowerBodyDirectionError: 0.22,
+          comparedLowerBodySegments: 6,
+          segments: {
+            rightShin: {
+              confidence: 0.96,
+              direction: { x: 0.02, y: -0.98, z: 0 },
+              length: 0.36,
+              sourceDirection: { x: 0.44, y: -0.6, z: 0 },
+              sourceError: 0.22,
+            },
+          },
+        },
+        fallbacks: {
+          lowerBody: "right-knee-raise-auto r0.31",
+          owners: "head player-calibrated; torso player-spine-model; lower player-right-leg-raise; feet recorded-retarget",
+        },
+        retarget: {
+          rightKneeLift: 0.31,
+          sourceQuality: 0.97,
+        },
+      }),
+    ]));
+    const avatarFailure = analysis.failures.find((failure) => (
+      failure.code === "avatar_output_diverged" &&
+      failure.frameIndex === 0
+    ));
+
+    expect(analysis.pass).toBe(false);
+    expect(avatarFailure).toEqual(expect.objectContaining({
+      semanticCode: "leg-lift-missing",
+      severity: "error",
+    }));
+    expect(analysis.replayStudio.session.status).toBe("blocked");
+    expect(analysis.replayStudio.session.blockedFrameCount).toBe(1);
+    expect(analysis.replayStudio.session.worstFrames[0]).toEqual(expect.objectContaining({
+      frameIndex: 0,
+      status: "blocked",
+    }));
+    expect(analysis.replayStudio.session.worstFrames[0]?.failures[0]).toEqual(expect.objectContaining({
+      code: "avatar-not-following-leg",
+      nextFixArea: "VRM lower-body application / leg-retarget output",
+      severity: "error",
+    }));
   });
 
   it("flags upper-body avatar divergence when torso and arms do not match the source", () => {
@@ -1456,6 +1644,115 @@ describe("movement replay analyzer", () => {
     expect(mirrorSideRow?.missingLayers).toContain("recorded replay visual capture");
   });
 
+  it("excludes seated leg-lift frames from standing leg proof evidence", () => {
+    const rightLegRaisePose = makeMovementAvatarProofMotionPayload("right-leg-raise").landmarks;
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(withCorePose()),
+      trackingFrame(rightLegRaisePose),
+      trackingFrame(rightLegRaisePose),
+    ]));
+    const seatedLegLiftFrame = analysis.gamePath.frames[1];
+    if (!seatedLegLiftFrame) throw new Error("Expected seated leg-lift proof frame.");
+    seatedLegLiftFrame.exercisePoseKey = "seated-leg-lift";
+    seatedLegLiftFrame.leftKneeLift = 0;
+    seatedLegLiftFrame.lowerLabel = "right-knee-raise";
+    seatedLegLiftFrame.lowerOwner = "player-right-leg-raise";
+    seatedLegLiftFrame.rightKneeLift = 0.36;
+    seatedLegLiftFrame.supportPresentationOwner = "support-presentation-seated-leg-lift";
+    seatedLegLiftFrame.supportIntentKey = "feet-floor";
+    seatedLegLiftFrame.sourceQuality = 0.95;
+    const standingLegLiftFrame = analysis.gamePath.frames[2];
+    if (!standingLegLiftFrame) throw new Error("Expected standing leg-lift proof frame.");
+    standingLegLiftFrame.exercisePoseKey = "standing-neutral";
+    standingLegLiftFrame.leftKneeLift = 0;
+    standingLegLiftFrame.lowerLabel = "right-knee-raise";
+    standingLegLiftFrame.lowerOwner = "player-right-leg-raise";
+    standingLegLiftFrame.rightKneeLift = 0.36;
+    standingLegLiftFrame.supportPresentationOwner = "support-presentation-none";
+    standingLegLiftFrame.supportIntentKey = "feet-floor";
+    standingLegLiftFrame.sourceQuality = 0.95;
+
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const rightLegRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "right-leg-raise"
+    ));
+    const mirrorSideRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "mirror-side-ownership"
+    ));
+
+    expect(rightLegRow).toEqual(expect.objectContaining({
+      automatedStatus: "passed",
+      evidenceFrameCount: 1,
+      expectedFrameWindow: {
+        endFrame: 2,
+        startFrame: 2,
+      },
+      proofCase: "right-leg-raise",
+    }));
+    expect(mirrorSideRow).toEqual(expect.objectContaining({
+      automatedStatus: "passed",
+      evidenceFrameCount: 1,
+      expectedFrameWindow: {
+        endFrame: 2,
+        startFrame: 2,
+      },
+      proofCase: "mirror-side-ownership",
+    }));
+  });
+
+  it("excludes weak-source startup frames from standing leg proof evidence", () => {
+    const rightLegRaisePose = makeMovementAvatarProofMotionPayload("right-leg-raise").landmarks;
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(rightLegRaisePose),
+      trackingFrame(rightLegRaisePose),
+    ]));
+    const weakStartupFrame = analysis.gamePath.frames[0];
+    if (!weakStartupFrame) throw new Error("Expected weak startup leg-lift proof frame.");
+    weakStartupFrame.exercisePoseKey = "standing-neutral";
+    weakStartupFrame.leftKneeLift = 0;
+    weakStartupFrame.lowerLabel = "right-knee-raise";
+    weakStartupFrame.lowerOwner = "player-right-leg-raise";
+    weakStartupFrame.rightKneeLift = 0.36;
+    weakStartupFrame.supportPresentationOwner = "support-presentation-none";
+    weakStartupFrame.supportIntentKey = "feet-floor";
+    weakStartupFrame.sourceQuality = 0.51;
+    const cleanStandingFrame = analysis.gamePath.frames[1];
+    if (!cleanStandingFrame) throw new Error("Expected clean standing leg-lift proof frame.");
+    cleanStandingFrame.exercisePoseKey = "standing-neutral";
+    cleanStandingFrame.leftKneeLift = 0;
+    cleanStandingFrame.lowerLabel = "right-knee-raise";
+    cleanStandingFrame.lowerOwner = "player-right-leg-raise";
+    cleanStandingFrame.rightKneeLift = 0.36;
+    cleanStandingFrame.supportPresentationOwner = "support-presentation-none";
+    cleanStandingFrame.supportIntentKey = "feet-floor";
+    cleanStandingFrame.sourceQuality = 0.95;
+
+    const manifest = buildMovementRecordedProofManifest([analysis]);
+    const rightLegRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "right-leg-raise"
+    ));
+    const mirrorSideRow = manifest.rows.find((row) => (
+      row.recordingId === analysis.sessionId && row.proofCase === "mirror-side-ownership"
+    ));
+
+    expect(rightLegRow).toEqual(expect.objectContaining({
+      evidenceFrameCount: 1,
+      expectedFrameWindow: {
+        endFrame: 1,
+        startFrame: 1,
+      },
+      proofCase: "right-leg-raise",
+    }));
+    expect(mirrorSideRow).toEqual(expect.objectContaining({
+      evidenceFrameCount: 1,
+      expectedFrameWindow: {
+        endFrame: 1,
+        startFrame: 1,
+      },
+      proofCase: "mirror-side-ownership",
+    }));
+  });
+
   it("adds seated proof rows only for explicit seated validation runs", () => {
     const analysis = analyzeMovementDebugReplaySession(session([
       trackingFrame(makeMovementAvatarProofMotionPayload("seated").landmarks),
@@ -1502,14 +1799,67 @@ describe("movement replay analyzer", () => {
         proofCase: "seated-forward-fold",
       }),
       expect.objectContaining({
-        automatedStatus: "passed",
-        evidenceFrameCount: expect.any(Number),
+        automatedStatus: "missing-proof",
+        evidenceFrameCount: 0,
         proofCase: "seated-leg-lift",
       }),
       expect.objectContaining({
         automatedStatus: "passed",
         evidenceFrameCount: expect.any(Number),
         proofCase: "chair-contact",
+      }),
+    ]));
+  });
+
+  it("adds facing/occlusion proof rows only for explicit diagnostic validation runs", () => {
+    const analysis = analyzeMovementDebugReplaySession(session([
+      trackingFrame(worldTurnPose(0)),
+      trackingFrame(worldTurnPose(0.9)),
+      trackingFrame(worldTurnPose(-0.1)),
+    ]));
+    const occlusionFrame = analysis.gamePath.frames[1];
+    if (occlusionFrame) {
+      occlusionFrame.lowerBodyTrackingReady = true;
+      occlusionFrame.sourceQuality = 0.5;
+    }
+    const baselineManifest = buildMovementRecordedProofManifest([analysis]);
+    const facingManifest = buildMovementRecordedProofManifest([analysis], {
+      includeProductScopeProofCases: [
+        "facing-occlusion-recovery",
+        "side-swap-recovery",
+        "self-occlusion-recovery",
+      ],
+    });
+    const facingRows = facingManifest.rows.filter((row) => (
+      row.proofCase === "facing-occlusion-recovery" ||
+      row.proofCase === "side-swap-recovery" ||
+      row.proofCase === "self-occlusion-recovery"
+    ));
+
+    expect(baselineManifest.rows.some((row) => row.proofCase === "facing-occlusion-recovery")).toBe(false);
+    expect(facingRows.map((row) => row.proofCase).sort()).toEqual([
+      "facing-occlusion-recovery",
+      "self-occlusion-recovery",
+      "side-swap-recovery",
+    ]);
+    expect(facingRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "facing-occlusion-recovery",
+        status: "manual-review",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "side-swap-recovery",
+        status: "manual-review",
+      }),
+      expect.objectContaining({
+        automatedStatus: "passed",
+        evidenceFrameCount: expect.any(Number),
+        proofCase: "self-occlusion-recovery",
+        status: "manual-review",
       }),
     ]));
   });
@@ -1539,6 +1889,11 @@ describe("movement replay analyzer", () => {
         average: 0.12,
         count: 1,
         max: 0.12,
+      },
+      avatarPlantedFootClearance: {
+        average: null,
+        count: 0,
+        max: null,
       },
       avatarUpperError: {
         average: null,

@@ -103,6 +103,16 @@ function captureScenarioForRow(row) {
         setup: "Stand centered and visible; avoid only turning the head.",
         title: "Root turn",
       };
+    case "facing-occlusion-recovery":
+    case "side-swap-recovery":
+    case "self-occlusion-recovery":
+      return {
+        acceptance: "Analyzer should keep root-heading/body-facing fallback readable, recover after a side swap, and recover after brief self-occlusion without promoting unstable frames.",
+        id: "facing-occlusion-recovery",
+        movement: "Face the camera, turn the torso away while the head briefly disagrees, cross through a left/right side-swap, briefly hide one shoulder/arm across the torso, then return to a clear front-facing pose with short holds between beats.",
+        setup: "Stand centered with head, shoulders, torso, hips, knees, and feet visible; keep the camera steady and avoid leaving the frame during the occlusion or side-swap beats.",
+        title: "Facing and occlusion recovery",
+      };
     case "side-bend":
       return {
         acceptance: "Analyzer should observe side-bend amplitude >= 0.120 in the expected direction.",
@@ -203,6 +213,14 @@ export function recordingGapCaptureProtocolForRow(row) {
         movement: "Turn the torso and hips clearly left and right, hold each turned position briefly, and return to center between turns.",
         setup: "Stand centered and visible; avoid stepping out of frame or only turning the head.",
       };
+    case "facing-occlusion-recovery":
+    case "side-swap-recovery":
+    case "self-occlusion-recovery":
+      return {
+        acceptance: "Analyzer should keep facing fallback readable, identify side-swap recovery, and recover after brief self-occlusion without losing stable root/body orientation.",
+        movement: "Record distinct beats for front-facing neutral, torso-away/head-disagreeing fallback, left/right side-swap recovery, brief self-occlusion across the torso, and return-to-front recovery, with short holds between beats.",
+        setup: "Stand centered with the full body visible and the camera steady; keep the recovery beats slow enough for frame-locked Replay/Game review.",
+      };
     case "side-bend":
       return {
         acceptance: `Analyzer should observe side-bend amplitude >= ${required} in the expected direction while feet stay planted.`,
@@ -289,8 +307,22 @@ export function recordingGapScenarioQuickValidationCommand(scenario, options = {
   ].filter(Boolean).join(" ");
 }
 
+export function recordingGapScenarioQuickValidationScriptName(scenario) {
+  const label = recordingGapFreshRecordingLabelForScenario(scenario);
+  if (label === "movement-proof-facing-occlusion-recovery") return "movement:proof:validate:facing-occlusion";
+  if (label === "movement-proof-root-travel") return "movement:proof:validate:root-travel";
+  if (label === "movement-proof-seated-forward-fold") return "movement:proof:validate:seated-forward-fold";
+  return "";
+}
+
+export function recordingGapScenarioQuickValidationScriptCommand(scenario) {
+  const scriptName = recordingGapScenarioQuickValidationScriptName(scenario);
+  return scriptName ? `npm run ${scriptName}` : "";
+}
+
 export function recordingGapScenarioQuickValidationSpec(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
+  const scriptName = recordingGapScenarioQuickValidationScriptName(scenario);
   return {
     argvTemplate: [
       ...(options.recordingPlanPath ? ["--recording-plan", options.recordingPlanPath] : []),
@@ -301,6 +333,8 @@ export function recordingGapScenarioQuickValidationSpec(scenario, options = {}) 
     command: "npm run movement:replay:validate-scenario --",
     nodeVersion: "22.13.0",
     recordingScenario: label,
+    scriptCommand: scriptName ? `npm run ${scriptName}` : "",
+    scriptName,
   };
 }
 
@@ -346,6 +380,7 @@ export function recordingGapScenarioValidationSpec(scenario, options = {}) {
   const label = recordingGapFreshRecordingLabelForScenario(scenario);
   const outputPath = recordingGapScenarioValidationOutputPath(scenario);
   const recordingPlanPath = options.recordingPlanPath ?? reviewedValidationPaths.recordingPlanPath;
+  const scenarioAnalyzerArgs = recordingGapScenarioAnalyzerArgs(scenario);
 
   return {
     argvTemplate: [
@@ -355,6 +390,7 @@ export function recordingGapScenarioValidationSpec(scenario, options = {}) {
       recordingPlanPath,
       "--recording-scenario",
       label,
+      ...scenarioAnalyzerArgs,
       "--visual-captures",
       reviewedValidationPaths.visualCapturesPath,
       "--review-decisions",
@@ -385,11 +421,43 @@ export function recordingGapScenarioValidationArgs(scenario, options = {}) {
     `--export "$(cat ${reviewedValidationPaths.latestExportPointerPath})"`,
     `--recording-plan ${recordingPlanPath}`,
     `--recording-scenario ${label}`,
+    ...recordingGapScenarioAnalyzerArgs(scenario),
     `--visual-captures ${reviewedValidationPaths.visualCapturesPath}`,
     `--review-decisions ${reviewedValidationPaths.reviewDecisionsPath}`,
     `--source-limitation-decisions ${reviewedValidationPaths.sourceLimitationDecisionsPath}`,
     `--out ${recordingGapScenarioValidationOutputPath(scenario)}`,
   ];
+}
+
+function recordingGapScenarioAnalyzerArgs(scenario) {
+  const proofCases = new Set(Array.isArray(scenario?.proofCases) ? scenario.proofCases : []);
+  const args = [];
+  if (
+    proofCases.has("seated-neutral") ||
+    proofCases.has("seated-twist") ||
+    proofCases.has("seated-forward-fold") ||
+    proofCases.has("seated-leg-lift") ||
+    proofCases.has("chair-contact")
+  ) {
+    args.push("--include-seated-targets", "--include-seated-product-scope-proof");
+  }
+  if (proofCases.has("root-travel")) {
+    args.push("--include-walking-product-scope-proof");
+  }
+
+  const facingProofCases = [
+    "facing-occlusion-recovery",
+    "side-swap-recovery",
+    "self-occlusion-recovery",
+  ].filter((proofCase) => proofCases.has(proofCase));
+  if (facingProofCases.length > 0) {
+    args.push("--include-facing-occlusion-targets");
+    facingProofCases.forEach((proofCase) => {
+      args.push("--include-product-scope-proof-case", proofCase);
+    });
+  }
+
+  return args;
 }
 
 export function recordingGapRowsForRows(rows) {
@@ -468,7 +536,7 @@ function recordingGapActionGroupsForRows(rows) {
     const existing = groups.get(key);
     if (existing) {
       existing.count += 1;
-      existing.recordingIds.push(row.recordingId);
+      if (row.recordingId) existing.recordingIds.push(row.recordingId);
       continue;
     }
 
@@ -480,7 +548,7 @@ function recordingGapActionGroupsForRows(rows) {
       protocol: row.protocol,
       proofCase: row.proofCase,
       recommendedAction: row.recommendedAction,
-      recordingIds: [row.recordingId],
+      recordingIds: row.recordingId ? [row.recordingId] : [],
       status: row.status,
       triageDisposition: row.triageDisposition,
     });
@@ -515,39 +583,29 @@ function recordingGapCaptureScenariosForRows(rows, options = {}) {
     if (row.blockerCode) blockerCodes.add(row.blockerCode);
     if (row.recordingId) recordingIds.add(row.recordingId);
     const freshRecordingLabel = `movement-proof-${scenario.id}`;
+    const scenarioProofCases = Array.from(proofCases).sort((left, right) => String(left).localeCompare(String(right)));
+    const scenarioForValidation = {
+      ...scenario,
+      freshRecordingLabel,
+      proofCases: scenarioProofCases,
+    };
 
     scenarios.set(scenario.id, {
       ...scenario,
       blockerCodes: Array.from(blockerCodes).sort((left, right) => String(left).localeCompare(String(right))),
       estimatedRowsClosed: (existing?.rowCount ?? 0) + 1,
       freshRecordingLabel,
-      proofCases: Array.from(proofCases).sort((left, right) => String(left).localeCompare(String(right))),
-      quickValidation: recordingGapScenarioQuickValidationSpec({
-        ...scenario,
-        freshRecordingLabel,
-      }, options),
-      quickValidationCommand: recordingGapScenarioQuickValidationCommand({
-        ...scenario,
-        freshRecordingLabel,
-      }, options),
+      proofCases: scenarioProofCases,
+      quickValidation: recordingGapScenarioQuickValidationSpec(scenarioForValidation, options),
+      quickValidationCommand: recordingGapScenarioQuickValidationCommand(scenarioForValidation, options),
+      quickValidationScript: recordingGapScenarioQuickValidationScriptName(scenarioForValidation),
+      quickValidationScriptCommand: recordingGapScenarioQuickValidationScriptCommand(scenarioForValidation),
       recordingIds: Array.from(recordingIds).sort((left, right) => String(left).localeCompare(String(right))),
       rowCount: (existing?.rowCount ?? 0) + 1,
-      validationArgs: recordingGapScenarioValidationArgs({
-        ...scenario,
-        freshRecordingLabel,
-      }, options),
-      validationCommand: recordingGapScenarioValidationCommand({
-        ...scenario,
-        freshRecordingLabel,
-      }, options),
-      validation: recordingGapScenarioValidationSpec({
-        ...scenario,
-        freshRecordingLabel,
-      }, options),
-      validationOutputPath: recordingGapScenarioValidationOutputPath({
-        ...scenario,
-        freshRecordingLabel,
-      }),
+      validationArgs: recordingGapScenarioValidationArgs(scenarioForValidation, options),
+      validationCommand: recordingGapScenarioValidationCommand(scenarioForValidation, options),
+      validation: recordingGapScenarioValidationSpec(scenarioForValidation, options),
+      validationOutputPath: recordingGapScenarioValidationOutputPath(scenarioForValidation),
     });
   }
 

@@ -61,6 +61,7 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
   previousState,
   retargetFrame,
   shouldApplyLowerBody,
+  shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
 }: {
   avatarRole: "instructor" | "player";
@@ -72,6 +73,7 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
   previousState: MovementAvatarFootLockState;
   retargetFrame: MovementRetargetFrame;
   shouldApplyLowerBody: boolean;
+  shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
 }): MovementAvatarFootLockRuntimeDecision {
   const options = resolveMovementAvatarFootLockOptions({ avatarRole });
@@ -81,6 +83,7 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
     lowerBodyTrackingReady,
     retargetFrame,
     shouldApplyLowerBody,
+    shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
   }).shouldEngage;
   const shouldLock = Boolean(hasAvatarRoot && currentLeft && currentRight && shouldEngage);
@@ -140,6 +143,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
   previousState,
   retargetFrame,
   shouldApplyLowerBody,
+  shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
 }: {
   avatarRole: "instructor" | "player";
@@ -151,6 +155,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
   previousState: MovementAvatarFootLockState;
   retargetFrame: MovementRetargetFrame;
   shouldApplyLowerBody: boolean;
+  shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
 }): MovementAvatarFootLockRuntimeFrameApplication {
   const runtimeDecision = resolveMovementAvatarFootLockRuntimeDecision({
@@ -163,6 +168,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
     previousState,
     retargetFrame,
     shouldApplyLowerBody,
+    shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
   });
   const footLockDecision = runtimeDecision.footLockDecision;

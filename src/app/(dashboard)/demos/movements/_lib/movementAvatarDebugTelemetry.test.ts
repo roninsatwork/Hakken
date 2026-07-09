@@ -866,6 +866,36 @@ describe("movement avatar debug telemetry", () => {
     });
   });
 
+  it("adds avatar foot floor-clearance telemetry from the runtime foot snapshot", () => {
+    const scene = new THREE.Scene();
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: () => null,
+      },
+      scene,
+    } as unknown as VRM;
+
+    const telemetry = buildMovementAvatarVisualTelemetry({
+      floorY: -2.75,
+      footWorldSnapshot: {
+        left: new THREE.Vector3(-0.2, -2.62, 0.1),
+        lowestFootY: -2.74,
+        right: new THREE.Vector3(0.2, -2.74, -0.1),
+      },
+      retargetFrame: retargetFrame(),
+      vrm,
+      zScale: 1,
+    });
+
+    expect(telemetry?.footing).toMatchObject({
+      floorY: -2.75,
+      leftFootClearance: 0.13,
+      leftFootY: -2.62,
+      rightFootClearance: 0.01,
+      rightFootY: -2.74,
+    });
+  });
+
   it("keeps optional post-frame debug telemetry neutral when state or VRM is unavailable", () => {
     expect(applyMovementAvatarOptionalPostFrameDebugTelemetry({
       avatarName: "Player",

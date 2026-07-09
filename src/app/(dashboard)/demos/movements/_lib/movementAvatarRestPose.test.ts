@@ -35,8 +35,8 @@ describe("movement avatar rest pose", () => {
   it("keeps shared upper/lower retarget mappings explicit", () => {
     expect(MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS).toHaveLength(6);
     expect(MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS).toHaveLength(5);
-    expect(MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS).toHaveLength(4);
-    expect(MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS.some((mapping) => mapping.type === "spine")).toBe(false);
+    expect(MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS).toHaveLength(5);
+    expect(MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS.some((mapping) => mapping.type === "spine")).toBe(true);
   });
 
   it("builds rest directions for valid VRM bone pairs and skips missing or zero-length pairs", () => {

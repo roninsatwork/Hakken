@@ -48,6 +48,6 @@ export function applyMovementAvatarSupportPresentationRuntimeToVrmBones({
 
   return {
     applied: result.applied,
-    owner: supportPresentation.owner,
+    owner: result.applied > 0 ? supportPresentation.owner : null,
   };
 }

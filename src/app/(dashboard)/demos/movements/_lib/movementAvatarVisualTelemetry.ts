@@ -6,6 +6,7 @@ import {
 import {
   resolveMovementAvatarRetargetSegmentWorldDirection,
 } from "./movementAvatarSegmentApplication";
+import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootWorldRuntime";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
 
@@ -18,10 +19,14 @@ function compactVector(vector: THREE.Vector3) {
 }
 
 export function buildMovementAvatarVisualTelemetry({
+  floorY,
+  footWorldSnapshot,
   retargetFrame,
   vrm,
   zScale,
 }: {
+  floorY?: number;
+  footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   retargetFrame: MovementRetargetFrame;
   vrm: VRM;
   zScale: number;
@@ -89,6 +94,19 @@ export function buildMovementAvatarVisualTelemetry({
       : undefined,
     comparedLowerBodySegments: lowerBodySourceErrors.length,
     comparedUpperBodySegments: upperBodySourceErrors.length,
+    footing: footWorldSnapshot
+      ? {
+        floorY: typeof floorY === "number" ? Number(floorY.toFixed(4)) : undefined,
+        leftFootClearance: footWorldSnapshot.left && typeof floorY === "number"
+          ? Number((footWorldSnapshot.left.y - floorY).toFixed(4))
+          : undefined,
+        leftFootY: footWorldSnapshot.left ? Number(footWorldSnapshot.left.y.toFixed(4)) : undefined,
+        rightFootClearance: footWorldSnapshot.right && typeof floorY === "number"
+          ? Number((footWorldSnapshot.right.y - floorY).toFixed(4))
+          : undefined,
+        rightFootY: footWorldSnapshot.right ? Number(footWorldSnapshot.right.y.toFixed(4)) : undefined,
+      }
+      : undefined,
     segments,
   };
 }

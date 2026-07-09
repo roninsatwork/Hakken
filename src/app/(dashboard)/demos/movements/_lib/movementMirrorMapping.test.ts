@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMovementSideOwnershipProof,
   getMovementDisplayMapping,
   mapMovementDisplaySide,
   mirrorMovementLandmarksForDisplay,
+  MOVEMENT_SIDE_OWNERSHIP_PROOF_PAIRS,
 } from "./movementMirrorMapping";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
@@ -62,5 +64,52 @@ describe("movementMirrorMapping", () => {
     expect(mapped).toEqual(pose);
     expect(mapped).not.toBe(pose);
     expect(mapped[11]).not.toBe(pose[11]);
+  });
+
+  it("proves every bilateral landmark pair maps source left to avatar right in facing-player mode", () => {
+    const pose = makePose();
+    const displayPose = mirrorMovementLandmarksForDisplay(pose, {
+      mapX: (x) => 1 - x,
+      mirrorMode: "facing-player",
+    });
+    const proofRows = buildMovementSideOwnershipProof({
+      displayLandmarks: displayPose,
+      mapX: (x) => 1 - x,
+      mirrorMode: "facing-player",
+      sourceLandmarks: pose,
+    });
+
+    expect(proofRows).toHaveLength(MOVEMENT_SIDE_OWNERSHIP_PROOF_PAIRS.length);
+    expect(proofRows.every((row) => row.sourceLeftAvatarSide === "avatarRight")).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightAvatarSide === "avatarLeft")).toBe(true);
+    expect(proofRows.every((row) => row.sourceLeftMatchesDisplay)).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightMatchesDisplay)).toBe(true);
+    expect(proofRows.find((row) => row.bodyPart === "knee")).toMatchObject({
+      sourceLeftDisplayIndex: 26,
+      sourceRightDisplayIndex: 25,
+    });
+  });
+
+  it("proves every bilateral landmark pair stays same-side when mirror mode is same-side", () => {
+    const pose = makePose();
+    const displayPose = mirrorMovementLandmarksForDisplay(pose, {
+      mapX: (x) => 1 - x,
+      mirrorMode: "same-side",
+    });
+    const proofRows = buildMovementSideOwnershipProof({
+      displayLandmarks: displayPose,
+      mirrorMode: "same-side",
+      sourceLandmarks: pose,
+    });
+
+    expect(proofRows).toHaveLength(MOVEMENT_SIDE_OWNERSHIP_PROOF_PAIRS.length);
+    expect(proofRows.every((row) => row.sourceLeftAvatarSide === "avatarLeft")).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightAvatarSide === "avatarRight")).toBe(true);
+    expect(proofRows.every((row) => row.sourceLeftMatchesDisplay)).toBe(true);
+    expect(proofRows.every((row) => row.sourceRightMatchesDisplay)).toBe(true);
+    expect(proofRows.find((row) => row.bodyPart === "wrist")).toMatchObject({
+      sourceLeftDisplayIndex: 15,
+      sourceRightDisplayIndex: 16,
+    });
   });
 });

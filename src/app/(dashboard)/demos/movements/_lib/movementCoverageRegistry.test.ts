@@ -150,6 +150,21 @@ describe("movementCoverageRegistry", () => {
     });
   });
 
+  it("keeps proof-ready facing/occlusion diagnostic copy from reading as missing proof", () => {
+    const entry = MOVEMENT_COVERAGE_REGISTRY["facing-occlusion"];
+    const claimText = [entry.summary, ...entry.remainingGaps].join(" ");
+
+    expect(entry).toMatchObject({
+      demoReady: true,
+      proofLevel: "diagnostic",
+      status: "diagnostic-only",
+    });
+    expect(claimText).toMatch(/focused recorded Replay and Game proof closed/i);
+    expect(claimText).toMatch(/coverage product truth is still internal diagnostic/i);
+    expect(claimText).not.toMatch(/recorded replay and Game visual proof (?:are|is) missing/i);
+    expect(claimText).not.toMatch(/until recorded proof and Game visual proof exist/i);
+  });
+
   it("keeps product claim language scoped to the support proof level", () => {
     const summary = summarizeMovementCoverageRegistry();
     const explicitInternalLanguage = /(internal|missing|before user-facing|non-user-facing|debug-only|diagnostic|does not include)/i;

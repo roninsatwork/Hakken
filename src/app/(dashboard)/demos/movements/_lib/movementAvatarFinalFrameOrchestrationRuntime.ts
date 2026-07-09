@@ -30,7 +30,9 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   avatarRole,
   blendshapes,
   expressionManager,
+  floorY,
   footLock,
+  footWorldSnapshot,
   frameUpdatedAt,
   hands,
   isPlayer,
@@ -45,7 +47,9 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   avatarRole: "instructor" | "player";
   blendshapes?: VrmBlendshapeCategory[] | null;
   expressionManager: VrmExpressionTargetWriter | null | undefined;
+  floorY?: number;
   footLock: Parameters<typeof applyMovementAvatarPostFrameDebugRuntime>[0]["footLock"];
+  footWorldSnapshot?: Parameters<typeof applyMovementAvatarPostFrameDebugRuntime>[0]["footWorldSnapshot"];
   frameUpdatedAt: number;
   hands?: VrmHandsPayload | null;
   isPlayer: boolean;
@@ -59,7 +63,9 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   const postFrameDebugRuntime = applyMovementAvatarPostFrameDebugRuntime({
     avatarName,
     avatarRole,
+    floorY,
     footLock,
+    footWorldSnapshot,
     frameUpdatedAt,
     retargetFrame,
     trackingDebugRef,

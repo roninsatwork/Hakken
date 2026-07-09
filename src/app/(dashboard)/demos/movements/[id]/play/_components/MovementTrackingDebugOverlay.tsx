@@ -1,6 +1,17 @@
 "use client";
 
-import { useEffect, useState, type MutableRefObject } from "react";
+import { useEffect, useState, type MutableRefObject, type RefObject } from "react";
+import type { MovementMotionFrame } from "../../../_lib/movementMotionFrame";
+import { getMovementCameraConfidenceRecoveryCue } from "../../../_lib/movementSourceFrame";
+import { getMovementStartReadinessMessage } from "../../../_lib/movementSetupRecoveryCue";
+import {
+  buildMovementSpineModel,
+  evaluateMovementSpineReadiness,
+} from "../../../_lib/movementSpineMetrics";
+import {
+  getMovementTruthSkeletonRecoveryCue,
+  summarizeMovementTruthSkeleton,
+} from "../../../_lib/movementTruthSkeleton";
 import type {
   MovementCalibration,
   MovementTrackingDebugState,
@@ -11,6 +22,7 @@ type MovementTrackingDebugOverlayProps = {
   calibration: MovementCalibration | null;
   debugRef: MutableRefObject<MovementTrackingDebugState | null>;
   isEnabled: boolean;
+  motionFrameRef?: RefObject<MovementMotionFrame | null | undefined>;
   placement?: "left" | "right";
   title?: string;
 };
@@ -22,6 +34,10 @@ function formatAngle(value?: number) {
 
 function formatConfidence(value?: number) {
   return (value ?? 0).toFixed(2);
+}
+
+function formatPercent(value?: number) {
+  return `${Math.round((value ?? 0) * 100)}%`;
 }
 
 function formatCameraValue(value?: number) {
@@ -37,6 +53,15 @@ function formatAge(updatedAt?: number, now?: number) {
   return `${Math.max(0, (now - updatedAt) / 1000).toFixed(1)}s`;
 }
 
+function formatMotionContacts(motionFrame: MovementMotionFrame) {
+  const activeContacts = motionFrame.contacts
+    .filter((contact) => contact.state !== "rejected")
+    .map((contact) => `${contact.point}:${contact.surface}`);
+
+  if (activeContacts.length === 0) return "none";
+  return activeContacts.slice(0, 3).join(" ");
+}
+
 function getHealthToneClass(level: string) {
   if (level === "ready") return "border-green-300/30 bg-green-400/15 text-green-100";
   if (level === "watch") return "border-yellow-300/30 bg-yellow-400/15 text-yellow-100";
@@ -47,10 +72,12 @@ export default function MovementTrackingDebugOverlay({
   calibration,
   debugRef,
   isEnabled,
+  motionFrameRef,
   placement = "left",
   title = "Posture Diagnostics",
 }: MovementTrackingDebugOverlayProps) {
   const [debugState, setDebugState] = useState<MovementTrackingDebugState | null>(null);
+  const [motionFrame, setMotionFrame] = useState<MovementMotionFrame | null>(null);
   const [debugNow, setDebugNow] = useState(0);
 
   useEffect(() => {
@@ -58,11 +85,12 @@ export default function MovementTrackingDebugOverlay({
 
     const interval = window.setInterval(() => {
       setDebugState(debugRef.current);
+      setMotionFrame(motionFrameRef?.current ?? null);
       setDebugNow(performance.now());
     }, 250);
 
     return () => window.clearInterval(interval);
-  }, [debugRef, isEnabled]);
+  }, [debugRef, isEnabled, motionFrameRef]);
 
   if (!isEnabled) return null;
 
@@ -73,6 +101,26 @@ export default function MovementTrackingDebugOverlay({
   const healthSummary = getMovementTrackingHealthSummary(debugState, { now: debugNow });
   const healthToneClass = getHealthToneClass(healthSummary.level);
   const calibrationQuality = calibration?.quality ?? debugState?.calibrationQuality;
+  const spineReadiness = motionFrame
+    ? evaluateMovementSpineReadiness(buildMovementSpineModel(motionFrame.source.landmarks?.pose))
+    : null;
+  const cameraConfidence = motionFrame?.cameraConfidence ?? motionFrame?.source.cameraConfidence ?? null;
+  const cameraRecoveryCue = cameraConfidence
+    ? getMovementCameraConfidenceRecoveryCue(cameraConfidence)
+    : null;
+  const startReadiness = motionFrame?.source.startReadiness ?? null;
+  const startReadinessMessage = startReadiness
+    ? getMovementStartReadinessMessage({
+        cameraRecoveryCue,
+        readiness: startReadiness,
+      })
+    : null;
+  const truthSummary = motionFrame
+    ? summarizeMovementTruthSkeleton(motionFrame.truthSkeleton)
+    : null;
+  const truthRecoveryCue = truthSummary
+    ? getMovementTruthSkeletonRecoveryCue(truthSummary)
+    : null;
   const confidenceRows = [
     ["Torso", confidence?.torso],
     ["L arm", Math.max(confidence?.leftWrist ?? 0, confidence?.leftHand ?? 0)],
@@ -83,7 +131,7 @@ export default function MovementTrackingDebugOverlay({
   const placementClass = placement === "right" ? "right-6" : "left-6";
 
   return (
-    <aside className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-hidden rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}>
+    <aside className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-y-auto rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}>
       <div className="flex items-center justify-between gap-3">
         <div className="font-black uppercase tracking-[0.18em] text-[#a8d5ba]">{title}</div>
         <div className={`rounded-full border px-2 py-1 font-mono text-[10px] ${healthToneClass}`}>
@@ -233,6 +281,105 @@ export default function MovementTrackingDebugOverlay({
             <span>Foot lock</span>
             <span>{retarget.footLockStrength.toFixed(2)} c{retarget.footLockCorrection.toFixed(2)} d{retarget.footLockDrift.toFixed(2)}</span>
           </div>
+        </div>
+      ) : null}
+
+      {motionFrameRef ? (
+        <div className="mt-3 rounded-lg border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 p-2 font-mono text-[11px] text-white/70">
+          <div className="mb-2 font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
+            Motion Frame
+          </div>
+          {motionFrame ? (
+            <>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                <span>Readability</span>
+                <span>
+                  {motionFrame.readability.state} {formatPercent(motionFrame.readability.confidence)}
+                </span>
+                <span>Movement</span>
+                <span>
+                  raw {motionFrame.readability.rawMovementStrength.toFixed(2)}
+                  {" "}show {motionFrame.readability.displayedMovementStrength.toFixed(2)}
+                </span>
+                <span>Owners</span>
+                <span>
+                  lower {motionFrame.owners.lowerBody}; feet {motionFrame.owners.feet}
+                </span>
+                <span>Root / spine</span>
+                <span>
+                  {motionFrame.owners.root}; {motionFrame.owners.spine}
+                </span>
+                <span>Side map</span>
+                <span>
+                  {motionFrame.display.mirrorMode}
+                  {" "}L-&gt;{motionFrame.display.sideMap.sourceLeft}
+                  {" "}R-&gt;{motionFrame.display.sideMap.sourceRight}
+                </span>
+                <span>Spine readiness</span>
+                <span>
+                  {spineReadiness?.status ?? "blocked"} {spineReadiness?.score ?? 0}%
+                </span>
+                <span>Start gate</span>
+                <span
+                  className="truncate"
+                  data-testid="movement-debug-start-gate"
+                  title={startReadinessMessage ?? undefined}
+                >
+                  {startReadiness
+                    ? `${startReadiness.state} - ${startReadinessMessage ?? "waiting"}`
+                    : "waiting"}
+                </span>
+                <span>Start blockers</span>
+                <span className="truncate">
+                  {startReadiness?.blockedReasons.length
+                    ? startReadiness.blockedReasons.join(", ")
+                    : startReadiness?.promptEvents.length
+                      ? startReadiness.promptEvents.join(", ")
+                      : "none"}
+                </span>
+                <span>Camera cue</span>
+                <span className="truncate">
+                  {cameraRecoveryCue?.message ?? "none"}
+                </span>
+                <span>Support</span>
+                <span>
+                  {motionFrame.support.supportLabel || motionFrame.support.primarySurface}
+                  {" "} / {motionFrame.supportConstraint.status}
+                </span>
+                <span>Contacts</span>
+                <span className="truncate">{formatMotionContacts(motionFrame)}</span>
+                <span>Truth</span>
+                <span>
+                  hips {formatPercent(motionFrame.truthSkeleton.segmentConfidence.hips)}
+                  {" "}feet {formatPercent(Math.min(
+                    motionFrame.truthSkeleton.segmentConfidence.leftFoot,
+                    motionFrame.truthSkeleton.segmentConfidence.rightFoot,
+                  ))}
+                </span>
+                <span>Truth readiness</span>
+                <span>
+                  {truthSummary?.state ?? "blocked"} {truthSummary?.weakestGroup ?? "torso"} {formatPercent(truthSummary?.weakestScore)}
+                </span>
+                <span>Truth cue</span>
+                <span className="truncate">
+                  {truthRecoveryCue?.message ?? "none"}
+                </span>
+                <span>Source</span>
+                <span>
+                  {motionFrame.source.sourceOrigin} / {motionFrame.source.sourceStatus}
+                </span>
+              </div>
+              {motionFrame.readability.reasons.length > 0 ? (
+                <div className="mt-2 truncate text-white/45">
+                  {motionFrame.readability.reasons.join(", ")}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="text-white/55">
+              waiting for shared motion-frame input
+            </div>
+          )}
         </div>
       ) : null}
 

@@ -424,6 +424,7 @@ describe("upper body standing support readiness audit", () => {
       ],
       productScopedBroadEvidenceRecordingIds: ["recording-a"],
       readyForFinalAudit: false,
+      supportClaimSnapshotSource: "capture-contract snapshot; run the strict final audit to recompute support readiness from artifact paths",
     });
     const formattedWaitingCandidatePreflight = formatBroadCaptureContractPreflight(waitingCandidatePreflight);
     expect(formattedWaitingCandidatePreflight).toContain(
@@ -1076,6 +1077,12 @@ describe("upper body standing support readiness audit", () => {
     });
     expect(formatBroadCaptureContractPreflight(readyPreflight)).toContain("Strict final audit: ready to run.");
     expect(formatBroadCaptureContractPreflight(readyPreflight)).toContain("Broad passing recording ids: recording-a.");
+    expect(formatBroadCaptureContractPreflight(readyPreflight)).toContain(
+      "Support claim status snapshot: ready-for-scoped-support-review (capture-contract snapshot; run the strict final audit to recompute support readiness from artifact paths).",
+    );
+    expect(formatBroadCaptureContractPreflight(readyPreflight)).toContain(
+      "Missing broad passed proof cases snapshot: none.",
+    );
 
     const blockedPreflight = await preflightBroadCaptureContractForFinalAudit(contract, {
       fileExists: (filePath) => filePath !== `/repo/${contract.paths.semanticReviewDecisions}`,

@@ -50,6 +50,13 @@ export type MovementCameraConfidence = {
   state: MovementCameraConfidenceState;
 };
 
+export type MovementCameraConfidenceRecoveryCue = {
+  event?: MovementCameraMessageEvent;
+  message: string;
+  reasons: string[];
+  state: MovementCameraConfidenceState;
+};
+
 export type MovementStartReadinessState =
   | "countdown"
   | "checking-visibility"
@@ -78,6 +85,7 @@ export type MovementStartReadiness = {
 };
 
 export type MovementStartReadinessTarget = "game" | "recording";
+export type MovementStartSpineReadinessStatus = "blocked" | "needs-attention" | "ready";
 
 export type MovementStartGateDecision = {
   blockedReasons: string[];
@@ -186,6 +194,21 @@ function unique<T>(values: T[]) {
   return Array.from(new Set(values));
 }
 
+function cloneTrackingLandmarks(landmarks: TrackingLandmark[] = []) {
+  return landmarks.map((landmark) => ({ ...landmark }));
+}
+
+function cloneMovementHands(hands?: MovementHandsForConfidence): MovementHandsForConfidence | undefined {
+  if (!hands) return undefined;
+
+  return Object.fromEntries(
+    Object.entries(hands).map(([side, hand]) => [
+      side,
+      hand ? { ...hand, landmarks: cloneTrackingLandmarks(hand.landmarks ?? []) } : hand,
+    ]),
+  ) as MovementHandsForConfidence;
+}
+
 function getPoseBounds(poseLandmarks: TrackingLandmark[]) {
   const visible = poseLandmarks.filter((landmark) => confidenceForLandmark(landmark) >= 0.2);
   if (visible.length === 0) return null;
@@ -201,6 +224,56 @@ function getPoseBounds(poseLandmarks: TrackingLandmark[]) {
 function resolveRequiredBodyParts(requirements?: MovementSourceFrameRequirements) {
   if (requirements?.bodyParts?.length) return requirements.bodyParts;
   return requirements?.mode === "upper-body" ? UPPER_BODY_REQUIREMENTS : FULL_BODY_REQUIREMENTS;
+}
+
+const CAMERA_CONFIDENCE_EVENT_MESSAGES: Record<MovementCameraMessageEvent, string> = {
+  "move-where-i-can-see-you": "Move where I can see you.",
+  "show-your-feet": "Show both feet.",
+  "show-your-hands": "Show your hands.",
+  "step-back": "Step back so your whole body is visible.",
+  "step-closer": "Step closer so movement stays readable.",
+};
+
+const CAMERA_CONFIDENCE_EVENT_PRIORITY: MovementCameraMessageEvent[] = [
+  "move-where-i-can-see-you",
+  "step-back",
+  "step-closer",
+  "show-your-feet",
+  "show-your-hands",
+];
+
+export function getMovementCameraConfidenceRecoveryCue(
+  cameraConfidence: MovementCameraConfidence,
+): MovementCameraConfidenceRecoveryCue | null {
+  if (cameraConfidence.state === "ready" && cameraConfidence.messageEvents.length === 0) {
+    return null;
+  }
+
+  const priorityEvent = CAMERA_CONFIDENCE_EVENT_PRIORITY.find((event) => (
+    cameraConfidence.messageEvents.includes(event)
+  ));
+  if (priorityEvent) {
+    return {
+      event: priorityEvent,
+      message: CAMERA_CONFIDENCE_EVENT_MESSAGES[priorityEvent],
+      reasons: cameraConfidence.reasons,
+      state: cameraConfidence.state,
+    };
+  }
+
+  if (cameraConfidence.reasons.includes("head-weak") || cameraConfidence.reasons.includes("torso-weak")) {
+    return {
+      message: "Keep head, shoulders, and hips in view.",
+      reasons: cameraConfidence.reasons,
+      state: cameraConfidence.state,
+    };
+  }
+
+  return {
+    message: "Hold still where I can see you.",
+    reasons: cameraConfidence.reasons,
+    state: cameraConfidence.state,
+  };
 }
 
 export function resolveMovementCameraConfidence({
@@ -363,9 +436,11 @@ export function resolveMovementStartReadiness({
 
 export function resolveMovementStartGateDecision({
   readiness,
+  spineReadinessStatus,
   target,
 }: {
   readiness: MovementStartReadiness | null | undefined;
+  spineReadinessStatus?: MovementStartSpineReadinessStatus | null;
   target: MovementStartReadinessTarget;
 }): MovementStartGateDecision {
   if (!readiness) {
@@ -382,13 +457,22 @@ export function resolveMovementStartGateDecision({
   const canStart = target === "game"
     ? readiness.canStartGame
     : readiness.canStartRecording;
+  const shouldBlockForSpine = target === "game" &&
+    (spineReadinessStatus === "blocked" || spineReadinessStatus === "needs-attention");
 
   return {
-    blockedReasons: readiness.blockedReasons,
-    canStart,
-    promptEvents: readiness.promptEvents,
+    blockedReasons: shouldBlockForSpine
+      ? unique([
+          ...readiness.blockedReasons,
+          spineReadinessStatus === "blocked" ? "spine-blocked" : "spine-needs-attention",
+        ])
+      : readiness.blockedReasons,
+    canStart: canStart && !shouldBlockForSpine,
+    promptEvents: shouldBlockForSpine
+      ? unique([...readiness.promptEvents, "hold-still-for-calibration"])
+      : readiness.promptEvents,
     readiness,
-    state: readiness.state,
+    state: shouldBlockForSpine ? "blocked" : readiness.state,
     target,
   };
 }
@@ -409,9 +493,11 @@ export function buildMovementSourceFrame({
   poseLandmarks,
   worldPoseLandmarks = [],
 }: BuildMovementSourceFrameInput): MovementSourceFrame {
+  const sourcePoseLandmarks = cloneTrackingLandmarks(poseLandmarks);
+  const sourceWorldPoseLandmarks = cloneTrackingLandmarks(worldPoseLandmarks);
   const cameraConfidence = resolveMovementCameraConfidence({
     capturedAt,
-    poseLandmarks,
+    poseLandmarks: sourcePoseLandmarks,
     previousCapturedAt,
     staleAfterMs,
   });
@@ -426,10 +512,10 @@ export function buildMovementSourceFrame({
     capturedAt,
     frameId,
     landmarks: {
-      blendshapes,
-      hands,
-      pose: poseLandmarks,
-      worldPose: worldPoseLandmarks,
+      blendshapes: blendshapes?.map((blendshape) => ({ ...blendshape })),
+      hands: cloneMovementHands(hands),
+      pose: sourcePoseLandmarks,
+      worldPose: sourceWorldPoseLandmarks,
     },
     movementId,
     sessionId,

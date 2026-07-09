@@ -47,6 +47,19 @@ function withCorePose() {
   return pose;
 }
 
+function faceLandmarks() {
+  const face = Array.from({ length: 264 }, () => ({
+    x: 0.5,
+    y: 0.5,
+    z: 0,
+    visibility: 0.9,
+  }));
+  face[1] = { x: 0.58, y: 0.48, z: 0, visibility: 0.9 };
+  face[33] = { x: 0.42, y: 0.45, z: 0, visibility: 0.9 };
+  face[263] = { x: 0.58, y: 0.45, z: 0, visibility: 0.9 };
+  return face;
+}
+
 describe("movement avatar head target", () => {
   it("keeps head world yaw relative to the supplied avatar root yaw", () => {
     const target = resolveMovementAvatarHeadTarget({
@@ -80,6 +93,105 @@ describe("movement avatar head target", () => {
     expect(target.headDecision.shouldApplyPlayerHeadMotion).toBe(true);
     expect(target.applicationPose.headPositionOffset?.y).toBeLessThan(0);
     expect(target.applyOptions.headSlerp).toBeGreaterThan(0);
+  });
+
+  it("keeps moderate pose-only player head noise facing forward", () => {
+    const pose = withCorePose();
+    pose[7] = { ...pose[7]!, z: 0.02 };
+    pose[8] = { ...pose[8]!, z: -0.02 };
+
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "player",
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+
+    expect(target.rawHeadDecision.rawHead.source).toBe("pose");
+    expect(Math.abs(target.rawHeadDecision.rawHead.yaw)).toBeGreaterThan(0.35);
+    expect(Math.abs(target.headDecision.headYaw)).toBeLessThan(0.03);
+  });
+
+  it("preserves strong pose-only player head yaw while spine is actively driven", () => {
+    const pose = withCorePose();
+    pose[7] = { ...pose[7]!, z: 0.08 };
+    pose[8] = { ...pose[8]!, z: -0.08 };
+
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "player",
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: neutralHeadIntent,
+      mirrorHeadForDisplay: false,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: true,
+    });
+
+    expect(target.rawHeadDecision.rawHead.source).toBe("pose");
+    expect(Math.abs(target.rawHeadDecision.rawHead.yaw)).toBeGreaterThan(0.65);
+    expect(Math.abs(target.headDecision.headYaw)).toBeGreaterThan(0.35);
+    expect(Math.sign(target.headDecision.headYaw)).toBe(Math.sign(target.rawHeadDecision.rawHead.yaw));
+  });
+
+  it("preserves strong recorded pose-only head yaw for replay proof", () => {
+    const pose = withCorePose();
+    pose[7] = { ...pose[7]!, z: 0.08 };
+    pose[8] = { ...pose[8]!, z: -0.08 };
+
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: true,
+    });
+
+    expect(target.rawHeadDecision.rawHead.source).toBe("pose");
+    expect(Math.abs(target.rawHeadDecision.rawHead.yaw)).toBeGreaterThan(0.65);
+    expect(Math.abs(target.headDecision.headYaw)).toBeGreaterThan(0.35);
+    expect(Math.sign(target.headDecision.headYaw)).toBe(Math.sign(target.rawHeadDecision.rawHead.yaw));
+  });
+
+  it("preserves pose-only player head pitch for look up and down", () => {
+    const pose = withCorePose();
+    pose[0] = { ...pose[0]!, y: 0.36 };
+
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "player",
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+
+    expect(target.rawHeadDecision.rawHead.source).toBe("pose");
+    expect(Math.abs(target.rawHeadDecision.rawHead.pitch)).toBeGreaterThan(0.3);
+    expect(Math.abs(target.headDecision.headPitch)).toBeGreaterThan(0.19);
+    expect(Math.sign(target.headBonePitch)).toBe(Math.sign(target.headDecision.headPitch));
+  });
+
+  it("still lets face landmarks drive player head motion", () => {
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "player",
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      faceLandmarks: faceLandmarks(),
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+
+    expect(target.rawHeadDecision.rawHead.source).toBe("face");
+    expect(Math.abs(target.headDecision.headYaw)).toBeGreaterThan(0.2);
   });
 
   it("does not apply live-only head position offsets to recorded instructor targets", () => {

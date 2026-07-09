@@ -719,7 +719,6 @@ async function main() {
     manualReviewQueueSummary: reviewQueueSummary,
     sourceLimitationQueueSummary,
   } = proofQueueSummariesForManifest(manifest);
-  const passedVisualAuditSummary = reviewQueueSummaryForRows(passedVisualAuditRows);
   const captureIndex = await loadCaptureIndex(path.resolve(args.captureDir));
   const decisionEntries = await readDecisionEntries(args.decisionsPath);
   const decisionSummary = summarizeDecisions(reviewRows, decisionEntries);

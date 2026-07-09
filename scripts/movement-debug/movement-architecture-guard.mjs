@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { auditFacingOcclusionSupportReadiness } from "./facing-occlusion-support-readiness-audit.mjs";
 import { auditRootTurnSupportClaim } from "./root-turn-support-claim-audit.mjs";
+import { auditRootTravelSupportReadiness } from "./root-travel-support-readiness-audit.mjs";
 import { auditSittingSupportReadiness } from "./sitting-support-readiness-audit.mjs";
 import { auditSquatKneeLiftSupportClaim } from "./squat-knee-lift-support-claim-audit.mjs";
 import {
@@ -16,6 +18,7 @@ import { buildSupportReadinessMatrix } from "./movement-support-readiness-matrix
 import { auditMovementArchitecturePlanStatus } from "./movement-architecture-plan-status-audit.mjs";
 import { buildMovementRoadmapProgressReport } from "./movement-roadmap-progress-report.mjs";
 import { auditMovementOutstandingTasks } from "./movement-outstanding-tasks-audit.mjs";
+import { buildNextProofReadinessSummary } from "./next-proof-readiness.mjs";
 
 export const DEFAULT_WATCHED_FILES = [
   {
@@ -280,6 +283,10 @@ export const DEFAULT_PROOF_PATHS = {
   broadGameVisualPlan: "tmp/movement-replay-lab/current-game-visual-proof-plan.broad-upper-body.json",
   broadSemanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.broad-upper-body.codex-semantic-review.json",
   captureManifest: "tmp/movement-replay-lab/captures/game-visual-proof/game-visual-proof-captures-manifest.json",
+  facingAnalysis: "tmp/movement-replay-lab/facing-occlusion-recovery-scenario-reviewed-smoke.json",
+  facingGameVisualPlan: "tmp/movement-replay-lab/current-facing-occlusion-game-visual-proof-plan.json",
+  facingManifest: "tmp/movement-replay-lab/facing-occlusion-recovery-scenario-reviewed-smoke.proof-manifest.json",
+  facingSemanticReview: "tmp/movement-replay-lab/current-facing-occlusion-game-visual-proof-review-decisions.codex-semantic-review.json",
   manifest: "tmp/movement-replay-lab/current-analysis-reviewed.proof-manifest.json",
   semanticReview: "tmp/movement-replay-lab/current-game-visual-proof-review-decisions.codex-semantic-review.json",
   sittingGameVisualPlan: "tmp/movement-replay-lab/current-expansion-preview-sitting-game-visual-proof-plan.json",
@@ -288,12 +295,26 @@ export const DEFAULT_PROOF_PATHS = {
 };
 export const DEFAULT_GAME_VISUAL_PROOF_FRAME_COUNT = 50;
 export const USER_FACING_SUPPORT_AUDIT_GATES = {
+  "facing-occlusion": {
+    internalDemoOnlyFailure: "expected facing-occlusion support audit to stay blocked while facing-occlusion is diagnostic-only",
+    mustStayBlockedWhileInternal: true,
+    readinessKey: "facingOcclusionSupport.ready",
+    scriptName: "movement:facing-occlusion-support-audit",
+    userFacingFailure: "expected facing-occlusion support audit to pass before user-facing promotion",
+  },
   "sitting": {
     internalDemoOnlyFailure: "expected sitting support audit to stay blocked while sitting is internal-demo-only",
     mustStayBlockedWhileInternal: true,
     readinessKey: "sittingSupport.ready",
     scriptName: "movement:sitting-support-audit",
     userFacingFailure: "expected sitting support audit to pass before user-facing promotion",
+  },
+  "root-travel": {
+    internalDemoOnlyFailure: "expected root-travel support audit to stay blocked while root-travel is internal-demo-only",
+    mustStayBlockedWhileInternal: true,
+    readinessKey: "rootTravelSupport.ready",
+    scriptName: "movement:root-travel-support-audit",
+    userFacingFailure: "expected root-travel support audit to pass before user-facing promotion",
   },
   "squat-knee-lift": {
     readinessKey: "squatKneeLiftSupportClaim.ok",
@@ -330,6 +351,11 @@ export const USER_FACING_SUPPORT_AUDIT_GATES = {
 };
 export const USER_FACING_SUPPORT_AUDIT_FAMILIES = Object.keys(USER_FACING_SUPPORT_AUDIT_GATES).sort();
 export const DEFAULT_PHASE_14_SCRIPT_EXPECTATIONS = {
+  "movement:expansion-preview-handoff:facing-occlusion": [
+    "scripts/movement-debug/movement-expansion-preview-handoff.mjs",
+    "--family facing-occlusion",
+    "--guide-out tmp/movement-replay-lab/current-facing-occlusion-handoff.md",
+  ],
   "movement:expansion-preview-handoff:sitting": [
     "scripts/movement-debug/movement-expansion-preview-handoff.mjs",
     "--family sitting",
@@ -356,8 +382,26 @@ export const DEFAULT_PHASE_14_SCRIPT_EXPECTATIONS = {
   "movement:replay:export-session": [
     "scripts/movement-debug/export-replay-session.mjs",
   ],
+  "movement:facing-occlusion-support-audit": [
+    "scripts/movement-debug/facing-occlusion-support-readiness-audit.mjs",
+  ],
+  "movement:facing-occlusion-support-audit:strict": [
+    "scripts/movement-debug/facing-occlusion-support-readiness-audit.mjs",
+    "--strict",
+  ],
+  "movement:root-travel-support-audit": [
+    "scripts/movement-debug/root-travel-support-readiness-audit.mjs",
+  ],
+  "movement:root-travel-support-audit:strict": [
+    "scripts/movement-debug/root-travel-support-readiness-audit.mjs",
+    "--strict",
+  ],
   "movement:sitting-support-audit": [
     "scripts/movement-debug/sitting-support-readiness-audit.mjs",
+  ],
+  "movement:sitting-support-audit:strict": [
+    "scripts/movement-debug/sitting-support-readiness-audit.mjs",
+    "--strict",
   ],
   "movement:squat-knee-lift-support-audit": [
     "scripts/movement-debug/squat-knee-lift-support-claim-audit.mjs",
@@ -365,12 +409,51 @@ export const DEFAULT_PHASE_14_SCRIPT_EXPECTATIONS = {
   "movement:walking-support-audit": [
     "scripts/movement-debug/walking-support-readiness-audit.mjs",
   ],
+  "movement:walking-support-audit:strict": [
+    "scripts/movement-debug/walking-support-readiness-audit.mjs",
+    "--strict",
+  ],
   "movement:next-proof-readiness": [
     "scripts/movement-debug/next-proof-readiness.mjs",
   ],
   "movement:next-proof-readiness:strict": [
     "scripts/movement-debug/next-proof-readiness.mjs",
     "--strict",
+  ],
+  "movement:next-proof-capture-queue": [
+    "scripts/movement-debug/next-proof-readiness.mjs",
+    "--no-write",
+    "--capture-queue-only",
+    "--capture-queue-strict",
+    "--capture-preflight-strict",
+  ],
+  "movement:replay-studio-verdict-gate": [
+    "movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json",
+  ],
+  "movement:today-finish-gate": [
+    "movement:architecture-guard",
+    "movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json",
+    "movement:support-readiness-matrix -- --no-write --json",
+    "movement:future-family-support-audit-shapes:strict -- --json",
+    "movement:roadmap-progress-report:strict -- --no-write --json",
+    "movement:architecture-plan-status-audit:strict -- --json",
+    "movement:outstanding-tasks-audit:strict -- --json",
+    "movement:next-proof-capture-queue",
+  ],
+  "movement:proof:validate:facing-occlusion": [
+    "scripts/movement-debug/validate-recording-scenario.mjs",
+    "--scenario movement-proof-facing-occlusion-recovery",
+    "--quiet",
+  ],
+  "movement:proof:validate:root-travel": [
+    "scripts/movement-debug/validate-recording-scenario.mjs",
+    "--scenario movement-proof-root-travel",
+    "--quiet",
+  ],
+  "movement:proof:validate:seated-forward-fold": [
+    "scripts/movement-debug/validate-recording-scenario.mjs",
+    "--scenario movement-proof-seated-forward-fold",
+    "--quiet",
   ],
   "movement:support-readiness-matrix": [
     "scripts/movement-debug/movement-support-readiness-matrix.mjs",
@@ -398,6 +481,15 @@ export const DEFAULT_PHASE_14_SCRIPT_EXPECTATIONS = {
   ],
   "movement:outstanding-tasks-audit:strict": [
     "scripts/movement-debug/movement-outstanding-tasks-audit.mjs",
+    "--strict",
+  ],
+  "movement:precommit-handoff-audit": [
+    "scripts/movement-debug/movement-outstanding-tasks-audit.mjs",
+    "--precommit-handoff",
+  ],
+  "movement:precommit-handoff-audit:strict": [
+    "scripts/movement-debug/movement-outstanding-tasks-audit.mjs",
+    "--precommit-handoff",
     "--strict",
   ],
   "movement:coverage-registry-claim-audit": [
@@ -519,17 +611,30 @@ export function summarizeUserFacingSupportAuditGates(
       const hasScriptName = typeof gate.scriptName === "string" && gate.scriptName.length > 0;
       const hasUserFacingFailure = typeof gate.userFacingFailure === "string" && gate.userFacingFailure.length > 0;
       const scriptContractTracked = !gate.scriptName || Object.hasOwn(scriptExpectations, gate.scriptName);
+      const strictScriptName = gate.mustStayBlockedWhileInternal && hasScriptName
+        ? `${gate.scriptName}:strict`
+        : null;
+      const strictCommand = strictScriptName ? scripts[strictScriptName] : null;
+      const hasInternalStrictScript = !strictScriptName || Boolean(strictCommand);
+      const strictScriptContractTracked = !strictScriptName || Object.hasOwn(scriptExpectations, strictScriptName);
+      const strictScriptHasStrictFlag = !strictScriptName || (
+        typeof strictCommand === "string" && strictCommand.includes("--strict")
+      );
       return {
         builtIn: gate.builtIn ?? null,
         command,
         family,
         hasInternalDemoOnlyFailure,
+        hasInternalStrictScript,
         hasSingleTarget: hasBuiltIn !== hasScriptName,
         hasUserFacingFailure,
         ok: Boolean(
           (gate.builtIn || command) &&
           gate.readinessKey &&
           scriptContractTracked &&
+          hasInternalStrictScript &&
+          strictScriptContractTracked &&
+          strictScriptHasStrictFlag &&
           hasBuiltIn !== hasScriptName &&
           hasUserFacingFailure &&
           hasInternalDemoOnlyFailure
@@ -537,6 +642,10 @@ export function summarizeUserFacingSupportAuditGates(
         readinessKey: gate.readinessKey ?? null,
         scriptContractTracked,
         scriptName: gate.scriptName ?? null,
+        strictCommand,
+        strictScriptContractTracked,
+        strictScriptHasStrictFlag,
+        strictScriptName,
       };
     });
 
@@ -953,12 +1062,17 @@ export function buildMovementArchitectureGuardReport({
   broadGameVisualPlan = null,
   broadSemanticReview = null,
   captureManifest,
+  facingAnalysis = null,
+  facingGameVisualPlan = null,
+  facingManifest = null,
+  facingSemanticReview = null,
   files,
   manifest,
   packageJson = null,
   planText = null,
   proofExpectations = {},
   routeBypassPurityResults = [],
+  runbookText = "",
   semanticReview,
   sittingGameVisualPlan = null,
   sittingManifest = null,
@@ -1001,6 +1115,10 @@ export function buildMovementArchitectureGuardReport({
   const expectedProductScopeProofCaseCounts = proofExpectations.productScopeProofCaseCounts ?? {
     "root-travel": 9,
   };
+  const expectedNextProofCaptureLabels = proofExpectations.nextProofCaptureLabels ?? [
+    "movement-proof-root-travel",
+    "movement-proof-seated-forward-fold",
+  ];
   const fileResults = files.map((file) => ({
     ...file,
     ok: file.lineCount <= file.maxLines,
@@ -1011,7 +1129,14 @@ export function buildMovementArchitectureGuardReport({
   const parity = summarizeReplayGameParity(analysis);
   const coverageProductTruth = summarizeCoverageProductTruth(analysis);
   const proofManifest = summarizeProofManifest(manifest);
+  const facingOcclusionSupport = auditFacingOcclusionSupportReadiness({
+    analysis: facingAnalysis ?? analysis,
+    gameVisualPlan: facingGameVisualPlan ?? {},
+    manifest: facingManifest ?? manifest,
+    semanticReview: facingSemanticReview ?? {},
+  });
   const rootTurnSupportClaim = auditRootTurnSupportClaim({ manifest, semanticReview });
+  const rootTravelSupport = auditRootTravelSupportReadiness({ gameVisualPlan: captureManifest, manifest, semanticReview });
   const squatKneeLiftSupportClaim = auditSquatKneeLiftSupportClaim({ manifest, semanticReview });
   const upperBodyStandingGameVisualPlan = broadGameVisualPlan
     ? mergeGameVisualPlans([captureManifest, broadGameVisualPlan])
@@ -1034,11 +1159,19 @@ export function buildMovementArchitectureGuardReport({
     manifest,
     semanticReview,
   });
+  const nextProofReadiness = buildNextProofReadinessSummary({
+    facingOcclusion: facingOcclusionSupport,
+    rootTravel: rootTravelSupport,
+    sitting: sittingSupport,
+    walking: walkingSupport,
+  });
   const phase14ScriptContracts = summarizePhase14ScriptContracts(packageJson);
   const userFacingSupportAuditGates = summarizeUserFacingSupportAuditGates(packageJson, expectedSupportAuditGates);
   const supportAuditReadinessByKey = proofExpectations.supportAuditReadinessByKey ?? {
     "coverageProductTruth.found": coverageProductTruth.found,
+    "facingOcclusionSupport.ready": facingOcclusionSupport.ready,
     "rootTurnSupportClaim.ok": rootTurnSupportClaim.ok,
+    "rootTravelSupport.ready": rootTravelSupport.ready,
     "sittingSupport.ready": sittingSupport.ready,
     "squatKneeLiftSupportClaim.ok": squatKneeLiftSupportClaim.ok,
     "upperBodyStandingSupport.broadReady": upperBodyStandingSupport.broadReady,
@@ -1092,7 +1225,7 @@ export function buildMovementArchitectureGuardReport({
       },
     };
   const outstandingTasks = planText
-    ? auditMovementOutstandingTasks(planText)
+    ? auditMovementOutstandingTasks(planText, { runbookText })
     : {
       failures: [],
       ok: true,
@@ -1191,6 +1324,15 @@ export function buildMovementArchitectureGuardReport({
       if (!gate.scriptContractTracked) {
         proofFailures.push(`expected support audit gate for ${gate.family} to be tracked by Phase 14 script contracts`);
       }
+      if (!gate.hasInternalStrictScript) {
+        proofFailures.push(`expected internal-demo-only support audit gate for ${gate.family} to define a strict npm script alias`);
+      }
+      if (!gate.strictScriptContractTracked) {
+        proofFailures.push(`expected strict support audit gate for ${gate.family} to be tracked by Phase 14 script contracts`);
+      }
+      if (!gate.strictScriptHasStrictFlag) {
+        proofFailures.push(`expected strict support audit gate for ${gate.family} to include --strict`);
+      }
       if (!gate.hasSingleTarget) {
         proofFailures.push(`expected support audit gate for ${gate.family} to define exactly one of npm script or built-in guard`);
       }
@@ -1210,7 +1352,9 @@ export function buildMovementArchitectureGuardReport({
     proofFailures.push(`expected architecture guard readiness map key ${readinessKey} to be referenced by a support audit gate`);
   });
   if (!supportReadinessMatrix.ready) {
-    const blocked = supportReadinessMatrix.blockedUserFacingFamilies.join(",") || "coverage product truth";
+    const blocked = supportReadinessMatrix.futureFamilyShapeFailures?.length > 0
+      ? `future-family shape drift: ${supportReadinessMatrix.futureFamilyShapeFailures.join("; ")}`
+      : supportReadinessMatrix.blockedUserFacingFamilies.join(",") || "coverage product truth";
     proofFailures.push(`expected support readiness matrix to pass for current user-facing families, blocked ${blocked}`);
   }
   if (supportReadinessMatrix.userFacingCount !== expectedUserFacingFamilies.length) {
@@ -1225,6 +1369,14 @@ export function buildMovementArchitectureGuardReport({
   outstandingTasks.failures.forEach((failure) => {
     proofFailures.push(`outstanding tasks audit failed: ${failure}`);
   });
+  const nextProofCaptureLabels = nextProofReadiness.captureQueue.map((item) => item.freshRecordingLabel);
+  if (JSON.stringify(nextProofCaptureLabels) !== JSON.stringify(expectedNextProofCaptureLabels)) {
+    proofFailures.push(`expected next-proof capture queue ${expectedNextProofCaptureLabels.join(",")}, got ${nextProofCaptureLabels.join(",") || "none"}`);
+  }
+  if (!nextProofReadiness.capturePreflight?.ok) {
+    const failures = nextProofReadiness.capturePreflight?.failures ?? ["capture preflight summary is missing"];
+    proofFailures.push(`expected next-proof capture preflight to be ready, got ${failures.join("; ")}`);
+  }
   const missingInternalDemoOnly = expectedInternalDemoOnlyFamilies.filter((family) => (
     !coverageProductTruth.internalDemoOnlyFamilies.includes(family)
   ));
@@ -1273,16 +1425,19 @@ export function buildMovementArchitectureGuardReport({
     broadUpperBodyCaptureContract,
     architecturePlanStatus,
     coverageProductTruth,
+    facingOcclusionSupport,
     fileResults,
     ok: fileResults.every((file) => file.ok) &&
       sourcePurityResults.every((result) => result.ok) &&
       routeBypassPurityResults.every((result) => result.ok) &&
       proofFailures.length === 0,
+    nextProofReadiness,
     proofFailures,
     proofManifest,
     phase14ScriptContracts,
     replayGameParity: parity,
     rootTurnSupportClaim,
+    rootTravelSupport,
     routeBypassPurityResults,
     roadmapProgress,
     semanticReview: semantic,
@@ -1323,6 +1478,18 @@ export function parseMovementArchitectureGuardArgs(argv) {
       index += 1;
     } else if (arg === "--broad-semantic-review") {
       options.proofPaths.broadSemanticReview = value;
+      index += 1;
+    } else if (arg === "--facing-analysis") {
+      options.proofPaths.facingAnalysis = value;
+      index += 1;
+    } else if (arg === "--facing-manifest") {
+      options.proofPaths.facingManifest = value;
+      index += 1;
+    } else if (arg === "--facing-game-visual-plan") {
+      options.proofPaths.facingGameVisualPlan = value;
+      index += 1;
+    } else if (arg === "--facing-semantic-review") {
+      options.proofPaths.facingSemanticReview = value;
       index += 1;
     } else if (arg === "--manifest") {
       options.proofPaths.manifest = value;
@@ -1393,11 +1560,16 @@ export function runMovementArchitectureGuard({
     broadGameVisualPlan: readOptionalJson(proofPaths.broadGameVisualPlan),
     broadSemanticReview: readOptionalJson(proofPaths.broadSemanticReview),
     captureManifest: readJson(resolve(proofPaths.captureManifest)),
+    facingAnalysis: readOptionalJson(proofPaths.facingAnalysis),
+    facingGameVisualPlan: readOptionalJson(proofPaths.facingGameVisualPlan),
+    facingManifest: readOptionalJson(proofPaths.facingManifest),
+    facingSemanticReview: readOptionalJson(proofPaths.facingSemanticReview),
     files,
     manifest: readJson(resolve(proofPaths.manifest)),
     packageJson: readJson(resolve("package.json")),
     planText: fs.readFileSync(resolve("docs/plans/active/movement-studio-best-practice-architecture-plan.md"), "utf8"),
     routeBypassPurityResults,
+    runbookText: fs.readFileSync(resolve("scripts/movement-debug/README.md"), "utf8"),
     semanticReview: readJson(resolve(proofPaths.semanticReview)),
     sittingGameVisualPlan: readOptionalJson(proofPaths.sittingGameVisualPlan),
     sittingManifest: readOptionalJson(proofPaths.sittingManifest),
@@ -1425,17 +1597,53 @@ function formatSupportRecordingScenario(audit) {
   const scenario = audit?.recordingGap?.captureScenarios?.[0];
   if (!scenario) return "none";
   const label = scenario.freshRecordingLabel || scenario.id || "unknown";
-  return scenario.quickValidationCommand ? `${label} (${scenario.quickValidationCommand})` : label;
+  const command = scenario.quickValidationScriptCommand || scenario.quickValidationCommand;
+  return command ? `${label} (${command})` : label;
 }
 
-function writeSupportRecordingPlans(report) {
+function formatFacingOcclusionNextAction(audit) {
+  if (audit?.proofReadyForPromotion) {
+    return audit?.nextActions?.[0] || "make a deliberate product-truth promotion decision";
+  }
+  if (audit?.recordedReviewCandidateIds?.length > 0) {
+    return `review candidate(s) ${audit.recordedReviewCandidateIds.join(", ")}`;
+  }
+  return audit?.nextActions?.[0] || formatSupportRecordingScenario(audit);
+}
+
+function formatNextProofCaptureQueue(queue) {
+  if (!Array.isArray(queue) || queue.length === 0) return "none";
+  return queue.map((item) => {
+    const label = item.freshRecordingLabel || "unknown";
+    const families = item.families?.join("+") || "unknown";
+    const command = item.quickValidationScriptCommand || "no quick validation";
+    return `${label} for ${families} (${command})`;
+  }).join("; ");
+}
+
+export function supportRecordingPlansForGuardReport(report) {
+  const planByPath = new Map();
   [
+    report.facingOcclusionSupport?.recordingGap,
+    report.rootTravelSupport?.recordingGap,
     report.sittingSupport?.recordingGap,
     report.walkingSupport?.recordingGap,
   ].forEach((recordingGap) => {
     if (!recordingGap?.planPath || !recordingGap?.plan) return;
-    fs.mkdirSync(path.dirname(recordingGap.planPath), { recursive: true });
-    fs.writeFileSync(recordingGap.planPath, `${JSON.stringify(recordingGap.plan, null, 2)}\n`, "utf8");
+    const existing = planByPath.get(recordingGap.planPath);
+    const existingRows = existing?.summary?.totalRows ?? 0;
+    const nextRows = recordingGap.plan?.summary?.totalRows ?? 0;
+    if (!existing || nextRows >= existingRows) {
+      planByPath.set(recordingGap.planPath, recordingGap.plan);
+    }
+  });
+  return planByPath;
+}
+
+function writeSupportRecordingPlans(report) {
+  supportRecordingPlansForGuardReport(report).forEach((plan, planPath) => {
+    fs.mkdirSync(path.dirname(planPath), { recursive: true });
+    fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
   });
 }
 
@@ -1445,6 +1653,12 @@ export function formatReport(report) {
     gate.hasInternalDemoOnlyFailure &&
     gate.hasSingleTarget &&
     gate.hasUserFacingFailure
+  )).length;
+  const supportGateStrictAliasResults = report.userFacingSupportAuditGates.gateResults.filter((gate) => gate.strictScriptName);
+  const supportGateStrictAliasOkCount = supportGateStrictAliasResults.filter((gate) => (
+    gate.hasInternalStrictScript &&
+    gate.strictScriptContractTracked &&
+    gate.strictScriptHasStrictFlag
   )).length;
   const supportGateRegisteredCount = report.userFacingSupportAuditGateReadiness.gateResults.filter((gate) => (
     gate.registeredFamily
@@ -1475,23 +1689,29 @@ export function formatReport(report) {
     `Game visual review consistency: ${report.visualReviewConsistency.captureTargetCount} captures, ${report.visualReviewConsistency.missingDecisionKeys.length} missing decisions, ${report.visualReviewConsistency.staleDecisionKeys.length} stale decisions, ${report.visualReviewConsistency.contextMismatchCount} context mismatches`,
     `Replay/Game parity: ${report.replayGameParity.scoreMessageParityFrames} frames, score divergences ${report.replayGameParity.scoreMessageDivergenceFrames}, wrapper divergences ${report.replayGameParity.wrapperDivergenceFrames}, visual frames ${report.replayGameParity.visualProofFrames}`,
     `Coverage product truth: user-facing ${report.coverageProductTruth.userFacingFamilies.join(",") || "none"}, internal-demo-only ${report.coverageProductTruth.internalDemoOnlyFamilies.join(",") || "none"}`,
-    `Support readiness matrix: ${report.supportReadinessMatrix.ready ? "ready" : "blocked"}, production families ${report.supportReadinessMatrix.userFacingCount}/${report.supportReadinessMatrix.familyCount} (${report.supportReadinessMatrix.productionFamilySupportPercent}%), blocked user-facing ${report.supportReadinessMatrix.blockedUserFacingFamilies.length}`,
+    `Support readiness matrix: ${report.supportReadinessMatrix.ready ? "ready" : "blocked"}, production families ${report.supportReadinessMatrix.userFacingCount}/${report.supportReadinessMatrix.familyCount} (${report.supportReadinessMatrix.productionFamilySupportPercent}%), blocked user-facing ${report.supportReadinessMatrix.blockedUserFacingFamilies.length}, future-family shape failures ${report.supportReadinessMatrix.futureFamilyShapeFailures?.length ?? 0}`,
     `Architecture plan status: ${report.architecturePlanStatus.ok ? "passed" : "blocked"}, current board ${report.architecturePlanStatus.expected.userFacingCount}/${report.supportReadinessMatrix.familyCount} (${report.architecturePlanStatus.expected.productionFamilySupportPercent}%), internal ${report.architecturePlanStatus.expected.internalFamilyCount}/${report.supportReadinessMatrix.familyCount}`,
     `Roadmap progress: ${report.roadmapProgress.ok ? "ready" : "blocked"}, overall ${report.roadmapProgress.progress.overallPercent ?? "missing"}%, section average about ${report.roadmapProgress.progress.sectionAverageNearestFive ?? "missing"}%, production families ${report.supportReadinessMatrix.userFacingCount}/${report.supportReadinessMatrix.familyCount} (${report.supportReadinessMatrix.productionFamilySupportPercent}%)`,
-    `Outstanding tasks: ${report.outstandingTasks.ok ? "ready" : "blocked"}, unchecked ${report.outstandingTasks.uncheckedTaskCount}, recommended next ${report.outstandingTasks.recommendedTaskCount}`,
+    `Outstanding tasks: ${report.outstandingTasks.ok ? "ready" : "blocked"}, unchecked ${report.outstandingTasks.uncheckedTaskCount}, recommended next ${report.outstandingTasks.recommendedTaskCount}, future family shapes ${report.outstandingTasks.futureFamilyAuditShapeCount}`,
+    `Next proof capture queue: ${report.nextProofReadiness.captureQueue.length} recording(s): ${formatNextProofCaptureQueue(report.nextProofReadiness.captureQueue)}`,
+    `Next proof capture preflight: ${report.nextProofReadiness.capturePreflight?.ok ? "ready" : "blocked"}`,
     `Root-turn support claim: ${report.rootTurnSupportClaim.ok ? "passed" : "blocked"} (${report.rootTurnSupportClaim.passingCandidateCount} reviewed bundle(s))`,
     `Squat/knee-lift support claim: ${report.squatKneeLiftSupportClaim.ok ? "passed" : "blocked"} (${report.squatKneeLiftSupportClaim.passingCandidateCount} reviewed bundle(s))`,
     `Broad upper-body capture contract: ${report.broadUpperBodyCaptureContract.recordedProofCases.length} recorded proof cases, ${report.broadUpperBodyCaptureContract.gameProofCases.length} Game proof cases, ${report.broadUpperBodyCaptureContract.commandIds.length} commands, strict final audit ${report.broadUpperBodyCaptureContract.hasStrictFinalAudit ? "yes" : "no"}, status ${report.broadUpperBodyCaptureContract.supportClaimStatus}, workflow ${report.broadUpperBodyCaptureContract.captureWorkflowState}, missing recorded passes ${report.broadUpperBodyCaptureContract.missingBroadPassedProofCases.length}, missing Game plan/readability ${report.broadUpperBodyCaptureContract.missingBroadGamePlanCases.length + report.broadUpperBodyCaptureContract.missingBroadReadableGameCases.length}, passing bundles ${report.broadUpperBodyCaptureContract.broadPassingRecordingCount}, passed-proof candidates ${report.broadUpperBodyCaptureContract.broadPassedProofCandidateCount}, product-scoped candidates ${report.broadUpperBodyCaptureContract.broadProductScopedEvidenceCandidateCount}`,
+    `Facing/occlusion support audit: ${report.facingOcclusionSupport.ready ? "ready" : "blocked"}, missing recorded evidence ${report.facingOcclusionSupport.missingRecordedEvidenceRequirements.length}, missing Game plan/readability ${report.facingOcclusionSupport.missingGamePlanCases.length + report.facingOcclusionSupport.missingReadableGameCases.length}`,
+    `Facing/occlusion support next action: ${formatFacingOcclusionNextAction(report.facingOcclusionSupport)}`,
     `Sitting support audit: ${report.sittingSupport.ready ? "ready" : "blocked"}, missing analyzer ${report.sittingSupport.missingAnalyzerProofCases.length}, missing Game plan/readability ${report.sittingSupport.missingGamePlanCases.length + report.sittingSupport.missingReadableGameCases.length}, candidates ${report.sittingSupport.seatedProofCandidates.length}`,
     `Sitting support blockers: analyzer ${formatInlineList(report.sittingSupport.missingAnalyzerProofCases)}, Game plan/readability ${formatInlineList([...report.sittingSupport.missingGamePlanCases, ...report.sittingSupport.missingReadableGameCases])}`,
     `Sitting support best candidate: ${formatSeatedCandidate(report.sittingSupport.seatedProofCandidates[0])}`,
     `Sitting support next recording: ${formatSupportRecordingScenario(report.sittingSupport)}`,
+    `Root-travel support audit: ${report.rootTravelSupport.ready ? "ready" : "blocked"}, missing analyzer ${report.rootTravelSupport.missingAnalyzerProofCases.length}, product-scoped ${report.rootTravelSupport.productScopedRecordedProofCases.length}, candidates ${report.rootTravelSupport.walkingProofCandidates.length}`,
+    `Root-travel support next recording: ${formatSupportRecordingScenario(report.rootTravelSupport)}`,
     `Walking support audit: ${report.walkingSupport.ready ? "ready" : "blocked"}, missing analyzer ${report.walkingSupport.missingAnalyzerProofCases.length}, product-scoped ${report.walkingSupport.productScopedRecordedProofCases.length}, candidates ${report.walkingSupport.walkingProofCandidates.length}`,
     `Walking support blockers: analyzer ${formatInlineList(report.walkingSupport.missingAnalyzerProofCases)}, recorded passed ${formatInlineList(report.walkingSupport.missingRecordedPassedProofCases)}, Game plan/readability ${formatInlineList([...report.walkingSupport.missingGamePlanCases, ...report.walkingSupport.missingReadableGameCases])}`,
     `Walking support best candidate: ${formatWalkingCandidate(report.walkingSupport.walkingProofCandidates[0])}`,
     `Walking support next recording: ${formatSupportRecordingScenario(report.walkingSupport)}`,
     `User-facing support audit gates: ${report.userFacingSupportAuditGates.gateResults.filter((gate) => gate.ok).length}/${report.userFacingSupportAuditGates.gateResults.length} ok`,
-    `User-facing support audit gate integrity: ${supportGateRegisteredCount}/${supportGateCount} registered families, ${supportGateSchemaOkCount}/${supportGateCount} schema-valid, ${supportGateReadinessWiredCount}/${supportGateCount} readiness-wired, ${report.userFacingSupportAuditGateReadiness.unusedReadinessKeys.length} unused readiness keys`,
+    `User-facing support audit gate integrity: ${supportGateRegisteredCount}/${supportGateCount} registered families, ${supportGateSchemaOkCount}/${supportGateCount} schema-valid, ${supportGateReadinessWiredCount}/${supportGateCount} readiness-wired, ${supportGateStrictAliasOkCount}/${supportGateStrictAliasResults.length} strict aliases, ${report.userFacingSupportAuditGateReadiness.unusedReadinessKeys.length} unused readiness keys`,
     `User-facing support audit readiness: ${report.userFacingSupportAuditGateReadiness.promotionReadyCount}/${report.userFacingSupportAuditGateReadiness.gateResults.length} promotion-ready, ${report.userFacingSupportAuditGateReadiness.internalBlockedOkCount}/${report.userFacingSupportAuditGateReadiness.internalBlockedGateCount} internal-blocked ok`,
     `Phase 14 script contracts: ${report.phase14ScriptContracts.scriptResults.filter((script) => script.ok).length}/${report.phase14ScriptContracts.scriptResults.length} ok`,
     `Proof manifest: ${report.proofManifest.rowCount} rows, ${report.proofManifest.blockingRows} blocking, ${report.proofManifest.acceptedProductLimitationRows} accepted limitations`,

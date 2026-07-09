@@ -35,6 +35,7 @@ export function resolveMovementAvatarHeadTarget({
   calibration,
   faceLandmarks,
   headMotionIntent,
+  mirrorHeadForDisplay,
   poseLandmarks,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   shouldApplyLowerBody,
@@ -45,6 +46,7 @@ export function resolveMovementAvatarHeadTarget({
   calibration: MovementCalibration | null;
   faceLandmarks?: TrackingLandmark[] | null;
   headMotionIntent?: MovementHeadMotionIntent;
+  mirrorHeadForDisplay?: boolean;
   poseLandmarks: TrackingLandmark[];
   profile?: MovementAvatarTrackingProfile;
   shouldApplyLowerBody: boolean;
@@ -63,8 +65,10 @@ export function resolveMovementAvatarHeadTarget({
     avatarRole,
     calibration,
     headMotionIntent: resolvedHeadMotionIntent,
+    mirrorHeadForDisplay,
     profile,
     rawHead: rawHeadDecision.rawHead,
+    shouldApplySpine,
   });
   const headBonePitch = resolveMovementAvatarHeadBonePitch({
     avatarRole,

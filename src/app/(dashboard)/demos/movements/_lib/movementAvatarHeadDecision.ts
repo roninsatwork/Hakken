@@ -18,6 +18,30 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function applyDeadzone(value: number, deadzone: number) {
+  const magnitude = Math.abs(value);
+  if (magnitude <= deadzone) return 0;
+  return Math.sign(value) * (magnitude - deadzone);
+}
+
+function stabilizePoseOnlyPlayerHead(
+  head: MovementHeadAngles,
+  options: { preserveActiveSpineYaw?: boolean } = {},
+): MovementHeadAngles {
+  if (head.source !== "pose") return head;
+
+  const strongYaw = Math.abs(head.yaw) >= 0.65;
+  const yawDeadzone = options.preserveActiveSpineYaw && strongYaw ? 0.2 : 0.45;
+  const yawScale = options.preserveActiveSpineYaw && strongYaw ? 0.65 : 0.4;
+
+  return {
+    ...head,
+    pitch: applyDeadzone(head.pitch, 0.1) * 0.82,
+    yaw: applyDeadzone(head.yaw, yawDeadzone) * yawScale,
+    roll: applyDeadzone(head.roll, 0.28) * 0.35,
+  };
+}
+
 export function resolveMovementAvatarRecordedHeadAngles({
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   rawHead,
@@ -26,7 +50,7 @@ export function resolveMovementAvatarRecordedHeadAngles({
   rawHead: MovementHeadAngles;
 }): MovementHeadAngles {
   const poseOnlyHeadScale = rawHead.source === "pose"
-    ? { pitch: 0.38, roll: 0.22, yaw: 0.28 }
+    ? { pitch: 0.38, roll: 0.22, yaw: 0.58 }
     : { pitch: 0.72, roll: 0.48, yaw: 0.52 };
 
   return {
@@ -37,8 +61,8 @@ export function resolveMovementAvatarRecordedHeadAngles({
     ),
     yaw: clamp(
       rawHead.yaw * poseOnlyHeadScale.yaw + profile.headYawOffset,
-      -Math.min(profile.maxHeadYaw, 0.2),
-      Math.min(profile.maxHeadYaw, 0.2),
+      -Math.min(profile.maxHeadYaw, 0.78),
+      Math.min(profile.maxHeadYaw, 0.78),
     ),
     roll: clamp(
       rawHead.roll * poseOnlyHeadScale.roll + profile.headRollOffset,
@@ -72,14 +96,18 @@ export function resolveMovementAvatarHeadDecision({
   avatarRole,
   calibration,
   headMotionIntent,
+  mirrorHeadForDisplay,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   rawHead,
+  shouldApplySpine = false,
 }: {
   avatarRole: "instructor" | "player";
   calibration: MovementCalibration | null;
   headMotionIntent: MovementHeadMotionIntent;
+  mirrorHeadForDisplay?: boolean;
   profile?: MovementAvatarTrackingProfile;
   rawHead: MovementHeadAngles;
+  shouldApplySpine?: boolean;
 }): MovementAvatarHeadDecision {
   const isPlayer = avatarRole === "player";
   const recordedHeadTrackingReady =
@@ -96,11 +124,18 @@ export function resolveMovementAvatarHeadDecision({
         profile,
       })
     : null;
-  const appliedHead = calibratedPlayerHead
-    ? resolveMovementAvatarMirrorHeadForDisplay({
-        avatarRole,
-        head: calibratedPlayerHead,
+  const stabilizedPlayerHead = calibratedPlayerHead
+    ? stabilizePoseOnlyPlayerHead(calibratedPlayerHead, {
+        preserveActiveSpineYaw: shouldApplySpine,
       })
+    : null;
+  const appliedHead = stabilizedPlayerHead
+    ? (mirrorHeadForDisplay ?? avatarRole === "player")
+        ? resolveMovementAvatarMirrorHeadForDisplay({
+            avatarRole,
+            head: stabilizedPlayerHead,
+          })
+        : stabilizedPlayerHead
     : recordedHeadTrackingReady
       ? resolveMovementAvatarRecordedHeadAngles({
           profile,

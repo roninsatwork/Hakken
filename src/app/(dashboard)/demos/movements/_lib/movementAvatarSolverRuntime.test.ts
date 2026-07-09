@@ -15,6 +15,19 @@ function buildPose(overrides: Partial<VrmPoseLandmark>[] = []): VrmPoseLandmark[
   }));
 }
 
+function buildFace(): VrmPoseLandmark[] {
+  const face = Array.from({ length: 264 }, () => ({
+    x: 0.5,
+    y: 0.5,
+    z: 0,
+    visibility: 0.9,
+  }));
+  face[1] = { x: 0.62, y: 0.45, z: 0, visibility: 0.9 };
+  face[33] = { x: 0.44, y: 0.42, z: 0, visibility: 0.9 };
+  face[263] = { x: 0.58, y: 0.47, z: 0, visibility: 0.9 };
+  return face;
+}
+
 describe("movementAvatarSolverRuntime", () => {
   it("returns null when the motion input has too few landmarks", () => {
     expect(resolveMovementAvatarSolverRuntimeInput({
@@ -27,9 +40,11 @@ describe("movementAvatarSolverRuntime", () => {
 
   it("reuses instructor prepared input and target solver landmarks", () => {
     const pose = buildPose();
+    const faceLandmarks = buildFace();
     const runtimeInput = resolveMovementAvatarSolverRuntimeInput({
       isPlaying: false,
       motionRef: {
+        faceLandmarks,
         pose,
       },
       showPausedPose: false,
@@ -37,12 +52,15 @@ describe("movementAvatarSolverRuntime", () => {
     });
 
     expect(runtimeInput).not.toBeNull();
-    expect(runtimeInput?.payload).toEqual({ pose });
+    expect(runtimeInput?.payload).toEqual({ faceLandmarks, pose });
     expect(runtimeInput?.mirrorPlayerDisplay).toBe(false);
     expect(runtimeInput?.displayPreparedInput).toBe(runtimeInput?.rawPreparedInput);
     expect(runtimeInput?.targetSolverLandmarks).toBe(runtimeInput?.rawPreparedInput.solverLandmarks);
     expect(runtimeInput?.displayPreparedInput.forceStandby).toBe(true);
     expect(runtimeInput?.displayPreparedInput.imageLandmarks[11].visibility).toBe(0);
+    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
+    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[33]?.x).toBeCloseTo(0.42);
+    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[263]?.x).toBeCloseTo(0.56);
   });
 
   it("keeps player source input separate from mirrored display target", () => {
@@ -76,9 +94,13 @@ describe("movementAvatarSolverRuntime", () => {
 
   it("solves and exposes prepared frame fields for the avatar renderer", () => {
     const pose = buildPose();
+    const faceLandmarks = buildFace();
     const runtime = resolveMovementAvatarSolvedFrameRuntime({
       isPlaying: true,
-      motionRef: pose,
+      motionRef: {
+        faceLandmarks,
+        pose,
+      },
       showPausedPose: false,
       solvePose: (kalidokitSolverLandmarks, imageLandmarks) => ({
         Hips: {
@@ -99,6 +121,8 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtime.riggedPose.Spine?.x).toBeCloseTo(0.88);
     expect(runtime.riggedPose.Spine?.y).toBeCloseTo(-0.46875);
     expect(runtime.imageLandmarks).toBe(runtime.displayPreparedInput.imageLandmarks);
+    expect(runtime.faceLandmarks).toBe(runtime.displayPreparedInput.faceLandmarks);
+    expect(runtime.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
     expect(runtime.solverLandmarks).toBe(runtime.rawPreparedInput.solverLandmarks);
     expect(runtime.rigHands).toBe(runtime.displayPreparedInput.rigHands);
     expect(runtime.targetSolverLandmarks).not.toBe(runtime.rawPreparedInput.solverLandmarks);

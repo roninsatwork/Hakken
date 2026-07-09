@@ -10,9 +10,11 @@ export type MovementGameVisualParityProofCase =
   | "strongest-left-leg-lift"
   | "strongest-right-leg-lift"
   | "strongest-head-direction"
+  | "strongest-facing-occlusion-recovery"
   | "strongest-root-travel"
   | "strongest-root-turn"
   | "strongest-side-bend"
+  | "strongest-side-swap-recovery"
   | "strongest-seated-chair-contact"
   | "strongest-seated-forward-fold"
   | "strongest-seated-leg-lift"
@@ -49,6 +51,7 @@ export type MovementGameVisualParityProofFrame = {
 };
 
 export type MovementGameVisualParityProofOptions = {
+  includeFacingOcclusionTargets?: boolean;
   includeSeatedTargets?: boolean;
   includeStandingUpperBodyTargets?: boolean;
   maxFrames?: number;
@@ -147,6 +150,7 @@ export function selectMovementGameVisualParityProofFrames(
   options: MovementGameVisualParityProofOptions = {},
 ): MovementGameVisualParityProofFrame[] {
   const maxFrames = options.maxFrames ?? DEFAULT_MAX_FRAMES;
+  const includeFacingOcclusionTargets = options.includeFacingOcclusionTargets ?? false;
   const includeSeatedTargets = options.includeSeatedTargets ?? false;
   const includeStandingUpperBodyTargets = options.includeStandingUpperBodyTargets ?? false;
   const minKneeLift = options.minKneeLift ?? DEFAULT_MIN_KNEE_LIFT;
@@ -383,6 +387,32 @@ export function selectMovementGameVisualParityProofFrames(
         strongestSeatedLegLift.frameIndex,
         "strongest-seated-leg-lift",
         "strongest displayed seated leg lift",
+      );
+    }
+  }
+
+  if (includeFacingOcclusionTargets) {
+    const strongestFacingOcclusionRecovery = findStrongestFrame(
+      simulation,
+      (_motionFrame, rootMotion) => absolute(rootMotion?.headingYaw),
+    );
+    if (strongestFacingOcclusionRecovery && strongestFacingOcclusionRecovery.value >= minRootTurnYaw) {
+      addFrame(
+        strongestFacingOcclusionRecovery.frameIndex,
+        "strongest-facing-occlusion-recovery",
+        "strongest facing/occlusion root-heading recovery",
+      );
+    }
+
+    const strongestSideSwapRecovery = findStrongestFrame(
+      simulation,
+      (_motionFrame, rootMotion) => absolute(rootMotion?.intent.headingDelta),
+    );
+    if (strongestSideSwapRecovery && strongestSideSwapRecovery.value >= minRootTurnYaw) {
+      addFrame(
+        strongestSideSwapRecovery.frameIndex,
+        "strongest-side-swap-recovery",
+        "strongest facing side-swap recovery",
       );
     }
   }

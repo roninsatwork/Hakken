@@ -11,7 +11,6 @@ import type { MovementSupportIntentDecision } from "./movementSupportIntent";
 import type { MovementSupportConstraintDecision } from "./movementSupportConstraint";
 import type {
   MovementRetargetFrame,
-  MovementRetargetSegmentName,
   MovementRetargetSourceModel,
 } from "./movementRetargeting";
 import type { MovementAvatarRootOrientationDecision } from "./movementAvatarRootOrientationDecision";

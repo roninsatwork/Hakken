@@ -33,6 +33,7 @@ export type MovementAvatarBodyFrameOrchestrationRuntimeResult = {
 
 export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   activeSpineDrive,
+  armAvatarRole,
   avatarRole,
   avatarRoot,
   balancedPlantedSquatDepth,
@@ -71,6 +72,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   zScale,
 }: {
   activeSpineDrive: MovementAvatarUpperBodyFrameOrchestrationInput["activeSpineDrive"];
+  armAvatarRole?: MovementAvatarFrameTargetRetargetInput["avatarRole"];
   avatarRole: MovementAvatarFrameTargetRetargetInput["avatarRole"];
   avatarRoot: MovementAvatarFrameTargetRetargetInput["avatarRoot"];
   balancedPlantedSquatDepth: MovementAvatarLowerBodyFrameOrchestrationInput["balancedPlantedSquatDepth"];
@@ -110,6 +112,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   zScale: MovementAvatarLowerBodyFrameOrchestrationInput["zScale"];
 }): MovementAvatarBodyFrameOrchestrationRuntimeResult {
   const targetRetargetOrchestrationRuntime = resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
+    armAvatarRole,
     avatarRole,
     avatarRoot,
     currentRestMap,
@@ -138,6 +141,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   const upperBodyFrameOrchestrationRuntime = applyMovementAvatarUpperBodyFrameOrchestrationRuntime({
     activeSpineDrive,
     armTargetComposition,
+    armAvatarRole,
     avatarRole,
     boneEaseOptions,
     hasWorldLandmarks,

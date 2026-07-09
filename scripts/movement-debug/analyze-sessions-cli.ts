@@ -31,6 +31,7 @@ type CliArgs = {
   createExport: boolean;
   exportPath: string | null;
   file: string | null;
+  includeFacingOcclusionTargets: boolean;
   includeSeatedTargets: boolean;
   includeStandingUpperBodyTargets: boolean;
   includeProductScopeProofCases: MovementRecordedProofCase[];
@@ -59,6 +60,7 @@ function parseArgs(argv: string[]): CliArgs {
     createExport: false,
     exportPath: null,
     file: null,
+    includeFacingOcclusionTargets: false,
     includeSeatedTargets: false,
     includeStandingUpperBodyTargets: false,
     includeProductScopeProofCases: [],
@@ -113,6 +115,8 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--include-standing-upper-body-targets") {
       args.includeStandingUpperBodyTargets = true;
+    } else if (arg === "--include-facing-occlusion-targets") {
+      args.includeFacingOcclusionTargets = true;
     } else if (arg === "--include-seated-targets") {
       args.includeSeatedTargets = true;
     } else if (arg === "--include-broad-upper-body-product-scope-proof") {
@@ -202,6 +206,10 @@ Options:
                      Include broad standing arm/reach/twist Game visual targets in
                      gamePath.visualProofFrames. This is opt-in so the default reviewed
                      Game visual gate remains stable.
+  --include-facing-occlusion-targets
+                     Include facing/occlusion recovery Game visual targets in
+                     gamePath.visualProofFrames. This is opt-in so the default reviewed
+                     Game visual gate remains stable.
   --include-seated-targets
                      Include seated chair/contact, twist, forward-fold, and leg-lift
                      Game visual targets in gamePath.visualProofFrames. This is opt-in so
@@ -241,6 +249,9 @@ const MOVEMENT_RECORDED_PROOF_CASES = new Set<MovementRecordedProofCase>([
   "right-leg-raise",
   "weak-feet",
   "lower-body-out-of-frame",
+  "facing-occlusion-recovery",
+  "side-swap-recovery",
+  "self-occlusion-recovery",
   "root-turn",
   "root-travel",
   "seated-neutral",
@@ -513,6 +524,7 @@ function parseVisualCaptureManifest(value: unknown): MovementRecordedVisualCaptu
     return [{
       avatarLowerError: maybeNumber(capture.diagnostics?.avatarLowerError),
       avatarPath: maybeString(capture.avatarPath),
+      avatarPlantedFootClearance: maybeNumber(capture.diagnostics?.avatarFollowPlantedFootClearance),
       avatarUpperError: maybeNumber(capture.diagnostics?.avatarUpperError),
       frameIndex,
       recordingId,
@@ -523,9 +535,23 @@ function parseVisualCaptureManifest(value: unknown): MovementRecordedVisualCaptu
 
 function readVisualCaptures(paths: string[]) {
   return paths.flatMap((inputPath) => (
-    captureManifestFiles(inputPath).flatMap((manifestPath) => (
-      parseVisualCaptureManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown)
-    ))
+    captureManifestFiles(inputPath).flatMap((manifestPath) => {
+      const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+      const directCaptures = parseVisualCaptureManifest(parsed);
+      if (directCaptures.length > 0) return directCaptures;
+
+      const jobs = typeof parsed === "object" && parsed !== null && Array.isArray((parsed as { jobs?: unknown[] }).jobs)
+        ? (parsed as { jobs: Array<{ outDir?: unknown }> }).jobs
+        : [];
+      return jobs.flatMap((job) => {
+        const outDir = maybeString(job.outDir);
+        return outDir
+          ? captureManifestFiles(outDir).flatMap((childManifestPath) => (
+            parseVisualCaptureManifest(JSON.parse(readFileSync(childManifestPath, "utf8")) as unknown)
+          ))
+          : [];
+      });
+    })
   ));
 }
 
@@ -886,6 +912,13 @@ function printReport(analyses: MovementReplayAnalysis[]) {
       `  avatar output: ${analysis.metrics.avatarVisualFrameCount} frame(s), avg lower-body direction error ${analysis.metrics.averageAvatarLowerBodyDirectionError.toFixed(2)}`,
     );
     console.log(
+      `  replay judge: ${analysis.replayStudio.session.status}, blocked ${analysis.replayStudio.session.blockedFrameCount}, review ${analysis.replayStudio.session.reviewedFrameCount}${
+        analysis.replayStudio.session.worstFrames[0]
+          ? `, worst frame ${analysis.replayStudio.session.worstFrames[0].frameIndex} (${analysis.replayStudio.session.worstFrames[0].failures[0]?.code ?? analysis.replayStudio.session.worstFrames[0].status})`
+          : ""
+      }`,
+    );
+    console.log(
       `  lower owner transitions: ${analysis.metrics.lowerBodyOwnerTransitions} (${analysis.metrics.ownerTransitionsPerSecond.toFixed(2)}/s)`,
     );
     console.log(
@@ -934,6 +967,7 @@ export async function runMovementReplayAnalyzerCli(argv: string[]) {
     : parseMovementDebugReplaySessions(rows);
   const analyses = analyzeMovementDebugReplaySessions(sessions, {
     gameVisualProofOptions: {
+      includeFacingOcclusionTargets: args.includeFacingOcclusionTargets,
       includeSeatedTargets: args.includeSeatedTargets,
       includeStandingUpperBodyTargets: args.includeStandingUpperBodyTargets,
     },

@@ -18,6 +18,7 @@ export type MovementSpineModel = {
   headPelvisOffset: number;
   ribcagePelvisOffset: number;
   torsoLean: number;
+  torsoDepthLean: number;
   torsoSideBend: number;
   shoulderHipRotation: number;
   neutralStackScore: number;
@@ -28,10 +29,22 @@ export type MovementSpineModel = {
 export type MovementSpineComparison = {
   score: number;
   cue: string;
+  instructorReadiness: MovementSpineReadiness;
+  playerReadiness: MovementSpineReadiness;
+};
+
+export type MovementSpineReadiness = {
+  blockers: string[];
+  cue: string;
+  score: number;
+  status: "blocked" | "needs-attention" | "ready";
 };
 
 const MIN_SPINE_CONFIDENCE = 0.2;
 const IDEAL_TORSO_LENGTH = 0.22;
+const SPINE_BLOCKED_CONFIDENCE = 0.25;
+const SPINE_READY_CONFIDENCE = 0.55;
+const SPINE_READY_SCORE = 70;
 
 type WeightedScore = {
   score: number;
@@ -158,6 +171,7 @@ export function buildMovementSpineModel(landmarks: MovementLandmark[] | null | u
   const headPelvisOffset = headCenter.x - pelvisCenter.x;
   const ribcagePelvisOffset = ribcageCenter.x - pelvisCenter.x;
   const torsoLean = shoulderCenter.y - pelvisCenter.y;
+  const torsoDepthLean = shoulderCenter.z - pelvisCenter.z;
   const torsoSideBend = shoulderCenter.x - pelvisCenter.x;
   const shoulderHipRotation = horizontalAngle(leftShoulder, rightShoulder) - horizontalAngle(leftHip, rightHip);
   const torsoLength = safeDistance(shoulderCenter, pelvisCenter);
@@ -188,6 +202,7 @@ export function buildMovementSpineModel(landmarks: MovementLandmark[] | null | u
     headPelvisOffset,
     ribcagePelvisOffset,
     torsoLean,
+    torsoDepthLean,
     torsoSideBend,
     shoulderHipRotation,
     neutralStackScore,
@@ -208,21 +223,95 @@ export function compareMovementSpineModels(
   instructor: MovementSpineModel | null | undefined,
   spineGoal?: MovementSpineGoal | null,
 ): MovementSpineComparison {
+  const playerReadiness = evaluateMovementSpineReadiness(player);
+  const instructorReadiness = evaluateMovementSpineReadiness(instructor);
+
   if (!player || !instructor) {
     return {
       score: 0,
       cue: "Waiting for spine tracking.",
+      instructorReadiness,
+      playerReadiness,
     };
   }
 
   const confidence = Math.min(player.confidence, instructor.confidence);
   const shapeMatch = getGoalShapeMatch(player, instructor, spineGoal);
+  const readinessScale = Math.min(
+    readinessScoreScale(playerReadiness),
+    readinessScoreScale(instructorReadiness),
+  );
 
-  const score = Math.round(clamp01(shapeMatch * confidence) * 100);
+  const score = Math.round(clamp01(shapeMatch * confidence * readinessScale) * 100);
   return {
     score,
-    cue: getGoalCue({ player, score, spineGoal }),
+    cue: playerReadiness.status === "blocked"
+      ? playerReadiness.cue
+      : getGoalCue({ player, score, spineGoal }),
+    instructorReadiness,
+    playerReadiness,
   };
+}
+
+export function evaluateMovementSpineReadiness(
+  model: MovementSpineModel | null | undefined,
+): MovementSpineReadiness {
+  if (!model) {
+    return {
+      blockers: ["missing-spine-model"],
+      cue: "Waiting for spine tracking.",
+      score: 0,
+      status: "blocked",
+    };
+  }
+
+  const blockers: string[] = [];
+  if (model.confidence < SPINE_BLOCKED_CONFIDENCE) blockers.push("low-spine-confidence");
+  if (model.symmetryScore < 30) blockers.push("weak-left-right-spine-reference");
+
+  const score = Math.round(Math.min(
+    model.confidence * 100,
+    Math.max(model.symmetryScore, 35),
+  ));
+
+  if (blockers.length > 0) {
+    return {
+      blockers,
+      cue: model.coachingCue,
+      score,
+      status: "blocked",
+    };
+  }
+
+  if (
+    model.confidence < SPINE_READY_CONFIDENCE ||
+    model.symmetryScore < SPINE_READY_SCORE
+  ) {
+    return {
+      blockers: [],
+      cue: model.coachingCue,
+      score,
+      status: "needs-attention",
+    };
+  }
+
+  return {
+    blockers: [],
+    cue: "Spine tracking ready.",
+    score,
+    status: "ready",
+  };
+}
+
+function readinessScoreScale(readiness: MovementSpineReadiness) {
+  switch (readiness.status) {
+    case "ready":
+      return 1;
+    case "needs-attention":
+      return 0.85;
+    case "blocked":
+      return 0.4;
+  }
 }
 
 function getGoalShapeMatch(

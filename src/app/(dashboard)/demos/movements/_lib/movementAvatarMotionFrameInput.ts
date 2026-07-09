@@ -4,6 +4,7 @@ import type { MovementMotionFrame } from "./movementMotionFrame";
 export type MovementAvatarMotionFrameInputDecision = {
   decision: MovementAvatarPipelineDecision | null;
   owner: "movement-motion-frame" | "presentation-standby" | "renderer-fallback";
+  sourceOrigin?: MovementMotionFrame["source"]["sourceOrigin"];
 };
 
 export function resolveMovementAvatarMotionFrameInput({
@@ -21,6 +22,7 @@ export function resolveMovementAvatarMotionFrameInput({
     return {
       decision: motionFrame.avatarDisplayDecision,
       owner: "movement-motion-frame",
+      sourceOrigin: motionFrame.source?.sourceOrigin,
     };
   }
 

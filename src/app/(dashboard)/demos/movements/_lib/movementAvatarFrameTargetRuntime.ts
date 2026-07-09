@@ -18,6 +18,7 @@ export type MovementAvatarFrameTargetRuntimeDecision = {
 };
 
 export function resolveMovementAvatarFrameTargetRuntime({
+  armAvatarRole,
   avatarRole,
   imageLandmarks,
   lowerBodyDrive,
@@ -25,6 +26,7 @@ export function resolveMovementAvatarFrameTargetRuntime({
   solverLandmarks,
   targetSolverLandmarks,
 }: {
+  armAvatarRole?: "instructor" | "player";
   avatarRole: "instructor" | "player";
   imageLandmarks: VrmSolverLandmark[];
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
@@ -32,10 +34,12 @@ export function resolveMovementAvatarFrameTargetRuntime({
   solverLandmarks: VrmSolverLandmark[];
   targetSolverLandmarks: VrmSolverLandmark[];
 }): MovementAvatarFrameTargetRuntimeDecision {
+  const resolvedArmAvatarRole = armAvatarRole ?? avatarRole;
+
   return {
     armTargetComposition: resolveMovementAvatarArmTargetComposition({
       imageLandmarks,
-      isPlayer: avatarRole === "player",
+      isPlayer: resolvedArmAvatarRole === "player",
       lowerBodyDrive,
       rigHands,
       solverLandmarks,

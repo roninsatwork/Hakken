@@ -156,6 +156,26 @@ describe("movement avatar lower-body application plan", () => {
     expect(plan.lowerBodyOwner).toBe("player-left-leg-raise");
   });
 
+  it("lets source retarget own player leg raises when solved leg segments are available", () => {
+    const plan = resolveMovementAvatarLowerBodyApplicationPlan({
+      lowerBodyDrive: drive({ playerLegRaiseDepth: 0.72 }),
+      lowerBodyTarget: target(stage("player-leg-raise", {
+        anchoredPlayerLegRaiseSide: "left",
+        canUsePlayerRetargetLegRaise: true,
+        feetOwner: "left-feet",
+        lowerBodyOwner: "player-left-leg-raise",
+      }), {
+        feetOwner: "recorded-retarget",
+        lowerBodyOwner: "player-retarget",
+      }),
+    });
+
+    expect(plan.mode).toBe("retarget");
+    expect(plan.lowerBodyOwner).toBe("player-retarget");
+    expect(plan.feetOwner).toBe("recorded-retarget");
+    expect(plan.stageDecision?.anchoredPlayerLegRaiseSide).toBe("left");
+  });
+
   it("marks shallow player squats for neutral easing", () => {
     const plan = resolveMovementAvatarLowerBodyApplicationPlan({
       lowerBodyDrive: drive(),
@@ -1239,7 +1259,7 @@ describe("movement avatar lower-body retarget application plan", () => {
     expect(plan.plantedSquatIkDepth).toBe(0.41);
   });
 
-  it("preserves anchored player leg-raise overlays after retarget application", () => {
+  it("lets solved player leg-raise retarget own the pose instead of adding a canned overlay", () => {
     const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
       appliedDecision: appliedDecision(),
       avatarRole: "player",
@@ -1249,6 +1269,23 @@ describe("movement avatar lower-body retarget application plan", () => {
       playerSquatPresentationDepth: 0,
       retargetAppliedLowerBody: 4,
       stageDecision: stage("retarget", { anchoredPlayerLegRaiseSide: "right" }),
+    });
+
+    expect(plan.legRaiseOverlay).toBeNull();
+  });
+
+  it("keeps an explicit player leg-raise overlay when solved leg retarget is incomplete", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision(),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0,
+      lowerBodyDrive: drive({ playerLegRaiseDepth: 0.63 }),
+      playerSquatPresentationDepth: 0,
+      retargetAppliedLowerBody: 3,
+      stageDecision: stage("retarget", {
+        anchoredPlayerLegRaiseSide: "right",
+      }),
     });
 
     expect(plan.legRaiseOverlay).toEqual({ depth: 0.63, side: "right" });

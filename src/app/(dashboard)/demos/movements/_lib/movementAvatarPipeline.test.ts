@@ -295,10 +295,6 @@ describe("movement avatar pipeline", () => {
     const forwardFoldDecision = resolveDecision(makeMovementAvatarProofPose("seated-forward-fold"));
     const legLiftDecision = resolveDecision(makeMovementAvatarProofPose("seated-leg-lift"));
     const neutralDecision = resolveDecision(makeMovementAvatarProofPose("seated"));
-    const legPitch = (
-      decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
-      bone: "leftLowerLeg" | "rightLowerLeg",
-    ) => decision.supportPresentation.specs.find((spec) => spec.bone === bone)?.rotation.x ?? 0;
     const spinePitch = (
       decision: ReturnType<typeof resolveMovementAvatarStudioDecision>,
       bone: "chest" | "spine",
@@ -314,10 +310,9 @@ describe("movement avatar pipeline", () => {
     expect(spinePitch(forwardFoldDecision, "chest")).toBeGreaterThan(0.17);
 
     expect(legLiftDecision.exercisePose.poseKey).toBe("seated-leg-lift");
-    expect(legLiftDecision.supportPresentation.owner).toBe("support-presentation-seated-leg-lift");
-    expect(legPitch(legLiftDecision, "rightLowerLeg")).toBeGreaterThan(
-      legPitch(legLiftDecision, "leftLowerLeg"),
-    );
+    expect(legLiftDecision.supportIntent.key).toBe("feet-floor");
+    expect(legLiftDecision.supportPresentation.owner).toBe("support-presentation-none");
+    expect(legLiftDecision.supportPresentation.shouldApply).toBe(false);
     expect(proofSlerps.every((slerp) => slerp >= 0.86)).toBe(true);
     expect(neutralDecision.supportPresentation.armSpecs.every((spec) => spec.slerp >= 0.86)).toBe(true);
   });

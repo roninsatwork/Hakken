@@ -111,7 +111,7 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
     appliedDecision.shouldUseLegacyLowerBody || appliedDecision.shouldUseRecordedSquatPresentation
       ? playerSquatPresentationDepth
       : null;
-  const legRaiseOverlay = stageDecision.anchoredPlayerLegRaiseSide
+  const legRaiseOverlay = stageDecision.anchoredPlayerLegRaiseSide && retargetAppliedLowerBody < 4
     ? {
         depth: lowerBodyDrive.playerLegRaiseDepth,
         side: stageDecision.anchoredPlayerLegRaiseSide,

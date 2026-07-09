@@ -39,6 +39,13 @@ import {
   loadMovementReplayRecording,
   type MovementReplayRecordingSource,
 } from "../_lib/movementRecordingReplay";
+import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "../_lib/movementNextProofRehearsal";
+import {
+  getMovementProofRehearsalBatchEvidence,
+  getMovementProofRehearsalBatchSummary,
+  getMovementProofRehearsalRequirement,
+  getMovementProofRehearsalScoreSummary,
+} from "../_lib/movementProofRehearsalEvidence";
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {
@@ -51,6 +58,9 @@ import {
   resolveMovementMotionFrame,
   type MovementMotionFrame,
 } from "../_lib/movementMotionFrame";
+import {
+  mirrorMovementLandmarksForDisplay,
+} from "../_lib/movementMirrorMapping";
 import type { VrmMotionRef } from "../_lib/vrmRigging";
 import MovementMatchScene from "../[id]/play/_components/MovementMatchScene";
 import MovementSourceSkeleton from "../[id]/play/_components/MovementSourceSkeleton";
@@ -174,7 +184,18 @@ const LIVE_UPPER_BODY_REVIEW_THRESHOLD = 0.18;
 const LIVE_SPINE_DRIVE_MOTION_THRESHOLD = 0.18;
 const LIVE_SPINE_DRIVE_REVIEW_THRESHOLD = 0.1;
 const LIVE_HEAD_DAMPING_REVIEW_THRESHOLD = 0.05;
-const LIVE_LOWER_BODY_REVIEW_THRESHOLD = 0.52;
+const AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD = 0.85;
+const AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD = 1.25;
+const AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD = 0.18;
+const AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD = 0.12;
+const AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD = 0.52;
+const AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD = 0.18;
+const AVATAR_FOLLOW_CURRENT_LOWER_REVIEW_THRESHOLD = 0.24;
+const AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD = 0.08;
+const AVATAR_FOLLOW_PLANTED_FOOT_ERROR_THRESHOLD = 0.12;
+const AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD = 0.14;
+type AvatarFollowBatchStatus = "blocked" | "review" | "pass";
+type AvatarFollowCriterionStatus = "blocked" | "review" | "pass" | "--";
 const SOURCE_OUT_OF_FRAME_REVIEW_COUNT = 3;
 
 function frameLandmarks(frame?: MovementDebugReplayFrame) {
@@ -191,6 +212,57 @@ function headMotionMagnitude(value?: { pitch: number; yaw: number; roll: number 
   return Math.max(Math.abs(value.pitch), Math.abs(value.yaw), Math.abs(value.roll));
 }
 
+function maxAvatarSegmentError(
+  avatarVisual: MovementTrackingDebugState["avatarVisual"] | undefined,
+  segments: string[],
+) {
+  const errors = segments.flatMap((segment) => {
+    const value = avatarVisual?.segments?.[segment]?.sourceError;
+    return typeof value === "number" && Number.isFinite(value) ? [value] : [];
+  });
+  return errors.length > 0 ? Math.max(...errors) : undefined;
+}
+
+function maxFinite(values: Array<number | undefined>) {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  return valid.length > 0 ? Math.max(...valid) : undefined;
+}
+
+function avatarPlantedFootClearance(
+  avatarVisual: MovementTrackingDebugState["avatarVisual"] | undefined,
+  plantedFoot: string | undefined,
+) {
+  const left = avatarVisual?.footing?.leftFootClearance;
+  const right = avatarVisual?.footing?.rightFootClearance;
+  if (plantedFoot === "left") return left;
+  if (plantedFoot === "right") return right;
+  if (plantedFoot === "both") return maxFinite([left, right]);
+  return undefined;
+}
+
+function avatarSegmentVectorAttr(
+  avatarVisual: MovementTrackingDebugState["avatarVisual"] | undefined,
+  segment: string,
+  key: "direction" | "sourceDirection",
+) {
+  const vector = avatarVisual?.segments?.[segment]?.[key];
+  if (!vector) return "";
+  return `${vector.x},${vector.y},${vector.z}`;
+}
+
+function extractKnownOwner(fallbacks: Record<string, string> | undefined, key: "feet" | "lower") {
+  if (!fallbacks) return undefined;
+  const owner = extractOwner(fallbacks, key);
+  return owner === "unknown" ? undefined : owner;
+}
+
+function avatarFollowCriterionClass(status: AvatarFollowCriterionStatus) {
+  if (status === "blocked") return "text-[#ffb0b0]";
+  if (status === "review") return "text-[#f6ccbe]";
+  if (status === "pass") return "text-[#a8d5ba]";
+  return "text-muted";
+}
+
 function captureFileName(recordingId: string | null, suffix: string) {
   const recordingSuffix = recordingId ? recordingId.slice(-8) : "pending";
   return `movement-replay-${recordingSuffix}-${suffix}`;
@@ -202,6 +274,10 @@ function downloadDataUrl(filename: string, dataUrl: string) {
   link.href = dataUrl;
   link.rel = "noopener";
   link.click();
+}
+
+function compactCaptureLabel(value: string, maxLength = 42) {
+  return value.length <= maxLength ? value : `${value.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
 function selectStripFrameIndexes(
@@ -246,11 +322,34 @@ function classifyLowerOwner(owner?: string) {
 
 function getBatchSummary(analyses: MovementReplayAnalysis[]) {
   const visualScores = analyses.map((analysis) => analysis.metrics.visualMatchScore);
+  const setupBlocked = analyses.filter((analysis) => analysis.metrics.startReadinessBlockedFrameCount > 0).length;
+  const setupReadyFrames = analyses.reduce(
+    (sum, analysis) => sum + analysis.metrics.startReadinessReadyFrameCount,
+    0,
+  );
+  const setupBlockedFrames = analyses.reduce(
+    (sum, analysis) => sum + analysis.metrics.startReadinessBlockedFrameCount,
+    0,
+  );
+  const setupTopMessages = new Map<string, number>();
+  analyses.forEach((analysis) => {
+    analysis.gamePath.startReadinessMessageSummary.forEach((item) => {
+      setupTopMessages.set(item.message, (setupTopMessages.get(item.message) ?? 0) + item.count);
+    });
+  });
+  const setupTopMessage = [...setupTopMessages.entries()].sort((left, right) => (
+    right[1] - left[1] || left[0].localeCompare(right[0])
+  ))[0]?.[0] ?? null;
+
   return {
     clean: analyses.filter((analysis) => analysis.pass && countFailures(analysis, "warning") === 0).length,
     errors: analyses.reduce((sum, analysis) => sum + countFailures(analysis, "error"), 0),
     failed: analyses.filter((analysis) => !analysis.pass).length,
     passed: analyses.filter((analysis) => analysis.pass).length,
+    setupBlocked,
+    setupBlockedFrames,
+    setupReadyFrames,
+    setupTopMessage,
     visualMatchScore: visualScores.length === 0
       ? 0
       : visualScores.reduce((sum, score) => sum + score, 0) / visualScores.length,
@@ -322,8 +421,100 @@ function getBatchStatusLabel({
 }) {
   if (!hasRunBatch) return `${selectedCount} recordings selected`;
   if (summary.errors > 0) return `${summary.errors} code errors in ${summary.failed}/${total} recordings`;
+  if (summary.setupBlocked > 0) {
+    return `${summary.setupBlocked}/${total} recordings have setup blockers`;
+  }
   if (summary.warnings > 0) return `0 code errors · ${Math.round(summary.visualMatchScore * 100)}% visual match · review needed`;
   return `${summary.clean}/${total} recordings clean`;
+}
+
+function getAvatarFollowBatchStatus(analysis: MovementReplayAnalysis): AvatarFollowBatchStatus {
+  const hasHardFailure = analysis.replayStudio.session.status === "blocked" ||
+    countFailures(analysis, "error") > 0;
+  if (hasHardFailure) return "blocked";
+  const needsReview = analysis.replayStudio.session.status === "review" ||
+    countFailures(analysis, "warning") > 0 ||
+    analysis.metrics.visualMatchScore < AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD ||
+    (
+      analysis.metrics.ownerTransitionsPerSecond > AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD &&
+      analysis.metrics.lowerBodyOwnerTransitions >= 2
+    ) ||
+    analysis.metrics.averageAvatarLowerBodyDirectionError > AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD;
+  return needsReview ? "review" : "pass";
+}
+
+function getAvatarFollowBatchIssueCode(analysis: MovementReplayAnalysis) {
+  const worstFrameFailure = analysis.replayStudio.session.worstFrames[0]?.failures[0];
+  if (worstFrameFailure) return worstFrameFailure.code;
+  const firstFailure = analysis.failures.find((failure) => failure.severity === "error") ?? analysis.failures[0];
+  if (firstFailure) return firstFailure.code;
+  if (analysis.metrics.visualMatchScore < AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD) return "visual_match_low";
+  if (
+    analysis.metrics.ownerTransitionsPerSecond > AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD &&
+    analysis.metrics.lowerBodyOwnerTransitions >= 2
+  ) {
+    return "lower_body_owner_flicker";
+  }
+  if (analysis.metrics.averageAvatarLowerBodyDirectionError > AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD) {
+    return "avatar_output_diverged";
+  }
+  return "clean";
+}
+
+function getAvatarFollowBatchNextFixArea(analysis: MovementReplayAnalysis) {
+  const worstFrameFailure = analysis.replayStudio.session.worstFrames[0]?.failures[0];
+  if (worstFrameFailure) return worstFrameFailure.nextFixArea;
+  const issueCode = getAvatarFollowBatchIssueCode(analysis);
+  if (issueCode === "visual_match_low") return "Replay visual proof capture / avatar-follow gate";
+  if (issueCode === "lower_body_owner_flicker") return "lower-body owner smoothing / hysteresis";
+  if (issueCode === "avatar_output_diverged") return "VRM lower-body application / leg-retarget output";
+  return "none";
+}
+
+function getProofRehearsalReadiness({
+  hasRunBatch,
+  isRunInProgress,
+  selectedCount,
+  setupBlocked,
+}: {
+  hasRunBatch: boolean;
+  isRunInProgress: boolean;
+  selectedCount: number;
+  setupBlocked: number;
+}) {
+  if (selectedCount === 0) {
+    return {
+      detail: "Select the recording set you want to compare before the physical proof pass.",
+      label: "Select recordings first",
+      state: "needs-selection",
+    };
+  }
+  if (isRunInProgress) {
+    return {
+      detail: "Replay Lab is checking the selected recordings for setup blockers.",
+      label: "Checking selected recordings",
+      state: "checking",
+    };
+  }
+  if (!hasRunBatch) {
+    return {
+      detail: "Run the selected recordings so setup blockers are visible before recording new proof.",
+      label: "Run selected recordings",
+      state: "needs-run",
+    };
+  }
+  if (setupBlocked > 0) {
+    return {
+      detail: `${setupBlocked} selected recording${setupBlocked === 1 ? "" : "s"} still need setup review before physical proof.`,
+      label: "Fix setup blockers first",
+      state: "setup-blocked",
+    };
+  }
+  return {
+    detail: "Selected recordings have no setup blockers; rehearse the two physical proof motions next.",
+    label: "Ready to rehearse proof",
+    state: "ready",
+  };
 }
 
 type ReplayStudioParitySnapshot = {
@@ -406,6 +597,7 @@ export default function MovementReplayLabPage() {
   const replaySceneRef = useRef<HTMLElement | null>(null);
   const replayAvatarDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const replayMotionRef = useRef<VrmMotionRef>(null);
+  const replaySourceMotionRef = useRef<VrmMotionRef>(null);
   const replayMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<Id<"movements"> | null>(null);
   const [selectedRecordingIds, setSelectedRecordingIds] = useState<Array<Id<"movements">>>([]);
@@ -600,11 +792,95 @@ export default function MovementReplayLabPage() {
   const analysisByRecordingId = useMemo(() => (
     new Map(batchAnalyses.map((batchAnalysis) => [batchAnalysis.sessionId, batchAnalysis]))
   ), [batchAnalyses]);
+  const setupReviewItems = useMemo(() => {
+    if (!hasRunBatch || !replayRecordings) return [];
+
+    return replayRecordings.flatMap((recording) => {
+      if (!selectedRecordingIds.includes(recording._id)) return [];
+      const recordingAnalysis = analysisByRecordingId.get(recording._id);
+      const topMessage = recordingAnalysis?.gamePath.startReadinessMessageSummary[0];
+      if (!recordingAnalysis || !topMessage || recordingAnalysis.metrics.startReadinessBlockedFrameCount === 0) {
+        return [];
+      }
+
+      return [{
+        analysis: recordingAnalysis,
+        recording,
+        topMessage,
+      }];
+    }).sort((left, right) => (
+      right.analysis.metrics.startReadinessBlockedFrameCount -
+      left.analysis.metrics.startReadinessBlockedFrameCount ||
+      right.topMessage.count - left.topMessage.count ||
+      (left.recording.title ?? "").localeCompare(right.recording.title ?? "")
+    ));
+  }, [analysisByRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
+  const avatarFollowBatchItems = useMemo(() => {
+    if (!hasRunBatch || !replayRecordings) return [];
+    const statusRank = { blocked: 0, review: 1, pass: 2 } as const;
+
+    return replayRecordings.flatMap((recording) => {
+      if (!selectedRecordingIds.includes(recording._id)) return [];
+      const recordingAnalysis = analysisByRecordingId.get(recording._id);
+      if (!recordingAnalysis) return [];
+
+      const status = getAvatarFollowBatchStatus(recordingAnalysis);
+      const worstFrame = recordingAnalysis.replayStudio.session.worstFrames[0] ?? null;
+      const issueCode = getAvatarFollowBatchIssueCode(recordingAnalysis);
+      return [{
+        analysis: recordingAnalysis,
+        issueCode,
+        nextFixArea: getAvatarFollowBatchNextFixArea(recordingAnalysis),
+        recording,
+        status,
+        worstFrame,
+      }];
+    }).sort((left, right) => (
+      statusRank[left.status] - statusRank[right.status] ||
+      (right.analysis.replayStudio.session.blockedFrameCount - left.analysis.replayStudio.session.blockedFrameCount) ||
+      (right.analysis.replayStudio.session.failureCount - left.analysis.replayStudio.session.failureCount) ||
+      (right.analysis.metrics.averageAvatarLowerBodyDirectionError - left.analysis.metrics.averageAvatarLowerBodyDirectionError) ||
+      (left.recording.title ?? "").localeCompare(right.recording.title ?? "")
+    ));
+  }, [analysisByRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
+  const avatarFollowBatchBlockedCount = avatarFollowBatchItems.filter((item) => item.status === "blocked").length;
+  const avatarFollowBatchReviewCount = avatarFollowBatchItems.filter((item) => item.status === "review").length;
+  const avatarFollowBatchWorstItem = avatarFollowBatchItems[0] ?? null;
+  const recordingTitleById = useMemo(() => (
+    new Map<string, string>((replayRecordings ?? []).map((recording) => [
+      recording._id,
+      recording.title ?? recording._id,
+    ]))
+  ), [replayRecordings]);
 
   const analysis = useMemo(
     () => replaySession ? analyzeMovementDebugReplaySession(replaySession) : null,
     [replaySession],
   );
+  const proofRehearsalEvidenceEntries = useMemo(() => {
+    if (hasRunBatch) {
+      return batchAnalyses.map((batchAnalysis, order) => ({
+        analysis: batchAnalysis,
+        order,
+        recordingId: batchAnalysis.sessionId,
+        recordingTitle: recordingTitleById.get(batchAnalysis.sessionId),
+      }));
+    }
+
+    if (!activeRecordingId || !analysis) return [];
+    return [{
+      analysis,
+      order: 0,
+      recordingId: activeRecordingId,
+      recordingTitle: recordingTitleById.get(activeRecordingId),
+    }];
+  }, [activeRecordingId, analysis, batchAnalyses, hasRunBatch, recordingTitleById]);
+  const proofRehearsalCandidateSummary = useMemo(() => (
+    getMovementProofRehearsalBatchSummary(
+      MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS,
+      proofRehearsalEvidenceEntries,
+    )
+  ), [proofRehearsalEvidenceEntries]);
   const failureGroups = useMemo(
     () => getFailureGroups(analysis?.failures ?? []),
     [analysis?.failures],
@@ -621,6 +897,7 @@ export default function MovementReplayLabPage() {
   const currentFallbacks = currentAvatarDebug?.fallbacks;
   const currentSpineDrive = currentAvatarDebug?.spineDrive;
   const currentLegRaise = currentAvatarDebug?.avatarLegRaise;
+  const torsoConfidence = currentBodyConfidence?.torso;
   const armConfidence = minNumber([
     currentBodyConfidence?.leftShoulder,
     currentBodyConfidence?.rightShoulder,
@@ -640,6 +917,23 @@ export default function MovementReplayLabPage() {
   ]);
   const currentGamePathFrame = analysis?.gamePath.frames.find((frame) => frame.frameIndex === safeFrameIndex);
   const currentSourceFrame = analysis?.gamePath.sourceFrames.find((frame) => frame.frameIndex === safeFrameIndex);
+  const currentReplayStudioFrameVerdict = analysis?.replayStudio.frames.find((frame) => (
+    frame.frameIndex === safeFrameIndex
+  ));
+  const replayStudioWorstFrames = analysis?.replayStudio.session.worstFrames ?? [];
+  const topStartReadinessMessages = analysis?.gamePath.startReadinessMessageSummary.slice(0, 3) ?? [];
+  const currentStartReadinessStatus = currentSourceFrame
+    ? currentSourceFrame.canStartGame ? "ready" : currentSourceFrame.startReadinessState
+    : "--";
+  const currentStartReadinessDetail = currentSourceFrame
+    ? currentSourceFrame.blockedReasons.length > 0
+      ? currentSourceFrame.blockedReasons.join(", ")
+      : currentSourceFrame.promptEvents.length > 0
+        ? currentSourceFrame.promptEvents.join(", ")
+        : currentSourceFrame.visibleBodyParts.length > 0
+          ? `visible ${currentSourceFrame.visibleBodyParts.join(", ")}`
+          : "no blockers"
+    : "--";
   const currentRootMotionFrame = analysis?.rootMotion.frames.find((frame) => frame.frameIndex === safeFrameIndex);
   const rootPathStrip = useMemo(
     () => buildPathStripPoints(analysis?.rootMotion.frames ?? []),
@@ -660,11 +954,49 @@ export default function MovementReplayLabPage() {
   const rootMotionLabel = currentRootMotionFrame
     ? rootMotionNeedsReview ? "review" : "stable"
     : "--";
-  const liveLowerOwner = currentFallbacks?.lower ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
-  const liveFeetOwner = currentFallbacks?.feet ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
-  const replayLowerOwner = liveLowerOwner ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined);
-  const replayFeetOwner = liveFeetOwner ?? (currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined);
+  const recordedLowerOwner = currentFrame ? extractOwner(currentFrame.fallbacks, "lower") : undefined;
+  const recordedFeetOwner = currentFrame ? extractOwner(currentFrame.fallbacks, "feet") : undefined;
+  const liveLowerOwner = extractKnownOwner(currentFallbacks, "lower") ?? recordedLowerOwner;
+  const liveFeetOwner = extractKnownOwner(currentFallbacks, "feet") ?? recordedFeetOwner;
+  const replayLowerOwner = liveLowerOwner ?? recordedLowerOwner;
+  const replayFeetOwner = liveFeetOwner ?? recordedFeetOwner;
   const replaySquatDepth = currentRetarget?.squatDepth ?? currentFrame?.retarget?.squatDepth ?? 0;
+  const currentFrameStationaryFeetFloorSideBend = Boolean(
+    currentGamePathFrame &&
+      currentRootMotionFrame?.intent.key === "root-stationary" &&
+      currentGamePathFrame.supportIntentKey === "feet-floor" &&
+      Math.abs(currentSpineDrive?.sideBend ?? 0) >= 0.12 &&
+      Math.max(currentGamePathFrame.leftKneeLift, currentGamePathFrame.rightKneeLift) <
+        AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD &&
+      currentGamePathFrame.squatDepth < 0.12 &&
+      !currentGamePathFrame.shouldDrivePlayerLegRaise &&
+      !currentGamePathFrame.shouldDrivePlayerSquat,
+  );
+  const currentFrameActiveLegMotion = Boolean(
+    currentGamePathFrame &&
+      (
+        currentGamePathFrame.shouldDrivePlayerLegRaise ||
+        Math.max(currentGamePathFrame.leftKneeLift, currentGamePathFrame.rightKneeLift) >=
+          AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD ||
+        (!currentFrameStationaryFeetFloorSideBend &&
+          currentGamePathFrame.lowerBodyTargetPlayerRetargetMotion >= AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD) ||
+        currentGamePathFrame.lowerOwner.includes("leg-raise") ||
+        currentGamePathFrame.lowerLabel.includes("knee-raise")
+      ),
+  );
+  const currentFrameUsesSeatedSupport = Boolean(
+    currentGamePathFrame &&
+      (
+        currentGamePathFrame.supportIntentKey === "seat-chair" ||
+        currentGamePathFrame.supportPresentationOwner.startsWith("support-presentation-seated") ||
+        currentGamePathFrame.supportContactOwner.includes("seat") ||
+        currentGamePathFrame.supportContactOwner.includes("chair")
+      ),
+  );
+  const currentFrameSourceReady = Boolean(
+    currentSourceFrame &&
+      (currentSourceFrame.canStartGame || currentSourceFrame.startReadinessState === "ready"),
+  );
   const gamePathLowerMode = classifyLowerOwner(currentGamePathFrame?.lowerOwner);
   const replayLowerMode = classifyLowerOwner(replayLowerOwner);
   const gamePathParityNeedsReview = Boolean(
@@ -740,7 +1072,10 @@ export default function MovementReplayLabPage() {
       .map((sample, index) => ({
         calibration: buildMovementCalibration({
           now: index,
-          poseLandmarks: sample.tracking.pose,
+          poseLandmarks: mirrorMovementLandmarksForDisplay(sample.tracking.pose, {
+            mapX: (x) => 1 - x,
+            mirrorMode: "facing-player",
+          }),
         }),
         score: replayCalibrationNeutralScore(sample),
       }))
@@ -760,11 +1095,22 @@ export default function MovementReplayLabPage() {
   const currentReplayMotionFrame = useMemo(() => {
     if (!currentFrame || currentPoseLandmarks.length < 33) return null;
 
+    const displayPoseLandmarks = mirrorMovementLandmarksForDisplay(currentPoseLandmarks, {
+      mapX: (x) => 1 - x,
+      mirrorMode: "facing-player",
+    });
+    const displayWorldPoseLandmarks = currentFrame.tracking.worldPose.length >= 33
+      ? mirrorMovementLandmarksForDisplay(currentFrame.tracking.worldPose, {
+          mapX: (x) => -x,
+          mirrorMode: "facing-player",
+        })
+      : [];
+
     return resolveMovementMotionFrame({
       avatarRole: "player",
-      calibration: replayPlayerCalibration ?? buildMovementCalibration({ poseLandmarks: currentPoseLandmarks }),
-      displayPoseLandmarks: currentPoseLandmarks,
-      displayWorldPoseLandmarks: currentFrame.tracking.worldPose,
+      calibration: replayPlayerCalibration ?? buildMovementCalibration({ poseLandmarks: displayPoseLandmarks }),
+      displayPoseLandmarks,
+      displayWorldPoseLandmarks,
       mirrorMode: "facing-player",
       retargetSourceModel: replayRetargetSourceModel,
       sourceFrame: buildMovementSourceFrame({
@@ -819,6 +1165,17 @@ export default function MovementReplayLabPage() {
     const rawHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headRaw);
     const appliedHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headApplied);
     const headDamping = rawHeadMagnitude - appliedHeadMagnitude;
+    const armPoseError = maxAvatarSegmentError(currentAvatarVisual, [
+      "leftUpperArm",
+      "leftLowerArm",
+      "rightUpperArm",
+      "rightLowerArm",
+    ]);
+    const footPoseError = maxAvatarSegmentError(currentAvatarVisual, [
+      "leftFoot",
+      "rightFoot",
+    ]);
+    const spinePoseError = maxAvatarSegmentError(currentAvatarVisual, ["spine"]);
 
     if (outOfFrameCount >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT || maxY > 1.08) {
       failures.push({
@@ -858,10 +1215,24 @@ export default function MovementReplayLabPage() {
       upperBodyError > LIVE_UPPER_BODY_REVIEW_THRESHOLD
     ) {
       failures.push({
-        code: "avatar_upper_body_diverged",
+        code: "avatar_arm_pose_diverged",
         detail: `Live avatar upper-body direction error is ${upperBodyError.toFixed(2)} across ${upperBodySegments} segments; review visible spine/arm match.`,
         frameIndex: safeFrameIndex,
-        severity: "warning",
+        severity: currentFrameSourceReady ? "error" : "warning",
+      });
+    }
+
+    if (
+      typeof armPoseError === "number" &&
+      typeof armConfidence === "number" &&
+      armConfidence >= 0.45 &&
+      armPoseError > AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_arm_pose_diverged",
+        detail: `Avatar arm pose max segment error is ${armPoseError.toFixed(2)} with source arm confidence ${armConfidence.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: currentFrameSourceReady ? "error" : "warning",
       });
     }
 
@@ -872,10 +1243,39 @@ export default function MovementReplayLabPage() {
       upperBodyError > LIVE_SPINE_DRIVE_REVIEW_THRESHOLD
     ) {
       failures.push({
-        code: "avatar_upper_body_diverged",
+        code: "avatar_spine_angle_diverged",
         detail: `Recorded spine drive is strong (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but avatar upper-body error is ${upperBodyError.toFixed(2)}.`,
         frameIndex: safeFrameIndex,
-        severity: "warning",
+        severity: currentFrameSourceReady ? "error" : "warning",
+      });
+    }
+
+    if (
+      currentSpineDrive?.owner === "recorded-spine-model" &&
+      typeof spinePoseError === "number" &&
+      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
+      spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_spine_angle_diverged",
+        detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} while recorded spine drive is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}).`,
+        frameIndex: safeFrameIndex,
+        severity: currentFrameSourceReady ? "error" : "warning",
+      });
+    }
+
+    if (
+      currentFrameSourceReady &&
+      typeof torsoConfidence === "number" &&
+      torsoConfidence >= 0.45 &&
+      typeof spinePoseError === "number" &&
+      spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_spine_angle_diverged",
+        detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} with source torso confidence ${torsoConfidence.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: "error",
       });
     }
 
@@ -887,10 +1287,10 @@ export default function MovementReplayLabPage() {
       headDamping > LIVE_HEAD_DAMPING_REVIEW_THRESHOLD
     ) {
       failures.push({
-        code: "avatar_head_spine_diverged",
+        code: "avatar_head_alignment_diverged",
         detail: `Recorded spine motion is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but head motion is damped from ${formatAngleDegrees(rawHeadMagnitude)} to ${formatAngleDegrees(appliedHeadMagnitude)}.`,
         frameIndex: safeFrameIndex,
-        severity: "warning",
+        severity: currentFrameSourceReady ? "error" : "warning",
       });
     }
 
@@ -901,10 +1301,10 @@ export default function MovementReplayLabPage() {
       Math.abs(currentAvatarDebug.headApplied.yaw) < 0.08
     ) {
       failures.push({
-        code: "avatar_head_spine_diverged",
+        code: "avatar_head_alignment_diverged",
         detail: `Recorded pose head yaw is strong (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)}) but avatar applied yaw is nearly neutral (${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
         frameIndex: safeFrameIndex,
-        severity: "warning",
+        severity: currentFrameSourceReady ? "error" : "warning",
       });
     }
 
@@ -916,17 +1316,86 @@ export default function MovementReplayLabPage() {
       Math.abs(currentAvatarDebug.headApplied.yaw) >= 0.08
     ) {
       failures.push({
-        code: "avatar_head_spine_diverged",
+        code: "avatar_head_alignment_diverged",
         detail: `Recorded pose head yaw and avatar applied yaw point in opposite directions (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)} vs ${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
         frameIndex: safeFrameIndex,
-        severity: "warning",
+        severity: currentFrameSourceReady ? "error" : "warning",
+      });
+    }
+
+    const plantedFootClearance = avatarPlantedFootClearance(
+      currentAvatarVisual,
+      currentRootMotionFrame?.intent.plantedFoot,
+    );
+
+    if (
+      currentFrameSourceReady &&
+      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
+      typeof footPoseError === "number" &&
+      footPoseError > AVATAR_FOLLOW_PLANTED_FOOT_ERROR_THRESHOLD &&
+      (
+        !currentFrameStationaryFeetFloorSideBend ||
+        typeof plantedFootClearance !== "number" ||
+        plantedFootClearance > AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD
+      )
+    ) {
+      failures.push({
+        code: "avatar_planted_foot_diverged",
+        detail: `Avatar planted-foot segment error is ${footPoseError.toFixed(2)} while source support is feet-floor.`,
+        frameIndex: safeFrameIndex,
+        severity: "error",
       });
     }
 
     if (
+      currentFrameSourceReady &&
+      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
+      typeof plantedFootClearance === "number" &&
+      plantedFootClearance > AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD
+    ) {
+      failures.push({
+        code: "avatar_planted_foot_diverged",
+        detail: `Avatar planted foot is ${plantedFootClearance.toFixed(2)} above the floor while source support is feet-floor.`,
+        frameIndex: safeFrameIndex,
+        severity: "error",
+      });
+    }
+
+    if (
+      currentFrameSourceReady &&
+      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
+      currentFrameActiveLegMotion &&
+      typeof replayFeetOwner === "string" &&
+      replayFeetOwner.startsWith("recorded")
+    ) {
+      failures.push({
+        code: "avatar_planted_foot_diverged",
+        detail: `Source has active leg motion on feet-floor support, but Replay Lab reports feet owner as ${replayFeetOwner} instead of a planted/locked support owner.`,
+        frameIndex: safeFrameIndex,
+        severity: "error",
+      });
+    }
+
+    const activeLegVisualDiverged = Boolean(
+      currentFrameSourceReady &&
+        currentFrameActiveLegMotion &&
+        lowerBodySegments >= 4 &&
+        typeof lowerBodyError === "number" &&
+        lowerBodyError > AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD
+    );
+
+    if (activeLegVisualDiverged) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: `Current frame has active leg motion but rendered avatar lower-body direction error is ${lowerBodyError?.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        semanticCode: "leg-lift-missing",
+        severity: "error",
+      });
+    } else if (
       lowerBodySegments >= 4 &&
       typeof lowerBodyError === "number" &&
-      lowerBodyError > LIVE_LOWER_BODY_REVIEW_THRESHOLD
+      lowerBodyError > AVATAR_FOLLOW_CURRENT_LOWER_REVIEW_THRESHOLD
     ) {
       failures.push({
         code: "avatar_output_diverged",
@@ -936,24 +1405,56 @@ export default function MovementReplayLabPage() {
       });
     }
 
+    if (currentFrameSourceReady && currentFrameActiveLegMotion && currentFrameUsesSeatedSupport) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: `Source is ready with active leg motion, but avatar support is seated (${currentGamePathFrame?.supportIntentLabel ?? "unknown"} · ${currentGamePathFrame?.supportPresentationOwner ?? "unknown"}).`,
+        frameIndex: safeFrameIndex,
+        semanticCode: "movement-visible-but-unscored",
+        severity: "error",
+      });
+    }
+
+    if (
+      currentFrameActiveLegMotion &&
+      lowerBodySegments === 0 &&
+      currentAvatarVisual
+    ) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: "Current frame has active leg motion but no comparable rendered avatar lower-body segments.",
+        frameIndex: safeFrameIndex,
+        semanticCode: "leg-lift-missing",
+        severity: "warning",
+      });
+    }
+
     return failures;
   }, [
-    currentAvatarVisual?.averageLowerBodyDirectionError,
-    currentAvatarVisual?.averageUpperBodyDirectionError,
-    currentAvatarVisual?.comparedLowerBodySegments,
-    currentAvatarVisual?.comparedUpperBodySegments,
+    currentAvatarVisual,
     currentAvatarDebug?.headApplied,
     currentAvatarDebug?.headRaw,
     currentFrame?.poseBounds?.maxY,
     currentFrame?.poseBounds?.outOfFrameCount,
     currentFrame?.retarget?.sourceQuality,
+    currentFrameActiveLegMotion,
+    currentFrameSourceReady,
+    currentFrameStationaryFeetFloorSideBend,
+    currentFrameUsesSeatedSupport,
+    currentGamePathFrame?.supportIntentKey,
+    currentGamePathFrame?.supportIntentLabel,
+    currentGamePathFrame?.supportPresentationOwner,
+    currentRootMotionFrame?.intent.plantedFoot,
     currentRetarget?.sourceQuality,
     currentSpineDrive?.forwardLean,
     currentSpineDrive?.owner,
     currentSpineDrive?.sideBend,
+    replayFeetOwner,
+    armConfidence,
     footConfidence,
     legConfidence,
     safeFrameIndex,
+    torsoConfidence,
   ]);
   const replayStudioParityFailure = useMemo<MovementReplayFailure | null>(() => {
     if (!replayStudioParity || replayStudioParity.diffs.length === 0) return null;
@@ -965,10 +1466,150 @@ export default function MovementReplayLabPage() {
       severity: "warning",
     };
   }, [replayStudioParity, safeFrameIndex]);
+  const avatarFollowSessionFailures = useMemo<MovementReplayFailure[]>(() => {
+    if (!analysis) return [];
+    const failures: MovementReplayFailure[] = [];
+    const visualMatchScore = analysis.metrics.visualMatchScore;
+    const ownerTransitionsPerSecond = analysis.metrics.ownerTransitionsPerSecond;
+    const lowerError = analysis.metrics.averageAvatarLowerBodyDirectionError;
+
+    if (visualMatchScore < AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD) {
+      failures.push({
+        code: "visual_match_low",
+        detail: `Replay avatar-follow visual match is ${Math.round(visualMatchScore * 100)}%; target is ${Math.round(AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD * 100)}%.`,
+        severity: "error",
+      });
+    }
+
+    if (
+      ownerTransitionsPerSecond > AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD &&
+      analysis.metrics.lowerBodyOwnerTransitions >= 2
+    ) {
+      failures.push({
+        code: "lower_body_owner_flicker",
+        detail: `Lower-body owner changes ${ownerTransitionsPerSecond.toFixed(2)} times/sec; target is <= ${AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD.toFixed(2)}.`,
+        severity: "warning",
+      });
+    }
+
+    if (analysis.metrics.avatarVisualFrameCount === 0) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: "This replay has no persisted VRM bone telemetry, so visual follow must be proven by capture frames before it can pass.",
+        severity: "error",
+      });
+    }
+
+    if (lowerError > AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD) {
+      failures.push({
+        code: "avatar_output_diverged",
+        detail: `Average avatar lower-body direction error is ${lowerError.toFixed(2)}; target is <= ${AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD.toFixed(2)}.`,
+        severity: "error",
+      });
+    }
+
+    return failures;
+  }, [analysis]);
   const currentFrameFailures = [
     ...(analysis?.failures.filter((failure) => failure.frameIndex === safeFrameIndex) ?? []),
     ...liveCurrentFrameFailures,
     ...(replayStudioParityFailure ? [replayStudioParityFailure] : []),
+  ];
+  const replayStudioFrameStatus = currentReplayStudioFrameVerdict?.status;
+  const replayStudioSessionStatus = analysis?.replayStudio.session.status;
+  const currentReplayStudioPrimaryFailure = currentReplayStudioFrameVerdict?.failures[0] ?? null;
+  const avatarFollowHasSessionError = avatarFollowSessionFailures.some((failure) => (
+    failure.severity === "error"
+  ));
+  const avatarFollowProofMissing = Boolean(analysis && analysis.metrics.avatarVisualFrameCount === 0);
+  const avatarFollowStatus = currentFrameFailures.some((failure) => failure.severity === "error") ||
+    avatarFollowHasSessionError ||
+    replayStudioFrameStatus === "blocked"
+    ? "blocked"
+    : avatarFollowSessionFailures.length > 0 ||
+        currentFrameFailures.length > 0 ||
+        replayStudioFrameStatus === "review" ||
+        replayStudioSessionStatus === "review" ||
+        replayStudioSessionStatus === "blocked"
+      ? "review"
+      : analysis
+        ? "pass"
+        : "--";
+  const avatarFollowAcceptanceStatus = avatarFollowStatus === "blocked"
+    ? "blocked-for-acceptance"
+    : avatarFollowStatus === "review"
+      ? "review-only"
+      : avatarFollowStatus === "pass"
+        ? "accepted"
+        : "--";
+  const avatarFollowJudgeText = currentReplayStudioFrameVerdict
+    ? `${currentReplayStudioFrameVerdict.status} frame / ${analysis?.replayStudio.session.status ?? "--"} session`
+    : analysis?.replayStudio.session.status
+      ? `${analysis.replayStudio.session.status} session`
+      : "--";
+  const avatarFollowCurrentFailureCodes = currentFrameFailures.map((failure) => failure.code).join(",");
+  const avatarFollowCriterionStatus = (
+    codes: string[],
+  ): AvatarFollowCriterionStatus => {
+    const matchingFailures = currentFrameFailures.filter((failure) => (
+      codes.includes(failure.code)
+    ));
+    if (matchingFailures.some((failure) => failure.severity === "error")) return "blocked";
+    if (avatarFollowProofMissing) return "blocked";
+    if (matchingFailures.length > 0) return "review";
+    if (avatarFollowHasSessionError) return "review";
+    return currentFrameSourceReady ? "pass" : "--";
+  };
+  const currentArmPoseError = maxAvatarSegmentError(currentAvatarVisual, [
+    "leftUpperArm",
+    "leftLowerArm",
+    "rightUpperArm",
+    "rightLowerArm",
+  ]);
+  const currentSpinePoseError = maxAvatarSegmentError(currentAvatarVisual, ["spine"]);
+  const currentLeftFootPoseError = maxAvatarSegmentError(currentAvatarVisual, ["leftFoot"]);
+  const currentRightFootPoseError = maxAvatarSegmentError(currentAvatarVisual, ["rightFoot"]);
+  const currentLeftShinPoseError = maxAvatarSegmentError(currentAvatarVisual, ["leftShin"]);
+  const currentRightShinPoseError = maxAvatarSegmentError(currentAvatarVisual, ["rightShin"]);
+  const currentFootPoseError = maxAvatarSegmentError(currentAvatarVisual, [
+    "leftFoot",
+    "rightFoot",
+  ]);
+  const currentLeftFootClearance = currentAvatarVisual?.footing?.leftFootClearance;
+  const currentRightFootClearance = currentAvatarVisual?.footing?.rightFootClearance;
+  const currentPlantedFootClearance = avatarPlantedFootClearance(
+    currentAvatarVisual,
+    currentRootMotionFrame?.intent.plantedFoot,
+  );
+  const avatarFollowHeadCriterionStatus = avatarFollowCriterionStatus(["avatar_head_alignment_diverged"]);
+  const avatarFollowSpineCriterionStatus = avatarFollowCriterionStatus(["avatar_spine_angle_diverged"]);
+  const avatarFollowArmCriterionStatus = avatarFollowCriterionStatus(["avatar_arm_pose_diverged"]);
+  const avatarFollowFootCriterionStatus = avatarFollowCriterionStatus(["avatar_planted_foot_diverged"]);
+  const avatarFollowCriteria = [
+    {
+      key: "head",
+      label: "Head",
+      metric: `raw ${formatAnglesCompact(currentAvatarDebug?.headRaw)} · applied ${formatAnglesCompact(currentAvatarDebug?.headApplied)}`,
+      status: avatarFollowHeadCriterionStatus,
+    },
+    {
+      key: "spine",
+      label: "Body / spine",
+      metric: `e ${formatNumber(currentSpinePoseError)} · conf ${formatNumber(torsoConfidence)}`,
+      status: avatarFollowSpineCriterionStatus,
+    },
+    {
+      key: "arms",
+      label: "Arms",
+      metric: `e ${formatNumber(currentArmPoseError)} · conf ${formatNumber(armConfidence)}`,
+      status: avatarFollowArmCriterionStatus,
+    },
+    {
+      key: "foot",
+      label: "Planted foot",
+      metric: `e ${formatNumber(currentFootPoseError)} · clear ${formatNumber(currentPlantedFootClearance)} · ${liveFeetOwner ?? "--"}`,
+      status: avatarFollowFootCriterionStatus,
+    },
   ];
   const frameSeverity = useMemo(() => {
     const severityByFrame = new Map<number, "error" | "warning">();
@@ -992,6 +1633,14 @@ export default function MovementReplayLabPage() {
         severityByFrame.set(replayStudioParityFailure.frameIndex, replayStudioParityFailure.severity);
       }
     }
+    analysis?.replayStudio.frames.forEach((frame) => {
+      if (frame.status === "pass") return;
+      const currentSeverity = severityByFrame.get(frame.frameIndex);
+      const replayStudioSeverity = frame.status === "blocked" ? "error" : "warning";
+      if (replayStudioSeverity === "error" || !currentSeverity) {
+        severityByFrame.set(frame.frameIndex, replayStudioSeverity);
+      }
+    });
     return severityByFrame;
   }, [analysis, liveCurrentFrameFailures, replayStudioParityFailure]);
 
@@ -1008,6 +1657,18 @@ export default function MovementReplayLabPage() {
             : null,
         }
       : null;
+  }, [currentFrame]);
+
+  useEffect(() => {
+    const sourceMotion = currentFrame
+      ? {
+          landmarks: currentFrame.tracking.pose,
+          worldLandmarks: currentFrame.tracking.worldPose.length > 0
+            ? currentFrame.tracking.worldPose
+            : null,
+        }
+      : null;
+    replaySourceMotionRef.current = sourceMotion;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1066,6 +1727,12 @@ export default function MovementReplayLabPage() {
       : selectedCount > 0
         ? "Ready to run selected recordings."
         : "Select recordings to run.";
+  const proofRehearsalReadiness = getProofRehearsalReadiness({
+    hasRunBatch,
+    isRunInProgress,
+    selectedCount,
+    setupBlocked: batchSummary.setupBlocked,
+  });
   const resetRunState = () => {
     setHasRunBatch(false);
     setPendingRunId(null);
@@ -1084,6 +1751,13 @@ export default function MovementReplayLabPage() {
     const latestIds = replayRecordings?.slice(0, 5).map((recording) => recording._id) ?? [];
     resetRunState();
     setSelectedRecordingIds(latestIds);
+    setFrameIndex(0);
+    setIsPlaying(false);
+  };
+  const selectAllRecordings = () => {
+    const allIds = replayRecordings?.map((recording) => recording._id) ?? [];
+    resetRunState();
+    setSelectedRecordingIds(allIds);
     setFrameIndex(0);
     setIsPlaying(false);
   };
@@ -1152,7 +1826,7 @@ export default function MovementReplayLabPage() {
       const indexes = selectStripFrameIndexes(frameCount, safeFrameIndex, analysis?.failures ?? []);
       const panelWidth = 420;
       const panelHeight = 260;
-      const labelHeight = 38;
+      const labelHeight = 64;
       const stripCanvas = document.createElement("canvas");
       const tempCanvas = document.createElement("canvas");
       const stripContext = stripCanvas.getContext("2d");
@@ -1170,17 +1844,24 @@ export default function MovementReplayLabPage() {
 
       stripContext.fillStyle = "#07070b";
       stripContext.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
-      stripContext.font = "16px ui-monospace, SFMono-Regular, Menlo, monospace";
-      stripContext.textBaseline = "middle";
+      stripContext.textBaseline = "top";
 
       indexes.forEach((index, stripIndex) => {
         const frame = replaySession.samples[index];
         const x = stripIndex * panelWidth;
+        const sourceFrame = analysis?.gamePath.sourceFrames.find((source) => source.frameIndex === index);
+        const startGateLabel = sourceFrame
+          ? `${sourceFrame.canStartGame ? "ready" : sourceFrame.startReadinessState}: ${sourceFrame.startReadinessMessage}`
+          : "start gate: pending";
         drawMovementSkeleton(tempContext, frameLandmarks(frame), panelWidth, panelHeight);
         stripContext.fillStyle = "#111118";
         stripContext.fillRect(x, 0, panelWidth, labelHeight);
         stripContext.fillStyle = index === safeFrameIndex ? "#f6ccbe" : "#d7d7dd";
-        stripContext.fillText(`frame ${index}`, x + 14, labelHeight / 2);
+        stripContext.font = "16px ui-monospace, SFMono-Regular, Menlo, monospace";
+        stripContext.fillText(`frame ${index}`, x + 14, 10);
+        stripContext.fillStyle = sourceFrame?.canStartGame ? "#a8d5ba" : "#f6ccbe";
+        stripContext.font = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
+        stripContext.fillText(compactCaptureLabel(startGateLabel), x + 14, 36);
         stripContext.drawImage(tempCanvas, x, labelHeight);
       });
 
@@ -1188,12 +1869,31 @@ export default function MovementReplayLabPage() {
         captureFileName(activeRecordingId, "source-strip.png"),
         stripCanvas.toDataURL("image/png"),
       );
-      setCaptureStatus(`Captured source strip: ${indexes.join(", ")}.`);
+      setCaptureStatus(`Captured source strip with setup labels: ${indexes.join(", ")}.`);
     } catch (error) {
       setCaptureStatus(error instanceof Error ? error.message : "Source strip capture failed.");
     } finally {
       setCaptureMode(null);
     }
+  };
+
+  const exportReplayStudioFixLog = () => {
+    if (!analysis) return;
+
+    const fixLog = {
+      generatedAt: new Date().toISOString(),
+      recordingId: activeRecordingId,
+      replayStudio: analysis.replayStudio.session,
+      currentFrame: currentReplayStudioFrameVerdict ?? null,
+      failures: analysis.failures,
+    };
+    downloadDataUrl(
+      captureFileName(activeRecordingId, "replay-studio-fix-log.json"),
+      `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(fixLog, null, 2))}`,
+    );
+    setCaptureStatus(
+      `Exported Replay Studio fix log with ${analysis.replayStudio.session.worstFrames.length} worst frames.`,
+    );
   };
 
   useEffect(() => {
@@ -1216,6 +1916,45 @@ export default function MovementReplayLabPage() {
       <div
         className="flex min-h-[calc(100dvh-92px)] flex-col gap-2"
         data-active-session-id={activeRecordingId ?? ""}
+        data-avatar-follow-current-active-leg-motion={currentFrameActiveLegMotion}
+        data-avatar-follow-current-seated-support={currentFrameUsesSeatedSupport}
+        data-avatar-follow-batch-blocked-recording-count={hasRunBatch ? avatarFollowBatchBlockedCount : ""}
+        data-avatar-follow-batch-review-recording-count={hasRunBatch ? avatarFollowBatchReviewCount : ""}
+        data-avatar-follow-batch-worst-fix-area={hasRunBatch ? avatarFollowBatchWorstItem?.nextFixArea ?? "" : ""}
+        data-avatar-follow-batch-worst-frame={hasRunBatch ? avatarFollowBatchWorstItem?.worstFrame?.frameIndex ?? "" : ""}
+        data-avatar-follow-batch-worst-issue={hasRunBatch ? avatarFollowBatchWorstItem?.issueCode ?? "" : ""}
+        data-avatar-follow-batch-worst-recording-id={hasRunBatch ? avatarFollowBatchWorstItem?.recording._id ?? "" : ""}
+        data-avatar-follow-batch-worst-status={hasRunBatch ? avatarFollowBatchWorstItem?.status ?? "" : ""}
+        data-avatar-follow-session-issue-count={avatarFollowSessionFailures.length}
+        data-avatar-follow-acceptance-status={avatarFollowAcceptanceStatus}
+        data-avatar-follow-current-failure-codes={avatarFollowCurrentFailureCodes}
+        data-avatar-follow-head-status={avatarFollowHeadCriterionStatus}
+        data-avatar-follow-spine-status={avatarFollowSpineCriterionStatus}
+        data-avatar-follow-arm-status={avatarFollowArmCriterionStatus}
+        data-avatar-follow-foot-status={avatarFollowFootCriterionStatus}
+        data-avatar-follow-status={avatarFollowStatus}
+        data-avatar-follow-current-arm-error={currentArmPoseError ?? ""}
+        data-avatar-follow-current-foot-error={currentFootPoseError ?? ""}
+        data-avatar-follow-current-left-foot-error={currentLeftFootPoseError ?? ""}
+        data-avatar-follow-current-left-foot-clearance={currentLeftFootClearance ?? ""}
+        data-avatar-follow-current-left-shin-error={currentLeftShinPoseError ?? ""}
+        data-avatar-follow-current-right-foot-error={currentRightFootPoseError ?? ""}
+        data-avatar-follow-current-right-foot-clearance={currentRightFootClearance ?? ""}
+        data-avatar-follow-current-right-shin-error={currentRightShinPoseError ?? ""}
+        data-avatar-follow-current-planted-foot-clearance={currentPlantedFootClearance ?? ""}
+        data-avatar-follow-current-spine-error={currentSpinePoseError ?? ""}
+        data-avatar-follow-current-left-shin-avatar-direction={avatarSegmentVectorAttr(currentAvatarVisual, "leftShin", "direction")}
+        data-avatar-follow-current-left-shin-source-direction={avatarSegmentVectorAttr(currentAvatarVisual, "leftShin", "sourceDirection")}
+        data-avatar-follow-current-right-shin-avatar-direction={avatarSegmentVectorAttr(currentAvatarVisual, "rightShin", "direction")}
+        data-avatar-follow-current-right-shin-source-direction={avatarSegmentVectorAttr(currentAvatarVisual, "rightShin", "sourceDirection")}
+        data-avatar-follow-current-spine-avatar-direction={avatarSegmentVectorAttr(currentAvatarVisual, "spine", "direction")}
+        data-avatar-follow-current-spine-source-direction={avatarSegmentVectorAttr(currentAvatarVisual, "spine", "sourceDirection")}
+        data-replay-studio-failure-codes={
+          currentReplayStudioFrameVerdict?.failures.map((failure) => failure.code).join(",") ?? ""
+        }
+        data-replay-studio-frame-status={currentReplayStudioFrameVerdict?.status ?? ""}
+        data-replay-studio-session-status={analysis?.replayStudio.session.status ?? ""}
+        data-replay-studio-worst-frame={replayStudioWorstFrames[0]?.frameIndex ?? ""}
         data-avatar-lower-error={currentAvatarVisual?.averageLowerBodyDirectionError ?? ""}
         data-avatar-root-applied-x={currentAvatarDebug?.avatarRoot?.appliedX ?? ""}
         data-avatar-root-applied-yaw={currentAvatarDebug?.avatarRoot?.appliedYaw ?? ""}
@@ -1263,8 +2002,10 @@ export default function MovementReplayLabPage() {
         data-current-source-status={currentSourceFrame?.sourceStatus ?? ""}
         data-current-start-readiness={currentSourceFrame?.startReadinessState ?? ""}
         data-current-start-readiness-blocked-reasons={currentSourceFrame?.blockedReasons.join(",") ?? ""}
+        data-current-start-readiness-message={currentSourceFrame?.startReadinessMessage ?? ""}
         data-current-start-readiness-prompts={currentSourceFrame?.promptEvents.join(",") ?? ""}
         data-current-visible-body-parts={currentSourceFrame?.visibleBodyParts.join(",") ?? ""}
+        data-start-readiness-top-messages={topStartReadinessMessages.map((item) => `${item.message}:${item.count}`).join("|")}
         data-gameplay-clear-movement-event-count={analysis?.metrics.gameplayClearMovementEventCount ?? ""}
         data-gameplay-score-delta-total={analysis?.metrics.gameplayScoreDeltaTotal ?? ""}
         data-gameplay-tracking-uncertainty-event-count={analysis?.metrics.gameplayTrackingUncertaintyEventCount ?? ""}
@@ -1279,6 +2020,7 @@ export default function MovementReplayLabPage() {
         data-leg-raise-raw-left-depth={currentLegRaise?.rawLeftDepth ?? ""}
         data-leg-raise-raw-right-depth={currentLegRaise?.rawRightDepth ?? ""}
         data-leg-raise-side={currentLegRaise?.side ?? ""}
+        data-motion-frame-input={currentAvatarDebug?.fallbacks.motionFrameInput ?? ""}
         data-current-frame-index={safeFrameIndex}
         data-frame-count={frameCount}
         data-game-lower-body-target-can-use-player-retarget-leg-raise={currentGamePathFrame?.lowerBodyTargetCanUsePlayerRetargetLegRaise ?? ""}
@@ -1286,6 +2028,7 @@ export default function MovementReplayLabPage() {
         data-game-lower-body-target-player-retarget-motion={currentGamePathFrame?.lowerBodyTargetPlayerRetargetMotion ?? ""}
         data-game-lower-body-target-should-hold-player-squat={currentGamePathFrame?.lowerBodyTargetShouldHoldPlayerSquat ?? ""}
         data-game-lower-body-target-stage={currentGamePathFrame?.lowerBodyTargetStage ?? ""}
+        data-feet-owner={liveFeetOwner ?? ""}
         data-lower-owner={liveLowerOwner ?? ""}
         data-retarget-left-knee={currentRetarget?.leftKneeLift ?? ""}
         data-retarget-right-knee={currentRetarget?.rightKneeLift ?? ""}
@@ -1315,11 +2058,20 @@ export default function MovementReplayLabPage() {
         data-root-turn-count={analysis?.metrics.rootMotionTurnFrameCount ?? ""}
         data-root-weight-transfer-count={analysis?.metrics.rootMotionWeightTransferFrameCount ?? ""}
         data-root-world-count={analysis?.rootMotion.worldLandmarkFrameCount ?? ""}
+        data-next-proof-rehearsal-count={MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS.length}
+        data-next-proof-rehearsal-readiness={proofRehearsalReadiness.state}
+        data-start-readiness-batch-blocked-frame-count={hasRunBatch ? batchSummary.setupBlockedFrames : ""}
+        data-start-readiness-batch-blocked-recording-count={hasRunBatch ? batchSummary.setupBlocked : ""}
+        data-start-readiness-batch-ready-frame-count={hasRunBatch ? batchSummary.setupReadyFrames : ""}
+        data-start-readiness-batch-top-message={hasRunBatch ? batchSummary.setupTopMessage ?? "" : ""}
         data-start-readiness-blocked-frame-count={analysis?.metrics.startReadinessBlockedFrameCount ?? ""}
         data-start-readiness-can-start-game-frame-count={analysis?.metrics.startReadinessCanStartGameFrameCount ?? ""}
         data-start-readiness-ready-frame-count={analysis?.metrics.startReadinessReadyFrameCount ?? ""}
         data-spine-owner={currentSpineDrive?.owner ?? ""}
+        data-spine-confidence={currentSpineDrive?.confidence ?? ""}
+        data-spine-forward-lean={currentSpineDrive?.forwardLean ?? ""}
         data-spine-side-bend={currentSpineDrive?.sideBend ?? ""}
+        data-spine-twist={currentSpineDrive?.twist ?? ""}
         data-testid="movement-replay-lab"
       >
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -1356,6 +2108,7 @@ export default function MovementReplayLabPage() {
             {[
               ["Selected", selectedCount, "text-foreground"],
               ["Clean", hasRunBatch ? batchSummary.clean : "--", "text-[#a8d5ba]"],
+              ["Setup", hasRunBatch ? `${batchSummary.setupBlocked}/${batchAnalyses.length}` : "--", batchSummary.setupBlocked > 0 ? "text-[#f6ccbe]" : "text-[#a8d5ba]"],
               ["Visual", hasRunBatch ? `${Math.round(batchSummary.visualMatchScore * 100)}%` : "--", "text-[#f6ccbe]"],
               ["Errors", hasRunBatch ? batchSummary.errors : "--", "text-[#f28b82]"],
               ["Warnings", hasRunBatch ? batchSummary.warnings : "--", "text-[#f6ccbe]"],
@@ -1381,6 +2134,14 @@ export default function MovementReplayLabPage() {
               </button>
               <button
                 type="button"
+                onClick={selectAllRecordings}
+                disabled={!replayRecordings || replayRecordings.length === 0 || isRunInProgress}
+                className="h-8 rounded-[8px] border border-border-dim px-3 text-xs font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Select All {replayRecordings?.length ?? 0}
+              </button>
+              <button
+                type="button"
                 onClick={runAlignmentBatch}
                 disabled={selectedCount === 0 || isRunInProgress}
                 className="inline-flex h-8 items-center gap-2 rounded-[8px] bg-[#f6ccbe] px-3 text-xs font-bold text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:cursor-not-allowed disabled:opacity-50"
@@ -1398,6 +2159,276 @@ export default function MovementReplayLabPage() {
             </div>
           </div>
         </section>
+
+        <section
+          className="rounded-[8px] border border-border-dim bg-sidebar/35 p-2"
+          data-testid="movement-replay-proof-rehearsal"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wide text-foreground">Proof Rehearsal</h2>
+              <div className="mt-0.5 text-[11px] text-muted">
+                {MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS.length} blocker recordings queued before promotion
+              </div>
+            </div>
+            <span className="rounded-full border border-[#f6ccbe]/25 bg-[#f6ccbe]/10 px-2 py-1 font-mono text-[11px] text-[#f6ccbe]">
+              no-recording prep
+            </span>
+          </div>
+          <div
+            className="mt-2 rounded-[8px] border border-border-dim bg-background/45 p-2 text-xs text-secondary"
+            data-state={proofRehearsalReadiness.state}
+            data-testid="movement-replay-proof-rehearsal-readiness"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-foreground">Ready to record?</span>
+              <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[10px] text-muted">
+                {proofRehearsalReadiness.state}
+              </span>
+            </div>
+            <div className="mt-1 font-semibold text-[#f6ccbe]">{proofRehearsalReadiness.label}</div>
+            <div className="mt-0.5 leading-snug">{proofRehearsalReadiness.detail}</div>
+          </div>
+          <div
+            className="mt-2 rounded-[8px] border border-border-dim bg-background/45 p-2 text-xs text-secondary"
+            data-below-threshold-count={proofRehearsalCandidateSummary.belowThresholdCount}
+            data-meets-threshold-count={proofRehearsalCandidateSummary.meetsThresholdCount}
+            data-missing-count={proofRehearsalCandidateSummary.missingCount}
+            data-testid="movement-replay-proof-rehearsal-candidate-summary"
+            data-total-count={proofRehearsalCandidateSummary.total}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-foreground">Candidate coverage</span>
+              <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[10px] text-muted">
+                {proofRehearsalCandidateSummary.meetsThresholdCount}/{proofRehearsalCandidateSummary.total} at threshold
+              </span>
+            </div>
+            <div className="mt-1 font-mono text-[11px] text-secondary">
+              {proofRehearsalCandidateSummary.belowThresholdCount} below threshold · {proofRehearsalCandidateSummary.missingCount} missing
+            </div>
+          </div>
+          <div className="mt-2 grid gap-2 lg:grid-cols-2">
+            {MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS.map((item) => {
+              const evidence = getMovementProofRehearsalBatchEvidence(item, proofRehearsalEvidenceEntries);
+              const requirement = getMovementProofRehearsalRequirement(item);
+              const score = evidence?.score ?? 0;
+              const scoreSummary = requirement
+                ? getMovementProofRehearsalScoreSummary(score, requirement)
+                : null;
+              return (
+                <div
+                  key={item.freshRecordingLabel}
+                  className="rounded-[8px] border border-border-dim bg-background/45 p-2 text-xs text-secondary"
+                  data-evidence-frame-index={evidence?.frameIndex ?? ""}
+                  data-evidence-recording-id={evidence?.recordingId ?? ""}
+                  data-evidence-recording-title={evidence?.recordingTitle ?? ""}
+                  data-evidence-required-score={requirement?.requiredScore ?? ""}
+                  data-evidence-score={evidence?.score ?? ""}
+                  data-evidence-score-percent={scoreSummary?.scorePercent ?? ""}
+                  data-evidence-score-state={scoreSummary?.scoreState ?? "missing"}
+                  data-evidence-state={evidence ? "available" : "missing"}
+                  data-families={item.families.join(",")}
+                  data-proof-cases={item.proofCases.join(",")}
+                  data-testid="movement-replay-proof-rehearsal-item"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-foreground">{item.freshRecordingLabel}</div>
+                      <div className="mt-0.5 truncate text-[11px] text-muted">
+                        {item.families.join(" + ")} · {item.proofCases.join(", ")}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white/5 px-2 py-0.5 font-mono text-[10px] text-muted">
+                      {item.quickValidationScriptCommand.replace("npm run ", "")}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-border-dim bg-black/15 p-2"
+                    data-testid="movement-replay-proof-rehearsal-evidence"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-muted">Evidence</div>
+                      <div className="mt-0.5 truncate font-mono text-[11px] text-secondary">
+                        {evidence
+                          ? `${evidence.recordingTitle} · ${evidence.label} · frame ${evidence.frameIndex} · ${evidence.detail}`
+                          : "No matching frame in the selected recordings"}
+                      </div>
+                      {requirement && scoreSummary ? (
+                        <div
+                          className={`mt-1 font-mono text-[11px] ${
+                            scoreSummary.scoreState === "meets-threshold"
+                              ? "text-[#a8d5ba]"
+                              : scoreSummary.scoreState === "below-threshold"
+                                ? "text-[#f6ccbe]"
+                                : "text-muted"
+                          }`}
+                          data-testid="movement-replay-proof-rehearsal-score"
+                        >
+                          {requirement.label}: {scoreSummary.scoreSummary}
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!evidence}
+                      onClick={() => {
+                        if (!evidence) return;
+                        setSelectedRecordingId(evidence.recordingId as Id<"movements">);
+                        setFrameIndex(evidence.frameIndex);
+                        setIsPlaying(false);
+                      }}
+                      className="h-7 rounded-[8px] border border-border-dim px-2 text-[11px] font-semibold text-secondary transition-colors hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Jump Evidence
+                    </button>
+                  </div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    {([
+                      ["Setup", item.rehearsal.setupChecks],
+                      ["Motion", item.rehearsal.motionChecks],
+                      ["Validate", item.rehearsal.validationChecks],
+                      ["Stop", item.rehearsal.stopIf],
+                    ] as Array<[string, string[]]>).map(([label, checks]) => (
+                      <div key={label} className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-muted">{label}</div>
+                        <ul className="mt-1 space-y-1">
+                          {checks.slice(0, 2).map((check) => (
+                            <li key={check} className="line-clamp-2 leading-snug">
+                              {check}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {hasRunBatch ? (
+          <section
+            className="rounded-[8px] border border-border-dim bg-sidebar/35 p-2"
+            data-testid="movement-replay-setup-review"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xs font-bold uppercase tracking-wide text-foreground">Setup Review</h2>
+              <span className="text-xs text-muted">
+                {setupReviewItems.length > 0
+                  ? `${setupReviewItems.length} recording${setupReviewItems.length === 1 ? "" : "s"} need setup review`
+                  : "No setup blockers in selected recordings"}
+              </span>
+            </div>
+            {setupReviewItems.length > 0 ? (
+              <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                {setupReviewItems.slice(0, 4).map(({ analysis: setupAnalysis, recording, topMessage }) => (
+                  <button
+                    key={recording._id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRecordingId(recording._id);
+                      setFrameIndex(topMessage.firstFrameIndex);
+                      setIsPlaying(false);
+                    }}
+                    className="rounded-[8px] border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 p-2 text-left text-xs text-secondary transition-colors hover:border-[#f6ccbe]/40 hover:bg-[#f6ccbe]/15"
+                    data-blocked-frame-count={setupAnalysis.metrics.startReadinessBlockedFrameCount}
+                    data-first-frame-index={topMessage.firstFrameIndex}
+                    data-testid="movement-replay-setup-review-item"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate font-semibold text-foreground">{recording.title}</span>
+                      <span className="shrink-0 font-mono text-[#f6ccbe]">
+                        {setupAnalysis.metrics.startReadinessBlockedFrameCount} blocked
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate">
+                      {topMessage.message}
+                    </div>
+                    <div className="mt-1 font-mono text-[11px] text-muted">
+                      first frame {topMessage.firstFrameIndex} · {topMessage.count} message frame{topMessage.count === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 rounded-[8px] border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 text-xs text-[#a8d5ba]">
+                Selected recordings did not report start-gate blockers.
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {hasRunBatch ? (
+          <section
+            className="rounded-[8px] border border-border-dim bg-sidebar/35 p-2"
+            data-testid="movement-replay-avatar-follow-batch"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xs font-bold uppercase tracking-wide text-foreground">Avatar Follow Review</h2>
+              <span className="text-xs text-muted">
+                {avatarFollowBatchBlockedCount > 0
+                  ? `${avatarFollowBatchBlockedCount} blocked · ${avatarFollowBatchReviewCount} review`
+                  : avatarFollowBatchReviewCount > 0
+                    ? `${avatarFollowBatchReviewCount} review · no hard blockers`
+                    : `${avatarFollowBatchItems.length} recording${avatarFollowBatchItems.length === 1 ? "" : "s"} clean`}
+              </span>
+            </div>
+
+            {avatarFollowBatchItems.length > 0 ? (
+              <div className="mt-2 grid gap-2 lg:grid-cols-3">
+                {avatarFollowBatchItems.map((item) => {
+                  const worstFrameIndex = item.worstFrame?.frameIndex ?? 0;
+                  return (
+                    <button
+                      key={item.recording._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedRecordingId(item.recording._id);
+                        setFrameIndex(worstFrameIndex);
+                        setIsPlaying(false);
+                      }}
+                      className={`rounded-[8px] border p-2 text-left text-xs transition-colors ${
+                        item.status === "blocked"
+                          ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0] hover:border-[#ff8f8f]/50"
+                          : item.status === "review"
+                            ? "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe] hover:border-[#f6ccbe]/45"
+                            : "border-[#a8d5ba]/20 bg-[#a8d5ba]/10 text-[#a8d5ba] hover:border-[#a8d5ba]/45"
+                      }`}
+                      data-avatar-follow-issue={item.issueCode}
+                      data-avatar-follow-status={item.status}
+                      data-avatar-follow-worst-frame={item.worstFrame?.frameIndex ?? ""}
+                      data-recording-id={item.recording._id}
+                      data-testid="movement-replay-avatar-follow-batch-item"
+                      title={item.nextFixArea}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate font-semibold text-foreground">{item.recording.title}</span>
+                        <span className="shrink-0 font-mono uppercase">{item.status}</span>
+                      </div>
+                      <div className="mt-1 truncate font-mono">
+                        {item.issueCode}
+                        {item.worstFrame ? ` · frame ${item.worstFrame.frameIndex}` : ""}
+                      </div>
+                      <div className="mt-1 truncate text-secondary">
+                        {item.nextFixArea}
+                      </div>
+                      <div className="mt-1 font-mono text-[11px] text-muted">
+                        {Math.round(item.analysis.metrics.visualMatchScore * 100)}% match · lower{" "}
+                        {formatNumber(item.analysis.metrics.averageAvatarLowerBodyDirectionError)} ·{" "}
+                        {formatNumber(item.analysis.metrics.ownerTransitionsPerSecond)}/s owner
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-2 rounded-[8px] border border-border-dim bg-background/50 p-2 text-xs text-secondary">
+                Run selected recordings to diagnose avatar-follow mismatches.
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="rounded-[8px] border border-border-dim bg-sidebar/35 p-2">
           <div className="flex items-center justify-between gap-3">
@@ -1420,6 +2451,12 @@ export default function MovementReplayLabPage() {
               const recordingAnalysis = analysisByRecordingId.get(recording._id);
               const loaded = loadedRecordings[recording._id];
               const frameTotal = loaded?.session?.sampleCount ?? recording.frameCount ?? 0;
+              const recordingTopStartMessage = recordingAnalysis?.gamePath.startReadinessMessageSummary[0];
+              const recordingSetupLine = recordingAnalysis
+                ? recordingTopStartMessage
+                  ? `Setup ${recordingAnalysis.metrics.startReadinessReadyFrameCount}/${frameTotal} ready, ${recordingAnalysis.metrics.startReadinessBlockedFrameCount} blocked, top: ${recordingTopStartMessage.message}`
+                  : `Setup ${recordingAnalysis.metrics.startReadinessReadyFrameCount}/${frameTotal} ready, ${recordingAnalysis.metrics.startReadinessBlockedFrameCount} blocked`
+                : null;
               return (
                 <div
                   key={recording._id}
@@ -1471,6 +2508,15 @@ export default function MovementReplayLabPage() {
                         ? `${Math.round(recordingAnalysis.metrics.visualMatchScore * 100)}% match, ${recordingAnalysis.metrics.strongFullBodyFrameCount} strong, ${recordingAnalysis.metrics.supportConstraintPartialFrameCount} partial support`
                         : loaded?.error ?? `${recording.difficulty} · ${recording.spineGoal ?? "uncategorized"}`}
                     </div>
+                    {recordingSetupLine ? (
+                      <div
+                        className="mt-0.5 truncate text-[11px] text-muted"
+                        data-testid="movement-replay-session-setup-summary"
+                        title={recordingSetupLine}
+                      >
+                        {recordingSetupLine}
+                      </div>
+                    ) : null}
                   </button>
                 </div>
               );
@@ -1558,7 +2604,7 @@ export default function MovementReplayLabPage() {
                       <MovementMatchScene>
                         <MovementSourceSkeleton
                           color="#f6ccbe"
-                          landmarksRef={replayMotionRef}
+                          landmarksRef={replaySourceMotionRef}
                           positionOffset={[0, 0, 0]}
                         />
                         <VrmAvatar
@@ -1567,7 +2613,6 @@ export default function MovementReplayLabPage() {
                           positionOffset={[0, 0, 0]}
                           isPlayer
                           isPlaying
-                          motionMode="recorded"
                           name="Replay student"
                           retargetSourceModel={replayRetargetSourceModel}
                           rootMotionFrame={currentRootMotionFrame ?? null}
@@ -1641,14 +2686,20 @@ export default function MovementReplayLabPage() {
                 >
                   {replaySession?.samples.map((sample, index) => {
                     const severity = frameSeverity.get(index);
+                    const replayStudioFrame = analysis?.replayStudio.frames[index];
+                    const replayStudioMarkerStatus = replayStudioFrame?.status ?? "";
                     const quality = sample.retarget?.sourceQuality ?? 0;
                     const selected = index === safeFrameIndex;
+                    const sourceFrame = analysis?.gamePath.sourceFrames.find((frame) => frame.frameIndex === index);
+                    const isStartBlocked = sourceFrame?.startReadinessState === "blocked";
                     const markerClass = selected
                       ? "border-[#f6ccbe] bg-[#f6ccbe]"
                       : severity === "error"
                         ? "border-[#f28b82] bg-[#f28b82]/70"
                         : severity === "warning"
                           ? "border-[#f6ccbe] bg-[#f6ccbe]/45"
+                          : isStartBlocked
+                            ? "border-[#f6ccbe] bg-[#f6ccbe]/30"
                           : quality >= 0.8
                             ? "border-[#a8d5ba] bg-[#a8d5ba]/50"
                             : "border-border-dim bg-background";
@@ -1664,8 +2715,15 @@ export default function MovementReplayLabPage() {
                         aria-label={`Show frame ${index}`}
                         className={`h-4 rounded-[5px] border transition-transform hover:-translate-y-0.5 ${markerClass}`}
                         data-frame-index={index}
+                        data-replay-studio-failure-codes={
+                          replayStudioFrame?.failures.map((failure) => failure.code).join(",") ?? ""
+                        }
+                        data-replay-studio-frame-status={replayStudioMarkerStatus}
+                        data-replay-studio-next-fix-area={replayStudioFrame?.failures[0]?.nextFixArea ?? ""}
+                        data-start-readiness={sourceFrame?.startReadinessState ?? ""}
+                        data-start-readiness-message={sourceFrame?.startReadinessMessage ?? ""}
                         data-testid="movement-replay-frame"
-                        title={`Frame ${index} quality ${formatNumber(quality)}`}
+                        title={`Frame ${index} quality ${formatNumber(quality)} · start ${sourceFrame?.startReadinessMessage ?? "pending"} · avatar ${replayStudioMarkerStatus || "pending"}`}
                       />
                     );
                   }) ?? (
@@ -1698,9 +2756,298 @@ export default function MovementReplayLabPage() {
                   <dd className="text-right text-secondary">
                     {formatNumber(currentFrame?.poseBounds?.minY)}..{formatNumber(currentFrame?.poseBounds?.maxY)}
                   </dd>
-                  <dt className="text-muted">Out of frame</dt>
-                  <dd className="text-right text-secondary">{currentFrame?.poseBounds?.outOfFrameCount ?? "--"}</dd>
+                    <dt className="text-muted">Out of frame</dt>
+                    <dd className="text-right text-secondary">{currentFrame?.poseBounds?.outOfFrameCount ?? "--"}</dd>
                 </dl>
+
+                <div
+                  className="mt-2 rounded-[8px] border border-border-dim bg-background/35 p-2"
+                  data-testid="movement-replay-start-gate"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Start Gate</h3>
+                    <span
+                      className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
+                        currentSourceFrame?.canStartGame
+                          ? "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                          : "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                      }`}
+                    >
+                      {currentStartReadinessStatus}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-foreground">
+                    {currentSourceFrame?.startReadinessMessage ?? "--"}
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <dt className="text-muted">Can start game</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {currentSourceFrame ? String(currentSourceFrame.canStartGame) : "--"}
+                    </dd>
+                    <dt className="text-muted">Can record</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {currentSourceFrame ? String(currentSourceFrame.canStartRecording) : "--"}
+                    </dd>
+                    <dt className="text-muted">Reason</dt>
+                    <dd className="truncate text-right font-mono text-secondary" title={currentStartReadinessDetail}>
+                      {currentStartReadinessDetail}
+                    </dd>
+                    <dt className="text-muted">Batch</dt>
+                    <dd className="text-right font-mono text-secondary">
+                      {analysis
+                        ? `${analysis.metrics.startReadinessReadyFrameCount} ready · ${analysis.metrics.startReadinessBlockedFrameCount} blocked`
+                        : "--"}
+                    </dd>
+                  </dl>
+                  {topStartReadinessMessages.length > 0 ? (
+                    <div className="mt-2 border-t border-border-dim pt-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
+                        Top Messages
+                      </div>
+                      <div className="mt-1 flex flex-col gap-1">
+                        {topStartReadinessMessages.map((item) => (
+                          <button
+                            key={item.message}
+                            type="button"
+                            onClick={() => {
+                              setIsPlaying(false);
+                              setFrameIndex(item.firstFrameIndex);
+                            }}
+                            className="rounded-[6px] border border-border-dim bg-background/40 px-2 py-1 text-left text-[11px] text-secondary transition-colors hover:border-border hover:text-foreground"
+                            data-first-frame-index={item.firstFrameIndex}
+                            data-testid="movement-replay-start-gate-message"
+                            title={`First frame ${item.firstFrameIndex}`}
+                          >
+                            <span className="font-mono text-foreground">{item.count}x</span>
+                            {" "}
+                            <span>{item.message}</span>
+                            <span className="text-muted">
+                              {" "}({item.blockedFrameCount} blocked)
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-2 border-t border-border-dim pt-3">
+                  <div
+                    className="rounded-[8px] border border-border-dim bg-background/35 p-2"
+                    data-testid="movement-replay-avatar-follow"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Avatar Follow</h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded-[6px] border border-border-dim bg-background/45 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-secondary transition hover:border-[#f6ccbe]/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          data-testid="movement-replay-export-fix-log"
+                          disabled={!analysis}
+                          onClick={exportReplayStudioFixLog}
+                        >
+                          Export Log
+                        </button>
+                        <span
+                          className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
+                            avatarFollowAcceptanceStatus === "blocked-for-acceptance"
+                              ? "border-[#ff8f8f]/35 bg-[#ff8f8f]/10 text-[#ffb0b0]"
+                              : avatarFollowAcceptanceStatus === "review-only"
+                                ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                                : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                          }`}
+                        >
+                          {avatarFollowAcceptanceStatus}
+                        </span>
+                      </div>
+                    </div>
+                    <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <dt className="text-muted">Judge</dt>
+                      <dd
+                        className="text-right font-mono text-secondary"
+                        data-testid="movement-replay-studio-judge-status"
+                      >
+                        {avatarFollowJudgeText}
+                      </dd>
+                      <dt className="text-muted">Acceptance</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {avatarFollowAcceptanceStatus}
+                      </dd>
+                      <dt className="text-muted">Visual match</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {analysis ? `${Math.round(analysis.metrics.visualMatchScore * 100)}%` : "--"}
+                      </dd>
+                      <dt className="text-muted">Lower error</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {formatNumber(
+                          currentAvatarVisual?.averageLowerBodyDirectionError ??
+                            analysis?.metrics.averageAvatarLowerBodyDirectionError,
+                        )}
+                      </dd>
+                      <dt className="text-muted">Upper error</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {formatNumber(currentAvatarVisual?.averageUpperBodyDirectionError)}
+                      </dd>
+                      <dt className="text-muted">Owner flicker</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {analysis ? `${formatNumber(analysis.metrics.ownerTransitionsPerSecond)}/s` : "--"}
+                      </dd>
+                      <dt className="text-muted">Visual frames</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {analysis
+                          ? `${analysis.metrics.avatarVisualFrameCount} telemetry · ${currentAvatarVisual?.comparedLowerBodySegments ?? 0} current lower`
+                          : "--"}
+                      </dd>
+                      <dt className="text-muted">Criteria</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {avatarFollowCriteria.filter((criterion) => criterion.status === "blocked").length} blocked
+                        {" "}· {avatarFollowCriteria.filter((criterion) => criterion.status === "review").length} review
+                      </dd>
+                      <dt className="text-muted">Current conflict</dt>
+                      <dd className="text-right font-mono text-secondary">
+                        {currentFrameUsesSeatedSupport && currentFrameActiveLegMotion
+                          ? "seated support + leg motion"
+                          : currentFrameActiveLegMotion
+                            ? "leg motion"
+                            : currentFrameUsesSeatedSupport
+                              ? "seated support"
+                              : "none"}
+                      </dd>
+                      <dt className="text-muted">Worst frame</dt>
+                      <dd
+                        className="text-right font-mono text-secondary"
+                        data-testid="movement-replay-studio-worst-frame"
+                      >
+                        {replayStudioWorstFrames[0]
+                          ? `${replayStudioWorstFrames[0].frameIndex} · ${replayStudioWorstFrames[0].failures[0]?.code ?? replayStudioWorstFrames[0].status}`
+                          : "--"}
+                      </dd>
+                    </dl>
+                    {replayStudioWorstFrames.length > 0 ? (
+                      <div
+                        className="mt-2 flex flex-col gap-1.5"
+                        data-testid="movement-replay-studio-worst-frames"
+                      >
+                        {replayStudioWorstFrames.slice(0, 5).map((frame) => (
+                          <button
+                            key={frame.frameIndex}
+                            type="button"
+                            className={`rounded-[6px] border px-2 py-1 text-left text-[11px] transition ${
+                              frame.status === "blocked"
+                                ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0] hover:border-[#ff8f8f]/50"
+                                : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe] hover:border-[#f6ccbe]/45"
+                            }`}
+                            onClick={() => {
+                              setIsPlaying(false);
+                              setFrameIndex(frame.frameIndex);
+                            }}
+                          >
+                            <span className="font-mono">frame {frame.frameIndex}</span>
+                            <span className="text-secondary">
+                              {" "}· {frame.failures[0]?.code ?? frame.status}
+                              {" "}· {frame.failures[0]?.nextFixArea ?? "review motion pipeline"}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {currentReplayStudioPrimaryFailure ? (
+                      <div
+                        className={`mt-2 rounded-[6px] border px-2 py-1.5 text-[11px] ${
+                          currentReplayStudioFrameVerdict?.status === "blocked"
+                            ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0]"
+                            : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                        }`}
+                        data-testid="movement-replay-current-frame-failure"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono">{currentReplayStudioPrimaryFailure.code}</span>
+                          <span className="font-mono uppercase">
+                            {currentReplayStudioFrameVerdict?.status ?? "review"}
+                          </span>
+                        </div>
+                        <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-secondary">
+                          <dt>Source</dt>
+                          <dd className="truncate text-right font-mono">
+                            {currentReplayStudioFrameVerdict?.source.readiness ?? "--"}
+                            {" "}q{formatNumber(currentReplayStudioFrameVerdict?.source.sourceQuality)}
+                          </dd>
+                          <dt>Expected</dt>
+                          <dd className="truncate text-right font-mono">
+                            {currentReplayStudioFrameVerdict?.expected.motion ?? "--"}
+                            {currentReplayStudioFrameVerdict?.expected.side
+                              ? ` ${currentReplayStudioFrameVerdict.expected.side}`
+                              : ""}
+                          </dd>
+                          <dt>Actual</dt>
+                          <dd className="truncate text-right font-mono">
+                            lower {formatNumber(currentReplayStudioFrameVerdict?.actual.lowerBodyDirectionError ?? undefined)}
+                            {" "}· upper {formatNumber(currentReplayStudioFrameVerdict?.actual.upperBodyDirectionError ?? undefined)}
+                          </dd>
+                          <dt>Owners</dt>
+                          <dd
+                            className="truncate text-right font-mono"
+                            title={`${currentReplayStudioFrameVerdict?.actual.lowerOwner ?? "--"} · ${currentReplayStudioFrameVerdict?.actual.feetOwner ?? "--"}`}
+                          >
+                            {currentReplayStudioFrameVerdict?.actual.lowerOwner ?? "--"}
+                            {" "}· {currentReplayStudioFrameVerdict?.actual.feetOwner ?? "--"}
+                          </dd>
+                          <dt>Support</dt>
+                          <dd
+                            className="truncate text-right font-mono"
+                            title={`${currentReplayStudioFrameVerdict?.actual.supportIntent ?? "--"} · ${currentReplayStudioFrameVerdict?.actual.supportPresentation ?? "--"}`}
+                          >
+                            {currentReplayStudioFrameVerdict?.actual.supportIntent ?? "--"}
+                            {" "}· {currentReplayStudioFrameVerdict?.actual.supportPresentation ?? "--"}
+                          </dd>
+                          <dt>Fix area</dt>
+                          <dd className="truncate text-right font-mono" title={currentReplayStudioPrimaryFailure.nextFixArea}>
+                            {currentReplayStudioPrimaryFailure.nextFixArea}
+                          </dd>
+                        </dl>
+                      </div>
+                    ) : null}
+                    {avatarFollowSessionFailures.length > 0 ? (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        {avatarFollowSessionFailures.slice(0, 3).map((failure, index) => (
+                          <div
+                            key={`${failure.code}-${index}`}
+                            className={`rounded-[6px] border px-2 py-1 text-[11px] ${
+                              failure.severity === "error"
+                                ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0]"
+                                : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                            }`}
+                            data-avatar-follow-issue-severity={failure.severity}
+                            data-testid="movement-replay-avatar-follow-issue"
+                          >
+                            <span className="font-mono">{failure.code}</span>
+                            <span className="text-secondary"> · {failure.detail}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-2 border-t border-border-dim pt-2" data-testid="movement-replay-avatar-follow-criteria">
+                      <div className="grid gap-1.5 text-[11px]">
+                        {avatarFollowCriteria.map((criterion) => (
+                          <div
+                            key={criterion.key}
+                            className="grid grid-cols-[88px_64px_minmax(0,1fr)] items-center gap-2"
+                            data-avatar-follow-criterion={criterion.key}
+                            data-avatar-follow-criterion-status={criterion.status}
+                          >
+                            <span className="text-muted">{criterion.label}</span>
+                            <span className={`text-right font-mono uppercase ${avatarFollowCriterionClass(criterion.status)}`}>
+                              {criterion.status}
+                            </span>
+                            <span className="truncate text-right font-mono text-secondary" title={criterion.metric}>
+                              {criterion.metric}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="mt-2 border-t border-border-dim pt-3">
                   <div className="flex items-center justify-between gap-3">
@@ -2013,7 +3360,10 @@ export default function MovementReplayLabPage() {
             </section>
 
             {captureStatus && (
-              <div className="rounded-[8px] border border-border-dim bg-sidebar/35 px-3 py-2 text-xs text-secondary">
+              <div
+                className="rounded-[8px] border border-border-dim bg-sidebar/35 px-3 py-2 text-xs text-secondary"
+                data-testid="movement-replay-capture-status"
+              >
                 {captureStatus}
               </div>
             )}

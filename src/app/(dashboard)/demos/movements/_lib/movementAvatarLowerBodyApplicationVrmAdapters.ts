@@ -26,6 +26,8 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones
   applyPlantedSquatIk,
   currentFeetOwner,
   isPlayer,
+  kneeRaiseLowerLegBoost,
+  kneeRaiseUpperLegBoost,
   lookupBone,
   plan,
   singleLegRaiseSlerp,
@@ -36,6 +38,8 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones
   applyPlantedSquatIk: (depth: number) => number;
   currentFeetOwner: string;
   isPlayer: boolean;
+  kneeRaiseLowerLegBoost?: number;
+  kneeRaiseUpperLegBoost?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   plan: MovementAvatarLowerBodyApplicationPlan;
   singleLegRaiseSlerp: number;
@@ -47,9 +51,11 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones
     applyLegRaise: (side, depth) => {
       applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones({
         depth,
+        lowerLegBoost: kneeRaiseLowerLegBoost,
         lookupBone,
         side,
         slerp: singleLegRaiseSlerp,
+        upperLegBoost: kneeRaiseUpperLegBoost,
       });
     },
     applyNeutral: () => {
@@ -87,6 +93,8 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   contacts,
   currentFeetOwner,
   isPlayer,
+  kneeRaiseLowerLegBoost,
+  kneeRaiseUpperLegBoost,
   lookupBone,
   plan,
   singleLegRaiseSlerp,
@@ -100,6 +108,8 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   contacts?: MovementAvatarInstructorFootPlantContacts;
   currentFeetOwner: string;
   isPlayer: boolean;
+  kneeRaiseLowerLegBoost?: number;
+  kneeRaiseUpperLegBoost?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   plan: MovementAvatarLowerBodyRetargetApplicationPlan;
   singleLegRaiseSlerp: number;
@@ -114,9 +124,11 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
     applyLegRaise: (side, depth) => {
       applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones({
         depth,
+        lowerLegBoost: kneeRaiseLowerLegBoost,
         lookupBone,
         side,
         slerp: singleLegRaiseSlerp,
+        upperLegBoost: kneeRaiseUpperLegBoost,
       });
     },
     applyPlantedSquatIk,

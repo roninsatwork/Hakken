@@ -3,7 +3,12 @@ import {
   buildLiveMovementSourceFrame,
   buildSyntheticMovementSourceFrame,
 } from "./movementSourceFrame";
-import { buildMovementTruthSkeleton } from "./movementTruthSkeleton";
+import {
+  buildMovementTruthSkeleton,
+  getMovementTruthSkeletonRecoveryCue,
+  summarizeMovementTruthSkeleton,
+} from "./movementTruthSkeleton";
+import type { MovementTruthSkeletonSegment } from "./movementTruthSkeleton";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 const makePose = (): TrackingLandmark[] =>
@@ -62,6 +67,24 @@ function weakFeetPose() {
   return pose;
 }
 
+function summarizeWithSegments(
+  segments: Partial<Record<MovementTruthSkeletonSegment, number>>,
+) {
+  const sourceFrame = buildLiveMovementSourceFrame({
+    capturedAt: 1000,
+    poseLandmarks: withCorePose(),
+  });
+  const skeleton = buildMovementTruthSkeleton(sourceFrame);
+
+  return summarizeMovementTruthSkeleton({
+    ...skeleton,
+    segmentConfidence: {
+      ...skeleton.segmentConfidence,
+      ...segments,
+    },
+  });
+}
+
 describe("movementTruthSkeleton", () => {
   it("builds inspectable source truth from a standing source frame", () => {
     const sourceFrame = buildLiveMovementSourceFrame({
@@ -77,7 +100,19 @@ describe("movementTruthSkeleton", () => {
     expect(skeleton.bodyScale.torsoHeight).toBeGreaterThan(0.2);
     expect(skeleton.floorY).toBeCloseTo(0.97);
     expect(skeleton.segmentConfidence.leftThigh).toBeGreaterThan(0.8);
+    expect(skeleton.segments.shoulders.start).toEqual(sourceFrame.landmarks.pose[11]);
+    expect(skeleton.segments.shoulders.end).toEqual(sourceFrame.landmarks.pose[12]);
+    expect(skeleton.segments.leftShin.start).toEqual(sourceFrame.landmarks.pose[25]);
+    expect(skeleton.segments.leftShin.end).toEqual(sourceFrame.landmarks.pose[27]);
+    expect(skeleton.segments.leftFoot.start).toEqual(sourceFrame.landmarks.pose[27]);
+    expect(skeleton.segments.leftFoot.end?.x).toBeCloseTo(0.43);
+    expect(skeleton.segments.leftFoot.confidence).toBe(skeleton.segmentConfidence.leftFoot);
     expect(skeleton.heldOrRejectedReasons).toEqual([]);
+
+    expect(summarizeMovementTruthSkeleton(skeleton)).toMatchObject({
+      state: "ready",
+      weakestGroup: "feet",
+    });
   });
 
   it("keeps broad lower-body source truth visible for squat and leg raise poses", () => {
@@ -106,10 +141,72 @@ describe("movementTruthSkeleton", () => {
 
     expect(skeleton.bodyPartConfidence.leftFoot).toBeLessThan(0.35);
     expect(skeleton.segmentConfidence.leftFoot).toBeLessThan(0.2);
+    expect(skeleton.segments.leftFoot.confidence).toBeLessThan(0.2);
+    expect(summarizeMovementTruthSkeleton(skeleton)).toMatchObject({
+      reasons: expect.arrayContaining(["feet-weak", "weak-feet"]),
+      state: "blocked",
+      weakestGroup: "feet",
+    });
     expect(skeleton.heldOrRejectedReasons).toEqual(expect.arrayContaining([
       "feet-weak",
       "leftFoot-missing",
       "rightFoot-missing",
     ]));
+  });
+
+  it.each([
+    [
+      "torso",
+      { shoulders: 0.18, hips: 0.22 },
+      "Bring head, shoulders, and hips into view.",
+    ],
+    [
+      "arms",
+      {
+        leftLowerArm: 0.14,
+        leftUpperArm: 0.16,
+        rightLowerArm: 0.18,
+        rightUpperArm: 0.2,
+      },
+      "Keep hands and elbows in frame.",
+    ],
+    [
+      "legs",
+      {
+        leftShin: 0.14,
+        leftThigh: 0.18,
+        rightShin: 0.16,
+        rightThigh: 0.2,
+      },
+      "Keep hips, knees, and feet visible.",
+    ],
+    [
+      "feet",
+      { leftFoot: 0.12, rightFoot: 0.18 },
+      "Step back until both feet are visible.",
+    ],
+  ] as const)("returns a %s recovery cue when that truth group is weakest", (
+    group,
+    segments,
+    message,
+  ) => {
+    const summary = summarizeWithSegments(segments);
+
+    expect(summary).toMatchObject({
+      state: "blocked",
+      weakestGroup: group,
+    });
+    expect(getMovementTruthSkeletonRecoveryCue(summary)).toEqual({
+      group,
+      message,
+      state: "blocked",
+    });
+  });
+
+  it("omits recovery cues when source truth is ready", () => {
+    const summary = summarizeWithSegments({});
+
+    expect(summary.state).toBe("ready");
+    expect(getMovementTruthSkeletonRecoveryCue(summary)).toBeNull();
   });
 });

@@ -179,34 +179,40 @@ export function resolveMovementAvatarSquatFlexionPose({
 
 export function resolveMovementAvatarSingleLegRaisePose({
   depth,
+  lowerLegBoost = 0,
   side,
   slerp,
+  upperLegBoost = 0,
 }: {
   depth: number;
+  lowerLegBoost?: number;
   side: "left" | "right";
   slerp: number;
+  upperLegBoost?: number;
 }): MovementAvatarBoneRotationSpec[] {
-  const liftDepth = smoothstep(depth, 0.12, 0.9);
+  const liftDepth = smoothstep(depth, 0.1, 0.45);
   if (liftDepth <= 0.001) return [];
 
   const plantedSide = side === "left" ? "right" : "left";
-  const kneeOut = side === "left" ? 0.08 : -0.08;
+  const kneeOut = side === "left" ? 0.42 : -0.42;
+  const upperLegPitch = (1.88 + upperLegBoost) * liftDepth;
+  const lowerLegPitch = -(1.24 + lowerLegBoost) * liftDepth;
 
   return [
     {
       bone: `${side}UpperLeg`,
-      rotation: { x: 1.18 * liftDepth, y: 0.05 * liftDepth, z: kneeOut * liftDepth },
+      rotation: { x: upperLegPitch, y: 0.08 * liftDepth, z: kneeOut * 1.4 * liftDepth },
       slerp,
     },
     {
       bone: `${side}LowerLeg`,
-      rotation: { x: -0.72 * liftDepth, y: 0, z: -kneeOut * 0.35 * liftDepth },
+      rotation: { x: lowerLegPitch, y: 0, z: -kneeOut * 0.5 * liftDepth },
       slerp,
     },
     {
       bone: `${side}Foot`,
-      rotation: { x: 0.18 * liftDepth, y: 0, z: 0 },
-      slerp: slerp * 0.72,
+      rotation: { x: 0.48 * liftDepth, y: 0, z: 0 },
+      slerp: slerp * 0.82,
     },
     {
       bone: `${plantedSide}UpperLeg`,
@@ -221,7 +227,7 @@ export function resolveMovementAvatarSingleLegRaisePose({
     {
       bone: `${plantedSide}Foot`,
       rotation: { x: 0, y: 0, z: 0 },
-      slerp: 0.32,
+      slerp: 0.12,
     },
   ];
 }

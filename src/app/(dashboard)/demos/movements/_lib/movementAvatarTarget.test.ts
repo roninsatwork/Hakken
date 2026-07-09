@@ -50,6 +50,16 @@ function squatPose() {
   return pose;
 }
 
+function sideBendPoseWithStraightLegs() {
+  const pose = withCorePose();
+  pose[0] = { ...pose[0]!, x: 0.62 };
+  pose[7] = { ...pose[7]!, x: 0.58 };
+  pose[8] = { ...pose[8]!, x: 0.66 };
+  pose[11] = { ...pose[11]!, x: 0.5 };
+  pose[12] = { ...pose[12]!, x: 0.74 };
+  return pose;
+}
+
 function resolveDecision({
   avatarRole,
   pose,
@@ -107,6 +117,35 @@ describe("movement avatar target", () => {
     expect(target.stageDecision?.stage ?? "inactive").toMatch(/player-neutral|inactive/);
     expect(target.lowerBodyOwner).toMatch(/neutral/);
     expect(target.shouldHoldPlayerSquatPose).toBe(false);
+  });
+
+  it("keeps feet-floor side bends from retargeting straight player legs", () => {
+    const decision = resolveDecision({
+      avatarRole: "player",
+      pose: sideBendPoseWithStraightLegs(),
+    });
+    const noisySideBendDecision = {
+      ...decision,
+      lowerBodySegmentMotion: 0.48,
+      playerRetargetLowerBodyMotion: 0.48,
+    };
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision: noisySideBendDecision,
+      lowerBodyVisualState: {
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(noisySideBendDecision.supportIntent.key).toBe("feet-floor");
+    expect(Math.abs(noisySideBendDecision.spineDrive.sideBend)).toBeGreaterThan(0.12);
+    expect(noisySideBendDecision.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
+    expect(noisySideBendDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(false);
+    expect(target.stageDecision?.stage).toBe("player-neutral");
+    expect(target.lowerBodyOwner).toBe("player-lower-body-neutral");
+    expect(target.feetOwner).toBe("neutral");
+    expect(target.playerSourceOwner.playerRetargetLowerBodyMotion).toBe(0);
   });
 
   it("keeps recorded neutral instructor ownership explicit for replay parity", () => {

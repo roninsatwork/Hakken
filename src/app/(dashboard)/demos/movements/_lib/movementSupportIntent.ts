@@ -79,6 +79,22 @@ export function resolveMovementSupportIntent({
 }): MovementSupportIntentDecision {
   const points = activePoints(bodySupport);
 
+  if (
+    exercisePose.poseKey === "seated-leg-lift" &&
+    hasEveryPoint(points, ["leftFoot", "rightFoot"])
+  ) {
+    return buildIntent({
+      anchorPoints: ["leftFoot", "rightFoot"],
+      confidence: bodySupport.confidence,
+      key: "feet-floor",
+      label: "Feet on floor",
+      primarySurface: "floor",
+      priority: 2,
+      status: "diagnostic-only",
+      summary: "Ambiguous seated-leg-lift geometry stays on foot support until chair contact is explicit.",
+    });
+  }
+
   if (points.includes("seat")) {
     return buildIntent({
       anchorPoints: ["seat"],

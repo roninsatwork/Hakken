@@ -49,6 +49,13 @@ function poseLandmarks(): TrackingLandmark[] {
   return pose;
 }
 
+function positiveYawPoseLandmarks(): TrackingLandmark[] {
+  const pose = poseLandmarks();
+  pose[7] = { ...pose[7]!, z: 0.1 };
+  pose[8] = { ...pose[8]!, z: -0.1 };
+  return pose;
+}
+
 function debugInput(): MovementAvatarHeadFrameDebugInput {
   return {
     activeCalibrationQuality: 0.88,
@@ -273,5 +280,41 @@ describe("movementAvatarHeadFrameRuntime", () => {
       profileName: "default",
       updatedAt: 1000,
     });
+  });
+
+  it("preserves motion-frame display head yaw sign in tracking debug output", () => {
+    const parent = new THREE.Object3D();
+    const head = new THREE.Object3D();
+    const neck = new THREE.Object3D();
+    const upperChest = new THREE.Object3D();
+    parent.add(head);
+    parent.add(neck);
+    parent.add(upperChest);
+    parent.updateMatrixWorld(true);
+    const bones = new Map<string, THREE.Object3D>([
+      ["head", head],
+      ["neck", neck],
+      ["upperChest", upperChest],
+    ]);
+
+    const result = applyMovementAvatarHeadFrameRuntime({
+      debugInput: debugInput(),
+      debugUpdatedAt: 1000,
+      headInput: {
+        avatarRole: "player",
+        avatarRootYaw: 0,
+        baseHeadPosition: null,
+        calibration: neutralCalibration,
+        lookupBone: (boneName) => bones.get(boneName) ?? null,
+        mirrorHeadForDisplay: false,
+        neckSlerp: 1,
+        poseLandmarks: positiveYawPoseLandmarks(),
+        shouldApplyLowerBody: false,
+        shouldApplySpine: false,
+      },
+    });
+
+    expect(result.trackingDebugState?.headRaw.yaw).toBeGreaterThan(0);
+    expect(result.trackingDebugState?.headApplied.yaw).toBeGreaterThan(0);
   });
 });

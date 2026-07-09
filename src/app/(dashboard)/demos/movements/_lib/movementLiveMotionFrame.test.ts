@@ -24,9 +24,9 @@ describe("movementLiveMotionFrame", () => {
     expect(motionFrame?.source.sourceStatus).toBe("smoothed");
     expect(motionFrame?.source.capturedAt).toBe(1234);
     expect(motionFrame?.mirrorMode).toBe("facing-player");
-    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
-    expect(motionFrame?.source.landmarks.blendshapes).toBe(payload.blendshapes);
+    expect(motionFrame?.source.landmarks.blendshapes).toEqual(payload.blendshapes);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.displayLandmarks.pose[0]?.x).toBeCloseTo(1 - (payload.landmarks[0]?.x ?? 0));
     expect(motionFrame?.avatarDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
@@ -80,7 +80,7 @@ describe("movementLiveMotionFrame", () => {
     });
 
     expect(motionFrame).not.toBeNull();
-    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[25]?.x).toBe(payload.landmarks[25]?.x);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.displayLandmarks.pose[26]?.x).toBeCloseTo(1 - (payload.landmarks[25]?.x ?? 0));
@@ -106,9 +106,10 @@ describe("movementLiveMotionFrame", () => {
     });
 
     expect(motionFrame).not.toBeNull();
-    expect(motionFrame?.source.landmarks.worldPose).toBe(worldLandmarks);
-    expect(motionFrame?.source.landmarks.hands).toBe(payload.hands);
-    expect(motionFrame?.source.landmarks.blendshapes).toBe(payload.blendshapes);
+    expect(motionFrame?.source.landmarks.worldPose).not.toBe(worldLandmarks);
+    expect(motionFrame?.source.landmarks.worldPose[0]?.z).toBe(worldLandmarks[0]?.z);
+    expect(motionFrame?.source.landmarks.hands).toEqual(payload.hands);
+    expect(motionFrame?.source.landmarks.blendshapes).toEqual(payload.blendshapes);
     expect(motionFrame?.displayLandmarks.worldPose).not.toBe(worldLandmarks);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
   });

@@ -80,6 +80,13 @@ export type MovementTrackingDebugState = {
     averageUpperBodyDirectionError?: number;
     comparedLowerBodySegments: number;
     comparedUpperBodySegments?: number;
+    footing?: {
+      floorY?: number;
+      leftFootClearance?: number;
+      leftFootY?: number;
+      rightFootClearance?: number;
+      rightFootY?: number;
+    };
     segments: Record<string, {
       confidence?: number;
       direction: {
@@ -832,6 +839,30 @@ function getFloorRelativeSquatDepth({
   return Math.min(floorDistanceDrop, bodyRatioDrop);
 }
 
+function lateralSingleLegRaiseDepth({
+  ankle,
+  hip,
+  isLeft,
+  knee,
+  kneeAngle,
+  torsoScale,
+}: {
+  ankle?: TrackingLandmark;
+  hip: TrackingLandmark;
+  isLeft: boolean;
+  knee: TrackingLandmark;
+  kneeAngle: number;
+  torsoScale: number;
+}) {
+  if (kneeAngle < 2.45) return 0;
+
+  const direction = isLeft ? -1 : 1;
+  const kneeOffset = (knee.x - hip.x) * direction;
+  const ankleOffset = ankle ? (ankle.x - hip.x) * direction : kneeOffset;
+  const sideOffset = Math.max(kneeOffset, ankleOffset);
+  return clamp((sideOffset - torsoScale * 0.16) / (torsoScale * 0.48), 0, 1);
+}
+
 export function getMovementLowerBodyIntent({
   poseLandmarks,
   calibration,
@@ -901,20 +932,42 @@ export function getMovementLowerBodyIntent({
     const rightKneeRaise = visibility(rightKnee) >= 0.3
       ? clamp((kneeRaiseThreshold - rightKnee.y) / kneeRaiseWindow, 0, 1)
       : 0;
-    const strongestKneeRaise = Math.max(leftKneeRaise, rightKneeRaise);
-    const kneeRaiseDifference = Math.abs(leftKneeRaise - rightKneeRaise);
+    const leftSideRaise = visibility(leftKnee) >= 0.3
+      ? lateralSingleLegRaiseDepth({
+          ankle: leftAnkle,
+          hip: leftHip,
+          isLeft: true,
+          knee: leftKnee,
+          kneeAngle: leftKneeAngle,
+          torsoScale: currentTorsoScale,
+        })
+      : 0;
+    const rightSideRaise = visibility(rightKnee) >= 0.3
+      ? lateralSingleLegRaiseDepth({
+          ankle: rightAnkle,
+          hip: rightHip,
+          isLeft: false,
+          knee: rightKnee,
+          kneeAngle: rightKneeAngle,
+          torsoScale: currentTorsoScale,
+        })
+      : 0;
+    const leftLegRaise = Math.max(leftKneeRaise, leftSideRaise);
+    const rightLegRaise = Math.max(rightKneeRaise, rightSideRaise);
+    const strongestKneeRaise = Math.max(leftLegRaise, rightLegRaise);
+    const kneeRaiseDifference = Math.abs(leftLegRaise - rightLegRaise);
     const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
     const squatDepth = clearSingleKneeRaise ? 0 : kneeBendDepth;
     const label =
       clearSingleKneeRaise
-        ? leftKneeRaise > rightKneeRaise
+        ? leftLegRaise > rightLegRaise
           ? "left-knee-raise"
           : "right-knee-raise"
-        : leftKneeRaise > 0.32 && rightKneeRaise > 0.32
+        : leftLegRaise > 0.32 && rightLegRaise > 0.32
           ? "mixed-lower-body"
-          : leftKneeRaise > 0.32
+          : leftLegRaise > 0.32
             ? "left-knee-raise"
-            : rightKneeRaise > 0.32
+            : rightLegRaise > 0.32
               ? "right-knee-raise"
               : squatDepth > 0.18
                 ? "squat"
@@ -922,8 +975,8 @@ export function getMovementLowerBodyIntent({
 
     return {
       squatDepth: label === "squat" ? squatDepth : 0,
-      leftKneeRaise,
-      rightKneeRaise,
+      leftKneeRaise: leftLegRaise,
+      rightKneeRaise: rightLegRaise,
       squatSignals: {
         hipDrop: 0,
         kneeBend: kneeBendDepth,
@@ -991,11 +1044,33 @@ export function getMovementLowerBodyIntent({
   const rightKneeRaise = visibility(rightKnee) >= 0.3
     ? clamp((kneeRaiseThreshold - rightKnee.y) / kneeRaiseWindow, 0, 1)
     : 0;
-  const strongestKneeRaise = Math.max(leftKneeRaise, rightKneeRaise);
-  const kneeRaiseDifference = Math.abs(leftKneeRaise - rightKneeRaise);
-  const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
   const leftKneeAngle = leftAnkle ? angleAtJoint(leftHip, leftKnee, leftAnkle) : Math.PI;
   const rightKneeAngle = rightAnkle ? angleAtJoint(rightHip, rightKnee, rightAnkle) : Math.PI;
+  const leftSideRaise = visibility(leftKnee) >= 0.3
+    ? lateralSingleLegRaiseDepth({
+        ankle: leftAnkle,
+        hip: leftHip,
+        isLeft: true,
+        knee: leftKnee,
+        kneeAngle: leftKneeAngle,
+        torsoScale: currentTorsoScale,
+      })
+    : 0;
+  const rightSideRaise = visibility(rightKnee) >= 0.3
+    ? lateralSingleLegRaiseDepth({
+        ankle: rightAnkle,
+        hip: rightHip,
+        isLeft: false,
+        knee: rightKnee,
+        kneeAngle: rightKneeAngle,
+        torsoScale: currentTorsoScale,
+      })
+    : 0;
+  const leftLegRaise = Math.max(leftKneeRaise, leftSideRaise);
+  const rightLegRaise = Math.max(rightKneeRaise, rightSideRaise);
+  const strongestKneeRaise = Math.max(leftLegRaise, rightLegRaise);
+  const kneeRaiseDifference = Math.abs(leftLegRaise - rightLegRaise);
+  const clearSingleKneeRaise = strongestKneeRaise > 0.45 && kneeRaiseDifference > 0.32;
   const kneeAngleDifference = Math.abs(leftKneeAngle - rightKneeAngle);
   const averageKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
   const kneeBendDepth = kneeAngleDifference < 0.5
@@ -1029,23 +1104,23 @@ export function getMovementLowerBodyIntent({
     squatDepth > 0.22 && !clearSingleKneeRaise
       ? "squat"
       : clearSingleKneeRaise
-        ? leftKneeRaise > rightKneeRaise
+        ? leftLegRaise > rightLegRaise
           ? "left-knee-raise"
           : "right-knee-raise"
-      : leftKneeRaise > 0.32 && rightKneeRaise > 0.32
+      : leftLegRaise > 0.32 && rightLegRaise > 0.32
         ? "mixed-lower-body"
-        : leftKneeRaise > 0.32
+        : leftLegRaise > 0.32
           ? "left-knee-raise"
-          : rightKneeRaise > 0.32
+          : rightLegRaise > 0.32
             ? "right-knee-raise"
             : squatDepth > 0.16
               ? "squat"
               : "neutral";
 
   return {
-    squatDepth,
-    leftKneeRaise,
-    rightKneeRaise,
+    squatDepth: label === "squat" ? squatDepth : 0,
+    leftKneeRaise: leftLegRaise,
+    rightKneeRaise: rightLegRaise,
     squatSignals,
     confidence,
     label,

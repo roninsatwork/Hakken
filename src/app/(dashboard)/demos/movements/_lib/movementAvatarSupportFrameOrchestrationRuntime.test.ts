@@ -44,12 +44,14 @@ function contactLocks(
 
 describe("movementAvatarSupportFrameOrchestrationRuntime", () => {
   it("returns the support owner when support presentation applies", () => {
+    const rightUpperLeg = new THREE.Object3D();
+
     const result = applyMovementAvatarSupportFrameOrchestrationRuntime({
       avatarRoot: new THREE.Object3D(),
       contactLocks: contactLocks(),
       currentLowerBodyOwner: "previous-owner",
       floorY: -1,
-      lookupBone: () => null,
+      lookupBone: (bone) => bone === "rightUpperLeg" ? rightUpperLeg : null,
       scene: new THREE.Object3D(),
       supportPresentation: supportPresentation({
         owner: "support-owner",

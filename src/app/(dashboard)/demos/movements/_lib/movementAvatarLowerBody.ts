@@ -174,7 +174,6 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   solvedFootSegments,
   solvedLegSegments,
   solvedLowerBodySegments,
-  totalSolvedSegments,
 }: {
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   lowerBodySegmentMotion: number;
@@ -188,14 +187,19 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   solvedLowerBodySegments: number;
   totalSolvedSegments: number;
 }): MovementAvatarPlayerLowerBodyOwnerDecision {
+  const hasUsablePlayerLegRetarget = solvedLegSegments >= 4;
   const canUsePlayerRetargetLegRaise =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
-    retargetSourceQuality >= 0.65 &&
-    totalSolvedSegments >= 8;
+    hasUsablePlayerLegRetarget;
   const playerLegRaiseOwner =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
     lowerBodyDrive.playerLegRaiseSide
       ? `player-${lowerBodyDrive.playerLegRaiseSide}-leg-raise`
+      : null;
+  const playerLegRaiseFeetOwner =
+    lowerBodyDrive.shouldDrivePlayerLegRaise &&
+    solvedFootSegments > 0
+      ? "player-leg-raise-planted-flat"
       : null;
   const retargetOwnsLowerBody = solvedLegSegments >= 4 && retargetSourceQuality >= 0.45;
   const shouldUsePlayerFootFallback =
@@ -255,16 +259,16 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
 
   return {
     canUsePlayerRetargetLegRaise,
-    feetOwner: solvedFootSegments > 0
+    feetOwner: playerLegRaiseFeetOwner ?? (solvedFootSegments > 0
       ? "recorded-retarget"
       : shouldUsePlayerFootFallback
         ? "player-legacy-foot-fallback"
-        : "neutral",
-    lowerBodyOwner: playerLegRaiseOwner ?? (retargetOwnsLowerBody
+        : "neutral"),
+    lowerBodyOwner: retargetOwnsLowerBody
       ? "player-retarget"
-      : solvedLowerBodySegments > 0
-        ? "retarget-legacy-fallback"
-        : "legacy-fallback"),
+      : playerLegRaiseOwner ?? (solvedLowerBodySegments > 0
+          ? "retarget-legacy-fallback"
+          : "legacy-fallback"),
     shouldUsePlayerFootFallback,
   };
 }

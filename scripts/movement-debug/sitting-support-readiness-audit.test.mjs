@@ -218,7 +218,7 @@ describe("sitting support readiness audit", () => {
     expect(formatSittingSupportReadiness(audit)).toContain("- seated-forward-fold: candidate-below-threshold; best 0.000/1.000; searched 1 recording; blockers candidate-below-threshold:1; Record or tag a stronger seated-forward-fold sample.");
     expect(formatSittingSupportReadiness(audit)).toContain("Recording gap plan: 2 row(s); 2 action group(s); 2 capture scenario(s); 2 fresh recording(s) minimum");
     expect(formatSittingSupportReadiness(audit)).toContain("Fresh recording scenario: movement-proof-seated-forward-fold");
-    expect(formatSittingSupportReadiness(audit)).toContain("Quick validation: npx -p node@22.13.0 npm run movement:replay:validate-scenario -- --scenario movement-proof-seated-forward-fold --quiet");
+    expect(formatSittingSupportReadiness(audit)).toContain("Quick validation: npm run movement:proof:validate:seated-forward-fold");
     expect(formatSittingSupportReadiness(audit)).toContain("Next review targets: seated-neutral, seated-twist, chair-contact");
   });
 });

@@ -34,6 +34,21 @@ describe("movement expansion preview handoff", () => {
     });
   });
 
+  it("parses facing/occlusion handoff arguments", () => {
+    expect(parseMovementExpansionPreviewHandoffArgs([
+      "--family",
+      "facing-occlusion",
+      "--out",
+      "tmp/facing-handoff.json",
+      "--guide-out",
+      "tmp/facing-handoff.md",
+    ])).toMatchObject({
+      family: "facing-occlusion",
+      guideOut: "tmp/facing-handoff.md",
+      out: "tmp/facing-handoff.json",
+    });
+  });
+
   it("parses best partial recording-id binding", () => {
     expect(parseMovementExpansionPreviewHandoffArgs([
       "--family",
@@ -157,6 +172,56 @@ describe("movement expansion preview handoff", () => {
     expect(contract.commands[6].command).toContain("--proof-case strongest-root-travel");
     expect(contract.commands[9].command).toContain("npm run movement:walking-support-audit");
     expect(contract.commands[9].command).toContain("current-expansion-preview-walking-game-visual-proof-review-decisions.codex-semantic-review.json");
+    expect(contract.commands[9].command).toContain("--strict");
+  });
+
+  it("builds the facing/occlusion recorded-proof handoff contract", () => {
+    const contract = buildMovementExpansionPreviewHandoff({
+      family: "facing-occlusion",
+      generatedAt: "2026-07-08T00:00:00.000Z",
+      recordingId: "recording-a",
+    });
+
+    expect(contract).toMatchObject({
+      family: "facing-occlusion",
+      previewAuditCase: {
+        expectedFamily: "facing-occlusion",
+        mode: "root-turn-left",
+      },
+      recordingId: "recording-a",
+      requiredGameProofCases: [
+        "strongest-facing-occlusion-recovery",
+        "strongest-side-swap-recovery",
+      ],
+      requiredRecordedProofCases: [
+        "facing-occlusion-recovery",
+        "side-swap-recovery",
+        "self-occlusion-recovery",
+      ],
+      supportClaimStatus: "internal-preview-needs-recorded-proof",
+    });
+    expect(contract.commands.map((command) => command.id)).toEqual([
+      "preview-audit",
+      "recorded-analysis",
+      "replay-session-export",
+      "replay-proof-set",
+      "replay-review",
+      "reviewed-analysis",
+      "game-visual-plan",
+      "game-visual-capture",
+      "game-visual-review",
+      "facing-occlusion-support-audit",
+    ]);
+    expect(contract.commands[1].command).toContain("--include-facing-occlusion-targets");
+    expect(contract.commands[1].command).toContain("--include-product-scope-proof-case facing-occlusion-recovery");
+    expect(contract.commands[1].command).toContain("--include-product-scope-proof-case side-swap-recovery");
+    expect(contract.commands[1].command).toContain("--include-product-scope-proof-case self-occlusion-recovery");
+    expect(contract.commands[1].command).toContain("current-facing-occlusion-analysis.validation.proof-manifest.json");
+    expect(contract.commands[6].command).toContain("--proof-case strongest-facing-occlusion-recovery");
+    expect(contract.commands[6].command).toContain("--proof-case strongest-side-swap-recovery");
+    expect(contract.commands[8].command).toContain("current-facing-occlusion-game-visual-proof-review-decisions.codex-semantic-review.json");
+    expect(contract.commands[9].command).toContain("npm run movement:facing-occlusion-support-audit");
+    expect(contract.commands[9].command).toContain("current-facing-occlusion-game-visual-proof-plan.json");
     expect(contract.commands[9].command).toContain("--strict");
   });
 
@@ -294,6 +359,42 @@ describe("movement expansion preview handoff", () => {
     });
     expect(selection.readiness.bestPartialCandidates[0]).toMatchObject({
       matchedRequiredCaseCount: 1,
+      recordingId: "recording-a",
+    });
+  });
+
+  it("selects the best partial facing/occlusion recording from the Game visual plan", () => {
+    const contract = buildMovementExpansionPreviewHandoff({
+      family: "facing-occlusion",
+      generatedAt: "2026-07-08T00:00:00.000Z",
+      recordingId: "<new-recording-id>",
+    });
+    const selection = selectMovementExpansionPreviewBestPartialRecordingId({
+      contract,
+      gameVisualPlan: {
+        sessions: [
+          {
+            proofCases: ["strongest-side-swap-recovery"],
+            recordingId: "recording-b",
+            targetFrameCount: 1,
+          },
+          {
+            proofCases: [
+              "strongest-facing-occlusion-recovery",
+              "strongest-side-swap-recovery",
+            ],
+            recordingId: "recording-a",
+            targetFrameCount: 2,
+          },
+        ],
+      },
+    });
+
+    expect(selection).toMatchObject({
+      recordingId: "recording-a",
+    });
+    expect(selection.readiness.bestPartialCandidates[0]).toMatchObject({
+      matchedRequiredCaseCount: 2,
       recordingId: "recording-a",
     });
   });

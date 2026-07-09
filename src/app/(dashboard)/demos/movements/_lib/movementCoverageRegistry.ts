@@ -145,9 +145,9 @@ export const MOVEMENT_COVERAGE_REGISTRY: Record<MovementCoverageFamily, Movement
     family: "facing-occlusion",
     label: "Facing and occlusion",
     proofLevel: "diagnostic",
-    remainingGaps: ["side-swap recovery is conservative", "self-occlusion correction remains approximate", "recorded replay and Game visual proof are missing"],
+    remainingGaps: ["coverage product truth is still internal diagnostic", "promotion copy and guard expectations need a deliberate product decision before any user-facing claim"],
     status: "diagnostic-only",
-    summary: "Root heading, away-body, source-limited, mirror-side ownership, and confidence gates are internally demo-ready as diagnostics; robust side-swap/self-occlusion recovery remains non-user-facing until recorded proof and Game visual proof exist.",
+    summary: "Root heading, away-body, source-limited, mirror-side ownership, and confidence gates are internally demo-ready as diagnostics with focused recorded Replay and Game proof closed; keep this non-user-facing until product truth is deliberately promoted.",
   },
   "root-turn": {
     demoReady: true,

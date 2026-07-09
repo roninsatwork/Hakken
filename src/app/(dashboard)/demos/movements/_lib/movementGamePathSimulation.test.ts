@@ -361,6 +361,7 @@ const proofPipelineParityModes: MovementAvatarProofMode[] = [
   "prone",
   "prone-cobra",
   "pilates-swimming",
+  "weak-spine-standing",
   "weak-feet-standing",
   "lower-body-out-of-frame",
   "upper-body-auto",
@@ -533,6 +534,24 @@ describe("movementGamePathSimulation", () => {
     expect(proofCases).toContain("strongest-root-travel");
   });
 
+  it("selects facing/occlusion Game visual parity frames for focused diagnostic capture", () => {
+    const proofFrames = selectMovementGameVisualParityProofFrames(
+      buildMovementGamePathSimulation(session([
+        frameWithWorld(withCorePose(), worldHeadingPose(0, { x: 0, z: 0 })),
+        frameWithWorld(withCorePose(), worldHeadingPose(0.9, { x: 0.02, z: 0.01 })),
+        frameWithWorld(withCorePose(), worldHeadingPose(-0.1, { x: 0.02, z: 0.01 })),
+      ])),
+      {
+        includeFacingOcclusionTargets: true,
+        minRootTurnYaw: 0.3,
+      },
+    );
+    const proofCases = proofFrames.flatMap((proofFrame) => proofFrame.cases);
+
+    expect(proofCases).toContain("strongest-facing-occlusion-recovery");
+    expect(proofCases).toContain("strongest-side-swap-recovery");
+  });
+
   it("selects upper-body Game visual parity frames for side bend and head direction", () => {
     const proofFrames = selectMovementGameVisualParityProofFrames(
       buildMovementGamePathSimulation(session([
@@ -617,18 +636,14 @@ describe("movementGamePathSimulation", () => {
     const foldFrame = proofFrames.find((proofFrame) => (
       proofFrame.cases.includes("strongest-seated-forward-fold")
     ));
-    const legLiftFrame = proofFrames.find((proofFrame) => (
-      proofFrame.cases.includes("strongest-seated-leg-lift")
-    ));
 
     expect(proofCases).toContain("strongest-seated-chair-contact");
     expect(proofCases).toContain("strongest-seated-twist");
     expect(proofCases).toContain("strongest-seated-forward-fold");
-    expect(proofCases).toContain("strongest-seated-leg-lift");
+    expect(proofCases).not.toContain("strongest-seated-leg-lift");
     expect(chairContactFrame?.supportPresentationOwner).toMatch(/^support-presentation-seated/);
     expect(twistFrame?.supportPresentationOwner).toBe("support-presentation-seated-twist");
     expect(foldFrame?.supportPresentationOwner).toBe("support-presentation-seated-forward-fold");
-    expect(legLiftFrame?.supportPresentationOwner).toBe("support-presentation-seated-leg-lift");
   });
 
   it("marks the first source/display semantic divergence for visual proof", () => {
@@ -693,7 +708,7 @@ describe("movementGamePathSimulation", () => {
     ["seated", "seated", "chair", "seat:inferred", false, true, "body-orientation-seated", "chair-seated", "seat-chair", "support-presentation-seated"],
     ["seated-twist", "seated", "chair", "seat:inferred", false, true, "body-orientation-seated", "seated-twist", "seat-chair", "support-presentation-seated-twist"],
     ["seated-forward-fold", "seated", "chair", "seat:inferred", false, true, "body-orientation-seated", "seated-forward-fold", "seat-chair", "support-presentation-seated-forward-fold"],
-    ["seated-leg-lift", "seated", "chair", "seat:inferred", false, true, "body-orientation-seated", "seated-leg-lift", "seat-chair", "support-presentation-seated-leg-lift"],
+    ["seated-leg-lift", "seated", "chair", "seat:inferred", false, true, "body-orientation-seated", "seated-leg-lift", "feet-floor", "support-presentation-none"],
     ["kneeling", "kneeling", "floor", "leftKnee:active", false, true, "body-orientation-kneeling", "kneeling-floor", "knees-floor", "support-presentation-kneeling"],
     ["half-kneeling", "kneeling", "floor", "leftKnee:active", false, true, "body-orientation-kneeling", "half-kneeling-floor", "knees-floor", "support-presentation-half-kneeling"],
     ["low-lunge", "kneeling", "floor", "leftKnee:active", false, true, "body-orientation-kneeling", "low-lunge-floor", "knees-floor", "support-presentation-low-lunge"],
@@ -757,14 +772,27 @@ describe("movementGamePathSimulation", () => {
       expect(decision.exercisePose.poseKey).toBe(exercisePoseKey);
       expect(decision.exercisePose.status).toBe("diagnostic-only");
       expect(decision.supportIntent.key).toBe(supportIntentKey);
-      expect(decision.supportConstraint.status).toBe("partial-contact-correction");
-      expect(decision.supportContactLocks.shouldApply).toBe(true);
-      expect(decision.supportContactLocks.anchors.length).toBeGreaterThan(0);
+      if (supportPresentationOwner === "support-presentation-none") {
+        expect(decision.supportConstraint.status).toBe("active");
+        expect(decision.supportContactLocks.shouldApply).toBe(false);
+        expect(decision.supportContactLocks.anchors).toEqual([]);
+      } else {
+        expect(decision.supportConstraint.status).toBe("partial-contact-correction");
+        expect(decision.supportContactLocks.shouldApply).toBe(true);
+        expect(decision.supportContactLocks.anchors.length).toBeGreaterThan(0);
+      }
       expect(decision.supportPresentation.owner).toBe(supportPresentationOwner);
-      expect(decision.supportPresentation.shouldApply).toBe(true);
-      expect(decision.supportPresentation.specs.length).toBeGreaterThanOrEqual(6);
-      expect(decision.supportPresentation.armSpecs.length).toBeGreaterThan(0);
-      expect(decision.supportPresentation.spineSpecs.length).toBeGreaterThan(0);
+      if (supportPresentationOwner === "support-presentation-none") {
+        expect(decision.supportPresentation.shouldApply).toBe(false);
+        expect(decision.supportPresentation.specs).toEqual([]);
+        expect(decision.supportPresentation.armSpecs).toEqual([]);
+        expect(decision.supportPresentation.spineSpecs).toEqual([]);
+      } else {
+        expect(decision.supportPresentation.shouldApply).toBe(true);
+        expect(decision.supportPresentation.specs.length).toBeGreaterThanOrEqual(6);
+        expect(decision.supportPresentation.armSpecs.length).toBeGreaterThan(0);
+        expect(decision.supportPresentation.spineSpecs.length).toBeGreaterThan(0);
+      }
       expect(decision.spineDrive.shouldApplySpine).toBe(false);
     },
   );
@@ -1186,6 +1214,37 @@ describe("movementGamePathSimulation", () => {
     expect(appliedDecision.shouldUseLegacyLowerBody).toBe(false);
   });
 
+  it("keeps player leg-raise feet planted instead of handing them to recorded retarget", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const pipelineDecision = resolveMovementAvatarStudioDecision({
+      avatarRole: "player",
+      calibration,
+      retargetSourceModel,
+      source: { poseLandmarks: leftKneeLiftPose() },
+    });
+    const appliedDecision = resolveMovementAvatarAppliedLowerBodyDecision({
+      appliedFootSegments: 2,
+      appliedLegSegments: 4,
+      appliedLowerBodySegments: 6,
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0,
+      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
+      lowerBodySegmentMotion: pipelineDecision.lowerBodySegmentMotion,
+      lowerBodyTrackingReady: pipelineDecision.lowerBodyTrackingReady,
+      playerRetargetLowerBodyMotion: pipelineDecision.playerRetargetLowerBodyMotion,
+      retargetFrame: pipelineDecision.retargetFrame,
+      shouldApplyLowerBody: pipelineDecision.shouldApplyLowerBody,
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(pipelineDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
+    expect(appliedDecision.lowerBodyOwner).toBe("player-retarget");
+    expect(appliedDecision.feetOwner).toBe("player-leg-raise-planted-flat");
+    expect(appliedDecision.feetOwner).not.toBe("recorded-retarget");
+  });
+
   it("resolves held player source ownership from the smoothed visual squat depth", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
     const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
@@ -1233,6 +1292,35 @@ describe("movementGamePathSimulation", () => {
     expect(stageDecision.stage).toBe("player-leg-raise");
     expect(stageDecision.anchoredPlayerLegRaiseSide).toBe("left");
     expect(stageDecision.lowerBodyOwner).toBe("player-left-leg-raise");
+  });
+
+  it("keeps strong player leg raises anchored even when retarget has enough leg segments", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const pipelineDecision = resolveMovementAvatarStudioDecision({
+      avatarRole: "player",
+      calibration,
+      retargetSourceModel,
+      source: { poseLandmarks: leftKneeLiftPose() },
+    });
+    const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
+      avatarRole: "player",
+      instructorLowerBodyMotion: 0,
+      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
+      playerRetargetLowerBodyMotion: 0.72,
+      sourceOwnerDecision: {
+        ...pipelineDecision.lowerBodyOwnerDecision!,
+        canUsePlayerRetargetLegRaise: true,
+        lowerBodyOwner: "player-retarget",
+      },
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(stageDecision.stage).toBe("player-leg-raise");
+    expect(stageDecision.canUsePlayerRetargetLegRaise).toBe(true);
+    expect(stageDecision.anchoredPlayerLegRaiseSide).toBe("left");
+    expect(stageDecision.lowerBodyOwner).toBe("player-left-leg-raise");
+    expect(stageDecision.feetOwner).toBe("player-leg-raise-planted-flat");
   });
 
   it("keeps neutral player frames out of lower-body retarget even when distance adds segment motion", () => {
@@ -1846,7 +1934,7 @@ describe("movementGamePathSimulation", () => {
     expect(specs[0]!.rotation.x).toBeGreaterThan(0.9);
     expect(specs[0]!.rotation.z).toBeGreaterThan(0);
     expect(specs[1]!.rotation.x).toBeLessThan(-0.5);
-    expect(specs[2]!.slerp).toBeCloseTo(0.5184);
+    expect(specs[2]!.slerp).toBeCloseTo(0.5904);
     expect(specs[3]).toMatchObject({
       rotation: { x: 0, y: 0, z: 0 },
       slerp: 0.28,
@@ -1861,6 +1949,23 @@ describe("movementGamePathSimulation", () => {
       side: "left",
       slerp: 0.72,
     })[0]!.rotation.x).toBeGreaterThan(0.45);
+    expect(resolveMovementAvatarSingleLegRaisePose({
+      depth: 0.334,
+      side: "right",
+      slerp: 0.72,
+    })[0]!.rotation.x).toBeGreaterThan(1.2);
+    expect(resolveMovementAvatarSingleLegRaisePose({
+      depth: 0.49,
+      lowerLegBoost: 0.08,
+      side: "right",
+      slerp: 0.72,
+      upperLegBoost: 0.18,
+    })[0]!.rotation.x).toBeGreaterThan(1.25);
+    expect(Math.abs(resolveMovementAvatarSingleLegRaisePose({
+      depth: 0.49,
+      side: "right",
+      slerp: 0.72,
+    })[0]!.rotation.z)).toBeGreaterThan(0.3);
   });
 
   it("resolves spine application options and recorded retarget counting", () => {
@@ -1875,10 +1980,10 @@ describe("movementGamePathSimulation", () => {
 
     expect(playerOptions).toEqual({
       activeDrive: {
-        chest: 0.42,
-        hips: 0.22,
-        spine: 0.44,
-        upperChest: 0.36,
+        chest: 0.76,
+        hips: 0.34,
+        spine: 0.78,
+        upperChest: 0.68,
       },
       shouldCountRecordedSpineRetarget: false,
       solver: {
@@ -1925,10 +2030,10 @@ describe("movementGamePathSimulation", () => {
         twist: 0.05,
       },
     })).toEqual([
-      { bone: "hips", rotation: { x: 0.1, y: 0.02, z: 0.01 }, slerp: 0.22 },
-      { bone: "spine", rotation: { x: 0.2, y: 0.03, z: 0.015 }, slerp: 0.44 },
-      { bone: "chest", rotation: { x: 0.3, y: 0.04, z: 0.02 }, slerp: 0.42 },
-      { bone: "upperChest", rotation: { x: 0.25, y: 0.035, z: 0.018 }, slerp: 0.36 },
+      { bone: "hips", rotation: { x: 0.1, y: 0.02, z: 0.01 }, slerp: 0.34 },
+      { bone: "spine", rotation: { x: 0.2, y: 0.03, z: 0.015 }, slerp: 0.78 },
+      { bone: "chest", rotation: { x: 0.3, y: 0.04, z: 0.02 }, slerp: 0.76 },
+      { bone: "upperChest", rotation: { x: 0.25, y: 0.035, z: 0.018 }, slerp: 0.68 },
     ]);
 
     expect(resolveMovementAvatarSpineSolverPose({
@@ -1999,11 +2104,11 @@ describe("movementGamePathSimulation", () => {
     });
   });
 
-  it("uses opposite VRM bone pitch for live player head motion while leaving replay pitch unchanged", () => {
+  it("keeps player and replay VRM bone pitch in the same direction", () => {
     expect(resolveMovementAvatarHeadBonePitch({
       avatarRole: "player",
       headPitch: 0.34,
-    })).toBeCloseTo(-0.34);
+    })).toBeCloseTo(0.34);
     expect(resolveMovementAvatarHeadBonePitch({
       avatarRole: "instructor",
       headPitch: 0.34,
@@ -2031,6 +2136,45 @@ describe("movementGamePathSimulation", () => {
       avatarRole: "instructor",
       head: sourceHead,
     })).toBe(sourceHead);
+  });
+
+  it("keeps moderate pose-only player head yaw facing forward", () => {
+    const decision = resolveMovementAvatarHeadDecision({
+      avatarRole: "player",
+      calibration: buildMovementCalibration({ poseLandmarks: withCorePose() }),
+      headMotionIntent: neutralHeadMotion,
+      mirrorHeadForDisplay: false,
+      rawHead: {
+        confidence: 0.95,
+        pitch: 0,
+        roll: 0,
+        source: "pose",
+        yaw: 0.42,
+      },
+    });
+
+    expect(decision.appliedHead.yaw).toBe(0);
+    expect(decision.headYaw).toBe(0);
+  });
+
+  it("preserves strong pose-only player head yaw direction after damping", () => {
+    const decision = resolveMovementAvatarHeadDecision({
+      avatarRole: "player",
+      calibration: buildMovementCalibration({ poseLandmarks: withCorePose() }),
+      headMotionIntent: neutralHeadMotion,
+      mirrorHeadForDisplay: false,
+      rawHead: {
+        confidence: 0.95,
+        pitch: 0,
+        roll: 0,
+        source: "pose",
+        yaw: 0.75,
+      },
+    });
+
+    expect(decision.appliedHead.yaw).toBeGreaterThan(0);
+    expect(decision.appliedHead.yaw).toBeLessThan(0.2);
+    expect(Math.sign(decision.appliedHead.yaw)).toBe(Math.sign(decision.headYaw));
   });
 
   it("resolves head, neck, and upper-chest application poses outside avatar application", () => {
@@ -2143,6 +2287,19 @@ describe("movementGamePathSimulation", () => {
     });
 
     expect(neutralDecision.lowerBodyIntent.label).toBe("neutral");
+    expect(resolveMovementAvatarFootLockEngagement({
+      avatarRole: "player",
+      lowerBodyDrive: neutralDecision.lowerBodyDrive,
+      lowerBodyTrackingReady: true,
+      retargetFrame: retargetFrame({
+        contacts: {
+          leftFoot: true,
+          rightFoot: false,
+        },
+      }),
+      shouldApplyLowerBody: neutralDecision.shouldApplyLowerBody,
+      shouldLockActiveTorso: true,
+    })).toEqual({ shouldEngage: true });
     expect(resolveMovementAvatarFootLockEngagement({
       avatarRole: "player",
       lowerBodyDrive: neutralDecision.lowerBodyDrive,
@@ -2554,10 +2711,12 @@ describe("movementGamePathSimulation", () => {
     expect(sideBendDecision?.spineDrive.owner).toBe("player-spine-model");
     expect(sideBendDecision?.spineDrive.shouldApplySpine).toBe(true);
     expect(sideBendDecision?.spineDrive.sideBend).toBeLessThan(-0.4);
-    expect(sideBendDecision?.spineDrive.rotations.hips.z).toBeGreaterThan(0);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.spine.z ?? 0)).toBeGreaterThan(0.1);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeGreaterThan(0.15);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeLessThan(0.25);
+    expect(sideBendDecision?.spineDrive.rotations.hips.z).toBeLessThan(0);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.spine.z ?? 0)).toBeGreaterThan(0.2);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeGreaterThan(0.42);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeLessThan(0.45);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.x ?? 0)).toBeLessThan(0.01);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.upperChest.x ?? 0)).toBeLessThan(0.01);
   });
 
   it("keeps weak feet from becoming recorded-retarget feet during standing", () => {
@@ -2577,7 +2736,7 @@ describe("movementGamePathSimulation", () => {
     expect(weakFeetDecision?.lowerOwner).not.toContain("squat");
   });
 
-  it("uses a player foot fallback when lower-leg retarget moves but foot segments are missing", () => {
+  it("uses a player foot fallback when side-leg retarget moves but foot segments are missing", () => {
     const simulation = buildMovementGamePathSimulation(session([
       frame(withCorePose()),
       frame(sideReachWithoutFootSegmentsPose()),
@@ -2585,9 +2744,11 @@ describe("movementGamePathSimulation", () => {
 
     const sideReachDecision = simulation.decisions[1];
 
-    expect(sideReachDecision?.lowerBodyIntent.label).toBe("neutral");
+    expect(sideReachDecision?.lowerBodyIntent.label).toBe("right-knee-raise");
+    expect(sideReachDecision?.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
+    expect(sideReachDecision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
     expect(sideReachDecision?.retarget.lowerBodySegmentMotion).toBeGreaterThan(0.16);
-    expect(sideReachDecision?.lowerOwner).toBe("player-retarget");
+    expect(sideReachDecision?.lowerOwner).toBe("player-right-leg-raise");
     expect(sideReachDecision?.feetOwner).toBe("player-legacy-foot-fallback");
   });
 

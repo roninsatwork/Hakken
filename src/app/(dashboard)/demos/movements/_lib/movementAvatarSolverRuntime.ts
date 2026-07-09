@@ -72,6 +72,7 @@ export type MovementAvatarSolvedFrameRuntime =
   }
   | {
     displayPreparedInput: MovementAvatarPreparedSolverInput;
+    faceLandmarks: MovementAvatarPreparedSolverInput["faceLandmarks"];
     forceStandby: MovementAvatarPreparedSolverInput["forceStandby"];
     imageLandmarks: MovementAvatarPreparedSolverInput["imageLandmarks"];
     mirrorPlayerDisplay: boolean;
@@ -118,6 +119,7 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     targetSolverLandmarks,
   } = solverRuntimeInput;
   const {
+    faceLandmarks,
     forceStandby,
     imageLandmarks,
     rigHands,
@@ -145,6 +147,7 @@ export function resolveMovementAvatarSolvedFrameRuntime({
 
   return {
     displayPreparedInput,
+    faceLandmarks,
     forceStandby,
     imageLandmarks,
     mirrorPlayerDisplay,

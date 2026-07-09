@@ -23,6 +23,13 @@ import {
   resolveMovementMatchScoringGameplaySummary,
 } from "./movementGameplayScoring";
 import {
+  buildMovementTruthSkeleton,
+  getMovementTruthSkeletonRecoveryCue,
+  summarizeMovementTruthSkeleton,
+  type MovementTruthSkeletonReadinessGroup,
+  type MovementTruthSkeletonReadinessState,
+} from "./movementTruthSkeleton";
+import {
   getMovementCoverageEntries,
   getMovementCoverageMissingProofs,
   summarizeMovementCoverageRegistry,
@@ -43,24 +50,31 @@ import {
   resolveMovementRootMotionStepResponse,
   type MovementRootMotionFrame,
 } from "./movementRootMotion";
-import type {
-  MovementCameraBodyPart,
-  MovementCameraConfidenceState,
-  MovementCameraMessageEvent,
-  MovementSourceFrame,
-  MovementSourceOrigin,
-  MovementSourceStatus,
-  MovementStartPromptEvent,
-  MovementStartReadiness,
-  MovementStartReadinessState,
+import {
+  getMovementCameraConfidenceRecoveryCue,
+  type MovementCameraConfidenceRecoveryCue,
+  type MovementCameraBodyPart,
+  type MovementCameraConfidenceState,
+  type MovementCameraMessageEvent,
+  type MovementSourceFrame,
+  type MovementSourceOrigin,
+  type MovementSourceStatus,
+  type MovementStartPromptEvent,
+  type MovementStartReadiness,
+  type MovementStartReadinessState,
 } from "./movementSourceFrame";
+import { getMovementStartReadinessMessage } from "./movementSetupRecoveryCue";
 import type { MovementHeadMotionIntent, TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementReplayFailureCode =
+  | "avatar_arm_pose_diverged"
+  | "avatar_head_alignment_diverged"
   | "avatar_head_spine_diverged"
   | "avatar_head_not_applied"
   | "avatar_head_root_diverged"
   | "avatar_output_diverged"
+  | "avatar_planted_foot_diverged"
+  | "avatar_spine_angle_diverged"
   | "avatar_upper_body_diverged"
   | "feet_neutral_while_leg_motion_present"
   | "false_knee_raise_candidate"
@@ -109,6 +123,70 @@ export type MovementReplayFailure = {
   frameIndex?: number;
   semanticCode?: MovementReplaySemanticFailureCode;
   severity: "error" | "warning";
+};
+
+export type ReplayStudioFailureCode =
+  | "source-not-trustworthy"
+  | "avatar-not-following-leg"
+  | "avatar-wrong-side"
+  | "avatar-collapsed-to-squat"
+  | "avatar-seated-while-source-standing"
+  | "avatar-output-missing"
+  | "owner-flicker"
+  | "visual-proof-missing"
+  | "replay-game-diverged"
+  | "root-motion-wrong";
+
+export type ReplayStudioVerdictStatus = "pass" | "review" | "blocked";
+
+export type MovementReplayStudioFrameFailure = {
+  analyzerCode?: MovementReplayFailureCode;
+  code: ReplayStudioFailureCode;
+  detail: string;
+  nextFixArea: string;
+  severity: "error" | "warning";
+};
+
+export type MovementReplayStudioFrameVerdict = {
+  actual: {
+    comparedLowerBodySegments: number;
+    comparedUpperBodySegments: number;
+    feetOwner: string;
+    lowerBodyDirectionError: number | null;
+    lowerOwner: string;
+    supportIntent: string;
+    supportPresentation: string;
+    upperBodyDirectionError: number | null;
+  };
+  expected: {
+    motion: "neutral" | "leg-raise" | "squat" | "side-leg" | "root-turn" | "root-travel" | "upper-body" | "support";
+    owner: string;
+    side: "left" | "right" | "both" | null;
+  };
+  failures: MovementReplayStudioFrameFailure[];
+  frameIndex: number;
+  source: {
+    readiness: MovementStartReadinessState | "lost";
+    sourceQuality: number;
+    visibleBodyParts: string[];
+    weakestGroup?: MovementTruthSkeletonReadinessGroup;
+  };
+  status: ReplayStudioVerdictStatus;
+};
+
+export type MovementReplayStudioSessionVerdict = {
+  blockedFrameCount: number;
+  failureCount: number;
+  recordingId: string;
+  reviewedFrameCount: number;
+  status: ReplayStudioVerdictStatus;
+  summary: {
+    averageAvatarLowerBodyDirectionError: number;
+    avatarVisualFrameCount: number;
+    lowerBodyOwnerTransitionsPerSecond: number;
+    visualMatchScore: number;
+  };
+  worstFrames: MovementReplayStudioFrameVerdict[];
 };
 
 export type MovementReplayGamePathFrame = {
@@ -189,6 +267,10 @@ export type MovementReplaySourceFrame = {
   blockedReasons: string[];
   cameraHelpEvents: MovementCameraMessageEvent[];
   cameraReasons: string[];
+  cameraRecoveryCueEvent: MovementCameraMessageEvent | null;
+  cameraRecoveryCueMessage: string | null;
+  cameraRecoveryCueReasons: string[];
+  cameraRecoveryCueState: MovementCameraConfidenceRecoveryCue["state"] | null;
   cameraScore: number;
   cameraState: MovementCameraConfidenceState;
   canStartGame: boolean;
@@ -200,8 +282,26 @@ export type MovementReplaySourceFrame = {
   scoreAllowed: boolean;
   sourceOrigin: MovementSourceOrigin;
   sourceStatus: MovementSourceStatus;
+  startReadinessMessage: string;
   startReadinessState: MovementStartReadinessState;
+  truthSkeletonGroupConfidence: Record<MovementTruthSkeletonReadinessGroup, number>;
+  truthSkeletonReasons: string[];
+  truthSkeletonRecoveryCueGroup: MovementTruthSkeletonReadinessGroup | null;
+  truthSkeletonRecoveryCueMessage: string | null;
+  truthSkeletonRecoveryCueState: Exclude<MovementTruthSkeletonReadinessState, "ready"> | null;
+  truthSkeletonState: MovementTruthSkeletonReadinessState;
+  truthSkeletonWeakestGroup: MovementTruthSkeletonReadinessGroup;
+  truthSkeletonWeakestScore: number;
   visibleBodyParts: MovementCameraBodyPart[];
+};
+
+export type MovementReplayStartReadinessMessageSummary = {
+  blockedFrameCount: number;
+  canStartGameFrameCount: number;
+  count: number;
+  firstFrameIndex: number;
+  message: string;
+  readyFrameCount: number;
 };
 
 type MovementReplayGameWrapperParitySnapshot = {
@@ -260,6 +360,7 @@ export type MovementReplayAnalysis = {
     };
     retargetSourceQuality: number;
     scoreMessageParityFrames: MovementReplayScoreMessageParityFrame[];
+    startReadinessMessageSummary: MovementReplayStartReadinessMessageSummary[];
     sourceFrames: MovementReplaySourceFrame[];
     visualProofFrames: MovementGameVisualParityProofFrame[];
     wrapperFrames: MovementReplayGameWrapperFrame[];
@@ -304,7 +405,12 @@ export type MovementReplayAnalysis = {
     cameraConfidenceReadyFrameCount: number;
     cameraConfidenceUncertainFrameCount: number;
     cameraHelpEventCount: number;
+    cameraRecoveryCueFrameCount: number;
     cameraScoreAllowedFrameCount: number;
+    truthSkeletonBlockedFrameCount: number;
+    truthSkeletonPartialFrameCount: number;
+    truthSkeletonReadyFrameCount: number;
+    truthSkeletonRecoveryCueFrameCount: number;
     gameplayClearMovementEventCount: number;
     gameplayScoreDeltaTotal: number;
     gameplayTrackingUncertaintyEventCount: number;
@@ -349,6 +455,10 @@ export type MovementReplayAnalysis = {
     visualReliableFrameCount: number;
   };
   pass: boolean;
+  replayStudio: {
+    frames: MovementReplayStudioFrameVerdict[];
+    session: MovementReplayStudioSessionVerdict;
+  };
   sessionId: string;
   summary: MovementDebugReplaySummary;
   rootMotion: {
@@ -366,9 +476,11 @@ export type MovementReplayAnalyzerOptions = {
 
 const STRONG_CONFIDENCE = 0.65;
 const AVATAR_LOWER_BODY_DIRECTION_REVIEW_THRESHOLD = 0.52;
+const AVATAR_ACTIVE_LEG_DIRECTION_ERROR_THRESHOLD = 0.12;
 const AVATAR_UPPER_BODY_DIRECTION_REVIEW_THRESHOLD = 0.18;
 const REPLAY_GAME_PATH_MOTION_REVIEW_THRESHOLD = 0.18;
 const ROOT_HEADING_REVIEW_THRESHOLD = 0.65;
+const ROOT_HEADING_AVATAR_FOLLOW_REVIEW_THRESHOLD = 1.2;
 const ROOT_PATH_REVIEW_THRESHOLD = 0.16;
 const SOURCE_OUT_OF_FRAME_REVIEW_COUNT = 3;
 const VISUAL_MATCH_REVIEW_THRESHOLD = 0.85;
@@ -484,6 +596,18 @@ function hasLegMotion(frame: MovementDebugReplayFrame, currentDecision?: Movemen
   ) >= 0.22;
 }
 
+function hasLegRaiseMotion(frame: MovementDebugReplayFrame, currentDecision?: MovementReplayCurrentDecision) {
+  const retarget = currentDecision?.retarget ?? frame.retarget;
+  const owner = currentDecision?.lowerOwner ?? lowerOwner(frame);
+  const label = currentDecision?.lowerLabel ?? lowerLabel(frame);
+  return Boolean(
+    currentDecision?.lowerBodyDrive.shouldDrivePlayerLegRaise ||
+      owner.includes("leg-raise") ||
+      label.includes("knee-raise") ||
+      Math.max(retarget?.leftKneeLift ?? 0, retarget?.rightKneeLift ?? 0) >= 0.22,
+  );
+}
+
 function hasStoredSquat(frame: MovementDebugReplayFrame, currentDecision?: MovementReplayCurrentDecision) {
   const retarget = currentDecision?.retarget ?? frame.retarget;
   const lower = lowerLabel(frame);
@@ -532,6 +656,21 @@ function transitionCount(values: string[]) {
   return values.reduce((count, value, index) => (
     index > 0 && value !== values[index - 1] ? count + 1 : count
   ), 0);
+}
+
+function activeLowerBodyOwnerForFlicker(
+  frame: MovementDebugReplayFrame,
+  currentDecision?: MovementReplayCurrentDecision,
+) {
+  const owner = currentDecision?.lowerOwner ?? lowerOwner(frame);
+  const label = currentDecision?.lowerLabel ?? lowerLabel(frame);
+  const mode = replayLowerMotionMode({
+    label,
+    owner,
+    retarget: currentDecision?.retarget ?? frame.retarget,
+  });
+
+  return mode && mode !== "not-motion" ? owner : null;
 }
 
 function unique(values: string[]) {
@@ -630,6 +769,276 @@ function semanticCodeForReplayFailure(
   if (failure.code === "squat_not_detected") return "squat-missing";
   if (failure.code === "stand_recovery_missing") return "squat-collapsed-to-leg-lift";
   return undefined;
+}
+
+function replayStudioFailureCodeFor(
+  failure: MovementReplayFailure,
+  gameFrame?: MovementReplayGamePathFrame,
+  sourceFrame?: MovementReplaySourceFrame,
+): ReplayStudioFailureCode {
+  const sourceIsReady = sourceFrame?.canStartGame === true && sourceFrame.startReadinessState === "ready";
+  if (failure.code === "support_constraint_partial" && !sourceIsReady) {
+    return "source-not-trustworthy";
+  }
+  if (
+    failure.code === "source_feet_weak" ||
+    failure.code === "source_lower_body_out_of_frame" ||
+    failure.code === "start_readiness_blocked_at_capture" ||
+    failure.code === "start_readiness_replay_mismatch" ||
+    failure.code === "retarget_quality_drop" ||
+    failure.code === "world_landmarks_missing" ||
+    failure.code === "heading_unavailable"
+  ) {
+    return "source-not-trustworthy";
+  }
+  if (failure.code === "lower_body_owner_flicker") return "owner-flicker";
+  if (failure.code === "visual_match_low") return "visual-proof-missing";
+  if (
+    failure.code === "replay_game_path_diverged" ||
+    failure.code === "replay_game_score_message_diverged" ||
+    failure.code === "replay_game_wrapper_diverged"
+  ) {
+    return "replay-game-diverged";
+  }
+  if (
+    failure.code === "root_motion_missing" ||
+    failure.code === "root_path_detected" ||
+    failure.code === "root_turn_detected"
+  ) {
+    if (!sourceIsReady) return "source-not-trustworthy";
+    const rootIntentKey = gameFrame?.rootMotionIntentKey ?? "";
+    if (failure.code === "root_turn_detected") {
+      const hasClearRootTurnIntent = rootIntentKey.includes("turn");
+      const hasClearRootYaw = Math.abs(gameFrame?.rootHeadingYaw ?? 0) >= ROOT_HEADING_AVATAR_FOLLOW_REVIEW_THRESHOLD;
+      if (!hasClearRootTurnIntent && !hasClearRootYaw) return "source-not-trustworthy";
+    }
+    if (failure.code === "root_path_detected") {
+      const hasClearRootTravelIntent = rootIntentKey.includes("travel");
+      const hasClearRootTravel = (gameFrame?.rootPathDistance ?? 0) >= ROOT_PATH_REVIEW_THRESHOLD;
+      if (!hasClearRootTravelIntent && !hasClearRootTravel) return "source-not-trustworthy";
+    }
+    return "root-motion-wrong";
+  }
+  if (
+    failure.code === "false_knee_raise_candidate" ||
+    failure.semanticCode === "mirror-side-mismatch" ||
+    failure.semanticCode === "leg-lift-wrong-side"
+  ) {
+    return "avatar-wrong-side";
+  }
+  if (
+    failure.code === "squat_not_detected" ||
+    failure.code === "stand_recovery_missing" ||
+    failure.semanticCode === "leg-lift-collapsed-to-squat" ||
+    failure.semanticCode === "squat-collapsed-to-leg-lift"
+  ) {
+    return "avatar-collapsed-to-squat";
+  }
+  if (
+    failure.detail.toLowerCase().includes("seated") ||
+    gameFrame?.supportIntentKey === "seat-chair" ||
+    gameFrame?.supportPresentationOwner.startsWith("support-presentation-seated")
+  ) {
+    return "avatar-seated-while-source-standing";
+  }
+  if (
+    failure.code === "feet_neutral_while_leg_motion_present" ||
+    failure.semanticCode === "leg-lift-missing" ||
+    gameFrame?.shouldDrivePlayerLegRaise
+  ) {
+    return "avatar-not-following-leg";
+  }
+  if (failure.code === "avatar_output_diverged") return "avatar-output-missing";
+  return "visual-proof-missing";
+}
+
+function nextFixAreaForReplayStudioFailure(code: ReplayStudioFailureCode) {
+  switch (code) {
+    case "source-not-trustworthy":
+      return "source setup / visibility";
+    case "avatar-not-following-leg":
+      return "VRM lower-body application / leg-retarget output";
+    case "avatar-wrong-side":
+      return "mirror mapping / side ownership";
+    case "avatar-collapsed-to-squat":
+      return "lower-body owner selection / squat-vs-leg classification";
+    case "avatar-seated-while-source-standing":
+      return "support intent / seated presentation guard";
+    case "avatar-output-missing":
+      return "avatar visual telemetry / VRM bone application";
+    case "owner-flicker":
+      return "lower-body owner smoothing / hysteresis";
+    case "visual-proof-missing":
+      return "Replay visual proof capture / avatar-follow gate";
+    case "replay-game-diverged":
+      return "Replay/Game shared motion pipeline parity";
+    case "root-motion-wrong":
+      return "root yaw / root travel solver";
+  }
+}
+
+function expectedReplayStudioMotion(gameFrame?: MovementReplayGamePathFrame): MovementReplayStudioFrameVerdict["expected"] {
+  if (!gameFrame) {
+    return {
+      motion: "neutral",
+      owner: "unknown",
+      side: null,
+    };
+  }
+
+  const combined = `${gameFrame.lowerOwner} ${gameFrame.lowerLabel}`.toLowerCase();
+  const side = combined.includes("left")
+    ? "left"
+    : combined.includes("right")
+      ? "right"
+      : gameFrame.shouldDrivePlayerSquat
+        ? "both"
+        : null;
+  const motion = gameFrame.shouldDrivePlayerLegRaise || combined.includes("leg-raise") || combined.includes("knee-raise")
+    ? "leg-raise"
+    : gameFrame.shouldDrivePlayerSquat || combined.includes("squat")
+      ? "squat"
+      : gameFrame.rootMotionIntentKey.includes("travel")
+        ? "root-travel"
+        : gameFrame.rootMotionIntentKey.includes("turn") || Math.abs(gameFrame.rootHeadingYaw) >= ROOT_HEADING_REVIEW_THRESHOLD
+          ? "root-turn"
+          : gameFrame.supportPresentationApplied || gameFrame.supportIntentKey !== "feet-floor"
+            ? "support"
+            : "neutral";
+
+  return {
+    motion,
+    owner: gameFrame.lowerOwner,
+    side,
+  };
+}
+
+function buildReplayStudioFrameVerdicts({
+  failures,
+  frames,
+  gamePathFrames,
+  sourceFrames,
+}: {
+  failures: MovementReplayFailure[];
+  frames: MovementDebugReplayFrame[];
+  gamePathFrames: MovementReplayGamePathFrame[];
+  sourceFrames: MovementReplaySourceFrame[];
+}): MovementReplayStudioFrameVerdict[] {
+  const failuresByFrame = new Map<number, MovementReplayFailure[]>();
+  failures.forEach((failure) => {
+    if (typeof failure.frameIndex !== "number") return;
+    const frameFailures = failuresByFrame.get(failure.frameIndex) ?? [];
+    frameFailures.push(failure);
+    failuresByFrame.set(failure.frameIndex, frameFailures);
+  });
+
+  return frames.map((frame, frameIndex) => {
+    const gameFrame = gamePathFrames[frameIndex];
+    const sourceFrame = sourceFrames[frameIndex];
+    const frameFailures = [...(failuresByFrame.get(frameIndex) ?? [])];
+    if (sourceFrame && (!sourceFrame.canStartGame || sourceFrame.startReadinessState !== "ready")) {
+      frameFailures.push({
+        code: "start_readiness_blocked_at_capture",
+        detail: `Frame ${frameIndex} source is not ready: ${sourceFrame.startReadinessMessage}`,
+        frameIndex,
+        severity: "warning",
+      });
+    }
+
+    const replayStudioFailures = frameFailures.map((failure): MovementReplayStudioFrameFailure => {
+      const code = replayStudioFailureCodeFor(failure, gameFrame, sourceFrame);
+      return {
+        analyzerCode: failure.code,
+        code,
+        detail: failure.detail,
+        nextFixArea: nextFixAreaForReplayStudioFailure(code),
+        severity: failure.severity,
+      };
+    });
+    const status: ReplayStudioVerdictStatus = replayStudioFailures.some((failure) => failure.severity === "error")
+      ? "blocked"
+      : replayStudioFailures.length > 0
+        ? "review"
+        : "pass";
+
+    return {
+      actual: {
+        comparedLowerBodySegments: frame.avatarVisual?.comparedLowerBodySegments ?? 0,
+        comparedUpperBodySegments: frame.avatarVisual?.comparedUpperBodySegments ?? 0,
+        feetOwner: gameFrame?.feetOwner ?? feetOwner(frame),
+        lowerBodyDirectionError: avatarLowerBodyDirectionError(frame),
+        lowerOwner: gameFrame?.lowerOwner ?? lowerOwner(frame),
+        supportIntent: gameFrame?.supportIntentKey ?? "unknown",
+        supportPresentation: gameFrame?.supportPresentationOwner ?? "unknown",
+        upperBodyDirectionError: avatarUpperBodyDirectionError(frame),
+      },
+      expected: expectedReplayStudioMotion(gameFrame),
+      failures: replayStudioFailures,
+      frameIndex,
+      source: {
+        readiness: sourceFrame?.startReadinessState ?? "lost",
+        sourceQuality: gameFrame?.sourceQuality ?? frame.retarget?.sourceQuality ?? 0,
+        visibleBodyParts: sourceFrame?.visibleBodyParts ?? [],
+        weakestGroup: sourceFrame?.truthSkeletonWeakestGroup,
+      },
+      status,
+    };
+  });
+}
+
+function buildReplayStudioSessionVerdict({
+  failures,
+  frames,
+  metrics,
+  recordingId,
+}: {
+  failures: MovementReplayFailure[];
+  frames: MovementReplayStudioFrameVerdict[];
+  metrics: MovementReplayStudioSessionVerdict["summary"];
+  recordingId: string;
+}): MovementReplayStudioSessionVerdict {
+  const blockedFrameCount = frames.filter((frame) => frame.status === "blocked").length;
+  const sessionRelevantFrames = frames.filter((frame) => (
+    frame.status === "blocked" ||
+    frame.failures.some((failure) => failure.code !== "source-not-trustworthy")
+  ));
+  const reviewedFrameCount = sessionRelevantFrames.filter((frame) => frame.status === "review").length;
+  const unframedErrorCount = failures.filter((failure) => (
+    failure.severity === "error" && typeof failure.frameIndex !== "number"
+  )).length;
+  const unframedWarningCount = failures.filter((failure) => (
+    failure.severity === "warning" && typeof failure.frameIndex !== "number"
+  )).length;
+  const status: ReplayStudioVerdictStatus = blockedFrameCount > 0 || unframedErrorCount > 0
+    ? "blocked"
+    : reviewedFrameCount > 0 || unframedWarningCount > 0
+      ? "review"
+      : "pass";
+  const statusRank = { blocked: 0, review: 1, pass: 2 } satisfies Record<ReplayStudioVerdictStatus, number>;
+  const worstFrames = sessionRelevantFrames
+    .filter((frame) => frame.status !== "pass")
+    .sort((left, right) => (
+      statusRank[left.status] - statusRank[right.status] ||
+      right.failures.length - left.failures.length ||
+      (right.actual.lowerBodyDirectionError ?? 0) - (left.actual.lowerBodyDirectionError ?? 0) ||
+      left.frameIndex - right.frameIndex
+    ))
+    .slice(0, 12);
+
+  return {
+    blockedFrameCount,
+    failureCount: failures.length,
+    recordingId,
+    reviewedFrameCount,
+    status,
+    summary: {
+      averageAvatarLowerBodyDirectionError: metrics.averageAvatarLowerBodyDirectionError,
+      avatarVisualFrameCount: metrics.avatarVisualFrameCount,
+      lowerBodyOwnerTransitionsPerSecond: metrics.lowerBodyOwnerTransitionsPerSecond,
+      visualMatchScore: metrics.visualMatchScore,
+    },
+    worstFrames,
+  };
 }
 
 function getReplayGamePathDivergenceFailure({
@@ -1117,11 +1526,20 @@ function toReplaySourceFrames(
 ): MovementReplaySourceFrame[] {
   return sourceFrames.flatMap((sourceFrame, frameIndex) => {
     if (!sourceFrame) return [];
+    const cameraRecoveryCue = getMovementCameraConfidenceRecoveryCue(sourceFrame.cameraConfidence);
+    const truthSkeletonSummary = summarizeMovementTruthSkeleton(
+      buildMovementTruthSkeleton(sourceFrame),
+    );
+    const truthSkeletonRecoveryCue = getMovementTruthSkeletonRecoveryCue(truthSkeletonSummary);
 
     return [{
       blockedReasons: sourceFrame.startReadiness.blockedReasons,
       cameraHelpEvents: sourceFrame.cameraConfidence.messageEvents,
       cameraReasons: sourceFrame.cameraConfidence.reasons,
+      cameraRecoveryCueEvent: cameraRecoveryCue?.event ?? null,
+      cameraRecoveryCueMessage: cameraRecoveryCue?.message ?? null,
+      cameraRecoveryCueReasons: cameraRecoveryCue?.reasons ?? [],
+      cameraRecoveryCueState: cameraRecoveryCue?.state ?? null,
       cameraScore: sourceFrame.cameraConfidence.score,
       cameraState: sourceFrame.cameraConfidence.state,
       canStartGame: sourceFrame.startReadiness.canStartGame,
@@ -1133,10 +1551,56 @@ function toReplaySourceFrames(
       scoreAllowed: sourceFrame.cameraConfidence.scoreAllowed,
       sourceOrigin: sourceFrame.sourceOrigin,
       sourceStatus: sourceFrame.sourceStatus,
+      startReadinessMessage: getMovementStartReadinessMessage({
+        cameraRecoveryCue,
+        readiness: sourceFrame.startReadiness,
+      }),
       startReadinessState: sourceFrame.startReadiness.state,
+      truthSkeletonGroupConfidence: truthSkeletonSummary.groupConfidence,
+      truthSkeletonReasons: truthSkeletonSummary.reasons,
+      truthSkeletonRecoveryCueGroup: truthSkeletonRecoveryCue?.group ?? null,
+      truthSkeletonRecoveryCueMessage: truthSkeletonRecoveryCue?.message ?? null,
+      truthSkeletonRecoveryCueState: truthSkeletonRecoveryCue?.state ?? null,
+      truthSkeletonState: truthSkeletonSummary.state,
+      truthSkeletonWeakestGroup: truthSkeletonSummary.weakestGroup,
+      truthSkeletonWeakestScore: truthSkeletonSummary.weakestScore,
       visibleBodyParts: sourceFrame.startReadiness.visibleBodyParts,
     }];
   });
+}
+
+function summarizeStartReadinessMessages(
+  sourceFrames: MovementReplaySourceFrame[],
+): MovementReplayStartReadinessMessageSummary[] {
+  const summaryByMessage = new Map<string, MovementReplayStartReadinessMessageSummary>();
+
+  sourceFrames.forEach((frame) => {
+    const message = frame.startReadinessMessage || "Get ready.";
+    const existing = summaryByMessage.get(message);
+    if (existing) {
+      existing.count += 1;
+      existing.blockedFrameCount += frame.startReadinessState === "blocked" ? 1 : 0;
+      existing.readyFrameCount += frame.startReadinessState === "ready" ? 1 : 0;
+      existing.canStartGameFrameCount += frame.canStartGame ? 1 : 0;
+      return;
+    }
+
+    summaryByMessage.set(message, {
+      blockedFrameCount: frame.startReadinessState === "blocked" ? 1 : 0,
+      canStartGameFrameCount: frame.canStartGame ? 1 : 0,
+      count: 1,
+      firstFrameIndex: frame.frameIndex,
+      message,
+      readyFrameCount: frame.startReadinessState === "ready" ? 1 : 0,
+    });
+  });
+
+  return [...summaryByMessage.values()].sort((left, right) => (
+    right.blockedFrameCount - left.blockedFrameCount ||
+    right.count - left.count ||
+    left.firstFrameIndex - right.firstFrameIndex ||
+    left.message.localeCompare(right.message)
+  ));
 }
 
 function buildReplayHeadFrames(
@@ -1310,7 +1774,10 @@ export function analyzeMovementDebugReplaySession(
     .map((decision) => decision?.exercisePose.qualityScore)
     .filter((score): score is number => typeof score === "number");
   const lowerOwners = frames.map((frame, index) => currentDecisions[index]?.lowerOwner ?? lowerOwner(frame));
-  const lowerBodyOwnerTransitions = transitionCount(lowerOwners);
+  const activeLowerOwners = frames
+    .map((frame, index) => activeLowerBodyOwnerForFlicker(frame, currentDecisions[index]))
+    .filter((owner): owner is string => Boolean(owner));
+  const lowerBodyOwnerTransitions = transitionCount(activeLowerOwners);
   const exerciseTransitionCount = currentDecisions.filter((decision) => (
     decision?.exerciseTransition.isTransition
   )).length;
@@ -1334,6 +1801,7 @@ export function analyzeMovementDebugReplaySession(
     decision?.exerciseTransition.key === "floor-roll"
   )).length;
   const sourceFrames = toReplaySourceFrames(gamePathSimulation.sourceFrames);
+  const startReadinessMessageSummary = summarizeStartReadinessMessages(sourceFrames);
   const startReadinessAudit = getStartReadinessAudit({
     frames,
     session,
@@ -1345,6 +1813,11 @@ export function analyzeMovementDebugReplaySession(
   const cameraConfidenceLostFrameCount = sourceFrames.filter((frame) => frame.cameraState === "lost").length;
   const cameraScoreAllowedFrameCount = sourceFrames.filter((frame) => frame.scoreAllowed).length;
   const cameraHelpEventCount = sourceFrames.reduce((count, frame) => count + frame.cameraHelpEvents.length, 0);
+  const cameraRecoveryCueFrameCount = sourceFrames.filter((frame) => frame.cameraRecoveryCueMessage).length;
+  const truthSkeletonReadyFrameCount = sourceFrames.filter((frame) => frame.truthSkeletonState === "ready").length;
+  const truthSkeletonPartialFrameCount = sourceFrames.filter((frame) => frame.truthSkeletonState === "partial").length;
+  const truthSkeletonBlockedFrameCount = sourceFrames.filter((frame) => frame.truthSkeletonState === "blocked").length;
+  const truthSkeletonRecoveryCueFrameCount = sourceFrames.filter((frame) => frame.truthSkeletonRecoveryCueMessage).length;
   const startReadinessReadyFrameCount = sourceFrames.filter((frame) => frame.startReadinessState === "ready").length;
   const startReadinessBlockedFrameCount = sourceFrames.filter((frame) => frame.startReadinessState === "blocked").length;
   const startReadinessCanStartGameFrameCount = sourceFrames.filter((frame) => frame.canStartGame).length;
@@ -1513,7 +1986,22 @@ export function analyzeMovementDebugReplaySession(
       });
     }
 
-    if (
+    const activeLegVisualDiverged = Boolean(
+      avatarDirectionError !== null &&
+        hasStrongFullBody(frame, currentDecision) &&
+        hasLegRaiseMotion(frame, currentDecision) &&
+        avatarDirectionError > AVATAR_ACTIVE_LEG_DIRECTION_ERROR_THRESHOLD,
+    );
+
+    if (activeLegVisualDiverged) {
+      pushFailure(failures, {
+        code: "avatar_output_diverged",
+        detail: `Frame ${index} has active leg-raise motion but avatar lower-body direction error is ${avatarDirectionError?.toFixed(2)}.`,
+        frameIndex: index,
+        semanticCode: "leg-lift-missing",
+        severity: "error",
+      });
+    } else if (
       avatarDirectionError !== null &&
       avatarDirectionError > AVATAR_LOWER_BODY_DIRECTION_REVIEW_THRESHOLD
     ) {
@@ -1638,6 +2126,24 @@ export function analyzeMovementDebugReplaySession(
   const coverageEntries = getMovementCoverageEntries();
   const coverageMissingProofs = getMovementCoverageMissingProofs();
   const coverageSummary = summarizeMovementCoverageRegistry();
+  const gamePathFrames = toGamePathFrames(currentDecisions, frames);
+  const replayStudioFrames = buildReplayStudioFrameVerdicts({
+    failures: finalFailures,
+    frames,
+    gamePathFrames,
+    sourceFrames,
+  });
+  const replayStudioSession = buildReplayStudioSessionVerdict({
+    failures: finalFailures,
+    frames: replayStudioFrames,
+    metrics: {
+      averageAvatarLowerBodyDirectionError,
+      avatarVisualFrameCount: avatarDirectionErrors.length,
+      lowerBodyOwnerTransitionsPerSecond: lowerBodyOwnerTransitions / durationSeconds,
+      visualMatchScore,
+    },
+    recordingId: session.id,
+  });
 
   return {
     coverage: {
@@ -1648,7 +2154,7 @@ export function analyzeMovementDebugReplaySession(
     failures: finalFailures,
     gamePath: {
       calibrationQuality: gamePathSimulation.calibration?.quality ?? 0,
-      frames: toGamePathFrames(currentDecisions, frames),
+      frames: gamePathFrames,
       gameplayEvents,
       parity: {
         divergenceFrameCount: replayGamePathDivergences.length,
@@ -1667,6 +2173,7 @@ export function analyzeMovementDebugReplaySession(
       },
       retargetSourceQuality: gamePathSimulation.retargetSourceModel?.quality ?? 0,
       scoreMessageParityFrames,
+      startReadinessMessageSummary,
       sourceFrames,
       visualProofFrames: gameVisualProofFrames,
       wrapperFrames,
@@ -1711,7 +2218,12 @@ export function analyzeMovementDebugReplaySession(
       cameraConfidenceReadyFrameCount,
       cameraConfidenceUncertainFrameCount,
       cameraHelpEventCount,
+      cameraRecoveryCueFrameCount,
       cameraScoreAllowedFrameCount,
+      truthSkeletonBlockedFrameCount,
+      truthSkeletonPartialFrameCount,
+      truthSkeletonReadyFrameCount,
+      truthSkeletonRecoveryCueFrameCount,
       gameplayClearMovementEventCount,
       gameplayScoreDeltaTotal,
       gameplayTrackingUncertaintyEventCount,
@@ -1756,6 +2268,10 @@ export function analyzeMovementDebugReplaySession(
       visualReliableFrameCount,
     },
     pass: !finalFailures.some((failure) => failure.severity === "error"),
+    replayStudio: {
+      frames: replayStudioFrames,
+      session: replayStudioSession,
+    },
     rootMotion: {
       frames: rootMotionAnalysis.frames,
       sourceLimitedFrameCount: rootMotionAnalysis.summary.sourceLimitedFrameCount,

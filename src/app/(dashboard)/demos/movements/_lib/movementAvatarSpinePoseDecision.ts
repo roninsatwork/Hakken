@@ -16,10 +16,10 @@ export function resolveMovementAvatarSpineApplyOptions({
 
   return {
     activeDrive: {
-      chest: isPlayer ? 0.42 : 0.78,
-      hips: isPlayer ? 0.22 : 0.36,
-      spine: isPlayer ? 0.44 : 0.82,
-      upperChest: isPlayer ? 0.36 : 0.72,
+      chest: isPlayer ? 0.76 : 0.78,
+      hips: isPlayer ? 0.34 : 0.36,
+      spine: isPlayer ? 0.78 : 0.82,
+      upperChest: isPlayer ? 0.68 : 0.72,
     },
     shouldCountRecordedSpineRetarget: !isPlayer && shouldApplySpine,
     solver: {

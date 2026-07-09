@@ -218,13 +218,19 @@ export function classifyMovementBodyOrientation(
       Math.abs(kneeCenter.y - hipCenter.y) < torsoHeight * 0.65 &&
       foldedThighEvidence > shoulderWidth * 0.28;
     const feetBelowKnees = ankleCenter.y > kneeCenter.y + torsoHeight * 0.22;
-    const asymmetricKnees = Math.abs(leftKnee.y - rightKnee.y) > torsoHeight * 0.45;
+    const strongSeatedVariationAsymmetry = Math.abs(leftKnee.y - rightKnee.y) > torsoHeight * 0.85;
     const wideStandingBase = Math.abs(leftAnkle.x - rightAnkle.x) > shoulderWidth * 2.1;
     const hipsAboveKnees = hipCenter.y < kneeCenter.y - torsoHeight * 0.08;
+    const kneeHipVerticalFold = Math.abs(kneeCenter.y - hipCenter.y);
+    const ankleBelowKneeGap = ankleCenter.y - kneeCenter.y;
+    const wideSeatedKneeLine = Math.abs(leftKnee.x - rightKnee.x) > shoulderWidth * 1.5;
+    const symmetricChairSeatEvidence =
+      kneeHipVerticalFold < torsoHeight * 0.45 &&
+      (ankleBelowKneeGap > torsoHeight * 0.62 || wideSeatedKneeLine);
     const seatedVariationFold =
       thighIsFolded &&
       feetBelowKnees &&
-      asymmetricKnees &&
+      strongSeatedVariationAsymmetry &&
       foldedThighEvidence > shoulderWidth * 0.65;
 
     if (
@@ -232,7 +238,7 @@ export function classifyMovementBodyOrientation(
       hipsAboveKnees &&
       thighIsFolded &&
       feetBelowKnees &&
-      (!asymmetricKnees || seatedVariationFold) &&
+      (symmetricChairSeatEvidence || seatedVariationFold) &&
       !wideStandingBase
     ) {
       return buildDecision({

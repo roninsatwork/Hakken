@@ -51,33 +51,10 @@ export function resolveMovementAvatarPipelineDecision({
   const isPlayer = avatarRole === "player";
   const bodyConfidence = getMovementBodyConfidence(source.poseLandmarks, source.hands);
   const bodyOrientation = classifyMovementBodyOrientation(source.poseLandmarks);
-  const {
-    bodySupport,
-    exercisePose,
-    supportConstraint,
-    supportContactLocks,
-    supportIntent,
-    supportPresentation,
-  } = resolveMovementAvatarPipelineSupportDecision({
-    bodyOrientation,
-    poseLandmarks: source.poseLandmarks,
-  });
   const rootOrientation = resolveMovementAvatarRootOrientation({ bodyOrientation });
   const upperBodyTrackingReady =
     bodyConfidence.head >= 0.55 &&
     Math.min(bodyConfidence.leftShoulder, bodyConfidence.rightShoulder) >= 0.55;
-  const leftArm = resolveMovementAvatarArmDecision({
-    bodyConfidence,
-    isPlayer,
-    profile: avatarTrackingProfile,
-    side: "left",
-  });
-  const rightArm = resolveMovementAvatarArmDecision({
-    bodyConfidence,
-    isPlayer,
-    profile: avatarTrackingProfile,
-    side: "right",
-  });
   const torsoTrackingReady = !isPlayer || bodyConfidence.torso >= 0.45 || upperBodyTrackingReady;
   const {
     lowerBodyDrive,
@@ -103,6 +80,36 @@ export function resolveMovementAvatarPipelineDecision({
     retargetSourceModel,
     shouldHoldPlayerSquatPose,
     torsoTrackingReady,
+  });
+  const {
+    bodySupport,
+    exercisePose,
+    supportConstraint,
+    supportContactLocks,
+    supportIntent,
+    supportPresentation,
+  } = resolveMovementAvatarPipelineSupportDecision({
+    bodyOrientation,
+    preferFeetFloorForActiveLowerBody:
+      isPlayer &&
+      (
+        lowerBodyDrive.shouldDrivePlayerSquat ||
+        lowerBodyDrive.shouldDrivePlayerLegRaise ||
+        playerRetargetLowerBodyMotion >= 0.16
+      ),
+    poseLandmarks: source.poseLandmarks,
+  });
+  const leftArm = resolveMovementAvatarArmDecision({
+    bodyConfidence,
+    isPlayer,
+    profile: avatarTrackingProfile,
+    side: "left",
+  });
+  const rightArm = resolveMovementAvatarArmDecision({
+    bodyConfidence,
+    isPlayer,
+    profile: avatarTrackingProfile,
+    side: "right",
   });
   const playerSpineDrive = resolveMovementAvatarPlayerSpineDrive({
     calibration,

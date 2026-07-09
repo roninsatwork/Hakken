@@ -87,4 +87,39 @@ describe("movementAvatarFrameTargetRuntime", () => {
       runtime.lowerBodyTargetComposition.rightToeTarget,
     );
   });
+
+  it("keeps replayed player avatars on recorded arm targets while preserving player lower-body targets", () => {
+    const imageLandmarks = solverLandmarks();
+    imageLandmarks[15] = {
+      ...imageLandmarks[15]!,
+      visibility: 0.2,
+    };
+    const targetSolverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
+    const rigHands: VrmHandsPayload = {
+      left: {
+        landmarks: [{
+          x: 0.68,
+          y: 0.42,
+          z: -0.09,
+          visibility: 0.95,
+        }],
+      },
+    };
+
+    const runtime = resolveMovementAvatarFrameTargetRuntime({
+      armAvatarRole: "instructor",
+      avatarRole: "player",
+      imageLandmarks,
+      lowerBodyDrive: lowerBodyDrive(),
+      rigHands,
+      solverLandmarks: imageLandmarks,
+      targetSolverLandmarks,
+    });
+
+    expect(runtime.armTargetComposition.armTargets.left.wristSource).toBe("pose");
+    expect(runtime.armTargetComposition.leftFrontBodyArmBias).toBe(0);
+    expect(runtime.armTargetComposition.leftWristTarget).toEqual(targetSolverLandmarks[15]);
+    expect(runtime.armTargetComposition.playerSafeArmZScale).toBeUndefined();
+    expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.18);
+  });
 });

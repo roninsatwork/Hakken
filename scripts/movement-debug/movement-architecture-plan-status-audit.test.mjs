@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditMovementArchitecturePlanStatus,
+  formatAudit,
   parseMovementArchitecturePlanStatusAuditArgs,
 } from "./movement-architecture-plan-status-audit.mjs";
 
@@ -34,6 +35,7 @@ function matrixFixture() {
   return {
     blockedUserFacingFamilies: [],
     familyCount: 19,
+    futureFamilyShapeFailures: [],
     internalFamilyCount: 14,
     productionFamilySupportPercent: 26,
     rows: [
@@ -71,7 +73,7 @@ Current movement-family coverage:
 
 Current proof snapshot from the cheap gates run in this audit:
 
-- \`movement:support-readiness-matrix -- --no-write --json\` passes as the all-family status cross-check: 19 families total, ${userFacingCount} user-facing production-supported families, ${internalCount} internal preview/diagnostic families, ${productionPercent}% production family support, and 0 blocked current user-facing families.
+- \`movement:support-readiness-matrix -- --no-write --json\` passes as the all-family status cross-check: 19 families total, ${userFacingCount} user-facing production-supported families, ${internalCount} internal preview/diagnostic families, ${productionPercent}% production family support, 0 blocked current user-facing families, and \`futureFamilyShapeFailures: []\`.
 
 Current progress estimates:
 
@@ -93,6 +95,7 @@ describe("movement architecture plan status audit", () => {
     expect(audit).toMatchObject({
       expected: {
         internalFamilyCount: 14,
+        futureFamilyShapeFailures: [],
         productionFamilySupportPercent: 26,
         userFacingCount: 5,
       },
@@ -120,6 +123,32 @@ describe("movement architecture plan status audit", () => {
       "stale current-board text is still present: Non-user-facing internal families: 15/19.",
       "stale current-board text is still present: 21% user-facing production support",
     ]));
+  });
+
+  it("blocks when the support matrix reports future-family shape drift", () => {
+    const audit = auditMovementArchitecturePlanStatus({
+      matrix: {
+        ...matrixFixture(),
+        futureFamilyShapeFailures: [
+          "quadruped must remain internal-preview until a dedicated promotion audit is ready",
+        ],
+      },
+      planText: currentPlanText(),
+    });
+
+    expect(audit.ok).toBe(false);
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      "support matrix future-family shape drift: quadruped must remain internal-preview until a dedicated promotion audit is ready",
+    ]));
+  });
+
+  it("prints future-family shape failures in the text status output", () => {
+    const audit = auditMovementArchitecturePlanStatus({
+      matrix: matrixFixture(),
+      planText: currentPlanText(),
+    });
+
+    expect(formatAudit(audit)).toContain("Future-family shape failures: 0");
   });
 
   it("parses CLI options", () => {

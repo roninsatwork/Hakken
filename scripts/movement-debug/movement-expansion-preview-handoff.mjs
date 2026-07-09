@@ -6,6 +6,40 @@ import path from "node:path";
 export const MOVEMENT_EXPANSION_HANDOFF_SCHEMA = "sonae-movement-expansion-preview-handoff/v1";
 
 export const MOVEMENT_EXPANSION_HANDOFFS = {
+  "facing-occlusion": {
+    analysisFlags: [
+      "--include-facing-occlusion-targets",
+      "--include-product-scope-proof-case facing-occlusion-recovery",
+      "--include-product-scope-proof-case side-swap-recovery",
+      "--include-product-scope-proof-case self-occlusion-recovery",
+    ],
+    family: "facing-occlusion",
+    finalAuditScript: "movement:facing-occlusion-support-audit",
+    label: "Facing and occlusion",
+    outputBase: "tmp/movement-replay-lab/current-facing-occlusion",
+    previewAuditCase: {
+      expectedFamily: "facing-occlusion",
+      mode: "root-turn-left",
+    },
+    requiredGameProofCases: [
+      "strongest-facing-occlusion-recovery",
+      "strongest-side-swap-recovery",
+    ],
+    requiredRecordedProofCases: [
+      "facing-occlusion-recovery",
+      "side-swap-recovery",
+      "self-occlusion-recovery",
+    ],
+    recordingChecklist: [
+      "Camera sees head, shoulders, torso, hips, knees, and feet throughout the take.",
+      "Start with a clear front-facing neutral pose for at least 2 seconds.",
+      "Turn the torso away while the head briefly disagrees with body heading.",
+      "Cross through a clear left/right side-swap beat and pause long enough for review.",
+      "Briefly occlude one shoulder or arm across the torso, then recover to clear front-facing posture.",
+      "Keep every beat slow and separated so Replay and Game visual proof can target individual frames.",
+    ],
+    scopeRule: "Internal diagnostic only until recorded facing/occlusion recovery proof, Game visual captures, semantic review, and architecture guard all agree.",
+  },
   sitting: {
     analysisFlags: [
       "--include-seated-targets",
@@ -146,7 +180,7 @@ function commandListForHandoff({
   recordingId,
 }) {
   const handoff = MOVEMENT_EXPANSION_HANDOFFS[family];
-  const outputBase = `tmp/movement-replay-lab/current-expansion-preview-${family}`;
+  const outputBase = handoff.outputBase ?? `tmp/movement-replay-lab/current-expansion-preview-${family}`;
   const analysisPath = `${outputBase}-analysis.validation.json`;
   const manifestPath = `${outputBase}-analysis.validation.proof-manifest.json`;
   const replaySessionPath = `${outputBase}-replay-session.json`;
@@ -202,7 +236,7 @@ function commandListForHandoff({
         `--debug-session-json ${replaySessionPath}`,
       ].join(" "),
       id: "replay-proof-set",
-      purpose: "Capture Replay visual proof rows for seated manual-review cases.",
+      purpose: `Capture Replay visual proof rows for ${family} manual-review cases.`,
     },
     {
       command: [
@@ -213,7 +247,7 @@ function commandListForHandoff({
         `--decisions-out ${replayReviewDecisionsPath}`,
       ].join(" "),
       id: "replay-review",
-      purpose: "Generate the seated Replay visual review checklist and decision template.",
+      purpose: `Generate the ${family} Replay visual review checklist and decision template.`,
     },
     {
       command: [

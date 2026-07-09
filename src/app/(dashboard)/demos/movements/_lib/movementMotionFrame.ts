@@ -251,10 +251,16 @@ export function resolveMovementMotionFrame({
         },
         sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
   });
+  const headAvatarRole = sourceFrame.sourceOrigin === "recorded-replay"
+    ? "instructor"
+    : pipelineInput.avatarRole;
+  const headCalibration = sourceFrame.sourceOrigin === "recorded-replay"
+    ? null
+    : pipelineInput.calibration;
   const avatarHeadTarget = resolveMovementAvatarHeadTarget({
-    avatarRole: pipelineInput.avatarRole,
+    avatarRole: headAvatarRole,
     avatarRootYaw: 0,
-    calibration: pipelineInput.calibration,
+    calibration: headCalibration,
     poseLandmarks: sourcePoseLandmarks,
     profile: pipelineInput.avatarTrackingProfile,
     shouldApplyLowerBody: avatarDecision.shouldApplyLowerBody,
@@ -263,11 +269,12 @@ export function resolveMovementMotionFrame({
   const avatarDisplayHeadTarget = poseLandmarks === sourcePoseLandmarks
     ? avatarHeadTarget
     : resolveMovementAvatarHeadTarget({
-        avatarRole: pipelineInput.avatarRole,
-        avatarRootYaw: 0,
-        calibration: pipelineInput.calibration,
-        poseLandmarks,
-        profile: pipelineInput.avatarTrackingProfile,
+      avatarRole: headAvatarRole,
+      avatarRootYaw: 0,
+      calibration: headCalibration,
+      mirrorHeadForDisplay: false,
+      poseLandmarks,
+      profile: pipelineInput.avatarTrackingProfile,
         shouldApplyLowerBody: avatarDisplayDecision.shouldApplyLowerBody,
         shouldApplySpine: avatarDisplayDecision.spineDrive.shouldApplySpine,
       });

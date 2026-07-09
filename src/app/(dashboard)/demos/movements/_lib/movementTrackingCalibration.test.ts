@@ -431,6 +431,46 @@ describe("movementTrackingCalibration", () => {
     expect(intent.rightKneeRaise).toBe(0);
   });
 
+  it("does not collapse a calibrated single-leg raise into a squat", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const singleLegPose = withCorePose();
+    singleLegPose[23] = { ...singleLegPose[23]!, y: 0.73 };
+    singleLegPose[24] = { ...singleLegPose[24]!, y: 0.73 };
+    singleLegPose[25] = { ...singleLegPose[25]!, y: 0.58 };
+    singleLegPose[27] = { ...singleLegPose[27]!, y: 0.72 };
+    singleLegPose[31] = { ...singleLegPose[31]!, y: 0.73 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: singleLegPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("left-knee-raise");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.45);
+    expect(intent.rightKneeRaise).toBeLessThan(0.1);
+  });
+
+  it("reads a calibrated side leg extension as the moving leg", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const sideLegPose = withCorePose();
+    sideLegPose[25] = { ...sideLegPose[25]!, x: 0.27, y: 0.78 };
+    sideLegPose[27] = { ...sideLegPose[27]!, x: 0.22, y: 0.9 };
+    sideLegPose[31] = { ...sideLegPose[31]!, x: 0.21, y: 0.92 };
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: sideLegPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("left-knee-raise");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.leftKneeRaise).toBeGreaterThan(0.45);
+    expect(intent.rightKneeRaise).toBe(0);
+  });
+
   it("keeps calibrated standing neutral when the whole lower body shifts down in camera frame", () => {
     const neutralPose = withCorePose();
     const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });

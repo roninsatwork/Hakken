@@ -11,6 +11,7 @@ const defaultManifestPath = "tmp/movement-replay-lab/latest-recorded-proof-manif
 const supportRecordingPlanPaths = [
   "tmp/movement-replay-lab/current-expansion-preview-sitting-recording-plan.json",
   "tmp/movement-replay-lab/current-expansion-preview-walking-recording-plan.json",
+  "tmp/movement-replay-lab/current-facing-occlusion-recording-plan.json",
 ];
 
 function printHelp() {

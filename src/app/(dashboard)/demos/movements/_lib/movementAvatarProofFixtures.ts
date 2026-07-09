@@ -81,6 +81,7 @@ export type MovementAvatarProofMode =
   | "kneeling"
   | "upper-body-auto"
   | "upper-body-auto-rejected"
+  | "weak-spine-standing"
   | "weak-feet-standing";
 
 export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
@@ -144,6 +145,7 @@ export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
   "prone",
   "prone-cobra",
   "pilates-swimming",
+  "weak-spine-standing",
   "weak-feet-standing",
   "lower-body-out-of-frame",
   "upper-body-auto",
@@ -214,6 +216,7 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "yoga-warrior-two": "Yoga warrior II prep",
   "upper-body-auto": "Upper-body auto baseline",
   "upper-body-auto-rejected": "Upper-body auto rejected",
+  "weak-spine-standing": "Weak spine standing",
   "weak-feet-standing": "Weak feet standing",
 };
 
@@ -1058,6 +1061,14 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
     return pose.map((point, index) => (
       index >= 27 && index <= 32
         ? { ...point, visibility: 0.12 }
+        : point
+    ));
+  }
+
+  if (mode === "weak-spine-standing") {
+    return pose.map((point, index) => (
+      [0, 7, 8, 11, 12, 23, 24].includes(index)
+        ? { ...point, visibility: 0.18 }
         : point
     ));
   }

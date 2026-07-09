@@ -46,6 +46,7 @@ describe("movement avatar motion-frame input", () => {
     });
 
     expect(selected.owner).toBe("movement-motion-frame");
+    expect(selected.sourceOrigin).toBe("live-webcam");
     expect(selected.decision).toBe(motionFrame.avatarDisplayDecision);
     expect(selected.decision).not.toBe(fallbackDecision);
   });

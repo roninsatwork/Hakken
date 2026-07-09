@@ -2,6 +2,7 @@ import type { MovementCalibration } from "./movementTrackingCalibration";
 import type { MovementLandmark } from "./movementTypes";
 import {
   average,
+  capRecordedPresentationSideBend,
   clamp,
   midpoint,
   visibility,
@@ -57,6 +58,7 @@ export function resolveUpperBodyPlayerSpineDrive({
     1,
   );
   const sideBend = clamp(headShoulderSideBend * 0.55 + shoulderLateral * 0.55, -1, 1);
+  const presentationSideBend = capRecordedPresentationSideBend(sideBend);
   const headDrop = clamp(
     (currentHeadShoulderY - neutralHeadShoulderY) / (shoulderScale * 0.78),
     -1,
@@ -85,22 +87,22 @@ export function resolveUpperBodyPlayerSpineDrive({
       hips: {
         x: forwardLean * 0.02,
         y: twist * 0.02,
-        z: -sideBend * 0.02,
+        z: presentationSideBend * 0.12,
       },
       spine: {
         x: forwardLean * 0.12,
         y: twist * 0.08,
-        z: -sideBend * 0.2,
+        z: presentationSideBend * 0.8,
       },
       chest: {
         x: forwardLean * 0.22,
         y: twist * 0.16,
-        z: -sideBend * 0.42,
+        z: presentationSideBend * 1.15,
       },
       upperChest: {
         x: forwardLean * 0.18,
         y: twist * 0.18,
-        z: -sideBend * 0.38,
+        z: presentationSideBend * 0.95,
       },
     },
     shouldApplySpine: true,

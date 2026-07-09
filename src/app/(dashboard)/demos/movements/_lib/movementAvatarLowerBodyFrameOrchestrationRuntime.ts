@@ -53,6 +53,8 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
     applyPlantedSquatIk: retargetFrameRuntimeAdapters.applyPlantedSquatIk,
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
     getLastGoodQuaternion: lowerBodyFrameCallbacks.getLastGoodQuaternion,
+    kneeRaiseLowerLegBoost: profile?.kneeRaiseLowerLegBoost,
+    kneeRaiseUpperLegBoost: profile?.kneeRaiseUpperLegBoost,
     lowerBodyAimOptions: resolveMovementAvatarLegacyLowerBodyAimOptions({
       avatarRole: input.avatarRole,
       profile,

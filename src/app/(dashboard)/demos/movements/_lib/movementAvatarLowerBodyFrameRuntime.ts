@@ -44,6 +44,8 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   fallbackSlerp,
   getLastGoodQuaternion,
   instructorSquatPresentationDepth,
+  kneeRaiseLowerLegBoost,
+  kneeRaiseUpperLegBoost,
   lookupBone,
   lowerBodyAimOptions,
   lowerBodyAimTargets,
@@ -77,6 +79,8 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   fallbackSlerp: number;
   getLastGoodQuaternion?: (boneName: string) => THREE.Quaternion | null | undefined;
   instructorSquatPresentationDepth: number;
+  kneeRaiseLowerLegBoost?: number;
+  kneeRaiseUpperLegBoost?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   lowerBodyAimOptions: MovementAvatarLegacyLowerBodyAimOptionsDecision;
   lowerBodyAimTargets: MovementAvatarLegacyLowerBodyAimTargets;
@@ -115,6 +119,8 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
       applyPlantedSquatIk,
       currentFeetOwner: footOwner,
       isPlayer,
+      kneeRaiseLowerLegBoost,
+      kneeRaiseUpperLegBoost,
       lookupBone,
       lowerBodyNeutralSlerp: boneEaseOptions.lowerBodyNeutralSlerp,
       plan: lowerBodyApplicationPlan,
@@ -165,6 +171,9 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
       });
       lowerBodyOwner = retargetDecisionApplication.lowerBodyOwner;
       const { retargetApplicationPlan } = retargetDecisionApplication;
+      if (retargetApplicationPlan.legRaiseOverlay) {
+        lowerBodyOwner = `player-${retargetApplicationPlan.legRaiseOverlay.side}-leg-raise`;
+      }
 
       applyMovementAvatarLegacyLowerBodyAimRequestsToVrmBones({
         fallbackSlerp,
@@ -186,6 +195,8 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         contacts: retargetFrame.contacts,
         currentFeetOwner: footOwner,
         isPlayer,
+        kneeRaiseLowerLegBoost,
+        kneeRaiseUpperLegBoost,
         lookupBone,
         plan: retargetApplicationPlan,
         singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,

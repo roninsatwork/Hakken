@@ -417,7 +417,7 @@ export function formatWalkingSupportReadiness(audit) {
     audit.recordingGap.captureScenarios?.slice(0, 2).forEach((scenario) => {
       lines.push(`Fresh recording scenario: ${scenario.freshRecordingLabel || scenario.id}`);
       lines.push(`Protocol: ${recordingGapProtocolText(scenario.protocol ?? scenario)}`);
-      lines.push(`Quick validation: ${scenario.quickValidationCommand}`);
+      lines.push(`Quick validation: ${scenario.quickValidationScriptCommand || scenario.quickValidationCommand}`);
     });
   }
 

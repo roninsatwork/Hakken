@@ -55,6 +55,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   faceLandmarks,
   headMotionIntent,
   lookupBone,
+  mirrorHeadForDisplay,
   neckSlerp,
   poseLandmarks,
   profile,
@@ -68,6 +69,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   faceLandmarks?: TrackingLandmark[] | null;
   headMotionIntent?: MovementHeadMotionIntent;
   lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
+  mirrorHeadForDisplay?: boolean;
   neckSlerp: number;
   poseLandmarks: TrackingLandmark[];
   profile?: MovementAvatarTrackingProfile;
@@ -98,6 +100,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
     calibration,
     faceLandmarks,
     headMotionIntent,
+    mirrorHeadForDisplay,
     poseLandmarks,
     profile,
     shouldApplyLowerBody,

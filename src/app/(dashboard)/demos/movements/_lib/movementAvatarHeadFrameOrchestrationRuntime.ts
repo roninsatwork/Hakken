@@ -164,6 +164,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
       calibration: activeCalibration,
       faceLandmarks,
       lookupBone,
+      mirrorHeadForDisplay: motionFrameInputOwner !== "movement-motion-frame",
       neckSlerp,
       poseLandmarks,
       profile,

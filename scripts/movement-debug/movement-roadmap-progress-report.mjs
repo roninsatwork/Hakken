@@ -145,6 +145,9 @@ export function buildMovementRoadmapProgressReport({
   if (overallPercent !== null && overallPercent <= matrix.productionFamilySupportPercent) {
     failures.push(`expected overall full human-movement progress to stay above production family support, got ${overallPercent}% vs ${matrix.productionFamilySupportPercent}%`);
   }
+  (matrix.futureFamilyShapeFailures ?? []).forEach((failure) => {
+    failures.push(`future-family support matrix shape drift: ${failure}`);
+  });
 
   const internalRows = matrix.rows.filter((row) => row.category !== "user-facing");
   const highlightedBlockers = internalRows
@@ -161,6 +164,7 @@ export function buildMovementRoadmapProgressReport({
     matrix: {
       blockedUserFacingFamilies: matrix.blockedUserFacingFamilies,
       familyCount: matrix.familyCount,
+      futureFamilyShapeFailures: matrix.futureFamilyShapeFailures ?? [],
       internalFamilyCount: matrix.internalFamilyCount,
       productionFamilySupportPercent: matrix.productionFamilySupportPercent,
       userFacingCount: matrix.userFacingCount,
@@ -188,6 +192,7 @@ export function formatMovementRoadmapProgressReport(report) {
     `Movement-family production support: ${report.matrix.userFacingCount}/${report.matrix.familyCount} (${report.matrix.productionFamilySupportPercent}%)`,
     `Internal preview/diagnostic families: ${report.matrix.internalFamilyCount}/${report.matrix.familyCount}`,
     `Blocked current user-facing families: ${report.matrix.blockedUserFacingFamilies.join(", ") || "none"}`,
+    `Future-family shape failures: ${report.matrix.futureFamilyShapeFailures.length}`,
     "",
     report.explanation,
     "",
@@ -229,6 +234,10 @@ async function buildCurrentSupportMatrix() {
     analysis: await readRequiredJson(paths.analysisPath, "reviewed analysis"),
     broadGameVisualPlan: await readJsonIfPresent(paths.broadGamePlanPath),
     broadSemanticReview: await readJsonIfPresent(paths.broadReviewPath),
+    facingAnalysis: await readJsonIfPresent(paths.facingAnalysisPath),
+    facingGameVisualPlan: await readJsonIfPresent(paths.facingGamePlanPath) ?? {},
+    facingManifest: await readJsonIfPresent(paths.facingManifestPath),
+    facingSemanticReview: await readJsonIfPresent(paths.facingReviewPath) ?? {},
     gameCaptureManifest: await readRequiredJson(paths.gameCaptureManifestPath, "Game capture manifest"),
     manifest: await readRequiredJson(paths.manifestPath, "reviewed proof manifest"),
     semanticReview: await readRequiredJson(paths.gameReviewPath, "Game semantic review"),

@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, use, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -43,6 +43,7 @@ import {
   parseMovementDebugGameFrameIndex,
   shouldShowMovementDebugPlayerPausedPose,
 } from "../../_lib/movementGameDebugRoute";
+import { getMovementDebugQaPresets } from "../../_lib/movementDebugQaPresets";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import {
   averageMovementRetargetSourceModels,
@@ -51,6 +52,10 @@ import {
 } from "../../_lib/movementRetargeting";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
+import {
+  buildMovementSpineModel,
+  evaluateMovementSpineReadiness,
+} from "../../_lib/movementSpineMetrics";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import {
   averageMovementCalibrations,
@@ -61,10 +66,15 @@ import {
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
 import {
+  getMovementCameraConfidenceRecoveryCue,
   resolveMovementStartGateDecision,
   resolveMovementStartReadiness,
   type MovementStartReadiness,
 } from "../../_lib/movementSourceFrame";
+import {
+  getMovementSetupRecoveryCue,
+  getMovementStartReadinessMessage,
+} from "../../_lib/movementSetupRecoveryCue";
 import type { VrmMotionFrame, VrmPoseLandmark } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
@@ -225,21 +235,6 @@ function toMovementSpineGoal(value: unknown): MovementSpineGoal | null {
     : null;
 }
 
-function getMovementStartReadinessMessage(readiness: MovementStartReadiness | null) {
-  if (!readiness) return "Move where I can see you.";
-  if (readiness.promptEvents.includes("show-your-whole-body")) return "Show your whole body.";
-  if (readiness.promptEvents.includes("show-your-feet")) return "Show your feet.";
-  if (readiness.promptEvents.includes("show-your-hands")) return "Show your hands.";
-  if (readiness.promptEvents.includes("hold-still-for-calibration")) {
-    return "Hold still for posture check.";
-  }
-  if (readiness.promptEvents.includes("walk-back-into-frame")) {
-    return "Walk back into frame.";
-  }
-  if (readiness.blockedReasons.length > 0) return "Move where I can see you.";
-  return "Get ready.";
-}
-
 function createIdleGameStartGate(): MovementGameStartGateState {
   return {
     countdownMsRemaining: 0,
@@ -278,6 +273,8 @@ function toDebugPlayerMotionPayload(frame: MotionFrame | null | undefined): Move
 
 export default function MatchPlayPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const movementId = unwrappedParams.id as Id<"movements">;
   const isDebugTracking = searchParams.get("debugTracking") === "1";
@@ -292,6 +289,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     : null;
   const isDebugPlayerPoseRoute = Boolean(debugPlayerPoseMode);
   const isDebugPlayerInjectionRoute = isDebugPlayerPoseRoute || isDebugGameFrameRoute;
+  const shouldUseDebugStartGate = isDebugPlayerInjectionRoute && searchParams.get("debugStartGate") === "1";
+  const shouldBypassStartReadinessForDebug =
+    isDebugPlayerInjectionRoute && !shouldUseDebugStartGate;
   const shouldShowPlayerPausedPose = shouldShowMovementDebugPlayerPausedPose({ isDebugTracking });
   const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugPlayerInjectionRoute;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
@@ -450,9 +450,22 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetInstructorPlayback,
     setInstructorFrame,
   } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
+  const debugQaPresets = React.useMemo(
+    () => getMovementDebugQaPresets(movementId, instructorFrameCount),
+    [instructorFrameCount, movementId],
+  );
+  const syncDebugGameFrameRoute = React.useCallback((frameIndex: number) => {
+    if (!isDebugTracking) return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("debugTracking", "1");
+    nextParams.set("debugGameFrame", String(frameIndex));
+    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+  }, [isDebugTracking, pathname, router, searchParams]);
+  const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking;
   const instructorMotionFrameRef = useMovementRecordedMotionFrame({
     instructorFrameRef: instructorCurrentLmRef,
-    isPlaying,
+    isPlaying: shouldKeepInstructorMotionFrameVisible,
     retargetSourceModel: instructorRetargetSourceModel,
   });
   useEffect(() => {
@@ -470,6 +483,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     hudSync,
     hudSpine,
     hudSpineCue,
+    hudSpineReadiness,
     syncRef,
     resetScoring,
   } = useMovementMatchScoring({
@@ -510,7 +524,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     startMatch();
 
     const readinessBypassReason = resolveMovementStartReadinessBypassReason({
-      isDebugPlayerPoseRoute: isDebugPlayerInjectionRoute,
+      isDebugPlayerPoseRoute: shouldBypassStartReadinessForDebug,
       isGuidedPreviewRoute,
     });
     if (!readinessBypassReason) return;
@@ -525,34 +539,38 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }, [
     debugGameFrameIndex,
     isDebugGameFrameRoute,
-    isDebugPlayerPoseRoute,
-    isDebugPlayerInjectionRoute,
     isGuidedPreviewRoute,
     loadedFrames.length,
     resetInstructorPlayback,
     resetScoring,
     setIsPlaying,
     setInstructorFrame,
+    shouldBypassStartReadinessForDebug,
     skipCalibration,
     startMatch,
   ]);
 
-  const resolveCurrentGameStartReadiness = React.useCallback(() => {
-    const sourceFrame = playerMotionFrameRef.current?.source;
-    if (!sourceFrame) return null;
-
-    return resolveMovementStartReadiness({
-      cameraConfidence: sourceFrame.cameraConfidence,
-      requirements: {
-        calibrationQuality: effectivePlayerCalibration?.quality ?? null,
-      },
-    });
-  }, [effectivePlayerCalibration?.quality, playerMotionFrameRef]);
+  const resolveCurrentSpineStartReadinessStatus = React.useCallback(() => {
+    const poseLandmarks = playerMotionFrameRef.current?.source.landmarks.pose;
+    return evaluateMovementSpineReadiness(buildMovementSpineModel(poseLandmarks)).status;
+  }, [playerMotionFrameRef]);
 
   const completeGameStartGate = React.useCallback(() => {
-    const readiness = resolveCurrentGameStartReadiness();
+    const sourceFrame = playerMotionFrameRef.current?.source;
+    const readiness = sourceFrame
+      ? resolveMovementStartReadiness({
+          cameraConfidence: sourceFrame.cameraConfidence,
+          requirements: {
+            calibrationQuality: effectivePlayerCalibration?.quality ?? null,
+          },
+        })
+      : null;
+    const cameraRecoveryCue = sourceFrame
+      ? getMovementCameraConfidenceRecoveryCue(sourceFrame.cameraConfidence)
+      : null;
     const gateDecision = resolveMovementStartGateDecision({
       readiness,
+      spineReadinessStatus: resolveCurrentSpineStartReadinessStatus(),
       target: "game",
     });
     if (gateDecision.canStart) {
@@ -566,13 +584,19 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     setGameStartGate({
       countdownMsRemaining: 0,
       endsAt: null,
-      message: getMovementStartReadinessMessage(gateDecision.readiness),
+      message: getMovementStartReadinessMessage({
+        blockedReasons: gateDecision.blockedReasons,
+        cameraRecoveryCue,
+        readiness: gateDecision.readiness,
+      }),
       status: "blocked",
     });
   }, [
+    effectivePlayerCalibration?.quality,
+    playerMotionFrameRef,
     resetInstructorPlayback,
     resetScoring,
-    resolveCurrentGameStartReadiness,
+    resolveCurrentSpineStartReadinessStatus,
     setIsPlaying,
   ]);
 
@@ -581,7 +605,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       return undefined;
     }
 
-    let startCheckTimeoutId: number | null = null;
     const updateCountdown = () => {
       const countdownMsRemaining = Math.max(0, gameStartGate.endsAt! - Date.now());
       if (countdownMsRemaining > 0) {
@@ -603,7 +626,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             }
           : current
       ));
-      startCheckTimeoutId = window.setTimeout(completeGameStartGate, 120);
     };
 
     updateCountdown();
@@ -611,13 +633,21 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
     return () => {
       window.clearInterval(intervalId);
-      if (startCheckTimeoutId !== null) {
-        window.clearTimeout(startCheckTimeoutId);
-      }
     };
   }, [
-    completeGameStartGate,
     gameStartGate.endsAt,
+    gameStartGate.status,
+  ]);
+
+  useEffect(() => {
+    if (gameStartGate.status !== "checking-visibility") {
+      return undefined;
+    }
+
+    const startCheckTimeoutId = window.setTimeout(completeGameStartGate, 120);
+    return () => window.clearTimeout(startCheckTimeoutId);
+  }, [
+    completeGameStartGate,
     gameStartGate.status,
   ]);
 
@@ -629,7 +659,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     }
 
     const readinessBypassReason = resolveMovementStartReadinessBypassReason({
-      isDebugPlayerPoseRoute: isDebugPlayerInjectionRoute,
+      isDebugPlayerPoseRoute: shouldBypassStartReadinessForDebug,
       isManualPreviewSkip: isCalibrationSkipped,
     });
     if (readinessBypassReason) {
@@ -650,11 +680,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }, [
     isCalibrating,
     isCalibrationSkipped,
-    isDebugPlayerInjectionRoute,
     isPlaying,
     isTrackingReady,
     isVisionReadyForSession,
     setIsPlaying,
+    shouldBypassStartReadinessForDebug,
     togglePlaying,
   ]);
 
@@ -821,6 +851,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }
 
   const routineTitle = getStudioRoutineTitle(movement.title);
+  const setupRecoveryCue = getMovementSetupRecoveryCue({
+    motionFrame: playerMotionFrameRef.current,
+    spineReadiness: hudSpineReadiness,
+  });
 
   const studio = (
     <div className="fixed inset-0 z-[9999] flex h-screen w-screen flex-col overflow-hidden bg-[#07070b]">
@@ -839,12 +873,22 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         />
 
         {isDebugTracking ? (
-          <MovementSourceSkeleton
-            color="#f6ccbe"
-            landmarksRef={instructorCurrentLmRef}
-            mirrorX
-            positionOffset={[-5, 0, 0]}
-          />
+          <>
+            <MovementSourceSkeleton
+              color="#f6ccbe"
+              landmarksRef={instructorCurrentLmRef}
+              mirrorX
+              positionOffset={[-5, 0, 0]}
+            />
+            <MovementSourceSkeleton
+              color="#f5d84f"
+              landmarksRef={instructorCurrentLmRef}
+              mirrorX
+              mode="truth"
+              motionFrameRef={instructorMotionFrameRef}
+              positionOffset={[-3.55, 0, 0]}
+            />
+          </>
         ) : null}
 
         <VrmAvatar
@@ -862,11 +906,20 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         />
 
         {isDebugTracking ? (
-          <MovementSourceSkeleton
-            color="#bfe7d0"
-            landmarksRef={effectivePlayerLiveLmRef}
-            positionOffset={[5, 0, 0]}
-          />
+          <>
+            <MovementSourceSkeleton
+              color="#bfe7d0"
+              landmarksRef={effectivePlayerLiveLmRef}
+              positionOffset={[5, 0, 0]}
+            />
+            <MovementSourceSkeleton
+              color="#f5d84f"
+              landmarksRef={effectivePlayerLiveLmRef}
+              mode="truth"
+              motionFrameRef={playerMotionFrameRef}
+              positionOffset={[3.55, 0, 0]}
+            />
+          </>
         ) : null}
 
         <MovementSparkles landmarksRef={effectivePlayerLiveLmRef} jointIndices={[15, 16, 27, 28]} syncRef={syncRef} />
@@ -879,11 +932,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         hudSync={hudSync}
         hudSpine={hudSpine}
         hudSpineCue={hudSpineCue}
+        hudSpineReadiness={hudSpineReadiness}
         isPlaying={isPlaying}
         isVisionReady={isVisionReadyForSession}
         isTrackingCalibrated={isTrackingReady}
         isPreviewMode={isCalibrationSkipped}
         isCalibrating={isCalibrating}
+        setupRecoveryCue={setupRecoveryCue}
         visionStatus={visionStatus}
         visionError={visionError}
         isCameraReady={isDebugPlayerPoseRoute || cameraStatus === "ready"}
@@ -931,11 +986,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         frameIndexRef={instructorFrameIndexRef}
         isEnabled={isDebugTracking}
         isPlaying={isPlaying}
+        onDebugFrameRouteChange={syncDebugGameFrameRoute}
         onFrameChange={(frameIndex) => {
           resetScoring();
           setInstructorFrame(frameIndex);
         }}
         onPlayingChange={setIsPlaying}
+        qaPresets={debugQaPresets}
         recordingAnalysis={instructorRetargetAnalysis}
       />
 
@@ -953,18 +1010,20 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       />
 
       <MovementTrackingDebugOverlay
-        calibration={effectivePlayerCalibration}
-        debugRef={trackingDebugRef}
-        isEnabled={isDebugTracking}
-        title="Student Diagnostics"
-      />
-
-      <MovementTrackingDebugOverlay
         calibration={null}
         debugRef={instructorTrackingDebugRef}
         isEnabled={isDebugTracking}
+        motionFrameRef={instructorMotionFrameRef}
+        title="Instructor Diagnostics"
+      />
+
+      <MovementTrackingDebugOverlay
+        calibration={effectivePlayerCalibration}
+        debugRef={trackingDebugRef}
+        isEnabled={isDebugTracking}
+        motionFrameRef={playerMotionFrameRef}
         placement="right"
-        title="Coach Diagnostics"
+        title="Your Avatar Diagnostics"
       />
 
       <MovementFeedbackOverlay feedbackMsg={feedbackMsg} />

@@ -22,9 +22,9 @@ describe("movementRecordedMotionFrame", () => {
     expect(motionFrame?.source.sourceStatus).toBe("decoded");
     expect(motionFrame?.source.capturedAt).toBe(2345);
     expect(motionFrame?.mirrorMode).toBe("facing-player");
-    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
-    expect(motionFrame?.source.landmarks.blendshapes).toBe(payload.blendshapes);
+    expect(motionFrame?.source.landmarks.blendshapes).toEqual(payload.blendshapes);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.displayLandmarks.pose[0]?.x).toBeCloseTo(1 - (payload.landmarks[0]?.x ?? 0));
     expect(motionFrame?.avatarDecision.retargetFrame.squatDepth).toBeGreaterThan(0);
@@ -74,7 +74,8 @@ describe("movementRecordedMotionFrame", () => {
     });
 
     expect(motionFrame).not.toBeNull();
-    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
     expect(motionFrame?.source.landmarks.pose.some((landmark) => (landmark.visibility ?? 0) > 0)).toBe(true);
     expect(motionFrame?.displayLandmarks.pose.every((landmark) => landmark.visibility === 0)).toBe(true);
   });
@@ -90,8 +91,10 @@ describe("movementRecordedMotionFrame", () => {
     });
 
     expect(motionFrame).not.toBeNull();
-    expect(motionFrame?.source.landmarks.pose).toBe(payload.landmarks);
-    expect(motionFrame?.source.landmarks.worldPose).toBe(payload.worldLandmarks);
+    expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
+    expect(motionFrame?.source.landmarks.worldPose).not.toBe(payload.worldLandmarks);
+    expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
+    expect(motionFrame?.source.landmarks.worldPose[0]?.x).toBe(payload.worldLandmarks?.[0]?.x);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.displayLandmarks.worldPose).not.toBe(payload.worldLandmarks);
     expect(motionFrame?.displayLandmarks.pose[0]?.x).toBeCloseTo(1 - (payload.landmarks[0]?.x ?? 0));

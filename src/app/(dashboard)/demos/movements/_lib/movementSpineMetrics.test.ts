@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMovementSpineModel,
   compareMovementSpineModels,
+  evaluateMovementSpineReadiness,
 } from "./movementSpineMetrics";
 import type { MovementLandmark } from "./movementTypes";
 
@@ -62,6 +63,30 @@ describe("movement spine metrics", () => {
     expect(model?.confidence).toBeCloseTo(0.2);
     expect(model?.neutralStackScore).toBeLessThan(25);
     expect(model?.coachingCue).toBe("Bring shoulders and hips into view.");
+    expect(evaluateMovementSpineReadiness(model)).toMatchObject({
+      blockers: ["low-spine-confidence", "weak-left-right-spine-reference"],
+      cue: "Bring shoulders and hips into view.",
+      status: "blocked",
+    });
+  });
+
+  it("separates reliable spine tracking readiness from form quality", () => {
+    const readyModel = buildMovementSpineModel(makeNeutralPose());
+    const weakSymmetryPose = makeNeutralPose();
+    weakSymmetryPose[11] = visible(0.39, 0.54);
+    weakSymmetryPose[12] = visible(0.61, 0.42);
+    const weakSymmetryModel = buildMovementSpineModel(weakSymmetryPose);
+
+    expect(evaluateMovementSpineReadiness(readyModel)).toMatchObject({
+      blockers: [],
+      cue: "Spine tracking ready.",
+      status: "ready",
+    });
+    expect(evaluateMovementSpineReadiness(weakSymmetryModel)).toMatchObject({
+      blockers: [],
+      cue: "Level the shoulders.",
+      status: "needs-attention",
+    });
   });
 
   it("compares student and instructor spine shape", () => {
@@ -77,6 +102,7 @@ describe("movement spine metrics", () => {
 
     expect(goodMatch.score).toBeGreaterThan(80);
     expect(goodMatch.cue).toBe("Spine shape matches.");
+    expect(goodMatch.playerReadiness.status).toBe("ready");
     expect(weakMatch.score).toBeLessThan(goodMatch.score);
   });
 
