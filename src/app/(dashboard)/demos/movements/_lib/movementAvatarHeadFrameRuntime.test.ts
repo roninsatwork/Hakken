@@ -66,19 +66,9 @@ function debugInput(): MovementAvatarHeadFrameDebugInput {
       sideBend: 0.2,
       twist: -0.1,
     } as MovementAvatarHeadFrameDebugInput["activeSpineDrive"],
-    armTargets: {
-      left: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "left-wrist",
-        wristTarget: null,
-      },
-      right: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "right-wrist",
-        wristTarget: null,
-      },
+    armApplicationModes: {
+      left: "retargeted" as const,
+      right: "retargeted" as const,
     },
     autoCalibrationKind: "upright",
     avatarRole: "player",
@@ -101,7 +91,6 @@ function debugInput(): MovementAvatarHeadFrameDebugInput {
     },
     hasActiveCalibration: true,
     hasManualCalibration: false,
-    leftArmTrackingReady: true,
     leftFootSource: "left-foot-live",
     leftKneeSource: "left-knee-live",
     legRaise: {
@@ -188,7 +177,6 @@ function debugInput(): MovementAvatarHeadFrameDebugInput {
       retargetSourceModel: null,
       visualRootDrop: 0.2,
     },
-    rightArmTrackingReady: true,
     rightFootSource: "right-foot-live",
     rightKneeSource: "right-knee-live",
     shouldApplyLowerBody: true,

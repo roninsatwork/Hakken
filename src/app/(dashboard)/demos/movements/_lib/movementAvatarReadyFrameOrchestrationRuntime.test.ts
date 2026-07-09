@@ -177,6 +177,14 @@ describe("movementAvatarReadyFrameOrchestrationRuntime", () => {
       plantedSquatIkDepth: 0.7,
       retargetAppliedLowerBody: 4,
       retargetAppliedUpperBody: 3,
+      upperBodyFrameOrchestrationRuntime: {
+        upperBodyFrameRuntime: {
+          upperBodyRuntimeApplication: {
+            leftArm: { handled: false, mode: "retargeted" },
+            rightArm: { handled: false, mode: "retargeted" },
+          },
+        },
+      },
     } as never);
     vi.mocked(applyMovementAvatarFrameCompletionOrchestrationRuntime).mockReturnValue({
       final: true,

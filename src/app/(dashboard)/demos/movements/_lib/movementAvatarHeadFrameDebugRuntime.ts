@@ -3,7 +3,7 @@ import type { MovementAvatarHeadFrameDebugInput } from "./movementAvatarHeadFram
 export type MovementAvatarHeadFrameDebugRuntimeInput = {
   activeCalibrationQuality?: MovementAvatarHeadFrameDebugInput["activeCalibrationQuality"];
   activeSpineDrive: MovementAvatarHeadFrameDebugInput["activeSpineDrive"];
-  armTargets: MovementAvatarHeadFrameDebugInput["armTargets"];
+  armApplicationModes: MovementAvatarHeadFrameDebugInput["armApplicationModes"];
   autoCalibrationKind: MovementAvatarHeadFrameDebugInput["autoCalibrationKind"];
   avatarRole: MovementAvatarHeadFrameDebugInput["avatarRole"];
   bodyConfidence: MovementAvatarHeadFrameDebugInput["bodyConfidence"];
@@ -16,7 +16,6 @@ export type MovementAvatarHeadFrameDebugRuntimeInput = {
   hasActiveCalibration: boolean;
   hasManualCalibration: boolean;
   isEnabled: boolean;
-  leftArmTrackingReady: boolean;
   leftFootSource: MovementAvatarHeadFrameDebugInput["leftFootSource"];
   leftKneeSource: MovementAvatarHeadFrameDebugInput["leftKneeSource"];
   legRaiseHoldDecision: MovementAvatarHeadFrameDebugInput["legRaise"]["holdDecision"];
@@ -35,7 +34,6 @@ export type MovementAvatarHeadFrameDebugRuntimeInput = {
   retargetAppliedUpperBody: number;
   retargetFrame: MovementAvatarHeadFrameDebugInput["retarget"]["retargetFrame"];
   retargetSourceModel: MovementAvatarHeadFrameDebugInput["retarget"]["retargetSourceModel"];
-  rightArmTrackingReady: boolean;
   rightFootSource: MovementAvatarHeadFrameDebugInput["rightFootSource"];
   rightKneeSource: MovementAvatarHeadFrameDebugInput["rightKneeSource"];
   shouldApplyLowerBody: boolean;
@@ -51,7 +49,7 @@ export type MovementAvatarHeadFrameDebugRuntimeInput = {
 export function resolveMovementAvatarHeadFrameDebugRuntime({
   activeCalibrationQuality,
   activeSpineDrive,
-  armTargets,
+  armApplicationModes,
   autoCalibrationKind,
   avatarRole,
   bodyConfidence,
@@ -64,7 +62,6 @@ export function resolveMovementAvatarHeadFrameDebugRuntime({
   hasActiveCalibration,
   hasManualCalibration,
   isEnabled,
-  leftArmTrackingReady,
   leftFootSource,
   leftKneeSource,
   legRaiseHoldDecision,
@@ -83,7 +80,6 @@ export function resolveMovementAvatarHeadFrameDebugRuntime({
   retargetAppliedUpperBody,
   retargetFrame,
   retargetSourceModel,
-  rightArmTrackingReady,
   rightFootSource,
   rightKneeSource,
   shouldApplyLowerBody,
@@ -100,7 +96,7 @@ export function resolveMovementAvatarHeadFrameDebugRuntime({
   return {
     activeCalibrationQuality,
     activeSpineDrive,
-    armTargets,
+    armApplicationModes,
     autoCalibrationKind,
     avatarRole,
     bodyConfidence,
@@ -114,7 +110,6 @@ export function resolveMovementAvatarHeadFrameDebugRuntime({
     },
     hasActiveCalibration,
     hasManualCalibration,
-    leftArmTrackingReady,
     leftFootSource,
     leftKneeSource,
     legRaise: {
@@ -139,7 +134,6 @@ export function resolveMovementAvatarHeadFrameDebugRuntime({
       retargetSourceModel,
       visualRootDrop,
     },
-    rightArmTrackingReady,
     rightFootSource,
     rightKneeSource,
     shouldApplyLowerBody,

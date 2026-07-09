@@ -35,6 +35,7 @@ export type MovementAvatarHeadFrameOrchestrationRuntimeResult = {
 
 export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   activeCalibration,
+  armApplicationModes,
   autoCalibrationKind,
   avatarDecision,
   avatarRole,
@@ -70,6 +71,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   visualRootDrop,
 }: {
   activeCalibration: MovementCalibration | null;
+  armApplicationModes: MovementAvatarHeadFrameDebugRuntimeInput["armApplicationModes"];
   autoCalibrationKind: MovementAvatarHeadFrameDebugRuntimeInput["autoCalibrationKind"];
   avatarDecision: MovementAvatarPipelineDecision;
   avatarRole: "instructor" | "player";
@@ -104,13 +106,13 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   visualRootDrop: number;
 }): MovementAvatarHeadFrameOrchestrationRuntimeResult {
-  const { armTargetComposition, lowerBodyTargetComposition } = frameTargetRuntime;
+  const { lowerBodyTargetComposition } = frameTargetRuntime;
   const { selections: lowerBodyTargetSelections } = lowerBodyTargetComposition;
   const activeSpineDrive = avatarDecision.spineDrive;
   const debugInput = resolveMovementAvatarHeadFrameDebugRuntime({
     activeCalibrationQuality: activeCalibration?.quality,
     activeSpineDrive,
-    armTargets: armTargetComposition.armTargets,
+    armApplicationModes,
     autoCalibrationKind,
     avatarRole,
     bodyConfidence: avatarDecision.bodyConfidence,
@@ -123,7 +125,6 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
     hasActiveCalibration: Boolean(activeCalibration),
     hasManualCalibration,
     isEnabled: Boolean(trackingDebugRef),
-    leftArmTrackingReady: avatarDecision.leftArm.isTrackingReady,
     leftFootSource: lowerBodyTargetSelections.leftToe.source,
     leftKneeSource: lowerBodyTargetSelections.leftKnee.source,
     legRaiseHoldDecision,
@@ -142,7 +143,6 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
     retargetAppliedUpperBody,
     retargetFrame: avatarDecision.retargetFrame,
     retargetSourceModel,
-    rightArmTrackingReady: avatarDecision.rightArm.isTrackingReady,
     rightFootSource: lowerBodyTargetSelections.rightToe.source,
     rightKneeSource: lowerBodyTargetSelections.rightKnee.source,
     shouldApplyLowerBody,

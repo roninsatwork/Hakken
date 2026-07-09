@@ -122,6 +122,7 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime", () => {
 
     const result = applyMovementAvatarFrameCompletionOrchestrationRuntime({
       activeCalibration: calibration,
+      armApplicationModes: { left: "retargeted" as const, right: "retargeted" as const },
       autoCalibrationKind: "upright",
       avatarDecision,
       avatarName: "Player",

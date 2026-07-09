@@ -40,7 +40,7 @@ export type MovementAvatarFrameTrackingDebugInput = {
   activeCalibrationQuality?: number;
   activeSpineDrive: Parameters<typeof buildMovementAvatarSpineRuntimeDebugTelemetry>[0];
   appliedHead: MovementAvatarTrackingDebugStateInput["appliedHead"];
-  armTargets: MovementAvatarTrackingFallbackLabelInput["armTargets"];
+  armApplicationModes: MovementAvatarTrackingFallbackLabelInput["armApplicationModes"];
   autoCalibrationKind: MovementAvatarTrackingFallbackLabelInput["autoCalibrationKind"];
   avatarHead: Parameters<typeof buildMovementAvatarHeadRuntimeDebugTelemetry>[0];
   avatarRole: MovementAvatarTrackingFallbackLabelInput["avatarRole"];
@@ -53,7 +53,6 @@ export type MovementAvatarFrameTrackingDebugInput = {
   hasManualCalibration: MovementAvatarTrackingFallbackLabelInput["hasManualCalibration"];
   headMotionIntent: MovementAvatarTrackingFallbackLabelInput["headMotionIntent"];
   headOwner: MovementAvatarTrackingFallbackLabelInput["headOwner"];
-  leftArmTrackingReady: MovementAvatarTrackingFallbackLabelInput["leftArmTrackingReady"];
   leftFootSource: MovementAvatarTrackingFallbackLabelInput["leftFootSource"];
   leftKneeSource: MovementAvatarTrackingFallbackLabelInput["leftKneeSource"];
   legRaise: MovementAvatarLegRaiseDebugInput;
@@ -65,7 +64,6 @@ export type MovementAvatarFrameTrackingDebugInput = {
   profileName: string;
   rawHead: MovementAvatarTrackingFallbackLabelInput["rawHead"] & MovementAvatarTrackingDebugStateInput["rawHead"];
   retarget: Omit<Parameters<typeof buildMovementAvatarRuntimeRetargetDebug>[0], "footLock" | "totalLowerBody" | "totalUpperBody">;
-  rightArmTrackingReady: MovementAvatarTrackingFallbackLabelInput["rightArmTrackingReady"];
   rightFootSource: MovementAvatarTrackingFallbackLabelInput["rightFootSource"];
   rightKneeSource: MovementAvatarTrackingFallbackLabelInput["rightKneeSource"];
   shouldApplyLowerBody: MovementAvatarTrackingFallbackLabelInput["shouldApplyLowerBody"];
@@ -292,7 +290,7 @@ export function buildMovementAvatarFrameTrackingDebugState({
   activeCalibrationQuality,
   activeSpineDrive,
   appliedHead,
-  armTargets,
+  armApplicationModes,
   autoCalibrationKind,
   avatarHead,
   avatarRole,
@@ -305,7 +303,6 @@ export function buildMovementAvatarFrameTrackingDebugState({
   hasManualCalibration,
   headMotionIntent,
   headOwner,
-  leftArmTrackingReady,
   leftFootSource,
   leftKneeSource,
   legRaise,
@@ -317,7 +314,6 @@ export function buildMovementAvatarFrameTrackingDebugState({
   profileName,
   rawHead,
   retarget,
-  rightArmTrackingReady,
   rightFootSource,
   rightKneeSource,
   shouldApplyLowerBody,
@@ -331,7 +327,7 @@ export function buildMovementAvatarFrameTrackingDebugState({
 }: MovementAvatarFrameTrackingDebugInput): MovementTrackingDebugState {
   const fallbackLabels = resolveMovementAvatarTrackingFallbackLabels({
     activeSpineOwner: activeSpineDrive.owner,
-    armTargets,
+    armApplicationModes,
     autoCalibrationKind,
     avatarRole,
     bodyConfidence,
@@ -340,14 +336,12 @@ export function buildMovementAvatarFrameTrackingDebugState({
     hasManualCalibration,
     headMotionIntent,
     headOwner,
-    leftArmTrackingReady,
     leftFootSource,
     leftKneeSource,
     lowerBodyIntent,
     lowerBodyOwner,
     lowerBodyTrackingReady,
     rawHead,
-    rightArmTrackingReady,
     rightFootSource,
     rightKneeSource,
     shouldApplyLowerBody,

@@ -31,19 +31,9 @@ function input(
       sideBend: 0.2,
       twist: -0.1,
     } as MovementAvatarHeadFrameDebugRuntimeInput["activeSpineDrive"],
-    armTargets: {
-      left: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "left-wrist",
-        wristTarget: null,
-      },
-      right: {
-        elbowTarget: null,
-        frontBias: 0,
-        wristSource: "right-wrist",
-        wristTarget: null,
-      },
+    armApplicationModes: {
+      left: "retargeted" as const,
+      right: "retargeted" as const,
     },
     autoCalibrationKind: "upright",
     avatarRole: "player",
@@ -65,7 +55,6 @@ function input(
     hasActiveCalibration: true,
     hasManualCalibration: false,
     isEnabled: true,
-    leftArmTrackingReady: true,
     leftFootSource: "left-foot-live",
     leftKneeSource: "left-knee-live",
     legRaiseHoldDecision: {
@@ -122,7 +111,6 @@ function input(
       squatDepth: 0.5,
     },
     retargetSourceModel: null,
-    rightArmTrackingReady: true,
     rightFootSource: "right-foot-live",
     rightKneeSource: "right-knee-live",
     shouldApplyLowerBody: true,

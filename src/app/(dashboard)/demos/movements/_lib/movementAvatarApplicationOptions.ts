@@ -1,6 +1,5 @@
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import type {
-  MovementAvatarArmAimOptionsDecision,
   MovementAvatarBoneEaseOptionsDecision,
   MovementAvatarHipsApplicationDecision,
   MovementAvatarHipsPositionOptionsDecision,
@@ -12,38 +11,6 @@ import {
   type MovementAvatarTrackingProfile,
 } from "./movementTrackingCalibration";
 
-export function resolveMovementAvatarArmAimOptions({
-  avatarRole,
-  frontBias,
-  profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
-  safeZScale,
-}: {
-  avatarRole: "instructor" | "player";
-  frontBias: number;
-  profile?: MovementAvatarTrackingProfile;
-  safeZScale?: number;
-}): MovementAvatarArmAimOptionsDecision {
-  const isPlayer = avatarRole === "player";
-  const baseOptions = {
-    minVectorLengthSq: 0.00002,
-    storeVisibilityThreshold: isPlayer ? profile.armStoreVisibility : 0.6,
-    visibilityThreshold: isPlayer ? profile.armVisibility : 0.2,
-    zScale: safeZScale,
-  };
-
-  return {
-    lowerArm: {
-      ...baseOptions,
-      frontBias: frontBias * 1.15,
-      slerpOverride: isPlayer ? profile.lowerArmSlerp : 0.45,
-    },
-    upperArm: {
-      ...baseOptions,
-      frontBias: frontBias * 0.9,
-      slerpOverride: isPlayer ? profile.upperArmSlerp : 0.42,
-    },
-  };
-}
 
 export function resolveMovementAvatarLegacyLowerBodyAimOptions({
   avatarRole,

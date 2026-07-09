@@ -382,19 +382,9 @@ describe("movement avatar debug telemetry", () => {
         source: "pose",
         yaw: -0.3,
       },
-      armTargets: {
-        left: {
-          elbowTarget: null,
-          frontBias: 0,
-          wristSource: "left-wrist",
-          wristTarget: null,
-        },
-        right: {
-          elbowTarget: null,
-          frontBias: 0,
-          wristSource: "right-wrist",
-          wristTarget: null,
-        },
+      armApplicationModes: {
+        left: "retargeted" as const,
+        right: "retargeted" as const,
       },
       autoCalibrationKind: "upright",
       avatarHead: {
@@ -444,7 +434,6 @@ describe("movement avatar debug telemetry", () => {
         vertical: 0,
       },
       headOwner: "head-live",
-      leftArmTrackingReady: true,
       leftFootSource: "left-foot-live",
       leftKneeSource: "left-knee-live",
       legRaise: {
@@ -533,7 +522,6 @@ describe("movement avatar debug telemetry", () => {
         retargetSourceModel: null,
         visualRootDrop: 0.2,
       },
-      rightArmTrackingReady: true,
       rightFootSource: "right-foot-live",
       rightKneeSource: "right-knee-live",
       shouldApplyLowerBody: true,
@@ -573,13 +561,13 @@ describe("movement avatar debug telemetry", () => {
       calibrationQuality: 0.88,
       fallbacks: {
         baseline: "upright-auto-baseline",
-        leftArm: "left-wrist",
+        leftArm: "retargeted-arm",
         leftFoot: "left-foot-live",
         lowerBody: "left-knee-raise-auto d0.20 h0.11 k0.22 t0.33 l0.45 r0.12",
         motionFrameInput: "movement-motion-frame",
         owners: "head head-live; torso torso-live; lower player-left-leg-raise; feet player-feet",
         retarget: expect.stringContaining("q0.88"),
-        rightArm: "right-wrist",
+        rightArm: "retargeted-arm",
         spine: "player-spine-model",
       },
       profileName: "default",

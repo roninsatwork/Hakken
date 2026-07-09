@@ -71,27 +71,6 @@ export type VrmRigRotation = VrmRigVector & {
   rotationOrder?: string;
 };
 
-export type VrmRiggedPose = {
-  Neck?: VrmRigRotation;
-  Head?: VrmRigRotation;
-  RightUpperArm?: VrmRigRotation;
-  RightLowerArm?: VrmRigRotation;
-  LeftUpperArm?: VrmRigRotation;
-  LeftLowerArm?: VrmRigRotation;
-  RightHand?: VrmRigRotation;
-  LeftHand?: VrmRigRotation;
-  RightUpperLeg?: VrmRigRotation;
-  RightLowerLeg?: VrmRigRotation;
-  LeftUpperLeg?: VrmRigRotation;
-  LeftLowerLeg?: VrmRigRotation;
-  Spine?: VrmRigRotation;
-  Hips?: {
-    position?: VrmRigVector;
-    rotation?: VrmRigRotation;
-    worldPosition?: VrmRigVector;
-  };
-};
-
 export type VrmHandRig = Record<string, VrmRigRotation | undefined>;
 
 export type VrmHandRotationSpec = {
@@ -379,53 +358,8 @@ export function createVrmImageSolverLandmarks(
   }));
 }
 
-export function resolveVrmArmTargetLandmarks({
-  imageLandmarks,
-  isPlayer,
-  solverLandmarks,
-}: {
-  imageLandmarks: VrmSolverLandmark[];
-  isPlayer: boolean;
-  solverLandmarks: VrmSolverLandmark[];
-}) {
-  return isPlayer
-    ? createVrmImageSolverLandmarks(imageLandmarks)
-    : solverLandmarks;
-}
 
-export function getVrmHandWristFallbackTarget(
-  handData: VrmHandCapture | null | undefined,
-  imageLandmarks: VrmSolverLandmark[],
-): VrmSolverLandmark | null {
-  const handWrist = handData?.landmarks?.[0];
-  const leftHip = imageLandmarks[23];
-  const rightHip = imageLandmarks[24];
 
-  if (!handWrist || !leftHip || !rightHip) return null;
-  if (handWrist.visibility !== undefined && handWrist.visibility < 0.15) return null;
-
-  const hipX = (leftHip.x + rightHip.x) / 2;
-  const hipY = (leftHip.y + rightHip.y) / 2;
-
-  return {
-    x: (handWrist.x - hipX) * 3.0,
-    y: (handWrist.y - hipY) * 3.0,
-    z: (handWrist.z ?? 0) * 3.0,
-    visibility: handWrist.visibility ?? 0.95,
-    isSnapped: handWrist.isSnapped,
-  };
-}
-
-export function solveVrmPose(
-  kalidokitSolverLandmarks: VrmSolverLandmark[],
-  imageLandmarks: VrmSolverLandmark[],
-): VrmRiggedPose | null {
-  return Kalidokit.Pose.solve(kalidokitSolverLandmarks, imageLandmarks, {
-    runtime: "mediapipe",
-    video: null,
-    imageSize: { width: 640, height: 480 },
-  }) as VrmRiggedPose | null;
-}
 
 export function solveVrmHand(
   landmarks: VrmPoseLandmark[],

@@ -1,9 +1,21 @@
-import type { MovementAvatarArmTargetsDecision } from "./movementAvatarPipeline";
+import type { MovementAvatarArmApplicationMode } from "./movementAvatarArmApplication";
 import type {
   MovementHeadAngles,
   MovementHeadMotionIntent,
   MovementLowerBodyIntent,
 } from "./movementTrackingCalibration";
+
+export type MovementAvatarArmApplicationModes = {
+  left: MovementAvatarArmApplicationMode;
+  right: MovementAvatarArmApplicationMode;
+};
+
+// "last-good" is load-bearing: the tracking-warning builder keys on it.
+function armFallbackLabel(mode: MovementAvatarArmApplicationMode) {
+  if (mode === "hold-last-good") return "last-good";
+  if (mode === "retargeted") return "retargeted-arm";
+  return "relaxed-arm";
+}
 
 export type MovementAvatarTrackingFallbackLabelsDecision = {
   armDepth: string;
@@ -24,7 +36,7 @@ export type MovementAvatarTrackingFallbackLabelsDecision = {
 
 export function resolveMovementAvatarTrackingFallbackLabels({
   activeSpineOwner,
-  armTargets,
+  armApplicationModes,
   autoCalibrationKind,
   avatarRole,
   bodyConfidence,
@@ -33,21 +45,19 @@ export function resolveMovementAvatarTrackingFallbackLabels({
   hasManualCalibration,
   headMotionIntent,
   headOwner,
-  leftArmTrackingReady,
   leftFootSource,
   leftKneeSource,
   lowerBodyIntent,
   lowerBodyOwner,
   lowerBodyTrackingReady,
   rawHead,
-  rightArmTrackingReady,
   rightFootSource,
   rightKneeSource,
   shouldApplyLowerBody,
   torsoOwner,
 }: {
   activeSpineOwner: string;
-  armTargets: MovementAvatarArmTargetsDecision;
+  armApplicationModes: MovementAvatarArmApplicationModes;
   autoCalibrationKind?: string | null;
   avatarRole: "instructor" | "player";
   bodyConfidence: Record<string, number>;
@@ -56,14 +66,12 @@ export function resolveMovementAvatarTrackingFallbackLabels({
   hasManualCalibration: boolean;
   headMotionIntent: MovementHeadMotionIntent;
   headOwner: string;
-  leftArmTrackingReady: boolean;
   leftFootSource: string;
   leftKneeSource: string;
   lowerBodyIntent: MovementLowerBodyIntent;
   lowerBodyOwner: string;
   lowerBodyTrackingReady: boolean;
   rawHead: MovementHeadAngles;
-  rightArmTrackingReady: boolean;
   rightFootSource: string;
   rightKneeSource: string;
   shouldApplyLowerBody: boolean;
@@ -104,12 +112,12 @@ export function resolveMovementAvatarTrackingFallbackLabels({
         ? `${headSource}-auto`
         : "neutral",
     headMotion: hasActiveCalibration ? headMotionIntent.label : "uncalibrated",
-    leftArm: leftArmTrackingReady ? armTargets.left.wristSource : "relaxed-arm",
+    leftArm: armFallbackLabel(armApplicationModes.left),
     leftFoot: shouldUseLowerBodySources ? leftFootSource : "neutral-stance",
     leftKnee: shouldUseLowerBodySources ? leftKneeSource : "neutral-stance",
     lowerBody: shouldUseLowerBodySources ? lowerBodyDebugLabel : "neutral-stance",
     owners: `head ${headOwner}; torso ${torsoOwner}; lower ${lowerBodyOwner}; feet ${feetOwner}`,
-    rightArm: rightArmTrackingReady ? armTargets.right.wristSource : "relaxed-arm",
+    rightArm: armFallbackLabel(armApplicationModes.right),
     rightFoot: shouldUseLowerBodySources ? rightFootSource : "neutral-stance",
     rightKnee: shouldUseLowerBodySources ? rightKneeSource : "neutral-stance",
     spine: activeSpineOwner,

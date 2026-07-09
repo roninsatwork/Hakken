@@ -180,8 +180,15 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     retargetAppliedUpperBody,
   } = bodyFrameOrchestrationRuntime;
 
+  const upperBodyArmApplication =
+    bodyFrameOrchestrationRuntime.upperBodyFrameOrchestrationRuntime.upperBodyFrameRuntime.upperBodyRuntimeApplication;
+
   const completionFrameOrchestrationRuntime = applyMovementAvatarFrameCompletionOrchestrationRuntime({
     activeCalibration,
+    armApplicationModes: {
+      left: upperBodyArmApplication.leftArm.mode,
+      right: upperBodyArmApplication.rightArm.mode,
+    },
     autoCalibrationKind,
     avatarDecision,
     avatarName,

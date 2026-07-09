@@ -62,19 +62,6 @@ export type MovementAvatarTargetLandmark = {
   isSnapped?: boolean;
 };
 
-export type MovementAvatarArmTargetDecision = {
-  elbowTarget: MovementAvatarTargetLandmark | null;
-  frontBias: number;
-  safeZScale?: number;
-  wristSource: string;
-  wristTarget: MovementAvatarTargetLandmark | null;
-};
-
-export type MovementAvatarArmTargetsDecision = {
-  left: MovementAvatarArmTargetDecision;
-  right: MovementAvatarArmTargetDecision;
-};
-
 export type MovementAvatarHeadDecision = {
   appliedHead: MovementHeadAngles;
   headOwner: string;
@@ -168,11 +155,6 @@ export type MovementAvatarAimOptionsDecision = {
   storeVisibilityThreshold?: number;
   visibilityThreshold: number;
   zScale?: number;
-};
-
-export type MovementAvatarArmAimOptionsDecision = {
-  lowerArm: MovementAvatarAimOptionsDecision;
-  upperArm: MovementAvatarAimOptionsDecision;
 };
 
 export type MovementAvatarLegacyLowerBodyAimOptionsDecision = {

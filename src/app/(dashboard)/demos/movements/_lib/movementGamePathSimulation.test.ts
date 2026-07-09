@@ -7,8 +7,6 @@ import {
   appendMovementAvatarFootLockDebugLabel,
   formatMovementAvatarRetargetDebugLabel,
   resolveMovementAvatarAppliedLowerBodyDecision,
-  resolveMovementAvatarArmAimOptions,
-  resolveMovementAvatarArmTargets,
   resolveMovementAvatarBoneEaseOptions,
   resolveMovementAvatarFootLockEngagement,
   resolveMovementAvatarFootLockOptions,
@@ -282,21 +280,6 @@ const debugLowerBodyIntent: MovementLowerBodyIntent = {
     hipDrop: 0.22,
     kneeBend: 0.31,
     torsoDrop: 0.18,
-  },
-};
-
-const debugArmTargets = {
-  left: {
-    elbowTarget: null,
-    frontBias: 0,
-    wristSource: "pose",
-    wristTarget: null,
-  },
-  right: {
-    elbowTarget: null,
-    frontBias: 0,
-    wristSource: "hand",
-    wristTarget: null,
   },
 };
 
@@ -1073,61 +1056,7 @@ describe("movementGamePathSimulation", () => {
     expect(decision.leftArm.unreadyFallback).toBe("hold-last-good");
   });
 
-  it("uses shared front-body arm cleanup for live player wrist and elbow targets", () => {
-    const pose = withCorePose();
-    const playerLandmarks = armTargetLandmarks(pose);
-    const solverLandmarks = armTargetLandmarks(pose);
-    playerLandmarks[15] = { ...playerLandmarks[15]!, visibility: 0.2 };
-    const calibration = buildMovementCalibration({ poseLandmarks: pose });
-    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: pose });
-    const pipelineDecision = resolveMovementAvatarStudioDecision({
-      avatarRole: "player",
-      calibration,
-      retargetSourceModel,
-      source: { poseLandmarks: pose },
-    });
-    const targets = resolveMovementAvatarArmTargets({
-      handWristFallbacks: {
-        left: { x: 0.5, y: 0.58, z: -0.2, visibility: 0.9 },
-      },
-      isPlayer: true,
-      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
-      playerLandmarks,
-      solverLandmarks,
-    });
 
-    expect(targets.left.wristSource).toBe("hand");
-    expect(targets.left.frontBias).toBeGreaterThan(0);
-    expect(targets.left.elbowTarget?.x).not.toBe(playerLandmarks[13]!.x);
-    expect(targets.left.safeZScale).toBe(0.24);
-  });
-
-  it("keeps recorded arm target cleanup free of live front-body bias", () => {
-    const pose = withCorePose();
-    const landmarks = armTargetLandmarks(pose);
-    const calibration = buildMovementCalibration({ poseLandmarks: pose });
-    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: pose });
-    const pipelineDecision = resolveMovementAvatarReplayDecision({
-      avatarRole: "instructor",
-      calibration,
-      retargetSourceModel,
-      source: { poseLandmarks: pose },
-    });
-    const targets = resolveMovementAvatarArmTargets({
-      handWristFallbacks: {
-        left: { x: 0.5, y: 0.58, z: -0.2, visibility: 0.9 },
-      },
-      isPlayer: false,
-      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
-      playerLandmarks: landmarks,
-      solverLandmarks: landmarks,
-    });
-
-    expect(targets.left.wristSource).toBe("pose");
-    expect(targets.left.frontBias).toBe(0);
-    expect(targets.left.elbowTarget).toEqual(landmarks[13]);
-    expect(targets.left.safeZScale).toBeUndefined();
-  });
 
   it("smooths player lower-body visual depth with shared live rules", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
@@ -1464,53 +1393,7 @@ describe("movementGamePathSimulation", () => {
     expect(legDecision.slerp).toBe(0.43);
   });
 
-  it("resolves player arm aim options from the avatar profile", () => {
-    const profile = {
-      ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
-      armStoreVisibility: 0.33,
-      armVisibility: 0.12,
-      lowerArmSlerp: 0.62,
-      upperArmSlerp: 0.57,
-    };
-    const options = resolveMovementAvatarArmAimOptions({
-      avatarRole: "player",
-      frontBias: 0.2,
-      profile,
-      safeZScale: 0.24,
-    });
 
-    expect(options.upperArm).toEqual({
-      frontBias: 0.18000000000000002,
-      minVectorLengthSq: 0.00002,
-      slerpOverride: 0.57,
-      storeVisibilityThreshold: 0.33,
-      visibilityThreshold: 0.12,
-      zScale: 0.24,
-    });
-    expect(options.lowerArm).toMatchObject({
-      frontBias: 0.22999999999999998,
-      slerpOverride: 0.62,
-    });
-  });
-
-  it("resolves recorded arm aim options with replay defaults", () => {
-    const options = resolveMovementAvatarArmAimOptions({
-      avatarRole: "instructor",
-      frontBias: 0.2,
-      safeZScale: 0.24,
-    });
-
-    expect(options.upperArm).toMatchObject({
-      slerpOverride: 0.42,
-      storeVisibilityThreshold: 0.6,
-      visibilityThreshold: 0.2,
-    });
-    expect(options.lowerArm).toMatchObject({
-      slerpOverride: 0.45,
-      storeVisibilityThreshold: 0.6,
-      visibilityThreshold: 0.2,
-    });
-  });
 
   it("resolves legacy lower-body aim options for player and recorded roles", () => {
     const profile = {
@@ -2323,7 +2206,7 @@ describe("movementGamePathSimulation", () => {
   it("formats manual-calibrated player tracking fallback labels", () => {
     const labels = resolveMovementAvatarTrackingFallbackLabels({
       activeSpineOwner: "player-spine-model",
-      armTargets: debugArmTargets,
+      armApplicationModes: { left: "hold-last-good" as const, right: "retargeted" as const },
       avatarRole: "player",
       bodyConfidence: { leftFoot: 0.8, rightFoot: 0.2 },
       feetOwner: "player-retarget",
@@ -2331,14 +2214,12 @@ describe("movementGamePathSimulation", () => {
       hasManualCalibration: true,
       headMotionIntent: neutralHeadMotion,
       headOwner: "player-calibrated",
-      leftArmTrackingReady: false,
       leftFootSource: "pose-foot",
       leftKneeSource: "pose-knee",
       lowerBodyIntent: debugLowerBodyIntent,
       lowerBodyOwner: "player-stable-squat",
       lowerBodyTrackingReady: true,
       rawHead: { confidence: 0.9, pitch: 0, roll: 0, source: "pose", yaw: 0 },
-      rightArmTrackingReady: true,
       rightFootSource: "toe",
       rightKneeSource: "knee",
       shouldApplyLowerBody: true,
@@ -2350,17 +2231,17 @@ describe("movementGamePathSimulation", () => {
       baseline: "manual-calibration",
       floor: "calibrated-floor",
       head: "pose",
-      leftArm: "relaxed-arm",
+      leftArm: "last-good",
       lowerBody: "squat d0.34 h0.22 k0.31 t0.18 l0.12 r0.08",
       owners: "head player-calibrated; torso player-spine-model; lower player-stable-squat; feet player-retarget",
-      rightArm: "hand",
+      rightArm: "retargeted-arm",
     });
   });
 
   it("formats auto-calibrated player tracking fallback labels", () => {
     const labels = resolveMovementAvatarTrackingFallbackLabels({
       activeSpineOwner: "player-spine-neutral",
-      armTargets: debugArmTargets,
+      armApplicationModes: { left: "hold-last-good" as const, right: "retargeted" as const },
       autoCalibrationKind: "upper-body",
       avatarRole: "player",
       bodyConfidence: { leftFoot: 0.1, rightFoot: 0.1 },
@@ -2369,14 +2250,12 @@ describe("movementGamePathSimulation", () => {
       hasManualCalibration: false,
       headMotionIntent: { ...neutralHeadMotion, label: "mixed-head" },
       headOwner: "neutral",
-      leftArmTrackingReady: true,
       leftFootSource: "toe",
       leftKneeSource: "knee",
       lowerBodyIntent: debugLowerBodyIntent,
       lowerBodyOwner: "neutral",
       lowerBodyTrackingReady: true,
       rawHead: { confidence: 0.1, pitch: 0, roll: 0, source: "pose", yaw: 0 },
-      rightArmTrackingReady: true,
       rightFootSource: "toe",
       rightKneeSource: "knee",
       shouldApplyLowerBody: true,
@@ -2393,7 +2272,7 @@ describe("movementGamePathSimulation", () => {
   it("formats recorded tracking fallback labels", () => {
     const labels = resolveMovementAvatarTrackingFallbackLabels({
       activeSpineOwner: "recorded-spine",
-      armTargets: debugArmTargets,
+      armApplicationModes: { left: "hold-last-good" as const, right: "retargeted" as const },
       avatarRole: "instructor",
       bodyConfidence: { leftFoot: 0.6, rightFoot: 0.7 },
       feetOwner: "recorded-retarget",
@@ -2401,14 +2280,12 @@ describe("movementGamePathSimulation", () => {
       hasManualCalibration: false,
       headMotionIntent: neutralHeadMotion,
       headOwner: "recorded-face",
-      leftArmTrackingReady: true,
       leftFootSource: "toe",
       leftKneeSource: "knee",
       lowerBodyIntent: debugLowerBodyIntent,
       lowerBodyOwner: "recorded-retarget",
       lowerBodyTrackingReady: true,
       rawHead: { confidence: 0.7, pitch: 0, roll: 0, source: "face", yaw: 0 },
-      rightArmTrackingReady: true,
       rightFootSource: "toe",
       rightKneeSource: "knee",
       shouldApplyLowerBody: true,

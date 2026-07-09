@@ -21,7 +21,6 @@ import type {
 } from "./vrmRigging";
 
 export type MovementAvatarFrameTargetRetargetOrchestrationRuntime = {
-  armTargetComposition: MovementAvatarFrameTargetRuntimeDecision["armTargetComposition"];
   frameTargetRuntime: MovementAvatarFrameTargetRuntimeDecision;
   lowerBodyAimTargets: MovementAvatarFrameTargetRuntimeDecision["lowerBodyTargetComposition"]["aimTargets"];
   retargetFrameRuntimeAdapters: MovementAvatarRetargetFrameRuntimeAdapters;
@@ -75,7 +74,6 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   });
 
   return {
-    armTargetComposition: frameTargetRuntime.armTargetComposition,
     frameTargetRuntime,
     lowerBodyAimTargets: frameTargetRuntime.lowerBodyTargetComposition.aimTargets,
     retargetFrameRuntimeAdapters: createMovementAvatarRetargetFrameRuntimeAdapters({

@@ -20,7 +20,6 @@ import {
   applyVrmStoredRotationTargetToBone,
   createVrmNormalizedBoneLookup,
   createVrmImageSolverLandmarks,
-  getVrmHandWristFallbackTarget,
   lookupVrmNormalizedBone,
   normalizeVrmLandmark,
   prepareVrmHandLandmarks,
@@ -29,7 +28,6 @@ import {
   resolveVrmRigRotationApplicationTarget,
   resolveVrmArmLastGoodRotationTargets,
   resolveVrmArmRelaxedRotationTargets,
-  resolveVrmArmTargetLandmarks,
   resolveVrmBlendshapeExpressionTargets,
   resolveVrmHandRigOptions,
   resolveVrmHandNeutralRotationTargets,
@@ -189,60 +187,8 @@ describe("vrmRigging", () => {
     });
   });
 
-  it("uses image-space solver landmarks for player arm targets", () => {
-    const imageLandmarks = makeLandmarks().map((landmark, index) => normalizeVrmLandmark({
-      ...landmark,
-      x: index === 23 ? 0.4 : index === 24 ? 0.6 : landmark.x,
-      z: 0.05,
-    }));
-    const solverLandmarks = imageLandmarks.map((landmark) => ({
-      ...landmark,
-      x: landmark.x + 10,
-    }));
 
-    const resolved = resolveVrmArmTargetLandmarks({
-      imageLandmarks,
-      isPlayer: true,
-      solverLandmarks,
-    });
 
-    expect(resolved).not.toBe(solverLandmarks);
-    expect(resolved[16]?.x).toBeCloseTo(0);
-  });
-
-  it("keeps prepared solver landmarks for recorded arm targets", () => {
-    const imageLandmarks = makeLandmarks().map((landmark) => normalizeVrmLandmark(landmark));
-    const solverLandmarks = imageLandmarks.map((landmark) => ({
-      ...landmark,
-      x: landmark.x + 10,
-    }));
-
-    const resolved = resolveVrmArmTargetLandmarks({
-      imageLandmarks,
-      isPlayer: false,
-      solverLandmarks,
-    });
-
-    expect(resolved).toBe(solverLandmarks);
-  });
-
-  it("uses the tracked hand wrist as a forearm target in image solver space", () => {
-    const landmarks = makeLandmarks();
-    landmarks[23] = { x: 0.4, y: 0.5, visibility: 0.9 };
-    landmarks[24] = { x: 0.6, y: 0.5, visibility: 0.8 };
-
-    const target = getVrmHandWristFallbackTarget(
-      { landmarks: [{ x: 0.7, y: 0.3, z: 0.05 }] },
-      landmarks.map((landmark) => normalizeVrmLandmark(landmark)),
-    );
-
-    expect(target).toMatchObject({
-      x: 0.5999999999999999,
-      y: -0.6000000000000001,
-      z: 0.15000000000000002,
-      visibility: 0.95,
-    });
-  });
 
   it("prepares hand landmarks with optional x mirroring", () => {
     const prepared = prepareVrmHandLandmarks({

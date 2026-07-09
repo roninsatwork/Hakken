@@ -1,7 +1,3 @@
-import {
-  resolveMovementAvatarArmTargetComposition,
-  type MovementAvatarArmTargetCompositionDecision,
-} from "./movementAvatarArmTarget";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import {
   resolveMovementAvatarLowerBodyTargetSelectionComposition,
@@ -13,7 +9,6 @@ import type {
 } from "./vrmRigging";
 
 export type MovementAvatarFrameTargetRuntimeDecision = {
-  armTargetComposition: MovementAvatarArmTargetCompositionDecision;
   lowerBodyTargetComposition: MovementAvatarLowerBodyTargetSelectionCompositionDecision;
 };
 
@@ -37,14 +32,6 @@ export function resolveMovementAvatarFrameTargetRuntime({
   const resolvedArmAvatarRole = armAvatarRole ?? avatarRole;
 
   return {
-    armTargetComposition: resolveMovementAvatarArmTargetComposition({
-      imageLandmarks,
-      isPlayer: resolvedArmAvatarRole === "player",
-      lowerBodyDrive,
-      rigHands,
-      solverLandmarks,
-      targetSolverLandmarks,
-    }),
     lowerBodyTargetComposition: resolveMovementAvatarLowerBodyTargetSelectionComposition({
       avatarRole,
       targetSolverLandmarks,

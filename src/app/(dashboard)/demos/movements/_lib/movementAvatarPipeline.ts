@@ -7,7 +7,6 @@ export type {
   MovementAvatarSupportContactLockDecision,
 } from "./movementAvatarSupportContactDecision";
 export {
-  resolveMovementAvatarArmAimOptions,
   resolveMovementAvatarBoneEaseOptions,
   resolveMovementAvatarHipsApplication,
   resolveMovementAvatarHipsPositionOptions,
@@ -59,7 +58,6 @@ export {
 } from "./movementAvatarLowerBodyPoseDecision";
 export {
   resolveMovementAvatarArmDecision,
-  resolveMovementAvatarArmTargets,
 } from "./movementAvatarArmTargetDecision";
 export {
   resolveMovementAvatarActiveSpinePose,

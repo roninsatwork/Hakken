@@ -58,10 +58,6 @@ describe("movementAvatarFrameTargetRuntime", () => {
       targetSolverLandmarks,
     });
 
-    expect(runtime.armTargetComposition.armTargets.left.wristSource).toBe("hand");
-    expect(runtime.armTargetComposition.leftWristTarget).toEqual(
-      runtime.armTargetComposition.armTargets.left.wristTarget,
-    );
     expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.18);
     expect(runtime.lowerBodyTargetComposition.aimTargets.leftKnee).toEqual(
       runtime.lowerBodyTargetComposition.leftKneeTarget,
@@ -80,8 +76,6 @@ describe("movementAvatarFrameTargetRuntime", () => {
       targetSolverLandmarks: imageLandmarks,
     });
 
-    expect(runtime.armTargetComposition.armTargets.left.wristSource).toBe("pose");
-    expect(runtime.armTargetComposition.leftWristTarget).toEqual(imageLandmarks[15]);
     expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.2);
     expect(runtime.lowerBodyTargetComposition.aimTargets.rightToe).toEqual(
       runtime.lowerBodyTargetComposition.rightToeTarget,
@@ -116,10 +110,6 @@ describe("movementAvatarFrameTargetRuntime", () => {
       targetSolverLandmarks,
     });
 
-    expect(runtime.armTargetComposition.armTargets.left.wristSource).toBe("pose");
-    expect(runtime.armTargetComposition.leftFrontBodyArmBias).toBe(0);
-    expect(runtime.armTargetComposition.leftWristTarget).toEqual(targetSolverLandmarks[15]);
-    expect(runtime.armTargetComposition.playerSafeArmZScale).toBeUndefined();
     expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.18);
   });
 });

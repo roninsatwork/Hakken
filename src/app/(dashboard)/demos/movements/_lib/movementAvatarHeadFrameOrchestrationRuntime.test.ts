@@ -76,6 +76,7 @@ describe("movementAvatarHeadFrameOrchestrationRuntime", () => {
 
     const result = applyMovementAvatarHeadFrameOrchestrationRuntime({
       activeCalibration: calibration,
+      armApplicationModes: { left: "retargeted" as const, right: "retargeted" as const },
       autoCalibrationKind: "upright",
       avatarDecision,
       avatarRole: "player",
@@ -138,6 +139,7 @@ describe("movementAvatarHeadFrameOrchestrationRuntime", () => {
 
     const result = applyMovementAvatarHeadFrameOrchestrationRuntime({
       activeCalibration: calibration,
+      armApplicationModes: { left: "retargeted" as const, right: "retargeted" as const },
       autoCalibrationKind: "upright",
       avatarDecision,
       avatarRole: "player",

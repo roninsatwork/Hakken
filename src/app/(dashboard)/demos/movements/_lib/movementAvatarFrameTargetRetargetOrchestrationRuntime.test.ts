@@ -116,7 +116,6 @@ describe("movementAvatarFrameTargetRetargetOrchestrationRuntime", () => {
       vrm,
     });
 
-    expect(runtime.armTargetComposition.armTargets.left.wristSource).toBe("pose");
     expect(runtime.lowerBodyAimTargets.rightToe).toEqual(
       runtime.frameTargetRuntime.lowerBodyTargetComposition.rightToeTarget,
     );

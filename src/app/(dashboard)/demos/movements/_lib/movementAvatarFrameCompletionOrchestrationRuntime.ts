@@ -116,6 +116,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
 
   const headFrameOrchestrationRuntime = applyMovementAvatarHeadFrameOrchestrationRuntime({
     activeCalibration: input.activeCalibration,
+    armApplicationModes: input.armApplicationModes,
     autoCalibrationKind: input.autoCalibrationKind,
     avatarDecision: input.avatarDecision,
     avatarRole: input.avatarRole,
