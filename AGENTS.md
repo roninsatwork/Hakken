@@ -10,6 +10,13 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - Do not push after every small task. Batch related fixes, verify them, then push only when the user asks.
 - After merging or pushing to `main`, switch back to `dev` before continuing feature or cleanup work.
 
+## Git in Codex Desktop
+
+- In Codex Desktop, prefer Apple system Git for network operations: `/usr/bin/git pull`, `/usr/bin/git fetch`, and `/usr/bin/git push`.
+- The bundled Codex Git can fail against the HTTPS GitHub remote with `could not read Username for 'https://github.com': Device not configured`, even when the user's normal machine credentials work.
+- If a normal `git pull` or `git fetch` fails with that credential error, retry the same operation with `/usr/bin/git` before asking the user to fix GitHub auth.
+- The remote is expected to be `https://github.com/roninsatwork/Sonae.git`; do not switch it to SSH just to work around Codex auth unless the user asks.
+
 ## Progress Reporting
 
 - For roadmap, plan, or multi-step product builds, include a percentage-complete estimate in user updates and final summaries.
