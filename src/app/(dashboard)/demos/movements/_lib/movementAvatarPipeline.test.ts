@@ -7,7 +7,11 @@ import {
   resolveMovementAvatarPlayerLegRaiseHold,
   resolveMovementAvatarRootOrientation,
 } from "./movementAvatarPipeline";
-import { resolveMovementAvatarStudioDecision } from "./movementAvatarLegacyDecision";
+import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
+
+const resolveMovementAvatarStudioDecision = (
+  input: Omit<Parameters<typeof resolveMovementAvatarPipelineDecision>[0], "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "studio" });
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import { classifyMovementBodyOrientation } from "./movementBodyOrientation";
 import {

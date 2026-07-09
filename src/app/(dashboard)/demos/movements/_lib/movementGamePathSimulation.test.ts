@@ -36,10 +36,17 @@ import {
   resolveMovementAvatarSquatFlexionPose,
   resolveMovementAvatarTrackingFallbackLabels,
 } from "./movementAvatarPipeline";
-import {
-  resolveMovementAvatarReplayDecision,
-  resolveMovementAvatarStudioDecision,
-} from "./movementAvatarLegacyDecision";
+import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
+
+type MovementAvatarPipelineDecisionInput = Parameters<typeof resolveMovementAvatarPipelineDecision>[0];
+
+const resolveMovementAvatarReplayDecision = (
+  input: Omit<MovementAvatarPipelineDecisionInput, "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "replay" });
+
+const resolveMovementAvatarStudioDecision = (
+  input: Omit<MovementAvatarPipelineDecisionInput, "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "studio" });
 import {
   MOVEMENT_AVATAR_PROOF_MODES,
   type MovementAvatarProofMode,

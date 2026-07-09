@@ -43,7 +43,6 @@ export type MovementAvatarPipelineInput = {
   sourceOrigin: MovementAvatarSourceOrigin;
 };
 
-export type MovementAvatarSourceWrapperInput = Omit<MovementAvatarPipelineInput, "sourceOrigin">;
 
 export type MovementAvatarArmSide = "left" | "right";
 

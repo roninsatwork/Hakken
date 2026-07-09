@@ -3,7 +3,11 @@ import {
   classifyMovementBodyOrientation,
   shouldHoldUnsupportedBodyOrientation,
 } from "./movementBodyOrientation";
-import { resolveMovementAvatarStudioDecision } from "./movementAvatarLegacyDecision";
+import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
+
+const resolveMovementAvatarStudioDecision = (
+  input: Omit<Parameters<typeof resolveMovementAvatarPipelineDecision>[0], "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "studio" });
 import {
   makeMovementAvatarProofPose,
   movementAvatarProofLandmark,

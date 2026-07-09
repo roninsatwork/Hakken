@@ -29,10 +29,7 @@ import {
   type MovementReplayFailure,
 } from "../_lib/movementReplayAnalyzer";
 import {
-  resolveMovementAvatarReplayDecision,
-  resolveMovementAvatarStudioDecision,
-} from "../_lib/movementAvatarLegacyDecision";
-import {
+  resolveMovementAvatarPipelineDecision,
   type MovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
 import {
@@ -1131,17 +1128,19 @@ export default function MovementReplayLabPage() {
         ? currentFrame.tracking.worldPose
         : null,
     };
-    const replayDecision = resolveMovementAvatarReplayDecision({
+    const replayDecision = resolveMovementAvatarPipelineDecision({
       avatarRole: "player",
       calibration,
       retargetSourceModel: replayRetargetSourceModel,
       source,
+      sourceOrigin: "replay",
     });
-    const studioDecision = resolveMovementAvatarStudioDecision({
+    const studioDecision = resolveMovementAvatarPipelineDecision({
       avatarRole: "player",
       calibration,
       retargetSourceModel: replayRetargetSourceModel,
       source,
+      sourceOrigin: "studio",
     });
     const replay = getReplayStudioParitySnapshot(replayDecision);
     const studio = getReplayStudioParitySnapshot(studioDecision);

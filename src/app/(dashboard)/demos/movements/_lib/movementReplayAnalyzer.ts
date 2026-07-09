@@ -38,10 +38,7 @@ import {
   type MovementCoverageSummary,
 } from "./movementCoverageRegistry";
 import {
-  resolveMovementAvatarReplayDecision,
-  resolveMovementAvatarStudioDecision,
-} from "./movementAvatarLegacyDecision";
-import {
+  resolveMovementAvatarPipelineDecision,
   type MovementAvatarPipelineDecision,
 } from "./movementAvatarPipeline";
 import { resolveMovementAvatarHeadTarget } from "./movementAvatarHeadTarget";
@@ -1167,17 +1164,19 @@ function buildReplayGameWrapperFrames({
       poseLandmarks: frame.tracking.pose,
       worldPoseLandmarks: frame.tracking.worldPose.length >= 33 ? frame.tracking.worldPose : null,
     };
-    const replayDecision = resolveMovementAvatarReplayDecision({
+    const replayDecision = resolveMovementAvatarPipelineDecision({
       avatarRole: "player",
       calibration: simulation.calibration,
       retargetSourceModel: simulation.retargetSourceModel,
       source,
+      sourceOrigin: "replay",
     });
-    const studioDecision = resolveMovementAvatarStudioDecision({
+    const studioDecision = resolveMovementAvatarPipelineDecision({
       avatarRole: "player",
       calibration: simulation.calibration,
       retargetSourceModel: simulation.retargetSourceModel,
       source,
+      sourceOrigin: "studio",
     });
     const replay = replayGameWrapperParitySnapshot(replayDecision);
     const studio = replayGameWrapperParitySnapshot(studioDecision);

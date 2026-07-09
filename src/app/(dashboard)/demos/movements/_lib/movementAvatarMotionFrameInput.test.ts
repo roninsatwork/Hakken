@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { resolveMovementAvatarMotionFrameInput } from "./movementAvatarMotionFrameInput";
-import {
-  resolveMovementAvatarReplayDecision,
-  resolveMovementAvatarStudioDecision,
-} from "./movementAvatarLegacyDecision";
+import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
+
+type MovementAvatarPipelineDecisionInput = Parameters<typeof resolveMovementAvatarPipelineDecision>[0];
+
+const resolveMovementAvatarReplayDecision = (
+  input: Omit<MovementAvatarPipelineDecisionInput, "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "replay" });
+
+const resolveMovementAvatarStudioDecision = (
+  input: Omit<MovementAvatarPipelineDecisionInput, "sourceOrigin">,
+) => resolveMovementAvatarPipelineDecision({ ...input, sourceOrigin: "studio" });
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import {
