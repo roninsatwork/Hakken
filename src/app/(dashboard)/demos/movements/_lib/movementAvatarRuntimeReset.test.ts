@@ -48,6 +48,12 @@ function buildRefs(): MovementAvatarRuntimeResetRefs {
         worldQuaternion: new THREE.Quaternion(),
       },
     }),
+    rigMeasurementsRef: ref<MovementAvatarRuntimeResetRefs["rigMeasurementsRef"]["current"]>({
+      armLength: 0.5,
+      hipHeight: 0.9,
+      legLength: 0.8,
+      torsoLength: 0.6,
+    }),
     retargetSourceModelRef: ref({
       calibratedAt: 1,
       floorY: 0,
@@ -103,6 +109,7 @@ describe("movementAvatarRuntimeReset", () => {
 
     expect(updateMatrixWorld).toHaveBeenCalledWith(true);
     expect(refs.baseHipsPositionRef.current).toBeNull();
+    expect(refs.rigMeasurementsRef.current).toBeNull();
     expect(refs.baseBonePositionRef.current).toEqual({});
     expect(refs.setupStateRef.current.autoCalibration).toEqual({
       calibration: null,

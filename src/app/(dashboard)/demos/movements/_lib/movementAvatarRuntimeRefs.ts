@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import type * as THREE from "three";
 import type { MovementAvatarLowerBodyVisualState, MovementAvatarPlayerLegRaiseHoldState } from "./movementAvatarPipeline";
-import type { MovementAvatarRetargetRestMap } from "./movementAvatarRestPose";
+import type {
+  MovementAvatarRetargetRestMap,
+  MovementAvatarRigMeasurements,
+} from "./movementAvatarRestPose";
 import type { MovementAvatarExerciseTransitionState } from "./movementAvatarExerciseTarget";
 import { createMovementAvatarExerciseTransitionState } from "./movementAvatarExerciseTarget";
 import type { MovementAvatarFootLockState } from "./movementAvatarFootLock";
@@ -32,6 +35,7 @@ export function useMovementAvatarRuntimeRefs(
   const setupStateRef = useRef<MovementAvatarSetupState>(createMovementAvatarSetupState());
   const retargetAvatarRestRef = useRef<MovementAvatarRetargetRestMap>({});
   const retargetSourceModelRef = useRef<MovementRetargetSourceModel | null>(null);
+  const rigMeasurementsRef = useRef<MovementAvatarRigMeasurements | null>(null);
   const rootMotionFrameRef = useRef<MovementRootMotionFrame | null>(initialRootMotionFrame);
   const liveRootMotionHistoryRef = useRef<MovementRootMotionInputFrame[]>([]);
   const exerciseTransitionStateRef = useRef<MovementAvatarExerciseTransitionState>(
@@ -64,6 +68,7 @@ export function useMovementAvatarRuntimeRefs(
       playerLowerBodyStabilityRef,
       retargetAvatarRestRef,
       retargetSourceModelRef,
+      rigMeasurementsRef,
       setupStateRef,
     };
 

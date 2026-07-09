@@ -93,6 +93,81 @@ export function buildMovementAvatarRetargetRestMap(
   return restMap;
 }
 
+export type MovementAvatarRigMeasurements = {
+  /** upperArm -> lowerArm -> hand chain length, averaged over both sides. */
+  armLength: number;
+  /** World-space height of the hips bone in the bind pose. */
+  hipHeight: number;
+  /** upperLeg -> lowerLeg -> foot chain length, averaged over both sides. */
+  legLength: number;
+  /** Straight-line hips -> head distance in the bind pose. */
+  torsoLength: number;
+};
+
+function movementAvatarBoneWorldPosition(
+  vrm: VRM,
+  boneName: MovementAvatarRetargetBoneName,
+): THREE.Vector3 | null {
+  const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
+  if (!bone) return null;
+  return bone.getWorldPosition(new THREE.Vector3());
+}
+
+function movementAvatarChainLength(
+  vrm: VRM,
+  chain: MovementAvatarRetargetBoneName[],
+): number | null {
+  let length = 0;
+  let previous: THREE.Vector3 | null = null;
+
+  for (const boneName of chain) {
+    const position = movementAvatarBoneWorldPosition(vrm, boneName);
+    if (!position) return null;
+    if (previous) length += position.distanceTo(previous);
+    previous = position;
+  }
+
+  return length > 0 ? length : null;
+}
+
+function averageSides(left: number | null, right: number | null): number | null {
+  if (left !== null && right !== null) return (left + right) / 2;
+  return left ?? right;
+}
+
+/**
+ * Measure the rig geometry that calibration derives from, in the same bind
+ * pose buildMovementAvatarRetargetRestMap walks. Returns null when the rig
+ * lacks the core bones (hips/head plus at least one leg and arm chain).
+ */
+export function measureMovementAvatarRig(
+  vrm: VRM,
+): MovementAvatarRigMeasurements | null {
+  vrm.scene.updateMatrixWorld(true);
+
+  const hips = movementAvatarBoneWorldPosition(vrm, "hips");
+  const head = movementAvatarBoneWorldPosition(vrm, "head");
+  const legLength = averageSides(
+    movementAvatarChainLength(vrm, ["leftUpperLeg", "leftLowerLeg", "leftFoot"]),
+    movementAvatarChainLength(vrm, ["rightUpperLeg", "rightLowerLeg", "rightFoot"]),
+  );
+  const armLength = averageSides(
+    movementAvatarChainLength(vrm, ["leftUpperArm", "leftLowerArm", "leftHand"]),
+    movementAvatarChainLength(vrm, ["rightUpperArm", "rightLowerArm", "rightHand"]),
+  );
+  if (!hips || !head || legLength === null || armLength === null) return null;
+
+  const torsoLength = head.distanceTo(hips);
+  if (hips.y <= 0 || torsoLength <= 0) return null;
+
+  return {
+    armLength,
+    hipHeight: hips.y,
+    legLength,
+    torsoLength,
+  };
+}
+
 export function movementSourceSegmentToAvatarWorldDirection(
   direction: { x: number; y: number; z: number },
   zScale: number,

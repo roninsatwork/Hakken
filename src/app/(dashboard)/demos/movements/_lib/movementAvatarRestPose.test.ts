@@ -6,6 +6,7 @@ import {
   MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
   MOVEMENT_AVATAR_UPPER_BODY_VISUAL_MAPPINGS,
   buildMovementAvatarRetargetRestMap,
+  measureMovementAvatarRig,
   movementSourceSegmentToAvatarWorldDirection,
   type MovementAvatarRetargetBoneName,
 } from "./movementAvatarRestPose";
@@ -58,6 +59,54 @@ describe("movement avatar rest pose", () => {
     expect(restMap.spine?.worldDirection.z).toBeCloseTo(0);
     expect(restMap.rightUpperArm).toBeUndefined();
     expect(restMap.leftUpperArm).toBeUndefined();
+  });
+
+  it("measures rig geometry from the bind pose", () => {
+    const vrm = makeVrm({
+      hips: makeBone("hips", new THREE.Vector3(0, 0.9, 0)),
+      head: makeBone("head", new THREE.Vector3(0, 1.5, 0)),
+      leftUpperLeg: makeBone("leftUpperLeg", new THREE.Vector3(-0.1, 0.85, 0)),
+      leftLowerLeg: makeBone("leftLowerLeg", new THREE.Vector3(-0.1, 0.45, 0)),
+      leftFoot: makeBone("leftFoot", new THREE.Vector3(-0.1, 0.05, 0)),
+      rightUpperLeg: makeBone("rightUpperLeg", new THREE.Vector3(0.1, 0.85, 0)),
+      rightLowerLeg: makeBone("rightLowerLeg", new THREE.Vector3(0.1, 0.45, 0)),
+      rightFoot: makeBone("rightFoot", new THREE.Vector3(0.1, 0.05, 0)),
+      leftUpperArm: makeBone("leftUpperArm", new THREE.Vector3(-0.2, 1.35, 0)),
+      leftLowerArm: makeBone("leftLowerArm", new THREE.Vector3(-0.5, 1.35, 0)),
+      leftHand: makeBone("leftHand", new THREE.Vector3(-0.75, 1.35, 0)),
+      rightUpperArm: makeBone("rightUpperArm", new THREE.Vector3(0.2, 1.35, 0)),
+      rightLowerArm: makeBone("rightLowerArm", new THREE.Vector3(0.5, 1.35, 0)),
+      rightHand: makeBone("rightHand", new THREE.Vector3(0.75, 1.35, 0)),
+    });
+
+    const measurements = measureMovementAvatarRig(vrm);
+
+    expect(measurements).not.toBeNull();
+    expect(measurements?.hipHeight).toBeCloseTo(0.9);
+    expect(measurements?.torsoLength).toBeCloseTo(0.6);
+    expect(measurements?.legLength).toBeCloseTo(0.8);
+    expect(measurements?.armLength).toBeCloseTo(0.55);
+  });
+
+  it("measures one-sided rigs and rejects rigs missing core bones", () => {
+    const oneSided = makeVrm({
+      hips: makeBone("hips", new THREE.Vector3(0, 1, 0)),
+      head: makeBone("head", new THREE.Vector3(0, 1.6, 0)),
+      rightUpperLeg: makeBone("rightUpperLeg", new THREE.Vector3(0.1, 0.95, 0)),
+      rightLowerLeg: makeBone("rightLowerLeg", new THREE.Vector3(0.1, 0.5, 0)),
+      rightFoot: makeBone("rightFoot", new THREE.Vector3(0.1, 0.05, 0)),
+      rightUpperArm: makeBone("rightUpperArm", new THREE.Vector3(0.2, 1.4, 0)),
+      rightLowerArm: makeBone("rightLowerArm", new THREE.Vector3(0.45, 1.4, 0)),
+      rightHand: makeBone("rightHand", new THREE.Vector3(0.7, 1.4, 0)),
+    });
+
+    expect(measureMovementAvatarRig(oneSided)?.legLength).toBeCloseTo(0.9);
+    expect(measureMovementAvatarRig(oneSided)?.armLength).toBeCloseTo(0.5);
+
+    const noHead = makeVrm({
+      hips: makeBone("hips", new THREE.Vector3(0, 1, 0)),
+    });
+    expect(measureMovementAvatarRig(noHead)).toBeNull();
   });
 
   it("converts source segment direction into avatar world direction with y/z handedness", () => {

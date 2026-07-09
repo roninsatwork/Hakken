@@ -49,6 +49,7 @@ function resetRefs(): MovementAvatarRuntimeResetRefs {
     },
     retargetAvatarRestRef: { current: {} },
     retargetSourceModelRef: { current: null },
+    rigMeasurementsRef: { current: null },
     setupStateRef: { current: {} as MovementAvatarRuntimeResetRefs["setupStateRef"]["current"] },
   };
 }

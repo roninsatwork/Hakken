@@ -1,8 +1,14 @@
 import type { VRM } from "@pixiv/three-vrm";
 import type * as THREE from "three";
 import type { MovementAvatarLowerBodyVisualState, MovementAvatarPlayerLegRaiseHoldState } from "./movementAvatarPipeline";
-import type { MovementAvatarRetargetRestMap } from "./movementAvatarRestPose";
-import { buildMovementAvatarRetargetRestMap } from "./movementAvatarRestPose";
+import type {
+  MovementAvatarRetargetRestMap,
+  MovementAvatarRigMeasurements,
+} from "./movementAvatarRestPose";
+import {
+  buildMovementAvatarRetargetRestMap,
+  measureMovementAvatarRig,
+} from "./movementAvatarRestPose";
 import type { MovementAvatarExerciseTransitionState } from "./movementAvatarExerciseTarget";
 import { createMovementAvatarExerciseTransitionState } from "./movementAvatarExerciseTarget";
 import type { MovementAvatarFootLockState } from "./movementAvatarFootLock";
@@ -32,6 +38,7 @@ export type MovementAvatarRuntimeResetRefs = {
   playerLowerBodyStabilityRef: MovementAvatarRuntimeRef<MovementAvatarLowerBodyVisualState>;
   retargetAvatarRestRef: MovementAvatarRuntimeRef<MovementAvatarRetargetRestMap>;
   retargetSourceModelRef: MovementAvatarRuntimeRef<MovementRetargetSourceModel | null>;
+  rigMeasurementsRef: MovementAvatarRuntimeRef<MovementAvatarRigMeasurements | null>;
   setupStateRef: MovementAvatarRuntimeRef<MovementAvatarSetupState>;
 };
 
@@ -47,6 +54,7 @@ export function resetMovementAvatarRuntimeRefs({
   refs.setupStateRef.current = createMovementAvatarSetupState();
   refs.retargetAvatarRestRef.current = buildMovementAvatarRetargetRestMap(vrm);
   refs.retargetSourceModelRef.current = null;
+  refs.rigMeasurementsRef.current = measureMovementAvatarRig(vrm);
   refs.liveRootMotionHistoryRef.current = [];
   refs.exerciseTransitionStateRef.current = createMovementAvatarExerciseTransitionState();
   refs.playerLegRaiseHoldRef.current = createMovementAvatarPlayerLegRaiseHoldState();
