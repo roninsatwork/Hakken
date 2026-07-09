@@ -84,7 +84,6 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
   const retargetOwnsLowerBody =
     appliedLegSegments >= 4 &&
     retargetFrame.debug.sourceQuality >= 0.45;
-  const shouldUseLegacyLowerBody = !retargetOwnsLowerBody;
   const shouldUseRecordedSquatPresentation =
     !isPlayer &&
     instructorSquatPresentationDepth > 0.18 &&
@@ -109,10 +108,10 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
   const lowerBodyOwner = playerAppliedOwnerDecision?.lowerBodyOwner ?? (retargetOwnsLowerBody
     ? "recorded-retarget"
     : appliedLowerBodySegments > 0
-      ? "retarget-legacy-fallback"
-      : "legacy-fallback");
+      ? "retarget-partial-fallback"
+      : "neutral-fallback");
   const feetOwner = shouldUsePlayerFootFallback
-    ? "player-legacy-foot-fallback"
+    ? "player-foot-fallback"
     : playerAppliedOwnerDecision?.feetOwner ?? (appliedFootSegments > 0 ? "recorded-retarget" : "neutral");
 
   return {
@@ -120,7 +119,6 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
     lowerBodyOwner,
     playerAppliedOwnerDecision,
     retargetOwnsLowerBody,
-    shouldUseLegacyLowerBody,
     shouldUsePlayerFootFallback,
     shouldUseRecordedSquatPresentation,
   };

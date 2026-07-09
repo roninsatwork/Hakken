@@ -81,7 +81,6 @@ export type MovementAvatarAppliedLowerBodyDecision = {
   lowerBodyOwner: string;
   playerAppliedOwnerDecision: MovementAvatarPlayerLowerBodyOwnerDecision | null;
   retargetOwnsLowerBody: boolean;
-  shouldUseLegacyLowerBody: boolean;
   shouldUsePlayerFootFallback: boolean;
   shouldUseRecordedSquatPresentation: boolean;
 };

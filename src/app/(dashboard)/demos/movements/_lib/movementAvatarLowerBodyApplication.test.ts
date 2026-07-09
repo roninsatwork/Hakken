@@ -829,7 +829,6 @@ function appliedDecision(
     lowerBodyOwner: "neutral",
     playerAppliedOwnerDecision: null,
     retargetOwnsLowerBody: false,
-    shouldUseLegacyLowerBody: false,
     shouldUsePlayerFootFallback: false,
     shouldUseRecordedSquatPresentation: false,
     ...overrides,

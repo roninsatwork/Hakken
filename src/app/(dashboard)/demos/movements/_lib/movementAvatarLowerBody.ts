@@ -262,13 +262,13 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     feetOwner: playerLegRaiseFeetOwner ?? (solvedFootSegments > 0
       ? "recorded-retarget"
       : shouldUsePlayerFootFallback
-        ? "player-legacy-foot-fallback"
+        ? "player-foot-fallback"
         : "neutral"),
     lowerBodyOwner: retargetOwnsLowerBody
       ? "player-retarget"
       : playerLegRaiseOwner ?? (solvedLowerBodySegments > 0
-          ? "retarget-legacy-fallback"
-          : "legacy-fallback"),
+          ? "retarget-partial-fallback"
+          : "neutral-fallback"),
     shouldUsePlayerFootFallback,
   };
 }

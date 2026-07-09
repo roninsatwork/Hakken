@@ -1142,9 +1142,9 @@ describe("movementGamePathSimulation", () => {
     });
 
     expect(appliedDecision.lowerBodyOwner).toBe("player-retarget");
-    expect(appliedDecision.feetOwner).toBe("player-legacy-foot-fallback");
+    expect(appliedDecision.feetOwner).toBe("player-foot-fallback");
     expect(appliedDecision.shouldUsePlayerFootFallback).toBe(true);
-    expect(appliedDecision.shouldUseLegacyLowerBody).toBe(false);
+    expect(appliedDecision.retargetOwnsLowerBody).toBe(true);
   });
 
   it("keeps player leg-raise feet planted instead of handing them to recorded retarget", () => {
@@ -2257,9 +2257,9 @@ describe("movementGamePathSimulation", () => {
       shouldHoldPlayerSquatPose: false,
     });
 
-    expect(appliedDecision.lowerBodyOwner).toBe("legacy-fallback");
+    expect(appliedDecision.lowerBodyOwner).toBe("neutral-fallback");
     expect(appliedDecision.feetOwner).toBe("neutral");
-    expect(appliedDecision.shouldUseLegacyLowerBody).toBe(true);
+    expect(appliedDecision.retargetOwnsLowerBody).toBe(false);
   });
 
   it("resolves player head ownership through calibration", () => {
@@ -2504,7 +2504,7 @@ describe("movementGamePathSimulation", () => {
     expect(sideReachDecision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
     expect(sideReachDecision?.retarget.lowerBodySegmentMotion).toBeGreaterThan(0.16);
     expect(sideReachDecision?.lowerOwner).toBe("player-right-leg-raise");
-    expect(sideReachDecision?.feetOwner).toBe("player-legacy-foot-fallback");
+    expect(sideReachDecision?.feetOwner).toBe("player-foot-fallback");
   });
 
   it("keeps live leg raises active when feet are clipped but hips and knees are in frame", () => {
