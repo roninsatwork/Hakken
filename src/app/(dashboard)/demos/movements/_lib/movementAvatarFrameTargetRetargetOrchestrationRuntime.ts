@@ -61,12 +61,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   vrm: VRM | null | undefined;
 }): MovementAvatarFrameTargetRetargetOrchestrationRuntime {
   const frameTargetRuntime = resolveMovementAvatarFrameTargetRuntime({
-    armAvatarRole,
     avatarRole,
-    imageLandmarks,
-    lowerBodyDrive,
-    rigHands,
-    solverLandmarks,
     targetSolverLandmarks,
   });
 

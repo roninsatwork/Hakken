@@ -85,10 +85,6 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime", () => {
     });
     const frameTargetRuntime = resolveMovementAvatarFrameTargetRuntime({
       avatarRole: "player",
-      imageLandmarks: poseLandmarks,
-      lowerBodyDrive: avatarDecision.lowerBodyDrive,
-      rigHands: undefined,
-      solverLandmarks: poseLandmarks,
       targetSolverLandmarks: poseLandmarks,
     });
     const scene = new THREE.Object3D();

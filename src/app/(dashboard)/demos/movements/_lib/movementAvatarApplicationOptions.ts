@@ -3,7 +3,6 @@ import type {
   MovementAvatarBoneEaseOptionsDecision,
   MovementAvatarHipsApplicationDecision,
   MovementAvatarHipsPositionOptionsDecision,
-  MovementAvatarLegacyLowerBodyAimOptionsDecision,
   MovementAvatarPlantedSquatIkOptionsDecision,
 } from "./movementAvatarPipeline";
 import {

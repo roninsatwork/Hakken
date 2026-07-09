@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarFrameTargetRuntime";
-import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import {
-  createVrmImageSolverLandmarks,
   normalizeVrmLandmark,
-  type VrmHandsPayload,
   type VrmSolverLandmark,
 } from "./vrmRigging";
 
@@ -13,49 +10,11 @@ function solverLandmarks(): VrmSolverLandmark[] {
   return makeMovementAvatarProofMotionPayload("standing").landmarks.map(normalizeVrmLandmark);
 }
 
-function lowerBodyDrive(overrides: Partial<MovementAvatarLowerBodyDrive> = {}): MovementAvatarLowerBodyDrive {
-  return {
-    groundedSquatDepth: 0,
-    liveSquatDepth: 0,
-    playerLegRaiseDepth: 0,
-    playerLegRaiseSide: null,
-    playerLowerBodyState: "neutral",
-    playerSquatPresentationDepth: 0,
-    shouldApplyLowerBody: true,
-    shouldApplySolverTorso: true,
-    shouldDrivePlayerLegRaise: false,
-    shouldDrivePlayerSquat: false,
-    visualRootDrop: 0,
-    ...overrides,
-  };
-}
-
 describe("movementAvatarFrameTargetRuntime", () => {
-  it("composes player arm targets and lower-body target selections together", () => {
-    const imageLandmarks = solverLandmarks();
-    imageLandmarks[15] = {
-      ...imageLandmarks[15]!,
-      visibility: 0.2,
-    };
-    const targetSolverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
-    const rigHands: VrmHandsPayload = {
-      left: {
-        landmarks: [{
-          x: 0.68,
-          y: 0.42,
-          z: -0.09,
-          visibility: 0.95,
-        }],
-      },
-    };
-
+  it("resolves player lower-body target selections with the player threshold", () => {
     const runtime = resolveMovementAvatarFrameTargetRuntime({
       avatarRole: "player",
-      imageLandmarks,
-      lowerBodyDrive: lowerBodyDrive(),
-      rigHands,
-      solverLandmarks: imageLandmarks,
-      targetSolverLandmarks,
+      targetSolverLandmarks: solverLandmarks(),
     });
 
     expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.18);
@@ -64,52 +23,15 @@ describe("movementAvatarFrameTargetRuntime", () => {
     );
   });
 
-  it("keeps instructor target composition on recorded same-side landmarks", () => {
-    const imageLandmarks = solverLandmarks();
-
+  it("resolves instructor lower-body target selections with the recorded threshold", () => {
     const runtime = resolveMovementAvatarFrameTargetRuntime({
       avatarRole: "instructor",
-      imageLandmarks,
-      lowerBodyDrive: lowerBodyDrive(),
-      rigHands: undefined,
-      solverLandmarks: imageLandmarks,
-      targetSolverLandmarks: imageLandmarks,
+      targetSolverLandmarks: solverLandmarks(),
     });
 
     expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.2);
     expect(runtime.lowerBodyTargetComposition.aimTargets.rightToe).toEqual(
       runtime.lowerBodyTargetComposition.rightToeTarget,
     );
-  });
-
-  it("keeps replayed player avatars on recorded arm targets while preserving player lower-body targets", () => {
-    const imageLandmarks = solverLandmarks();
-    imageLandmarks[15] = {
-      ...imageLandmarks[15]!,
-      visibility: 0.2,
-    };
-    const targetSolverLandmarks = createVrmImageSolverLandmarks(imageLandmarks);
-    const rigHands: VrmHandsPayload = {
-      left: {
-        landmarks: [{
-          x: 0.68,
-          y: 0.42,
-          z: -0.09,
-          visibility: 0.95,
-        }],
-      },
-    };
-
-    const runtime = resolveMovementAvatarFrameTargetRuntime({
-      armAvatarRole: "instructor",
-      avatarRole: "player",
-      imageLandmarks,
-      lowerBodyDrive: lowerBodyDrive(),
-      rigHands,
-      solverLandmarks: imageLandmarks,
-      targetSolverLandmarks,
-    });
-
-    expect(runtime.lowerBodyTargetComposition.selections.endpointVisibilityThreshold).toBe(0.18);
   });
 });

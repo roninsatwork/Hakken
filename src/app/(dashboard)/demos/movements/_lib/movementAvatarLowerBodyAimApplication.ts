@@ -1,9 +1,4 @@
-import * as THREE from "three";
-import type {
-  MovementAvatarBoneRotationSpec,
-  MovementAvatarLegacyLowerBodyAimOptionsDecision,
-  MovementAvatarLegacyLowerBodyAimSpec,
-} from "./movementAvatarPipeline";
+import type { MovementAvatarBoneRotationSpec } from "./movementAvatarPipeline";
 import {
   resolveMovementAvatarPlantedFootOwner,
 } from "./movementAvatarPipeline";
@@ -12,13 +7,7 @@ import type {
   MovementAvatarInstructorFootPlantContacts,
   MovementAvatarInstructorFootPlantPoseResult,
   MovementAvatarInstructorFootPlantSide,
-  MovementAvatarLegacyLowerBodyAimRequest,
-  MovementAvatarLegacyLowerBodyAimRequestApplicationResult,
-  MovementAvatarLegacyLowerBodyAimTargets,
-  MovementAvatarLowerBodyAimLandmark,
 } from "./movementAvatarLowerBodyApplicationTypes";
-import type { MovementAvatarLowerBodyRetargetApplicationPlan } from "./movementAvatarLowerBodyApplicationPlan";
-import { applyMovementAvatarAimVectorToObjects } from "./movementAvatarAimApplication";
 
 export function applyMovementAvatarInstructorFootPlantRequests({
   apply,
