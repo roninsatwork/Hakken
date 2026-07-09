@@ -380,6 +380,26 @@ describe("movementRetargeting", () => {
       expect(getRecordedLowerBodySegmentMotionDepth({ calibration, frame })).toBe(0);
     });
 
+    it("solves segment directions without a calibration model so arms follow live", () => {
+      // Live webcam framings often cannot build a retarget source model
+      // (floor/upright gates); arms and spine must still follow.
+      const frame = solveMovementRetargetFrame({
+        calibration: null,
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+
+      expect(frame.space).toBe("world");
+      expect(frame.segments.leftUpperArm).toBeDefined();
+      expect(frame.segments.rightLowerArm).toBeDefined();
+      expect(frame.segments.spine).toBeDefined();
+      expect(frame.debug.solvedSegments.length).toBeGreaterThanOrEqual(5);
+      // Scalar heuristics need calibration and must stay inert.
+      expect(frame.squatDepth).toBe(0);
+      expect(frame.hipDrop).toBe(0);
+      expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: false });
+    });
+
     it("keeps image space when calibration was built without world landmarks", () => {
       const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
       expect(calibration?.space).toBe("image");

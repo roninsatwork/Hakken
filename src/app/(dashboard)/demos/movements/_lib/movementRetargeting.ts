@@ -447,9 +447,13 @@ export function solveMovementRetargetFrame({
   };
 
   const centers = getCenters(poseLandmarks);
-  if (!calibration || !centers) return fallback;
+  if (!centers) return fallback;
 
-  const usableWorldPose = (calibration.space ?? "image") === "world"
+  // Segment directions do not need a calibration model — only the scalar
+  // heuristics below do. Without a model (e.g. an upper-body-only webcam
+  // framing where the upright/floor gates block model building), the frame
+  // still solves segments so arms and spine can follow.
+  const usableWorldPose = !calibration || (calibration.space ?? "image") === "world"
     ? getUsableWorldPose(worldPoseLandmarks)
     : null;
   const segmentSpace: MovementRetargetSpace = usableWorldPose ? "world" : "image";
@@ -457,10 +461,27 @@ export function solveMovementRetargetFrame({
   const segments = usableWorldPose
     ? buildSegments(
         poseLandmarks,
-        calibration.worldTorsoHeight ?? usableWorldPose.torsoHeight,
+        calibration?.worldTorsoHeight ?? usableWorldPose.torsoHeight,
         usableWorldPose.worldPoseLandmarks,
       )
-    : buildSegments(poseLandmarks, calibration.torsoHeight);
+    : buildSegments(poseLandmarks, calibration?.torsoHeight ?? centers.torsoHeight);
+
+  if (!calibration) {
+    const solvedWithoutCalibration = SEGMENT_NAMES.filter(
+      (name) => (segments[name]?.confidence ?? 0) >= 0.3,
+    );
+
+    return {
+      ...fallback,
+      debug: {
+        heldSegments: SEGMENT_NAMES.filter((name) => !solvedWithoutCalibration.includes(name)),
+        solvedSegments: solvedWithoutCalibration,
+        sourceQuality,
+      },
+      segments,
+      space: segmentSpace,
+    };
+  }
   const solvedSegments = SEGMENT_NAMES.filter((name) => (segments[name]?.confidence ?? 0) >= 0.3);
   const heldSegments = SEGMENT_NAMES.filter((name) => !solvedSegments.includes(name));
   const hipConfidence = averageVisibility(poseLandmarks, [23, 24]);
