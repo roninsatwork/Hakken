@@ -1,4 +1,4 @@
-import type { MovementReplayAnalysis } from "./movementReplayAnalyzer";
+import type { MovementReplayAnalysis } from "../../../src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer";
 
 export type MovementRecordedProofStatus =
   | "covered-by-other-recording"

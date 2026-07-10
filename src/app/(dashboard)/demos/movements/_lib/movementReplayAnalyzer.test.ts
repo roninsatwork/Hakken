@@ -17,7 +17,7 @@ import {
   buildMovementRecordedProofManifest,
   movementRecordedProofDecisionReviewContextForRow,
   summarizeMovementRecordedProofGate,
-} from "./movementRecordedProofManifest";
+} from "../../../../../../scripts/movement-debug/lib/movementRecordedProofManifest";
 import type { MovementStartReadiness } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 

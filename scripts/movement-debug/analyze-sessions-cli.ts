@@ -23,7 +23,7 @@ import {
   type MovementRecordedProofCase,
   type MovementRecordedSourceLimitationDecision,
   type MovementRecordedVisualCaptureFrame,
-} from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordedProofManifest";
+} from "./lib/movementRecordedProofManifest";
 import type { MovementDataFormat } from "../../src/app/(dashboard)/demos/movements/_lib/movementTypes";
 
 type CliArgs = {

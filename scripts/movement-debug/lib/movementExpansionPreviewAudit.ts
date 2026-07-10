@@ -1,32 +1,32 @@
-import { classifyMovementBodyOrientation } from "./movementBodyOrientation";
+import { classifyMovementBodyOrientation } from "../../../src/app/(dashboard)/demos/movements/_lib/movementBodyOrientation";
 import {
   MOVEMENT_COVERAGE_REGISTRY,
   type MovementCoverageFamily,
-} from "./movementCoverageRegistry";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementCoverageRegistry";
 import {
   makeMovementAvatarProofMotionPayload,
   makeMovementAvatarProofPose,
   makeMovementAvatarProofRootBaselinePayload,
   type MovementAvatarProofMotionPayload,
   type MovementAvatarProofMode,
-} from "./movementAvatarProofFixtures";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementAvatarProofFixtures";
 import {
   buildMovementGamePathSimulation,
-} from "./movementGamePathSimulation";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation";
 import type {
   MovementDebugReplayFrame,
   MovementDebugReplaySession,
-} from "./movementDebugReplay";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementDebugReplay";
 import {
   resolveMovementRootMotionStepResponse,
-} from "./movementRootMotion";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementRootMotion";
 import {
   resolveMovementAvatarSupportPresentationPose,
-} from "./movementAvatarSupportPresentationDecision";
-import { resolveMovementExercisePose } from "./movementExercisePose";
-import { resolveMovementSupportConstraint } from "./movementSupportConstraint";
-import { resolveMovementSupportContacts } from "./movementSupportContact";
-import { resolveMovementSupportIntent } from "./movementSupportIntent";
+} from "../../../src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportPresentationDecision";
+import { resolveMovementExercisePose } from "../../../src/app/(dashboard)/demos/movements/_lib/movementExercisePose";
+import { resolveMovementSupportConstraint } from "../../../src/app/(dashboard)/demos/movements/_lib/movementSupportConstraint";
+import { resolveMovementSupportContacts } from "../../../src/app/(dashboard)/demos/movements/_lib/movementSupportContact";
+import { resolveMovementSupportIntent } from "../../../src/app/(dashboard)/demos/movements/_lib/movementSupportIntent";
 
 export type MovementExpansionPreviewFamily =
   | "facing-occlusion"
