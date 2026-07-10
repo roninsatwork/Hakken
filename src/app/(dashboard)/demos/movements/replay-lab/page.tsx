@@ -33,10 +33,10 @@ import {
   loadMovementReplayRecording,
   type MovementReplayRecordingSource,
 } from "../_lib/movementRecordingReplay";
-import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "../_lib/movementNextProofRehearsal";
+import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "./_lib/movementNextProofRehearsal";
 import {
   getMovementProofRehearsalBatchSummary,
-} from "../_lib/movementProofRehearsalEvidence";
+} from "./_lib/movementProofRehearsalEvidence";
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {

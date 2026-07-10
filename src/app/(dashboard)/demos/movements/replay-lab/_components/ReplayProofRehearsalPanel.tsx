@@ -1,9 +1,9 @@
-import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "../../_lib/movementNextProofRehearsal";
+import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "../_lib/movementNextProofRehearsal";
 import {
   getMovementProofRehearsalBatchEvidence,
   getMovementProofRehearsalRequirement,
   getMovementProofRehearsalScoreSummary,
-} from "../../_lib/movementProofRehearsalEvidence";
+} from "../_lib/movementProofRehearsalEvidence";
 import type { getProofRehearsalReadiness } from "../_lib/replayLabHelpers";
 
 type ReplayProofRehearsalPanelProps = {

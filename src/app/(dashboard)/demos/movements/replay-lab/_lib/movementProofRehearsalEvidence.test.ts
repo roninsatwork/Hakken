@@ -6,7 +6,7 @@ import {
   getMovementProofRehearsalBatchSummary,
   getMovementProofRehearsalEvidence,
 } from "./movementProofRehearsalEvidence";
-import type { MovementReplayAnalysis, MovementReplayGamePathFrame } from "./movementReplayAnalyzer";
+import type { MovementReplayAnalysis, MovementReplayGamePathFrame } from "../../_lib/movementReplayAnalyzer";
 
 function gameFrame(overrides: Partial<MovementReplayGamePathFrame>): MovementReplayGamePathFrame {
   return {

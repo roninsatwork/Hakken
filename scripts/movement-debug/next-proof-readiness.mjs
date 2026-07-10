@@ -27,7 +27,7 @@ import {
 const DEFAULT_OUT_PATH = "tmp/movement-replay-lab/current-next-proof-readiness.json";
 const DEFAULT_MARKDOWN_OUT_PATH = "tmp/movement-replay-lab/current-next-proof-readiness.md";
 const NEXT_PROOF_REHEARSAL_ITEMS = JSON.parse(readFileSync(
-  new URL("../../src/app/(dashboard)/demos/movements/_lib/movementNextProofRehearsalItems.json", import.meta.url),
+  new URL("../../src/app/(dashboard)/demos/movements/replay-lab/_lib/movementNextProofRehearsalItems.json", import.meta.url),
   "utf8",
 ));
 

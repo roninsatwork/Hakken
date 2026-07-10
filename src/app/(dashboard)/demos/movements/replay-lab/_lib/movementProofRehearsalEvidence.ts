@@ -1,5 +1,5 @@
 import type { MovementNextProofRehearsalItem } from "./movementNextProofRehearsal";
-import type { MovementReplayAnalysis, MovementReplayGamePathFrame } from "./movementReplayAnalyzer";
+import type { MovementReplayAnalysis, MovementReplayGamePathFrame } from "../../_lib/movementReplayAnalyzer";
 
 export type MovementProofRehearsalRequirement = {
   label: string;
