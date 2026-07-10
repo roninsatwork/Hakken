@@ -17,6 +17,10 @@ import {
   MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
   type MovementAvatarRetargetBoneMapping,
 } from "./movementAvatarRestPose";
+
+const MOVEMENT_AVATAR_FOOT_RETARGET_MAPPINGS = MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS.filter(
+  (mapping) => mapping.type === "foot",
+);
 import type { MovementAvatarLowerBodyTargetDecision } from "./movementAvatarTarget";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 
@@ -115,6 +119,22 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
       footOwner = nonRetargetLowerBodyApplication.feetOwner ?? footOwner;
       if (nonRetargetLowerBodyApplication.plantedSquatIkDepth !== null) {
         plantedSquatIkDepth = nonRetargetLowerBodyApplication.plantedSquatIkDepth;
+      }
+
+      // Feet keep following the solved world directions while the legs hold
+      // neutral. Measured on the goldens: foot segments score ~0 error when
+      // they own the feet, and the worst foot cells were exactly the frames
+      // where "standing" bodies pivot while feet sat in the neutral hold.
+      // The neutral ease drives first, the foot segments refine after - the
+      // same application-order contract as the spine drive + segment refine.
+      if (isPlayer && lowerBodyApplicationPlan.mode === "player-neutral") {
+        updateWorldMatrix();
+        const footRetargetCounts = applyRetargetMappings(MOVEMENT_AVATAR_FOOT_RETARGET_MAPPINGS);
+        if (footRetargetCounts.feet > 0) {
+          retargetAppliedFeet += footRetargetCounts.feet;
+          retargetAppliedLowerBody += footRetargetCounts.applied;
+          footOwner = "recorded-retarget";
+        }
       }
     } else if (lowerBodyApplicationPlan.mode === "retarget") {
       updateWorldMatrix();
