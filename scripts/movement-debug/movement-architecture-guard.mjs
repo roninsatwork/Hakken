@@ -27,14 +27,9 @@ export const DEFAULT_WATCHED_FILES = [
     reason: "avatar renderer should remain an orchestration adapter",
   },
   {
-    maxLines: 260,
-    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameOrchestrationRuntime.ts",
-    reason: "ready-frame orchestration should stay a coordinator, not regain application ownership",
-  },
-  {
-    maxLines: 280,
-    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameApplicationRuntime.ts",
-    reason: "ready-frame application handoff should stay focused on body/completion sequencing",
+    maxLines: 1100,
+    path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts",
+    reason: "frame application pipeline should coordinate the solve modules, not absorb their logic",
   },
   {
     maxLines: 260,

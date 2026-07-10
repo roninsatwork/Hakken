@@ -26,7 +26,7 @@ import {
 } from "../../../_lib/vrmRigging";
 import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntryRuntime";
 import { VrmAvatarPresentation } from "./VrmAvatarPresentation";
-import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarReadyFrameOrchestrationRuntime";
+import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
 
 const AVATAR_BASE_Y = -2.8;
 const AVATAR_FRAME_FALLBACK_SLERP = 0.35;

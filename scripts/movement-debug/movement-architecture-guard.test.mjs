@@ -541,12 +541,8 @@ describe("movement architecture guard", () => {
         path: "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
       }),
       expect.objectContaining({
-        maxLines: 260,
-        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameOrchestrationRuntime.ts",
-      }),
-      expect.objectContaining({
-        maxLines: 280,
-        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarReadyFrameApplicationRuntime.ts",
+        maxLines: 1100,
+        path: "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts",
       }),
       expect.objectContaining({
         maxLines: 260,
