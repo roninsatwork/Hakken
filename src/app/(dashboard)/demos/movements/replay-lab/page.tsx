@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "convex/react";
 import {
   Activity,
   AlertTriangle,
@@ -15,7 +14,6 @@ import {
   Pause,
   Play,
 } from "lucide-react";
-import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Header from "@/src/ui/components/layout/Header";
 import {
@@ -29,10 +27,6 @@ import {
 import {
   resolveMovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
-import {
-  loadMovementReplayRecording,
-  type MovementReplayRecordingSource,
-} from "../_lib/movementRecordingReplay";
 import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "./_lib/movementNextProofRehearsal";
 import {
   getMovementProofRehearsalBatchSummary,
@@ -61,6 +55,8 @@ import ReplayBatchReviewPanels from "./_components/ReplayBatchReviewPanels";
 import ReplayRecordingList from "./_components/ReplayRecordingList";
 import ReplayCurrentFramePanel from "./_components/ReplayCurrentFramePanel";
 import ReplayAnalysisReviewSections from "./_components/ReplayAnalysisReviewSections";
+import { useReplayLabCaptures } from "./_hooks/useReplayLabCaptures";
+import { useReplayLabRecordings } from "./_hooks/useReplayLabRecordings";
 
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD,
@@ -81,11 +77,8 @@ import {
   avatarPlantedFootClearance,
   avatarSegmentVectorAttr,
   buildPathStripPoints,
-  captureFileName,
   clampFrame,
   classifyLowerOwner,
-  compactCaptureLabel,
-  downloadDataUrl,
   extractKnownOwner,
   formatAngleDegrees,
   formatAnglesCompact,
@@ -105,17 +98,14 @@ import {
   maxAvatarSegmentError,
   minNumber,
   replayCalibrationNeutralScore,
-  selectStripFrameIndexes,
 } from "./_lib/replayLabHelpers";
 import type {
   AvatarFollowCriterionStatus,
-  LoadedReplayRecording,
   ReplayLabRecording,
 } from "./_lib/replayLabHelpers";
 
 export default function MovementReplayLabPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const replaySceneRef = useRef<HTMLElement | null>(null);
   const replayAvatarDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const replayMotionRef = useRef<VrmMotionRef>(null);
   const replaySourceMotionRef = useRef<VrmMotionRef>(null);
@@ -127,67 +117,35 @@ export default function MovementReplayLabPage() {
   const [completedRunCount, setCompletedRunCount] = useState(0);
   const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
   const [runCompletedAt, setRunCompletedAt] = useState<number | null>(null);
-  const [loadedRecordings, setLoadedRecordings] = useState<Record<string, LoadedReplayRecording>>({});
-  const loadedRecordingsRef = useRef<Record<string, LoadedReplayRecording>>({});
-  const recordingsToLoadRef = useRef<MovementReplayRecordingSource[]>([]);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [captureMode, setCaptureMode] = useState<"scene" | "strip" | null>(null);
-  const [captureStatus, setCaptureStatus] = useState<string | null>(null);
   const [currentAvatarDebug, setCurrentAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
   const [currentAvatarVisual, setCurrentAvatarVisual] = useState<MovementTrackingDebugState["avatarVisual"]>();
-  const [debugReplaySession, setDebugReplaySession] = useState<MovementDebugReplaySession | null>(null);
-  const [debugReplayError, setDebugReplayError] = useState<string | null>(null);
 
-  const recordings = useQuery(api.movements.listReplayAlignmentRecordings, { limit: 50 });
-  const debugRecordingId = debugReplaySession?.id as Id<"movements"> | undefined;
-  const debugRecording = useMemo<ReplayLabRecording | null>(() => {
-    if (!debugReplaySession || !debugRecordingId) return null;
-
-    return {
-      _id: debugRecordingId,
-      captureFps: debugReplaySession.fps,
-      createdAt: debugReplaySession.createdAt ?? debugReplaySession.startedAt,
-      difficulty: "debug",
-      durationMs: debugReplaySession.durationMs,
-      frameCount: debugReplaySession.sampleCount,
-      poseData: "debug-replay-session",
-      poseDataFormat: "legacy-inline-json",
-      spineGoal: debugReplaySession.trigger,
-      title: debugReplaySession.warningSummary ?? "Debug replay session",
-    };
-  }, [debugRecordingId, debugReplaySession]);
-  const replayRecordings = useMemo<ReplayLabRecording[] | undefined>(() => {
-    const savedRecordings = recordings as ReplayLabRecording[] | undefined;
-    if (!debugRecording) return savedRecordings;
-    return [debugRecording, ...(savedRecordings ?? []).filter((recording) => recording._id !== debugRecording._id)];
-  }, [debugRecording, recordings]);
   const activeRecordingId = selectedRecordingId;
-  const recordingsToLoad = useMemo(() => {
-    if (!replayRecordings) return [];
-    const idsToLoad = new Set<string>(hasRunBatch ? selectedRecordingIds : []);
-    if (activeRecordingId) idsToLoad.add(activeRecordingId);
-    return replayRecordings.filter((recording) => (
-      idsToLoad.has(recording._id) &&
-      recording._id !== debugRecordingId
-    ));
-  }, [activeRecordingId, debugRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
-  const recordingsToLoadKey = useMemo(() => (
-    recordingsToLoad
-      .map((recording) => [
-        recording._id,
-        recording.poseDataUrl ?? "",
-        recording.poseData,
-        recording.poseDataFormat ?? "",
-        recording.frameCount ?? "",
-        recording.durationMs ?? "",
-      ].join(":"))
-      .join("|")
-  ), [recordingsToLoad]);
-
-  useEffect(() => {
-    loadedRecordingsRef.current = loadedRecordings;
-  }, [loadedRecordings]);
+  const {
+    debugRecordingId,
+    debugReplayError,
+    loadedRecordings,
+    recordingTitleById,
+    replayIsLoading,
+    replayLoadError,
+    replayRecordings,
+    replaySession,
+  } = useReplayLabRecordings({
+    activeRecordingId,
+    hasRunBatch,
+    onDebugSessionReady: (readyRecordingId) => {
+      setSelectedRecordingId(readyRecordingId);
+      setSelectedRecordingIds((previousIds) => (
+        previousIds.includes(readyRecordingId) ? previousIds : [readyRecordingId, ...previousIds]
+      ));
+      setHasRunBatch(true);
+      setFrameIndex(0);
+      setIsPlaying(false);
+    },
+    selectedRecordingIds,
+  });
 
   // The lab's avatar is parameterisable so the rig-derived-calibration
   // acceptance test can score an unprofiled VRM against the golden set.
@@ -196,114 +154,6 @@ export default function MovementReplayLabPage() {
     return new URLSearchParams(window.location.search).get("avatarUrl") ?? "/models/VIPE_Hero__1793.vrm";
   });
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
-
-    const debugReplaySessionUrl = new URLSearchParams(window.location.search).get("debugReplaySessionUrl");
-    if (!debugReplaySessionUrl) return;
-
-    let cancelled = false;
-    void fetch(debugReplaySessionUrl)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Could not load debug replay session (${response.status}).`);
-        return response.json() as Promise<MovementDebugReplaySession>;
-      })
-      .then((session) => {
-        if (cancelled) return;
-        if (!session.id || !Array.isArray(session.samples)) {
-          throw new Error("Debug replay session must include an id and samples.");
-        }
-        setDebugReplayError(null);
-        setDebugReplaySession(session);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setDebugReplayError(error instanceof Error ? error.message : "Could not load debug replay session.");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!debugReplaySession || !debugRecordingId) return;
-
-    setLoadedRecordings((current) => ({
-      ...current,
-      [debugRecordingId]: {
-        error: null,
-        isLoading: false,
-        session: debugReplaySession,
-      },
-    }));
-    setSelectedRecordingId(debugRecordingId);
-    setSelectedRecordingIds((previousIds) => (
-      previousIds.includes(debugRecordingId) ? previousIds : [debugRecordingId, ...previousIds]
-    ));
-    setHasRunBatch(true);
-    setFrameIndex(0);
-    setIsPlaying(false);
-  }, [debugRecordingId, debugReplaySession]);
-
-  useEffect(() => {
-    recordingsToLoadRef.current = recordingsToLoad;
-  }, [recordingsToLoad]);
-
-  useEffect(() => {
-    const queuedRecordings = recordingsToLoadRef.current;
-    if (queuedRecordings.length === 0) return;
-
-    let cancelled = false;
-    const missingRecordings = queuedRecordings.filter((recording) => !loadedRecordingsRef.current[recording._id]);
-    if (missingRecordings.length === 0) return;
-
-    setLoadedRecordings((current) => {
-      const next = { ...current };
-      missingRecordings.forEach((recording) => {
-        next[recording._id] = {
-          error: null,
-          isLoading: true,
-          session: null,
-        };
-      });
-      return next;
-    });
-
-    missingRecordings.forEach((recording) => {
-      void loadMovementReplayRecording(recording as MovementReplayRecordingSource)
-        .then((result) => {
-          if (cancelled) return;
-          setLoadedRecordings((current) => ({
-            ...current,
-            [recording._id]: {
-              error: null,
-              isLoading: false,
-              session: result.session,
-            },
-          }));
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          setLoadedRecordings((current) => ({
-            ...current,
-            [recording._id]: {
-              error: error instanceof Error ? error.message : "Could not load recording.",
-              isLoading: false,
-              session: null,
-            },
-          }));
-        });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [recordingsToLoadKey]);
-
-  const replaySession = activeRecordingId ? loadedRecordings[activeRecordingId]?.session ?? null : null;
-  const replayLoadError = activeRecordingId ? loadedRecordings[activeRecordingId]?.error ?? null : null;
-  const replayIsLoading = Boolean(activeRecordingId && loadedRecordings[activeRecordingId]?.isLoading);
   const batchReplaySessions = useMemo(() => (
     selectedRecordingIds
       .map((recordingId) => loadedRecordings[recordingId]?.session)
@@ -374,12 +224,6 @@ export default function MovementReplayLabPage() {
   const avatarFollowBatchBlockedCount = avatarFollowBatchItems.filter((item) => item.status === "blocked").length;
   const avatarFollowBatchReviewCount = avatarFollowBatchItems.filter((item) => item.status === "review").length;
   const avatarFollowBatchWorstItem = avatarFollowBatchItems[0] ?? null;
-  const recordingTitleById = useMemo(() => (
-    new Map<string, string>((replayRecordings ?? []).map((recording) => [
-      recording._id,
-      recording.title ?? recording._id,
-    ]))
-  ), [replayRecordings]);
 
   const analysis = useMemo(
     () => replaySession ? analyzeMovementDebugReplaySession(replaySession) : null,
@@ -1321,115 +1165,23 @@ export default function MovementReplayLabPage() {
     return () => window.clearTimeout(timer);
   }, [batchIsLoading, batchReplaySessions.length, pendingRunId, selectedCount]);
 
-  const captureDisabled = frameCount === 0 || captureMode !== null;
-  const captureAvatarFrame = async () => {
-    if (!replaySceneRef.current || !replaySession) return;
-
-    setIsPlaying(false);
-    setCaptureMode("scene");
-    setCaptureStatus("Capturing avatar replay frame...");
-
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(replaySceneRef.current, {
-        backgroundColor: "#07070b",
-        logging: false,
-        scale: Math.min(window.devicePixelRatio || 1, 2),
-        useCORS: true,
-      });
-
-      downloadDataUrl(
-        captureFileName(activeRecordingId, `avatar-frame-${safeFrameIndex}.png`),
-        canvas.toDataURL("image/png"),
-      );
-      setCaptureStatus(`Captured avatar frame ${safeFrameIndex}.`);
-    } catch (error) {
-      setCaptureStatus(error instanceof Error ? error.message : "Avatar capture failed.");
-    } finally {
-      setCaptureMode(null);
-    }
-  };
-
-  const captureSourceStrip = () => {
-    if (!replaySession) return;
-
-    setIsPlaying(false);
-    setCaptureMode("strip");
-    setCaptureStatus("Capturing source skeleton strip...");
-
-    try {
-      const indexes = selectStripFrameIndexes(frameCount, safeFrameIndex, analysis?.failures ?? []);
-      const panelWidth = 420;
-      const panelHeight = 260;
-      const labelHeight = 64;
-      const stripCanvas = document.createElement("canvas");
-      const tempCanvas = document.createElement("canvas");
-      const stripContext = stripCanvas.getContext("2d");
-      const tempContext = tempCanvas.getContext("2d");
-
-      if (!stripContext || !tempContext || indexes.length === 0) {
-        setCaptureStatus("Source strip capture failed.");
-        return;
-      }
-
-      tempCanvas.width = panelWidth;
-      tempCanvas.height = panelHeight;
-      stripCanvas.width = panelWidth * indexes.length;
-      stripCanvas.height = panelHeight + labelHeight;
-
-      stripContext.fillStyle = "#07070b";
-      stripContext.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
-      stripContext.textBaseline = "top";
-
-      indexes.forEach((index, stripIndex) => {
-        const frame = replaySession.samples[index];
-        const x = stripIndex * panelWidth;
-        const sourceFrame = analysis?.gamePath.sourceFrames.find((source) => source.frameIndex === index);
-        const startGateLabel = sourceFrame
-          ? `${sourceFrame.canStartGame ? "ready" : sourceFrame.startReadinessState}: ${sourceFrame.startReadinessMessage}`
-          : "start gate: pending";
-        drawMovementSkeleton(tempContext, frameLandmarks(frame), panelWidth, panelHeight);
-        stripContext.fillStyle = "#111118";
-        stripContext.fillRect(x, 0, panelWidth, labelHeight);
-        stripContext.fillStyle = index === safeFrameIndex ? "#f6ccbe" : "#d7d7dd";
-        stripContext.font = "16px ui-monospace, SFMono-Regular, Menlo, monospace";
-        stripContext.fillText(`frame ${index}`, x + 14, 10);
-        stripContext.fillStyle = sourceFrame?.canStartGame ? "#a8d5ba" : "#f6ccbe";
-        stripContext.font = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
-        stripContext.fillText(compactCaptureLabel(startGateLabel), x + 14, 36);
-        stripContext.drawImage(tempCanvas, x, labelHeight);
-      });
-
-      downloadDataUrl(
-        captureFileName(activeRecordingId, "source-strip.png"),
-        stripCanvas.toDataURL("image/png"),
-      );
-      setCaptureStatus(`Captured source strip with setup labels: ${indexes.join(", ")}.`);
-    } catch (error) {
-      setCaptureStatus(error instanceof Error ? error.message : "Source strip capture failed.");
-    } finally {
-      setCaptureMode(null);
-    }
-  };
-
-  const exportReplayStudioFixLog = () => {
-    if (!analysis) return;
-
-    const fixLog = {
-      generatedAt: new Date().toISOString(),
-      recordingId: activeRecordingId,
-      replayStudio: analysis.replayStudio.session,
-      currentFrame: currentReplayStudioFrameVerdict ?? null,
-      failures: analysis.failures,
-    };
-    downloadDataUrl(
-      captureFileName(activeRecordingId, "replay-studio-fix-log.json"),
-      `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(fixLog, null, 2))}`,
-    );
-    setCaptureStatus(
-      `Exported Replay Studio fix log with ${analysis.replayStudio.session.worstFrames.length} worst frames.`,
-    );
-  };
+  const {
+    captureAvatarFrame,
+    captureDisabled,
+    captureMode,
+    captureSourceStrip,
+    captureStatus,
+    exportReplayStudioFixLog,
+    replaySceneRef,
+  } = useReplayLabCaptures({
+    activeRecordingId,
+    analysis,
+    currentReplayStudioFrameVerdict,
+    frameCount,
+    replaySession,
+    safeFrameIndex,
+    setIsPlaying,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
