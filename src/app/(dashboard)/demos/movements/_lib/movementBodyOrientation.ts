@@ -1,8 +1,8 @@
 import {
-  getMovementCoverageEntry,
+  getMovementSupportStatusEntry,
   type MovementCoverageFamily,
   type MovementSupportStatus,
-} from "./movementCoverageRegistry";
+} from "./movementSupportStatus";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementBodyOrientation =
@@ -65,7 +65,7 @@ function buildDecision({
   orientation: MovementBodyOrientation;
   reasons: string[];
 }): MovementBodyOrientationDecision {
-  const coverage = getMovementCoverageEntry(coverageFamily);
+  const coverage = getMovementSupportStatusEntry(coverageFamily);
   return {
     confidence: clamp(confidence),
     coverageFamily,

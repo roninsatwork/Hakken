@@ -1,7 +1,7 @@
 import type {
   MovementCoverageFamily,
   MovementSupportStatus,
-} from "./movementCoverageRegistry";
+} from "./movementSupportStatus";
 import type { MovementBodyOrientationDecision } from "./movementBodyOrientation";
 import type { MovementSupportContactDecision } from "./movementSupportContact";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
