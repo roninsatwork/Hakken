@@ -24,7 +24,7 @@ import { useMovementAvatarVrmAssetRuntime } from "../../../_lib/movementAvatarVr
 import {
   type VrmMotionRef,
 } from "../../../_lib/vrmRigging";
-import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntryRuntime";
+import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntry";
 import { VrmAvatarPresentation } from "./VrmAvatarPresentation";
 import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
 
