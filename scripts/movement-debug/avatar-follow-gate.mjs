@@ -204,6 +204,23 @@ function captureSummaryForRows(rows) {
   };
 }
 
+function replayStudioReviewResolvedByRenderedProof({
+  analysis,
+  hasCleanCaptureBackedAvatarProof,
+  replayStudioSession,
+}) {
+  if (!hasCleanCaptureBackedAvatarProof || replayStudioSession?.status !== "review") return false;
+  if (replayStudioSession.blockedFrameCount > 0 || replayStudioSession.reviewedFrameCount > 0) return false;
+  if ((replayStudioSession.worstFrames ?? []).length > 0) return false;
+
+  const unframedFailures = Array.isArray(analysis?.failures)
+    ? analysis.failures.filter((failure) => typeof failure?.frameIndex !== "number")
+    : [];
+  return unframedFailures.length > 0 && unframedFailures.every((failure) => (
+    failure?.code === "visual_match_low" && failure?.severity === "warning"
+  ));
+}
+
 function avatarFollowScopeForRows(rows) {
   const supportedRows = rows.filter(isSupportedAvatarFollowRow);
   if (supportedRows.length > 0) {
@@ -581,7 +598,6 @@ export function evaluateAvatarFollowGate({
         ? "replay-visual-captures"
         : "source-heuristic-only";
     const replayStudioReviewFrames = replayStudioWorstFrames.filter((frame) => frame.status !== "pass");
-    const replayStudioRequiresReview = replayStudioSession?.status === "review";
     const hasCleanCaptureBackedAvatarProof =
       captureSummary.visualCaptureFrameCount > 0 &&
       typeof lowerError === "number" &&
@@ -592,6 +608,16 @@ export function evaluateAvatarFollowGate({
         !Number.isFinite(upperError) ||
         upperError <= thresholds.maxUpperBodyDirectionError
       );
+    const replayStudioReviewResolvedByCaptures = replayStudioReviewResolvedByRenderedProof({
+      analysis,
+      hasCleanCaptureBackedAvatarProof,
+      replayStudioSession,
+    });
+    const replayStudioRequiresReview =
+      replayStudioSession?.status === "review" && !replayStudioReviewResolvedByCaptures;
+    const replayStudioStatus = replayStudioReviewResolvedByCaptures
+      ? "pass"
+      : replayStudioSession?.status;
     const shouldBlockLowVisualMatch =
       visualMatchScore < thresholds.minVisualMatchScore &&
       (
@@ -604,7 +630,7 @@ export function evaluateAvatarFollowGate({
       );
     const acceptanceStatus = supportedRows.length === 0
       ? "not-supported"
-      : replayStudioSession?.status === "blocked"
+      : replayStudioStatus === "blocked"
         ? "blocked"
         : replayStudioRequiresReview
           ? "review-only"
@@ -628,8 +654,10 @@ export function evaluateAvatarFollowGate({
         ? {
           blockedFrameCount: replayStudioSession.blockedFrameCount,
           failureCount: replayStudioSession.failureCount,
+          analysisStatus: replayStudioSession.status,
+          renderedProofResolvedReview: replayStudioReviewResolvedByCaptures,
           reviewedFrameCount: replayStudioSession.reviewedFrameCount,
-          status: replayStudioSession.status,
+          status: replayStudioStatus,
           worstFrames: replayStudioWorstFrames,
         }
         : null,
@@ -811,7 +839,7 @@ export function evaluateAvatarFollowGate({
       );
     }
 
-    if (replayStudioSession?.status === "review" && replayStudioReviewFrames.length === 0) {
+    if (replayStudioRequiresReview && replayStudioReviewFrames.length === 0) {
       pushFailure(
         failures,
         "visual-acceptance-review-session",

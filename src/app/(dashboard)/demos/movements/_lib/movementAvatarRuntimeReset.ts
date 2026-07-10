@@ -63,3 +63,14 @@ export function resetMovementAvatarRuntimeRefs({
   refs.instructorLowerBodyStabilityRef.current = createMovementAvatarLowerBodyVisualState();
   refs.lastGoodQuatRef.current = {};
 }
+
+export function resetMovementAvatarRuntimeForFrameJump({
+  refs,
+  vrm,
+}: {
+  refs: MovementAvatarRuntimeResetRefs;
+  vrm: VRM;
+}) {
+  vrm.humanoid.resetNormalizedPose();
+  resetMovementAvatarRuntimeRefs({ refs, vrm });
+}

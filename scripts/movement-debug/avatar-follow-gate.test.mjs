@@ -16,6 +16,7 @@ function analysis(overrides = {}) {
       ...overrides.metrics,
     },
     gamePath: overrides.gamePath,
+    failures: overrides.failures,
     replayStudio: overrides.replayStudio,
     sessionId: overrides.sessionId ?? "recording-1",
   };
@@ -215,6 +216,43 @@ describe("avatar follow gate", () => {
       "visual-acceptance-review-session",
       "visual-match-below-threshold",
     ]));
+  });
+
+  it("resolves a headless visual-match-only review with clean rendered proof", () => {
+    const result = evaluateAvatarFollowGate({
+      analyses: [
+        analysis({
+          failures: [{ code: "visual_match_low", severity: "warning" }],
+          metrics: {
+            avatarVisualFrameCount: 0,
+            visualMatchScore: 0.69,
+          },
+          replayStudio: {
+            session: {
+              blockedFrameCount: 0,
+              failureCount: 1,
+              reviewedFrameCount: 0,
+              status: "review",
+              worstFrames: [],
+            },
+          },
+        }),
+      ],
+      manifest: manifest([row()]),
+    });
+
+    expect(result.status).toBe("passed");
+    expect(result.recordings[0]).toEqual(expect.objectContaining({
+      acceptanceStatus: "accepted",
+      replayStudio: expect.objectContaining({
+        analysisStatus: "review",
+        renderedProofResolvedReview: true,
+        status: "pass",
+      }),
+    }));
+    expect(result.failures.map((failure) => failure.code)).not.toContain(
+      "visual-match-below-threshold",
+    );
   });
 
   it("blocks general capture-backed lower-body error above 0.22", () => {

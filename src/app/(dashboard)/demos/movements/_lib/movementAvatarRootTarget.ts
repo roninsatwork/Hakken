@@ -8,6 +8,7 @@ import {
 } from "./movementRootMotion";
 
 const ROOT_MOTION_HEADING_CONFIDENCE = 0.45;
+const ROOT_MOTION_VISIBLE_TURN_HEADING = 0.9;
 const ROOT_MOTION_POSITION_CONFIDENCE = 0.45;
 const ROOT_MOTION_MAX_OFFSET_METERS = 2.4;
 const ROOT_MOTION_POSITION_SCALE = 1;
@@ -67,7 +68,8 @@ function shouldApplyMovementAvatarRootHeading(rootMotion: MovementRootMotionFram
   if (!rootMotion || rootMotion.debug.source !== "world-landmarks") return false;
   if (rootMotion.headingConfidence < ROOT_MOTION_HEADING_CONFIDENCE) return false;
 
-  return rootMotion.intent.key === "root-travel"
+  return Math.abs(rootMotion.headingYaw) >= ROOT_MOTION_VISIBLE_TURN_HEADING
+    || rootMotion.intent.key === "root-travel"
     || rootMotion.intent.key === "turn-and-travel"
     || rootMotion.intent.key === "turn-on-spot"
     || rootMotion.intent.key === "left-foot-pivot"

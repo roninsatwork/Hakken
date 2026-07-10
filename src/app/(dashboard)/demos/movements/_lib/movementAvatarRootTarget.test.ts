@@ -129,6 +129,33 @@ describe("movement avatar root target", () => {
     expect(target.targetYaw).toBe(Math.PI);
   });
 
+  it("applies a confident cumulative heading when a slow turn never trips per-frame turn intent", () => {
+    const target = resolveMovementAvatarRootTarget({
+      avatarBaseY: -2.8,
+      avatarRootVisualLerp: 0.2,
+      positionOffset: [0.2, 0, -0.3],
+      rootMotion: rootMotionFrame({
+        headingYaw: 0.91,
+        intent: {
+          confidence: 0.99,
+          headingDelta: 0.02,
+          key: "root-stationary",
+          label: "Stationary root",
+          plantedFoot: "both",
+          summary: "stationary",
+          swingFoot: "none",
+          travelDirection: "none",
+          travelDistance: 0,
+        },
+      }),
+      rootOrientation: uprightRootOrientation,
+      visualRootDrop: 0,
+    });
+
+    expect(target.rootHeadingYaw).toBe(0.91);
+    expect(target.targetYaw).toBeCloseTo(Math.PI + 0.91);
+  });
+
   it("ignores image-space root travel while preserving root-motion intent responses", () => {
     const target = resolveMovementAvatarRootTarget({
       avatarBaseY: -2.8,

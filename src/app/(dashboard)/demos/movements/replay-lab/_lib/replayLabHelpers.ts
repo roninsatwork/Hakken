@@ -195,6 +195,15 @@ export function avatarPlantedFootClearance(
   return undefined;
 }
 
+export function avatarPlantedFootSide(
+  rootPlantedFoot: string | undefined,
+  raisedFoot: "left" | "right" | null | undefined,
+) {
+  if (raisedFoot === "left") return "right";
+  if (raisedFoot === "right") return "left";
+  return rootPlantedFoot;
+}
+
 export function avatarSegmentVectorAttr(
   avatarVisual: MovementTrackingDebugState["avatarVisual"] | undefined,
   segment: string,
@@ -546,4 +555,3 @@ export function formatRunClock(value?: number | null) {
     second: "2-digit",
   }).format(new Date(value));
 }
-

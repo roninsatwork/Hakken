@@ -1631,7 +1631,8 @@ function buildReplayHeadFrames(
     const headDecision = headTarget.headDecision;
     const rawHead = headTarget.rawHeadDecision.rawHead;
     const avatarHeadWorldYaw = normalizeAngle(headTarget.headWorldYaw);
-    const headRootDivergence = angleDistance(avatarHeadWorldYaw, avatarRootWorldYaw);
+    const sourceHeadWorldYaw = normalizeAngle(avatarRootWorldYaw + rawHead.yaw);
+    const headRootDivergence = angleDistance(avatarHeadWorldYaw, sourceHeadWorldYaw);
 
     return [{
       appliedYaw: headDecision.appliedHead.yaw,
@@ -1661,7 +1662,7 @@ function getHeadRootFailures(headFrames: MovementReplayHeadFrame[]) {
     ) {
       failures.push({
         code: "avatar_head_root_diverged",
-        detail: `Frame ${headFrame.frameIndex} body/root is turned ${(headFrame.rootHeadingYaw * 180 / Math.PI).toFixed(0)}deg but avatar head differs by ${(headFrame.headRootDivergence * 180 / Math.PI).toFixed(0)}deg.`,
+        detail: `Frame ${headFrame.frameIndex} body/root is turned ${(headFrame.rootHeadingYaw * 180 / Math.PI).toFixed(0)}deg but avatar head direction differs from the recorded head by ${(headFrame.headRootDivergence * 180 / Math.PI).toFixed(0)}deg.`,
         frameIndex: headFrame.frameIndex,
         severity: "error",
       });

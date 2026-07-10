@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type MutableRefObject, type RefObject } from "react";
+import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -27,11 +27,13 @@ import {
 import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntry";
 import { VrmAvatarPresentation } from "./VrmAvatarPresentation";
 import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
+import { resetMovementAvatarRuntimeForFrameJump } from "../../../_lib/movementAvatarRuntimeReset";
 
 const AVATAR_BASE_Y = -2.8;
 const AVATAR_FRAME_FALLBACK_SLERP = 0.35;
 
 type VrmAvatarProps = {
+  frameResetKey?: number | string;
   landmarksRef: RefObject<VrmMotionRef>;
   motionFrameRef: RefObject<MovementMotionFrame | null | undefined>;
   positionOffset: [number, number, number];
@@ -49,6 +51,7 @@ type VrmAvatarProps = {
 };
 
 export default function VrmAvatar({
+  frameResetKey,
   landmarksRef,
   motionFrameRef,
   positionOffset,
@@ -99,6 +102,12 @@ export default function VrmAvatar({
     resetRefs,
     vrmUrl,
   });
+
+  useEffect(() => {
+    const vrm = vrmRef.current;
+    if (frameResetKey === undefined || !vrm) return;
+    resetMovementAvatarRuntimeForFrameJump({ refs: resetRefs, vrm });
+  }, [frameResetKey, resetRefs, vrmRef]);
 
   useFrame((_, delta) => {
     const frameEntryRuntime = resolveMovementAvatarFrameEntryRuntime({

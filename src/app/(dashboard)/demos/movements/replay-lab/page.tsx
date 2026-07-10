@@ -62,6 +62,7 @@ import {
   AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD,
   AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD,
   avatarPlantedFootClearance,
+  avatarPlantedFootSide,
   avatarSegmentVectorAttr,
   buildPathStripPoints,
   clampFrame,
@@ -590,7 +591,10 @@ export default function MovementReplayLabPage() {
   const currentRightFootClearance = currentAvatarVisual?.footing?.rightFootClearance;
   const currentPlantedFootClearance = avatarPlantedFootClearance(
     currentAvatarVisual,
-    currentRootMotionFrame?.intent.plantedFoot,
+    avatarPlantedFootSide(
+      currentRootMotionFrame?.intent.plantedFoot,
+      currentLegRaise?.side,
+    ),
   );
   const avatarFollowHeadCriterionStatus = avatarFollowCriterionStatus(["avatar_head_alignment_diverged"]);
   const avatarFollowSpineCriterionStatus = avatarFollowCriterionStatus(["avatar_spine_angle_diverged"]);
@@ -1123,6 +1127,7 @@ export default function MovementReplayLabPage() {
                           positionOffset={[0, 0, 0]}
                         />
                         <VrmAvatar
+                          frameResetKey={isPlaying ? undefined : `${replaySession.id}:${safeFrameIndex}`}
                           landmarksRef={replayMotionRef}
                           motionFrameRef={replayMotionFrameRef}
                           positionOffset={[0, 0, 0]}

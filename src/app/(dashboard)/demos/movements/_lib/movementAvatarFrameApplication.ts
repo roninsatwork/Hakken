@@ -12,6 +12,7 @@ import {
   resolveMovementAvatarFrameDecisionSnapshotRuntime,
 } from "./movementAvatarFramePreparation";
 import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrame";
+import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import { applyMovementAvatarLocomotionFrameOrchestrationRuntime, type MovementAvatarLocomotionFrameOrchestrationRuntime } from "./movementAvatarLocomotionFrame";
 import { partialSupportContactLocks, supportContactAnchor } from "./movementAvatarSupportContactAnchors";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrame";
@@ -293,16 +294,33 @@ function resolveMovementAvatarFrameCompletionNow(getNow: (() => number) | undefi
   return getNow ? getNow() : performance.now();
 }
 
-function activeTorsoFeetFloorContactLocks(
-  contactLocks: MovementAvatarSupportFrameOrchestrationInput["contactLocks"],
-) {
-  if (contactLocks.owner !== "support-contact-locks-standing-foot-lock") return contactLocks;
+export function resolveMovementAvatarStandingFeetFloorContactLocks({
+  contactLocks,
+  lowerBodyDrive,
+  shouldApply,
+}: {
+  contactLocks: MovementAvatarSupportFrameOrchestrationInput["contactLocks"];
+  lowerBodyDrive: Pick<MovementAvatarLowerBodyDrive, "playerLegRaiseSide" | "shouldDrivePlayerLegRaise">;
+  shouldApply: boolean;
+}) {
+  if (!shouldApply || contactLocks.owner !== "support-contact-locks-standing-foot-lock") {
+    return contactLocks;
+  }
+
+  const raisedSide = lowerBodyDrive.shouldDrivePlayerLegRaise
+    ? lowerBodyDrive.playerLegRaiseSide
+    : null;
+  const anchors = raisedSide === "left"
+    ? [supportContactAnchor("rightFoot", "right planted foot to floor", "floor", 0, 1)]
+    : raisedSide === "right"
+      ? [supportContactAnchor("leftFoot", "left planted foot to floor", "floor", 0, 1)]
+      : [
+          supportContactAnchor("rightFoot", "right foot to floor", "floor", 0, 1),
+          supportContactAnchor("leftFoot", "left foot to floor", "floor", 0, 1),
+        ];
 
   return partialSupportContactLocks({
-    anchors: [
-      supportContactAnchor("rightFoot", "right foot to floor", "floor", 0, 1),
-      supportContactAnchor("leftFoot", "left foot to floor", "floor", 0, 1),
-    ],
+    anchors,
     maxCorrection: 0.9,
     owner: "support-contact-feet-floor-active-torso",
     rootCorrectionScale: 1,
@@ -327,8 +345,16 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     }
     : input.supportPresentation;
   const contactLocks = hasActiveSpineDrive
-    ? activeTorsoFeetFloorContactLocks(input.contactLocks)
-    : input.contactLocks;
+    ? resolveMovementAvatarStandingFeetFloorContactLocks({
+        contactLocks: input.contactLocks,
+        lowerBodyDrive: input.lowerBodyDrive,
+        shouldApply: true,
+      })
+    : resolveMovementAvatarStandingFeetFloorContactLocks({
+        contactLocks: input.contactLocks,
+        lowerBodyDrive: input.lowerBodyDrive,
+        shouldApply: input.shouldApplyLowerBody,
+      });
   const supportFrameOrchestrationRuntime = applyMovementAvatarSupportFrameOrchestrationRuntime({
     avatarRoot: input.avatarRoot,
     contactLocks,
@@ -388,6 +414,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     lookupBone: input.lookupBone,
     lowerBodyDrive: input.lowerBodyDrive,
     lowerBodyOwner,
+    motionFrameHeadTarget: input.motionFrameHeadTarget,
     motionFrameInputOwner: input.motionFrameInputOwner,
     neckSlerp: input.neckSlerp,
     plantedSquatIkDepth: input.plantedSquatIkDepth,
@@ -795,6 +822,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     lowerBodyDrive,
     lowerBodyTrackingReady,
     mirrorForDisplay: mirrorPlayerDisplay,
+    motionFrameHeadTarget: motionFrameInput.headTarget,
     motionFrameInputOwner: motionFrameInput.owner,
     neckSlerp: profile.neckSlerp,
     plantedFootLockRef,
@@ -1029,4 +1057,3 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     status: "ready",
   };
 }
-

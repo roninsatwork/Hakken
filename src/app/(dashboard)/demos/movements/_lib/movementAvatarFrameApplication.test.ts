@@ -17,6 +17,7 @@ import {
   applyMovementAvatarPostFrameDebugRuntime,
   applyMovementAvatarPreBodyFrameOrchestrationRuntime,
   resolveMovementAvatarFrameScenePreparationRuntime,
+  resolveMovementAvatarStandingFeetFloorContactLocks,
   resolveMovementAvatarFrameWorldRuntime,
 } from "./movementAvatarFrameApplication";
 import {
@@ -39,6 +40,48 @@ import {
   type MovementTrackingDebugState,
   type TrackingLandmark,
 } from "./movementTrackingCalibration";
+
+describe("movement avatar standing floor contacts", () => {
+  const standingContactLocks = {
+    anchors: [],
+    boneCorrectionScale: 0,
+    maxBoneCorrection: 0,
+    maxCorrection: 0,
+    owner: "support-contact-locks-standing-foot-lock",
+    rootCorrectionScale: 0,
+    shouldApply: false,
+    slerp: 0,
+    status: "inactive" as const,
+  };
+
+  it("anchors only the opposite planted foot during a left leg raise", () => {
+    const result = resolveMovementAvatarStandingFeetFloorContactLocks({
+      contactLocks: standingContactLocks,
+      lowerBodyDrive: {
+        playerLegRaiseSide: "left",
+        shouldDrivePlayerLegRaise: true,
+      },
+      shouldApply: true,
+    });
+
+    expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["rightFoot"]);
+    expect(result.shouldApply).toBe(true);
+    expect(result.slerp).toBe(1);
+  });
+
+  it("anchors both feet for non-leg-raise standing motion", () => {
+    const result = resolveMovementAvatarStandingFeetFloorContactLocks({
+      contactLocks: standingContactLocks,
+      lowerBodyDrive: {
+        playerLegRaiseSide: null,
+        shouldDrivePlayerLegRaise: false,
+      },
+      shouldApply: true,
+    });
+
+    expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["rightFoot", "leftFoot"]);
+  });
+});
 
 describe("movementAvatarFrameWorldRuntime (merged)", () => {
   describe("movementAvatarFrameWorldRuntime", () => {

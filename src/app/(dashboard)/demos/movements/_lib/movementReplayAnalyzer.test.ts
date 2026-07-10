@@ -801,6 +801,9 @@ describe("movement replay analyzer", () => {
         }),
       ]),
     );
+    expect(analysis.failures.map((failure) => failure.code)).not.toContain(
+      "avatar_head_root_diverged",
+    );
   });
 
   it("keeps source-blocked root reviews out of Avatar Follow root-motion blockers", () => {

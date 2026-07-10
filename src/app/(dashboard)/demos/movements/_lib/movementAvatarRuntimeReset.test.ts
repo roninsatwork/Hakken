@@ -2,6 +2,7 @@ import type { VRM } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
+  resetMovementAvatarRuntimeForFrameJump,
   resetMovementAvatarRuntimeRefs,
   type MovementAvatarRuntimeResetRefs,
 } from "./movementAvatarRuntimeReset";
@@ -93,6 +94,26 @@ function buildRefs(): MovementAvatarRuntimeResetRefs {
 }
 
 describe("movementAvatarRuntimeReset", () => {
+  it("restores normalized bones before rebuilding frame-jump state", () => {
+    const refs = buildRefs();
+    const resetNormalizedPose = vi.fn();
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: vi.fn(() => null),
+        resetNormalizedPose,
+      },
+      scene: {
+        updateMatrixWorld: vi.fn(),
+      },
+    } as unknown as VRM;
+
+    resetMovementAvatarRuntimeForFrameJump({ refs, vrm });
+
+    expect(resetNormalizedPose).toHaveBeenCalledOnce();
+    expect(refs.baseHipsPositionRef.current).toBeNull();
+    expect(refs.lastGoodQuatRef.current).toEqual({});
+  });
+
   it("resets avatar runtime refs when a new VRM is loaded", () => {
     const refs = buildRefs();
     const updateMatrixWorld = vi.fn();

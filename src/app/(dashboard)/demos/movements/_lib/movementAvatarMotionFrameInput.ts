@@ -1,8 +1,10 @@
 import type { MovementAvatarPipelineDecision } from "./movementAvatarPipeline";
+import type { MovementAvatarHeadTargetDecision } from "./movementAvatarHeadTarget";
 import type { MovementMotionFrame } from "./movementMotionFrame";
 
 export type MovementAvatarMotionFrameInputDecision = {
   decision: MovementAvatarPipelineDecision | null;
+  headTarget?: MovementAvatarHeadTargetDecision;
   owner: "movement-motion-frame" | "presentation-standby" | "renderer-fallback";
   sourceOrigin?: MovementMotionFrame["source"]["sourceOrigin"];
 };
@@ -21,6 +23,7 @@ export function resolveMovementAvatarMotionFrameInput({
   if (motionFrame) {
     return {
       decision: motionFrame.avatarDisplayDecision,
+      headTarget: motionFrame.avatarDisplayHeadTarget,
       owner: "movement-motion-frame",
       sourceOrigin: motionFrame.source?.sourceOrigin,
     };

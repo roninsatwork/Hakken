@@ -17,6 +17,7 @@ import {
   LIVE_UPPER_BODY_REVIEW_THRESHOLD,
   SOURCE_OUT_OF_FRAME_REVIEW_COUNT,
   avatarPlantedFootClearance,
+  avatarPlantedFootSide,
   formatAngleDegrees,
   headMotionMagnitude,
   maxAvatarSegmentError,
@@ -232,7 +233,10 @@ export function getReplayLabLiveCurrentFrameFailures({
 
   const plantedFootClearance = avatarPlantedFootClearance(
     currentAvatarVisual,
-    currentRootMotionFrame?.intent.plantedFoot,
+    avatarPlantedFootSide(
+      currentRootMotionFrame?.intent.plantedFoot,
+      currentAvatarDebug?.avatarLegRaise?.side,
+    ),
   );
 
   if (

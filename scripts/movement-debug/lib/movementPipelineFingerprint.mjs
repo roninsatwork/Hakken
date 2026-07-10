@@ -9,6 +9,11 @@ const movementLibDir = path.join(
   "src/app/(dashboard)/demos/movements/_lib",
 );
 const vrmAvatarPath = "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx";
+const replayProofFiles = [
+  "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabFrameFailures.ts",
+  "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabHelpers.ts",
+  "src/app/(dashboard)/demos/movements/replay-lab/page.tsx",
+];
 const sharedMotionFiles = new Set([
   "movementLiveMotionFrame.ts",
   "movementMotionFrame.ts",
@@ -30,7 +35,7 @@ export function movementPipelineFingerprintFiles() {
       fileName,
     ));
 
-  return [...movementFiles, vrmAvatarPath].sort();
+  return [...movementFiles, ...replayProofFiles, vrmAvatarPath].sort();
 }
 
 export function movementPipelineFingerprint() {

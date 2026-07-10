@@ -176,6 +176,43 @@ describe("movementAvatarHeadRuntime (merged)", () => {
         trackingYaw: result.headTarget.rawHeadDecision.rawHead.yaw,
       });
     });
+
+    it("applies a prepared motion-frame head target against the current avatar root yaw", () => {
+      const prepared = applyMovementAvatarHeadRuntimeToVrmBones({
+        avatarRole: "instructor",
+        avatarRootYaw: 0,
+        baseHeadPosition: null,
+        calibration: null,
+        lookupBone: () => new THREE.Object3D(),
+        neckSlerp: 1,
+        poseLandmarks: poseLandmarks(),
+        shouldApplyLowerBody: false,
+        shouldApplySpine: false,
+      });
+      expect(prepared.applied).toBe(true);
+      if (!prepared.applied) throw new Error("expected prepared head target");
+
+      const avatarRootYaw = 0.9;
+      const applied = applyMovementAvatarHeadRuntimeToVrmBones({
+        avatarRole: "player",
+        avatarRootYaw,
+        baseHeadPosition: null,
+        calibration: neutralCalibration,
+        lookupBone: () => new THREE.Object3D(),
+        neckSlerp: 1,
+        poseLandmarks: poseLandmarks(),
+        preparedHeadTarget: prepared.headTarget,
+        shouldApplyLowerBody: false,
+        shouldApplySpine: false,
+      });
+
+      expect(applied.applied).toBe(true);
+      if (!applied.applied) throw new Error("expected prepared head target to apply");
+      expect(applied.headTarget.headDecision).toBe(prepared.headTarget.headDecision);
+      expect(applied.headTarget.headWorldYaw).toBeCloseTo(
+        avatarRootYaw + prepared.headTarget.headDecision.headYaw,
+      );
+    });
   });
 });
 

@@ -80,6 +80,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   mirrorHeadForDisplay,
   neckSlerp,
   poseLandmarks,
+  preparedHeadTarget,
   profile,
   shouldApplyLowerBody,
   shouldApplySpine,
@@ -94,6 +95,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   mirrorHeadForDisplay?: boolean;
   neckSlerp: number;
   poseLandmarks: TrackingLandmark[];
+  preparedHeadTarget?: MovementAvatarHeadTargetDecision | null;
   profile?: MovementAvatarTrackingProfile;
   shouldApplyLowerBody: boolean;
   shouldApplySpine: boolean;
@@ -116,18 +118,23 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
     };
   }
 
-  const headTarget = resolveMovementAvatarHeadTarget({
-    avatarRole,
-    avatarRootYaw,
-    calibration,
-    faceLandmarks,
-    headMotionIntent,
-    mirrorHeadForDisplay,
-    poseLandmarks,
-    profile,
-    shouldApplyLowerBody,
-    shouldApplySpine,
-  });
+  const headTarget = preparedHeadTarget
+    ? {
+      ...preparedHeadTarget,
+      headWorldYaw: avatarRootYaw + preparedHeadTarget.headDecision.headYaw,
+    }
+    : resolveMovementAvatarHeadTarget({
+      avatarRole,
+      avatarRootYaw,
+      calibration,
+      faceLandmarks,
+      headMotionIntent,
+      mirrorHeadForDisplay,
+      poseLandmarks,
+      profile,
+      shouldApplyLowerBody,
+      shouldApplySpine,
+    });
   const headApplication = applyMovementAvatarHeadApplicationToVrmBones({
     baseHeadPosition,
     headApplicationPose: headTarget.applicationPose,
@@ -416,6 +423,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   lookupBone,
   lowerBodyDrive,
   lowerBodyOwner,
+  motionFrameHeadTarget,
   motionFrameInputOwner,
   neckSlerp,
   plantedSquatIkDepth,
@@ -453,6 +461,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   lookupBone: MovementAvatarHeadRuntimeInput["lookupBone"];
   lowerBodyDrive: MovementAvatarHeadFrameDebugRuntimeInput["lowerBodyDrive"];
   lowerBodyOwner: MovementAvatarHeadFrameDebugRuntimeInput["lowerBodyOwner"];
+  motionFrameHeadTarget?: MovementAvatarHeadTargetDecision;
   motionFrameInputOwner: MovementAvatarHeadFrameDebugRuntimeInput["motionFrameInputOwner"];
   neckSlerp: number;
   plantedSquatIkDepth: number;
@@ -529,6 +538,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
       mirrorHeadForDisplay: motionFrameInputOwner !== "movement-motion-frame",
       neckSlerp,
       poseLandmarks,
+      preparedHeadTarget: motionFrameHeadTarget,
       profile,
       shouldApplyLowerBody,
       shouldApplySpine: activeSpineDrive.shouldApplySpine,
@@ -545,4 +555,3 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
     headFrameRuntime,
   };
 }
-
