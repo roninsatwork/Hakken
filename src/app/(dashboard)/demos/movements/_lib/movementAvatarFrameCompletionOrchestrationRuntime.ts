@@ -1,6 +1,6 @@
 import { applyMovementAvatarFinalFrameOrchestrationRuntime } from "./movementAvatarFinalFrameOrchestrationRuntime";
 import { applyMovementAvatarFootingFrameOrchestrationRuntime } from "./movementAvatarFootingFrameOrchestrationRuntime";
-import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrameOrchestrationRuntime";
+import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrame";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrameOrchestrationRuntime";
 import {
   partialSupportContactLocks,

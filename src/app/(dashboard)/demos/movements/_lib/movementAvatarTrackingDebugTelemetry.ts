@@ -10,7 +10,7 @@ import {
   type MovementAvatarTrackingFallbackLabelsDecision,
 } from "./movementAvatarPipeline";
 import { buildMovementAvatarSpineRuntimeDebugTelemetry } from "./movementAvatarSpineApplication";
-import { buildMovementAvatarHeadRuntimeDebugTelemetry } from "./movementAvatarHeadRuntime";
+import { buildMovementAvatarHeadRuntimeDebugTelemetry } from "./movementAvatarHeadFrame";
 import { buildMovementAvatarFootLockRuntimeDebugTelemetry } from "./movementAvatarFootLockRuntime";
 import { buildMovementAvatarLegRaiseRuntimeDebugInput } from "./movementAvatarRuntimeState";
 import type {
