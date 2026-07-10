@@ -78,9 +78,9 @@ export type MovementAvatarRawHeadDecision = {
 
 export type MovementAvatarAppliedLowerBodyDecision = {
   feetOwner: string;
+  hasCompleteLegRetarget: boolean;
   lowerBodyOwner: string;
   playerAppliedOwnerDecision: MovementAvatarPlayerLowerBodyOwnerDecision | null;
-  retargetOwnsLowerBody: boolean;
   shouldUsePlayerFootFallback: boolean;
   shouldUseRecordedSquatPresentation: boolean;
 };
@@ -117,10 +117,7 @@ export type MovementAvatarRetargetSegmentType = "arm" | "foot" | "leg" | "spine"
 export type MovementAvatarRetargetSegmentApplicationDecision = {
   reason:
     | "active"
-    | "low-confidence"
-    | "recorded-foot-low-motion"
-    | "recorded-foot-planted"
-    | "recorded-foot-low-knee-lift";
+    | "low-confidence";
   shouldApply: boolean;
   slerp: number;
   zScale: number;

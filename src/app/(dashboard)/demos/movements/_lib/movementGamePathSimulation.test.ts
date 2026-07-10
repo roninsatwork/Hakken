@@ -214,15 +214,6 @@ function weakEndpointPose() {
   return pose;
 }
 
-function armTargetLandmarks(pose: TrackingLandmark[]) {
-  return pose.map((landmark) => ({
-    x: landmark.x,
-    y: landmark.y,
-    z: landmark.z ?? 0,
-    visibility: landmark.visibility ?? 0.8,
-  }));
-}
-
 function frame(pose: TrackingLandmark[]): MovementDebugReplayFrame {
   return {
     bodyConfidence: {},
@@ -1144,7 +1135,7 @@ describe("movementGamePathSimulation", () => {
     expect(appliedDecision.lowerBodyOwner).toBe("player-retarget");
     expect(appliedDecision.feetOwner).toBe("player-foot-fallback");
     expect(appliedDecision.shouldUsePlayerFootFallback).toBe(true);
-    expect(appliedDecision.retargetOwnsLowerBody).toBe(true);
+    expect(appliedDecision.hasCompleteLegRetarget).toBe(true);
   });
 
   it("keeps player leg-raise feet planted instead of handing them to recorded retarget", () => {
@@ -1319,7 +1310,7 @@ describe("movementGamePathSimulation", () => {
     );
   });
 
-  it("skips recorded foot retargeting while a foot is planted", () => {
+  it("keeps recorded foot retargeting active while contact handling owns the plant", () => {
     const decision = resolveMovementAvatarRetargetSegmentApplication({
       avatarRole: "instructor",
       instructorSquatPresentationDepth: 0.3,
@@ -1333,8 +1324,8 @@ describe("movementGamePathSimulation", () => {
     });
 
     expect(decision).toMatchObject({
-      reason: "recorded-foot-planted",
-      shouldApply: false,
+      reason: "active",
+      shouldApply: true,
       zScale: 0.18,
     });
   });
@@ -2292,7 +2283,7 @@ describe("movementGamePathSimulation", () => {
 
     expect(appliedDecision.lowerBodyOwner).toBe("neutral-fallback");
     expect(appliedDecision.feetOwner).toBe("neutral");
-    expect(appliedDecision.retargetOwnsLowerBody).toBe(false);
+    expect(appliedDecision.hasCompleteLegRetarget).toBe(false);
   });
 
   it("resolves player head ownership through calibration", () => {
@@ -2489,7 +2480,7 @@ describe("movementGamePathSimulation", () => {
     expect(kneeDecision?.lowerBodyDrive.visualRootDrop).toBe(0);
   });
 
-  it("drives visible live side-bend through the game path", () => {
+  it("drives visible live side-bend while keeping the pelvis level", () => {
     const simulation = buildMovementGamePathSimulation(session([
       frame(withCorePose()),
       frame(sideBendPose()),
@@ -2499,7 +2490,7 @@ describe("movementGamePathSimulation", () => {
     expect(sideBendDecision?.spineDrive.owner).toBe("player-spine-model");
     expect(sideBendDecision?.spineDrive.shouldApplySpine).toBe(true);
     expect(sideBendDecision?.spineDrive.sideBend).toBeLessThan(-0.4);
-    expect(sideBendDecision?.spineDrive.rotations.hips.z).toBeLessThan(0);
+    expect(sideBendDecision?.spineDrive.rotations.hips.z).toBe(0);
     expect(Math.abs(sideBendDecision?.spineDrive.rotations.spine.z ?? 0)).toBeGreaterThan(0.2);
     expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeGreaterThan(0.42);
     expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeLessThan(0.45);

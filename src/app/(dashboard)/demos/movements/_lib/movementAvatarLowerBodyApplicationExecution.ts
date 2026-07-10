@@ -86,10 +86,9 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplication({
   plan: MovementAvatarLowerBodyRetargetApplicationPlan;
   plantInstructorFeet: (sides: MovementAvatarInstructorFootPlantSide[]) => void;
 }): MovementAvatarLowerBodyRetargetPostPlanApplicationResult {
-  let appliedSolvedLowerBody = false;
+  const appliedSolvedLowerBody = false;
   let appliedSquatFlexion = false;
   let appliedLegRaiseOverlay = false;
-
 
   const plantedSquatIkDepth = applyPlantedSquatIk(plan.plantedSquatIkDepth);
 

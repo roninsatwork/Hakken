@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -18,7 +18,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import Header from "@/src/ui/components/layout/Header";
 import {
   extractOwner,
-  type MovementDebugReplaySession,
 } from "../_lib/movementDebugReplay";
 import {
   analyzeMovementDebugReplaySession,
@@ -28,9 +27,6 @@ import {
   resolveMovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
 import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "./_lib/movementNextProofRehearsal";
-import {
-  getMovementProofRehearsalBatchSummary,
-} from "./_lib/movementProofRehearsalEvidence";
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {
@@ -57,52 +53,41 @@ import ReplayCurrentFramePanel from "./_components/ReplayCurrentFramePanel";
 import ReplayAnalysisReviewSections from "./_components/ReplayAnalysisReviewSections";
 import { useReplayLabCaptures } from "./_hooks/useReplayLabCaptures";
 import { useReplayLabRecordings } from "./_hooks/useReplayLabRecordings";
+import { useReplayLabBatch } from "./_hooks/useReplayLabBatch";
+import { getReplayLabLiveCurrentFrameFailures } from "./_lib/replayLabFrameFailures";
 
 import {
-  AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD,
   AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD,
-  AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD,
   AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD,
-  AVATAR_FOLLOW_CURRENT_LOWER_REVIEW_THRESHOLD,
   AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD,
-  AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD,
-  AVATAR_FOLLOW_PLANTED_FOOT_ERROR_THRESHOLD,
-  AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD,
   AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD,
-  LIVE_HEAD_DAMPING_REVIEW_THRESHOLD,
-  LIVE_SPINE_DRIVE_MOTION_THRESHOLD,
-  LIVE_SPINE_DRIVE_REVIEW_THRESHOLD,
-  LIVE_UPPER_BODY_REVIEW_THRESHOLD,
-  SOURCE_OUT_OF_FRAME_REVIEW_COUNT,
   avatarPlantedFootClearance,
   avatarSegmentVectorAttr,
   buildPathStripPoints,
   clampFrame,
   classifyLowerOwner,
   extractKnownOwner,
-  formatAngleDegrees,
   formatAnglesCompact,
   formatNumber,
   formatRunClock,
   frameLandmarks,
-  getAvatarFollowBatchIssueCode,
-  getAvatarFollowBatchNextFixArea,
-  getAvatarFollowBatchStatus,
   getBatchStatusLabel,
-  getBatchSummary,
   getFailureGroups,
-  getProofRehearsalReadiness,
   getReplayStudioParityDiffs,
   getReplayStudioParitySnapshot,
-  headMotionMagnitude,
   maxAvatarSegmentError,
   minNumber,
   replayCalibrationNeutralScore,
 } from "./_lib/replayLabHelpers";
 import type {
   AvatarFollowCriterionStatus,
-  ReplayLabRecording,
 } from "./_lib/replayLabHelpers";
+
+function publishReplayLabDebug(value: unknown) {
+  (window as Window & {
+    __movementReplayLabDebug?: unknown;
+  }).__movementReplayLabDebug = value;
+}
 
 export default function MovementReplayLabPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -113,18 +98,21 @@ export default function MovementReplayLabPage() {
   const [selectedRecordingId, setSelectedRecordingId] = useState<Id<"movements"> | null>(null);
   const [selectedRecordingIds, setSelectedRecordingIds] = useState<Array<Id<"movements">>>([]);
   const [hasRunBatch, setHasRunBatch] = useState(false);
-  const [pendingRunId, setPendingRunId] = useState<number | null>(null);
-  const [completedRunCount, setCompletedRunCount] = useState(0);
-  const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
-  const [runCompletedAt, setRunCompletedAt] = useState<number | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentAvatarDebug, setCurrentAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
-  const [currentAvatarVisual, setCurrentAvatarVisual] = useState<MovementTrackingDebugState["avatarVisual"]>();
+  const [polledAvatarDebug, setPolledAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
+  const handleDebugSessionReady = useCallback((readyRecordingId: Id<"movements">) => {
+    setSelectedRecordingId(readyRecordingId);
+    setSelectedRecordingIds((previousIds) => (
+      previousIds.includes(readyRecordingId) ? previousIds : [readyRecordingId, ...previousIds]
+    ));
+    setHasRunBatch(true);
+    setFrameIndex(0);
+    setIsPlaying(false);
+  }, []);
 
   const activeRecordingId = selectedRecordingId;
   const {
-    debugRecordingId,
     debugReplayError,
     loadedRecordings,
     recordingTitleById,
@@ -135,17 +123,11 @@ export default function MovementReplayLabPage() {
   } = useReplayLabRecordings({
     activeRecordingId,
     hasRunBatch,
-    onDebugSessionReady: (readyRecordingId) => {
-      setSelectedRecordingId(readyRecordingId);
-      setSelectedRecordingIds((previousIds) => (
-        previousIds.includes(readyRecordingId) ? previousIds : [readyRecordingId, ...previousIds]
-      ));
-      setHasRunBatch(true);
-      setFrameIndex(0);
-      setIsPlaying(false);
-    },
+    onDebugSessionReady: handleDebugSessionReady,
     selectedRecordingIds,
   });
+  const currentAvatarDebug = replaySession ? polledAvatarDebug : null;
+  const currentAvatarVisual = currentAvatarDebug?.avatarVisual;
 
   // The lab's avatar is parameterisable so the rig-derived-calibration
   // acceptance test can score an unprofiled VRM against the golden set.
@@ -154,105 +136,46 @@ export default function MovementReplayLabPage() {
     return new URLSearchParams(window.location.search).get("avatarUrl") ?? "/models/VIPE_Hero__1793.vrm";
   });
 
-  const batchReplaySessions = useMemo(() => (
-    selectedRecordingIds
-      .map((recordingId) => loadedRecordings[recordingId]?.session)
-      .filter((session): session is MovementDebugReplaySession => Boolean(session))
-  ), [loadedRecordings, selectedRecordingIds]);
-
-  const batchAnalyses = useMemo(() => (
-    hasRunBatch
-      ? batchReplaySessions.map((session) => analyzeMovementDebugReplaySession(session))
-      : []
-  ), [batchReplaySessions, hasRunBatch]);
-
-  const batchSummary = useMemo(() => getBatchSummary(batchAnalyses), [batchAnalyses]);
-  const analysisByRecordingId = useMemo(() => (
-    new Map(batchAnalyses.map((batchAnalysis) => [batchAnalysis.sessionId, batchAnalysis]))
-  ), [batchAnalyses]);
-  const setupReviewItems = useMemo(() => {
-    if (!hasRunBatch || !replayRecordings) return [];
-
-    return replayRecordings.flatMap((recording) => {
-      if (!selectedRecordingIds.includes(recording._id)) return [];
-      const recordingAnalysis = analysisByRecordingId.get(recording._id);
-      const topMessage = recordingAnalysis?.gamePath.startReadinessMessageSummary[0];
-      if (!recordingAnalysis || !topMessage || recordingAnalysis.metrics.startReadinessBlockedFrameCount === 0) {
-        return [];
-      }
-
-      return [{
-        analysis: recordingAnalysis,
-        recording,
-        topMessage,
-      }];
-    }).sort((left, right) => (
-      right.analysis.metrics.startReadinessBlockedFrameCount -
-      left.analysis.metrics.startReadinessBlockedFrameCount ||
-      right.topMessage.count - left.topMessage.count ||
-      (left.recording.title ?? "").localeCompare(right.recording.title ?? "")
-    ));
-  }, [analysisByRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
-  const avatarFollowBatchItems = useMemo(() => {
-    if (!hasRunBatch || !replayRecordings) return [];
-    const statusRank = { blocked: 0, review: 1, pass: 2 } as const;
-
-    return replayRecordings.flatMap((recording) => {
-      if (!selectedRecordingIds.includes(recording._id)) return [];
-      const recordingAnalysis = analysisByRecordingId.get(recording._id);
-      if (!recordingAnalysis) return [];
-
-      const status = getAvatarFollowBatchStatus(recordingAnalysis);
-      const worstFrame = recordingAnalysis.replayStudio.session.worstFrames[0] ?? null;
-      const issueCode = getAvatarFollowBatchIssueCode(recordingAnalysis);
-      return [{
-        analysis: recordingAnalysis,
-        issueCode,
-        nextFixArea: getAvatarFollowBatchNextFixArea(recordingAnalysis),
-        recording,
-        status,
-        worstFrame,
-      }];
-    }).sort((left, right) => (
-      statusRank[left.status] - statusRank[right.status] ||
-      (right.analysis.replayStudio.session.blockedFrameCount - left.analysis.replayStudio.session.blockedFrameCount) ||
-      (right.analysis.replayStudio.session.failureCount - left.analysis.replayStudio.session.failureCount) ||
-      (right.analysis.metrics.averageAvatarLowerBodyDirectionError - left.analysis.metrics.averageAvatarLowerBodyDirectionError) ||
-      (left.recording.title ?? "").localeCompare(right.recording.title ?? "")
-    ));
-  }, [analysisByRecordingId, hasRunBatch, replayRecordings, selectedRecordingIds]);
-  const avatarFollowBatchBlockedCount = avatarFollowBatchItems.filter((item) => item.status === "blocked").length;
-  const avatarFollowBatchReviewCount = avatarFollowBatchItems.filter((item) => item.status === "review").length;
-  const avatarFollowBatchWorstItem = avatarFollowBatchItems[0] ?? null;
 
   const analysis = useMemo(
     () => replaySession ? analyzeMovementDebugReplaySession(replaySession) : null,
     [replaySession],
   );
-  const proofRehearsalEvidenceEntries = useMemo(() => {
-    if (hasRunBatch) {
-      return batchAnalyses.map((batchAnalysis, order) => ({
-        analysis: batchAnalysis,
-        order,
-        recordingId: batchAnalysis.sessionId,
-        recordingTitle: recordingTitleById.get(batchAnalysis.sessionId),
-      }));
-    }
+  const {
+    analysisByRecordingId,
+    avatarFollowBatchBlockedCount,
+    avatarFollowBatchItems,
+    avatarFollowBatchReviewCount,
+    avatarFollowBatchWorstItem,
+    batchAnalyses,
+    batchSummary,
+    isRunInProgress,
+    proofRehearsalCandidateSummary,
+    proofRehearsalEvidenceEntries,
+    proofRehearsalReadiness,
+    runAlignmentBatch,
+    runStartedAt,
+    runStatusText,
+    selectAllRecordings,
+    selectedCount,
+    selectLatestRecordings,
+    setupReviewItems,
+    toggleRecordingSelection,
+  } = useReplayLabBatch({
+    activeRecordingId,
+    analysis,
+    hasRunBatch,
+    loadedRecordings,
+    recordingTitleById,
+    replayRecordings,
+    selectedRecordingIds,
+    setFrameIndex,
+    setHasRunBatch,
+    setIsPlaying,
+    setSelectedRecordingId,
+    setSelectedRecordingIds,
+  });
 
-    if (!activeRecordingId || !analysis) return [];
-    return [{
-      analysis,
-      order: 0,
-      recordingId: activeRecordingId,
-      recordingTitle: recordingTitleById.get(activeRecordingId),
-    }];
-  }, [activeRecordingId, analysis, batchAnalyses, hasRunBatch, recordingTitleById]);
-  const proofRehearsalCandidateSummary = useMemo(() => (
-    getMovementProofRehearsalBatchSummary(
-      MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS,
-      proofRehearsalEvidenceEntries,
-    )
-  ), [proofRehearsalEvidenceEntries]);
   const failureGroups = useMemo(
     () => getFailureGroups(analysis?.failures ?? []),
     [analysis?.failures],
@@ -528,314 +451,23 @@ export default function MovementReplayLabPage() {
       studio,
     };
   }, [currentFrame, currentPoseLandmarks, replayPlayerCalibration, replayRetargetSourceModel]);
-  const liveCurrentFrameFailures = useMemo<MovementReplayFailure[]>(() => {
-    const failures: MovementReplayFailure[] = [];
-    const upperBodyError = currentAvatarVisual?.averageUpperBodyDirectionError;
-    const upperBodySegments = currentAvatarVisual?.comparedUpperBodySegments ?? 0;
-    const lowerBodyError = currentAvatarVisual?.averageLowerBodyDirectionError;
-    const lowerBodySegments = currentAvatarVisual?.comparedLowerBodySegments ?? 0;
-    const outOfFrameCount = currentFrame?.poseBounds?.outOfFrameCount ?? 0;
-    const maxY = currentFrame?.poseBounds?.maxY ?? 0;
-    const sourceQuality = currentRetarget?.sourceQuality ?? currentFrame?.retarget?.sourceQuality ?? 1;
-    const spineDriveMagnitude = Math.max(
-      Math.abs(currentSpineDrive?.sideBend ?? 0),
-      Math.abs(currentSpineDrive?.forwardLean ?? 0),
-    );
-    const rawHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headRaw);
-    const appliedHeadMagnitude = headMotionMagnitude(currentAvatarDebug?.headApplied);
-    const headDamping = rawHeadMagnitude - appliedHeadMagnitude;
-    const armPoseError = maxAvatarSegmentError(currentAvatarVisual, [
-      "leftUpperArm",
-      "leftLowerArm",
-      "rightUpperArm",
-      "rightLowerArm",
-    ]);
-    const footPoseError = maxAvatarSegmentError(currentAvatarVisual, [
-      "leftFoot",
-      "rightFoot",
-    ]);
-    const spinePoseError = maxAvatarSegmentError(currentAvatarVisual, ["spine"]);
-
-    if (outOfFrameCount >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT || maxY > 1.08) {
-      failures.push({
-        code: "source_lower_body_out_of_frame",
-        detail: `Current frame has ${outOfFrameCount} landmarks out of frame; review source tracking before trusting avatar alignment.`,
-        frameIndex: safeFrameIndex,
-        severity: "warning",
-      });
-    }
-
-    if (
-      typeof footConfidence === "number" &&
-      typeof legConfidence === "number" &&
-      footConfidence < 0.35 &&
-      legConfidence >= 0.45
-    ) {
-      failures.push({
-        code: "source_feet_weak",
-        detail: `Current frame has leg confidence ${legConfidence.toFixed(2)} but foot confidence ${footConfidence.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        severity: "warning",
-      });
-    }
-
-    if (sourceQuality < 0.45) {
-      failures.push({
-        code: "retarget_quality_drop",
-        detail: `Current frame retarget quality is ${sourceQuality.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        severity: "warning",
-      });
-    }
-
-    if (
-      upperBodySegments >= 3 &&
-      typeof upperBodyError === "number" &&
-      upperBodyError > LIVE_UPPER_BODY_REVIEW_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_arm_pose_diverged",
-        detail: `Live avatar upper-body direction error is ${upperBodyError.toFixed(2)} across ${upperBodySegments} segments; review visible spine/arm match.`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      typeof armPoseError === "number" &&
-      typeof armConfidence === "number" &&
-      armConfidence >= 0.45 &&
-      armPoseError > AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_arm_pose_diverged",
-        detail: `Avatar arm pose max segment error is ${armPoseError.toFixed(2)} with source arm confidence ${armConfidence.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      currentSpineDrive?.owner === "recorded-spine-model" &&
-      typeof upperBodyError === "number" &&
-      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
-      upperBodyError > LIVE_SPINE_DRIVE_REVIEW_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_spine_angle_diverged",
-        detail: `Recorded spine drive is strong (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but avatar upper-body error is ${upperBodyError.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      currentSpineDrive?.owner === "recorded-spine-model" &&
-      typeof spinePoseError === "number" &&
-      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
-      spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_spine_angle_diverged",
-        detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} while recorded spine drive is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}).`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      currentFrameSourceReady &&
-      typeof torsoConfidence === "number" &&
-      torsoConfidence >= 0.45 &&
-      typeof spinePoseError === "number" &&
-      spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_spine_angle_diverged",
-        detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} with source torso confidence ${torsoConfidence.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        severity: "error",
-      });
-    }
-
-    if (
-      currentSpineDrive?.owner === "recorded-spine-model" &&
-      currentAvatarDebug?.headRaw.source === "face" &&
-      spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
-      rawHeadMagnitude >= 0.12 &&
-      headDamping > LIVE_HEAD_DAMPING_REVIEW_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_head_alignment_diverged",
-        detail: `Recorded spine motion is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but head motion is damped from ${formatAngleDegrees(rawHeadMagnitude)} to ${formatAngleDegrees(appliedHeadMagnitude)}.`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      currentAvatarDebug?.headRaw.source === "pose" &&
-      currentAvatarDebug.headRaw.confidence >= 0.75 &&
-      Math.abs(currentAvatarDebug.headRaw.yaw) >= 0.65 &&
-      Math.abs(currentAvatarDebug.headApplied.yaw) < 0.08
-    ) {
-      failures.push({
-        code: "avatar_head_alignment_diverged",
-        detail: `Recorded pose head yaw is strong (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)}) but avatar applied yaw is nearly neutral (${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    if (
-      currentAvatarDebug?.headRaw.source === "pose" &&
-      currentAvatarDebug.headRaw.confidence >= 0.75 &&
-      Math.abs(currentAvatarDebug.headRaw.yaw) >= 0.35 &&
-      Math.sign(currentAvatarDebug.headRaw.yaw) !== Math.sign(currentAvatarDebug.headApplied.yaw) &&
-      Math.abs(currentAvatarDebug.headApplied.yaw) >= 0.08
-    ) {
-      failures.push({
-        code: "avatar_head_alignment_diverged",
-        detail: `Recorded pose head yaw and avatar applied yaw point in opposite directions (${formatAngleDegrees(currentAvatarDebug.headRaw.yaw)} vs ${formatAngleDegrees(currentAvatarDebug.headApplied.yaw)}).`,
-        frameIndex: safeFrameIndex,
-        severity: currentFrameSourceReady ? "error" : "warning",
-      });
-    }
-
-    const plantedFootClearance = avatarPlantedFootClearance(
-      currentAvatarVisual,
-      currentRootMotionFrame?.intent.plantedFoot,
-    );
-
-    if (
-      currentFrameSourceReady &&
-      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
-      typeof footPoseError === "number" &&
-      footPoseError > AVATAR_FOLLOW_PLANTED_FOOT_ERROR_THRESHOLD &&
-      (
-        !currentFrameStationaryFeetFloorSideBend ||
-        typeof plantedFootClearance !== "number" ||
-        plantedFootClearance > AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD
-      )
-    ) {
-      failures.push({
-        code: "avatar_planted_foot_diverged",
-        detail: `Avatar planted-foot segment error is ${footPoseError.toFixed(2)} while source support is feet-floor.`,
-        frameIndex: safeFrameIndex,
-        severity: "error",
-      });
-    }
-
-    if (
-      currentFrameSourceReady &&
-      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
-      typeof plantedFootClearance === "number" &&
-      plantedFootClearance > AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_planted_foot_diverged",
-        detail: `Avatar planted foot is ${plantedFootClearance.toFixed(2)} above the floor while source support is feet-floor.`,
-        frameIndex: safeFrameIndex,
-        severity: "error",
-      });
-    }
-
-    if (
-      currentFrameSourceReady &&
-      currentGamePathFrame?.supportIntentKey === "feet-floor" &&
-      currentFrameActiveLegMotion &&
-      typeof replayFeetOwner === "string" &&
-      replayFeetOwner.startsWith("recorded")
-    ) {
-      failures.push({
-        code: "avatar_planted_foot_diverged",
-        detail: `Source has active leg motion on feet-floor support, but Replay Lab reports feet owner as ${replayFeetOwner} instead of a planted/locked support owner.`,
-        frameIndex: safeFrameIndex,
-        severity: "error",
-      });
-    }
-
-    const activeLegVisualDiverged = Boolean(
-      currentFrameSourceReady &&
-        currentFrameActiveLegMotion &&
-        lowerBodySegments >= 4 &&
-        typeof lowerBodyError === "number" &&
-        lowerBodyError > AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD
-    );
-
-    if (activeLegVisualDiverged) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: `Current frame has active leg motion but rendered avatar lower-body direction error is ${lowerBodyError?.toFixed(2)}.`,
-        frameIndex: safeFrameIndex,
-        semanticCode: "leg-lift-missing",
-        severity: "error",
-      });
-    } else if (
-      lowerBodySegments >= 4 &&
-      typeof lowerBodyError === "number" &&
-      lowerBodyError > AVATAR_FOLLOW_CURRENT_LOWER_REVIEW_THRESHOLD
-    ) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: `Live avatar lower-body direction error is ${lowerBodyError.toFixed(2)} across ${lowerBodySegments} segments.`,
-        frameIndex: safeFrameIndex,
-        severity: "warning",
-      });
-    }
-
-    if (currentFrameSourceReady && currentFrameActiveLegMotion && currentFrameUsesSeatedSupport) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: `Source is ready with active leg motion, but avatar support is seated (${currentGamePathFrame?.supportIntentLabel ?? "unknown"} · ${currentGamePathFrame?.supportPresentationOwner ?? "unknown"}).`,
-        frameIndex: safeFrameIndex,
-        semanticCode: "movement-visible-but-unscored",
-        severity: "error",
-      });
-    }
-
-    if (
-      currentFrameActiveLegMotion &&
-      lowerBodySegments === 0 &&
-      currentAvatarVisual
-    ) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: "Current frame has active leg motion but no comparable rendered avatar lower-body segments.",
-        frameIndex: safeFrameIndex,
-        semanticCode: "leg-lift-missing",
-        severity: "warning",
-      });
-    }
-
-    return failures;
-  }, [
-    currentAvatarVisual,
-    currentAvatarDebug?.headApplied,
-    currentAvatarDebug?.headRaw,
-    currentFrame?.poseBounds?.maxY,
-    currentFrame?.poseBounds?.outOfFrameCount,
-    currentFrame?.retarget?.sourceQuality,
+  const liveCurrentFrameFailures = getReplayLabLiveCurrentFrameFailures({
+    armConfidence,
+    currentAvatarDebug,
+    currentFrame,
     currentFrameActiveLegMotion,
     currentFrameSourceReady,
     currentFrameStationaryFeetFloorSideBend,
     currentFrameUsesSeatedSupport,
-    currentGamePathFrame?.supportIntentKey,
-    currentGamePathFrame?.supportIntentLabel,
-    currentGamePathFrame?.supportPresentationOwner,
-    currentRootMotionFrame?.intent.plantedFoot,
-    currentRetarget?.sourceQuality,
-    currentSpineDrive?.forwardLean,
-    currentSpineDrive?.owner,
-    currentSpineDrive?.sideBend,
-    replayFeetOwner,
-    armConfidence,
+    currentGamePathFrame,
+    currentRootMotionFrame,
     footConfidence,
     legConfidence,
+    replayFeetOwner,
     safeFrameIndex,
     torsoConfidence,
-  ]);
-  const replayStudioParityFailure = useMemo<MovementReplayFailure | null>(() => {
+  });
+  const replayStudioParityFailure = ((): MovementReplayFailure | null => {
     if (!replayStudioParity || replayStudioParity.diffs.length === 0) return null;
 
     return {
@@ -844,7 +476,7 @@ export default function MovementReplayLabPage() {
       frameIndex: safeFrameIndex,
       severity: "warning",
     };
-  }, [replayStudioParity, safeFrameIndex]);
+  })();
   const avatarFollowSessionFailures = useMemo<MovementReplayFailure[]>(() => {
     if (!analysis) return [];
     const failures: MovementReplayFailure[] = [];
@@ -990,7 +622,7 @@ export default function MovementReplayLabPage() {
       status: avatarFollowFootCriterionStatus,
     },
   ];
-  const frameSeverity = useMemo(() => {
+  const frameSeverity = (() => {
     const severityByFrame = new Map<number, "error" | "warning">();
     analysis?.failures.forEach((failure) => {
       if (typeof failure.frameIndex !== "number") return;
@@ -1021,7 +653,7 @@ export default function MovementReplayLabPage() {
       }
     });
     return severityByFrame;
-  }, [analysis, liveCurrentFrameFailures, replayStudioParityFailure]);
+  })();
 
   useEffect(() => {
     replayMotionFrameRef.current = currentReplayMotionFrame;
@@ -1058,16 +690,11 @@ export default function MovementReplayLabPage() {
   }, [currentFrame]);
 
   useEffect(() => {
-    if (!replaySession) {
-      setCurrentAvatarDebug(null);
-      setCurrentAvatarVisual(undefined);
-      return undefined;
-    }
+    if (!replaySession) return;
 
     const interval = window.setInterval(() => {
       const debugState = replayAvatarDebugRef.current;
-      setCurrentAvatarDebug(debugState);
-      setCurrentAvatarVisual(debugState?.avatarVisual);
+      setPolledAvatarDebug(debugState);
     }, 160);
 
     return () => window.clearInterval(interval);
@@ -1091,79 +718,6 @@ export default function MovementReplayLabPage() {
   }, [isPlaying, replaySession]);
 
   const frameCount = replaySession?.samples.length ?? 0;
-  const batchIsLoading = hasRunBatch && selectedRecordingIds.some((recordingId) => {
-    const loaded = loadedRecordings[recordingId];
-    return !loaded || loaded.isLoading;
-  });
-  const selectedCount = selectedRecordingIds.length;
-  const isRunInProgress = pendingRunId !== null;
-  const runStatusText = isRunInProgress
-    ? batchIsLoading
-      ? "Loading selected recordings..."
-      : "Running replay analysis..."
-    : runCompletedAt
-      ? `Run ${completedRunCount} complete at ${formatRunClock(runCompletedAt)}`
-      : selectedCount > 0
-        ? "Ready to run selected recordings."
-        : "Select recordings to run.";
-  const proofRehearsalReadiness = getProofRehearsalReadiness({
-    hasRunBatch,
-    isRunInProgress,
-    selectedCount,
-    setupBlocked: batchSummary.setupBlocked,
-  });
-  const resetRunState = () => {
-    setHasRunBatch(false);
-    setPendingRunId(null);
-    setRunStartedAt(null);
-    setRunCompletedAt(null);
-  };
-  const toggleRecordingSelection = (recordingId: Id<"movements">) => {
-    resetRunState();
-    setSelectedRecordingIds((previousIds) => (
-      previousIds.includes(recordingId)
-        ? previousIds.filter((id) => id !== recordingId)
-        : [...previousIds, recordingId]
-    ));
-  };
-  const selectLatestRecordings = () => {
-    const latestIds = replayRecordings?.slice(0, 5).map((recording) => recording._id) ?? [];
-    resetRunState();
-    setSelectedRecordingIds(latestIds);
-    setFrameIndex(0);
-    setIsPlaying(false);
-  };
-  const selectAllRecordings = () => {
-    const allIds = replayRecordings?.map((recording) => recording._id) ?? [];
-    resetRunState();
-    setSelectedRecordingIds(allIds);
-    setFrameIndex(0);
-    setIsPlaying(false);
-  };
-  const runAlignmentBatch = () => {
-    const startedAt = Date.now();
-    const firstSelectedId = selectedRecordingIds[0] ?? null;
-    setHasRunBatch(true);
-    setPendingRunId(startedAt);
-    setRunStartedAt(startedAt);
-    setRunCompletedAt(null);
-    setSelectedRecordingId(firstSelectedId);
-    setIsPlaying(Boolean(firstSelectedId));
-    setFrameIndex(0);
-  };
-
-  useEffect(() => {
-    if (pendingRunId === null) return;
-    if (selectedCount === 0 || batchIsLoading || batchReplaySessions.length < selectedCount) return;
-
-    const timer = window.setTimeout(() => {
-      setPendingRunId(null);
-      setRunCompletedAt(Date.now());
-      setCompletedRunCount((count) => count + 1);
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [batchIsLoading, batchReplaySessions.length, pendingRunId, selectedCount]);
 
   const {
     captureAvatarFrame,
@@ -1186,15 +740,13 @@ export default function MovementReplayLabPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    (window as Window & {
-      __movementReplayLabDebug?: unknown;
-    }).__movementReplayLabDebug = {
+    publishReplayLabDebug({
       avatarVisual: currentAvatarVisual ?? null,
       debug: currentAvatarDebug,
       frameIndex: safeFrameIndex,
       parity: replayStudioParity,
       retarget: currentRetarget ?? null,
-    };
+    });
   }, [currentAvatarDebug, currentAvatarVisual, currentRetarget, replayStudioParity, safeFrameIndex]);
 
   return (

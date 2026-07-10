@@ -4,6 +4,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultOutDir = "tmp/movement-replay-lab/captures";
@@ -405,6 +406,7 @@ async function main() {
       captures,
       frameCount: labMeta.frameCount,
       frames,
+      motionPipelineFingerprint: movementPipelineFingerprint(),
       sessionId: labMeta.sessionId,
       storageState: storageState || null,
     };

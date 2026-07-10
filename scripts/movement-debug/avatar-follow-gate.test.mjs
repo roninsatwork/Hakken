@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { evaluateAvatarFollowGate } from "./avatar-follow-gate.mjs";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+
+const testMotionPipelineFingerprint = movementPipelineFingerprint();
 
 function analysis(overrides = {}) {
   return {
@@ -50,10 +53,41 @@ function row(overrides = {}) {
 }
 
 function manifest(rows) {
-  return { rows };
+  return {
+    motionPipelineFingerprints: [testMotionPipelineFingerprint],
+    rows,
+  };
 }
 
 describe("avatar follow gate", () => {
+  it("blocks proof captured without a motion-pipeline fingerprint", () => {
+    const result = evaluateAvatarFollowGate({
+      analyses: [analysis()],
+      manifest: { rows: [row()] },
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.failures.map((failure) => failure.code)).toContain(
+      "motion-pipeline-fingerprint-missing",
+    );
+  });
+
+  it("blocks proof captured against different motion-pipeline code", () => {
+    const result = evaluateAvatarFollowGate({
+      analyses: [analysis()],
+      expectedMotionPipelineFingerprint: testMotionPipelineFingerprint,
+      manifest: {
+        motionPipelineFingerprints: ["sha256:stale-motion-pipeline"],
+        rows: [row()],
+      },
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.failures.map((failure) => failure.code)).toContain(
+      "motion-pipeline-fingerprint-mismatch",
+    );
+  });
+
   it("passes when supported proof rows have capture-backed avatar-follow evidence", () => {
     const result = evaluateAvatarFollowGate({
       analyses: [analysis()],
@@ -108,7 +142,7 @@ describe("avatar follow gate", () => {
 
     expect(result.status).toBe("passed");
     expect(result.recordings[0]).toEqual(expect.objectContaining({
-      acceptanceStatus: "accepted-candidate",
+      acceptanceStatus: "accepted",
       visualMatchBasis: "replay-visual-captures",
       visualMatchScore: 0.84,
     }));
@@ -150,7 +184,7 @@ describe("avatar follow gate", () => {
     ]));
   });
 
-  it("does not treat source-only Replay Studio review status as avatar-follow failure when captures are clean", () => {
+  it("blocks Replay Studio review status even when captures are clean and no worst frame was persisted", () => {
     const result = evaluateAvatarFollowGate({
       analyses: [
         analysis({
@@ -172,15 +206,36 @@ describe("avatar follow gate", () => {
       manifest: manifest([row()]),
     });
 
-    expect(result.status).toBe("passed");
+    expect(result.status).toBe("blocked");
     expect(result.recordings[0]).toEqual(expect.objectContaining({
-      acceptanceStatus: "accepted-candidate",
+      acceptanceStatus: "review-only",
       visualMatchBasis: "replay-visual-captures",
     }));
-    expect(result.failures.map((failure) => failure.code)).not.toEqual(expect.arrayContaining([
+    expect(result.failures.map((failure) => failure.code)).toEqual(expect.arrayContaining([
       "visual-acceptance-review-session",
       "visual-match-below-threshold",
     ]));
+  });
+
+  it("blocks general capture-backed lower-body error above 0.22", () => {
+    const result = evaluateAvatarFollowGate({
+      analyses: [analysis()],
+      manifest: manifest([
+        row({
+          visualCaptureDiagnostics: {
+            avatarLowerError: { average: 0.221, count: 2, max: 0.24 },
+            avatarPlantedFootClearance: { average: null, count: 0, max: null },
+            avatarUpperError: { average: 0.04, count: 2, max: 0.05 },
+          },
+        }),
+      ]),
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.thresholds.maxLowerBodyDirectionError).toBe(0.22);
+    expect(result.failures.map((failure) => failure.code)).toContain(
+      "lower-body-direction-error-above-threshold",
+    );
   });
 
   it("blocks low analyzer avatar visual match and lower-body owner flicker", () => {

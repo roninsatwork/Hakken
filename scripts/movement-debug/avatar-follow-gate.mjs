@@ -3,6 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
 
 const defaultAnalysisPath = "tmp/movement-replay-lab/current-analysis-with-captures.json";
 const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-with-captures.proof-manifest.json";
@@ -11,7 +12,7 @@ const defaultFixLogMarkdownPath = "tmp/movement-replay-lab/current-avatar-follow
 
 export const DEFAULT_AVATAR_FOLLOW_THRESHOLDS = {
   maxActiveLegDirectionError: 0.12,
-  maxLowerBodyDirectionError: 0.52,
+  maxLowerBodyDirectionError: 0.22,
   maxMirrorSideDirectionError: 0.18,
   maxOwnerTransitionsPerSecond: 1.25,
   maxPlantedFootClearance: 0.08,
@@ -514,6 +515,7 @@ function writeOutputFile(filePath, contents) {
 
 export function evaluateAvatarFollowGate({
   analyses,
+  expectedMotionPipelineFingerprint = movementPipelineFingerprint(),
   manifest,
   thresholds = DEFAULT_AVATAR_FOLLOW_THRESHOLDS,
 }) {
@@ -528,6 +530,31 @@ export function evaluateAvatarFollowGate({
   const groupedRows = rowsByRecording(manifest.rows);
   const failures = [];
   const recordingSummaries = [];
+  const proofFingerprints = Array.isArray(manifest.motionPipelineFingerprints)
+    ? manifest.motionPipelineFingerprints.filter((value) => typeof value === "string")
+    : [];
+
+  if (proofFingerprints.length === 0) {
+    pushFailure(
+      failures,
+      "motion-pipeline-fingerprint-missing",
+      "Replay visual proof has no motion-pipeline fingerprint and must be recaptured.",
+      { expectedMotionPipelineFingerprint },
+    );
+  } else if (
+    proofFingerprints.length !== 1 ||
+    proofFingerprints[0] !== expectedMotionPipelineFingerprint
+  ) {
+    pushFailure(
+      failures,
+      "motion-pipeline-fingerprint-mismatch",
+      "Replay visual proof was captured with different motion-pipeline code and must be recaptured.",
+      {
+        actualMotionPipelineFingerprints: proofFingerprints,
+        expectedMotionPipelineFingerprint,
+      },
+    );
+  }
 
   for (const [recordingId, rows] of groupedRows.entries()) {
     const avatarFollowScope = avatarFollowScopeForRows(rows);
@@ -554,12 +581,7 @@ export function evaluateAvatarFollowGate({
         ? "replay-visual-captures"
         : "source-heuristic-only";
     const replayStudioReviewFrames = replayStudioWorstFrames.filter((frame) => frame.status !== "pass");
-    const replayStudioHasActionableReview =
-      replayStudioSession?.status === "review" &&
-      (
-        Number(replayStudioSession.reviewedFrameCount || 0) > 0 ||
-        replayStudioReviewFrames.length > 0
-      );
+    const replayStudioRequiresReview = replayStudioSession?.status === "review";
     const hasCleanCaptureBackedAvatarProof =
       captureSummary.visualCaptureFrameCount > 0 &&
       typeof lowerError === "number" &&
@@ -574,7 +596,7 @@ export function evaluateAvatarFollowGate({
       visualMatchScore < thresholds.minVisualMatchScore &&
       (
         visualMatchBasis === "analyzer-avatar-telemetry" ||
-        replayStudioHasActionableReview ||
+        replayStudioRequiresReview ||
         (
           visualMatchBasis === "replay-visual-captures" &&
           !hasCleanCaptureBackedAvatarProof
@@ -584,11 +606,11 @@ export function evaluateAvatarFollowGate({
       ? "not-supported"
       : replayStudioSession?.status === "blocked"
         ? "blocked"
-        : replayStudioHasActionableReview
+        : replayStudioRequiresReview
           ? "review-only"
           : shouldBlockLowVisualMatch
             ? "blocked"
-            : "accepted-candidate";
+            : "accepted";
 
     const summary = {
       acceptanceStatus,
@@ -789,11 +811,7 @@ export function evaluateAvatarFollowGate({
       );
     }
 
-    if (
-      replayStudioSession?.status === "review" &&
-      replayStudioReviewFrames.length === 0 &&
-      Number(replayStudioSession.reviewedFrameCount || 0) > 0
-    ) {
+    if (replayStudioSession?.status === "review" && replayStudioReviewFrames.length === 0) {
       pushFailure(
         failures,
         "visual-acceptance-review-session",
@@ -911,8 +929,10 @@ export function evaluateAvatarFollowGate({
   }
 
   const result = {
+    expectedMotionPipelineFingerprint,
     failureCount: failures.length,
     failures,
+    proofMotionPipelineFingerprints: proofFingerprints,
     recordingCount: recordingSummaries.length,
     recordings: recordingSummaries.sort((left, right) => left.recordingId.localeCompare(right.recordingId)),
     status: failures.length === 0 ? "passed" : "blocked",

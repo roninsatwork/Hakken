@@ -512,9 +512,11 @@ function parseVisualCaptureManifest(value: unknown): MovementRecordedVisualCaptu
       frame?: unknown;
       sourcePath?: unknown;
     }>;
+    motionPipelineFingerprint?: unknown;
     sessionId?: unknown;
   };
   const recordingId = maybeString(manifest.sessionId);
+  const motionPipelineFingerprint = maybeString(manifest.motionPipelineFingerprint);
   if (!recordingId || !Array.isArray(manifest.captures)) return [];
 
   return manifest.captures.flatMap((capture) => {
@@ -527,6 +529,7 @@ function parseVisualCaptureManifest(value: unknown): MovementRecordedVisualCaptu
       avatarPlantedFootClearance: maybeNumber(capture.diagnostics?.avatarFollowPlantedFootClearance),
       avatarUpperError: maybeNumber(capture.diagnostics?.avatarUpperError),
       frameIndex,
+      motionPipelineFingerprint,
       recordingId,
       sourcePath: maybeString(capture.sourcePath),
     }];

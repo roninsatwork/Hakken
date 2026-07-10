@@ -76,7 +76,6 @@ function buildProofMotionFrame({
     isPlaying: true,
     mirrorForDisplay: true,
   });
-  const hasWorldPose = payload.worldLandmarks?.length === 33;
   const setupTarget = resolveMovementAvatarSetup({
     faceLandmarks: payload.faceLandmarks,
     hands: payload.hands as MovementHandsForConfidence | undefined,

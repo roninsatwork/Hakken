@@ -7,7 +7,6 @@ import {
   vi,
 } from "vitest";
 import {
-  applyMovementAvatarBodyFrameOrchestrationRuntime,
   applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones,
   applyMovementAvatarLowerBodyFrameOrchestrationRuntime,
   applyMovementAvatarLowerBodyFrameRuntime,
@@ -87,7 +86,7 @@ describe("movementAvatarRetargetSegmentRuntime (merged)", () => {
   }
 
   describe("movementAvatarRetargetSegmentRuntime", () => {
-    it("applies active mappings and preserves recorded foot plant guards", () => {
+    it("applies every confident recorded leg and foot mapping", () => {
       const root = new THREE.Object3D();
       const rightUpperLeg = new THREE.Object3D();
       const rightFoot = new THREE.Object3D();
@@ -118,14 +117,14 @@ describe("movementAvatarRetargetSegmentRuntime (merged)", () => {
       });
 
       expect(result).toMatchObject({
-        applied: 1,
-        feet: 0,
+        applied: 2,
+        feet: 1,
         legs: 1,
       });
       expect(result.restMap.rightUpperLeg).toBeDefined();
-      expect(stored).toEqual(["rightUpperLeg"]);
+      expect(stored).toEqual(["rightUpperLeg", "rightFoot"]);
       expect(rightUpperLeg.quaternion.w).toBeLessThan(1);
-      expect(rightFoot.quaternion.w).toBe(1);
+      expect(rightFoot.quaternion.w).toBeLessThan(1);
     });
 
     it("threads the existing rest map when nothing can be applied", () => {
@@ -454,23 +453,6 @@ describe("movementAvatarFrameTargetRuntime (merged)", () => {
 describe("movementAvatarFrameTargetRetargetOrchestrationRuntime (merged)", () => {
   function solverLandmarks(): VrmSolverLandmark[] {
     return makeMovementAvatarProofMotionPayload("standing").landmarks.map(normalizeVrmLandmark);
-  }
-
-  function lowerBodyDrive(overrides: Partial<MovementAvatarLowerBodyDrive> = {}): MovementAvatarLowerBodyDrive {
-    return {
-      groundedSquatDepth: 0,
-      liveSquatDepth: 0,
-      playerLegRaiseDepth: 0,
-      playerLegRaiseSide: null,
-      playerLowerBodyState: "neutral",
-      playerSquatPresentationDepth: 0,
-      shouldApplyLowerBody: true,
-      shouldApplySolverTorso: true,
-      shouldDrivePlayerLegRaise: false,
-      shouldDrivePlayerSquat: false,
-      visualRootDrop: 0,
-      ...overrides,
-    };
   }
 
   function retargetFrame(): MovementRetargetFrame {

@@ -57,7 +57,7 @@ export function resolveMovementAvatarRecordedSpineDrive({
       hips: {
         x: -presentationForwardLean * 0.08,
         y: twist * 0.03,
-        z: presentationSideBend * 0.6,
+        z: 0,
       },
       spine: {
         x: -presentationForwardLean * 0.32,

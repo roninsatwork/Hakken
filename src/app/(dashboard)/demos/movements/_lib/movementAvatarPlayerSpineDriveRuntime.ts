@@ -76,7 +76,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
       hips: {
         x: -presentationForwardLean * 0.08,
         y: twist * 0.04,
-        z: presentationSideBend * 0.6,
+        z: 0,
       },
       spine: {
         x: -presentationForwardLean * 0.32,

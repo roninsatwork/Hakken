@@ -201,7 +201,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     solvedFootSegments > 0
       ? "player-leg-raise-planted-flat"
       : null;
-  const retargetOwnsLowerBody = solvedLegSegments >= 4 && retargetSourceQuality >= 0.45;
+  const hasCompleteLegRetarget = solvedLegSegments >= 4 && retargetSourceQuality >= 0.45;
   const shouldUsePlayerFootFallback =
     solvedLegSegments >= 4 &&
     solvedFootSegments === 0 &&
@@ -264,7 +264,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
       : shouldUsePlayerFootFallback
         ? "player-foot-fallback"
         : "neutral"),
-    lowerBodyOwner: retargetOwnsLowerBody
+    lowerBodyOwner: hasCompleteLegRetarget
       ? "player-retarget"
       : playerLegRaiseOwner ?? (solvedLowerBodySegments > 0
           ? "retarget-partial-fallback"

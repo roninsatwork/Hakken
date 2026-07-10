@@ -72,6 +72,18 @@ export function useReplayLabRecordings({
       ].join(":"))
       .join("|")
   ), [recordingsToLoad]);
+  const effectiveLoadedRecordings = useMemo<Record<string, LoadedReplayRecording>>(() => {
+    if (!debugReplaySession || !debugRecordingId) return loadedRecordings;
+
+    return {
+      ...loadedRecordings,
+      [debugRecordingId]: {
+        error: null,
+        isLoading: false,
+        session: debugReplaySession,
+      },
+    };
+  }, [debugRecordingId, debugReplaySession, loadedRecordings]);
 
   useEffect(() => {
     loadedRecordingsRef.current = loadedRecordings;
@@ -110,19 +122,8 @@ export function useReplayLabRecordings({
   useEffect(() => {
     if (!debugReplaySession || !debugRecordingId) return;
 
-    setLoadedRecordings((current) => ({
-      ...current,
-      [debugRecordingId]: {
-        error: null,
-        isLoading: false,
-        session: debugReplaySession,
-      },
-    }));
     onDebugSessionReady(debugRecordingId);
-    // The ready callback intentionally stays out of the dependency list so a
-    // re-created page handler cannot re-trigger the one-shot selection reset.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugRecordingId, debugReplaySession]);
+  }, [debugRecordingId, debugReplaySession, onDebugSessionReady]);
 
   useEffect(() => {
     recordingsToLoadRef.current = recordingsToLoad;
@@ -179,12 +180,11 @@ export function useReplayLabRecordings({
     };
     // Loading is keyed on the stable recordingsToLoadKey digest, matching the
     // original page effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingsToLoadKey]);
 
-  const replaySession = activeRecordingId ? loadedRecordings[activeRecordingId]?.session ?? null : null;
-  const replayLoadError = activeRecordingId ? loadedRecordings[activeRecordingId]?.error ?? null : null;
-  const replayIsLoading = Boolean(activeRecordingId && loadedRecordings[activeRecordingId]?.isLoading);
+  const replaySession = activeRecordingId ? effectiveLoadedRecordings[activeRecordingId]?.session ?? null : null;
+  const replayLoadError = activeRecordingId ? effectiveLoadedRecordings[activeRecordingId]?.error ?? null : null;
+  const replayIsLoading = Boolean(activeRecordingId && effectiveLoadedRecordings[activeRecordingId]?.isLoading);
   const recordingTitleById = useMemo(() => (
     new Map<string, string>((replayRecordings ?? []).map((recording) => [
       recording._id,
@@ -195,7 +195,7 @@ export function useReplayLabRecordings({
   return {
     debugRecordingId,
     debugReplayError,
-    loadedRecordings,
+    loadedRecordings: effectiveLoadedRecordings,
     recordingTitleById,
     replayIsLoading,
     replayLoadError,

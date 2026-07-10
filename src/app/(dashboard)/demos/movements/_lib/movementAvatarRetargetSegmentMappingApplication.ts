@@ -1,7 +1,5 @@
 import * as THREE from "three";
-import type {
-  MovementAvatarRetargetSegmentApplicationDecision,
-} from "./movementAvatarPipeline";
+import type { MovementAvatarRetargetSegmentApplicationDecision } from "./movementAvatarPipeline";
 import {
   movementSourceSegmentToAvatarWorldDirection,
   type MovementAvatarRetargetBoneMapping,
@@ -49,7 +47,6 @@ export function applyMovementAvatarRetargetSegmentMappings({
     legs: 0,
     spine: 0,
   };
-
   mappings.forEach((mapping) => {
     if (!apply(mapping)) return;
 
@@ -59,7 +56,6 @@ export function applyMovementAvatarRetargetSegmentMappings({
     if (mapping.type === "leg") counts.legs += 1;
     if (mapping.type === "spine") counts.spine += 1;
   });
-
   return counts;
 }
 

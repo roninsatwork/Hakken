@@ -134,6 +134,7 @@ export type MovementRecordedVisualCaptureFrame = {
   avatarPlantedFootClearance?: number | null;
   avatarUpperError: number | null;
   frameIndex: number;
+  motionPipelineFingerprint?: string | null;
   recordingId: string;
   sourcePath: string | null;
 };
@@ -167,6 +168,7 @@ export type MovementRecordedProofManifestOptions = {
 
 export type MovementRecordedProofManifest = {
   generatedBy: "movement-replay-analyzer";
+  motionPipelineFingerprints: string[];
   recordingCount: number;
   rows: MovementRecordedProofManifestRow[];
   summary: {
@@ -1696,6 +1698,11 @@ export function buildMovementRecordedProofManifest(
   const manualReviewDecisions = manualReviewDecisionMap(options.manualReviewDecisions ?? []);
   const sourceLimitationDecisions = sourceLimitationDecisionMap(options.sourceLimitationDecisions ?? []);
   const visualCaptures = options.visualCaptures ?? [];
+  const motionPipelineFingerprints = Array.from(new Set(
+    visualCaptures
+      .map((capture) => capture.motionPipelineFingerprint)
+      .filter((fingerprint): fingerprint is string => Boolean(fingerprint)),
+  )).sort();
   const coverageSummary = analyses[0]?.coverage.summary;
   const proofCaseDefinitions = activeProofCases({
     includeProductScopeProofCases: options.includeProductScopeProofCases,
@@ -1955,6 +1962,7 @@ export function buildMovementRecordedProofManifest(
 
   return {
     generatedBy: "movement-replay-analyzer",
+    motionPipelineFingerprints,
     recordingCount: analyses.length,
     rows,
     summary: {

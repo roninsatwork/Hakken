@@ -9,8 +9,6 @@ import {
   applyMovementAvatarLowerBodyNeutralPoseApplicationToVrmBones,
   applyMovementAvatarLowerBodyNonRetargetApplicationPlan,
   applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones,
-  applyMovementAvatarLowerBodyRetargetPostPlanApplication,
-  applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones,
   applyMovementAvatarLowerBodyRetargetSegmentCounts,
   applyMovementAvatarLowerBodyRotationSpecs,
   applyMovementAvatarLowerBodyRotationSpecsToVrmBones,
@@ -24,8 +22,6 @@ import {
   applyMovementAvatarSupportPresentationRotationSpecsToVrmBones,
   resolveMovementAvatarLowerBodyApplicationPlan,
   resolveMovementAvatarLowerBodyRetargetApplicationPlan,
-  resolveMovementAvatarLowerBodyRetargetDecisionApplication,
-  resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
 } from "./movementAvatarLowerBodyApplication";
 import type {
   MovementAvatarAppliedLowerBodyDecision,
@@ -33,7 +29,6 @@ import type {
 } from "./movementAvatarPipeline";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import type { MovementAvatarLowerBodyTargetDecision } from "./movementAvatarTarget";
-import type { MovementRetargetFrame } from "./movementRetargeting";
 
 function drive(overrides: Partial<MovementAvatarLowerBodyDrive> = {}): MovementAvatarLowerBodyDrive {
   return {
@@ -83,28 +78,6 @@ function target(
     recordedSquatPresentationDepth: 0,
     shouldHoldPlayerSquatPose: false,
     stageDecision,
-    ...overrides,
-  };
-}
-
-function retargetFrame(overrides: Partial<MovementRetargetFrame> = {}): MovementRetargetFrame {
-  return {
-    contacts: {
-      leftFoot: true,
-      rightFoot: true,
-    },
-    debug: {
-      heldSegments: [],
-      solvedSegments: ["leftThigh", "leftShin", "rightThigh", "rightShin", "leftFoot", "rightFoot"],
-      sourceQuality: 0.82,
-    },
-    hipDrop: 0,
-    kneeLift: {
-      left: 0,
-      right: 0,
-    },
-    segments: {},
-    squatDepth: 0,
     ...overrides,
   };
 }
@@ -828,7 +801,7 @@ function appliedDecision(
     feetOwner: "neutral",
     lowerBodyOwner: "neutral",
     playerAppliedOwnerDecision: null,
-    retargetOwnsLowerBody: false,
+    hasCompleteLegRetarget: false,
     shouldUsePlayerFootFallback: false,
     shouldUseRecordedSquatPresentation: false,
     ...overrides,

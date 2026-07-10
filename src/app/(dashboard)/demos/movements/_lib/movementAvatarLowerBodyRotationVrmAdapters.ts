@@ -5,14 +5,11 @@ import {
   resolveMovementAvatarSquatFlexionPose,
 } from "./movementAvatarPipeline";
 import type {
-  MovementAvatarLowerBodyRigRotationSources,
   MovementAvatarNamedBoneRotationSpec,
   MovementAvatarSupportPresentationRotationSpec,
 } from "./movementAvatarLowerBodyRotationApplication";
 import {
   applyVrmNamedRotationTargets,
-  applyVrmRigRotationApplicationTarget,
-  resolveVrmRigRotationApplicationTarget,
 } from "./vrmRigging";
 
 export function applyMovementAvatarSupportPresentationRotationSpecsToVrmBones({
@@ -121,4 +118,3 @@ export function applyMovementAvatarSingleLegRaisePoseApplicationToVrmBones({
     }),
   });
 }
-

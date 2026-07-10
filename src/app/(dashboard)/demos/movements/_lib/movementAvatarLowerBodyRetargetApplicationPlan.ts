@@ -99,11 +99,11 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
   const isPlayer = avatarRole === "player";
   const plantedSquatIkDepth = isPlayer
     ? playerSquatPresentationDepth
-    : !appliedDecision.retargetOwnsLowerBody && balancedPlantedSquatDepth > 0
+    : !appliedDecision.hasCompleteLegRetarget && balancedPlantedSquatDepth > 0
       ? instructorSquatPresentationDepth
       : 0;
   const squatFlexionDepth =
-    !appliedDecision.retargetOwnsLowerBody || appliedDecision.shouldUseRecordedSquatPresentation
+    !appliedDecision.hasCompleteLegRetarget || appliedDecision.shouldUseRecordedSquatPresentation
       ? playerSquatPresentationDepth
       : null;
   const legRaiseOverlay = stageDecision.anchoredPlayerLegRaiseSide && retargetAppliedLowerBody < 4

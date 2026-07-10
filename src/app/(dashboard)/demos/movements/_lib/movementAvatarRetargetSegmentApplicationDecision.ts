@@ -14,8 +14,6 @@ import {
 
 export function resolveMovementAvatarRetargetSegmentApplication({
   avatarRole,
-  instructorSquatPresentationDepth,
-  lowerBodySegmentMotion,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   retargetFrame,
   segmentName,
@@ -50,33 +48,6 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   });
 
   if (!segment || segment.confidence < 0.3) return inactiveDecision("low-confidence");
-
-  const presentationSquatDepth = isPlayer
-    ? retargetFrame.squatDepth
-    : instructorSquatPresentationDepth;
-  const activeFootMotion = Math.max(
-    presentationSquatDepth,
-    lowerBodySegmentMotion,
-    retargetFrame.kneeLift.left,
-    retargetFrame.kneeLift.right,
-  );
-
-  if (!isPlayer && segmentType === "foot" && activeFootMotion < 0.22) {
-    return inactiveDecision("recorded-foot-low-motion");
-  }
-
-  if (!isPlayer && segmentType === "foot") {
-    const isLeftFoot = segmentName === "leftFoot";
-    const isPlanted = isLeftFoot
-      ? retargetFrame.contacts.leftFoot
-      : retargetFrame.contacts.rightFoot;
-    const kneeLift = isLeftFoot
-      ? retargetFrame.kneeLift.left
-      : retargetFrame.kneeLift.right;
-
-    if (isPlanted) return inactiveDecision("recorded-foot-planted");
-    if (kneeLift < 0.45) return inactiveDecision("recorded-foot-low-knee-lift");
-  }
 
   return {
     reason: "active",

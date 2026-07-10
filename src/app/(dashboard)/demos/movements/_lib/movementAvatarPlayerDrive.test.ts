@@ -57,7 +57,7 @@ describe("movement avatar player drive", () => {
     expect(Math.abs(drive.rotations.chest.z)).toBeLessThan(0.001);
   });
 
-  it("turns side-bend evidence into visible chest and spine rotation", () => {
+  it("turns side-bend evidence into visible chest and spine rotation with level hips", () => {
     const neutralPose = makeNeutralPose();
     const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
     const sideBendPose = makeNeutralPose();
@@ -77,9 +77,8 @@ describe("movement avatar player drive", () => {
     expect(drive.shouldApplySpine).toBe(true);
     expect(drive.owner).toBe("player-spine-model");
     expect(drive.sideBend).toBeGreaterThan(0.5);
-    expect(drive.rotations.hips.z).toBeGreaterThan(0);
+    expect(drive.rotations.hips.z).toBe(0);
     expect(drive.rotations.chest.z).toBeGreaterThan(0);
-    expect(Math.abs(drive.rotations.hips.z)).toBeGreaterThan(0.05);
     expect(Math.abs(drive.rotations.spine.z)).toBeGreaterThan(0.24);
     expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.38);
     expect(Math.abs(drive.rotations.upperChest.z)).toBeGreaterThan(0.3);

@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
 
 const defaultAnalysisPath = "tmp/movement-replay-lab/root-motion-proof-analysis.json";
 const defaultBaseUrl = "http://localhost:3000";
@@ -337,6 +338,7 @@ async function main() {
     capturedAt: new Date().toISOString(),
     coverageProductTruth: coverageProductTruthForAnalyses(analyses),
     jobs,
+    motionPipelineFingerprint: movementPipelineFingerprint(),
   };
   const manifestPath = path.join(args.outDir, "movement-replay-proof-set-manifest.json");
   await writeFile(manifestPath, `${JSON.stringify(captureManifest, null, 2)}\n`);

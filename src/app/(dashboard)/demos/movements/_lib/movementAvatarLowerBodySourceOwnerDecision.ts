@@ -81,7 +81,7 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
   shouldHoldPlayerSquatPose: boolean;
 }): MovementAvatarAppliedLowerBodyDecision {
   const isPlayer = avatarRole === "player";
-  const retargetOwnsLowerBody =
+  const hasCompleteLegRetarget =
     appliedLegSegments >= 4 &&
     retargetFrame.debug.sourceQuality >= 0.45;
   const shouldUseRecordedSquatPresentation =
@@ -105,7 +105,7 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
     : null;
   const shouldUsePlayerFootFallback =
     playerAppliedOwnerDecision?.shouldUsePlayerFootFallback ?? false;
-  const lowerBodyOwner = playerAppliedOwnerDecision?.lowerBodyOwner ?? (retargetOwnsLowerBody
+  const lowerBodyOwner = playerAppliedOwnerDecision?.lowerBodyOwner ?? (hasCompleteLegRetarget
     ? "recorded-retarget"
     : appliedLowerBodySegments > 0
       ? "retarget-partial-fallback"
@@ -116,9 +116,9 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
 
   return {
     feetOwner,
+    hasCompleteLegRetarget,
     lowerBodyOwner,
     playerAppliedOwnerDecision,
-    retargetOwnsLowerBody,
     shouldUsePlayerFootFallback,
     shouldUseRecordedSquatPresentation,
   };

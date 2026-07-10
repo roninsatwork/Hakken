@@ -1880,6 +1880,7 @@ describe("movement replay analyzer", () => {
         avatarPath: "movement-replay-session-1-avatar-frame-1.png",
         avatarUpperError: null,
         frameIndex: 1,
+        motionPipelineFingerprint: "sha256:test-motion-pipeline",
         recordingId: analysis.sessionId,
         sourcePath: "movement-replay-session-1-source-frame-1.png",
       }],
@@ -1909,6 +1910,7 @@ describe("movement replay analyzer", () => {
     expect(squatRow?.missingLayers).not.toContain("recorded replay visual capture");
     expect(manifest.summary.visualCaptureFrameCount).toBeGreaterThan(0);
     expect(manifest.summary.visualCaptureRowCount).toBeGreaterThan(0);
+    expect(manifest.motionPipelineFingerprints).toEqual(["sha256:test-motion-pipeline"]);
   });
 
   it("applies manual readable-pass review decisions only to visual manual-review rows", () => {

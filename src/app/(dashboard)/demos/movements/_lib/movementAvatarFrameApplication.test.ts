@@ -7,7 +7,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { applyMovementAvatarBodyFrameOrchestrationRuntime, resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarBodyFrame";
+import { resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarBodyFrame";
 import type { MovementAvatarRetargetDebugRegistryWindow } from "./movementAvatarDebugTelemetry";
 import { createMovementAvatarFootLockState } from "./movementAvatarFootLock";
 import {
@@ -16,7 +16,6 @@ import {
   applyMovementAvatarFrameCompletionOrchestrationRuntime,
   applyMovementAvatarPostFrameDebugRuntime,
   applyMovementAvatarPreBodyFrameOrchestrationRuntime,
-  applyMovementAvatarReadyFrameOrchestrationRuntime,
   resolveMovementAvatarFrameScenePreparationRuntime,
   resolveMovementAvatarFrameWorldRuntime,
 } from "./movementAvatarFrameApplication";

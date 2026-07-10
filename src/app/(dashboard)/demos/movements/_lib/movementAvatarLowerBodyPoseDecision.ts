@@ -2,7 +2,6 @@ import { resolveMovementAvatarPlantedSquatIkOptions } from "./movementAvatarAppl
 import type {
   MovementAvatarBoneRotationSpec,
   MovementAvatarPlantedSquatIkPoseDecision,
-  MovementAvatarRigRotationSpec,
 } from "./movementAvatarPipeline";
 
 function smoothstep(value: number, min: number, max: number) {

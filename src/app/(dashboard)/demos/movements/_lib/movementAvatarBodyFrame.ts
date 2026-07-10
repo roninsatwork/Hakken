@@ -8,7 +8,6 @@ import {
   applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones,
   applyMovementAvatarLowerBodyRetargetSegmentCounts,
   type MovementAvatarLowerBodyRetargetSegmentCounts,
-  type MovementAvatarLowerBodyRigRotationSources,
   resolveMovementAvatarLowerBodyApplicationPlan,
   resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInput,
 } from "./movementAvatarLowerBodyApplication";
@@ -667,7 +666,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   shouldApplyLowerBody,
   shouldHoldPlayerSquatPose,
   squatFlexionBendBoost,
-  storeLastGoodQuaternion,
   updateWorldMatrix,
 }: {
   applyPlantedSquatIk: (depth: number) => number;
@@ -695,7 +693,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   shouldApplyLowerBody: boolean;
   shouldHoldPlayerSquatPose: boolean;
   squatFlexionBendBoost?: number;
-  storeLastGoodQuaternion?: (boneName: string, quaternion: THREE.Quaternion) => void;
   updateWorldMatrix: () => void;
 }): MovementAvatarLowerBodyFrameRuntimeResult {
   let footOwner = currentFeetOwner;
@@ -802,7 +799,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,
         squatFlexionBendBoost,
         squatFlexionSlerp: boneEaseOptions.squatFlexionSlerp,
-        storeLastGood: storeLastGoodQuaternion,
       });
       plantedSquatIkDepth = retargetPostPlanApplication.plantedSquatIkDepth;
       footOwner = retargetPostPlanApplication.feetOwner;
@@ -879,7 +875,6 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
   MovementAvatarLowerBodyFrameRuntimeInput,
   | "applyPlantedSquatIk"
   | "applyRetargetMappings"
-  | "storeLastGoodQuaternion"
   | "updateWorldMatrix"
 > & {
   lastGoodQuaternionRef: MovementAvatarMutableRef<Record<string, THREE.Quaternion>>;
@@ -898,7 +893,6 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
     kneeRaiseLowerLegBoost: profile?.kneeRaiseLowerLegBoost,
     kneeRaiseUpperLegBoost: profile?.kneeRaiseUpperLegBoost,
-    storeLastGoodQuaternion: lowerBodyFrameCallbacks.storeLastGoodQuaternion,
     updateWorldMatrix: lowerBodyFrameCallbacks.updateWorldMatrix,
   });
   retargetAvatarRestRef.current = retargetFrameRuntimeAdapters.getRestMap();
@@ -1064,4 +1058,3 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     upperBodyFrameOrchestrationRuntime,
   };
 }
-

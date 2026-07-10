@@ -14,7 +14,6 @@ import {
   applyMovementAvatarSquatFlexionPoseApplicationToVrmBones,
 } from "./movementAvatarLowerBodyRotationVrmAdapters";
 import { applyMovementAvatarInstructorFootPlantRequestsToVrmBones } from "./movementAvatarLowerBodyFootPlantVrmAdapters";
-import type { MovementAvatarLowerBodyRigRotationSources } from "./movementAvatarLowerBodyRotationApplication";
 import type {
   MovementAvatarInstructorFootPlantContacts,
   MovementAvatarLowerBodyNonRetargetApplicationResult,
@@ -99,7 +98,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   singleLegRaiseSlerp,
   squatFlexionBendBoost,
   squatFlexionSlerp,
-  storeLastGood,
 }: {
   applyPlantedSquatIk: (depth: number) => number;
   contacts?: MovementAvatarInstructorFootPlantContacts;
@@ -112,7 +110,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   singleLegRaiseSlerp: number;
   squatFlexionBendBoost?: number;
   squatFlexionSlerp: number;
-  storeLastGood?: (bone: string, quaternion: THREE.Quaternion) => void;
 }): MovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBonesResult {
   let feetOwner = currentFeetOwner;
   const result = applyMovementAvatarLowerBodyRetargetPostPlanApplication({
