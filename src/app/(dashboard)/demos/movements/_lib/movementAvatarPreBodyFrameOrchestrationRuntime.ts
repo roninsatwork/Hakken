@@ -9,7 +9,7 @@ import {
 import {
   applyMovementAvatarLocomotionFrameOrchestrationRuntime,
   type MovementAvatarLocomotionFrameOrchestrationRuntime,
-} from "./movementAvatarLocomotionFrameOrchestrationRuntime";
+} from "./movementAvatarLocomotionFrame";
 import {
   applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime,
   type MovementAvatarLowerBodyFrameStateOrchestrationRuntime,
