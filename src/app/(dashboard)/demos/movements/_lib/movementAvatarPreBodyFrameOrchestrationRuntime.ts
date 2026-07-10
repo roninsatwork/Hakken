@@ -1,11 +1,11 @@
 import {
   applyMovementAvatarFramePreparationOrchestrationRuntime,
   type MovementAvatarFramePreparationOrchestrationRuntime,
-} from "./movementAvatarFramePreparationOrchestrationRuntime";
+} from "./movementAvatarFramePreparation";
 import {
   resolveMovementAvatarFrameDecisionSnapshotRuntime,
   type MovementAvatarFrameDecisionSnapshotRuntime,
-} from "./movementAvatarFrameDecisionSnapshotRuntime";
+} from "./movementAvatarFramePreparation";
 import {
   applyMovementAvatarLocomotionFrameOrchestrationRuntime,
   type MovementAvatarLocomotionFrameOrchestrationRuntime,
@@ -13,7 +13,7 @@ import {
 import {
   applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime,
   type MovementAvatarLowerBodyFrameStateOrchestrationRuntime,
-} from "./movementAvatarLowerBodyFrameStateOrchestrationRuntime";
+} from "./movementAvatarFramePreparation";
 
 type MovementAvatarFramePreparationInput =
   Parameters<typeof applyMovementAvatarFramePreparationOrchestrationRuntime>[0];

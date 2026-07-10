@@ -1,19 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMovementAvatarPreBodyFrameOrchestrationRuntime } from "./movementAvatarPreBodyFrameOrchestrationRuntime";
-import { applyMovementAvatarFramePreparationOrchestrationRuntime } from "./movementAvatarFramePreparationOrchestrationRuntime";
-import { applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime } from "./movementAvatarLowerBodyFrameStateOrchestrationRuntime";
-import { resolveMovementAvatarFrameDecisionSnapshotRuntime } from "./movementAvatarFrameDecisionSnapshotRuntime";
+import { applyMovementAvatarFramePreparationOrchestrationRuntime } from "./movementAvatarFramePreparation";
+import { applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime } from "./movementAvatarFramePreparation";
+import { resolveMovementAvatarFrameDecisionSnapshotRuntime } from "./movementAvatarFramePreparation";
 import { applyMovementAvatarLocomotionFrameOrchestrationRuntime } from "./movementAvatarLocomotionFrame";
 
-vi.mock("./movementAvatarFramePreparationOrchestrationRuntime", () => ({
+vi.mock("./movementAvatarFramePreparation", () => ({
   applyMovementAvatarFramePreparationOrchestrationRuntime: vi.fn(),
-}));
-
-vi.mock("./movementAvatarLowerBodyFrameStateOrchestrationRuntime", () => ({
   applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime: vi.fn(),
-}));
-
-vi.mock("./movementAvatarFrameDecisionSnapshotRuntime", () => ({
   resolveMovementAvatarFrameDecisionSnapshotRuntime: vi.fn(),
 }));
 
