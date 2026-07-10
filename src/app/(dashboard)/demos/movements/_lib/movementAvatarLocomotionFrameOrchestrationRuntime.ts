@@ -77,7 +77,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
   positionOffset: readonly [number, number, number];
   profile: MovementAvatarTrackingProfile;
   recordedRootMotionFrame: MovementRootMotionFrame | null;
-  rigMeasurements: { hipHeight: number } | null;
+  rigMeasurements: { hipHeight: number; legLength: number } | null;
   rootOrientation: MovementAvatarRootOrientationDecision;
   shouldApplyLowerBody: boolean;
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;

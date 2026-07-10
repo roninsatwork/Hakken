@@ -36,13 +36,14 @@ export function resolveMovementAvatarHipsFrameRuntime({
   playerSquatPresentationDepth: number;
   poseLandmarks: VrmSolverLandmark[];
   profile: MovementAvatarTrackingProfile;
-  rigMeasurements: { hipHeight: number } | null;
+  rigMeasurements: { hipHeight: number; legLength: number } | null;
   shouldApplyLowerBody: boolean;
 }): MovementAvatarHipsFrameRuntimeDecision {
   const hipsPositionOptions = resolveMovementAvatarHipsPositionOptions({
     avatarRole,
     lowerBodyDrive,
     profile,
+    rigMeasurements,
   });
   const floorRuntime = resolveMovementAvatarFloorRuntime({
     calibration,

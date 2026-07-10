@@ -1475,6 +1475,39 @@ describe("movementGamePathSimulation", () => {
     });
   });
 
+  it("derives presentation squat drop from rig leg length when measured", () => {
+    const drive = {
+      ...debugLowerBodyIntent,
+      groundedSquatDepth: 0,
+      liveSquatDepth: 0,
+      playerLegRaiseDepth: 0,
+      playerLegRaiseSide: null,
+      playerLowerBodyState: "neutral" as const,
+      playerSquatPresentationDepth: 0,
+      shouldApplyLowerBody: true,
+      shouldApplySolverTorso: true,
+      shouldDrivePlayerLegRaise: false,
+      shouldDrivePlayerSquat: false,
+      visualRootDrop: 0,
+    };
+
+    const derived = resolveMovementAvatarHipsPositionOptions({
+      avatarRole: "instructor",
+      lowerBodyDrive: drive,
+      rigMeasurements: { legLength: 0.708 },
+    });
+    expect(derived.squatHipDropScale).toBeCloseTo(0.708 * 0.54);
+    expect(derived.squatHipDropLimit).toBeCloseTo(0.708 * 0.59);
+
+    const fallback = resolveMovementAvatarHipsPositionOptions({
+      avatarRole: "instructor",
+      lowerBodyDrive: drive,
+      rigMeasurements: null,
+    });
+    expect(fallback.squatHipDropScale).toBeCloseTo(0.38);
+    expect(fallback.squatHipDropLimit).toBeCloseTo(0.42);
+  });
+
   it("resolves hips positioning options for player squat and recorded roles", () => {
     const playerOptions = resolveMovementAvatarHipsPositionOptions({
       avatarRole: "player",

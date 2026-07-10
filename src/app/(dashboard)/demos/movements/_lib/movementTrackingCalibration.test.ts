@@ -358,6 +358,7 @@ describe("movementTrackingCalibration", () => {
 
   it("derives floor correction scale and limit from rig hip height when measured", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    if (!calibration) throw new Error("expected calibration");
     const hipToFloor = calibration.floorY - calibration.hipCenter.y;
     const rigMeasurements = { hipHeight: 0.9 };
     const drift = 0.1;
