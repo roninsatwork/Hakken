@@ -47,15 +47,9 @@ export type MovementAvatarTrackingProfile = {
   neckYawShare: number;
   neckRollShare: number;
   neckSlerp: number;
-  upperArmSlerp: number;
-  lowerArmSlerp: number;
   legSlerp: number;
   footSlerp: number;
-  armStoreVisibility: number;
-  legStoreVisibility: number;
   armVisibility: number;
-  legVisibility: number;
-  footVisibility: number;
   floorCorrectionScale: number;
   floorCorrectionLimit: number;
   squatHipDropScale?: number;
@@ -265,16 +259,10 @@ export const DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE: MovementAvatarTrackingPro
   neckYawShare: 0.18,
   neckRollShare: 0.18,
   neckSlerp: 0.26,
-  upperArmSlerp: 0.5,
-  lowerArmSlerp: 0.56,
   legSlerp: 0.42,
   footSlerp: 0.34,
-  // MediaPipe visibility gates for storing/applying limb tracking.
-  armStoreVisibility: 0.24,
-  legStoreVisibility: 0.34,
+  // MediaPipe visibility gate for player arm readiness.
   armVisibility: 0.05,
-  legVisibility: 0.12,
-  footVisibility: 0.18,
   // Fallbacks for rigs without measurements; measured rigs derive these from
   // hip height (getCalibratedFloorCorrection) and leg length
   // (resolveMovementAvatarHipsPositionOptions).

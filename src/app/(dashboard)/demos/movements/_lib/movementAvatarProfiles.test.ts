@@ -13,7 +13,6 @@ describe("movementAvatarProfiles", () => {
       minHeadPitch: -0.45,
       maxHeadPitch: 0.85,
       headSlerp: expect.any(Number),
-      lowerArmSlerp: 0.56,
       legSlerp: 0.42,
       floorCorrectionScale: 1.6,
     });
@@ -24,8 +23,8 @@ describe("movementAvatarProfiles", () => {
 
     expect(profile.maxHeadYaw).toBeGreaterThan(0);
     // Unprofiled avatars get the same unified smoothing as tuned ones.
-    expect(profile.upperArmSlerp).toBe(0.5);
-    expect(profile.footVisibility).toBe(0.18);
+    expect(profile.legSlerp).toBe(0.42);
+    expect(profile.headSlerp).toBe(0.6);
   });
 
   it("keeps avatar-specific overrides while preserving shared whole-body defaults", () => {
@@ -34,7 +33,6 @@ describe("movementAvatarProfiles", () => {
     expect(profile).toMatchObject({
       headPitchOffset: 0.02,
       footSlerp: 0.34,
-      lowerArmSlerp: 0.56,
       neckPitchShare: 0.28,
     });
   });

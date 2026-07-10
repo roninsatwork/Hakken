@@ -1354,7 +1354,6 @@ describe("movementGamePathSimulation", () => {
   it("uses avatar profile slerp for live player retarget segments", () => {
     const profile = {
       ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
-      upperArmSlerp: 0.51,
       legSlerp: 0.43,
     };
     const rightArmDecision = resolveMovementAvatarRetargetSegmentApplication({
