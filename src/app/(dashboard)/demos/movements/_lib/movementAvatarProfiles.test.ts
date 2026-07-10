@@ -23,7 +23,8 @@ describe("movementAvatarProfiles", () => {
     const profile = getMovementAvatarTrackingProfile("/models/custom.vrm");
 
     expect(profile.maxHeadYaw).toBeGreaterThan(0);
-    expect(profile.upperArmSlerp).toBe(0.78);
+    // Unprofiled avatars get the same unified smoothing as tuned ones.
+    expect(profile.upperArmSlerp).toBe(0.5);
     expect(profile.footVisibility).toBe(0.18);
   });
 
@@ -32,8 +33,8 @@ describe("movementAvatarProfiles", () => {
 
     expect(profile).toMatchObject({
       headPitchOffset: 0.02,
-      footSlerp: 0.32,
-      lowerArmSlerp: 0.54,
+      footSlerp: 0.34,
+      lowerArmSlerp: 0.56,
       neckPitchShare: 0.28,
     });
   });

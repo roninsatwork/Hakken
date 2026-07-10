@@ -246,31 +246,43 @@ const EMPTY_SQUAT_SIGNALS: MovementLowerBodyIntent["squatSignals"] = {
 };
 
 export const DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE: MovementAvatarTrackingProfile = {
+  // Mesh-aesthetic head-attitude trims. Not derivable from the rig: all four
+  // VIPE skeletons measure identically, yet each mesh carries its face at a
+  // slightly different pitch. Per-avatar overrides live in
+  // movementAvatarProfiles.ts; anything unprofiled reads as untrimmed.
   headPitchOffset: 0,
   headYawOffset: 0,
   headRollOffset: 0,
+  // Human-plausible head range of motion in radians.
   minHeadPitch: -0.45,
   maxHeadPitch: 0.85,
   maxHeadYaw: 1.3,
   maxHeadRoll: 0.75,
-  headSlerp: 0.82,
+  // Smoothing, not geometry: one tuned value per bone group, shared by every
+  // avatar (unified 2026-07-09 from the converged per-avatar hand tunings).
+  headSlerp: 0.6,
   neckPitchShare: 0.28,
   neckYawShare: 0.18,
   neckRollShare: 0.18,
-  neckSlerp: 0.35,
-  upperArmSlerp: 0.78,
-  lowerArmSlerp: 0.9,
-  legSlerp: 0.62,
-  footSlerp: 0.55,
-  armStoreVisibility: 0.25,
-  legStoreVisibility: 0.35,
+  neckSlerp: 0.26,
+  upperArmSlerp: 0.5,
+  lowerArmSlerp: 0.56,
+  legSlerp: 0.42,
+  footSlerp: 0.34,
+  // MediaPipe visibility gates for storing/applying limb tracking.
+  armStoreVisibility: 0.24,
+  legStoreVisibility: 0.34,
   armVisibility: 0.05,
   legVisibility: 0.12,
   footVisibility: 0.18,
+  // Fallbacks for rigs without measurements; measured rigs derive these from
+  // hip height (getCalibratedFloorCorrection) and leg length
+  // (resolveMovementAvatarHipsPositionOptions).
   floorCorrectionScale: 1.6,
   floorCorrectionLimit: 0.35,
   squatHipDropScale: 0.38,
   squatHipDropLimit: 0.42,
+  // Recorded-presentation pose emphasis.
   squatLegBendBoost: 0.32,
   kneeRaiseUpperLegBoost: 0.18,
   kneeRaiseLowerLegBoost: 0.08,
