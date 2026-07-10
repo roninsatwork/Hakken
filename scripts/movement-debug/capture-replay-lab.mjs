@@ -20,6 +20,7 @@ Options:
   --out <dir>            Output directory. Defaults to ${defaultOutDir}
   --storage-state <file> Playwright storage state to reuse for auth
   --session <id-title-tail> Click the matching session before capture
+  --avatar-url <path>    VRM the replay avatar should load (default: lab default)
   --debug-session-json <file>
                          Serve one exported Replay Lab session fixture in local/dev capture mode
   --frames <list|auto>   Comma-separated frame indexes, or auto. Defaults to auto
@@ -41,6 +42,7 @@ function parseArgs(argv) {
     outDir: defaultOutDir,
     role: "super-admin",
     session: "",
+    avatarUrl: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     storageState: "",
   };
@@ -61,6 +63,8 @@ function parseArgs(argv) {
       args.storageState = argv[++index] || "";
     } else if (arg === "--session") {
       args.session = argv[++index] || "";
+    } else if (arg === "--avatar-url") {
+      args.avatarUrl = argv[++index] || "";
     } else if (arg === "--debug-session-json") {
       args.debugSessionJson = argv[++index] || "";
     } else if (arg === "--frames") {
@@ -94,6 +98,9 @@ function replayUrl(baseUrl, args) {
   const url = new URL("/demos/movements/replay-lab", baseUrl.replace(/\/$/, ""));
   if (args.debugSessionJson) {
     url.searchParams.set("debugReplaySessionUrl", "/__movement-replay-session.json");
+  }
+  if (args.avatarUrl) {
+    url.searchParams.set("avatarUrl", args.avatarUrl);
   }
   return url.toString();
 }

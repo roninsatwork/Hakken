@@ -665,6 +665,13 @@ export default function MovementReplayLabPage() {
     loadedRecordingsRef.current = loadedRecordings;
   }, [loadedRecordings]);
 
+  // The lab's avatar is parameterisable so the rig-derived-calibration
+  // acceptance test can score an unprofiled VRM against the golden set.
+  const [replayAvatarVrmUrl] = useState(() => {
+    if (typeof window === "undefined") return "/models/VIPE_Hero__1793.vrm";
+    return new URLSearchParams(window.location.search).get("avatarUrl") ?? "/models/VIPE_Hero__1793.vrm";
+  });
+
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
 
@@ -2623,7 +2630,7 @@ export default function MovementReplayLabPage() {
                           showNameLabel={false}
                           trackingCalibration={replayPlayerCalibration}
                           trackingDebugRef={replayAvatarDebugRef}
-                          vrmUrl="/models/VIPE_Hero__1793.vrm"
+                          vrmUrl={replayAvatarVrmUrl}
                         />
                       </MovementMatchScene>
                     ) : (

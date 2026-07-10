@@ -31,6 +31,7 @@ Options:
   --local-test-auth      Sign in through /local-test-auth before capture.
   --role <role>          Local-test-auth role. Defaults to super-admin.
   --secret <secret>      Local-test-auth secret. Defaults to LOCAL_TEST_AUTH_SECRET.
+  --avatar-url <path>    VRM the replay avatar should load (default: lab default)
   --headed               Show the browser while capturing.
   --help                 Show this help.
 `);
@@ -51,6 +52,7 @@ function parseArgs(argv) {
     role: "super-admin",
     rootOnly: false,
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
+    avatarUrl: "",
     storageState: "",
   };
 
@@ -62,6 +64,8 @@ function parseArgs(argv) {
       args.dryRun = true;
     } else if (arg === "--headed") {
       args.headed = true;
+    } else if (arg === "--avatar-url") {
+      args.avatarUrl = argv[++index] || "";
     } else if (arg === "--local-test-auth") {
       args.localTestAuth = true;
     } else if (arg === "--root-only") {
@@ -233,6 +237,7 @@ function runCapture({
   if (args.localTestAuth) captureArgs.push("--local-test-auth");
   if (args.role) captureArgs.push("--role", args.role);
   if (args.secret) captureArgs.push("--secret", args.secret);
+  if (args.avatarUrl) captureArgs.push("--avatar-url", args.avatarUrl);
   if (args.headed) captureArgs.push("--headed");
 
   execFileSync(process.execPath, captureArgs, {
