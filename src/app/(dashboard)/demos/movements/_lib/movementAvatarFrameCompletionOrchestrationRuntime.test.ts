@@ -6,7 +6,7 @@ import { createMovementAvatarFootLockState } from "./movementAvatarFootLock";
 import { getMovementAvatarTrackingProfile } from "./movementAvatarProfiles";
 import {
   resolveMovementAvatarFrameTargetRuntime,
-} from "./movementAvatarFrameTargetRuntime";
+} from "./movementAvatarBodyFrame";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import {
   resolveMovementAvatarPipelineDecision,

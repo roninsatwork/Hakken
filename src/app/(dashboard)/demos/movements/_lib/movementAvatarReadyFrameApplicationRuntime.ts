@@ -1,5 +1,5 @@
 import type { VRM } from "@pixiv/three-vrm";
-import { applyMovementAvatarBodyFrameOrchestrationRuntime } from "./movementAvatarBodyFrameOrchestrationRuntime";
+import { applyMovementAvatarBodyFrameOrchestrationRuntime } from "./movementAvatarBodyFrame";
 import { applyMovementAvatarFrameCompletionOrchestrationRuntime } from "./movementAvatarFrameCompletionOrchestrationRuntime";
 import { resolveMovementAvatarFrameScenePreparationRuntime } from "./movementAvatarFrameScenePreparationRuntime";
 import { resolveMovementAvatarFrameWorldRuntime } from "./movementAvatarFrameWorldRuntime";

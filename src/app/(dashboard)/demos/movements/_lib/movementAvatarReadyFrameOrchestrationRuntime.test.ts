@@ -3,7 +3,7 @@ import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "./movementAva
 import { resolveMovementAvatarFrameWorldRuntime } from "./movementAvatarFrameWorldRuntime";
 import { resolveMovementAvatarFrameScenePreparationRuntime } from "./movementAvatarFrameScenePreparationRuntime";
 import { applyMovementAvatarPreBodyFrameOrchestrationRuntime } from "./movementAvatarPreBodyFrameOrchestrationRuntime";
-import { applyMovementAvatarBodyFrameOrchestrationRuntime } from "./movementAvatarBodyFrameOrchestrationRuntime";
+import { applyMovementAvatarBodyFrameOrchestrationRuntime } from "./movementAvatarBodyFrame";
 import { applyMovementAvatarFrameCompletionOrchestrationRuntime } from "./movementAvatarFrameCompletionOrchestrationRuntime";
 
 vi.mock("./movementAvatarFrameWorldRuntime", () => ({
@@ -18,7 +18,7 @@ vi.mock("./movementAvatarPreBodyFrameOrchestrationRuntime", () => ({
   applyMovementAvatarPreBodyFrameOrchestrationRuntime: vi.fn(),
 }));
 
-vi.mock("./movementAvatarBodyFrameOrchestrationRuntime", () => ({
+vi.mock("./movementAvatarBodyFrame", () => ({
   applyMovementAvatarBodyFrameOrchestrationRuntime: vi.fn(),
 }));
 

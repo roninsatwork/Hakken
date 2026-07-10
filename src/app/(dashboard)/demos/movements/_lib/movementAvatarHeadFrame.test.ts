@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarFrameTargetRuntime";
+import { resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarBodyFrame";
 import type { MovementAvatarHeadFrameDebugInput } from "./movementAvatarHeadFrame";
 import {
   applyMovementAvatarHeadRuntimeToVrmBones,

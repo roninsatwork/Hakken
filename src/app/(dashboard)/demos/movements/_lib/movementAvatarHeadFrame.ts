@@ -3,7 +3,7 @@ import {
   buildMovementAvatarFrameTrackingDebugState,
   type MovementAvatarFrameTrackingDebugInput,
 } from "./movementAvatarDebugTelemetry";
-import type { MovementAvatarFrameTargetRuntimeDecision } from "./movementAvatarFrameTargetRuntime";
+import type { MovementAvatarFrameTargetRuntimeDecision } from "./movementAvatarBodyFrame";
 import {
   applyMovementAvatarHeadApplicationToVrmBones,
   type MovementAvatarHeadApplicationResult,
