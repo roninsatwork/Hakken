@@ -1,5 +1,5 @@
 import { applyMovementAvatarFinalFrameOrchestrationRuntime } from "./movementAvatarFinalFrameOrchestrationRuntime";
-import { applyMovementAvatarFootingFrameOrchestrationRuntime } from "./movementAvatarFootingFrameOrchestrationRuntime";
+import { applyMovementAvatarFootingFrameOrchestrationRuntime } from "./movementAvatarFootingFrame";
 import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrame";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrame";
 import {

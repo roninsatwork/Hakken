@@ -11,7 +11,7 @@ import {
 } from "./movementAvatarPipeline";
 import { buildMovementAvatarSpineRuntimeDebugTelemetry } from "./movementAvatarSpineApplication";
 import { buildMovementAvatarHeadRuntimeDebugTelemetry } from "./movementAvatarHeadFrame";
-import { buildMovementAvatarFootLockRuntimeDebugTelemetry } from "./movementAvatarFootLockRuntime";
+import { buildMovementAvatarFootLockRuntimeDebugTelemetry } from "./movementAvatarFootingFrame";
 import { buildMovementAvatarLegRaiseRuntimeDebugInput } from "./movementAvatarRuntimeState";
 import type {
   MovementRetargetFrame,

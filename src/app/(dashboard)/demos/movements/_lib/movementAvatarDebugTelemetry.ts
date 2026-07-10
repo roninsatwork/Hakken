@@ -5,7 +5,7 @@ import {
 import type { MovementAvatarRootTransformApplication } from "./movementAvatarRootApplication";
 import type { MovementAvatarRootTargetDecision } from "./movementAvatarRootTarget";
 import { buildMovementAvatarVisualTelemetry } from "./movementAvatarVisualTelemetry";
-import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootWorldRuntime";
+import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootingFrame";
 import type {
   MovementRetargetFrame,
 } from "./movementRetargeting";

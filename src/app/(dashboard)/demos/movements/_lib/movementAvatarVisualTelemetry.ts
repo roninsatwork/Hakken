@@ -6,7 +6,7 @@ import {
 import {
   resolveMovementAvatarRetargetSegmentWorldDirection,
 } from "./movementAvatarSegmentApplication";
-import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootWorldRuntime";
+import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootingFrame";
 import {
   getMovementRetargetSegmentZScale,
   type MovementRetargetFrame,
