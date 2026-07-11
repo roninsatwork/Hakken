@@ -67,6 +67,10 @@ export function capRecordedPresentationSideBend(
   return clamp(sideBend, -cap, cap);
 }
 
+export function capLivePresentationSideBend(sideBend: number) {
+  return clamp(sideBend, -0.65, 0.65);
+}
+
 export function visibility(landmark?: MovementLandmark | null) {
   return landmark?.visibility ?? 0.8;
 }

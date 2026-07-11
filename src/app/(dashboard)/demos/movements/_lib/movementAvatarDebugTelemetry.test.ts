@@ -6,14 +6,20 @@ import {
   applyMovementAvatarOptionalPostFrameDebugTelemetry,
   applyMovementAvatarPostFrameDebugTelemetry,
   buildMovementAvatarFrameTrackingDebugState,
+  buildMovementAvatarSpineVisualTelemetry,
   buildMovementAvatarRootDebug,
   buildMovementAvatarRuntimeRetargetDebug,
   buildMovementAvatarTrackingFallbackContext,
   buildMovementAvatarTrackingDebugState,
   buildMovementAvatarVisualTelemetry,
+  mapMovementAvatarVisualSourceDirection,
   writeMovementAvatarRetargetDebugRegistry,
   type MovementAvatarRetargetDebugRegistryWindow,
 } from "./movementAvatarDebugTelemetry";
+import {
+  buildMovementAvatarExpressionVisualTelemetry,
+  buildMovementAvatarHandsVisualTelemetry,
+} from "./movementAvatarHandsFaceVisualTelemetry";
 import type { MovementAvatarRootTargetDecision } from "./movementAvatarRootTarget";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
@@ -266,9 +272,12 @@ describe("movement avatar debug telemetry", () => {
       },
       avatarHead: {
         appliedLocalPitch: 0.12345,
+        appliedLocalRoll: 0.13579,
         bonePitch: 0.23456,
+        boneRoll: -0.2468,
         boneYaw: -0.34567,
         trackingPitch: 0.45678,
+        trackingRoll: -0.46802,
         trackingYaw: -0.56789,
       },
       avatarLegRaise: {
@@ -338,9 +347,12 @@ describe("movement avatar debug telemetry", () => {
     expect(state).toMatchObject({
       avatarHead: {
         appliedLocalPitch: 0.1235,
+        appliedLocalRoll: 0.1358,
         bonePitch: 0.2346,
+        boneRoll: -0.2468,
         boneYaw: -0.3457,
         trackingPitch: 0.4568,
+        trackingRoll: -0.468,
         trackingYaw: -0.5679,
       },
       avatarLegRaise: {
@@ -393,6 +405,7 @@ describe("movement avatar debug telemetry", () => {
           headBonePitch: 0.23456,
           headDecision: {
             headPitch: 0.45678,
+            headRoll: -0.2468,
             headYaw: -0.34567,
           },
           rawHeadDecision: {
@@ -643,6 +656,84 @@ describe("movement avatar debug telemetry", () => {
     });
   });
 
+  it("maps player spine and limb comparisons into opposite anatomical space", () => {
+    const spine = mapMovementAvatarVisualSourceDirection({
+      anatomicalMapping: "opposite",
+      direction: new THREE.Vector3(0.6, 0.8, 0),
+      segment: "spine",
+    });
+    const arm = mapMovementAvatarVisualSourceDirection({
+      anatomicalMapping: "opposite",
+      direction: new THREE.Vector3(0.6, 0.8, 0),
+      segment: "rightUpperArm",
+    });
+
+    expect(spine.toArray()).toEqual([-0.6, 0.8, 0]);
+    expect(arm.toArray()).toEqual([-0.6, 0.8, 0]);
+  });
+
+  it("reads rendered spine bone rotations after application", () => {
+    const scene = new THREE.Scene();
+    const spine = new THREE.Object3D();
+    const chest = new THREE.Object3D();
+    spine.rotation.set(0.1, -0.2, 0.3);
+    chest.rotation.set(-0.4, 0.5, -0.6);
+    scene.add(spine, chest);
+    const bones: Record<string, THREE.Object3D> = { chest, spine };
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: (name: string) => bones[name] ?? null,
+      },
+      scene,
+    } as unknown as VRM;
+
+    expect(buildMovementAvatarSpineVisualTelemetry(vrm)).toEqual({
+      chest: { x: -0.4, y: 0.5, z: -0.6 },
+      spine: { x: 0.1, y: -0.2, z: 0.3 },
+    });
+  });
+
+  it("reads rendered finger rotations and expression weights after application", () => {
+    const scene = new THREE.Scene();
+    const leftIndex = new THREE.Object3D();
+    const leftMiddle = new THREE.Object3D();
+    const leftThumb = new THREE.Object3D();
+    leftIndex.rotation.set(0.2, -0.3, 0.4);
+    leftMiddle.rotation.set(-0.1, 0.2, -0.3);
+    leftThumb.rotation.set(0.5, 0, -0.25);
+    const bones: Record<string, THREE.Object3D> = {
+      leftIndexProximal: leftIndex,
+      leftMiddleProximal: leftMiddle,
+      leftThumbProximal: leftThumb,
+    };
+    const values: Record<string, number> = {
+      aa: 0.3,
+      blinkLeft: 0.85,
+      blinkRight: 0.05,
+      happy: 0.4,
+    };
+    const vrm = {
+      expressionManager: {
+        getValue: (name: string) => values[name] ?? null,
+      },
+      humanoid: {
+        getNormalizedBoneNode: (name: string) => bones[name] ?? null,
+      },
+      scene,
+    } as unknown as VRM;
+
+    expect(buildMovementAvatarHandsVisualTelemetry(vrm)).toMatchObject({
+      left: {
+        curlMagnitude: 2.25,
+        indexProximal: { x: 0.2, y: -0.3, z: 0.4 },
+        middleProximal: { x: -0.1, y: 0.2, z: -0.3 },
+        thumbProximal: { x: 0.5, y: 0, z: -0.25 },
+      },
+      right: { curlMagnitude: 0 },
+    });
+    expect(buildMovementAvatarExpressionVisualTelemetry(vrm)).toEqual(values);
+  });
+
   it("skips missing or zero-length avatar segments", () => {
     const scene = new THREE.Scene();
     const rightUpperArm = new THREE.Object3D();
@@ -851,6 +942,14 @@ describe("movement avatar debug telemetry", () => {
       avatarName: "Player",
       footLockCorrection: 0.1234,
       frameUpdatedAt: 456,
+    });
+    expect(registryWindow.__sonaeMovementAvatarDebug?.player).toMatchObject({
+      avatarName: "Player",
+      avatarVisual: expect.objectContaining({
+        comparedUpperBodySegments: 1,
+      }),
+      frameUpdatedAt: 456,
+      headApplied: state.headApplied,
     });
   });
 

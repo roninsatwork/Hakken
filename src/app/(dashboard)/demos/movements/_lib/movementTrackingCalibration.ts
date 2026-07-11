@@ -120,11 +120,31 @@ export type MovementTrackingDebugState = {
   };
   avatarHead?: {
     appliedLocalPitch: number;
+    appliedLocalRoll: number;
     boneYaw: number;
     bonePitch: number;
+    boneRoll: number;
     trackingPitch: number;
+    trackingRoll: number;
     trackingYaw: number;
   };
+  avatarHands?: Partial<Record<"left" | "right", {
+    curlMagnitude: number;
+    indexProximal?: { x: number; y: number; z: number };
+    middleProximal?: { x: number; y: number; z: number };
+    thumbProximal?: { x: number; y: number; z: number };
+  }>>;
+  avatarExpressions?: {
+    aa: number | null;
+    blinkLeft: number | null;
+    blinkRight: number | null;
+    happy: number | null;
+  };
+  avatarSpine?: Partial<Record<"hips" | "spine" | "chest" | "upperChest", {
+    x: number;
+    y: number;
+    z: number;
+  }>>;
   avatarLegRaise?: {
     appliedDepth: number;
     expiresInMs: number;
@@ -359,7 +379,9 @@ function estimateHeadAnglesFromFace(faceLandmarks?: TrackingLandmark[] | null): 
   if (eyeDistance < 0.001) return null;
 
   const eyeCenter = midpoint(leftEye, rightEye);
-  const roll = -Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+  // Coordinate reflection can reverse the horizontal eye ordering. Roll is an
+  // anatomical tilt, so its denominator must be independent of screen order.
+  const roll = -Math.atan2(rightEye.y - leftEye.y, Math.abs(rightEye.x - leftEye.x));
   const yaw = clamp(((nose.x - eyeCenter.x) / eyeDistance) * 1.4, -1.2, 1.2);
   const pitch = clamp(((nose.y - eyeCenter.y) / eyeDistance - 0.18) * 1.2, -1.2, 1.2);
 

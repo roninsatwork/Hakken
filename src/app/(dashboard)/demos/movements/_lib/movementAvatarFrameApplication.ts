@@ -1,8 +1,12 @@
 import type { VRM } from "@pixiv/three-vrm";
 import type * as THREE from "three";
+import type { MovementAvatarArmApplicationMode } from "./movementAvatarArmApplication";
 import { applyMovementAvatarBodyFrameOrchestrationRuntime } from "./movementAvatarBodyFrame";
 import { applyMovementAvatarOptionalPostFrameDebugTelemetry, type MovementAvatarRetargetDebugRegistryWindow } from "./movementAvatarDebugTelemetry";
-import { applyMovementAvatarFootingFrameOrchestrationRuntime } from "./movementAvatarFootingFrame";
+import {
+  applyMovementAvatarFootingFrameOrchestrationRuntime,
+  finalizeMovementAvatarFootingFrameWorldSnapshot,
+} from "./movementAvatarFootingFrame";
 import {
   applyMovementAvatarFramePreparationOrchestrationRuntime,
   applyMovementAvatarLowerBodyFrameStateOrchestrationRuntime,
@@ -17,6 +21,7 @@ import { applyMovementAvatarLocomotionFrameOrchestrationRuntime, type MovementAv
 import { partialSupportContactLocks, supportContactAnchor } from "./movementAvatarSupportContactAnchors";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrame";
 import type { MovementMotionFrame } from "./movementMotionFrame";
+import type { MovementAvatarSupportPresentationDecision } from "./movementAvatarPipeline";
 import type { MovementRetargetFrame, MovementRetargetSourceModel } from "./movementRetargeting";
 import type { MovementRootMotionFrame } from "./movementRootMotion";
 import type {
@@ -294,13 +299,28 @@ function resolveMovementAvatarFrameCompletionNow(getNow: (() => number) | undefi
   return getNow ? getNow() : performance.now();
 }
 
+export function filterMovementAvatarSupportArmSpecsForRetargetOwners({
+  armApplicationModes,
+  armSpecs,
+}: {
+  armApplicationModes: { left: MovementAvatarArmApplicationMode; right: MovementAvatarArmApplicationMode };
+  armSpecs: MovementAvatarSupportPresentationDecision["armSpecs"];
+}) {
+  return armSpecs.filter((spec) => {
+    const side = spec.bone.startsWith("left") ? "left" : "right";
+    return armApplicationModes[side] !== "retargeted";
+  });
+}
+
 export function resolveMovementAvatarStandingFeetFloorContactLocks({
   contactLocks,
   lowerBodyDrive,
+  retargetContacts,
   shouldApply,
 }: {
   contactLocks: MovementAvatarSupportFrameOrchestrationInput["contactLocks"];
   lowerBodyDrive: Pick<MovementAvatarLowerBodyDrive, "playerLegRaiseSide" | "shouldDrivePlayerLegRaise">;
+  retargetContacts?: MovementRetargetFrame["contacts"];
   shouldApply: boolean;
 }) {
   if (!shouldApply || contactLocks.owner !== "support-contact-locks-standing-foot-lock") {
@@ -309,7 +329,11 @@ export function resolveMovementAvatarStandingFeetFloorContactLocks({
 
   const raisedSide = lowerBodyDrive.shouldDrivePlayerLegRaise
     ? lowerBodyDrive.playerLegRaiseSide
-    : null;
+    : retargetContacts?.leftFoot && !retargetContacts.rightFoot
+      ? "right"
+      : retargetContacts?.rightFoot && !retargetContacts.leftFoot
+        ? "left"
+        : null;
   const anchors = raisedSide === "left"
     ? [supportContactAnchor("rightFoot", "right planted foot to floor", "floor", 0, 1)]
     : raisedSide === "right"
@@ -333,39 +357,37 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
 ): MovementAvatarFrameCompletionOrchestrationRuntimeResult {
   const floorY = -2.75 + input.calibratedFloorCorrection;
   const hasActiveSpineDrive = input.avatarDecision.spineDrive.shouldApplySpine;
+  const unownedArmSpecs = filterMovementAvatarSupportArmSpecsForRetargetOwners({
+    armApplicationModes: input.armApplicationModes,
+    armSpecs: input.supportPresentation.armSpecs,
+  });
   const supportPresentation =
     hasActiveSpineDrive || (input.lowerBodyTrackingReady && input.shouldApplyLowerBody)
     ? {
       ...input.supportPresentation,
-      armSpecs: hasActiveSpineDrive ? [] : input.supportPresentation.armSpecs,
+      armSpecs: hasActiveSpineDrive ? [] : unownedArmSpecs,
       specs: hasActiveSpineDrive || (input.lowerBodyTrackingReady && input.shouldApplyLowerBody)
         ? []
         : input.supportPresentation.specs,
       spineSpecs: hasActiveSpineDrive ? [] : input.supportPresentation.spineSpecs,
     }
-    : input.supportPresentation;
+    : {
+      ...input.supportPresentation,
+      armSpecs: unownedArmSpecs,
+    };
   const contactLocks = hasActiveSpineDrive
     ? resolveMovementAvatarStandingFeetFloorContactLocks({
         contactLocks: input.contactLocks,
         lowerBodyDrive: input.lowerBodyDrive,
+        retargetContacts: input.retargetFrame.contacts,
         shouldApply: true,
       })
     : resolveMovementAvatarStandingFeetFloorContactLocks({
         contactLocks: input.contactLocks,
         lowerBodyDrive: input.lowerBodyDrive,
+        retargetContacts: input.retargetFrame.contacts,
         shouldApply: input.shouldApplyLowerBody,
       });
-  const supportFrameOrchestrationRuntime = applyMovementAvatarSupportFrameOrchestrationRuntime({
-    avatarRoot: input.avatarRoot,
-    contactLocks,
-    currentLowerBodyOwner: input.currentLowerBodyOwner,
-    floorY,
-    lookupBone: input.lookupBone,
-    scene: input.scene,
-    supportPresentation,
-  });
-  const { lowerBodyOwner, supportContactTelemetry } = supportFrameOrchestrationRuntime;
-
   const footingFrameOrchestrationRuntime = applyMovementAvatarFootingFrameOrchestrationRuntime({
     avatarRole: input.avatarRole,
     avatarRoot: input.avatarRoot,
@@ -383,14 +405,32 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     shouldApplyLowerBody: input.shouldApplyLowerBody,
     shouldLockActiveTorso: input.avatarDecision.spineDrive.shouldApplySpine,
     shouldHoldPlayerSquatPose: input.shouldHoldPlayerSquatPose,
+    // The legacy lock yields because support contact corrects after hips.
+    shouldYieldToSupportContact: Boolean(input.avatarRoot && input.scene && contactLocks.shouldApply),
     stepResponse: input.stepResponse,
+  });
+  const supportFrameOrchestrationRuntime = applyMovementAvatarSupportFrameOrchestrationRuntime({
+    avatarRoot: input.avatarRoot,
+    contactLocks,
+    currentLowerBodyOwner: input.currentLowerBodyOwner,
+    floorY,
+    lookupBone: input.lookupBone,
+    scene: input.scene,
+    supportPresentation,
+  });
+  const { lowerBodyOwner, supportContactTelemetry } = supportFrameOrchestrationRuntime;
+  const finalFootingFrameOrchestrationRuntime = finalizeMovementAvatarFootingFrameWorldSnapshot({
+    avatarRoot: input.avatarRoot,
+    footingFrameOrchestrationRuntime,
+    lookupBone: input.lookupBone,
+    scene: input.scene,
   });
   const {
     footLockCorrection,
     footLockDrift,
     footLockState,
     footingRuntime,
-  } = footingFrameOrchestrationRuntime;
+  } = finalFootingFrameOrchestrationRuntime;
 
   const headFrameOrchestrationRuntime = applyMovementAvatarHeadFrameOrchestrationRuntime({
     activeCalibration: input.activeCalibration,
@@ -452,7 +492,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
 
   return {
     finalFrameOrchestrationRuntime,
-    footingFrameOrchestrationRuntime,
+    footingFrameOrchestrationRuntime: finalFootingFrameOrchestrationRuntime,
     headFrameOrchestrationRuntime,
     lowerBodyOwner,
     supportFrameOrchestrationRuntime,

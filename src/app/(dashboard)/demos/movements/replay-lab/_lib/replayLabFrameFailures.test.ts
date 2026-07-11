@@ -104,4 +104,38 @@ describe("replay lab current-frame failures", () => {
 
     expect(failures.map((failure) => failure.code)).not.toContain("avatar_planted_foot_diverged");
   });
+
+  it("accepts continuous recorded foot retarget when rendered leg segments are proven", () => {
+    const failures = getReplayLabLiveCurrentFrameFailures(failureInput({
+      currentAvatarDebug: {
+        avatarVisual: {
+          averageLowerBodyDirectionError: 0.01,
+          averageUpperBodyDirectionError: 0,
+          comparedLowerBodySegments: 6,
+          comparedUpperBodySegments: 5,
+          footing: {
+            leftFootClearance: 0.01,
+            rightFootClearance: 0.02,
+          },
+          segments: {
+            leftFoot: { sourceError: 0.01 },
+            rightFoot: { sourceError: 0.01 },
+          },
+        },
+        bodyConfidence: {},
+        fallbacks: {},
+        headApplied: { pitch: 0, roll: 0, yaw: 0 },
+        headRaw: { confidence: 1, pitch: 0, roll: 0, source: "pose", yaw: 0 },
+        updatedAt: 0,
+      } as unknown as FailureInput["currentAvatarDebug"],
+      currentFrameActiveLegMotion: true,
+      currentFrameSourceReady: true,
+      currentGamePathFrame: {
+        supportIntentKey: "feet-floor",
+      } as NonNullable<FailureInput["currentGamePathFrame"]>,
+      replayFeetOwner: "recorded-retarget",
+    }));
+
+    expect(failures.map((failure) => failure.code)).not.toContain("avatar_planted_foot_diverged");
+  });
 });

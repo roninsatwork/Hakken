@@ -129,7 +129,7 @@ describe("avatar follow gate", () => {
     ]));
   });
 
-  it("allows clean capture-backed avatar proof to override source-coverage visual match warnings", () => {
+  it("does not let sparse clean captures override a low whole-recording visual match", () => {
     const result = evaluateAvatarFollowGate({
       analyses: [
         analysis({
@@ -141,13 +141,13 @@ describe("avatar follow gate", () => {
       manifest: manifest([row()]),
     });
 
-    expect(result.status).toBe("passed");
+    expect(result.status).toBe("blocked");
     expect(result.recordings[0]).toEqual(expect.objectContaining({
-      acceptanceStatus: "accepted",
+      acceptanceStatus: "blocked",
       visualMatchBasis: "replay-visual-captures",
       visualMatchScore: 0.84,
     }));
-    expect(result.failures.map((failure) => failure.code)).not.toContain("visual-match-below-threshold");
+    expect(result.failures.map((failure) => failure.code)).toContain("visual-match-below-threshold");
   });
 
   it("blocks the screenshot-shaped false green: review session, 84% match, no telemetry, and capture proof", () => {
@@ -225,7 +225,7 @@ describe("avatar follow gate", () => {
           failures: [{ code: "visual_match_low", severity: "warning" }],
           metrics: {
             avatarVisualFrameCount: 0,
-            visualMatchScore: 0.69,
+            visualMatchScore: 0.89,
           },
           replayStudio: {
             session: {

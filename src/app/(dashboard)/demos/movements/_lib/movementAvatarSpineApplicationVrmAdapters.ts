@@ -17,11 +17,15 @@ import {
   resolveVrmRigRotationApplicationTarget,
 } from "./vrmRigging";
 
+const ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP = 0.04;
+
 function applyMovementAvatarSpineNamedRotationToVrmBone({
   lookupBone,
+  maxLocalAngleStep,
   spec,
 }: {
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
+  maxLocalAngleStep?: number;
   spec: MovementAvatarSpineBoneRotationSpec;
 }) {
   return applyVrmNamedRotationTargets({
@@ -29,7 +33,13 @@ function applyMovementAvatarSpineNamedRotationToVrmBone({
       const bone = lookupBone(target.bone);
       if (!bone) return false;
 
+      const previous = bone.quaternion.clone();
       bone.quaternion.slerp(target.targetQuaternion, target.slerp);
+      const step = previous.angleTo(bone.quaternion);
+      if (maxLocalAngleStep && step > maxLocalAngleStep) {
+        const proposed = bone.quaternion.clone();
+        bone.quaternion.copy(previous).slerp(proposed, maxLocalAngleStep / step);
+      }
       return bone.quaternion.clone();
     },
     targets: [{
@@ -89,11 +99,19 @@ export function applyMovementAvatarSpinePoseApplicationToVrmBones({
 }) {
   let applied = 0;
 
+  if (
+    activeSpineDrive.owner === "player-spine-held" ||
+    activeSpineDrive.owner === "recorded-spine-held"
+  ) {
+    return { applied, mode: "held" as const };
+  }
+
   if (activeSpineDrive.shouldApplySpine) {
     applyMovementAvatarActiveSpinePoseApplication({
       applyRotation: (spec) => {
         applied += applyMovementAvatarSpineNamedRotationToVrmBone({
           lookupBone,
+          maxLocalAngleStep: ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP,
           spec,
         }).applied;
       },

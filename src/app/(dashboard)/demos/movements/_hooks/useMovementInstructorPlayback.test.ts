@@ -71,7 +71,7 @@ describe("buildInstructorRetargetSourceModel", () => {
     expect(Math.abs(model.shoulderCenter.x - model.hipCenter.x)).toBeLessThan(0.02);
   });
 
-  it("mirrors front-facing instructor frames before building the retarget baseline", () => {
+  it("reflects front-facing instructor coordinates without swapping anatomical sides", () => {
     const pose = withCorePose();
     pose[23] = { ...pose[23]!, x: 0.58 };
     pose[24] = { ...pose[24]!, x: 0.42 };
@@ -87,8 +87,8 @@ describe("buildInstructorRetargetSourceModel", () => {
     ] satisfies MovementInstructorMotionFrame[]);
 
     expect(model).not.toBeNull();
-    expect(model?.segments.leftThigh?.direction.x).toBeLessThan(0);
-    expect(model?.segments.rightThigh?.direction.x).toBeGreaterThan(0);
+    expect(model?.segments.leftThigh?.direction.x).toBeGreaterThan(0);
+    expect(model?.segments.rightThigh?.direction.x).toBeLessThan(0);
   });
 
   it("finds the strongest single-knee lift frame in a recording", () => {
@@ -117,8 +117,8 @@ describe("buildInstructorRetargetSourceModel", () => {
     expect(analysis.peakSquat?.balancedPlantedSquatDepth).toBeGreaterThan(0.5);
     expect(analysis.peakSingleKneeLift?.frameIndex).toBe(2);
     expect(analysis.peakSingleKneeLift?.balancedPlantedSquatDepth).toBe(0);
-    expect(analysis.peakRightKneeLift?.rightKneeLift).toBeGreaterThan(0.6);
-    expect(analysis.peakLeftKneeLift?.leftKneeLift).toBeLessThan(0.2);
+    expect(analysis.peakLeftKneeLift?.leftKneeLift).toBeGreaterThan(0.6);
+    expect(analysis.peakRightKneeLift?.rightKneeLift).toBeLessThan(0.2);
   });
 
   it("drives planted full-body squat only on the recorded squat frame", () => {

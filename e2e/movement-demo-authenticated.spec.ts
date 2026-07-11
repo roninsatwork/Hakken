@@ -81,7 +81,8 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByText("Spine readiness")).toHaveCount(2);
     await expect(page.getByText(/ready \d+%/i).first()).toBeVisible();
     await expect(page.getByText("Truth readiness")).toHaveCount(2);
-    await expect(page.getByText(/facing-player L->avatarRight R->avatarLeft/i)).toHaveCount(2);
+    await expect(page.getByText(/same-side L->avatarLeft R->avatarRight/i)).toHaveCount(1);
+    await expect(page.getByText(/facing-player L->avatarRight R->avatarLeft/i)).toHaveCount(1);
     await expect(page.getByText(/player-left-leg-raise/i)).toHaveCount(0);
     await expect(page.getByText(/player-right-leg-raise/i)).toHaveCount(0);
 
@@ -101,6 +102,368 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
 
     await expect(page.getByText("Your Avatar Diagnostics")).toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId("movement-hud-setup-recovery-cue")).toHaveText("Show both feet.");
+  });
+
+  test("rendered player bones follow mirror-side arms, head pitch, side bend, and raised legs", async ({ page }) => {
+    const readPlayerDebug = async () => {
+      await page.waitForFunction(() => Boolean(
+        (window as Window & { __sonaeMovementAvatarDebug?: { player?: { avatarVisual?: unknown } } })
+          .__sonaeMovementAvatarDebug?.player?.avatarVisual,
+      ), undefined, { timeout: 30000 });
+      return page.evaluate(() => (
+        (window as Window & { __sonaeMovementAvatarDebug?: { player?: Record<string, unknown> } })
+          .__sonaeMovementAvatarDebug?.player
+      ));
+    };
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=left-arm-raise`,
+    );
+    await skipWhenRedirectedToLogin(page, "Rendered mirror proof requires the super-admin storage state.");
+    const armDebug = await readPlayerDebug() as {
+      avatarVisual: { segments: Record<string, { direction: { y: number } }> };
+    };
+    expect(armDebug.avatarVisual.segments.rightUpperArm?.direction.y).toBeGreaterThan(0.25);
+    expect(armDebug.avatarVisual.segments.leftUpperArm?.direction.y).toBeLessThan(-0.25);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=head-down`,
+    );
+    const headDebug = await readPlayerDebug() as {
+      avatarHead: { bonePitch: number };
+      headRaw: { pitch: number };
+    };
+    expect(Math.abs(headDebug.headRaw.pitch)).toBeGreaterThan(0.12);
+    expect(Math.abs(headDebug.avatarHead.bonePitch)).toBeGreaterThan(0.08);
+    expect(Math.sign(headDebug.avatarHead.bonePitch)).toBe(Math.sign(headDebug.headRaw.pitch));
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=side-bend`,
+    );
+    const sideBendDebug = await readPlayerDebug() as {
+      avatarVisual: { segments: Record<string, { direction: { x: number } }> };
+      spineDrive: { sideBend: number };
+    };
+    expect(Math.abs(sideBendDebug.spineDrive.sideBend)).toBeGreaterThan(0.4);
+    expect(Math.abs(sideBendDebug.avatarVisual.segments.spine?.direction.x)).toBeGreaterThan(0.25);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=left-leg-raise`,
+    );
+    const legDebug = await readPlayerDebug() as {
+      avatarVisual: { segments: Record<string, { direction: { y: number } }> };
+    };
+    expect(legDebug.avatarVisual.segments.rightThigh?.direction.y).toBeGreaterThan(0.2);
+    expect(legDebug.avatarVisual.segments.leftThigh?.direction.y).toBeLessThan(-0.2);
+  });
+
+  test("rendered instructor and mirrored player converge on the same anatomical arm", async ({ page }) => {
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=right-arm-raise&debugPlayerPose=left-arm-raise`,
+    );
+    await skipWhenRedirectedToLogin(page, "Three-party mirror proof requires the super-admin storage state.");
+
+    const instructor = page.locator('[data-movement-avatar-role="instructor"]');
+    const player = page.locator('[data-movement-avatar-role="player"]');
+    await expect(instructor).not.toHaveAttribute("data-movement-avatar-visual", "null", { timeout: 30000 });
+    await expect(player).not.toHaveAttribute("data-movement-avatar-visual", "null", { timeout: 30000 });
+
+    const instructorVisual = JSON.parse(
+      (await instructor.getAttribute("data-movement-avatar-visual")) ?? "null",
+    ) as { segments: Record<string, { direction: { y: number } }> };
+    const playerVisual = JSON.parse(
+      (await player.getAttribute("data-movement-avatar-visual")) ?? "null",
+    ) as { segments: Record<string, { direction: { y: number } }> };
+
+    await expect(instructor).toHaveAttribute(
+      "data-movement-side-map",
+      "same-side L->avatarLeft R->avatarRight",
+    );
+    await expect(player).toHaveAttribute(
+      "data-movement-side-map",
+      "facing-player L->avatarRight R->avatarLeft",
+    );
+    expect(instructorVisual.segments.rightUpperArm?.direction.y).toBeGreaterThan(0.25);
+    expect(instructorVisual.segments.leftUpperArm?.direction.y).toBeLessThan(-0.25);
+    expect(playerVisual.segments.rightUpperArm?.direction.y).toBeGreaterThan(0.25);
+    expect(playerVisual.segments.leftUpperArm?.direction.y).toBeLessThan(-0.25);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=left-arm-raise&debugPlayerPose=right-arm-raise`,
+    );
+    await expect(instructor).not.toHaveAttribute("data-movement-avatar-visual", "null", { timeout: 30000 });
+    await expect(player).not.toHaveAttribute("data-movement-avatar-visual", "null", { timeout: 30000 });
+
+    const oppositeInstructorVisual = JSON.parse(
+      (await instructor.getAttribute("data-movement-avatar-visual")) ?? "null",
+    ) as { segments: Record<string, { direction: { y: number } }> };
+    const oppositePlayerVisual = JSON.parse(
+      (await player.getAttribute("data-movement-avatar-visual")) ?? "null",
+    ) as { segments: Record<string, { direction: { y: number } }> };
+
+    expect(oppositeInstructorVisual.segments.leftUpperArm?.direction.y).toBeGreaterThan(0.25);
+    expect(oppositeInstructorVisual.segments.rightUpperArm?.direction.y).toBeLessThan(-0.25);
+    expect(oppositePlayerVisual.segments.leftUpperArm?.direction.y).toBeGreaterThan(0.25);
+    expect(oppositePlayerVisual.segments.rightUpperArm?.direction.y).toBeLessThan(-0.25);
+  });
+
+  test("rendered leg raises converge and keep the opposite planted foot on the floor", async ({ page }) => {
+    const readLegTelemetry = async () => page.locator("[data-movement-avatar-role]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const visual = JSON.parse(element.getAttribute("data-movement-avatar-visual") ?? "null") as {
+          footing: {
+            leftFootClearance: number;
+            rightFootClearance: number;
+          };
+          segments: Record<string, { direction: { y: number } }>;
+        };
+        return {
+          role: element.getAttribute("data-movement-avatar-role"),
+          visual,
+        };
+      }),
+    );
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=right-leg-raise&debugPlayerPose=left-leg-raise`,
+    );
+    await skipWhenRedirectedToLogin(page, "Three-party leg mirror proof requires the super-admin storage state.");
+    await expect(page.locator('[data-movement-avatar-role="instructor"]')).not.toHaveAttribute(
+      "data-movement-avatar-visual",
+      "null",
+      { timeout: 30000 },
+    );
+
+    const rightRaise = await readLegTelemetry();
+    expect(rightRaise).toHaveLength(2);
+    rightRaise.forEach(({ visual }) => {
+      expect(visual.segments.rightThigh?.direction.y).toBeGreaterThan(0.25);
+      expect(visual.segments.leftThigh?.direction.y).toBeLessThan(-0.25);
+      expect(Math.abs(visual.footing.leftFootClearance)).toBeLessThanOrEqual(0.05);
+      expect(visual.footing.rightFootClearance).toBeGreaterThan(0.5);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=left-leg-raise&debugPlayerPose=right-leg-raise`,
+    );
+    await expect(page.locator('[data-movement-avatar-role="instructor"]')).not.toHaveAttribute(
+      "data-movement-avatar-visual",
+      "null",
+      { timeout: 30000 },
+    );
+
+    const leftRaise = await readLegTelemetry();
+    expect(leftRaise).toHaveLength(2);
+    leftRaise.forEach(({ visual }) => {
+      expect(visual.segments.leftThigh?.direction.y).toBeGreaterThan(0.25);
+      expect(visual.segments.rightThigh?.direction.y).toBeLessThan(-0.25);
+      expect(Math.abs(visual.footing.rightFootClearance)).toBeLessThanOrEqual(0.05);
+      expect(visual.footing.leftFootClearance).toBeGreaterThan(0.5);
+    });
+  });
+
+  test("rendered head and side-lean axes follow the three-party mirror contract", async ({ page }) => {
+    const readAxialTelemetry = async () => page.locator("[data-movement-avatar-role]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const visual = JSON.parse(element.getAttribute("data-movement-avatar-visual") ?? "null") as {
+          segments: Record<string, { direction: { x: number } }>;
+        };
+        return {
+          avatarHead: JSON.parse(element.getAttribute("data-movement-avatar-head") ?? "null") as {
+            appliedLocalRoll: number;
+            bonePitch: number;
+            boneRoll: number;
+            boneYaw: number;
+          },
+          avatarSpine: JSON.parse(element.getAttribute("data-movement-avatar-spine") ?? "null") as {
+            chest: { y: number };
+            upperChest: { y: number };
+          },
+          role: element.getAttribute("data-movement-avatar-role"),
+          visual,
+        };
+      }),
+    );
+    const waitForAxialTelemetry = () => expect(
+      page.locator('[data-movement-avatar-role="instructor"]'),
+    ).not.toHaveAttribute("data-movement-avatar-head", "null", { timeout: 30000 });
+    const waitForRenderedHeadRoll = (direction: -1 | 1) => expect.poll(
+      async () => (await readAxialTelemetry()).every(({ avatarHead }) =>
+        direction * avatarHead.boneRoll > 0.2 && direction * avatarHead.appliedLocalRoll > 0.04,
+      ),
+      { timeout: 30000 },
+    ).toBe(true);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=head-down&debugPlayerPose=head-down`,
+    );
+    await skipWhenRedirectedToLogin(page, "Three-party axial proof requires the super-admin storage state.");
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ avatarHead }) => {
+      expect(avatarHead.bonePitch).toBeLessThan(-0.2);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=head-right&debugPlayerPose=head-left`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ avatarHead }) => {
+      expect(avatarHead.boneYaw).toBeLessThan(-0.3);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=head-left&debugPlayerPose=head-right`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ avatarHead }) => {
+      expect(avatarHead.boneYaw).toBeGreaterThan(0.3);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=head-roll-right&debugPlayerPose=head-roll-left`,
+    );
+    await waitForAxialTelemetry();
+    await waitForRenderedHeadRoll(1);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=head-roll-left&debugPlayerPose=head-roll-right`,
+    );
+    await waitForAxialTelemetry();
+    await waitForRenderedHeadRoll(-1);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=side-bend-right&debugPlayerPose=side-bend-left`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ visual }) => {
+      expect(visual.segments.spine?.direction.x).toBeLessThan(-0.15);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=side-bend-left&debugPlayerPose=side-bend-right`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ visual }) => {
+      expect(visual.segments.spine?.direction.x).toBeGreaterThan(0.15);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=standing-twist-right&debugPlayerPose=standing-twist-left`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ avatarSpine }) => {
+      expect(avatarSpine.chest.y).toBeLessThan(-0.04);
+      expect(avatarSpine.upperChest.y).toBeLessThan(-0.03);
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=standing-twist-left&debugPlayerPose=standing-twist-right`,
+    );
+    await waitForAxialTelemetry();
+    (await readAxialTelemetry()).forEach(({ avatarSpine }) => {
+      expect(avatarSpine.chest.y).toBeGreaterThan(0.04);
+      expect(avatarSpine.upperChest.y).toBeGreaterThan(0.03);
+    });
+
+    const readRootOffsets = async () => page.locator("[data-movement-avatar-role]").evaluateAll((elements) => {
+      const offsets: Record<string, number> = {};
+      elements.forEach((element) => {
+        const role = element.getAttribute("data-movement-avatar-role");
+        const root = JSON.parse(element.getAttribute("data-movement-avatar-root") ?? "null") as {
+          targetX: number;
+        } | null;
+        if (!role || !root) return;
+        offsets[role] = Number((root.targetX - (role === "instructor" ? -5 : 5)).toFixed(2));
+      });
+      return offsets;
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPoseTransition=1&debugInstructorPose=root-travel-right&debugPlayerPose=root-travel-left`,
+    );
+    await expect.poll(readRootOffsets, { intervals: [50, 100], timeout: 30000 }).toEqual({
+      instructor: 0.58,
+      player: 0.58,
+    });
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPoseTransition=1&debugInstructorPose=root-travel-left&debugPlayerPose=root-travel-right`,
+    );
+    await expect.poll(readRootOffsets, { intervals: [50, 100], timeout: 30000 }).toEqual({
+      instructor: -0.58,
+      player: -0.58,
+    });
+  });
+
+  test("rendered fingers and asymmetric face signals follow the three-party mirror contract", async ({ page }) => {
+    const readHandAndFaceTelemetry = async () => page.locator("[data-movement-avatar-role]").evaluateAll((elements) =>
+      elements.map((element) => ({
+        expressions: JSON.parse(element.getAttribute("data-movement-avatar-expressions") ?? "null") as {
+          blinkLeft: number | null;
+          blinkRight: number | null;
+        },
+        hands: JSON.parse(element.getAttribute("data-movement-avatar-hands") ?? "null") as {
+          left: { curlMagnitude: number };
+          right: { curlMagnitude: number };
+        },
+      })),
+    );
+    const waitForHandSide = (side: "left" | "right") => expect.poll(
+      async () => (await readHandAndFaceTelemetry()).every(({ hands }) =>
+        hands[side].curlMagnitude > 3 && hands[side === "left" ? "right" : "left"].curlMagnitude < 0.1,
+      ),
+      { timeout: 30000 },
+    ).toBe(true);
+    const waitForWinkSide = (side: "Left" | "Right") => expect.poll(
+      async () => (await readHandAndFaceTelemetry()).every(({ expressions }) =>
+        (expressions[`blink${side}`] ?? 0) > 0.8 && (expressions[`blink${side === "Left" ? "Right" : "Left"}`] ?? 0) < 0.1,
+      ),
+      { timeout: 30000 },
+    ).toBe(true);
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=right-hand-curl&debugPlayerPose=left-hand-curl`,
+    );
+    await skipWhenRedirectedToLogin(page, "Three-party hand and face proof requires the super-admin storage state.");
+    await waitForHandSide("right");
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=left-hand-curl&debugPlayerPose=right-hand-curl`,
+    );
+    await waitForHandSide("left");
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=wink-right&debugPlayerPose=wink-left`,
+    );
+    await waitForWinkSide("Right");
+
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugInstructorPose=wink-left&debugPlayerPose=wink-right`,
+    );
+    await waitForWinkSide("Left");
   });
 
   test("debug recorded game frame keeps paused player and instructor sync measurable", async ({ page }) => {

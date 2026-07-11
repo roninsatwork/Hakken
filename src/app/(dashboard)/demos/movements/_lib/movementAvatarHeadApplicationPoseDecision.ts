@@ -81,5 +81,7 @@ export function resolveMovementAvatarHeadBonePitch({
   avatarRole: "instructor" | "player";
   headPitch: number;
 }) {
-  return headPitch;
+  // Tracking pitch is user-intent pitch. The VRM head bone's local X axis is
+  // opposite in the rendered rig, so invert only at the final bone boundary.
+  return -headPitch;
 }

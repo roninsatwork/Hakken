@@ -66,10 +66,13 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 
 The movement demo is frozen unless the user explicitly asks to reopen it or a required gate is broken.
 
+**Required mirror methodology:** read [Movement Mirror And Side-Ownership Contract](./movement-mirror-and-side-ownership-contract.md) before any work involving left/right landmarks, instructor or player display preparation, scoring correspondence, retargeting, head/spine direction, hands, face, root motion, or avatar proof. Instructor motion preserves anatomical side, the human player imitates with the opposite side, and the player avatar reverses the player so both rendered avatars perform the same anatomical movement.
+
 - [Movement Tracking](./movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./movement-demo-client-recovery-plan.md)
 - [Movement Demo Game And Replay Parity Plan](./movement-demo-game-replay-parity-plan.md)
 - [Movement Demo Replay Lab Plan](./movement-demo-replay-lab-plan.md)
+- **[Movement Mirror And Side-Ownership Contract — required](./movement-mirror-and-side-ownership-contract.md)**
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md)
 - [Movement Studio And Replay Unification Plan](./movement-studio-replay-unification-plan.md)
 - [Movement Studio Reward Presentation Fix Plan](./movement-studio-reward-presentation-fix-plan.md)

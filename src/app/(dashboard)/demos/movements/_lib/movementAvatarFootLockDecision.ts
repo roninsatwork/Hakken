@@ -16,9 +16,11 @@ export function resolveMovementAvatarFootLockOptions({
     correctionScale: isPlayer ? 0.4 : 0.5,
     engageSlerp: 0.32,
     initialStrength: 0.25,
-    maxDriftBeforeReset: 0.55,
+    maxLateralDriftBeforeReset: 0.55,
+    maxVerticalCorrection: 0.45,
     minStrengthBeforeClear: 0.04,
     releaseSlerp: 0.28,
+    verticalCorrectionScale: 1,
   };
 }
 

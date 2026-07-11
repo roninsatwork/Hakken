@@ -19,6 +19,7 @@ export type MovementAvatarLowerBodyDrive = {
 export type MovementAvatarPlayerLowerBodyOwnerDecision = {
   canUsePlayerRetargetLegRaise: boolean;
   feetOwner: string;
+  hasCompleteLegRetarget: boolean;
   lowerBodyOwner: string;
   shouldUsePlayerFootFallback: boolean;
 };
@@ -128,8 +129,13 @@ export function resolveMovementAvatarLowerBodyDrive({
 
   const shouldApplyLowerBody = hasLiveBodyCalibration || shouldDrivePlayerSquat || shouldDrivePlayerLegRaise;
   const groundedSquatDepth = retargetContactsBothFeet ? liveSquatDepth : 0;
+  const hasContinuousPlantedHipDrop =
+    retargetContactsBothFeet &&
+    retargetHipDrop > 0.12;
   const rawPlayerSquatPresentationDepth = isPlayer
-    ? Math.max(groundedSquatDepth, shouldDrivePlayerSquat ? lowerBodyIntent.squatDepth : 0)
+    ? shouldDrivePlayerSquat && hasContinuousPlantedHipDrop
+      ? retargetHipDrop
+      : Math.max(groundedSquatDepth, shouldDrivePlayerSquat ? lowerBodyIntent.squatDepth : 0)
     : groundedSquatDepth;
   const playerSquatPresentationDepth =
     isPlayer && !shouldDrivePlayerSquat
@@ -158,7 +164,7 @@ export function resolveMovementAvatarLowerBodyDrive({
     shouldApplySolverTorso: isPlayer && shouldApplyLowerBody,
     shouldDrivePlayerSquat,
     visualRootDrop: lowerBodyTrackingReady && shouldApplyLowerBody
-      ? playerSquatPresentationDepth * (isPlayer ? 1.72 : 0.56)
+      ? playerSquatPresentationDepth * (isPlayer && !hasContinuousPlantedHipDrop ? 1.72 : 0.56)
       : 0,
   };
 }
@@ -188,9 +194,11 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   totalSolvedSegments: number;
 }): MovementAvatarPlayerLowerBodyOwnerDecision {
   const hasUsablePlayerLegRetarget = solvedLegSegments >= 4;
+  const hasCompleteLegRetarget =
+    hasUsablePlayerLegRetarget && retargetSourceQuality >= 0.45;
   const canUsePlayerRetargetLegRaise =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
-    hasUsablePlayerLegRetarget;
+    hasCompleteLegRetarget;
   const playerLegRaiseOwner =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
     lowerBodyDrive.playerLegRaiseSide
@@ -199,9 +207,10 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   const playerLegRaiseFeetOwner =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
     solvedFootSegments > 0
-      ? "player-leg-raise-planted-flat"
+      ? canUsePlayerRetargetLegRaise
+        ? "recorded-retarget"
+        : "player-leg-raise-planted-flat"
       : null;
-  const hasCompleteLegRetarget = solvedLegSegments >= 4 && retargetSourceQuality >= 0.45;
   const shouldUsePlayerFootFallback =
     solvedLegSegments >= 4 &&
     solvedFootSegments === 0 &&
@@ -212,6 +221,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
+      hasCompleteLegRetarget,
       lowerBodyOwner: "neutral",
       shouldUsePlayerFootFallback,
     };
@@ -221,6 +231,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
+      hasCompleteLegRetarget,
       lowerBodyOwner: "neutral",
       shouldUsePlayerFootFallback,
     };
@@ -230,6 +241,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
+      hasCompleteLegRetarget,
       lowerBodyOwner: playerLegRaiseOwner ?? "player-leg-raise",
       shouldUsePlayerFootFallback,
     };
@@ -239,9 +251,12 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "recorded-retarget",
-      lowerBodyOwner: lowerBodyDrive.shouldDrivePlayerSquat
-        ? "player-stable-squat"
-        : "player-stable-squat-held",
+      hasCompleteLegRetarget,
+      lowerBodyOwner: hasCompleteLegRetarget
+        ? "player-retarget"
+        : lowerBodyDrive.shouldDrivePlayerSquat
+          ? "player-stable-squat"
+          : "player-stable-squat-held",
       shouldUsePlayerFootFallback,
     };
   }
@@ -250,6 +265,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
+      hasCompleteLegRetarget,
       lowerBodyOwner: retargetSourceQuality >= 0.65
         ? "player-retarget"
         : "player-lower-body-neutral",
@@ -264,6 +280,7 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
       : shouldUsePlayerFootFallback
         ? "player-foot-fallback"
         : "neutral"),
+    hasCompleteLegRetarget,
     lowerBodyOwner: hasCompleteLegRetarget
       ? "player-retarget"
       : playerLegRaiseOwner ?? (solvedLowerBodySegments > 0

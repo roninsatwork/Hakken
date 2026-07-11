@@ -736,7 +736,7 @@ describe("movementAvatarUpperBodyFrameRuntime (merged)", () => {
   }
 
   describe("movementAvatarUpperBodyFrameRuntime", () => {
-    it("retargets both arms and the spine, marking arms as retarget-owned", () => {
+    it("keeps the calibrated spine drive as sole torso owner and retargets both arms", () => {
       const boneMap = bones();
       const applyRetargetMappings = vi.fn((mappings: MovementAvatarRetargetBoneMapping[]) => ({
         applied: mappings.length,
@@ -757,8 +757,13 @@ describe("movementAvatarUpperBodyFrameRuntime (merged)", () => {
         torsoTrackingReady: true,
       });
 
-      // Left arm, right arm, and spine mapping groups each apply once.
-      expect(applyRetargetMappings).toHaveBeenCalledTimes(3);
+      // The direction-only spine mapping must not compete with the calibrated
+      // multi-axis spine drive. Only the two arm mapping groups run here.
+      expect(applyRetargetMappings).toHaveBeenCalledTimes(2);
+      expect(applyRetargetMappings.mock.calls.map(([mappings]) => mappings.map((mapping) => mapping.segment))).toEqual([
+        ["leftUpperArm", "leftLowerArm"],
+        ["rightUpperArm", "rightLowerArm"],
+      ]);
       const mappedSegments = applyRetargetMappings.mock.calls
         .flatMap(([mappings]) => mappings.map((mapping) => mapping.segment));
       expect(mappedSegments.sort()).toEqual([
@@ -766,9 +771,8 @@ describe("movementAvatarUpperBodyFrameRuntime (merged)", () => {
         "leftUpperArm",
         "rightLowerArm",
         "rightUpperArm",
-        "spine",
       ]);
-      expect(result.retargetAppliedUpperBody).toBe(5);
+      expect(result.retargetAppliedUpperBody).toBe(4);
       expect(result.upperBodyRuntimeApplication.spine).toEqual({ applied: 4, mode: "active" });
       expect(result.upperBodyRuntimeApplication.leftArm.mode).toBe("retargeted");
       expect(result.upperBodyRuntimeApplication.rightArm.mode).toBe("retargeted");
@@ -796,8 +800,7 @@ describe("movementAvatarUpperBodyFrameRuntime (merged)", () => {
 
       expect(result.upperBodyRuntimeApplication.leftArm.mode).toBe("hold-last-good");
       expect(result.upperBodyRuntimeApplication.rightArm.mode).toBe("retargeted");
-      // right arm (2) + spine mapping (1) applied.
-      expect(result.retargetAppliedUpperBody).toBe(3);
+      expect(result.retargetAppliedUpperBody).toBe(2);
     });
   });
 });
@@ -867,10 +870,11 @@ describe("movementAvatarUpperBodyFrameOrchestrationRuntime (merged)", () => {
         torsoTrackingReady: true,
       });
 
-      // One call per mapping group: left arm, right arm, spine.
-      expect(applyRetargetMappings).toHaveBeenCalledTimes(3);
-      expect(result.retargetAppliedUpperBody).toBe(7);
-      expect(result.upperBodyFrameRuntime.retargetAppliedUpperBody).toBe(7);
+      // One call per arm mapping group. The recorded spine-drive count is
+      // retained, but no second direction-only spine writer runs.
+      expect(applyRetargetMappings).toHaveBeenCalledTimes(2);
+      expect(result.retargetAppliedUpperBody).toBe(5);
+      expect(result.upperBodyFrameRuntime.retargetAppliedUpperBody).toBe(5);
       expect(result.upperBodyFrameRuntime.upperBodyRuntimeApplication.recordedSpineRetargetCount).toBe(1);
       expect(result.upperBodyFrameRuntime.upperBodyRuntimeApplication.spine.applied).toBeGreaterThan(0);
     });
@@ -1102,13 +1106,42 @@ describe("movementAvatarLowerBodyFrameRuntime (merged)", () => {
         updateWorldMatrix,
       });
 
-      expect(updateWorldMatrix).toHaveBeenCalledTimes(1);
-      expect(applyRetargetMappings).toHaveBeenCalledTimes(1);
+      expect(updateWorldMatrix).toHaveBeenCalledTimes(2);
+      expect(applyRetargetMappings).toHaveBeenCalledTimes(2);
       expect(result.retargetAppliedLowerBody).toBe(3);
       expect(result.retargetAppliedLegs).toBe(2);
       expect(result.retargetAppliedFeet).toBe(1);
       expect(result.footOwner).not.toBe("neutral");
       expect(result.lowerBodyOwner).not.toBe("neutral");
+    });
+
+    it("refines foot world directions after applying a player squat fallback", () => {
+      const applyRetargetMappings = vi.fn(() => ({
+        applied: 2,
+        feet: 2,
+        legs: 0,
+      }));
+      const updateWorldMatrix = vi.fn();
+
+      const result = applyRuntime({
+        applyRetargetMappings,
+        lowerBodyDrive: drive({
+          liveSquatDepth: 0.5,
+          shouldDrivePlayerSquat: true,
+        }),
+        lowerBodyTarget: target(stage("player-squat"), {
+          playerSquatPresentationDepth: 0.42,
+          shouldHoldPlayerSquatPose: true,
+        }),
+        playerSquatPresentationDepth: 0.42,
+        shouldHoldPlayerSquatPose: true,
+        updateWorldMatrix,
+      });
+
+      expect(updateWorldMatrix).toHaveBeenCalledTimes(1);
+      expect(applyRetargetMappings).toHaveBeenCalledTimes(1);
+      expect(result.footOwner).toBe("recorded-retarget");
+      expect(result.retargetAppliedFeet).toBe(2);
     });
 
     it("reports player retarget ownership when complete solved leg retarget owns a leg raise", () => {
@@ -1141,7 +1174,7 @@ describe("movementAvatarLowerBodyFrameRuntime (merged)", () => {
       });
 
       expect(result.lowerBodyOwner).toBe("player-retarget");
-      expect(result.footOwner).toBe("player-leg-raise-planted-flat");
+      expect(result.footOwner).toBe("recorded-retarget");
     });
   });
 });

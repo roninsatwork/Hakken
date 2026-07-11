@@ -1,11 +1,5 @@
-import type {
-  MovementAvatarLowerBodyDrive,
-  MovementAvatarPlayerLowerBodyOwnerDecision,
-} from "./movementAvatarLowerBody";
-import type {
-  MovementAvatarInactiveLowerBodyDecision,
-  MovementAvatarLowerBodyApplicationStageDecision,
-} from "./movementAvatarPipeline";
+import type { MovementAvatarLowerBodyDrive, MovementAvatarPlayerLowerBodyOwnerDecision } from "./movementAvatarLowerBody";
+import type { MovementAvatarInactiveLowerBodyDecision, MovementAvatarLowerBodyApplicationStageDecision } from "./movementAvatarPipeline";
 
 export function resolveMovementAvatarInactiveLowerBodyDecision({
   avatarRole,
@@ -29,6 +23,7 @@ export function resolveMovementAvatarInactiveLowerBodyDecision({
 
 export function resolveMovementAvatarLowerBodyApplicationStage({
   avatarRole,
+  hasCompleteLegRetarget = false,
   instructorLowerBodyMotion,
   lowerBodyDrive,
   playerRetargetLowerBodyMotion,
@@ -36,6 +31,7 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
   shouldHoldPlayerSquatPose,
 }: {
   avatarRole: "instructor" | "player";
+  hasCompleteLegRetarget?: boolean;
   instructorLowerBodyMotion: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   playerRetargetLowerBodyMotion: number;
@@ -69,6 +65,16 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
   }
 
   if (isPlayer && (lowerBodyDrive.shouldDrivePlayerSquat || shouldHoldPlayerSquatPose)) {
+    if (sourceOwnerDecision?.hasCompleteLegRetarget) {
+      return {
+        anchoredPlayerLegRaiseSide,
+        canUsePlayerRetargetLegRaise,
+        feetOwner: sourceOwnerDecision.feetOwner,
+        lowerBodyOwner: sourceOwnerDecision.lowerBodyOwner,
+        stage: "retarget",
+      };
+    }
+
     return {
       anchoredPlayerLegRaiseSide,
       canUsePlayerRetargetLegRaise,
@@ -80,13 +86,38 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
     };
   }
 
+  // Complete leg directions remain the owner even when their
+  // frame-to-frame motion is small. Easing the rig to neutral by label and
+  // switching back at a motion threshold creates the observed bilateral leg
+  // snap despite a continuous source. This continuity rule applies equally to
+  // instructor identity and player mirror paths.
+  if (isPlayer && sourceOwnerDecision?.hasCompleteLegRetarget) {
+    return {
+      anchoredPlayerLegRaiseSide,
+      canUsePlayerRetargetLegRaise,
+      feetOwner: sourceOwnerDecision.feetOwner,
+      lowerBodyOwner: sourceOwnerDecision.lowerBodyOwner,
+      stage: "retarget",
+    };
+  }
+
+  if (!isPlayer && hasCompleteLegRetarget) {
+    return {
+      anchoredPlayerLegRaiseSide: null,
+      canUsePlayerRetargetLegRaise: false,
+      feetOwner: "recorded-retarget",
+      lowerBodyOwner: "recorded-retarget",
+      stage: "retarget",
+    };
+  }
+
   const shouldKeepNeutralPlayerLowerBody =
     isPlayer &&
     lowerBodyDrive.playerLowerBodyState === "neutral" &&
-    playerRetargetLowerBodyMotion < 0.32 &&
+    playerRetargetLowerBodyMotion < 0.12 &&
     !sourceOwnerDecision?.shouldUsePlayerFootFallback;
 
-  if (isPlayer && (shouldKeepNeutralPlayerLowerBody || playerRetargetLowerBodyMotion < 0.16)) {
+  if (isPlayer && (shouldKeepNeutralPlayerLowerBody || playerRetargetLowerBodyMotion < 0.08)) {
     return {
       anchoredPlayerLegRaiseSide,
       canUsePlayerRetargetLegRaise,

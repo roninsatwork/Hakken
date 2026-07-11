@@ -170,9 +170,12 @@ describe("movementAvatarHeadRuntime (merged)", () => {
 
       expect(telemetry).toEqual({
         appliedLocalPitch: result.headNode.rotation.x,
+        appliedLocalRoll: result.headNode.rotation.z,
         boneYaw: result.headTarget.headDecision.headYaw,
         bonePitch: result.headTarget.headBonePitch,
+        boneRoll: result.headTarget.headDecision.headRoll,
         trackingPitch: result.headTarget.headDecision.headPitch,
+        trackingRoll: result.headTarget.rawHeadDecision.rawHead.roll,
         trackingYaw: result.headTarget.rawHeadDecision.rawHead.yaw,
       });
     });
@@ -212,6 +215,42 @@ describe("movementAvatarHeadRuntime (merged)", () => {
       expect(applied.headTarget.headWorldYaw).toBeCloseTo(
         avatarRootYaw + prepared.headTarget.headDecision.headYaw,
       );
+    });
+
+    it("recomputes a pose-only prepared target when current face landmarks provide head yaw", () => {
+      const prepared = applyMovementAvatarHeadRuntimeToVrmBones({
+        avatarRole: "instructor",
+        avatarRootYaw: 0,
+        baseHeadPosition: null,
+        calibration: null,
+        lookupBone: () => new THREE.Object3D(),
+        neckSlerp: 1,
+        poseLandmarks: poseLandmarks(),
+        shouldApplyLowerBody: false,
+        shouldApplySpine: false,
+      });
+      expect(prepared.applied).toBe(true);
+      if (!prepared.applied) throw new Error("expected prepared head target");
+
+      const faceLandmarks = makeMovementAvatarProofMotionPayload("head-right").faceLandmarks;
+      const applied = applyMovementAvatarHeadRuntimeToVrmBones({
+        avatarRole: "instructor",
+        avatarRootYaw: 0,
+        baseHeadPosition: null,
+        calibration: null,
+        faceLandmarks,
+        lookupBone: () => new THREE.Object3D(),
+        neckSlerp: 1,
+        poseLandmarks: poseLandmarks(),
+        preparedHeadTarget: prepared.headTarget,
+        shouldApplyLowerBody: false,
+        shouldApplySpine: false,
+      });
+
+      expect(applied.applied).toBe(true);
+      if (!applied.applied) throw new Error("expected face head target to apply");
+      expect(applied.headTarget.rawHeadDecision.rawHead.source).toBe("face");
+      expect(Math.abs(applied.headTarget.headDecision.headYaw)).toBeGreaterThan(0.3);
     });
   });
 });
@@ -563,6 +602,38 @@ describe("movementAvatarHeadFrameRefsRuntime (merged)", () => {
       expect(result).toEqual({
         appliedBaseHeadPosition: false,
         appliedTrackingDebugState: true,
+      });
+    });
+
+    it("preserves root telemetry written earlier in the same rendered frame", () => {
+      const avatarRoot = {
+        appliedX: 0.58,
+        appliedYaw: 0,
+        appliedZ: 0,
+        source: "world-landmarks",
+        targetX: 0.58,
+        targetYaw: 0,
+        targetZ: 0,
+      };
+      const trackingDebugRef = {
+        current: {
+          avatarRoot,
+          updatedAt: 100,
+        },
+      };
+
+      applyMovementAvatarHeadFrameRefsRuntime({
+        baseBonePositionRef: { current: {} },
+        headFrameRuntime: {
+          nextBaseHeadPosition: null,
+          trackingDebugState: { updatedAt: 200 },
+        } as never,
+        trackingDebugRef: trackingDebugRef as never,
+      });
+
+      expect(trackingDebugRef.current).toEqual({
+        avatarRoot,
+        updatedAt: 200,
       });
     });
 

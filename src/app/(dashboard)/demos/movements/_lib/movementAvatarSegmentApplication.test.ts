@@ -4,7 +4,10 @@ import {
   resolveMovementAvatarPlantedSquatIkPose,
   type MovementAvatarRetargetSegmentApplicationDecision,
 } from "./movementAvatarPipeline";
-import { MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS } from "./movementAvatarRestPose";
+import {
+  MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
+  MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS,
+} from "./movementAvatarRestPose";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import {
   applyMovementAvatarPlantedSquatIkWorldDirectionSpecs,
@@ -78,6 +81,29 @@ describe("movement avatar segment application", () => {
     expect(result).not.toBeNull();
     expect(bone.quaternion.angleTo(result!.target.targetLocalQuaternion)).toBeCloseTo(0);
     expect(result!.finalLocalQuaternion.angleTo(bone.quaternion)).toBeCloseTo(0);
+  });
+
+  it("limits low-confidence recovery to a bounded local rotation step", () => {
+    const parent = new THREE.Object3D();
+    const bone = new THREE.Object3D();
+    parent.add(bone);
+    parent.updateMatrixWorld(true);
+    const before = bone.quaternion.clone();
+
+    const result = applyMovementAvatarRestMappedWorldDirection({
+      bone,
+      desiredWorldDirection: new THREE.Vector3(1, 0, 0),
+      maxLocalAngleStep: 0.08,
+      restPose: {
+        worldDirection: new THREE.Vector3(0, -1, 0),
+        worldQuaternion: new THREE.Quaternion(),
+      },
+      slerp: 1,
+    });
+
+    expect(result).not.toBeNull();
+    expect(before.angleTo(bone.quaternion)).toBeCloseTo(0.08);
+    expect(bone.quaternion.angleTo(result!.target.targetLocalQuaternion)).toBeGreaterThan(1);
   });
 
   it("skips rest-mapped world direction application when input is incomplete", () => {
@@ -427,6 +453,131 @@ describe("movement avatar segment application", () => {
     expect(spec?.desiredWorldDirection.x).toBeGreaterThan(0);
     expect(spec?.desiredWorldDirection.y).toBeLessThan(0);
     expect(spec?.desiredWorldDirection.z).toBeGreaterThan(0);
+  });
+
+  it("does not add a second player limb mirror after display side mapping", () => {
+    const mapping = MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!;
+    const frame = retargetFrame();
+    const instructor = resolveMovementAvatarRetargetSegmentWorldDirection({
+      avatarRole: "instructor",
+      mapping,
+      retargetFrame: frame,
+      segmentApplicationDecision: segmentDecision(),
+    });
+    const player = resolveMovementAvatarRetargetSegmentWorldDirection({
+      avatarRole: "player",
+      mapping,
+      retargetFrame: frame,
+      segmentApplicationDecision: segmentDecision(),
+    });
+
+    expect(instructor?.desiredWorldDirection.x).toBeGreaterThan(0);
+    expect(player?.desiredWorldDirection.x).toBeCloseTo(instructor?.desiredWorldDirection.x ?? 0);
+    expect(player?.desiredWorldDirection.y).toBeCloseTo(instructor?.desiredWorldDirection.y ?? 0);
+    expect(player?.desiredWorldDirection.z).toBeCloseTo(instructor?.desiredWorldDirection.z ?? 0);
+
+    const armMapping = MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS.find(
+      (candidate) => candidate.type === "arm" && candidate.segment === "rightUpperArm",
+    );
+    if (!armMapping) throw new Error("Expected right upper-arm mapping.");
+    const armFrame = retargetFrame();
+    armFrame.segments.rightUpperArm = {
+      confidence: 0.9,
+      direction: { x: 0.4, y: 0.9, z: 0 },
+      length: 1,
+    };
+    const playerArm = resolveMovementAvatarRetargetSegmentWorldDirection({
+      avatarRole: "player",
+      mapping: armMapping,
+      retargetFrame: armFrame,
+      segmentApplicationDecision: segmentDecision(),
+    });
+    expect(playerArm?.desiredWorldDirection.x).toBeGreaterThan(0);
+  });
+
+  it("keeps player arms in the already-mapped display direction after cancelling camera tilt", () => {
+    const armMapping = MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS.find(
+      (candidate) => candidate.type === "arm" && candidate.segment === "rightUpperArm",
+    );
+    if (!armMapping) throw new Error("Expected right upper-arm mapping.");
+
+    const instructorFrame = retargetFrame();
+    instructorFrame.space = "world";
+    instructorFrame.neutralSpineDirection = { x: 0.16, y: -0.95, z: -0.27 };
+    instructorFrame.segments.rightUpperArm = {
+      confidence: 0.9,
+      direction: { x: 0.32, y: 0.91, z: 0.26 },
+      length: 1,
+    };
+    const playerFrame: MovementRetargetFrame = {
+      ...instructorFrame,
+      segments: {
+        ...instructorFrame.segments,
+      },
+    };
+
+    const instructor = resolveMovementAvatarRetargetSegmentWorldDirection({
+      avatarRole: "instructor",
+      mapping: armMapping,
+      retargetFrame: instructorFrame,
+      segmentApplicationDecision: { ...segmentDecision(), zScale: 1 },
+    });
+    const player = resolveMovementAvatarRetargetSegmentWorldDirection({
+      avatarRole: "player",
+      mapping: armMapping,
+      retargetFrame: playerFrame,
+      segmentApplicationDecision: { ...segmentDecision(), zScale: 1 },
+    });
+
+    expect(player?.desiredWorldDirection.x).toBeCloseTo(instructor?.desiredWorldDirection.x ?? 0, 5);
+    expect(player?.desiredWorldDirection.y).toBeCloseTo(instructor?.desiredWorldDirection.y ?? 0, 5);
+    expect(player?.desiredWorldDirection.z).toBeCloseTo(instructor?.desiredWorldDirection.z ?? 0, 5);
+  });
+
+  it("bounds a newly reacquired leg segment before returning to normal response", () => {
+    const frame = retargetFrame();
+    frame.segments.rightThigh = {
+      ...frame.segments.rightThigh!,
+      confidence: 0.34,
+    };
+    const spec = resolveMovementAvatarRetargetSegmentWorldDirection({
+      mapping: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!,
+      retargetFrame: frame,
+      segmentApplicationDecision: segmentDecision({ slerp: 0.1 }),
+    });
+
+    expect(spec).toMatchObject({
+      bone: "rightUpperLeg",
+      slerp: 0.1,
+    });
+    expect(spec?.maxLocalAngleStep).toBeCloseTo(0.1013, 3);
+  });
+
+  it("releases the leg recovery bound for clear tracking", () => {
+    const recoveringFrame = retargetFrame();
+    recoveringFrame.segments.rightThigh = {
+      ...recoveringFrame.segments.rightThigh!,
+      confidence: 0.8,
+    };
+    const clearFrame = retargetFrame();
+    clearFrame.segments.rightThigh = {
+      ...clearFrame.segments.rightThigh!,
+      confidence: 0.95,
+    };
+
+    const recoveringSpec = resolveMovementAvatarRetargetSegmentWorldDirection({
+      mapping: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!,
+      retargetFrame: recoveringFrame,
+      segmentApplicationDecision: segmentDecision(),
+    });
+    const clearSpec = resolveMovementAvatarRetargetSegmentWorldDirection({
+      mapping: MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS[0]!,
+      retargetFrame: clearFrame,
+      segmentApplicationDecision: segmentDecision(),
+    });
+
+    expect(recoveringSpec?.maxLocalAngleStep).toBe(0.24);
+    expect(clearSpec?.maxLocalAngleStep).toBe(0.24);
   });
 
   it("skips retarget segment world directions when inactive or missing", () => {

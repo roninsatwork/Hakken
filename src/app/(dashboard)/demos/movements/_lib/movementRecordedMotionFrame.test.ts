@@ -21,7 +21,7 @@ describe("movementRecordedMotionFrame", () => {
     expect(motionFrame?.source.sourceOrigin).toBe("recorded-replay");
     expect(motionFrame?.source.sourceStatus).toBe("decoded");
     expect(motionFrame?.source.capturedAt).toBe(2345);
-    expect(motionFrame?.mirrorMode).toBe("facing-player");
+    expect(motionFrame?.mirrorMode).toBe("same-side");
     expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
     expect(motionFrame?.source.landmarks.blendshapes).toEqual(payload.blendshapes);

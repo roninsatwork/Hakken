@@ -1,7 +1,7 @@
 # Replay Lab Visual Acceptance Tightening Plan
 
-Last reviewed: 2026-07-09
-Status: active acceptance-hardening plan.
+Last reviewed: 2026-07-10
+Status: active acceptance correction; the previous all-nine acceptance result is reopened.
 Scope: make Replay Lab and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if existing analyzer/parity gates are green.
 
 ## Why This Exists
@@ -19,13 +19,20 @@ That is not acceptable product proof. It is a false acceptance signal. The syste
 
 ## Current Risk
 
-The current gate is too narrow:
+### 2026-07-10 correction
 
-- It allows some supported recordings with Replay Studio `review` status to pass the CLI gate.
-- It only hard-fails low visual match in some telemetry-backed cases, not all capture-backed acceptance cases.
-- It treats some `avatar_output_diverged` states as warnings even when the user-facing avatar is visibly wrong.
-- It does not make head, spine/body angle, arm pose, and foot contact explicit per-frame acceptance criteria.
-- It relies too much on averages, which can hide a bad proof frame.
+Manual playback disproved the previous green result. Frames that were not in the sparse selected capture set showed under-driven head motion, arms at a materially different camera-plane angle, lateral leg motion being neutralized, and abrupt lower-body owner changes. The earlier statement that the nine-recording avatar-follow gate passed is therefore historical, not current acceptance evidence.
+
+The current correction run processes every stored frame in all nine recordings. It is clean at the solver/analyzer error level, but it is not a full rendered-avatar acceptance pass: six recordings remain below the `0.85` whole-recording visual-match threshold or are source-limited, and no recording has persisted full-sequence VRM bone telemetry. Selected rendered recaptures are supporting diagnostics, not permission to override a failing whole-recording score.
+
+The false-green threshold path is now closed, but the current proof set is still incomplete:
+
+- Supported Replay Studio `review` sessions remain blocked rather than accepted.
+- Supported recordings below `0.85` now block for both analyzer telemetry and replay visual-capture evidence.
+- The previous proof bundle has a stale/missing motion-pipeline fingerprint and must be recaptured after these solver changes.
+- Full-sequence rendered-avatar telemetry is still absent, so selected frame captures cannot prove smoothness across every transition.
+- Per-frame head, spine/body, arm, and planted-foot criteria exist, but the remaining review/source-limited recordings still need fresh evidence.
+- Session averages remain diagnostic only; a failing selected proof frame continues to block acceptance.
 
 ## Acceptance Principle
 
@@ -184,6 +191,20 @@ Stop and reopen the acceptance contract if any of these happen:
 - A session summary says pass while the UI shows `avatar_output_diverged`.
 
 ## Implementation Log
+
+2026-07-10:
+
+- Reproduced the user-reported problems on `px75fgt11wbg0jvr17j6fc2dvd89trpm`, including the leg owner switch around frames 418-474 and the missing lateral leg travel at frames 840 and 970.
+- Ran the shared Replay/Game motion path over every stored frame in all nine acceptance recordings. The baseline had 1 failed session and 9 analyzer errors; the corrected run has 0 failed sessions and 0 analyzer errors. The remaining 45 warnings are principally source visibility/feet quality and whole-recording visual-match review warnings.
+- Corrected world-landmark arm retargeting so depth is retained while the camera-plane arm direction follows the visible source pose. This closes the metric blind spot where the applied arm could agree with its internally generated target while visibly disagreeing with the source image.
+- Kept complete recorded lower-body retargeting in continuous ownership through leg raises instead of switching the feet to a planted-flat pose at a classification threshold.
+- Stopped neutral side-bend presentation from suppressing a visible lateral leg lift when both source feet are not in contact.
+- Increased recorded head yaw, pitch, and roll fidelity so stable replay data is not visually flattened by live-input damping.
+- Removed a false `squat_not_detected` classification for side-on turn/standing frames by requiring actual squat shape evidence, not raw hip drop alone.
+- Rendered recaptures of px75 frames 441, 840, and 970 confirm continuous recorded foot ownership; frame 840 lower-body direction error changed from `0.1664` to `0`, and frame 970 retains a planted-foot clearance blocker for further review rather than being called accepted.
+- Tightened `movement:avatar-follow-gate`: a supported recording below `0.85` now blocks regardless of a few clean selected captures. The prior rule that allowed sparse captures to override an `84%` whole-recording score has been removed and regression-tested.
+- Current corrected whole-recording scores include px75 `89%`, px7b0 `88%`, and px7fafa `91%`; the other six recordings remain review/source-limited at `40%` to `77%`. The all-nine set is therefore improved and honestly blocked, not visually complete.
+- Verification passed under Node 22.13.0: 374 focused correction/gate tests, `verify:env`, `lint:all`, the full `check` gate, production `build`, `movement:architecture-guard`, and `git diff --check`. `movement:today-finish-gate` now stops at the avatar-follow gate on the stale proof bundle, which is the intended honest result until fresh captures are recorded.
 
 2026-07-09:
 

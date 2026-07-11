@@ -207,9 +207,12 @@ function captureSummaryForRows(rows) {
 function replayStudioReviewResolvedByRenderedProof({
   analysis,
   hasCleanCaptureBackedAvatarProof,
+  minVisualMatchScore,
   replayStudioSession,
+  visualMatchScore,
 }) {
   if (!hasCleanCaptureBackedAvatarProof || replayStudioSession?.status !== "review") return false;
+  if (visualMatchScore < minVisualMatchScore) return false;
   if (replayStudioSession.blockedFrameCount > 0 || replayStudioSession.reviewedFrameCount > 0) return false;
   if ((replayStudioSession.worstFrames ?? []).length > 0) return false;
 
@@ -611,7 +614,9 @@ export function evaluateAvatarFollowGate({
     const replayStudioReviewResolvedByCaptures = replayStudioReviewResolvedByRenderedProof({
       analysis,
       hasCleanCaptureBackedAvatarProof,
+      minVisualMatchScore: thresholds.minVisualMatchScore,
       replayStudioSession,
+      visualMatchScore,
     });
     const replayStudioRequiresReview =
       replayStudioSession?.status === "review" && !replayStudioReviewResolvedByCaptures;
@@ -619,15 +624,8 @@ export function evaluateAvatarFollowGate({
       ? "pass"
       : replayStudioSession?.status;
     const shouldBlockLowVisualMatch =
-      visualMatchScore < thresholds.minVisualMatchScore &&
-      (
-        visualMatchBasis === "analyzer-avatar-telemetry" ||
-        replayStudioRequiresReview ||
-        (
-          visualMatchBasis === "replay-visual-captures" &&
-          !hasCleanCaptureBackedAvatarProof
-        )
-      );
+      supportedRows.length > 0 &&
+      visualMatchScore < thresholds.minVisualMatchScore;
     const acceptanceStatus = supportedRows.length === 0
       ? "not-supported"
       : replayStudioStatus === "blocked"

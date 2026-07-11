@@ -543,7 +543,7 @@ describe("movementAvatarLowerBodyFrameStateRuntime (merged)", () => {
       expect(runtime.liveSquatDepth).toBeGreaterThan(0.12);
       expect(runtime.playerSquatPresentationDepth).toBeGreaterThan(0.18);
       expect(runtime.shouldHoldPlayerSquatPose).toBe(true);
-      expect(runtime.lowerBodyTarget.stageDecision?.stage).toBe("player-squat");
+      expect(runtime.lowerBodyTarget.stageDecision?.stage).toBe("retarget");
       expect(runtime.playerRetargetLowerBodyMotion).toBeGreaterThan(0.4);
     });
 
@@ -570,7 +570,7 @@ describe("movementAvatarLowerBodyFrameStateRuntime (merged)", () => {
 
       expect(runtime.lowerBodyRuntimeStateDecision.nextPlayerLowerBodyVisualState).toBe(playerVisualState);
       expect(runtime.lowerBodyRuntimeStateDecision.nextInstructorLowerBodyVisualState).not.toBe(playerVisualState);
-      expect(runtime.lowerBodyTarget.stageDecision?.stage).toBe("recorded-neutral");
+      expect(runtime.lowerBodyTarget.stageDecision?.stage).toBe("retarget");
       expect(runtime.visualRootDrop).toBeGreaterThanOrEqual(0);
     });
   });

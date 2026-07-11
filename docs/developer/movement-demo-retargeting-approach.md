@@ -1,6 +1,6 @@
 # Movement Demo Retargeting Approach
 
-Last reviewed: 2026-06-14
+Last reviewed: 2026-07-10
 Status: required direction for any future body-motion work in the movement demo.
 Audience: future agents working on the posture / movement demo.
 
@@ -14,6 +14,10 @@ Future agents should read this before changing:
 - `src/app/(dashboard)/demos/movements/[id]/play/_components/MovementSourceSkeleton.tsx`
 - `src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration.ts`
 - `src/app/(dashboard)/demos/movements/_lib/vrmRigging.ts`
+
+Before changing any left/right mapping, display preparation, scoring correspondence, or avatar-side ownership, also read [`movement-mirror-and-side-ownership-contract.md`](./movement-mirror-and-side-ownership-contract.md). It is the canonical rule for the three-party relationship: recorded instructor motion preserves anatomical side, the live player's avatar uses the opposite anatomical side, and the two rendered avatars must therefore perform the same anatomical movement.
+
+Coordinate reflection, preview mirroring, anatomical ownership, and player-to-instructor scoring are separate decisions. Do not use one generic mirror flag or `facing-player` label as a substitute for the side-ownership contract.
 
 The frozen movement demo implementation currently spans these route-local files:
 

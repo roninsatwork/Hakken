@@ -16,6 +16,7 @@ import {
   applyMovementAvatarFrameCompletionOrchestrationRuntime,
   applyMovementAvatarPostFrameDebugRuntime,
   applyMovementAvatarPreBodyFrameOrchestrationRuntime,
+  filterMovementAvatarSupportArmSpecsForRetargetOwners,
   resolveMovementAvatarFrameScenePreparationRuntime,
   resolveMovementAvatarStandingFeetFloorContactLocks,
   resolveMovementAvatarFrameWorldRuntime,
@@ -80,6 +81,41 @@ describe("movement avatar standing floor contacts", () => {
     });
 
     expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["rightFoot", "leftFoot"]);
+  });
+
+  it("anchors only the recorded instructor planted foot during a right leg raise", () => {
+    const result = resolveMovementAvatarStandingFeetFloorContactLocks({
+      contactLocks: standingContactLocks,
+      lowerBodyDrive: {
+        playerLegRaiseSide: null,
+        shouldDrivePlayerLegRaise: false,
+      },
+      retargetContacts: {
+        leftFoot: true,
+        rightFoot: false,
+      },
+      shouldApply: true,
+    } as Parameters<typeof resolveMovementAvatarStandingFeetFloorContactLocks>[0]);
+
+    expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["leftFoot"]);
+  });
+});
+
+describe("movement avatar support arm ownership", () => {
+  it("removes only support arm specs already owned by the retargeter", () => {
+    const armSpecs = [
+      { bone: "leftUpperArm" as const, rotation: { x: 0, y: 0, z: 1 }, slerp: 0.8 },
+      { bone: "rightUpperArm" as const, rotation: { x: 0, y: 0, z: -1 }, slerp: 0.8 },
+    ];
+
+    expect(filterMovementAvatarSupportArmSpecsForRetargetOwners({
+      armApplicationModes: { left: "retargeted", right: "hold-last-good" },
+      armSpecs,
+    })).toEqual([armSpecs[1]]);
+    expect(filterMovementAvatarSupportArmSpecsForRetargetOwners({
+      armApplicationModes: { left: "retargeted", right: "retargeted" },
+      armSpecs,
+    })).toEqual([]);
   });
 });
 
@@ -580,6 +616,7 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime (merged)", () => {
       });
       const scene = new THREE.Object3D();
       const avatarRoot = new THREE.Object3D();
+      const hips = new THREE.Object3D();
       const head = new THREE.Object3D();
       const leftFoot = new THREE.Object3D();
       const rightFoot = new THREE.Object3D();
@@ -589,11 +626,13 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime (merged)", () => {
         ["rightFoot", rightFoot],
       ]);
       scene.add(avatarRoot);
+      avatarRoot.add(hips);
       avatarRoot.add(head);
-      avatarRoot.add(leftFoot);
-      avatarRoot.add(rightFoot);
-      leftFoot.position.set(-0.2, -0.5, 0.1);
-      rightFoot.position.set(0.2, -0.5, -0.1);
+      hips.add(leftFoot);
+      hips.add(rightFoot);
+      hips.position.y = 1;
+      leftFoot.position.set(-0.2, 0, 0.1);
+      rightFoot.position.set(0.2, 0, -0.1);
 
       const trackingDebugRef: { current: MovementTrackingDebugState | null } = {
         current: null,
@@ -625,7 +664,7 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime (merged)", () => {
           current: null,
         },
         blendshapes: null,
-        calibratedFloorCorrection: 0,
+        calibratedFloorCorrection: 3.75,
         contactLocks: avatarDecision.supportContactLocks,
         currentLowerBodyOwner: "retarget-lower-body",
         exerciseTransition: stableUprightTransition,
@@ -637,9 +676,7 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime (merged)", () => {
         hands: null,
         hasManualCalibration: false,
         hipsApplication,
-        hipsNode: {
-          position: new THREE.Vector3(0, 1, 0),
-        },
+        hipsNode: hips,
         hipsPositionOptions,
         isPlayer: true,
         legRaiseHoldDecision: {
@@ -679,6 +716,8 @@ describe("movementAvatarFrameCompletionOrchestrationRuntime (merged)", () => {
 
       expect(result.supportFrameOrchestrationRuntime.supportContactTelemetry.owner).toContain("support-contact");
       expect(result.footingFrameOrchestrationRuntime.footingRuntime.footWorldSnapshot.left).not.toBeNull();
+      expect(result.footingFrameOrchestrationRuntime.footingRuntime.footWorldSnapshot.left?.y).toBeCloseTo(1, 4);
+      expect(result.footingFrameOrchestrationRuntime.footingRuntime.footWorldSnapshot.right?.y).toBeCloseTo(1, 4);
       expect(result.headFrameOrchestrationRuntime.headFrameRefsRuntime.appliedTrackingDebugState).toBe(true);
       expect(result.finalFrameOrchestrationRuntime.postFrameDebugRuntime.applied).toBe(true);
       expect(getNow).toHaveBeenCalledTimes(2);

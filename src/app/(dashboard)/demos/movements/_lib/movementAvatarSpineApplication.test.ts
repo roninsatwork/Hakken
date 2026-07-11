@@ -221,6 +221,38 @@ describe("movement avatar spine application", () => {
     expect(result).toEqual({ applied: 4, mode: "active" });
     expect(bones.hips.quaternion.w).toBeLessThan(1);
     expect(bones.upperChest.quaternion.w).toBeLessThan(1);
+    expect(new THREE.Quaternion().angleTo(bones.chest.quaternion)).toBeLessThanOrEqual(0.040001);
+    expect(new THREE.Quaternion().angleTo(bones.upperChest.quaternion)).toBeLessThanOrEqual(0.040001);
+  });
+
+  it("genuinely holds the rendered spine while tracking is unavailable", () => {
+    const held = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.25, -0.1, 0.08));
+    const bones = {
+      chest: new THREE.Object3D(),
+      hips: new THREE.Object3D(),
+      spine: new THREE.Object3D(),
+      upperChest: new THREE.Object3D(),
+    };
+    Object.values(bones).forEach((bone) => bone.quaternion.copy(held));
+
+    const result = applyMovementAvatarSpinePoseApplicationToVrmBones({
+      activeSpineDrive: {
+        ...spineDrive(),
+        owner: "player-spine-held",
+        shouldApplySpine: false,
+      },
+      avatarRole: "player",
+      lookupBone: (bone) => bones[bone as keyof typeof bones],
+      shouldApplySolverTorso: false,
+      sources: {},
+      spineApplyOptions: spineApplyOptions(),
+      torsoTrackingReady: false,
+    });
+
+    expect(result).toEqual({ applied: 0, mode: "held" });
+    Object.values(bones).forEach((bone) => {
+      expect(bone.quaternion.angleTo(held)).toBeCloseTo(0);
+    });
   });
 
   it("applies solver spine poses directly to VRM bones and stores last-good rotations", () => {

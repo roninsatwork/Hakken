@@ -148,6 +148,25 @@ describe("movementAvatarFootLockRuntime (merged)", () => {
       expect(decision.footLockDecision.nextState.strength).toBe(decision.options.initialStrength);
     });
 
+    it("yields legacy foot locking when the shared support-contact constraint applied", () => {
+      const decision = resolveMovementAvatarFootLockRuntimeDecision({
+        avatarRole: "player",
+        currentLeft: new THREE.Vector3(-0.4, -2.7, 0),
+        currentRight: new THREE.Vector3(0.4, -2.7, 0),
+        hasAvatarRoot: true,
+        lowerBodyDrive: lowerBodyDrive({ shouldDrivePlayerSquat: true }),
+        lowerBodyTrackingReady: true,
+        previousState: createMovementAvatarFootLockState(),
+        retargetFrame: retargetFrame(),
+        shouldApplyLowerBody: true,
+        shouldHoldPlayerSquatPose: false,
+        shouldYieldToSupportContact: true,
+      });
+
+      expect(decision.shouldLock).toBe(false);
+      expect(decision.footLockDecision.shouldApplyCorrection).toBe(false);
+    });
+
     it("skips root correction when the avatar root is unavailable", () => {
       const options = resolveMovementAvatarFootLockOptions({ avatarRole: "player" });
       const decision = resolveMovementAvatarFootLockApplication({
@@ -170,6 +189,7 @@ describe("movementAvatarFootLockRuntime (merged)", () => {
       })).toEqual({
         applied: false,
         correctionScale: 0,
+        verticalCorrectionScale: 0,
       });
     });
 
@@ -200,7 +220,7 @@ describe("movementAvatarFootLockRuntime (merged)", () => {
         decision.nextState.correction.x * result.correctionScale,
       );
       expect(avatarRoot.position.y).toBeCloseTo(
-        decision.nextState.correction.y * result.correctionScale,
+        decision.nextState.correction.y * result.verticalCorrectionScale,
       );
       expect(avatarRoot.matrixWorldNeedsUpdate).toBe(false);
     });
@@ -576,6 +596,58 @@ describe("movementAvatarFootingFrameRuntime (merged)", () => {
       expect(result.footLockDebug.strength).toBe(result.nextFootLockState.strength);
       expect(result.rootStepApplication.applied).toBe(true);
       expect(leftFoot.position.y).toBeGreaterThan(-0.4);
+    });
+
+    it("measures planted-foot drift after the hips move within the frame", () => {
+      const scene = new THREE.Object3D();
+      const avatarRoot = new THREE.Object3D();
+      const hipsNode = new THREE.Object3D();
+      const leftFoot = new THREE.Object3D();
+      const rightFoot = new THREE.Object3D();
+      scene.add(avatarRoot);
+      avatarRoot.add(hipsNode);
+      hipsNode.position.set(0, 1, 0);
+      hipsNode.add(leftFoot);
+      hipsNode.add(rightFoot);
+      leftFoot.position.set(-0.4, -1, 0);
+      rightFoot.position.set(0.4, -1, 0);
+      scene.updateMatrixWorld(true);
+      const anchoredLeft = leftFoot.getWorldPosition(new THREE.Vector3());
+      const anchoredRight = rightFoot.getWorldPosition(new THREE.Vector3());
+
+      const result = applyMovementAvatarFootingFrameRuntime({
+        avatarRole: "player",
+        avatarRoot,
+        baseHipsPosition: hipsNode.position.clone(),
+        floorY: 0,
+        hipsApplication: {
+          shouldApplyFloorContactCorrection: false,
+          shouldApplySquatDrop: true,
+          squatDrop: 0.4,
+        },
+        hipsNode,
+        hipsPositionOptions,
+        leftFoot,
+        lowerBodyDrive: lowerBodyDrive(),
+        lowerBodyTrackingReady: true,
+        previousFootLockState: {
+          correction: new THREE.Vector3(),
+          left: anchoredLeft,
+          right: anchoredRight,
+          strength: 1,
+        },
+        retargetFrame: retargetFrame(),
+        rightFoot,
+        scene,
+        shouldApplyLowerBody: true,
+        shouldHoldPlayerSquatPose: false,
+        stepResponse: inactiveStepResponse(),
+      });
+
+      expect(result.hipsRuntimeApplication.positionDecision?.nextHipsY).toBeCloseTo(0.8);
+      expect(result.footLockRuntimeApplication.appliedCorrection).toBeGreaterThan(0.15);
+      expect(result.footWorldSnapshot.left?.y).toBeCloseTo(anchoredLeft.y, 4);
+      expect(result.footWorldSnapshot.right?.y).toBeCloseTo(anchoredRight.y, 4);
     });
 
     it("returns neutral applications when runtime objects are unavailable", () => {

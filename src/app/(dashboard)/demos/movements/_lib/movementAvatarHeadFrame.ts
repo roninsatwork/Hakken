@@ -45,9 +45,12 @@ export type MovementAvatarHeadRuntimeApplication =
 
 export type MovementAvatarHeadRuntimeDebugTelemetry = {
   appliedLocalPitch: number;
+  appliedLocalRoll: number;
   bonePitch: number;
+  boneRoll: number;
   boneYaw: number;
   trackingPitch: number;
+  trackingRoll: number;
   trackingYaw: number;
 };
 
@@ -62,9 +65,12 @@ export function buildMovementAvatarHeadRuntimeDebugTelemetry({
 
   return {
     appliedLocalPitch: headNode.rotation.x,
+    appliedLocalRoll: headNode.rotation.z,
     boneYaw: headTarget.headDecision.headYaw,
     bonePitch: headTarget.headBonePitch,
+    boneRoll: headTarget.headDecision.headRoll,
     trackingPitch: headTarget.headDecision.headPitch,
+    trackingRoll: rawHead.roll,
     trackingYaw: rawHead.yaw,
   };
 }
@@ -118,7 +124,10 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
     };
   }
 
-  const headTarget = preparedHeadTarget
+  const hasCurrentFaceHeadLandmarks = Boolean(
+    faceLandmarks?.[1] && faceLandmarks[33] && faceLandmarks[263],
+  );
+  const headTarget = preparedHeadTarget && !hasCurrentFaceHeadLandmarks
     ? {
       ...preparedHeadTarget,
       headWorldYaw: avatarRootYaw + preparedHeadTarget.headDecision.headYaw,
@@ -235,7 +244,12 @@ export function applyMovementAvatarHeadFrameRefsRuntime({
   }
 
   if (trackingDebugRef && headFrameRuntime.trackingDebugState) {
-    trackingDebugRef.current = headFrameRuntime.trackingDebugState;
+    trackingDebugRef.current = trackingDebugRef.current?.avatarRoot
+      ? {
+          ...headFrameRuntime.trackingDebugState,
+          avatarRoot: trackingDebugRef.current.avatarRoot,
+        }
+      : headFrameRuntime.trackingDebugState;
     appliedTrackingDebugState = true;
   }
 
@@ -535,7 +549,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
       calibration: activeCalibration,
       faceLandmarks,
       lookupBone,
-      mirrorHeadForDisplay: motionFrameInputOwner !== "movement-motion-frame",
+      mirrorHeadForDisplay: avatarRole === "player",
       neckSlerp,
       poseLandmarks,
       preparedHeadTarget: motionFrameHeadTarget,

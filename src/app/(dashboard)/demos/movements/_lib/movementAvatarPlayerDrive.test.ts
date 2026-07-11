@@ -40,6 +40,15 @@ function makeCloseCroppedPose() {
   return pose;
 }
 
+function makeOppositePose(source: MovementLandmark[]) {
+  const opposite = source.map((landmark) => ({ ...landmark, x: 1 - landmark.x }));
+  for (const [left, right] of [[7, 8], [11, 12], [23, 24], [25, 26], [27, 28], [31, 32]]) {
+    opposite[left] = { ...source[right]!, x: 1 - source[right]!.x };
+    opposite[right] = { ...source[left]!, x: 1 - source[left]!.x };
+  }
+  return opposite;
+}
+
 describe("movement avatar player drive", () => {
   it("keeps player spine ownership active so neutral can return cleanly", () => {
     const neutralPose = makeNeutralPose();
@@ -79,9 +88,89 @@ describe("movement avatar player drive", () => {
     expect(drive.sideBend).toBeGreaterThan(0.5);
     expect(drive.rotations.hips.z).toBe(0);
     expect(drive.rotations.chest.z).toBeGreaterThan(0);
-    expect(Math.abs(drive.rotations.spine.z)).toBeGreaterThan(0.24);
-    expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.38);
-    expect(Math.abs(drive.rotations.upperChest.z)).toBeGreaterThan(0.3);
+    expect(Math.abs(drive.rotations.spine.z)).toBeGreaterThan(0.5);
+    expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.7);
+    expect(Math.abs(drive.rotations.upperChest.z)).toBeGreaterThan(0.6);
+  });
+
+  it("reverses only lateral spine axes for opposite anatomical mapping", () => {
+    const neutralPose = makeNeutralPose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const sideBendPose = makeNeutralPose();
+    sideBendPose[0] = visible(0.66, 0.25);
+    sideBendPose[7] = visible(0.62, 0.27);
+    sideBendPose[8] = visible(0.7, 0.27);
+    sideBendPose[11] = visible(0.54, 0.42);
+    sideBendPose[12] = visible(0.76, 0.42);
+
+    const identity = resolveMovementAvatarPlayerSpineDrive({
+      anatomicalMapping: "identity",
+      calibration,
+      isPlayer: true,
+      poseLandmarks: sideBendPose,
+      torsoTrackingReady: true,
+    });
+    const opposite = resolveMovementAvatarPlayerSpineDrive({
+      anatomicalMapping: "opposite",
+      calibration,
+      isPlayer: true,
+      poseLandmarks: sideBendPose,
+      torsoTrackingReady: true,
+    });
+
+    expect(opposite.sideBend).toBeCloseTo(-identity.sideBend);
+    expect(opposite.twist).toBeCloseTo(-identity.twist);
+    expect(opposite.forwardLean).toBeCloseTo(identity.forwardLean);
+    expect(opposite.rotations.chest.x).toBeCloseTo(identity.rotations.chest.x);
+    expect(opposite.rotations.chest.y).toBeCloseTo(-identity.rotations.chest.y);
+    expect(opposite.rotations.chest.z).toBeCloseTo(-identity.rotations.chest.z);
+  });
+
+  it("gives instructor and opposite-player full-body spine paths the same final rotations", () => {
+    const neutralPose = makeNeutralPose();
+    const instructorCalibration = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose })!;
+    const instructorPose = makeNeutralPose();
+    instructorPose[0] = visible(0.61, 0.28, 0.03);
+    instructorPose[11] = visible(0.47, 0.43, -0.04);
+    instructorPose[12] = visible(0.73, 0.4, 0.05);
+    instructorPose[23] = visible(0.45, 0.67, -0.01);
+    instructorPose[24] = visible(0.59, 0.65, 0.02);
+    const playerPose = makeOppositePose(instructorPose);
+    const playerCalibration = {
+      ...instructorCalibration,
+      hipCenter: { ...instructorCalibration.hipCenter, x: 1 - instructorCalibration.hipCenter.x },
+      shoulderCenter: {
+        ...instructorCalibration.shoulderCenter,
+        x: 1 - instructorCalibration.shoulderCenter.x,
+      },
+    };
+
+    const instructor = resolveMovementAvatarRecordedSpineDrive({
+      kneeLift: { left: 0.08, right: 0 },
+      poseLandmarks: instructorPose,
+      retargetCalibration: instructorCalibration,
+      torsoTrackingReady: true,
+    });
+    const player = resolveMovementAvatarPlayerSpineDrive({
+      anatomicalMapping: "opposite",
+      calibration: buildMovementCalibration({ poseLandmarks: playerPose }),
+      isPlayer: true,
+      kneeLift: { left: 0, right: 0.08 },
+      poseLandmarks: playerPose,
+      retargetCalibration: playerCalibration,
+      torsoTrackingReady: true,
+    });
+
+    expect(player.owner).toBe("player-spine-model");
+    expect(instructor.owner).toBe("recorded-spine-model");
+    expect(player.forwardLean).toBeCloseTo(instructor.forwardLean, 5);
+    expect(player.sideBend).toBeCloseTo(instructor.sideBend, 5);
+    expect(player.twist).toBeCloseTo(instructor.twist, 5);
+    for (const bone of ["hips", "spine", "chest", "upperChest"] as const) {
+      expect(player.rotations[bone].x).toBeCloseTo(instructor.rotations[bone].x, 5);
+      expect(player.rotations[bone].y).toBeCloseTo(instructor.rotations[bone].y, 5);
+      expect(player.rotations[bone].z).toBeCloseTo(instructor.rotations[bone].z, 5);
+    }
   });
 
   it("holds player spine when calibration is missing", () => {
@@ -163,8 +252,8 @@ describe("movement avatar player drive", () => {
     expect(drive.shouldApplySpine).toBe(true);
     expect(drive.owner).toBe("recorded-spine-model");
     expect(drive.sideBend).toBeGreaterThan(0.5);
-    expect(drive.rotations.chest.z).toBeGreaterThan(0.4);
-    expect(drive.rotations.chest.z).toBeLessThan(0.44);
+    expect(drive.rotations.chest.z).toBeGreaterThan(0.95);
+    expect(drive.rotations.chest.z).toBeLessThan(1.02);
   });
 
   it("keeps modest recorded replay side-bend visible without overdriving it", () => {
@@ -206,7 +295,7 @@ describe("movement avatar player drive", () => {
     expect(drive.sideBend).toBeLessThan(-0.25);
     expect(drive.sideBend).toBeGreaterThan(-0.4);
     expect(Math.abs(drive.rotations.chest.z)).toBeGreaterThan(0.1);
-    expect(Math.abs(drive.rotations.chest.z)).toBeLessThan(0.12);
+    expect(Math.abs(drive.rotations.chest.z)).toBeLessThan(0.13);
   });
 
 });

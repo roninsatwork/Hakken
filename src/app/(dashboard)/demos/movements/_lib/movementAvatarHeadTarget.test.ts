@@ -158,6 +158,54 @@ describe("movement avatar head target", () => {
     expect(Math.sign(target.headDecision.headYaw)).toBe(Math.sign(target.rawHeadDecision.rawHead.yaw));
   });
 
+  it("uses the same active-spine pose-head transform for instructor and player", () => {
+    const pose = withCorePose();
+    pose[0] = { ...pose[0]!, x: 0.56, y: 0.35 };
+    pose[7] = { ...pose[7]!, y: 0.27, z: 0.08 };
+    pose[8] = { ...pose[8]!, y: 0.34, z: -0.08 };
+    const common = {
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: neutralHeadIntent,
+      mirrorHeadForDisplay: false,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: true,
+    };
+
+    const instructor = resolveMovementAvatarHeadTarget({ avatarRole: "instructor", ...common });
+    const player = resolveMovementAvatarHeadTarget({ avatarRole: "player", ...common });
+
+    expect(player.headDecision.appliedHead.pitch).toBeCloseTo(instructor.headDecision.appliedHead.pitch, 5);
+    expect(player.headDecision.appliedHead.yaw).toBeCloseTo(instructor.headDecision.appliedHead.yaw, 5);
+    expect(player.headDecision.appliedHead.roll).toBeCloseTo(instructor.headDecision.appliedHead.roll, 5);
+  });
+
+  it("keeps recorded pose-only pitch and roll visually close to the source", () => {
+    const pose = withCorePose();
+    pose[0] = { ...pose[0]!, x: 0.56, y: 0.35 };
+    pose[7] = { ...pose[7]!, y: 0.27 };
+    pose[8] = { ...pose[8]!, y: 0.34 };
+
+    const target = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: true,
+    });
+
+    const raw = target.rawHeadDecision.rawHead;
+    expect(Math.abs(target.headDecision.appliedHead.pitch)).toBeGreaterThan(
+      Math.abs(raw.pitch) * 0.7,
+    );
+    expect(Math.abs(target.headDecision.appliedHead.roll)).toBeGreaterThan(
+      Math.abs(raw.roll) * 0.65,
+    );
+  });
+
   it("preserves pose-only player head pitch for look up and down", () => {
     const pose = withCorePose();
     pose[0] = { ...pose[0]!, y: 0.36 };
@@ -175,7 +223,7 @@ describe("movement avatar head target", () => {
     expect(target.rawHeadDecision.rawHead.source).toBe("pose");
     expect(Math.abs(target.rawHeadDecision.rawHead.pitch)).toBeGreaterThan(0.3);
     expect(Math.abs(target.headDecision.headPitch)).toBeGreaterThan(0.19);
-    expect(Math.sign(target.headBonePitch)).toBe(Math.sign(target.headDecision.headPitch));
+    expect(Math.sign(target.headBonePitch)).toBe(-Math.sign(target.headDecision.headPitch));
   });
 
   it("still lets face landmarks drive player head motion", () => {

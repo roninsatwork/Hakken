@@ -98,14 +98,19 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
 }): MovementAvatarLowerBodyRetargetApplicationPlan {
   const isPlayer = avatarRole === "player";
   const plantedSquatIkDepth = isPlayer
-    ? playerSquatPresentationDepth
+    ? appliedDecision.hasCompleteLegRetarget
+      ? 0
+      : playerSquatPresentationDepth
     : !appliedDecision.hasCompleteLegRetarget && balancedPlantedSquatDepth > 0
       ? instructorSquatPresentationDepth
       : 0;
-  const squatFlexionDepth =
-    !appliedDecision.hasCompleteLegRetarget || appliedDecision.shouldUseRecordedSquatPresentation
-      ? playerSquatPresentationDepth
-      : null;
+  // A complete four-segment leg solve already contains the visible squat.
+  // Adding the canned flexion pose afterwards makes the instructor diverge
+  // from the player mirror even though both received the same source skeleton.
+  // Keep the fallback only for incomplete leg solves.
+  const squatFlexionDepth = !appliedDecision.hasCompleteLegRetarget
+    ? Math.max(instructorSquatPresentationDepth, playerSquatPresentationDepth)
+    : null;
   const legRaiseOverlay = stageDecision.anchoredPlayerLegRaiseSide && retargetAppliedLowerBody < 4
     ? {
         depth: lowerBodyDrive.playerLegRaiseDepth,
@@ -113,9 +118,6 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
       }
     : null;
   const plantInstructorFeet: Array<"left" | "right"> = [];
-  if (!isPlayer) {
-    plantInstructorFeet.push("right", "left");
-  }
 
   return {
     legRaiseOverlay,

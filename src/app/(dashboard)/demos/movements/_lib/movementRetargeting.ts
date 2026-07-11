@@ -93,6 +93,12 @@ const SEGMENT_LANDMARKS: Record<MovementRetargetSegmentName, [number, number]> =
 };
 
 const SEGMENT_NAMES = Object.keys(SEGMENT_LANDMARKS) as MovementRetargetSegmentName[];
+const ARM_SEGMENT_NAMES: MovementRetargetSegmentName[] = [
+  "leftUpperArm",
+  "leftLowerArm",
+  "rightUpperArm",
+  "rightLowerArm",
+];
 const LOWER_BODY_MOTION_SEGMENTS: MovementRetargetSegmentName[] = [
   "leftThigh",
   "leftShin",
@@ -253,6 +259,48 @@ function buildSegments(
   }, {});
 }
 
+/**
+ * MediaPipe world landmarks preserve useful limb depth, but their camera-plane
+ * arm angle can drift away from the pose landmarks that the user actually sees.
+ * Preserve the metric world-depth component while aligning the projected arm
+ * direction to the visible source silhouette.
+ */
+function buildWorldSegmentsWithDisplayAlignedArms(
+  poseLandmarks: TrackingLandmark[],
+  worldScale: number,
+  worldPoseLandmarks: TrackingLandmark[],
+) {
+  const worldSegments = buildSegments(poseLandmarks, worldScale, worldPoseLandmarks);
+  const poseCenters = getCenters(poseLandmarks);
+  if (!poseCenters) return worldSegments;
+
+  const displaySegments = buildSegments(poseLandmarks, poseCenters.torsoHeight);
+  ARM_SEGMENT_NAMES.forEach((name) => {
+    const worldSegment = worldSegments[name];
+    const displaySegment = displaySegments[name];
+    if (!worldSegment || !displaySegment) return;
+
+    const displayPlanarLength = Math.hypot(
+      displaySegment.direction.x,
+      displaySegment.direction.y,
+    );
+    if (displayPlanarLength <= 0.00001) return;
+
+    const worldDepth = clamp(worldSegment.direction.z, -1, 1);
+    const planarScale = Math.sqrt(Math.max(0, 1 - worldDepth * worldDepth));
+    worldSegments[name] = {
+      ...worldSegment,
+      direction: normalizeVector({
+        x: (displaySegment.direction.x / displayPlanarLength) * planarScale,
+        y: (displaySegment.direction.y / displayPlanarLength) * planarScale,
+        z: worldDepth,
+      }),
+    };
+  });
+
+  return worldSegments;
+}
+
 const MIN_WORLD_TORSO_HEIGHT = 0.05;
 
 function getUsableWorldPose(worldPoseLandmarks?: TrackingLandmark[] | null) {
@@ -372,7 +420,11 @@ export function buildMovementRetargetSourceModel({
     },
     quality,
     segments: usableWorldPose
-      ? buildSegments(poseLandmarks, usableWorldPose.torsoHeight, usableWorldPose.worldPoseLandmarks)
+      ? buildWorldSegmentsWithDisplayAlignedArms(
+          poseLandmarks,
+          usableWorldPose.torsoHeight,
+          usableWorldPose.worldPoseLandmarks,
+        )
       : buildSegments(poseLandmarks, centers.torsoHeight),
     shoulderCenter: centers.shoulderCenter,
     space: usableWorldPose ? "world" : "image",
@@ -466,7 +518,7 @@ export function solveMovementRetargetFrame({
   const segmentSpace: MovementRetargetSpace = usableWorldPose ? "world" : "image";
   const sourceQuality = getBodyQuality(poseLandmarks);
   const segments = usableWorldPose
-    ? buildSegments(
+    ? buildWorldSegmentsWithDisplayAlignedArms(
         poseLandmarks,
         calibration?.worldTorsoHeight ?? usableWorldPose.torsoHeight,
         usableWorldPose.worldPoseLandmarks,

@@ -125,6 +125,23 @@ describe("movement avatar lower-body drive", () => {
     expect(drive.visualRootDrop).toBeLessThan(1.1);
   });
 
+  it("uses continuous source hip drop for a planted retargeted player squat", () => {
+    const drive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: liveSquatIntent,
+      lowerBodyTrackingReady: true,
+      retargetContactsBothFeet: true,
+      retargetHipDrop: 0.13,
+      retargetSquatDepth: 0.68,
+    });
+
+    expect(drive.shouldDrivePlayerSquat).toBe(true);
+    expect(drive.groundedSquatDepth).toBeCloseTo(0.68);
+    expect(drive.playerSquatPresentationDepth).toBeCloseTo(0.13);
+    expect(drive.visualRootDrop).toBeCloseTo(0.0728);
+  });
+
   it("does not drive a player squat from knee noise without body-drop evidence", () => {
     const drive = resolveMovementAvatarLowerBodyDrive({
       hasLiveBodyCalibration: true,

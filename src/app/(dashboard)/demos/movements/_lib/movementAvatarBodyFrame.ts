@@ -27,7 +27,6 @@ import {
   MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS,
   MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS,
   MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS,
-  MOVEMENT_AVATAR_SPINE_RETARGET_MAPPINGS,
   type MovementAvatarRetargetBoneMapping,
   type MovementAvatarRetargetBoneName,
   type MovementAvatarRetargetRestMap,
@@ -94,6 +93,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
         segmentType: mapping.type,
             });
       const application = applyMovementAvatarRetargetSegmentMappingToVrmBones({
+        avatarRole,
         canApply,
         currentRestMap: restMap,
         lookupBone,
@@ -526,19 +526,19 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   // The rest-mapped segment retarget owns arms and spine. Per-segment
   // confidence gates application; arms that could not solve fall back to
   // hold-last-good / relax inside the upper-body runtime.
-  const leftArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS);
-  const rightArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS);
-
-  const upperBodyRuntimeApplication = applyMovementAvatarUpperBodyRuntimeToVrmBones({
+  // Apply every parent torso writer before solving the child arm directions.
+  // Otherwise a later chest/upper-chest update invalidates both solved arms
+  // inside the same rendered frame and presents as a synchronized arm snap.
+  const torsoRuntimeApplication = applyMovementAvatarUpperBodyRuntimeToVrmBones({
     activeSpineDrive,
     armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
     avatarRole,
     lastGood,
     leftArmDecision,
-    leftArmRetargetApplied: leftArmRetarget.applied > 0,
+    leftArmRetargetApplied: true,
     lookupBone,
     rightArmDecision,
-    rightArmRetargetApplied: rightArmRetarget.applied > 0,
+    rightArmRetargetApplied: true,
     shouldApplySolverTorso,
     spineApplyOptions: resolveMovementAvatarSpineApplyOptions({
       avatarRole,
@@ -547,16 +547,41 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
     torsoTrackingReady,
   });
 
-  // The spine segment refines the angle-based spine drive, so it must apply
-  // after the spine pose application — not be overwritten by it.
-  const spineRetarget = applyRetargetMappings(MOVEMENT_AVATAR_SPINE_RETARGET_MAPPINGS);
+  // The calibrated spine drive is the single torso owner. A second
+  // direction-only spine solve cannot preserve axial twist and can choose a
+  // different local rotation branch while the source torso is moving
+  // smoothly. Because both arms inherit the spine transform, that branch
+  // change presents as a synchronized arm teleport. Arms remain rest-mapped,
+  // but the spine is intentionally not written a second time here.
+  const leftArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_LEFT_ARM_RETARGET_MAPPINGS);
+  const rightArmRetarget = applyRetargetMappings(MOVEMENT_AVATAR_RIGHT_ARM_RETARGET_MAPPINGS);
+  const leftArm = applyMovementAvatarArmApplicationToVrmBones({
+    armDecision: leftArmDecision,
+    armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
+    lastGood,
+    lookupBone,
+    retargetApplied: leftArmRetarget.applied > 0,
+    side: "left",
+  });
+  const rightArm = applyMovementAvatarArmApplicationToVrmBones({
+    armDecision: rightArmDecision,
+    armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
+    lastGood,
+    lookupBone,
+    retargetApplied: rightArmRetarget.applied > 0,
+    side: "right",
+  });
+  const upperBodyRuntimeApplication: MovementAvatarUpperBodyRuntimeApplication = {
+    ...torsoRuntimeApplication,
+    leftArm,
+    rightArm,
+  };
 
   return {
     retargetAppliedUpperBody:
       upperBodyRuntimeApplication.recordedSpineRetargetCount +
       leftArmRetarget.applied +
-      rightArmRetarget.applied +
-      spineRetarget.applied,
+      rightArmRetarget.applied,
     upperBodyRuntimeApplication,
   };
 }
@@ -735,7 +760,10 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
       // where "standing" bodies pivot while feet sat in the neutral hold.
       // The neutral ease drives first, the foot segments refine after - the
       // same application-order contract as the spine drive + segment refine.
-      if (isPlayer && lowerBodyApplicationPlan.mode === "player-neutral") {
+      if (
+        isPlayer &&
+        (lowerBodyApplicationPlan.mode === "player-neutral" || lowerBodyApplicationPlan.mode === "player-squat")
+      ) {
         updateWorldMatrix();
         const footRetargetCounts = applyRetargetMappings(MOVEMENT_AVATAR_FOOT_RETARGET_MAPPINGS);
         if (footRetargetCounts.feet > 0) {
@@ -802,6 +830,18 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
       });
       plantedSquatIkDepth = retargetPostPlanApplication.plantedSquatIkDepth;
       footOwner = retargetPostPlanApplication.feetOwner;
+
+      // A squat fallback rotates thigh/shin parents after the first retarget
+      // pass. Re-apply only the foot world-direction targets afterwards so the
+      // final rendered feet keep their source direction instead of inheriting
+      // a role-specific parent-chain offset.
+      if (retargetApplicationPlan.squatFlexionDepth !== null) {
+        updateWorldMatrix();
+        const refinedFootCounts = applyRetargetMappings(MOVEMENT_AVATAR_FOOT_RETARGET_MAPPINGS);
+        if (refinedFootCounts.feet > 0) {
+          footOwner = "recorded-retarget";
+        }
+      }
     }
   } else {
     const inactiveLowerBodyApplication = applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones({

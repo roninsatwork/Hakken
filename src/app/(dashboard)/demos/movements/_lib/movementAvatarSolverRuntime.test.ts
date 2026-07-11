@@ -59,8 +59,8 @@ describe("movementAvatarSolverRuntime", () => {
     expect(runtimeInput?.displayPreparedInput.forceStandby).toBe(true);
     expect(runtimeInput?.displayPreparedInput.imageLandmarks[11].visibility).toBe(0);
     expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[1]?.x).toBeCloseTo(0.38);
-    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[33]?.x).toBeCloseTo(0.42);
-    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[263]?.x).toBeCloseTo(0.56);
+    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[33]?.x).toBeCloseTo(0.56);
+    expect(runtimeInput?.displayPreparedInput.faceLandmarks?.[263]?.x).toBeCloseTo(0.42);
   });
 
   it("keeps player source input separate from mirrored display target", () => {

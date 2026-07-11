@@ -87,8 +87,19 @@ export function resolveMovementAvatarSupportContactCorrectionApplication({
     };
   }
 
+  const allAnchorsAreFloorContacts = samples.every(
+    (sample) => sample.anchor.surface === "floor",
+  );
+  const weightedFloorCorrections = corrections.filter(
+    (_correction, sampleIndex) => (samples[sampleIndex]?.anchor.weight ?? 0) > 0,
+  );
   const rootCorrection = clamp(
-    weightedCorrection / totalWeight,
+    allAnchorsAreFloorContacts
+      // Multiple planted feet share one vertical root. Bring the lowest
+      // positive-weight foot to the floor; averaging opposing corrections
+      // puts one foot below the floor and snaps when the anchor count changes.
+      ? Math.max(...weightedFloorCorrections)
+      : weightedCorrection / totalWeight,
     -contactLocks.maxCorrection,
     contactLocks.maxCorrection,
   );

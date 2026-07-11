@@ -118,6 +118,10 @@ function horizontalAngle(left: MovementSpinePoint, right: MovementSpinePoint) {
   return Math.atan2(right.z - left.z, right.x - left.x);
 }
 
+function normalizeSignedAngle(angle: number) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
 function selectHeadPoint(landmarks: MovementLandmark[]) {
   const nose = pointFromLandmark(landmarks[0]);
   const leftEar = pointFromLandmark(landmarks[7]);
@@ -173,7 +177,9 @@ export function buildMovementSpineModel(landmarks: MovementLandmark[] | null | u
   const torsoLean = shoulderCenter.y - pelvisCenter.y;
   const torsoDepthLean = shoulderCenter.z - pelvisCenter.z;
   const torsoSideBend = shoulderCenter.x - pelvisCenter.x;
-  const shoulderHipRotation = horizontalAngle(leftShoulder, rightShoulder) - horizontalAngle(leftHip, rightHip);
+  const shoulderHipRotation = normalizeSignedAngle(
+    horizontalAngle(leftShoulder, rightShoulder) - horizontalAngle(leftHip, rightHip),
+  );
   const torsoLength = safeDistance(shoulderCenter, pelvisCenter);
 
   const stackScore =

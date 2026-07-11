@@ -80,12 +80,13 @@ describe("movement avatar foot lock", () => {
       previousState: lockedState(),
       shouldLock: true,
     });
-    const applied: Array<{ scale: number; x: number }> = [];
+    const applied: Array<{ scale: number; verticalScale: number; x: number }> = [];
 
     const result = applyMovementAvatarFootLockRootCorrection({
-      apply: (correction, correctionScale) => {
+      apply: (correction, correctionScale, verticalCorrectionScale) => {
         applied.push({
           scale: correctionScale,
+          verticalScale: verticalCorrectionScale,
           x: correction.x,
         });
         return true;
@@ -96,8 +97,12 @@ describe("movement avatar foot lock", () => {
 
     expect(result.applied).toBe(true);
     expect(result.correctionScale).toBeCloseTo(decision.nextState.strength * options.correctionScale);
+    expect(result.verticalCorrectionScale).toBeCloseTo(
+      decision.nextState.strength * options.verticalCorrectionScale,
+    );
     expect(applied).toEqual([{
       scale: expect.closeTo(result.correctionScale),
+      verticalScale: expect.closeTo(result.verticalCorrectionScale),
       x: expect.closeTo(0.075),
     }]);
     expect(applyMovementAvatarFootLockRootCorrection({
@@ -110,7 +115,40 @@ describe("movement avatar foot lock", () => {
     })).toEqual({
       applied: false,
       correctionScale: 0,
+      verticalCorrectionScale: 0,
     });
+  });
+
+  it("keeps planted feet near their vertical anchors during a large root drop", () => {
+    const previousState = {
+      ...lockedState(),
+      strength: 1,
+    };
+    const decision = resolveMovementAvatarFootLockApplication({
+      currentLeft: new THREE.Vector3(-0.5, -2.95, -0.2),
+      currentRight: new THREE.Vector3(0.3, -2.95, -0.2),
+      options,
+      previousState,
+      shouldLock: true,
+    });
+    const applied = new THREE.Vector3();
+
+    applyMovementAvatarFootLockRootCorrection({
+      apply: (correction, correctionScale, verticalCorrectionScale) => {
+        applied.set(
+          correction.x * correctionScale,
+          correction.y * verticalCorrectionScale,
+          correction.z * correctionScale,
+        );
+        return true;
+      },
+      decision,
+      options,
+    });
+
+    expect(applied.y).toBeGreaterThan(0.2);
+    expect(Math.abs(applied.x)).toBeLessThan(0.04);
+    expect(Math.abs(applied.z)).toBeLessThan(0.04);
   });
 
   it("resets anchors instead of applying correction when drift is too large", () => {
@@ -124,11 +162,30 @@ describe("movement avatar foot lock", () => {
       shouldLock: true,
     });
 
-    expect(decision.drift).toBeGreaterThan(options.maxDriftBeforeReset);
+    expect(decision.drift).toBeGreaterThan(options.maxLateralDriftBeforeReset);
     expect(decision.nextState.left).toEqual(left);
     expect(decision.nextState.right).toEqual(right);
     expect(decision.nextState.strength).toBe(options.initialStrength);
     expect(decision.appliedCorrection).toBe(0);
     expect(decision.shouldApplyCorrection).toBe(false);
   });
+
+  it("does not release planted anchors for vertical squat drift alone", () => {
+    const decision = resolveMovementAvatarFootLockApplication({
+      currentLeft: new THREE.Vector3(-0.4, -3.4, 0),
+      currentRight: new THREE.Vector3(0.4, -3.4, 0),
+      options,
+      previousState: {
+        ...lockedState(),
+        strength: 1,
+      },
+      shouldLock: true,
+    });
+
+    expect(decision.drift).toBeGreaterThan(options.maxLateralDriftBeforeReset);
+    expect(decision.shouldApplyCorrection).toBe(true);
+    expect(decision.nextState.left?.y).toBeCloseTo(-2.7);
+    expect(decision.nextState.right?.y).toBeCloseTo(-2.7);
+  });
+
 });

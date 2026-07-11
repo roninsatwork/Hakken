@@ -6,12 +6,14 @@ import {
 import {
   resolveMovementAvatarRetargetSegmentWorldDirection,
 } from "./movementAvatarSegmentApplication";
+import { mapMovementAvatarVisualSourceDirection } from "./movementAvatarAxialVisualTelemetry";
 import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootingFrame";
 import {
   getMovementRetargetSegmentZScale,
   type MovementRetargetFrame,
 } from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
+import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
 
 function compactVector(vector: THREE.Vector3) {
   return {
@@ -22,12 +24,14 @@ function compactVector(vector: THREE.Vector3) {
 }
 
 export function buildMovementAvatarVisualTelemetry({
+  anatomicalMapping = "identity",
   floorY,
   footWorldSnapshot,
   retargetFrame,
   vrm,
   zScale,
 }: {
+  anatomicalMapping?: MovementAnatomicalMapping;
   floorY?: number;
   footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   retargetFrame: MovementRetargetFrame;
@@ -58,7 +62,7 @@ export function buildMovementAvatarVisualTelemetry({
 
     avatarDirection.normalize();
     const sourceSegment = retargetFrame.segments[mapping.segment];
-    const sourceDirection = resolveMovementAvatarRetargetSegmentWorldDirection({
+    const rawSourceDirection = resolveMovementAvatarRetargetSegmentWorldDirection({
       mapping,
       retargetFrame,
       segmentApplicationDecision: {
@@ -68,6 +72,13 @@ export function buildMovementAvatarVisualTelemetry({
         zScale: segmentZScale,
       },
     })?.desiredWorldDirection ?? null;
+    const sourceDirection = rawSourceDirection
+      ? mapMovementAvatarVisualSourceDirection({
+          anatomicalMapping,
+          direction: rawSourceDirection,
+          segment: mapping.segment,
+        })
+      : null;
     const sourceError = sourceDirection
       ? 1 - THREE.MathUtils.clamp(avatarDirection.dot(sourceDirection), -1, 1)
       : undefined;

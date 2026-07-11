@@ -27,13 +27,20 @@ export type MovementAvatarProofMode =
   | "half-kneeling"
   | "head-down"
   | "head-left"
+  | "head-roll-left"
+  | "head-roll-right"
   | "head-right"
   | "head-up"
+  | "left-hand-curl"
+  | "left-arm-raise"
+  | "left-leg-out-45"
   | "left-leg-raise"
   | "jumping-jack"
   | "lower-body-out-of-frame"
   | "low-lunge"
   | "right-leg-raise"
+  | "right-hand-curl"
+  | "right-arm-raise"
   | "root-travel-back"
   | "root-travel-forward"
   | "root-travel-left"
@@ -50,6 +57,8 @@ export type MovementAvatarProofMode =
   | "seated-leg-lift"
   | "seated-twist"
   | "side-bend"
+  | "side-bend-left"
+  | "side-bend-right"
   | "side-lunge"
   | "side-lying"
   | "side-lying-leg-lift"
@@ -57,6 +66,8 @@ export type MovementAvatarProofMode =
   | "standing-arm-raise"
   | "standing"
   | "standing-twist"
+  | "standing-twist-left"
+  | "standing-twist-right"
   | "supine"
   | "supine-bridge"
   | "pilates-clam"
@@ -82,14 +93,22 @@ export type MovementAvatarProofMode =
   | "upper-body-auto"
   | "upper-body-auto-rejected"
   | "weak-spine-standing"
-  | "weak-feet-standing";
+  | "weak-feet-standing"
+  | "wink-left"
+  | "wink-right";
 
 export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
   "standing",
   "side-bend",
+  "side-bend-left",
+  "side-bend-right",
   "hands-front",
   "standing-arm-raise",
+  "left-arm-raise",
+  "right-arm-raise",
   "standing-twist",
+  "standing-twist-left",
+  "standing-twist-right",
   "yoga-half-lift",
   "yoga-forward-fold",
   "yoga-chair",
@@ -100,13 +119,20 @@ export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
   "head-up",
   "head-down",
   "head-left",
+  "head-roll-left",
+  "head-roll-right",
   "head-right",
+  "left-hand-curl",
+  "right-hand-curl",
+  "wink-left",
+  "wink-right",
   "squat",
   "far-squat",
   "forward-lunge",
   "side-lunge",
   "jumping-jack",
   "left-leg-raise",
+  "left-leg-out-45",
   "far-left-leg-raise",
   "right-leg-raise",
   "far-right-leg-raise",
@@ -162,13 +188,20 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "half-kneeling": "Half kneeling",
   "head-down": "Head down",
   "head-left": "Head left",
+  "head-roll-left": "Head roll left",
+  "head-roll-right": "Head roll right",
   "head-right": "Head right",
   "head-up": "Head up",
+  "left-hand-curl": "Left hand curl",
+  "left-arm-raise": "Left arm raise",
+  "left-leg-out-45": "Left leg out 45 degrees",
   "left-leg-raise": "Left leg raise",
   "jumping-jack": "Jumping jack prep",
   "lower-body-out-of-frame": "Lower body out of frame",
   "low-lunge": "Low lunge",
   "right-leg-raise": "Right leg raise",
+  "right-hand-curl": "Right hand curl",
+  "right-arm-raise": "Right arm raise",
   "root-travel-back": "Root travel back",
   "root-travel-forward": "Root travel forward",
   "root-travel-left": "Root travel left",
@@ -186,6 +219,8 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "seated-twist": "Seated twist",
   kneeling: "Kneeling",
   "side-bend": "Side bend",
+  "side-bend-left": "Side bend left",
+  "side-bend-right": "Side bend right",
   "side-lunge": "Side lunge prep",
   "side-lying": "Side lying",
   "side-lying-leg-lift": "Side-lying leg lift",
@@ -193,6 +228,8 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "standing-arm-raise": "Standing arm raise",
   standing: "Standing",
   "standing-twist": "Standing twist",
+  "standing-twist-left": "Standing twist left",
+  "standing-twist-right": "Standing twist right",
   supine: "Supine",
   "supine-bridge": "Supine bridge",
   "pilates-clam": "Pilates clam prep",
@@ -218,6 +255,8 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "upper-body-auto-rejected": "Upper-body auto rejected",
   "weak-spine-standing": "Weak spine standing",
   "weak-feet-standing": "Weak feet standing",
+  "wink-left": "Wink left",
+  "wink-right": "Wink right",
 };
 
 export function toMovementAvatarProofMode(value: string | null): MovementAvatarProofMode | null {
@@ -248,13 +287,66 @@ function makeProofHandLandmarks(wrist: VrmPoseLandmark): VrmPoseLandmark[] {
   });
 }
 
+function makeCurledProofHandLandmarks(
+  wrist: VrmPoseLandmark,
+  side: "left" | "right",
+): VrmPoseLandmark[] {
+  const direction = side === "left" ? 1 : -1;
+  const landmarks = Array.from({ length: 21 }, () => ({ ...wrist }));
+  landmarks[0] = wrist;
+
+  const thumbX = wrist.x + direction * 0.025;
+  landmarks[1] = movementAvatarProofLandmark(thumbX, wrist.y - 0.01, -0.01, 0.96);
+  landmarks[2] = movementAvatarProofLandmark(thumbX + direction * 0.018, wrist.y - 0.018, -0.025, 0.96);
+  landmarks[3] = movementAvatarProofLandmark(thumbX + direction * 0.012, wrist.y - 0.004, -0.045, 0.96);
+  landmarks[4] = movementAvatarProofLandmark(thumbX, wrist.y + 0.01, -0.05, 0.96);
+
+  const fingerStarts = [5, 9, 13, 17] as const;
+  fingerStarts.forEach((start, fingerIndex) => {
+    const baseX = wrist.x + direction * ((fingerIndex - 1.5) * 0.014);
+    landmarks[start] = movementAvatarProofLandmark(baseX, wrist.y - 0.04, -0.005, 0.96);
+    landmarks[start + 1] = movementAvatarProofLandmark(baseX, wrist.y - 0.055, -0.03, 0.96);
+    landmarks[start + 2] = movementAvatarProofLandmark(baseX, wrist.y - 0.035, -0.055, 0.96);
+    landmarks[start + 3] = movementAvatarProofLandmark(baseX, wrist.y - 0.005, -0.06, 0.96);
+  });
+
+  return landmarks;
+}
+
+export function makeMovementAvatarProofBlendshapes(
+  mode: MovementAvatarProofMode,
+): VrmMotionPayload["blendshapes"] {
+  const categoryName = mode === "wink-left"
+    ? "eyeBlinkLeft"
+    : mode === "wink-right"
+      ? "eyeBlinkRight"
+      : null;
+  if (!categoryName) return undefined;
+
+  return [{
+    categoryName,
+    displayName: categoryName,
+    index: 0,
+    score: 0.92,
+  }];
+}
+
 export function makeMovementAvatarProofFaceLandmarks(
   mode: MovementAvatarProofMode,
 ): MovementAvatarProofMotionLandmark[] {
   const landmarks = Array.from({ length: 264 }, () => movementAvatarProofLandmark(0.5, 0.5, 0, 0.92));
-  const eyeY = 0.24;
-  const leftEye = movementAvatarProofLandmark(0.45, eyeY, 0, 0.95);
-  const rightEye = movementAvatarProofLandmark(0.55, eyeY, 0, 0.95);
+  const leftEyeY = mode === "head-roll-left"
+    ? 0.21
+    : mode === "head-roll-right"
+      ? 0.27
+      : 0.24;
+  const rightEyeY = mode === "head-roll-left"
+    ? 0.27
+    : mode === "head-roll-right"
+      ? 0.21
+      : 0.24;
+  const leftEye = movementAvatarProofLandmark(0.45, leftEyeY, 0, 0.95);
+  const rightEye = movementAvatarProofLandmark(0.55, rightEyeY, 0, 0.95);
   const noseY = mode === "head-up"
     ? 0.3
     : mode === "head-down"
@@ -277,7 +369,14 @@ export function makeMovementAvatarProofFaceLandmarks(
 function getBaseProofMode(mode: MovementAvatarProofMode): MovementAvatarProofMode {
   if (mode === "far-squat") return "squat";
   if (mode === "forward-lunge" || mode === "jumping-jack" || mode === "side-lunge") return "standing";
-  if (mode === "standing-arm-raise" || mode === "standing-twist") return "standing";
+  if (
+    mode === "standing-arm-raise" ||
+    mode === "left-arm-raise" ||
+    mode === "right-arm-raise" ||
+    mode === "standing-twist" ||
+    mode === "standing-twist-left" ||
+    mode === "standing-twist-right"
+  ) return "standing";
   if (
     mode === "yoga-chair" ||
     mode === "yoga-forward-fold" ||
@@ -287,8 +386,21 @@ function getBaseProofMode(mode: MovementAvatarProofMode): MovementAvatarProofMod
     mode === "yoga-warrior-one" ||
     mode === "yoga-warrior-two"
   ) return "standing";
-  if (mode === "head-up" || mode === "head-down" || mode === "head-left" || mode === "head-right") return "standing";
+  if (
+    mode === "head-up" ||
+    mode === "head-down" ||
+    mode === "head-left" ||
+    mode === "head-right" ||
+    mode === "head-roll-left" ||
+    mode === "head-roll-right" ||
+    mode === "left-hand-curl" ||
+    mode === "right-hand-curl" ||
+    mode === "wink-left" ||
+    mode === "wink-right"
+  ) return "standing";
+  if (mode === "side-bend-left" || mode === "side-bend-right") return "side-bend";
   if (mode === "far-left-leg-raise") return "left-leg-raise";
+  if (mode === "left-leg-out-45") return "standing";
   if (mode === "far-right-leg-raise") return "right-leg-raise";
   if (mode === "upper-body-auto") return "standing";
   if (mode === "upper-body-auto-rejected") return "side-bend";
@@ -362,15 +474,18 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
   pose[16] = movementAvatarProofLandmark(0.7, isSquatMode ? 0.72 : 0.7);
 
   if (baseMode === "side-bend") {
-    pose[0] = movementAvatarProofLandmark(0.66, 0.25);
-    pose[7] = movementAvatarProofLandmark(0.62, 0.27);
-    pose[8] = movementAvatarProofLandmark(0.7, 0.27);
-    pose[11] = movementAvatarProofLandmark(0.54, 0.42);
-    pose[12] = movementAvatarProofLandmark(0.76, 0.42);
-    pose[13] = movementAvatarProofLandmark(0.58, 0.56);
-    pose[14] = movementAvatarProofLandmark(0.8, 0.56);
-    pose[15] = movementAvatarProofLandmark(0.62, 0.7);
-    pose[16] = movementAvatarProofLandmark(0.84, 0.7);
+    const x = mode === "side-bend-left"
+      ? [0.34, 0.3, 0.38, 0.24, 0.46, 0.2, 0.42, 0.16, 0.38]
+      : [0.66, 0.62, 0.7, 0.54, 0.76, 0.58, 0.8, 0.62, 0.84];
+    pose[0] = movementAvatarProofLandmark(x[0]!, 0.25);
+    pose[7] = movementAvatarProofLandmark(x[1]!, 0.27);
+    pose[8] = movementAvatarProofLandmark(x[2]!, 0.27);
+    pose[11] = movementAvatarProofLandmark(x[3]!, 0.42);
+    pose[12] = movementAvatarProofLandmark(x[4]!, 0.42);
+    pose[13] = movementAvatarProofLandmark(x[5]!, 0.56);
+    pose[14] = movementAvatarProofLandmark(x[6]!, 0.56);
+    pose[15] = movementAvatarProofLandmark(x[7]!, 0.7);
+    pose[16] = movementAvatarProofLandmark(x[8]!, 0.7);
   }
 
   if (baseMode === "hands-front") {
@@ -387,13 +502,24 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
     pose[16] = movementAvatarProofLandmark(0.54, 0.2);
   }
 
-  if (mode === "standing-twist") {
-    pose[11] = movementAvatarProofLandmark(0.36, 0.38, -0.05);
-    pose[12] = movementAvatarProofLandmark(0.64, 0.46, 0.05);
-    pose[13] = movementAvatarProofLandmark(0.3, 0.54, -0.04);
-    pose[14] = movementAvatarProofLandmark(0.7, 0.58, 0.04);
-    pose[15] = movementAvatarProofLandmark(0.28, 0.62, -0.04);
-    pose[16] = movementAvatarProofLandmark(0.72, 0.64, 0.04);
+  if (mode === "left-arm-raise") {
+    pose[13] = movementAvatarProofLandmark(0.43, 0.31);
+    pose[15] = movementAvatarProofLandmark(0.46, 0.2);
+  }
+
+  if (mode === "right-arm-raise") {
+    pose[14] = movementAvatarProofLandmark(0.57, 0.31);
+    pose[16] = movementAvatarProofLandmark(0.54, 0.2);
+  }
+
+  if (mode === "standing-twist" || mode === "standing-twist-left" || mode === "standing-twist-right") {
+    const direction = mode === "standing-twist-left" ? -1 : 1;
+    pose[11] = movementAvatarProofLandmark(0.36, 0.42 - direction * 0.04, -direction * 0.05);
+    pose[12] = movementAvatarProofLandmark(0.64, 0.42 + direction * 0.04, direction * 0.05);
+    pose[13] = movementAvatarProofLandmark(0.3, 0.56 - direction * 0.02, -direction * 0.04);
+    pose[14] = movementAvatarProofLandmark(0.7, 0.56 + direction * 0.02, direction * 0.04);
+    pose[15] = movementAvatarProofLandmark(0.28, 0.63 - direction * 0.01, -direction * 0.04);
+    pose[16] = movementAvatarProofLandmark(0.72, 0.63 + direction * 0.01, direction * 0.04);
   }
 
   if (mode === "yoga-forward-fold") {
@@ -1013,6 +1139,17 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
     pose[30] = movementAvatarProofLandmark(0.6, 0.97);
     pose[31] = movementAvatarProofLandmark(0.36, 0.98);
     pose[32] = movementAvatarProofLandmark(0.64, 0.98);
+  } else if (mode === "left-leg-out-45") {
+    pose[23] = movementAvatarProofLandmark(0.42, 0.66);
+    pose[24] = movementAvatarProofLandmark(0.58, 0.66);
+    pose[25] = movementAvatarProofLandmark(0.25, 0.74);
+    pose[26] = movementAvatarProofLandmark(0.56, 0.8);
+    pose[27] = movementAvatarProofLandmark(0.12, 0.86);
+    pose[28] = movementAvatarProofLandmark(0.56, 0.94);
+    pose[29] = movementAvatarProofLandmark(0.11, 0.87);
+    pose[30] = movementAvatarProofLandmark(0.57, 0.95);
+    pose[31] = movementAvatarProofLandmark(0.08, 0.88);
+    pose[32] = movementAvatarProofLandmark(0.58, 0.96);
   } else if (baseMode === "left-leg-raise") {
     pose[23] = movementAvatarProofLandmark(0.42, 0.66);
     pose[24] = movementAvatarProofLandmark(0.58, 0.66);
@@ -1096,6 +1233,19 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
 }
 
 export function makeMovementAvatarProofHands(mode: MovementAvatarProofMode) {
+  if (mode === "left-hand-curl" || mode === "right-hand-curl") {
+    const side = mode === "left-hand-curl" ? "left" : "right";
+    const wrist = movementAvatarProofLandmark(
+      side === "left" ? 0.3 : 0.7,
+      0.7,
+      -0.08,
+      0.96,
+    );
+    return {
+      [side]: { landmarks: makeCurledProofHandLandmarks(wrist, side) },
+    };
+  }
+
   if (mode !== "squat" && mode !== "far-squat") return undefined;
 
   const leftWrist = mode === "far-squat"
@@ -1243,6 +1393,7 @@ export function makeMovementAvatarProofMotionPayload(
   const worldLandmarks = makeMovementAvatarProofWorldLandmarks(mode);
 
   return {
+    blendshapes: makeMovementAvatarProofBlendshapes(mode),
     faceLandmarks: makeMovementAvatarProofFaceLandmarks(mode),
     landmarks,
     worldLandmarks,

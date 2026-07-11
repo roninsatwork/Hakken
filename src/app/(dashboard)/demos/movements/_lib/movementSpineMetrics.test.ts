@@ -57,6 +57,26 @@ describe("movement spine metrics", () => {
     expect(model?.coachingCue).toBe("Stack head over hips.");
   });
 
+  it("keeps opposite twists symmetric across the plus-minus pi seam", () => {
+    const rightTwist = makeNeutralPose();
+    rightTwist[11] = visible(0.64, 0.42, -0.05);
+    rightTwist[12] = visible(0.36, 0.42, 0.05);
+    rightTwist[23] = visible(0.57, 0.66, 0);
+    rightTwist[24] = visible(0.43, 0.66, 0);
+    const leftTwist = makeNeutralPose();
+    leftTwist[11] = visible(0.64, 0.42, 0.05);
+    leftTwist[12] = visible(0.36, 0.42, -0.05);
+    leftTwist[23] = visible(0.57, 0.66, 0);
+    leftTwist[24] = visible(0.43, 0.66, 0);
+
+    const rightRotation = buildMovementSpineModel(rightTwist)?.shoulderHipRotation ?? 0;
+    const leftRotation = buildMovementSpineModel(leftTwist)?.shoulderHipRotation ?? 0;
+
+    expect(rightRotation).toBeLessThan(-0.2);
+    expect(leftRotation).toBeGreaterThan(0.2);
+    expect(leftRotation).toBeCloseTo(-rightRotation);
+  });
+
   it("returns low confidence guidance for weak spine landmarks", () => {
     const model = buildMovementSpineModel(makeNeutralPose(0.2));
 

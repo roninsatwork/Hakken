@@ -35,6 +35,7 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Movement Demo Refactor Plan](./active/movement-demo-refactor-plan.md)
 - [Movement Demo Root Motion And Full Body Replay Plan](./active/movement-demo-root-motion-and-full-body-replay-plan.md)
 - [Movement Demo Whole Body Tracking Plan](./active/movement-demo-whole-body-tracking-plan.md)
+- [Movement Mirror Methodology Implementation Plan](./active/movement-mirror-methodology-implementation-plan.md)
 - [Movement Studio Best-Practice Architecture Plan](./active/movement-studio-best-practice-architecture-plan.md)
 - [Human Movement Full Coverage Implementation Plan](./active/human-movement-full-coverage-implementation-plan.md)
 - [Platform Scale Hardening Plan](./active/platform-scale-hardening-plan.md)

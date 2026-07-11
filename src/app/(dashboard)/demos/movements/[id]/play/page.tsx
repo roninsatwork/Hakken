@@ -35,8 +35,10 @@ import {
 } from "../../_hooks/useMovementPlayerTracking";
 import { useMovementTrackingCalibration } from "../../_hooks/useMovementTrackingCalibration";
 import {
+  makeMovementAvatarProofFaceLandmarks,
   makeMovementAvatarProofMotionPayload,
   makeMovementAvatarProofPose,
+  makeMovementAvatarProofRootBaselinePayload,
   toMovementAvatarProofMode,
 } from "../../_lib/movementAvatarProofFixtures";
 import {
@@ -287,13 +289,20 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const debugPlayerPoseMode = isDebugTracking
     ? toMovementAvatarProofMode(searchParams.get("debugPlayerPose"))
     : null;
+  const debugInstructorPoseMode = isDebugTracking
+    ? toMovementAvatarProofMode(searchParams.get("debugInstructorPose"))
+    : null;
+  const isDebugPoseTransitionRoute = isDebugTracking && searchParams.get("debugPoseTransition") === "1";
+  const shouldSkipDebugPoseCalibration = isDebugTracking && searchParams.get("debugSkipPoseCalibration") === "1";
   const isDebugPlayerPoseRoute = Boolean(debugPlayerPoseMode);
+  const isDebugInstructorPoseRoute = Boolean(debugInstructorPoseMode);
   const isDebugPlayerInjectionRoute = isDebugPlayerPoseRoute || isDebugGameFrameRoute;
+  const isDebugMovementInjectionRoute = isDebugPlayerInjectionRoute || isDebugInstructorPoseRoute;
   const shouldUseDebugStartGate = isDebugPlayerInjectionRoute && searchParams.get("debugStartGate") === "1";
   const shouldBypassStartReadinessForDebug =
     isDebugPlayerInjectionRoute && !shouldUseDebugStartGate;
   const shouldShowPlayerPausedPose = shouldShowMovementDebugPlayerPausedPose({ isDebugTracking });
-  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugPlayerInjectionRoute;
+  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugMovementInjectionRoute;
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
@@ -312,14 +321,42 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retry: retryVision,
     isReady: isVisionReady,
   } = useMediaPipeVision();
-  const isVisionReadyForSession = isVisionReady || isDebugPlayerInjectionRoute;
+  const isVisionReadyForSession = isVisionReady || isDebugMovementInjectionRoute;
   const instructorTrackingDebugRef = useRef<MovementTrackingDebugState | null>(null);
+  const [debugPoseTransitionActive, setDebugPoseTransitionActive] = React.useState(false);
+  React.useEffect(() => {
+    if (!isDebugPoseTransitionRoute) {
+      setDebugPoseTransitionActive(false);
+      return;
+    }
+
+    setDebugPoseTransitionActive(false);
+    const timer = window.setTimeout(() => setDebugPoseTransitionActive(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [debugInstructorPoseMode, debugPlayerPoseMode, isDebugPoseTransitionRoute]);
   const debugPlayerNeutralPose = React.useMemo(() => makeMovementAvatarProofPose("standing"), []);
+  const debugPlayerNeutralFace = React.useMemo(
+    () => makeMovementAvatarProofFaceLandmarks("standing"),
+    [],
+  );
   const debugPlayerMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => {
     if (!debugPlayerPoseMode) return null;
 
+    if (isDebugPoseTransitionRoute && !debugPoseTransitionActive) {
+      return makeMovementAvatarProofRootBaselinePayload();
+    }
     return makeMovementAvatarProofMotionPayload(debugPlayerPoseMode);
-  }, [debugPlayerPoseMode]);
+  }, [debugPlayerPoseMode, debugPoseTransitionActive, isDebugPoseTransitionRoute]);
+  const debugInstructorMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => {
+    if (!debugInstructorPoseMode) return null;
+
+    if (isDebugPoseTransitionRoute && !debugPoseTransitionActive) {
+      return makeMovementAvatarProofRootBaselinePayload();
+    }
+    return makeMovementAvatarProofMotionPayload(debugInstructorPoseMode);
+  }, [debugInstructorPoseMode, debugPoseTransitionActive, isDebugPoseTransitionRoute]);
+  const debugInstructorLmRef = useRef<MovementPlayerMotionPayload | null>(null);
+  debugInstructorLmRef.current = debugInstructorMotionPayload;
   const debugGameFrameMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => (
     debugGameFrameIndex === null
       ? null
@@ -360,15 +397,23 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     return averageMovementRetargetSourceModels(models);
   }, [isDebugGameFrameRoute, loadedFrames]);
   const debugPlayerCalibration = React.useMemo(() => (
-    isDebugPlayerPoseRoute
-      ? buildMovementCalibration({ poseLandmarks: debugPlayerNeutralPose })
+    isDebugPlayerPoseRoute && !shouldSkipDebugPoseCalibration
+      ? buildMovementCalibration({
+          faceLandmarks: debugPlayerNeutralFace,
+          poseLandmarks: debugPlayerNeutralPose,
+        })
       : null
-  ), [debugPlayerNeutralPose, isDebugPlayerPoseRoute]);
+  ), [debugPlayerNeutralFace, debugPlayerNeutralPose, isDebugPlayerPoseRoute, shouldSkipDebugPoseCalibration]);
   const debugPlayerRetargetSourceModel = React.useMemo(() => (
-    isDebugPlayerPoseRoute
+    isDebugPlayerPoseRoute && !shouldSkipDebugPoseCalibration
       ? buildMovementRetargetSourceModel({ poseLandmarks: debugPlayerNeutralPose })
       : null
-  ), [debugPlayerNeutralPose, isDebugPlayerPoseRoute]);
+  ), [debugPlayerNeutralPose, isDebugPlayerPoseRoute, shouldSkipDebugPoseCalibration]);
+  const debugInstructorRetargetSourceModel = React.useMemo(() => (
+    isDebugInstructorPoseRoute
+      ? buildMovementRetargetSourceModel({ poseLandmarks: debugPlayerNeutralPose })
+      : null
+  ), [debugPlayerNeutralPose, isDebugInstructorPoseRoute]);
   const {
     isLobby,
     playerAvatarUrl,
@@ -450,6 +495,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     resetInstructorPlayback,
     setInstructorFrame,
   } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
+  const effectiveInstructorCurrentLmRef = isDebugInstructorPoseRoute
+    ? debugInstructorLmRef
+    : instructorCurrentLmRef;
+  const effectiveInstructorRetargetSourceModel =
+    debugInstructorRetargetSourceModel ?? instructorRetargetSourceModel;
   const debugQaPresets = React.useMemo(
     () => getMovementDebugQaPresets(movementId, instructorFrameCount),
     [instructorFrameCount, movementId],
@@ -464,9 +514,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }, [isDebugTracking, pathname, router, searchParams]);
   const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking;
   const instructorMotionFrameRef = useMovementRecordedMotionFrame({
-    instructorFrameRef: instructorCurrentLmRef,
+    instructorFrameRef: effectiveInstructorCurrentLmRef,
     isPlaying: shouldKeepInstructorMotionFrameVisible,
-    retargetSourceModel: instructorRetargetSourceModel,
+    retargetSourceModel: effectiveInstructorRetargetSourceModel,
   });
   useEffect(() => {
     if (debugGameFrameIndex === null || loadedFrames.length === 0) return;
@@ -827,6 +877,42 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     debugWindow.__sonaeMovementRecordingRetargetAnalysis = instructorRetargetAnalysis;
   }, [instructorRetargetAnalysis, isDebugTracking]);
 
+  useEffect(() => {
+    if (!isDebugTracking || typeof window === "undefined") return undefined;
+
+    const debugWindow = window as Window & {
+      __sonaeMovementLiveInputDebug?: {
+        leftElbow: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        leftShoulder: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        leftWrist: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        rightElbow: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        rightShoulder: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        rightWrist: MovementPlayerMotionPayload["landmarks"] extends Array<infer T> ? T | null : unknown;
+        updatedAt: number;
+      };
+    };
+    const updateLiveInputDebug = () => {
+      const landmarks = effectivePlayerLiveLmRef.current?.landmarks;
+      if (!landmarks || landmarks.length < 17) return;
+      debugWindow.__sonaeMovementLiveInputDebug = {
+        leftElbow: landmarks[13] ?? null,
+        leftShoulder: landmarks[11] ?? null,
+        leftWrist: landmarks[15] ?? null,
+        rightElbow: landmarks[14] ?? null,
+        rightShoulder: landmarks[12] ?? null,
+        rightWrist: landmarks[16] ?? null,
+        updatedAt: performance.now(),
+      };
+    };
+    const intervalId = window.setInterval(updateLiveInputDebug, 100);
+    updateLiveInputDebug();
+
+    return () => {
+      window.clearInterval(intervalId);
+      delete debugWindow.__sonaeMovementLiveInputDebug;
+    };
+  }, [effectivePlayerLiveLmRef, isDebugTracking]);
+
   if (!movement || isFramesLoading) {
     const loadingStudio = (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] text-[#f6ccbe] animate-pulse font-medium">
@@ -861,13 +947,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
-          landmarksRef={instructorCurrentLmRef}
+          landmarksRef={effectiveInstructorCurrentLmRef}
           motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}
           isPlaying={isPlaying}
           showPausedPose={isDebugTracking}
           trackingDebugRef={instructorTrackingDebugRef}
-          retargetSourceModel={instructorRetargetSourceModel}
+          retargetSourceModel={effectiveInstructorRetargetSourceModel}
           vrmUrl={instructorAvatarUrl}
           name={instructorAvatarName}
         />
@@ -876,13 +962,13 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           <>
             <MovementSourceSkeleton
               color="#f6ccbe"
-              landmarksRef={instructorCurrentLmRef}
+              landmarksRef={effectiveInstructorCurrentLmRef}
               mirrorX
               positionOffset={[-5, 0, 0]}
             />
             <MovementSourceSkeleton
               color="#f5d84f"
-              landmarksRef={instructorCurrentLmRef}
+              landmarksRef={effectiveInstructorCurrentLmRef}
               mirrorX
               mode="truth"
               motionFrameRef={instructorMotionFrameRef}
@@ -1011,6 +1097,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
       <MovementTrackingDebugOverlay
         calibration={null}
+        debugRole="instructor"
         debugRef={instructorTrackingDebugRef}
         isEnabled={isDebugTracking}
         motionFrameRef={instructorMotionFrameRef}
@@ -1019,6 +1106,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
       <MovementTrackingDebugOverlay
         calibration={effectivePlayerCalibration}
+        debugRole="player"
         debugRef={trackingDebugRef}
         isEnabled={isDebugTracking}
         motionFrameRef={playerMotionFrameRef}

@@ -809,6 +809,73 @@ function appliedDecision(
 }
 
 describe("movement avatar lower-body retarget application plan", () => {
+  it("does not overwrite complete instructor foot retarget with canned flat feet", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: true }),
+      avatarRole: "instructor",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0,
+      retargetAppliedLowerBody: 6,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.plantInstructorFeet).toEqual([]);
+  });
+
+  it("does not overwrite a complete instructor leg retarget with canned squat flexion", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({
+        hasCompleteLegRetarget: true,
+        shouldUseRecordedSquatPresentation: true,
+      }),
+      avatarRole: "instructor",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0.8,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0.79,
+      retargetAppliedLowerBody: 6,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.squatFlexionDepth).toBeNull();
+  });
+
+  it("does not flatten solved instructor feet when another leg segment is unavailable", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({
+        feetOwner: "recorded-retarget",
+        hasCompleteLegRetarget: false,
+        lowerBodyOwner: "retarget-partial-fallback",
+      }),
+      avatarRole: "instructor",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0,
+      retargetAppliedLowerBody: 3,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.plantInstructorFeet).toEqual([]);
+  });
+
+  it("does not overwrite a complete player leg retarget with planted squat IK", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: true }),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0.8,
+      instructorSquatPresentationDepth: 0.8,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0.79,
+      retargetAppliedLowerBody: 6,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.plantedSquatIkDepth).toBe(0);
+  });
+
   it("lets solved player leg-raise retarget own the pose instead of adding a canned overlay", () => {
     const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
       appliedDecision: appliedDecision(),
@@ -839,6 +906,21 @@ describe("movement avatar lower-body retarget application plan", () => {
     });
 
     expect(plan.legRaiseOverlay).toEqual({ depth: 0.63, side: "right" });
+  });
+
+  it("uses the shared source squat fallback when a player leg solve is incomplete", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: false }),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0.72,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0,
+      retargetAppliedLowerBody: 3,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.squatFlexionDepth).toBe(0.72);
   });
 
 

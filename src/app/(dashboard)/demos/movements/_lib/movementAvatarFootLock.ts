@@ -11,6 +11,7 @@ export type MovementAvatarFootLockState = {
 export type MovementAvatarFootLockApplicationDecision = {
   appliedCorrection: number;
   drift: number;
+  lateralDrift: number;
   nextState: MovementAvatarFootLockState;
   shouldApplyCorrection: boolean;
 };
@@ -18,6 +19,7 @@ export type MovementAvatarFootLockApplicationDecision = {
 export type MovementAvatarFootLockRootCorrectionApplicationResult = {
   applied: boolean;
   correctionScale: number;
+  verticalCorrectionScale: number;
 };
 
 export function createMovementAvatarFootLockState(): MovementAvatarFootLockState {
@@ -64,6 +66,7 @@ export function resolveMovementAvatarFootLockApplication({
     return {
       appliedCorrection: 0,
       drift: 0,
+      lateralDrift: 0,
       nextState,
       shouldApplyCorrection: false,
     };
@@ -78,6 +81,7 @@ export function resolveMovementAvatarFootLockApplication({
     return {
       appliedCorrection: 0,
       drift: 0,
+      lateralDrift: 0,
       nextState,
       shouldApplyCorrection: false,
     };
@@ -95,8 +99,12 @@ export function resolveMovementAvatarFootLockApplication({
     currentLeft.distanceTo(nextState.left),
     currentRight.distanceTo(nextState.right),
   );
+  const lateralDrift = Math.max(
+    Math.hypot(currentLeft.x - nextState.left.x, currentLeft.z - nextState.left.z),
+    Math.hypot(currentRight.x - nextState.right.x, currentRight.z - nextState.right.z),
+  );
 
-  if (drift > options.maxDriftBeforeReset) {
+  if (lateralDrift > options.maxLateralDriftBeforeReset) {
     nextState.left = currentLeft.clone();
     nextState.right = currentRight.clone();
     nextState.strength = options.initialStrength;
@@ -105,6 +113,7 @@ export function resolveMovementAvatarFootLockApplication({
     return {
       appliedCorrection: 0,
       drift,
+      lateralDrift,
       nextState,
       shouldApplyCorrection: false,
     };
@@ -112,15 +121,26 @@ export function resolveMovementAvatarFootLockApplication({
 
   nextState.correction.set(
     THREE.MathUtils.clamp(lateralCorrection.x, -0.075, 0.075),
-    THREE.MathUtils.clamp(verticalCorrection, -0.05, 0.05),
+    THREE.MathUtils.clamp(
+      verticalCorrection,
+      -options.maxVerticalCorrection,
+      options.maxVerticalCorrection,
+    ),
     THREE.MathUtils.clamp(lateralCorrection.z, -0.075, 0.075),
   );
 
   const correctionScale = nextState.strength * options.correctionScale;
+  const verticalCorrectionScale = nextState.strength * options.verticalCorrectionScale;
+  const appliedCorrection = new THREE.Vector3(
+    nextState.correction.x * correctionScale,
+    nextState.correction.y * verticalCorrectionScale,
+    nextState.correction.z * correctionScale,
+  ).length();
 
   return {
-    appliedCorrection: nextState.correction.length() * correctionScale,
+    appliedCorrection,
     drift,
+    lateralDrift,
     nextState,
     shouldApplyCorrection: true,
   };
@@ -131,7 +151,11 @@ export function applyMovementAvatarFootLockRootCorrection({
   decision,
   options,
 }: {
-  apply: (correction: THREE.Vector3, correctionScale: number) => boolean;
+  apply: (
+    correction: THREE.Vector3,
+    correctionScale: number,
+    verticalCorrectionScale: number,
+  ) => boolean;
   decision: MovementAvatarFootLockApplicationDecision;
   options: MovementAvatarFootLockOptionsDecision;
 }): MovementAvatarFootLockRootCorrectionApplicationResult {
@@ -139,13 +163,20 @@ export function applyMovementAvatarFootLockRootCorrection({
     return {
       applied: false,
       correctionScale: 0,
+      verticalCorrectionScale: 0,
     };
   }
 
   const correctionScale = decision.nextState.strength * options.correctionScale;
+  const verticalCorrectionScale = decision.nextState.strength * options.verticalCorrectionScale;
 
   return {
-    applied: apply(decision.nextState.correction, correctionScale),
+    applied: apply(
+      decision.nextState.correction,
+      correctionScale,
+      verticalCorrectionScale,
+    ),
     correctionScale,
+    verticalCorrectionScale,
   };
 }

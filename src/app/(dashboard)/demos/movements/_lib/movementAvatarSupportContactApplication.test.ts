@@ -89,6 +89,42 @@ describe("movement avatar support contact application", () => {
     });
   });
 
+  it("keeps the lowest planted floor anchor on the floor instead of averaging feet across it", () => {
+    const result = resolveMovementAvatarSupportContactCorrectionApplication({
+      contactLocks: contactLocks({
+        maxCorrection: 1,
+        rootCorrectionScale: 1,
+        slerp: 1,
+      }),
+      floorY: 0,
+      samples: [
+        {
+          anchor: {
+            bone: "leftFoot",
+            label: "left planted foot",
+            surface: "floor",
+            targetOffsetFromFloor: 0,
+            weight: 1,
+          },
+          worldY: 0.4,
+        },
+        {
+          anchor: {
+            bone: "rightFoot",
+            label: "right planted foot",
+            surface: "floor",
+            targetOffsetFromFloor: 0,
+            weight: 1,
+          },
+          worldY: -0.4,
+        },
+      ],
+    });
+
+    expect(result.rootCorrection).toBeCloseTo(0.4);
+    expect(result.appliedRootCorrection).toBeCloseTo(0.4);
+  });
+
   it("executes root correction only when support anchors were applied", () => {
     const applied: number[] = [];
 

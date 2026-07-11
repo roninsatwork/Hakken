@@ -118,6 +118,30 @@ describe("applyMovementAvatarArmApplicationToVrmBones", () => {
     expect(upperArm.quaternion.angleTo(stored)).toBeLessThan(0.7);
   });
 
+  it("holds an established arm pose through a transient relax decision", () => {
+    const storedUpperArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.8));
+    const upperArm = new THREE.Object3D();
+
+    const result = applyMovementAvatarArmApplicationToVrmBones({
+      armDecision: {
+        endpointConfidence: 0.04,
+        isTrackingReady: false,
+        side: "left",
+        unreadyFallback: "relax",
+      },
+      armRelaxedSlerp: 0.5,
+      lastGood: { leftUpperArm: storedUpperArm },
+      lookupBone: (boneName) => boneName === "leftUpperArm" ? upperArm : null,
+      retargetApplied: false,
+      side: "left",
+    });
+
+    expect(result).toEqual({ handled: true, mode: "hold-last-good" });
+    expect(upperArm.quaternion.angleTo(storedUpperArm)).toBeLessThan(
+      new THREE.Quaternion().angleTo(storedUpperArm),
+    );
+  });
+
   it("eases toward the relaxed pose when tracking is unready", () => {
     const boneMap = bones();
 

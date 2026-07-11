@@ -78,6 +78,40 @@ describe("movementTrackingCalibration", () => {
     expect(angles.yaw).toBeGreaterThan(0);
   });
 
+  it("keeps face roll stable when display reflection reverses eye x ordering", () => {
+    const face = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+    face[1] = { x: 0.5, y: 0.258, z: 0 };
+    face[33] = { x: 0.55, y: 0.24, z: 0 };
+    face[263] = { x: 0.45, y: 0.24, z: 0 };
+
+    const angles = estimateMovementHeadAngles({ poseLandmarks: withCorePose(), faceLandmarks: face });
+
+    expect(angles.source).toBe("face");
+    expect(angles.roll).toBeCloseTo(0);
+  });
+
+  it("reports equal and opposite face roll with reflected eye x ordering", () => {
+    const makeFace = (leftY: number, rightY: number) => {
+      const face = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+      face[1] = { x: 0.5, y: 0.258, z: 0 };
+      face[33] = { x: 0.55, y: leftY, z: 0 };
+      face[263] = { x: 0.45, y: rightY, z: 0 };
+      return face;
+    };
+
+    const left = estimateMovementHeadAngles({
+      poseLandmarks: withCorePose(),
+      faceLandmarks: makeFace(0.21, 0.27),
+    });
+    const right = estimateMovementHeadAngles({
+      poseLandmarks: withCorePose(),
+      faceLandmarks: makeFace(0.27, 0.21),
+    });
+
+    expect(Math.sign(left.roll)).toBe(-Math.sign(right.roll));
+    expect(Math.abs(left.roll)).toBeCloseTo(Math.abs(right.roll));
+  });
+
   it("builds a calibration sample from high-quality body landmarks", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose(), now: 1234 });
 

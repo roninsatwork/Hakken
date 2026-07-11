@@ -4,7 +4,11 @@ import {
 } from "./movementAvatarPipeline";
 import type { MovementAvatarRootTransformApplication } from "./movementAvatarRootApplication";
 import type { MovementAvatarRootTargetDecision } from "./movementAvatarRootTarget";
-import { buildMovementAvatarVisualTelemetry } from "./movementAvatarVisualTelemetry";
+import { buildMovementAvatarExpressionVisualTelemetry, buildMovementAvatarHandsVisualTelemetry } from "./movementAvatarHandsFaceVisualTelemetry";
+import {
+  buildMovementAvatarVisualTelemetry,
+} from "./movementAvatarVisualTelemetry";
+import { buildMovementAvatarSpineVisualTelemetry } from "./movementAvatarAxialVisualTelemetry";
 import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootingFrame";
 import type {
   MovementRetargetFrame,
@@ -19,7 +23,10 @@ export {
   type MovementAvatarFrameTrackingDebugInput,
   type MovementAvatarTrackingFallbackContext,
 } from "./movementAvatarTrackingDebugTelemetry";
-export { buildMovementAvatarVisualTelemetry } from "./movementAvatarVisualTelemetry";
+export {
+  buildMovementAvatarVisualTelemetry,
+} from "./movementAvatarVisualTelemetry";
+export { buildMovementAvatarSpineVisualTelemetry, mapMovementAvatarVisualSourceDirection } from "./movementAvatarAxialVisualTelemetry";
 
 export type MovementAvatarRetargetDebugRegistry = Record<
   "instructor" | "player",
@@ -30,6 +37,13 @@ export type MovementAvatarRetargetDebugRegistry = Record<
 >;
 
 export type MovementAvatarRetargetDebugRegistryWindow = {
+  __sonaeMovementAvatarDebug?: Partial<Record<
+    "instructor" | "player",
+    MovementTrackingDebugState & {
+      avatarName: string;
+      frameUpdatedAt: number;
+    }
+  >>;
   __sonaeMovementRetargetDebug?: Partial<MovementAvatarRetargetDebugRegistry>;
 };
 
@@ -129,7 +143,11 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
 }): MovementTrackingDebugState {
   let nextState: MovementTrackingDebugState = {
     ...state,
+    avatarExpressions: buildMovementAvatarExpressionVisualTelemetry(vrm),
+    avatarHands: buildMovementAvatarHandsVisualTelemetry(vrm),
+    avatarSpine: buildMovementAvatarSpineVisualTelemetry(vrm),
     avatarVisual: buildMovementAvatarVisualTelemetry({
+      anatomicalMapping: avatarRole === "player" ? "opposite" : "identity",
       floorY,
       footWorldSnapshot,
       retargetFrame,
@@ -153,6 +171,16 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
       registryWindow,
       retarget: nextState.retarget,
     });
+  }
+  if (registryWindow) {
+    registryWindow.__sonaeMovementAvatarDebug = {
+      ...registryWindow.__sonaeMovementAvatarDebug,
+      [avatarRole]: {
+        ...nextState,
+        avatarName,
+        frameUpdatedAt,
+      },
+    };
   }
 
   return nextState;

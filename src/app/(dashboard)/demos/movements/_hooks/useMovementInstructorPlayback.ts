@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Classifications } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import {
-  mirrorVrmLandmarkArray,
   normalizeVrmLandmark,
+  reflectVrmLandmarkArrayCoordinates,
 } from "../_lib/vrmRigging";
 import {
   buildMovementRetargetSourceModel,
@@ -99,20 +99,20 @@ const getInstructorMotionLandmarks = (
   return value.pose ?? value.landmarks ?? [];
 };
 
-const getMirroredInstructorMotionLandmarks = (
+const getReflectedInstructorMotionLandmarks = (
   value: MovementInstructorMotionRef,
 ): InstructorPoseLandmark[] => {
   const landmarks = withDepth(getInstructorMotionLandmarks(value))
     .map((landmark) => normalizeVrmLandmark(landmark));
 
-  mirrorVrmLandmarkArray(landmarks, (x) => 1 - x);
+  reflectVrmLandmarkArrayCoordinates(landmarks, (x) => 1 - x);
 
   return landmarks;
 };
 
 // World landmarks are hip-centred metres, so facing-player mirroring negates x
 // instead of the image-space 1 - x flip.
-const getMirroredInstructorWorldLandmarks = (
+const getReflectedInstructorWorldLandmarks = (
   value: MovementInstructorMotionRef,
 ): InstructorPoseLandmark[] | null => {
   if (!value || Array.isArray(value)) return null;
@@ -123,7 +123,7 @@ const getMirroredInstructorWorldLandmarks = (
   const landmarks = withDepth(worldLandmarks)
     .map((landmark) => normalizeVrmLandmark(landmark));
 
-  mirrorVrmLandmarkArray(landmarks, (x) => -x);
+  reflectVrmLandmarkArrayCoordinates(landmarks, (x) => -x);
 
   return landmarks;
 };
@@ -141,13 +141,13 @@ export function buildInstructorRetargetSourceModel(
   let bestScore = Number.POSITIVE_INFINITY;
 
   frames.forEach((frame, index) => {
-    const poseLandmarks = getMirroredInstructorMotionLandmarks(frame);
+    const poseLandmarks = getReflectedInstructorMotionLandmarks(frame);
     if (poseLandmarks.length < 33) return;
 
     const model = buildMovementRetargetSourceModel({
       now: index,
       poseLandmarks,
-      worldPoseLandmarks: getMirroredInstructorWorldLandmarks(frame),
+      worldPoseLandmarks: getReflectedInstructorWorldLandmarks(frame),
     });
     if (!model) return;
 
@@ -166,13 +166,13 @@ function toRetargetFrameAnalysis(
   frame: MovementInstructorMotionFrame,
   retargetSourceModel: MovementRetargetSourceModel,
 ): MovementInstructorRetargetFrameAnalysis | null {
-  const poseLandmarks = getMirroredInstructorMotionLandmarks(frame);
+  const poseLandmarks = getReflectedInstructorMotionLandmarks(frame);
   if (poseLandmarks.length < 33) return null;
 
   const retargetFrame = solveMovementRetargetFrame({
     calibration: retargetSourceModel,
     poseLandmarks,
-    worldPoseLandmarks: getMirroredInstructorWorldLandmarks(frame),
+    worldPoseLandmarks: getReflectedInstructorWorldLandmarks(frame),
   });
 
   return {

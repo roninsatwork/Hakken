@@ -41,6 +41,7 @@ function buildUnsupportedOrientationSpineDrive(
 }
 
 export function resolveMovementAvatarPipelineDecision({
+  anatomicalMapping = "identity",
   avatarTrackingProfile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   avatarRole,
   calibration,
@@ -91,12 +92,9 @@ export function resolveMovementAvatarPipelineDecision({
   } = resolveMovementAvatarPipelineSupportDecision({
     bodyOrientation,
     preferFeetFloorForActiveLowerBody:
-      isPlayer &&
-      (
-        lowerBodyDrive.shouldDrivePlayerSquat ||
-        lowerBodyDrive.shouldDrivePlayerLegRaise ||
-        playerRetargetLowerBodyMotion >= 0.16
-      ),
+      lowerBodyDrive.shouldDrivePlayerSquat ||
+      lowerBodyDrive.shouldDrivePlayerLegRaise ||
+      lowerBodySegmentMotion >= 0.16,
     poseLandmarks: source.poseLandmarks,
   });
   const leftArm = resolveMovementAvatarArmDecision({
@@ -112,9 +110,12 @@ export function resolveMovementAvatarPipelineDecision({
     side: "right",
   });
   const playerSpineDrive = resolveMovementAvatarPlayerSpineDrive({
+    anatomicalMapping,
     calibration,
     isPlayer,
+    kneeLift: retargetFrame.kneeLift,
     poseLandmarks: source.poseLandmarks,
+    retargetCalibration: retargetSourceModel,
     torsoTrackingReady,
   });
   const recordedSpineDrive = resolveMovementAvatarRecordedSpineDrive({

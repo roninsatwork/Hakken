@@ -1,10 +1,14 @@
 import { buildMovementSpineModel } from "./movementSpineMetrics";
 import type { MovementCalibration } from "./movementTrackingCalibration";
+import type { MovementRetargetSourceModel } from "./movementRetargeting";
 import type { MovementLandmark } from "./movementTypes";
+import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
+import { applyMovementAnatomicalMappingToPlayerSpineDrive } from "./movementAvatarPlayerSpineDriveMapping";
+import { resolveMovementAvatarFullBodySpineDrive } from "./movementAvatarFullBodySpineDrive";
 import { resolveUpperBodyPlayerSpineDrive } from "./movementAvatarUpperBodyPlayerSpineDrive";
 import {
   average,
-  capRecordedPresentationSideBend,
+  capLivePresentationSideBend,
   clamp,
   NEUTRAL_PLAYER_SPINE_DRIVE,
   visibility,
@@ -12,14 +16,20 @@ import {
 } from "./movementAvatarPlayerSpineDriveShared";
 
 export function resolveMovementAvatarPlayerSpineDrive({
+  anatomicalMapping = "identity",
   calibration,
   isPlayer,
+  kneeLift,
   poseLandmarks,
+  retargetCalibration,
   torsoTrackingReady,
 }: {
+  anatomicalMapping?: MovementAnatomicalMapping;
   calibration?: MovementCalibration | null;
   isPlayer: boolean;
+  kneeLift?: { left: number; right: number } | null;
   poseLandmarks: MovementLandmark[];
+  retargetCalibration?: MovementRetargetSourceModel | null;
   torsoTrackingReady: boolean;
 }): MovementAvatarPlayerSpineDrive {
   if (!isPlayer) return NEUTRAL_PLAYER_SPINE_DRIVE;
@@ -28,6 +38,16 @@ export function resolveMovementAvatarPlayerSpineDrive({
       ...NEUTRAL_PLAYER_SPINE_DRIVE,
       owner: "player-spine-held",
     };
+  }
+
+  if (retargetCalibration && retargetCalibration.quality >= 0.45) {
+    return resolveMovementAvatarFullBodySpineDrive({
+      anatomicalMapping,
+      kneeLift,
+      ownerRole: "player",
+      poseLandmarks,
+      retargetCalibration,
+    });
   }
 
   if (!calibration || calibration.quality < 0.45) {
@@ -42,7 +62,12 @@ export function resolveMovementAvatarPlayerSpineDrive({
   const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
   if (hipConfidence < 0.3) {
     const upperBodyDrive = resolveUpperBodyPlayerSpineDrive({ calibration, poseLandmarks });
-    if (upperBodyDrive) return upperBodyDrive;
+    if (upperBodyDrive) {
+      return applyMovementAnatomicalMappingToPlayerSpineDrive(
+        upperBodyDrive,
+        anatomicalMapping,
+      );
+    }
   }
 
   const spineModel = buildMovementSpineModel(poseLandmarks);
@@ -58,7 +83,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
   const neutralLean = calibration.shoulderCenter.y - calibration.hipCenter.y;
   const neutralDepthLean = calibration.shoulderCenter.z - calibration.hipCenter.z;
   const sideBend = clamp((spineModel.torsoSideBend - neutralSideBend) / 0.16, -1, 1);
-  const presentationSideBend = capRecordedPresentationSideBend(sideBend);
+  const presentationSideBend = capLivePresentationSideBend(sideBend);
   const forwardLean = clamp((spineModel.torsoLean - neutralLean) / 0.18, -1, 1);
   const depthLean = clamp((spineModel.torsoDepthLean - neutralDepthLean) / 0.18, -1, 1);
   const presentationForwardLean = Math.abs(depthLean) > Math.abs(forwardLean)
@@ -68,7 +93,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
   const activity = Math.max(Math.abs(sideBend), Math.abs(forwardLean), Math.abs(depthLean), Math.abs(twist));
   const owner = activity >= 0.06 ? "player-spine-model" : "player-spine-neutral";
 
-  return {
+  return applyMovementAnatomicalMappingToPlayerSpineDrive({
     confidence: spineModel.confidence,
     forwardLean,
     owner,
@@ -81,21 +106,21 @@ export function resolveMovementAvatarPlayerSpineDrive({
       spine: {
         x: -presentationForwardLean * 0.32,
         y: twist * 0.08,
-        z: presentationSideBend * 0.95,
+        z: presentationSideBend * 1.1,
       },
       chest: {
         x: -presentationForwardLean * 0.52,
         y: twist * 0.12,
-        z: presentationSideBend * 1.35,
+        z: presentationSideBend * 1.55,
       },
       upperChest: {
         x: -presentationForwardLean * 0.38,
         y: twist * 0.1,
-        z: presentationSideBend * 1.1,
+        z: presentationSideBend * 1.3,
       },
     },
     shouldApplySpine: true,
     sideBend,
     twist,
-  };
+  }, anatomicalMapping);
 }

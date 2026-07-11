@@ -22,37 +22,6 @@ export type MovementAvatarLowerBodyTargetDecision = {
   stageDecision: MovementAvatarLowerBodyApplicationStageDecision | null;
 };
 
-function isStationaryFeetFloorSideBend(decision: MovementAvatarPipelineDecision) {
-  const strongestKneeLift = Math.max(
-    decision.retargetFrame.kneeLift.left,
-    decision.retargetFrame.kneeLift.right,
-  );
-
-  return (
-    decision.supportIntent.key === "feet-floor" &&
-    Math.abs(decision.spineDrive.sideBend) >= 0.12 &&
-    !decision.lowerBodyDrive.shouldDrivePlayerSquat &&
-    !decision.lowerBodyDrive.shouldDrivePlayerLegRaise &&
-    decision.retargetFrame.squatDepth < 0.12 &&
-    strongestKneeLift < 0.18
-  );
-}
-
-function buildNeutralPlayerSideBendSourceOwner(
-  playerSourceOwner: MovementAvatarPlayerSourceOwnerDecision,
-): MovementAvatarPlayerSourceOwnerDecision {
-  return {
-    ...playerSourceOwner,
-    lowerBodyOwnerDecision: {
-      canUsePlayerRetargetLegRaise: false,
-      feetOwner: "neutral",
-      lowerBodyOwner: "player-lower-body-neutral",
-      shouldUsePlayerFootFallback: false,
-    },
-    playerRetargetLowerBodyMotion: 0,
-  };
-}
-
 export function resolveMovementAvatarLowerBodyTarget({
   avatarRole,
   decision,
@@ -83,31 +52,11 @@ export function resolveMovementAvatarLowerBodyTarget({
     shouldHoldPlayerSquatPose,
   });
 
-  if (isPlayer && isStationaryFeetFloorSideBend(decision)) {
-    const stageDecision: MovementAvatarLowerBodyApplicationStageDecision = {
-      anchoredPlayerLegRaiseSide: null,
-      canUsePlayerRetargetLegRaise: false,
-      feetOwner: "neutral",
-      lowerBodyOwner: "player-lower-body-neutral",
-      stage: "player-neutral",
-    };
-
-    return {
-      feetOwner: stageDecision.feetOwner,
-      inactiveDecision: null,
-      instructorLowerBodyMotion,
-      lowerBodyOwner: stageDecision.lowerBodyOwner,
-      playerSourceOwner: buildNeutralPlayerSideBendSourceOwner(playerSourceOwner),
-      playerSquatPresentationDepth: 0,
-      recordedSquatPresentationDepth,
-      shouldHoldPlayerSquatPose: false,
-      stageDecision,
-    };
-  }
-
   if ((decision.lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && decision.shouldApplyLowerBody) {
     const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
       avatarRole,
+      hasCompleteLegRetarget:
+        decision.retargetSolvedLegs >= 4 && decision.retargetFrame.debug.sourceQuality >= 0.45,
       instructorLowerBodyMotion,
       lowerBodyDrive: decision.lowerBodyDrive,
       playerRetargetLowerBodyMotion: playerSourceOwner.playerRetargetLowerBodyMotion,

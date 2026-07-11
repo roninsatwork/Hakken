@@ -20,6 +20,7 @@ import { getMovementTrackingHealthSummary } from "../../../_lib/movementTracking
 
 type MovementTrackingDebugOverlayProps = {
   calibration: MovementCalibration | null;
+  debugRole?: "instructor" | "player";
   debugRef: MutableRefObject<MovementTrackingDebugState | null>;
   isEnabled: boolean;
   motionFrameRef?: RefObject<MovementMotionFrame | null | undefined>;
@@ -70,6 +71,7 @@ function getHealthToneClass(level: string) {
 
 export default function MovementTrackingDebugOverlay({
   calibration,
+  debugRole,
   debugRef,
   isEnabled,
   motionFrameRef,
@@ -131,7 +133,21 @@ export default function MovementTrackingDebugOverlay({
   const placementClass = placement === "right" ? "right-6" : "left-6";
 
   return (
-    <aside className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-y-auto rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}>
+    <aside
+      className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-y-auto rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}
+      data-movement-avatar-expressions={JSON.stringify(debugState?.avatarExpressions ?? null)}
+      data-movement-avatar-head={JSON.stringify(debugState?.avatarHead ?? null)}
+      data-movement-avatar-hands={JSON.stringify(debugState?.avatarHands ?? null)}
+      data-movement-avatar-role={debugRole}
+      data-movement-avatar-root={JSON.stringify(debugState?.avatarRoot ?? null)}
+      data-movement-avatar-spine={JSON.stringify(debugState?.avatarSpine ?? null)}
+      data-movement-avatar-visual={JSON.stringify(debugState?.avatarVisual ?? null)}
+      data-movement-head-applied={JSON.stringify(debugState?.headApplied ?? null)}
+      data-movement-side-map={motionFrame
+        ? `${motionFrame.display.mirrorMode} L->${motionFrame.display.sideMap.sourceLeft} R->${motionFrame.display.sideMap.sourceRight}`
+        : "waiting"}
+      data-movement-spine-drive={JSON.stringify(debugState?.spineDrive ?? null)}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="font-black uppercase tracking-[0.18em] text-[#a8d5ba]">{title}</div>
         <div className={`rounded-full border px-2 py-1 font-mono text-[10px] ${healthToneClass}`}>

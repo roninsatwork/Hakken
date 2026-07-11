@@ -201,9 +201,12 @@ export function buildMovementAvatarTrackingDebugState({
   appliedHead: MovementTrackingDebugState["headApplied"];
   avatarHead: {
     appliedLocalPitch: number;
+    appliedLocalRoll: number;
     bonePitch: number;
+    boneRoll: number;
     boneYaw: number;
     trackingPitch: number;
+    trackingRoll: number;
     trackingYaw: number;
   };
   avatarLegRaise: {
@@ -235,9 +238,12 @@ export function buildMovementAvatarTrackingDebugState({
     headApplied: appliedHead,
     avatarHead: {
       appliedLocalPitch: Number(avatarHead.appliedLocalPitch.toFixed(4)),
+      appliedLocalRoll: Number(avatarHead.appliedLocalRoll.toFixed(4)),
       boneYaw: Number(avatarHead.boneYaw.toFixed(4)),
       bonePitch: Number(avatarHead.bonePitch.toFixed(4)),
+      boneRoll: Number(avatarHead.boneRoll.toFixed(4)),
       trackingPitch: Number(avatarHead.trackingPitch.toFixed(4)),
+      trackingRoll: Number(avatarHead.trackingRoll.toFixed(4)),
       trackingYaw: Number(avatarHead.trackingYaw.toFixed(4)),
     },
     avatarLegRaise: {

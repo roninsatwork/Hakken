@@ -2,6 +2,7 @@ import type { Classifications } from "@mediapipe/tasks-vision";
 import type { VRM } from "@pixiv/three-vrm";
 import * as Kalidokit from "kalidokit";
 import * as THREE from "three";
+import { MOVEMENT_LANDMARK_MIRROR_PAIRS } from "./movementMirrorMapping";
 import type { MovementHandSide } from "./movementTypes";
 
 export type VrmBlendshapeCategory = Classifications["categories"][number];
@@ -191,29 +192,21 @@ export function mirrorVrmLandmarkArray(
   arr: VrmSolverLandmark[],
   invertX: (x: number) => number,
 ) {
-  const swapPairs = [
-    [1, 4],
-    [2, 5],
-    [3, 6],
-    [7, 8],
-    [9, 10],
-    [11, 12],
-    [13, 14],
-    [15, 16],
-    [17, 18],
-    [19, 20],
-    [21, 22],
-    [23, 24],
-    [25, 26],
-    [27, 28],
-    [29, 30],
-    [31, 32],
-  ];
+  reflectVrmLandmarkArrayCoordinates(arr, invertX);
+  swapVrmLandmarkArraySides(arr);
+}
 
+export function reflectVrmLandmarkArrayCoordinates(
+  arr: VrmSolverLandmark[],
+  reflectX: (x: number) => number,
+) {
   arr.forEach((lm) => {
-    lm.x = invertX(lm.x);
+    lm.x = reflectX(lm.x);
   });
-  swapPairs.forEach(([leftIndex, rightIndex]) => {
+}
+
+export function swapVrmLandmarkArraySides(arr: VrmSolverLandmark[]) {
+  MOVEMENT_LANDMARK_MIRROR_PAIRS.forEach(([leftIndex, rightIndex]) => {
     if (arr[leftIndex] && arr[rightIndex]) {
       const temp = { ...arr[leftIndex] };
       arr[leftIndex] = { ...arr[rightIndex] };
@@ -222,27 +215,33 @@ export function mirrorVrmLandmarkArray(
   });
 }
 
-function mirrorHandsPayload(hands: VrmHandsPayload): VrmHandsPayload {
+function reflectHandsPayloadCoordinates(hands: VrmHandsPayload): VrmHandsPayload {
+  return Object.fromEntries(
+    (["left", "right"] as const).map((side) => {
+      const hand = hands[side];
+      if (!hand) return [side, hand];
+
+      return [side, {
+        ...hand,
+        landmarks: hand.landmarks.map((landmark) => ({ ...landmark })),
+        worldLandmarks: hand.worldLandmarks?.map((landmark) => ({
+          ...landmark,
+          x: -landmark.x,
+        })) ?? hand.worldLandmarks,
+      }];
+    }),
+  ) as VrmHandsPayload;
+}
+
+function swapHandsPayloadSides(hands: VrmHandsPayload): VrmHandsPayload {
   const mirroredHands: VrmHandsPayload = {};
 
   if (hands.left) {
     mirroredHands.right = { ...hands.left };
-    if (mirroredHands.right.worldLandmarks) {
-      mirroredHands.right.worldLandmarks = mirroredHands.right.worldLandmarks.map((lm) => ({
-        ...lm,
-        x: -lm.x,
-      }));
-    }
   }
 
   if (hands.right) {
     mirroredHands.left = { ...hands.right };
-    if (mirroredHands.left.worldLandmarks) {
-      mirroredHands.left.worldLandmarks = mirroredHands.left.worldLandmarks.map((lm) => ({
-        ...lm,
-        x: -lm.x,
-      }));
-    }
   }
 
   return mirroredHands;
@@ -261,21 +260,24 @@ const VRM_FACE_MIRROR_INDEX_PAIRS = [
   [33, 263],
 ] as const;
 
-function mirrorFaceLandmarksForDisplay(faceLandmarks: VrmSolverLandmark[]) {
-  const mirroredFaceLandmarks = faceLandmarks.map((landmark) => ({
+function reflectFaceLandmarksForDisplay(faceLandmarks: VrmSolverLandmark[]) {
+  return faceLandmarks.map((landmark) => ({
     ...landmark,
     x: 1 - landmark.x,
   }));
+}
 
+function swapFaceLandmarkSides(faceLandmarks: VrmSolverLandmark[]) {
+  const swappedFaceLandmarks = faceLandmarks.map((landmark) => ({ ...landmark }));
   VRM_FACE_MIRROR_INDEX_PAIRS.forEach(([leftIndex, rightIndex]) => {
-    const left = mirroredFaceLandmarks[leftIndex];
-    const right = mirroredFaceLandmarks[rightIndex];
+    const left = swappedFaceLandmarks[leftIndex];
+    const right = swappedFaceLandmarks[rightIndex];
     if (!left || !right) return;
-    mirroredFaceLandmarks[leftIndex] = right;
-    mirroredFaceLandmarks[rightIndex] = left;
+    swappedFaceLandmarks[leftIndex] = right;
+    swappedFaceLandmarks[rightIndex] = left;
   });
 
-  return mirroredFaceLandmarks;
+  return swappedFaceLandmarks;
 }
 
 export function prepareVrmSolverInput({
@@ -286,7 +288,8 @@ export function prepareVrmSolverInput({
   mirrorForDisplay = false,
 }: PrepareVrmSolverInput) {
   const forceStandby = !isPlayer && !isPlaying;
-  const shouldMirror = !isPlayer || mirrorForDisplay;
+  const shouldReflectCoordinates = !isPlayer || mirrorForDisplay;
+  const shouldSwapAnatomicalSides = mirrorForDisplay;
   const format = (landmark: VrmLandmarkInput) => {
     const normalized = normalizeVrmLandmark(landmark);
     return {
@@ -305,22 +308,34 @@ export function prepareVrmSolverInput({
   let rigHands = payload?.hands;
   let rigBlendshapes = payload?.blendshapes;
 
-  if (shouldMirror) {
-    mirrorVrmLandmarkArray(imageLandmarks, (x) => 1 - x);
+  if (shouldReflectCoordinates) {
+    reflectVrmLandmarkArrayCoordinates(imageLandmarks, (x) => 1 - x);
     if (solverLandmarks) {
-      mirrorVrmLandmarkArray(solverLandmarks, (x) => -x);
+      reflectVrmLandmarkArrayCoordinates(solverLandmarks, (x) => -x);
     }
 
     if (payload?.hands) {
-      rigHands = mirrorHandsPayload(payload.hands);
-    }
-
-    if (payload?.blendshapes) {
-      rigBlendshapes = mirrorBlendshapeSides(payload.blendshapes);
+      rigHands = reflectHandsPayloadCoordinates(payload.hands);
     }
 
     if (faceLandmarks) {
-      faceLandmarks = mirrorFaceLandmarksForDisplay(faceLandmarks);
+      faceLandmarks = reflectFaceLandmarksForDisplay(faceLandmarks);
+    }
+  }
+
+  if (shouldSwapAnatomicalSides) {
+    swapVrmLandmarkArraySides(imageLandmarks);
+    if (solverLandmarks) {
+      swapVrmLandmarkArraySides(solverLandmarks);
+    }
+    if (rigHands) {
+      rigHands = swapHandsPayloadSides(rigHands);
+    }
+    if (payload?.blendshapes) {
+      rigBlendshapes = mirrorBlendshapeSides(payload.blendshapes);
+    }
+    if (faceLandmarks) {
+      faceLandmarks = swapFaceLandmarkSides(faceLandmarks);
     }
   }
 

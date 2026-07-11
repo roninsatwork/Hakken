@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -39,6 +39,8 @@ import {
   resolveMovementMotionFrame,
   type MovementMotionFrame,
 } from "../_lib/movementMotionFrame";
+import { buildLiveMovementMotionFrame } from "../_lib/movementLiveMotionFrame";
+import { buildRecordedMovementMotionFrame } from "../_lib/movementRecordedMotionFrame";
 import {
   mirrorMovementLandmarksForDisplay,
 } from "../_lib/movementMirrorMapping";
@@ -55,6 +57,10 @@ import { useReplayLabCaptures } from "./_hooks/useReplayLabCaptures";
 import { useReplayLabRecordings } from "./_hooks/useReplayLabRecordings";
 import { useReplayLabBatch } from "./_hooks/useReplayLabBatch";
 import { getReplayLabLiveCurrentFrameFailures } from "./_lib/replayLabFrameFailures";
+import {
+  buildOppositePlayerImitationOracle,
+  buildOppositePlayerRetargetSourceModelOracle,
+} from "./_lib/replayThreePartyMirrorOracle";
 
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD,
@@ -90,17 +96,36 @@ function publishReplayLabDebug(value: unknown) {
   }).__movementReplayLabDebug = value;
 }
 
+type MovementReplayLabDeterministicDebugWindow = Window & {
+  __sonaeReplayLabCommittedAt?: number;
+  __sonaeReplayLabCommittedFrameIndex?: number;
+  __sonaeReplayLabStepToFrame?: (frameIndex: number) => number;
+};
+
 export default function MovementReplayLabPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const replayAvatarDebugRef = useRef<MovementTrackingDebugState | null>(null);
+  const replayInstructorAvatarDebugRef = useRef<MovementTrackingDebugState | null>(null);
   const replayMotionRef = useRef<VrmMotionRef>(null);
   const replaySourceMotionRef = useRef<VrmMotionRef>(null);
   const replayMotionFrameRef = useRef<MovementMotionFrame | null>(null);
+  const replayInstructorMotionRef = useRef<VrmMotionRef>(null);
+  const replayInstructorMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<Id<"movements"> | null>(null);
   const [selectedRecordingIds, setSelectedRecordingIds] = useState<Array<Id<"movements">>>([]);
   const [hasRunBatch, setHasRunBatch] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const isDeterministicReplay = useSyncExternalStore(
+    () => () => undefined,
+    () => new URLSearchParams(window.location.search).get("debugDeterministicReplay") === "1",
+    () => false,
+  );
+  const isThreePartyMirrorProof = useSyncExternalStore(
+    () => () => undefined,
+    () => new URLSearchParams(window.location.search).get("debugThreePartyMirror") === "1",
+    () => false,
+  );
   const [polledAvatarDebug, setPolledAvatarDebug] = useState<MovementTrackingDebugState | null>(null);
   const handleDebugSessionReady = useCallback((readyRecordingId: Id<"movements">) => {
     setSelectedRecordingId(readyRecordingId);
@@ -388,6 +413,64 @@ export default function MovementReplayLabPage() {
 
     return averageMovementCalibrations(calibrationSamples);
   }, [replaySession]);
+  const replayThreePartyPlayerSourceModel = useMemo(() => {
+    if (!isThreePartyMirrorProof) return null;
+    return buildOppositePlayerRetargetSourceModelOracle(replayRetargetSourceModel);
+  }, [isThreePartyMirrorProof, replayRetargetSourceModel]);
+  const replayThreePartyPlayerCalibration = useMemo(() => {
+    if (!replaySession || !isThreePartyMirrorProof) return null;
+
+    const calibrations = replaySession.samples
+      .map((sample, index) => {
+        const imitation = buildOppositePlayerImitationOracle({ landmarks: sample.tracking.pose });
+        return buildMovementCalibration({
+          now: index,
+          poseLandmarks: imitation.landmarks ?? [],
+        });
+      })
+      .filter((calibration): calibration is NonNullable<typeof calibration> => Boolean(calibration))
+      .sort((left, right) => right.quality - left.quality)
+      .slice(0, 8);
+
+    return averageMovementCalibrations(calibrations);
+  }, [isThreePartyMirrorProof, replaySession]);
+  const currentThreePartyInstructorPayload = useMemo(() => currentFrame
+    ? {
+        landmarks: currentFrame.tracking.pose,
+        worldLandmarks: currentFrame.tracking.worldPose.length > 0
+          ? currentFrame.tracking.worldPose
+          : undefined,
+      }
+    : null, [currentFrame]);
+  const currentThreePartyPlayerPayload = useMemo(() => (
+    currentThreePartyInstructorPayload && isThreePartyMirrorProof
+      ? buildOppositePlayerImitationOracle(currentThreePartyInstructorPayload)
+      : null
+  ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof]);
+  const currentThreePartyInstructorFrame = useMemo(() => (
+    currentThreePartyInstructorPayload && isThreePartyMirrorProof
+      ? buildRecordedMovementMotionFrame({
+          isPlaying: true,
+          motionRef: currentThreePartyInstructorPayload,
+          retargetSourceModel: replayRetargetSourceModel,
+        })
+      : null
+  ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof, replayRetargetSourceModel]);
+  const currentThreePartyPlayerFrame = useMemo(() => (
+    currentThreePartyPlayerPayload && isThreePartyMirrorProof
+      ? buildLiveMovementMotionFrame({
+          calibration: replayThreePartyPlayerCalibration,
+          isPlaying: true,
+          motionRef: currentThreePartyPlayerPayload,
+          retargetSourceModel: replayThreePartyPlayerSourceModel,
+        })
+      : null
+  ), [
+    currentThreePartyPlayerPayload,
+    isThreePartyMirrorProof,
+    replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSourceModel,
+  ]);
   const currentReplayMotionFrame = useMemo(() => {
     if (!currentFrame || currentPoseLandmarks.length < 33) return null;
 
@@ -660,19 +743,23 @@ export default function MovementReplayLabPage() {
   })();
 
   useEffect(() => {
-    replayMotionFrameRef.current = currentReplayMotionFrame;
-  }, [currentReplayMotionFrame]);
+    replayMotionFrameRef.current = isThreePartyMirrorProof
+      ? currentThreePartyPlayerFrame
+      : currentReplayMotionFrame;
+    replayInstructorMotionFrameRef.current = currentThreePartyInstructorFrame;
+  }, [
+    currentReplayMotionFrame,
+    currentThreePartyInstructorFrame,
+    currentThreePartyPlayerFrame,
+    isThreePartyMirrorProof,
+  ]);
 
   useEffect(() => {
-    replayMotionRef.current = currentFrame
-      ? {
-          landmarks: currentFrame.tracking.pose,
-          worldLandmarks: currentFrame.tracking.worldPose.length > 0
-            ? currentFrame.tracking.worldPose
-            : null,
-        }
-      : null;
-  }, [currentFrame]);
+    replayMotionRef.current = isThreePartyMirrorProof
+      ? currentThreePartyPlayerPayload
+      : currentThreePartyInstructorPayload;
+    replayInstructorMotionRef.current = currentThreePartyInstructorPayload;
+  }, [currentThreePartyInstructorPayload, currentThreePartyPlayerPayload, isThreePartyMirrorProof]);
 
   useEffect(() => {
     const sourceMotion = currentFrame
@@ -684,6 +771,11 @@ export default function MovementReplayLabPage() {
         }
       : null;
     replaySourceMotionRef.current = sourceMotion;
+    const debugWindow = window as MovementReplayLabDeterministicDebugWindow;
+    if (debugWindow.__sonaeReplayLabStepToFrame) {
+      debugWindow.__sonaeReplayLabCommittedAt = performance.now();
+      debugWindow.__sonaeReplayLabCommittedFrameIndex = safeFrameIndex;
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -691,7 +783,7 @@ export default function MovementReplayLabPage() {
     if (!ctx) return;
 
     drawMovementSkeleton(ctx, frameLandmarks(currentFrame), canvas.width, canvas.height);
-  }, [currentFrame]);
+  }, [currentFrame, safeFrameIndex]);
 
   useEffect(() => {
     if (!replaySession) return;
@@ -722,6 +814,26 @@ export default function MovementReplayLabPage() {
   }, [isPlaying, replaySession]);
 
   const frameCount = replaySession?.samples.length ?? 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get("debugDeterministicReplay") !== "1") return;
+
+    const debugWindow = window as MovementReplayLabDeterministicDebugWindow;
+    debugWindow.__sonaeReplayLabCommittedFrameIndex = 0;
+    debugWindow.__sonaeReplayLabStepToFrame = (requestedFrameIndex) => {
+      const nextFrameIndex = clampFrame(requestedFrameIndex, frameCount);
+      setIsPlaying(false);
+      setFrameIndex(nextFrameIndex);
+      return nextFrameIndex;
+    };
+
+    return () => {
+      delete debugWindow.__sonaeReplayLabCommittedFrameIndex;
+      delete debugWindow.__sonaeReplayLabStepToFrame;
+    };
+  }, [frameCount]);
 
   const {
     captureAvatarFrame,
@@ -1127,20 +1239,41 @@ export default function MovementReplayLabPage() {
                           positionOffset={[0, 0, 0]}
                         />
                         <VrmAvatar
-                          frameResetKey={isPlaying ? undefined : `${replaySession.id}:${safeFrameIndex}`}
+                          frameResetKey={isPlaying || isDeterministicReplay
+                            ? undefined
+                            : `${replaySession.id}:${safeFrameIndex}`}
                           landmarksRef={replayMotionRef}
                           motionFrameRef={replayMotionFrameRef}
-                          positionOffset={[0, 0, 0]}
+                          positionOffset={isThreePartyMirrorProof ? [0.8, 0, 0] : [0, 0, 0]}
                           isPlayer
                           isPlaying
                           name="Replay student"
-                          retargetSourceModel={replayRetargetSourceModel}
+                          retargetSourceModel={isThreePartyMirrorProof
+                            ? replayThreePartyPlayerSourceModel
+                            : replayRetargetSourceModel}
                           rootMotionFrame={currentRootMotionFrame ?? null}
                           showNameLabel={false}
-                          trackingCalibration={replayPlayerCalibration}
+                          trackingCalibration={isThreePartyMirrorProof
+                            ? replayThreePartyPlayerCalibration
+                            : replayPlayerCalibration}
                           trackingDebugRef={replayAvatarDebugRef}
                           vrmUrl={replayAvatarVrmUrl}
                         />
+                        {isThreePartyMirrorProof ? (
+                          <VrmAvatar
+                            landmarksRef={replayInstructorMotionRef}
+                            motionFrameRef={replayInstructorMotionFrameRef}
+                            positionOffset={[-0.8, 0, 0]}
+                            isPlaying
+                            motionMode="recorded"
+                            name="Replay instructor proof"
+                            retargetSourceModel={replayRetargetSourceModel}
+                            rootMotionFrame={currentRootMotionFrame ?? null}
+                            showNameLabel={false}
+                            trackingDebugRef={replayInstructorAvatarDebugRef}
+                            vrmUrl={replayAvatarVrmUrl}
+                          />
+                        ) : null}
                       </MovementMatchScene>
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-secondary">

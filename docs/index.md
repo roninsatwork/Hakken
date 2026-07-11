@@ -63,6 +63,7 @@ The latest implementation audits found no concrete unlinked documentation file, 
 - [Movement Demo Refactor Plan](./plans/active/movement-demo-refactor-plan.md)
 - [Movement Demo Root Motion And Full Body Replay Plan](./plans/active/movement-demo-root-motion-and-full-body-replay-plan.md)
 - [Movement Demo Whole Body Tracking Plan](./plans/active/movement-demo-whole-body-tracking-plan.md)
+- [Movement Mirror Methodology Implementation Plan](./plans/active/movement-mirror-methodology-implementation-plan.md)
 - [Movement Studio Best-Practice Architecture Plan](./plans/active/movement-studio-best-practice-architecture-plan.md)
 - [Platform Scale Hardening Plan](./plans/active/platform-scale-hardening-plan.md)
 - [Post Scale Hardening Plan](./plans/active/post-scale-hardening-plan.md)
@@ -133,10 +134,16 @@ The latest implementation audits found no concrete unlinked documentation file, 
 - [Agentic Starter Framework Overview](./developer/agentic-starter-framework-overview.md)
 - [New Agentic App Setup Checklist](./developer/new-agentic-app-setup-checklist.md)
 - [Starter App Template Checklist](./developer/starter-app-template-checklist.md)
+
+#### Required Movement Mirror Methodology
+
+Before changing movement-side behaviour, read **[Movement Mirror And Side-Ownership Contract](./developer/movement-mirror-and-side-ownership-contract.md)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
+
 - [Movement Tracking](./developer/movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)
 - [Movement Demo Game And Replay Parity Plan](./developer/movement-demo-game-replay-parity-plan.md)
 - [Movement Demo Replay Lab Plan](./developer/movement-demo-replay-lab-plan.md)
+- **[Movement Mirror And Side-Ownership Contract — required](./developer/movement-mirror-and-side-ownership-contract.md)**
 - [Movement Demo Retargeting Approach](./developer/movement-demo-retargeting-approach.md)
 - [Movement Studio And Replay Unification Plan](./developer/movement-studio-replay-unification-plan.md)
 - [Movement Studio Reward Presentation Fix Plan](./developer/movement-studio-reward-presentation-fix-plan.md)

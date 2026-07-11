@@ -60,6 +60,15 @@ function sideBendPoseWithStraightLegs() {
   return pose;
 }
 
+function sideBendPoseWithLateralLegLift() {
+  const pose = sideBendPoseWithStraightLegs();
+  pose[25] = { ...pose[25]!, x: 0.28, y: 0.82 };
+  pose[27] = { ...pose[27]!, x: 0.16, y: 0.84 };
+  pose[29] = { ...pose[29]!, x: 0.13, y: 0.85 };
+  pose[31] = { ...pose[31]!, x: 0.12, y: 0.86 };
+  return pose;
+}
+
 function resolveDecision({
   avatarRole,
   pose,
@@ -94,13 +103,13 @@ describe("movement avatar target", () => {
       },
     });
 
-    expect(target.stageDecision?.stage).toBe("player-squat");
-    expect(target.lowerBodyOwner).toContain("squat");
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.lowerBodyOwner).toBe("player-retarget");
     expect(target.shouldHoldPlayerSquatPose).toBe(true);
     expect(target.playerSourceOwner.playerRetargetLowerBodyMotion).toBeGreaterThan(0.4);
   });
 
-  it("keeps quiet player lower-body frames neutral before renderer application", () => {
+  it("keeps complete quiet player lower-body frames on recorded retarget", () => {
     const decision = resolveDecision({
       avatarRole: "player",
       pose: withCorePose(),
@@ -114,12 +123,13 @@ describe("movement avatar target", () => {
       },
     });
 
-    expect(target.stageDecision?.stage ?? "inactive").toMatch(/player-neutral|inactive/);
-    expect(target.lowerBodyOwner).toMatch(/neutral/);
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.lowerBodyOwner).toBe("player-retarget");
+    expect(target.feetOwner).toBe("neutral");
     expect(target.shouldHoldPlayerSquatPose).toBe(false);
   });
 
-  it("keeps feet-floor side bends from retargeting straight player legs", () => {
+  it("keeps complete feet-floor side-bend legs on continuous retarget across the old threshold", () => {
     const decision = resolveDecision({
       avatarRole: "player",
       pose: sideBendPoseWithStraightLegs(),
@@ -129,9 +139,23 @@ describe("movement avatar target", () => {
       lowerBodySegmentMotion: 0.48,
       playerRetargetLowerBodyMotion: 0.48,
     };
-    const target = resolveMovementAvatarLowerBodyTarget({
+    const targetAboveThreshold = resolveMovementAvatarLowerBodyTarget({
       avatarRole: "player",
       decision: noisySideBendDecision,
+      lowerBodyVisualState: {
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+    const targetBelowThreshold = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision: {
+        ...noisySideBendDecision,
+        spineDrive: {
+          ...noisySideBendDecision.spineDrive,
+          sideBend: Math.sign(noisySideBendDecision.spineDrive.sideBend) * 0.11,
+        },
+      },
       lowerBodyVisualState: {
         squatPresentationDepth: 0,
         visualRootDrop: 0,
@@ -142,13 +166,38 @@ describe("movement avatar target", () => {
     expect(Math.abs(noisySideBendDecision.spineDrive.sideBend)).toBeGreaterThan(0.12);
     expect(noisySideBendDecision.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
     expect(noisySideBendDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(false);
-    expect(target.stageDecision?.stage).toBe("player-neutral");
-    expect(target.lowerBodyOwner).toBe("player-lower-body-neutral");
-    expect(target.feetOwner).toBe("neutral");
-    expect(target.playerSourceOwner.playerRetargetLowerBodyMotion).toBe(0);
+    expect(targetAboveThreshold.stageDecision?.stage).toBe("retarget");
+    expect(targetAboveThreshold.lowerBodyOwner).toBe("player-retarget");
+    expect(targetAboveThreshold.playerSourceOwner.playerRetargetLowerBodyMotion).toBeGreaterThan(0.4);
+    expect(targetBelowThreshold.stageDecision?.stage).toBe("retarget");
+    expect(targetBelowThreshold.lowerBodyOwner).toBe("player-retarget");
   });
 
-  it("keeps recorded neutral instructor ownership explicit for replay parity", () => {
+  it("does not neutralize a visible lateral leg lift during a side bend", () => {
+    const decision = resolveDecision({
+      avatarRole: "player",
+      pose: sideBendPoseWithLateralLegLift(),
+    });
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision,
+      lowerBodyVisualState: {
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(decision.supportIntent.key).toBe("feet-floor");
+    expect(Math.abs(decision.spineDrive.sideBend)).toBeGreaterThan(0.12);
+    expect(decision.retargetFrame.contacts.leftFoot).toBe(false);
+    expect(decision.lowerBodySegmentMotion).toBeGreaterThan(0.32);
+    expect(target.stageDecision?.stage).not.toBe("player-neutral");
+    expect(target.stageDecision?.canUsePlayerRetargetLegRaise).toBe(true);
+    expect(target.feetOwner).toBe("recorded-retarget");
+    expect(target.playerSourceOwner.playerRetargetLowerBodyMotion).toBeGreaterThan(0.32);
+  });
+
+  it("keeps complete recorded instructor legs on retarget below the motion threshold", () => {
     const decision = resolveDecision({
       avatarRole: "instructor",
       pose: withCorePose(),
@@ -162,9 +211,9 @@ describe("movement avatar target", () => {
       },
     });
 
-    expect(target.stageDecision?.stage).toBe("recorded-neutral");
-    expect(target.lowerBodyOwner).toBe("recorded-neutral");
-    expect(target.feetOwner).toBe("neutral");
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.stageDecision?.lowerBodyOwner).toBe("recorded-retarget");
+    expect(target.stageDecision?.feetOwner).toBe("recorded-retarget");
     expect(target.instructorLowerBodyMotion).toBeLessThan(0.08);
   });
 });

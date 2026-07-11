@@ -2154,6 +2154,16 @@ export function analyzeMovementDebugReplaySession(
       hasStrongFullBody(frame, currentDecision) &&
       (retarget?.hipDrop ?? 0) >= 0.22 &&
       (retarget?.squatDepth ?? 0) < 0.12 &&
+      (
+        currentDecision?.lowerBodyIntent.label === "squat" ||
+        (
+          (currentDecision?.lowerBodyIntent.squatSignals.kneeBend ?? 0) >= 0.28 &&
+          Math.max(
+            currentDecision?.lowerBodyIntent.squatSignals.torsoDrop ?? 0,
+            currentDecision?.lowerBodyIntent.squatSignals.headDrop ?? 0,
+          ) >= 0.2
+        )
+      ) &&
       owner.includes("neutral")
     ) {
       pushFailure(failures, {

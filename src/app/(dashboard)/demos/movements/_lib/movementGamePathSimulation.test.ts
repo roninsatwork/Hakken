@@ -281,9 +281,15 @@ const debugLowerBodyIntent: MovementLowerBodyIntent = {
 const proofPipelineParityModes: MovementAvatarProofMode[] = [
   "standing",
   "side-bend",
+  "side-bend-left",
+  "side-bend-right",
   "hands-front",
   "standing-arm-raise",
+  "left-arm-raise",
+  "right-arm-raise",
   "standing-twist",
+  "standing-twist-left",
+  "standing-twist-right",
   "yoga-half-lift",
   "yoga-forward-fold",
   "yoga-chair",
@@ -294,13 +300,20 @@ const proofPipelineParityModes: MovementAvatarProofMode[] = [
   "head-up",
   "head-down",
   "head-left",
+  "head-roll-left",
+  "head-roll-right",
   "head-right",
+  "left-hand-curl",
+  "right-hand-curl",
+  "wink-left",
+  "wink-right",
   "squat",
   "far-squat",
   "forward-lunge",
   "side-lunge",
   "jumping-jack",
   "left-leg-raise",
+  "left-leg-out-45",
   "far-left-leg-raise",
   "right-leg-raise",
   "far-right-leg-raise",
@@ -1138,7 +1151,7 @@ describe("movementGamePathSimulation", () => {
     expect(appliedDecision.hasCompleteLegRetarget).toBe(true);
   });
 
-  it("keeps player leg-raise feet planted instead of handing them to recorded retarget", () => {
+  it("keeps complete leg-raise retarget ownership continuous across the lift threshold", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
     const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const pipelineDecision = resolveMovementAvatarStudioDecision({
@@ -1165,8 +1178,7 @@ describe("movementGamePathSimulation", () => {
 
     expect(pipelineDecision.lowerBodyDrive.shouldDrivePlayerLegRaise).toBe(true);
     expect(appliedDecision.lowerBodyOwner).toBe("player-retarget");
-    expect(appliedDecision.feetOwner).toBe("player-leg-raise-planted-flat");
-    expect(appliedDecision.feetOwner).not.toBe("recorded-retarget");
+    expect(appliedDecision.feetOwner).toBe("recorded-retarget");
   });
 
   it("resolves held player source ownership from the smoothed visual squat depth", () => {
@@ -1186,9 +1198,8 @@ describe("movementGamePathSimulation", () => {
     });
 
     expect(sourceOwner.playerRetargetLowerBodyMotion).toBe(0.24);
-    expect(sourceOwner.lowerBodyOwnerDecision?.lowerBodyOwner).toBe(
-      "player-stable-squat-held",
-    );
+    expect(sourceOwner.lowerBodyOwnerDecision?.hasCompleteLegRetarget).toBe(true);
+    expect(sourceOwner.lowerBodyOwnerDecision?.lowerBodyOwner).toBe("player-retarget");
     expect(sourceOwner.lowerBodyOwnerDecision?.feetOwner).toBe("recorded-retarget");
   });
 
@@ -1218,7 +1229,7 @@ describe("movementGamePathSimulation", () => {
     expect(stageDecision.lowerBodyOwner).toBe("player-left-leg-raise");
   });
 
-  it("keeps strong player leg raises anchored even when retarget has enough leg segments", () => {
+  it("uses continuous solved foot retarget during strong complete leg raises", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
     const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const pipelineDecision = resolveMovementAvatarStudioDecision({
@@ -1244,10 +1255,10 @@ describe("movementGamePathSimulation", () => {
     expect(stageDecision.canUsePlayerRetargetLegRaise).toBe(true);
     expect(stageDecision.anchoredPlayerLegRaiseSide).toBe("left");
     expect(stageDecision.lowerBodyOwner).toBe("player-left-leg-raise");
-    expect(stageDecision.feetOwner).toBe("player-leg-raise-planted-flat");
+    expect(stageDecision.feetOwner).toBe("recorded-retarget");
   });
 
-  it("keeps neutral player frames out of lower-body retarget even when distance adds segment motion", () => {
+  it("lets visible neutral-labelled leg motion reach lower-body retarget", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
     const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const pipelineDecision = resolveMovementAvatarStudioDecision({
@@ -1264,6 +1275,7 @@ describe("movementGamePathSimulation", () => {
       sourceOwnerDecision: {
         canUsePlayerRetargetLegRaise: false,
         feetOwner: "recorded-retarget",
+        hasCompleteLegRetarget: true,
         lowerBodyOwner: "player-retarget",
         shouldUsePlayerFootFallback: false,
       },
@@ -1272,10 +1284,75 @@ describe("movementGamePathSimulation", () => {
 
     expect(pipelineDecision.lowerBodyIntent.label).toBe("neutral");
     expect(pipelineDecision.lowerBodyDrive.playerLowerBodyState).toBe("neutral");
-    expect(stageDecision.stage).toBe("player-neutral");
-    expect(stageDecision.lowerBodyOwner).toBe("player-lower-body-neutral");
-    expect(stageDecision.feetOwner).toBe("neutral");
+    expect(stageDecision.stage).toBe("retarget");
+    expect(stageDecision.lowerBodyOwner).toBe("player-retarget");
   });
+
+  it("keeps complete neutral-labelled leg retarget active below the motion threshold", () => {
+    const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
+      avatarRole: "player",
+      instructorLowerBodyMotion: 0,
+      lowerBodyDrive: {
+        groundedSquatDepth: 0,
+        liveSquatDepth: 0,
+        playerLegRaiseDepth: 0,
+        playerLegRaiseSide: null,
+        playerLowerBodyState: "neutral",
+        playerSquatPresentationDepth: 0,
+        shouldApplyLowerBody: true,
+        shouldApplySolverTorso: true,
+        shouldDrivePlayerLegRaise: false,
+        shouldDrivePlayerSquat: false,
+        visualRootDrop: 0,
+      },
+      playerRetargetLowerBodyMotion: 0.02,
+      sourceOwnerDecision: {
+        canUsePlayerRetargetLegRaise: false,
+        feetOwner: "recorded-retarget",
+        hasCompleteLegRetarget: true,
+        lowerBodyOwner: "player-retarget",
+        shouldUsePlayerFootFallback: false,
+      },
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(stageDecision).toMatchObject({
+      feetOwner: "recorded-retarget",
+      lowerBodyOwner: "player-retarget",
+      stage: "retarget",
+    });
+  });
+
+  it("keeps complete source retargeting active during a detected player squat", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const pipelineDecision = resolveMovementAvatarStudioDecision({
+      avatarRole: "player",
+      calibration,
+      retargetSourceModel,
+      source: { poseLandmarks: squatPose() },
+    });
+    const sourceOwner = resolveMovementAvatarPlayerSourceOwnerDecision({
+      avatarRole: "player",
+      decision: pipelineDecision,
+      playerSquatPresentationDepth: pipelineDecision.lowerBodyDrive.playerSquatPresentationDepth,
+      shouldHoldPlayerSquatPose: false,
+    });
+    const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
+      avatarRole: "player",
+      instructorLowerBodyMotion: 0,
+      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
+      playerRetargetLowerBodyMotion: sourceOwner.playerRetargetLowerBodyMotion,
+      sourceOwnerDecision: sourceOwner.lowerBodyOwnerDecision,
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(pipelineDecision.lowerBodyDrive.shouldDrivePlayerSquat).toBe(true);
+    expect(sourceOwner.lowerBodyOwnerDecision?.hasCompleteLegRetarget).toBe(true);
+    expect(sourceOwner.lowerBodyOwnerDecision?.lowerBodyOwner).toBe("player-retarget");
+    expect(stageDecision.stage).toBe("retarget");
+  });
+
 
   it("selects recorded neutral stage for low-motion instructor frames", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
@@ -1298,6 +1375,32 @@ describe("movementGamePathSimulation", () => {
     expect(stageDecision.stage).toBe("recorded-neutral");
     expect(stageDecision.lowerBodyOwner).toBe("recorded-neutral");
     expect(stageDecision.feetOwner).toBe("neutral");
+  });
+
+  it("keeps complete instructor leg retarget active below the motion threshold", () => {
+    const calibration = buildMovementCalibration({ poseLandmarks: withCorePose() });
+    const retargetSourceModel = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const pipelineDecision = resolveMovementAvatarReplayDecision({
+      avatarRole: "instructor",
+      calibration,
+      retargetSourceModel,
+      source: { poseLandmarks: withCorePose() },
+    });
+    const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
+      avatarRole: "instructor",
+      hasCompleteLegRetarget: true,
+      instructorLowerBodyMotion: 0.02,
+      lowerBodyDrive: pipelineDecision.lowerBodyDrive,
+      playerRetargetLowerBodyMotion: 0,
+      sourceOwnerDecision: null,
+      shouldHoldPlayerSquatPose: false,
+    });
+
+    expect(stageDecision).toMatchObject({
+      feetOwner: "recorded-retarget",
+      lowerBodyOwner: "recorded-retarget",
+      stage: "retarget",
+    });
   });
 
   it("composes planted instructor foot ownership labels without duplicating them", () => {
@@ -1346,12 +1449,48 @@ describe("movementGamePathSimulation", () => {
     expect(decision).toMatchObject({
       reason: "active",
       shouldApply: true,
-      slerp: 0.36,
+      slerp: DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE.footSlerp,
       zScale: 1,
     });
   });
 
-  it("uses avatar profile slerp for live player retarget segments", () => {
+  it("uses a slow world-direction foot refinement through low-confidence squat occlusion", () => {
+    const recoveringFoot = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0.8,
+      lowerBodySegmentMotion: 1,
+      retargetFrame: retargetFrame({
+        segments: {
+          leftFoot: { confidence: 0.05, direction: { x: 0, y: 0, z: 1 }, length: 1 },
+        },
+      }),
+      segmentName: "leftFoot",
+      segmentType: "foot",
+    });
+    const unavailableFoot = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0.8,
+      lowerBodySegmentMotion: 1,
+      retargetFrame: retargetFrame({
+        segments: {
+          leftFoot: { confidence: 0.02, direction: { x: 0, y: 0, z: 1 }, length: 1 },
+        },
+      }),
+      segmentName: "leftFoot",
+      segmentType: "foot",
+    });
+
+    expect(recoveringFoot.reason).toBe("active");
+    expect(recoveringFoot.shouldApply).toBe(true);
+    expect(recoveringFoot.slerp).toBeGreaterThan(0.02);
+    expect(recoveringFoot.slerp).toBeLessThan(DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE.footSlerp);
+    expect(unavailableFoot).toMatchObject({
+      reason: "low-confidence",
+      shouldApply: false,
+    });
+  });
+
+  it("uses the same avatar-profile limb response for player and instructor retarget segments", () => {
     const profile = {
       ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
       legSlerp: 0.43,
@@ -1378,10 +1517,113 @@ describe("movementGamePathSimulation", () => {
       segmentName: "leftThigh",
       segmentType: "leg",
     });
+    const instructorLegDecision = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "instructor",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      profile,
+      retargetFrame: retargetFrame({
+        segments: {
+          leftThigh: { confidence: 0.9, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "leftThigh",
+      segmentType: "leg",
+    });
 
-    // Arms use the unified segment slerp; only legs remain profile-tuned.
+    // Temporal response is rig/profile policy, not anatomical role policy.
     expect(rightArmDecision.slerp).toBe(0.72);
     expect(legDecision.slerp).toBe(0.43);
+    expect(instructorLegDecision.slerp).toBe(legDecision.slerp);
+  });
+
+  it("ramps arm recovery through the low-confidence boundary without slowing clear tracking", () => {
+    const recoveringArm = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      retargetFrame: retargetFrame({
+        segments: {
+          rightUpperArm: { confidence: 0.3, direction: { x: -1, y: 0, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "rightUpperArm",
+      segmentType: "arm",
+    });
+    const clearArm = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      retargetFrame: retargetFrame(),
+      segmentName: "rightUpperArm",
+      segmentType: "arm",
+    });
+
+    expect(recoveringArm).toMatchObject({
+      reason: "active",
+      shouldApply: true,
+      slerp: 0.08,
+    });
+    expect(clearArm.slerp).toBe(0.72);
+  });
+
+  it("ramps leg recovery through the low-confidence boundary without slowing clear tracking", () => {
+    const recoveringLeg = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      profile: {
+        ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+        legSlerp: 0.44,
+      },
+      retargetFrame: retargetFrame({
+        segments: {
+          leftShin: { confidence: 0.3, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "leftShin",
+      segmentType: "leg",
+    });
+    const clearLeg = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      profile: {
+        ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+        legSlerp: 0.44,
+      },
+      retargetFrame: retargetFrame({
+        segments: {
+          leftShin: { confidence: 0.9, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "leftShin",
+      segmentType: "leg",
+    });
+    const recoveringMidBandLeg = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      profile: {
+        ...DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
+        legSlerp: 0.44,
+      },
+      retargetFrame: retargetFrame({
+        segments: {
+          leftShin: { confidence: 0.6, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "leftShin",
+      segmentType: "leg",
+    });
+
+    expect(recoveringLeg).toMatchObject({
+      reason: "active",
+      shouldApply: true,
+      slerp: 0.08,
+    });
+    expect(recoveringMidBandLeg.slerp).toBe(0.44);
+    expect(clearLeg.slerp).toBe(0.44);
   });
 
 
@@ -1888,18 +2130,18 @@ describe("movementGamePathSimulation", () => {
     });
   });
 
-  it("keeps player and replay VRM bone pitch in the same direction", () => {
+  it("maps player and replay head intent pitch into the VRM bone pitch direction", () => {
     expect(resolveMovementAvatarHeadBonePitch({
       avatarRole: "player",
       headPitch: 0.34,
-    })).toBeCloseTo(0.34);
+    })).toBeCloseTo(-0.34);
     expect(resolveMovementAvatarHeadBonePitch({
       avatarRole: "instructor",
       headPitch: 0.34,
-    })).toBeCloseTo(0.34);
+    })).toBeCloseTo(-0.34);
   });
 
-  it("mirrors live player head yaw and roll while preserving pitch", () => {
+  it("preserves already-mapped live player head yaw, roll, and pitch", () => {
     const sourceHead = {
       confidence: 0.9,
       pitch: 0.24,
@@ -1913,8 +2155,6 @@ describe("movementGamePathSimulation", () => {
       head: sourceHead,
     })).toEqual({
       ...sourceHead,
-      roll: 0.18,
-      yaw: -0.42,
     });
     expect(resolveMovementAvatarMirrorHeadForDisplay({
       avatarRole: "instructor",
@@ -2034,17 +2274,21 @@ describe("movementGamePathSimulation", () => {
       correctionScale: 0.4,
       engageSlerp: 0.32,
       initialStrength: 0.25,
-      maxDriftBeforeReset: 0.55,
+      maxLateralDriftBeforeReset: 0.55,
+      maxVerticalCorrection: 0.45,
       minStrengthBeforeClear: 0.04,
       releaseSlerp: 0.28,
+      verticalCorrectionScale: 1,
     });
     expect(resolveMovementAvatarFootLockOptions({ avatarRole: "instructor" })).toEqual({
       correctionScale: 0.5,
       engageSlerp: 0.32,
       initialStrength: 0.25,
-      maxDriftBeforeReset: 0.55,
+      maxLateralDriftBeforeReset: 0.55,
+      maxVerticalCorrection: 0.45,
       minStrengthBeforeClear: 0.04,
       releaseSlerp: 0.28,
+      verticalCorrectionScale: 1,
     });
   });
 
@@ -2384,7 +2628,7 @@ describe("movementGamePathSimulation", () => {
     expect(simulation.retargetSourceModel?.quality).toBeGreaterThan(0.8);
     expect(decision?.lowerBodyIntent.label).toBe("neutral");
     expect(decision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
-    expect(decision?.lowerOwner).toBe("player-lower-body-neutral");
+    expect(decision?.lowerOwner).toBe("player-retarget");
     expect(decision?.feetOwner).toBe("neutral");
     expect(decision?.retarget.squatDepth).toBe(0);
     expect(decision?.lowerBodyDrive.visualRootDrop).toBe(0);
@@ -2422,7 +2666,7 @@ describe("movementGamePathSimulation", () => {
     expect(farDecision?.lowerBodyIntent.leftKneeRaise).toBe(0);
     expect(farDecision?.lowerBodyIntent.rightKneeRaise).toBe(0);
     expect(farDecision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(false);
-    expect(farDecision?.lowerOwner).toBe("player-lower-body-neutral");
+    expect(farDecision?.lowerOwner).toBe("player-retarget");
     expect(farDecision?.feetOwner).toBe("neutral");
     expect(farDecision?.retarget.hipDrop).toBeLessThan(0.05);
     expect(farDecision?.retarget.squatDepth).toBe(0);
@@ -2440,11 +2684,14 @@ describe("movementGamePathSimulation", () => {
 
     expect(squatDecision?.lowerBodyIntent.label).toBe("squat");
     expect(squatDecision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(true);
-    expect(squatDecision?.lowerOwner).toBe("player-stable-squat");
+    expect(squatDecision?.lowerOwner).toBe("player-retarget");
     expect(squatDecision?.feetOwner).toBe("recorded-retarget");
     expect(squatDecision?.retarget.squatDepth).toBeGreaterThan(0.55);
-    expect(squatDecision?.lowerBodyDrive.visualRootDrop).toBeGreaterThan(1.5);
-    expect(squatDecision?.lowerBodyDrive.visualRootDrop).toBeLessThanOrEqual(1.72);
+    expect(squatDecision?.lowerBodyDrive.visualRootDrop).toBeCloseTo(
+      (squatDecision?.retarget.hipDrop ?? 0) * 0.56,
+    );
+    expect(squatDecision?.lowerBodyDrive.visualRootDrop).toBeGreaterThan(0.4);
+    expect(squatDecision?.lowerBodyDrive.visualRootDrop).toBeLessThanOrEqual(0.56);
   });
 
   it("recovers to neutral after a far squat returns to standing", () => {
@@ -2488,11 +2735,11 @@ describe("movementGamePathSimulation", () => {
     const sideBendDecision = simulation.decisions[1];
     expect(sideBendDecision?.spineDrive.owner).toBe("player-spine-model");
     expect(sideBendDecision?.spineDrive.shouldApplySpine).toBe(true);
-    expect(sideBendDecision?.spineDrive.sideBend).toBeLessThan(-0.4);
+    expect(sideBendDecision?.spineDrive.sideBend).toBeGreaterThan(0.4);
     expect(sideBendDecision?.spineDrive.rotations.hips.z).toBe(0);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.spine.z ?? 0)).toBeGreaterThan(0.2);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeGreaterThan(0.42);
-    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeLessThan(0.45);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.spine.z ?? 0)).toBeGreaterThan(0.45);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeGreaterThan(0.65);
+    expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.z ?? 0)).toBeLessThan(0.9);
     expect(Math.abs(sideBendDecision?.spineDrive.rotations.chest.x ?? 0)).toBeLessThan(0.01);
     expect(Math.abs(sideBendDecision?.spineDrive.rotations.upperChest.x ?? 0)).toBeLessThan(0.01);
   });

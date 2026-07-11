@@ -15,6 +15,7 @@ import type {
 } from "./movementRetargeting";
 import type { MovementAvatarRootOrientationDecision } from "./movementAvatarRootOrientationDecision";
 import type { MovementAvatarLowerBodySourceBounds } from "./movementAvatarLowerBodySourceBounds";
+import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
 import type {
   MovementAvatarTrackingProfile,
   MovementCalibration,
@@ -34,6 +35,7 @@ export type MovementAvatarSource = {
 };
 
 export type MovementAvatarPipelineInput = {
+  anatomicalMapping?: MovementAnatomicalMapping;
   avatarTrackingProfile?: MovementAvatarTrackingProfile;
   avatarRole: "instructor" | "player";
   calibration: MovementCalibration | null;
@@ -370,9 +372,11 @@ export type MovementAvatarFootLockOptionsDecision = {
   correctionScale: number;
   engageSlerp: number;
   initialStrength: number;
-  maxDriftBeforeReset: number;
+  maxLateralDriftBeforeReset: number;
+  maxVerticalCorrection: number;
   minStrengthBeforeClear: number;
   releaseSlerp: number;
+  verticalCorrectionScale: number;
 };
 
 export type MovementAvatarFootLockEngagementDecision = {

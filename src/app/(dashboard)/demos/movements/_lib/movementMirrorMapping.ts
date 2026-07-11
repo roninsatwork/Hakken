@@ -2,6 +2,8 @@ import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementMirrorMode = "facing-player" | "same-side";
 
+export type MovementAnatomicalMapping = "identity" | "opposite";
+
 export type MovementBodySide = "left" | "right";
 
 export type MovementDisplayMapping = {

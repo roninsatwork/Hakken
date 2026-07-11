@@ -276,6 +276,7 @@ export function getReplayLabLiveCurrentFrameFailures({
     currentFrameSourceReady &&
     currentGamePathFrame?.supportIntentKey === "feet-floor" &&
     currentFrameActiveLegMotion &&
+    lowerBodySegments < 4 &&
     typeof replayFeetOwner === "string" &&
     replayFeetOwner.startsWith("recorded")
   ) {

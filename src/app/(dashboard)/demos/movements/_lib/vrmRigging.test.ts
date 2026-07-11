@@ -82,7 +82,7 @@ describe("vrmRigging", () => {
     expect(prepared.imageLandmarks.every((landmark) => landmark.visibility === 0)).toBe(true);
   });
 
-  it("mirrors instructor hands and blendshape side names", () => {
+  it("reflects instructor coordinates while preserving anatomical hands, face, and blendshape sides", () => {
     const faceLandmarks = Array.from({ length: 264 }, () => ({
       x: 0.5,
       y: 0.5,
@@ -109,17 +109,17 @@ describe("vrmRigging", () => {
       isPlaying: true,
     });
 
-    expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.3);
-    expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.7);
+    expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.7);
+    expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.3);
     expect(prepared.faceLandmarks?.[1]?.x).toBeCloseTo(0.42);
     expect(prepared.faceLandmarks?.[1]?.y).toBeCloseTo(0.44);
-    expect(prepared.faceLandmarks?.[33]?.x).toBeCloseTo(0.43);
-    expect(prepared.faceLandmarks?.[33]?.y).toBeCloseTo(0.46);
-    expect(prepared.faceLandmarks?.[263]?.x).toBeCloseTo(0.56);
-    expect(prepared.faceLandmarks?.[263]?.y).toBeCloseTo(0.42);
+    expect(prepared.faceLandmarks?.[33]?.x).toBeCloseTo(0.56);
+    expect(prepared.faceLandmarks?.[33]?.y).toBeCloseTo(0.42);
+    expect(prepared.faceLandmarks?.[263]?.x).toBeCloseTo(0.43);
+    expect(prepared.faceLandmarks?.[263]?.y).toBeCloseTo(0.46);
     expect(prepared.rigBlendshapes?.map((blendshape) => blendshape.categoryName)).toEqual([
-      "eyeBlinkRight",
-      "mouthSmileLeft",
+      "eyeBlinkLeft",
+      "mouthSmileRight",
     ]);
   });
 

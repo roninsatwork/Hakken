@@ -8,10 +8,15 @@ import {
 } from "./movementAvatarRestPose";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 import { applyMovementAvatarRestMappedWorldDirectionWithLookup } from "./movementAvatarRestMappedSegmentApplication";
+import {
+  resolveMovementAvatarRetargetCameraTiltCorrection,
+  resolveMovementAvatarRetargetLimbAngleStep,
+} from "./movementAvatarRetargetSegmentWorldDirectionDecision";
 
 export type MovementAvatarRetargetSegmentWorldDirectionSpec = {
   bone: MovementAvatarRetargetBoneName;
   desiredWorldDirection: THREE.Vector3;
+  maxLocalAngleStep?: number;
   slerp: number;
 };
 
@@ -23,15 +28,9 @@ export type MovementAvatarRetargetSegmentApplicationCounts = {
   spine: number;
 };
 
-export type MovementAvatarRestMappedWorldDirectionBatchApplicationResult = {
-  applied: number;
-  restMap: MovementAvatarRetargetRestMap;
-};
+export type MovementAvatarRestMappedWorldDirectionBatchApplicationResult = { applied: number; restMap: MovementAvatarRetargetRestMap };
 
-export type MovementAvatarRetargetSegmentMappingApplicationResult = {
-  applied: boolean;
-  restMap: MovementAvatarRetargetRestMap;
-};
+export type MovementAvatarRetargetSegmentMappingApplicationResult = { applied: boolean; restMap: MovementAvatarRetargetRestMap };
 
 export function applyMovementAvatarRetargetSegmentMappings({
   apply,
@@ -60,6 +59,7 @@ export function applyMovementAvatarRetargetSegmentMappings({
 }
 
 export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
+  avatarRole = "instructor",
   canApply = true,
   currentRestMap,
   lookupBone,
@@ -70,6 +70,7 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   segmentApplicationDecision,
   storeLastGood,
 }: {
+  avatarRole?: "instructor" | "player";
   canApply?: boolean;
   currentRestMap: MovementAvatarRetargetRestMap;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -81,6 +82,7 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   storeLastGood?: (boneName: MovementAvatarRetargetBoneName, quaternion: THREE.Quaternion) => void;
 }): MovementAvatarRetargetSegmentMappingApplicationResult {
   const segmentApplicationSpec = resolveMovementAvatarRetargetSegmentWorldDirection({
+    avatarRole,
     mapping,
     retargetFrame,
     segmentApplicationDecision,
@@ -98,6 +100,7 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
     currentRestMap,
     desiredWorldDirection: segmentApplicationSpec.desiredWorldDirection,
     lookupBone,
+    maxLocalAngleStep: segmentApplicationSpec.maxLocalAngleStep,
     refreshRestMap,
     rememberLastGood,
     slerp: segmentApplicationSpec.slerp,
@@ -110,36 +113,12 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   };
 }
 
-const AVATAR_WORLD_UP = new THREE.Vector3(0, 1, 0);
-
-/**
- * Source landmark axes follow the camera, not gravity. The calibrated neutral
- * spine is the vertical reference: rotating every desired direction by the
- * quaternion that maps that neutral onto world-up cancels camera tilt.
- */
-function resolveMovementAvatarCameraTiltCorrection({
-  retargetFrame,
-  zScale,
-}: {
-  retargetFrame: MovementRetargetFrame;
-  zScale: number;
-}): THREE.Quaternion | null {
-  if (!retargetFrame.neutralSpineDirection) return null;
-
-  const neutralSpine = movementSourceSegmentToAvatarWorldDirection(
-    retargetFrame.neutralSpineDirection,
-    zScale,
-  );
-  if (!neutralSpine) return null;
-
-  return new THREE.Quaternion().setFromUnitVectors(neutralSpine, AVATAR_WORLD_UP);
-}
-
 export function resolveMovementAvatarRetargetSegmentWorldDirection({
   mapping,
   retargetFrame,
   segmentApplicationDecision,
 }: {
+  avatarRole?: "instructor" | "player";
   mapping: MovementAvatarRetargetBoneMapping;
   retargetFrame: MovementRetargetFrame;
   segmentApplicationDecision: MovementAvatarRetargetSegmentApplicationDecision;
@@ -152,7 +131,7 @@ export function resolveMovementAvatarRetargetSegmentWorldDirection({
   // Legs and feet are co-driven by squat/leg-raise/planted-IK appliers that
   // operate in the raw camera frame, so only the upper body is tilt-corrected.
   const cameraTiltCorrection = mapping.type === "spine" || mapping.type === "arm"
-    ? resolveMovementAvatarCameraTiltCorrection({
+    ? resolveMovementAvatarRetargetCameraTiltCorrection({
         retargetFrame,
         zScale: segmentApplicationDecision.zScale,
       })
@@ -172,9 +151,23 @@ export function resolveMovementAvatarRetargetSegmentWorldDirection({
     desiredWorldDirection.applyQuaternion(cameraTiltCorrection);
   }
 
+  // Player-side anatomical ownership is resolved before this layer by the
+  // display landmark mapping. Do not add another horizontal reflection here:
+  // this function only converts the already-mapped segment into VRM world
+  // coordinates.
+
+  const limbAngleStep = resolveMovementAvatarRetargetLimbAngleStep({
+    confidence: segment.confidence,
+    type: mapping.type,
+  });
+
   return {
     bone: mapping.bone,
     desiredWorldDirection,
+    // Arms need a continuous bound through their long reacquisition ramp.
+    // Legs use a shorter linear ramp and reach the generous clear-tracking cap
+    // by 0.6 confidence, preserving turning and lateral leg direction.
+    maxLocalAngleStep: limbAngleStep,
     slerp: segmentApplicationDecision.slerp,
   };
 }

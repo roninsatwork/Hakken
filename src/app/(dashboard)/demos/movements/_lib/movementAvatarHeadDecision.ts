@@ -31,14 +31,14 @@ function stabilizePoseOnlyPlayerHead(
   if (head.source !== "pose") return head;
 
   const strongYaw = Math.abs(head.yaw) >= 0.65;
-  const yawDeadzone = options.preserveActiveSpineYaw && strongYaw ? 0.2 : 0.45;
-  const yawScale = options.preserveActiveSpineYaw && strongYaw ? 0.65 : 0.4;
+  const yawDeadzone = options.preserveActiveSpineYaw && strongYaw ? 0 : 0.45;
+  const yawScale = options.preserveActiveSpineYaw && strongYaw ? 0.85 : 0.4;
 
   return {
     ...head,
-    pitch: applyDeadzone(head.pitch, 0.1) * 0.82,
+    pitch: applyDeadzone(head.pitch, 0.025) * 0.98,
     yaw: applyDeadzone(head.yaw, yawDeadzone) * yawScale,
-    roll: applyDeadzone(head.roll, 0.28) * 0.35,
+    roll: applyDeadzone(head.roll, 0.06) * 0.82,
   };
 }
 
@@ -50,24 +50,24 @@ export function resolveMovementAvatarRecordedHeadAngles({
   rawHead: MovementHeadAngles;
 }): MovementHeadAngles {
   const poseOnlyHeadScale = rawHead.source === "pose"
-    ? { pitch: 0.38, roll: 0.22, yaw: 0.58 }
-    : { pitch: 0.72, roll: 0.48, yaw: 0.52 };
+    ? { pitch: 0.78, roll: 0.72, yaw: 0.85 }
+    : { pitch: 0.85, roll: 0.72, yaw: 0.8 };
 
   return {
     pitch: clamp(
       rawHead.pitch * poseOnlyHeadScale.pitch + profile.headPitchOffset,
-      Math.max(profile.minHeadPitch, -0.18),
-      Math.min(profile.maxHeadPitch, 0.24),
+      Math.max(profile.minHeadPitch, -0.42),
+      Math.min(profile.maxHeadPitch, 0.42),
     ),
     yaw: clamp(
       rawHead.yaw * poseOnlyHeadScale.yaw + profile.headYawOffset,
-      -Math.min(profile.maxHeadYaw, 0.78),
-      Math.min(profile.maxHeadYaw, 0.78),
+      -Math.min(profile.maxHeadYaw, 0.9),
+      Math.min(profile.maxHeadYaw, 0.9),
     ),
     roll: clamp(
       rawHead.roll * poseOnlyHeadScale.roll + profile.headRollOffset,
-      -Math.min(profile.maxHeadRoll, 0.12),
-      Math.min(profile.maxHeadRoll, 0.12),
+      -Math.min(profile.maxHeadRoll, 0.35),
+      Math.min(profile.maxHeadRoll, 0.35),
     ),
     confidence: rawHead.confidence,
     source: rawHead.source,
@@ -129,7 +129,10 @@ export function resolveMovementAvatarHeadDecision({
         preserveActiveSpineYaw: shouldApplySpine,
       })
     : null;
-  const appliedHead = stabilizedPlayerHead
+  const sharedPoseHead = isPlayer && shouldApplySpine && rawHead.source === "pose"
+    ? resolveMovementAvatarRecordedHeadAngles({ profile, rawHead })
+    : null;
+  const appliedHead = sharedPoseHead ?? (stabilizedPlayerHead
     ? (mirrorHeadForDisplay ?? avatarRole === "player")
         ? resolveMovementAvatarMirrorHeadForDisplay({
             avatarRole,
@@ -141,7 +144,7 @@ export function resolveMovementAvatarHeadDecision({
           profile,
           rawHead,
         })
-      : getNeutralMovementHeadAngles(profile);
+      : getNeutralMovementHeadAngles(profile));
   const shouldApplyHeadMotion = shouldApplyPlayerHeadMotion || recordedHeadTrackingReady;
   const headOwner = shouldApplyPlayerHeadMotion
     ? "player-calibrated"
@@ -170,8 +173,10 @@ export function resolveMovementAvatarMirrorHeadForDisplay({
 
   return {
     ...head,
-    roll: -head.roll,
-    yaw: -head.yaw,
+    // Player face/pose landmark ownership and lateral coordinates have already
+    // been mapped before head estimation. Reversing yaw again here makes the
+    // player avatar turn away from the recorded instructor; preserve the same
+    // mapped yaw, roll, and pitch at application time.
   };
 }
 

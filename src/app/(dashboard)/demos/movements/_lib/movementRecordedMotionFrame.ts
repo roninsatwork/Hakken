@@ -59,7 +59,7 @@ export function buildRecordedMovementMotionFrame({
     calibration,
     displayPoseLandmarks: displayFrame.pose,
     displayWorldPoseLandmarks: displayFrame.worldPose,
-    mirrorMode: "facing-player",
+    mirrorMode: "same-side",
     previousMotionFrame,
     retargetSourceModel,
     sourceFrame,

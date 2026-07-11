@@ -73,6 +73,7 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
   shouldApplyLowerBody,
   shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
+  shouldYieldToSupportContact = false,
 }: {
   avatarRole: "instructor" | "player";
   currentLeft: THREE.Vector3 | null;
@@ -85,6 +86,7 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
   shouldApplyLowerBody: boolean;
   shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
+  shouldYieldToSupportContact?: boolean;
 }): MovementAvatarFootLockRuntimeDecision {
   const options = resolveMovementAvatarFootLockOptions({ avatarRole });
   const shouldEngage = resolveMovementAvatarFootLockEngagement({
@@ -96,7 +98,9 @@ export function resolveMovementAvatarFootLockRuntimeDecision({
     shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
   }).shouldEngage;
-  const shouldLock = Boolean(hasAvatarRoot && currentLeft && currentRight && shouldEngage);
+  const shouldLock = Boolean(
+    !shouldYieldToSupportContact && hasAvatarRoot && currentLeft && currentRight && shouldEngage,
+  );
   const footLockDecision = resolveMovementAvatarFootLockApplication({
     currentLeft: shouldLock ? currentLeft : null,
     currentRight: shouldLock ? currentRight : null,
@@ -125,12 +129,15 @@ export function applyMovementAvatarFootLockRuntimeRootCorrection({
     return {
       applied: false,
       correctionScale: 0,
+      verticalCorrectionScale: 0,
     };
   }
 
   const application = applyMovementAvatarFootLockRootCorrection({
-    apply: (correction, correctionScale) => {
-      avatarRoot.position.addScaledVector(correction, correctionScale);
+    apply: (correction, correctionScale, verticalCorrectionScale) => {
+      avatarRoot.position.x += correction.x * correctionScale;
+      avatarRoot.position.y += correction.y * verticalCorrectionScale;
+      avatarRoot.position.z += correction.z * correctionScale;
       return true;
     },
     decision: footLockDecision,
@@ -155,6 +162,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
   shouldApplyLowerBody,
   shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
+  shouldYieldToSupportContact,
 }: {
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
@@ -167,6 +175,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
   shouldApplyLowerBody: boolean;
   shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
+  shouldYieldToSupportContact?: boolean;
 }): MovementAvatarFootLockRuntimeFrameApplication {
   const runtimeDecision = resolveMovementAvatarFootLockRuntimeDecision({
     avatarRole,
@@ -180,6 +189,7 @@ export function applyMovementAvatarFootLockRuntimeFrame({
     shouldApplyLowerBody,
     shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
+    shouldYieldToSupportContact,
   });
   const footLockDecision = runtimeDecision.footLockDecision;
 
@@ -391,6 +401,7 @@ export function applyMovementAvatarFootingFrameRuntime({
   shouldApplyLowerBody,
   shouldLockActiveTorso,
   shouldHoldPlayerSquatPose,
+  shouldYieldToSupportContact,
   stepResponse,
 }: {
   avatarRole: "instructor" | "player";
@@ -410,6 +421,7 @@ export function applyMovementAvatarFootingFrameRuntime({
   shouldApplyLowerBody: boolean;
   shouldLockActiveTorso?: boolean;
   shouldHoldPlayerSquatPose: boolean;
+  shouldYieldToSupportContact?: boolean;
   stepResponse: MovementRootMotionStepResponseDecision;
 }): MovementAvatarFootingFrameRuntimeResult {
   const initialFootWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
@@ -426,11 +438,17 @@ export function applyMovementAvatarFootingFrameRuntime({
     hipsPositionOptions,
     lowestFootY: initialFootWorldSnapshot.lowestFootY,
   });
+  const postHipsFootWorldSnapshot = resolveMovementAvatarFootWorldRuntimeSnapshot({
+    avatarRoot,
+    leftFoot,
+    rightFoot,
+    scene,
+  });
   const footLockRuntimeApplication = applyMovementAvatarFootLockRuntimeFrame({
     avatarRole,
     avatarRoot,
-    currentLeft: initialFootWorldSnapshot.left,
-    currentRight: initialFootWorldSnapshot.right,
+    currentLeft: postHipsFootWorldSnapshot.left,
+    currentRight: postHipsFootWorldSnapshot.right,
     lowerBodyDrive,
     lowerBodyTrackingReady,
     previousState: previousFootLockState,
@@ -438,6 +456,7 @@ export function applyMovementAvatarFootingFrameRuntime({
     shouldApplyLowerBody,
     shouldLockActiveTorso,
     shouldHoldPlayerSquatPose,
+    shouldYieldToSupportContact,
   });
   const rootStepApplication = applyMovementAvatarRootStepRuntimeResponse({
     leftFoot,
@@ -505,6 +524,31 @@ export type MovementAvatarFootingFrameOrchestrationRuntimeResult = {
   footingRuntime: MovementAvatarFootingFrameRuntimeResult;
 };
 
+export function finalizeMovementAvatarFootingFrameWorldSnapshot({
+  avatarRoot,
+  footingFrameOrchestrationRuntime,
+  lookupBone,
+  scene,
+}: {
+  avatarRoot: THREE.Object3D | null | undefined;
+  footingFrameOrchestrationRuntime: MovementAvatarFootingFrameOrchestrationRuntimeResult;
+  lookupBone: (bone: string) => THREE.Object3D | null | undefined;
+  scene: THREE.Object3D | null | undefined;
+}): MovementAvatarFootingFrameOrchestrationRuntimeResult {
+  return {
+    ...footingFrameOrchestrationRuntime,
+    footingRuntime: {
+      ...footingFrameOrchestrationRuntime.footingRuntime,
+      footWorldSnapshot: resolveMovementAvatarFootWorldRuntimeSnapshot({
+        avatarRoot,
+        leftFoot: lookupBone("leftFoot"),
+        rightFoot: lookupBone("rightFoot"),
+        scene,
+      }),
+    },
+  };
+}
+
 export function applyMovementAvatarFootingFrameOrchestrationRuntime({
   baseHipsPositionRef,
   lookupBone,
@@ -538,4 +582,3 @@ export function applyMovementAvatarFootingFrameOrchestrationRuntime({
     footingRuntime,
   };
 }
-

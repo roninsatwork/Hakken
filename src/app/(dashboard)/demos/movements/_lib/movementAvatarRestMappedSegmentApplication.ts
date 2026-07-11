@@ -57,11 +57,13 @@ export function resolveMovementAvatarRestMappedQuaternionTarget({
 export function applyMovementAvatarRestMappedWorldDirection({
   bone,
   desiredWorldDirection,
+  maxLocalAngleStep,
   restPose,
   slerp,
 }: {
   bone: THREE.Object3D | null | undefined;
   desiredWorldDirection: THREE.Vector3;
+  maxLocalAngleStep?: number;
   restPose: MovementAvatarRetargetRestBone | null | undefined;
   slerp: number;
 }): MovementAvatarRestMappedWorldDirectionApplicationResult | null {
@@ -76,7 +78,18 @@ export function applyMovementAvatarRestMappedWorldDirection({
   });
   if (!target) return null;
 
+  const previousLocalQuaternion = bone.quaternion.clone();
   bone.quaternion.slerp(target.targetLocalQuaternion, slerp);
+  if (maxLocalAngleStep && maxLocalAngleStep > 0) {
+    const appliedAngle = previousLocalQuaternion.angleTo(bone.quaternion);
+    if (appliedAngle > maxLocalAngleStep) {
+      const proposedLocalQuaternion = bone.quaternion.clone();
+      bone.quaternion.copy(previousLocalQuaternion).slerp(
+        proposedLocalQuaternion,
+        maxLocalAngleStep / appliedAngle,
+      );
+    }
+  }
   bone.updateMatrixWorld(true);
 
   return {
@@ -90,6 +103,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithRestMap({
   boneName,
   currentRestMap,
   desiredWorldDirection,
+  maxLocalAngleStep,
   refreshRestMap,
   rememberLastGood = false,
   slerp,
@@ -99,6 +113,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithRestMap({
   boneName: MovementAvatarRetargetBoneName;
   currentRestMap: MovementAvatarRetargetRestMap;
   desiredWorldDirection: THREE.Vector3;
+  maxLocalAngleStep?: number;
   refreshRestMap: () => MovementAvatarRetargetRestMap;
   rememberLastGood?: boolean;
   slerp: number;
@@ -117,6 +132,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithRestMap({
   const application = applyMovementAvatarRestMappedWorldDirection({
     bone,
     desiredWorldDirection,
+    maxLocalAngleStep,
     restPose,
     slerp,
   });
@@ -148,6 +164,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithLookup({
   currentRestMap,
   desiredWorldDirection,
   lookupBone,
+  maxLocalAngleStep,
   refreshRestMap,
   rememberLastGood = false,
   slerp,
@@ -158,6 +175,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithLookup({
   currentRestMap: MovementAvatarRetargetRestMap;
   desiredWorldDirection: THREE.Vector3;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
+  maxLocalAngleStep?: number;
   refreshRestMap: () => MovementAvatarRetargetRestMap;
   rememberLastGood?: boolean;
   slerp: number;
@@ -177,6 +195,7 @@ export function applyMovementAvatarRestMappedWorldDirectionWithLookup({
     boneName,
     currentRestMap,
     desiredWorldDirection,
+    maxLocalAngleStep,
     refreshRestMap,
     rememberLastGood,
     slerp,

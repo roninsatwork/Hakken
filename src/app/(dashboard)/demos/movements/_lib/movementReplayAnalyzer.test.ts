@@ -376,10 +376,10 @@ describe("movement replay analyzer", () => {
     });
     expect(analysis.gamePath.frames[2]).toMatchObject({
       feetOwner: "recorded-retarget",
-      lowerBodyTargetShouldHoldPlayerSquat: true,
-      lowerBodyTargetStage: "player-squat",
+      lowerBodyTargetShouldHoldPlayerSquat: false,
+      lowerBodyTargetStage: "retarget",
       lowerLabel: "squat",
-      lowerOwner: "player-stable-squat",
+      lowerOwner: "player-retarget",
       shouldDrivePlayerSquat: true,
     });
     expect(analysis.gamePath.frames[2]?.lowerBodyTargetPlayerRetargetMotion).toBeGreaterThan(0.55);
@@ -1398,7 +1398,7 @@ describe("movement replay analyzer", () => {
     expect(analysis.gamePath.frames[1]?.spineSideBend ?? 0).not.toBe(0);
     expect(sideBendRow).toEqual(expect.objectContaining({
       automatedStatus: "passed",
-      directionSign: "negative",
+      directionSign: "positive",
       evidenceFrameCount: expect.any(Number),
       nextAction: expect.stringContaining("movement:replay:proof-set"),
       observedAmplitude: expect.any(Number),

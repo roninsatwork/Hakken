@@ -235,6 +235,7 @@ export function resolveMovementMotionFrame({
   const worldPoseLandmarks = displayWorldPoseLandmarks ?? sourceFrame.landmarks.worldPose;
   const avatarDecision = resolveMovementAvatarPipelineDecision({
     ...pipelineInput,
+    anatomicalMapping: "identity",
     source: {
       hands: sourceFrame.landmarks.hands,
       poseLandmarks: sourcePoseLandmarks,
@@ -244,10 +245,11 @@ export function resolveMovementMotionFrame({
   });
   // The display decision runs on mirrored landmarks; only pass world landmarks that
   // were mirrored alongside them, never the unmirrored source world pose.
-  const avatarDisplayDecision = poseLandmarks === sourcePoseLandmarks
+  const avatarDisplayDecision = poseLandmarks === sourcePoseLandmarks && mirrorMode === "same-side"
     ? avatarDecision
     : resolveMovementAvatarPipelineDecision({
         ...pipelineInput,
+        anatomicalMapping: mirrorMode === "facing-player" ? "opposite" : "identity",
         source: {
           hands: sourceFrame.landmarks.hands,
           poseLandmarks,
@@ -276,7 +278,7 @@ export function resolveMovementMotionFrame({
       avatarRole: headAvatarRole,
       avatarRootYaw: 0,
       calibration: headCalibration,
-      mirrorHeadForDisplay: false,
+      mirrorHeadForDisplay: mirrorMode === "facing-player",
       poseLandmarks,
       profile: pipelineInput.avatarTrackingProfile,
         shouldApplyLowerBody: avatarDisplayDecision.shouldApplyLowerBody,

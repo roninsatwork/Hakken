@@ -70,8 +70,16 @@ export function applyMovementAvatarArmApplicationToVrmBones({
   retargetApplied: boolean;
   side: "left" | "right";
 }): MovementAvatarArmApplicationResult {
+  const hasStoredArmPose = Boolean(
+    lastGood[`${side}UpperArm`] || lastGood[`${side}LowerArm`],
+  );
+  const continuityDecision =
+    !retargetApplied && armDecision.unreadyFallback === "relax" && hasStoredArmPose
+      ? { ...armDecision, unreadyFallback: "hold-last-good" as const }
+      : armDecision;
+
   return applyMovementAvatarArmApplication({
-    armDecision,
+    armDecision: continuityDecision,
     holdLastGood: (targetSide) => {
       applyVrmArmLastGoodPoseToBones({
         lastGood,
