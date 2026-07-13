@@ -1,0 +1,158 @@
+{
+  "failures": [
+    {
+      "code": "feet_neutral_while_leg_motion_present",
+      "detail": "Frame 5 expected visible right leg motion but the rendered avatar lower body stayed neutral.",
+      "frameIndex": 5,
+      "semanticCode": "leg-lift-missing",
+      "severity": "error"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 5,
+        "rootHeadingYaw": 0.04,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.39,
+          "lowerOwner": "neutral",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "none",
+          "upperBodyDirectionError": 0.06
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [
+          {
+            "analyzerCode": "feet_neutral_while_leg_motion_present",
+            "code": "avatar-not-following-leg",
+            "detail": "Frame 5 expected visible right leg motion but the rendered avatar lower body stayed neutral.",
+            "doNotPatch": [
+              "Do not add replay-only or game-only bone rules; keep VRM application shared and telemetry-backed."
+            ],
+            "evidenceStatus": "proven",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.ts"
+            ],
+            "nextFixArea": "VRM lower-body application / leg-retarget output",
+            "repairStage": "vrm-application",
+            "severity": "error"
+          }
+        ],
+        "frameIndex": 5,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.94,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "blocked"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 1,
+      "failureCount": 1,
+      "recordingId": "avatar-leg-missing-minimal",
+      "reviewedFrameCount": 0,
+      "status": "blocked",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.39,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0.64
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "neutral",
+            "lowerBodyDirectionError": 0.39,
+            "lowerOwner": "neutral",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "none",
+            "upperBodyDirectionError": 0.06
+          },
+          "expected": {
+            "motion": "leg-raise",
+            "owner": "player-right-leg-raise",
+            "side": "right"
+          },
+          "failures": [
+            {
+              "analyzerCode": "feet_neutral_while_leg_motion_present",
+              "code": "avatar-not-following-leg",
+              "detail": "Frame 5 expected visible right leg motion but the rendered avatar lower body stayed neutral.",
+              "doNotPatch": [
+                "Do not add replay-only or game-only bone rules; keep VRM application shared and telemetry-backed."
+              ],
+              "evidenceStatus": "proven",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarSegmentApplication.ts"
+              ],
+              "nextFixArea": "VRM lower-body application / leg-retarget output",
+              "repairStage": "vrm-application",
+              "severity": "error"
+            }
+          ],
+          "frameIndex": 5,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.94,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "blocked"
+        }
+      ]
+    }
+  },
+  "sessionId": "avatar-leg-missing-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

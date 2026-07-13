@@ -1,5 +1,7 @@
 # Replay Avatar-Follow Correction Plan
 
+Agent workflow follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) defines how saved recordings, rendered telemetry, and repair packets must drive future correction work. This plan remains the behavior-correction history and technical direction; the follow-on owns reproducible diagnosis orchestration.
+
 Last reviewed: 2026-07-10
 Status: Phases 0-2 implemented; Phase 3 and acceptance gap closure in progress; Phase 4 structural slice complete with original broad-consolidation target superseded. See the Handoff runbook section before changing avatar code.
 Scope: fix the root causes that make the replay/posture studio avatar hard to keep following recorded movement, then reduce the movement engine's structural overhead so future tuning is cheap.

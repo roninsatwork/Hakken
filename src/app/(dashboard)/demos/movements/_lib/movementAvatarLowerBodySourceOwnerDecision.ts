@@ -8,6 +8,10 @@ import type {
   MovementAvatarPipelineDecision,
   MovementAvatarPlayerSourceOwnerDecision,
 } from "./movementAvatarPipeline";
+import {
+  countMovementApplicableRetargetSegments,
+  THIGH_SEGMENTS,
+} from "./movementAvatarRetargetDebugDecision";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 
 export function resolveMovementAvatarPlayerSourceOwnerDecision({
@@ -34,6 +38,8 @@ export function resolveMovementAvatarPlayerSourceOwnerDecision({
   return {
     lowerBodyOwnerDecision: avatarRole === "player"
       ? resolveMovementAvatarPlayerLowerBodyOwners({
+          applicableLegSegments: decision.retargetApplicableLegs,
+          hasBilateralApplicableThighs: decision.retargetApplicableThighs >= 2,
           lowerBodyDrive: decision.lowerBodyDrive,
           lowerBodySegmentMotion: decision.lowerBodySegmentMotion,
           lowerBodyTrackingReady: decision.lowerBodyTrackingReady,
@@ -42,8 +48,7 @@ export function resolveMovementAvatarPlayerSourceOwnerDecision({
           shouldApplyLowerBody: decision.shouldApplyLowerBody,
           shouldHoldPlayerSquatPose,
           solvedFootSegments: decision.retargetSolvedFeet,
-          solvedLegSegments: decision.retargetSolvedLegs,
-          solvedLowerBodySegments: decision.retargetSolvedLegs + decision.retargetSolvedFeet,
+          solvedLowerBodySegments: decision.retargetApplicableLegs + decision.retargetSolvedFeet,
           totalSolvedSegments: decision.retargetFrame.debug.solvedSegments.length,
         })
       : null,
@@ -90,6 +95,9 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
     balancedPlantedSquatDepth === 0;
   const playerAppliedOwnerDecision = isPlayer
     ? resolveMovementAvatarPlayerLowerBodyOwners({
+        applicableLegSegments: appliedLegSegments,
+        hasBilateralApplicableThighs:
+          countMovementApplicableRetargetSegments(retargetFrame, THIGH_SEGMENTS, "leg") >= 2,
         lowerBodyDrive,
         lowerBodySegmentMotion,
         lowerBodyTrackingReady,
@@ -98,7 +106,6 @@ export function resolveMovementAvatarAppliedLowerBodyDecision({
         shouldApplyLowerBody,
         shouldHoldPlayerSquatPose,
         solvedFootSegments: appliedFootSegments,
-        solvedLegSegments: appliedLegSegments,
         solvedLowerBodySegments: appliedLowerBodySegments,
         totalSolvedSegments: retargetFrame.debug.solvedSegments.length,
       })

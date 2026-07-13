@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -8,6 +8,7 @@ import {
   getMovementAvatarTrackingProfileName,
 } from "../../../_lib/movementAvatarProfiles";
 import {
+  mapMovementRetargetSourceModelForDisplay,
   type MovementRetargetSourceModel,
 } from "../../../_lib/movementRetargeting";
 import type { MovementRootMotionFrame } from "../../../_lib/movementRootMotion";
@@ -89,12 +90,20 @@ export default function VrmAvatar({
   const avatarTrackingProfile = getMovementAvatarTrackingProfile(vrmUrl);
   const avatarTrackingProfileName = getMovementAvatarTrackingProfileName(vrmUrl);
   const usesPlayerMotionPath = isPlayer && motionMode !== "recorded";
+  const displayRetargetSourceModel = useMemo(() => (
+    usesPlayerMotionPath
+      ? mapMovementRetargetSourceModelForDisplay({
+          mirrorMode: "facing-player",
+          sourceModel: retargetSourceModel,
+        })
+      : retargetSourceModel
+  ), [retargetSourceModel, usesPlayerMotionPath]);
 
   useSyncMovementAvatarRuntimeInputs({
     refs: runtimeRefs,
-    retargetSourceModel,
+    retargetSourceModel: displayRetargetSourceModel,
     rootMotionFrame,
-    shouldClearRetargetSourceModel: usesPlayerMotionPath && Boolean(trackingCalibration) && !retargetSourceModel,
+    shouldClearRetargetSourceModel: usesPlayerMotionPath && Boolean(trackingCalibration) && !displayRetargetSourceModel,
   });
 
   const { avatarScene, vrmRef } = useMovementAvatarVrmAssetRuntime({
@@ -172,7 +181,7 @@ export default function VrmAvatar({
         positionOffset,
         profile: avatarTrackingProfile,
         profileName: avatarTrackingProfileName,
-        providedRetargetSourceModel: retargetSourceModel,
+        providedRetargetSourceModel: displayRetargetSourceModel,
         recordedRootMotionFrame: rootMotionFrameRef.current,
         retargetAvatarRestRef,
         retargetSourceModelRef,

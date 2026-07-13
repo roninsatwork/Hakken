@@ -7,6 +7,7 @@ import {
   mapMovementDisplaySide,
   type MovementMirrorMode,
 } from "./movementMirrorMapping";
+import type { MovementRetargetSourceModel } from "./movementRetargeting";
 import {
   resolveMovementAvatarHeadTarget,
   type MovementAvatarHeadTargetDecision,
@@ -88,6 +89,8 @@ export type MovementMotionFrame = {
 
 export type ResolveMovementMotionFrameInput = Omit<MovementAvatarPipelineInput, "source" | "sourceOrigin"> & {
   displayPoseLandmarks?: TrackingLandmark[];
+  /** Neutral model expressed in the same coordinate/anatomical space as display landmarks. */
+  displayRetargetSourceModel?: MovementRetargetSourceModel | null;
   displayWorldPoseLandmarks?: TrackingLandmark[];
   mirrorMode: MovementMirrorMode;
   previousMotionFrame?: MovementMotionFrame | null;
@@ -224,6 +227,7 @@ function resolveMotionReadability({
 
 export function resolveMovementMotionFrame({
   displayPoseLandmarks,
+  displayRetargetSourceModel,
   displayWorldPoseLandmarks,
   mirrorMode,
   previousMotionFrame,
@@ -249,14 +253,20 @@ export function resolveMovementMotionFrame({
     ? avatarDecision
     : resolveMovementAvatarPipelineDecision({
         ...pipelineInput,
-        anatomicalMapping: mirrorMode === "facing-player" ? "opposite" : "identity",
+        // Display preparation has already reflected coordinates and exchanged
+        // bilateral landmark ownership for a facing player. Applying an
+        // additional anatomical inversion here reverses the player spine a
+        // second time, making its rendered side bend/twist oppose the
+        // instructor despite matched display landmarks.
+        anatomicalMapping: "identity",
         source: {
           hands: sourceFrame.landmarks.hands,
           poseLandmarks,
           worldPoseLandmarks: displayWorldPoseLandmarks,
         },
         sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
-  });
+        retargetSourceModel: displayRetargetSourceModel ?? pipelineInput.retargetSourceModel,
+      });
   const headAvatarRole = sourceFrame.sourceOrigin === "recorded-replay"
     ? "instructor"
     : pipelineInput.avatarRole;

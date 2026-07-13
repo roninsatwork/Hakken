@@ -2,6 +2,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { inspectReplayTelemetryFrames } from "./lib/replay-proof-identity.mjs";
 
 const SEGMENT_THRESHOLDS = {
   leftFoot: 0.2,
@@ -17,6 +18,7 @@ const SEGMENT_THRESHOLDS = {
 };
 const AXIAL_THRESHOLD = 0.12;
 const CONFIDENT_SOURCE_THRESHOLD = 0.45;
+const PERSISTENT_DIVERGENCE_FRAMES = 3;
 
 function parseArgs(argv) {
   const args = { out: "", strict: false, telemetry: "" };
@@ -46,14 +48,35 @@ function percentile(sorted, fraction) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
 }
 
+function persistentDivergenceRuns(samples, threshold) {
+  const runs = [];
+  samples
+    .filter((sample) => sample.difference > threshold)
+    .sort((left, right) => left.frameIndex - right.frameIndex)
+    .forEach((sample) => {
+      const currentRun = runs.at(-1);
+      if (!currentRun || sample.frameIndex !== currentRun.at(-1).frameIndex + 1) {
+        runs.push([sample]);
+        return;
+      }
+      currentRun.push(sample);
+    });
+  return runs.filter((run) => run.length >= PERSISTENT_DIVERGENCE_FRAMES);
+}
+
 function axialDifferences(frame) {
   const instructor = frame.avatars?.instructor;
   const player = frame.avatars?.player;
   if (!instructor || !player) return [];
   const entries = [];
   for (const axis of ["pitch", "roll", "yaw"]) {
-    const left = instructor.headApplied?.[axis];
-    const right = player.headApplied?.[axis];
+    const renderedKey = `appliedWorld${axis[0].toUpperCase()}${axis.slice(1)}`;
+    const left = Number.isFinite(instructor.avatarHead?.[renderedKey])
+      ? instructor.avatarHead[renderedKey]
+      : instructor.headApplied?.[axis];
+    const right = Number.isFinite(player.avatarHead?.[renderedKey])
+      ? player.avatarHead[renderedKey]
+      : player.headApplied?.[axis];
     if (Number.isFinite(left) && Number.isFinite(right)) {
       entries.push({ axis: `head.${axis}`, difference: Math.abs(left - right) });
     }
@@ -71,16 +94,51 @@ function axialDifferences(frame) {
 }
 
 export function analyzeThreePartyReplay({ telemetry }) {
-  const frames = telemetry.frames ?? [];
-  const missingRoleFrames = frames.filter((frame) => (
-    !frame.avatars?.instructor?.avatarVisual || !frame.avatars?.player?.avatarVisual
-  )).map((frame) => frame.frameIndex);
+  const frameInspection = inspectReplayTelemetryFrames({
+    frameCount: telemetry.frameCount,
+    frames: telemetry.frames,
+    hasDebug: () => true,
+    isRendered: (frame) => Boolean(
+      frame?.avatars?.instructor?.avatarVisual && frame?.avatars?.player?.avatarVisual,
+    ),
+  });
+  const frames = frameInspection.uniqueExpectedFrames;
+  const missingRoleFrames = Array.from({ length: frameInspection.frameCount }, (_, frameIndex) => {
+    const frame = frames.find((candidate) => candidate.frameIndex === frameIndex);
+    return !frame?.avatars?.instructor?.avatarVisual || !frame?.avatars?.player?.avatarVisual
+      ? frameIndex
+      : null;
+  }).filter((frameIndex) => frameIndex !== null);
   const failures = [];
-  if (telemetry.proofMode !== "three-party-mirror") {
-    failures.push({ code: "three-party-proof-mode-missing", count: telemetry.frameCount ?? 0 });
+  if (frameInspection.frameCount === 0) {
+    failures.push({ code: "three-party-frame-count-invalid", count: 1 });
   }
-  if ((telemetry.missingFrameCount ?? 0) > 0) {
-    failures.push({ code: "three-party-rendered-frames-missing", count: telemetry.missingFrameCount });
+  if (telemetry.proofMode !== "three-party-mirror") {
+    failures.push({ code: "three-party-proof-mode-missing", count: frameInspection.frameCount });
+  }
+  if (frameInspection.missingFrameIndexes.length > 0) {
+    failures.push({ code: "three-party-rendered-frames-missing", count: frameInspection.missingFrameIndexes.length });
+  }
+  if (frameInspection.duplicateFrameIndexes.length > 0) {
+    failures.push({ code: "three-party-frame-index-duplicate", count: frameInspection.duplicateFrameIndexes.length });
+  }
+  if (frameInspection.unexpectedFrameIndexes.length > 0 || frameInspection.invalidFrameEntries.length > 0) {
+    failures.push({
+      code: "three-party-frame-index-invalid",
+      count: frameInspection.unexpectedFrameIndexes.length + frameInspection.invalidFrameEntries.length,
+    });
+  }
+  if (frameInspection.missingRenderedFrameIndexes.length > 0) {
+    failures.push({
+      code: "three-party-rendered-frame-telemetry-missing",
+      count: frameInspection.missingRenderedFrameIndexes.length,
+    });
+  }
+  if (
+    typeof telemetry.missingFrameCount === "number" &&
+    telemetry.missingFrameCount !== frameInspection.missingFrameIndexes.length
+  ) {
+    failures.push({ code: "three-party-frame-accounting-mismatch", count: 1 });
   }
   if (missingRoleFrames.length > 0) {
     failures.push({ code: "three-party-rendered-role-missing", count: missingRoleFrames.length });
@@ -100,23 +158,37 @@ export function analyzeThreePartyReplay({ telemetry }) {
       }
       samples.push({ difference, frameIndex: frame.frameIndex });
     }
-    samples.sort((left, right) => left.difference - right.difference);
-    const p95 = percentile(samples.map((sample) => sample.difference), 0.95);
-    const missingSampleCount = Math.max(0, frames.length - samples.length);
+    const sortedSamples = [...samples].sort((left, right) => left.difference - right.difference);
+    const p95 = percentile(sortedSamples.map((sample) => sample.difference), 0.95);
+    const persistentRuns = persistentDivergenceRuns(samples, threshold);
+    const missingSampleCount = Math.max(0, frameInspection.frameCount - samples.length);
     if (missingSampleCount > 0) {
       failures.push({ code: "three-party-segment-render-missing", count: missingSampleCount, segment });
     } else if (p95 !== null && p95 > threshold) {
       failures.push({ code: "three-party-segment-diverged", count: samples.filter((sample) => sample.difference > threshold).length, segment });
     }
+    if (persistentRuns.length > 0) {
+      failures.push({
+        code: "three-party-segment-sustained-divergence",
+        count: persistentRuns.reduce((sum, run) => sum + run.length, 0),
+        segment,
+      });
+    }
     return [segment, {
       confidentSampleCount,
-      maxDifference: round(samples.at(-1)?.difference),
+      maxDifference: round(sortedSamples.at(-1)?.difference),
       meanDifference: round(samples.reduce((sum, sample) => sum + sample.difference, 0) / Math.max(samples.length, 1)),
       missingSampleCount,
       p95Difference: round(p95),
+      persistentDivergenceRuns: persistentRuns.slice(0, 10).map((run) => ({
+        frameEnd: run.at(-1).frameIndex,
+        frameStart: run[0].frameIndex,
+        length: run.length,
+        maxDifference: round(Math.max(...run.map((sample) => sample.difference))),
+      })),
       sampleCount: samples.length,
       threshold,
-      worstFrames: samples.slice(-20).reverse().map((sample) => ({
+      worstFrames: sortedSamples.slice(-20).reverse().map((sample) => ({
         difference: round(sample.difference),
         frameIndex: sample.frameIndex,
       })),
@@ -126,28 +198,71 @@ export function analyzeThreePartyReplay({ telemetry }) {
   const axialSamples = frames.flatMap((frame) => axialDifferences(frame).map((sample) => ({
     ...sample,
     frameIndex: frame.frameIndex,
-  }))).sort((left, right) => left.difference - right.difference);
-  const axialP95 = percentile(axialSamples.map((sample) => sample.difference), 0.95);
+  })));
+  const sortedAxialSamples = [...axialSamples].sort((left, right) => left.difference - right.difference);
+  const axialP95 = percentile(sortedAxialSamples.map((sample) => sample.difference), 0.95);
   if (axialP95 !== null && axialP95 > AXIAL_THRESHOLD) {
     failures.push({
       code: "three-party-axial-diverged",
       count: axialSamples.filter((sample) => sample.difference > AXIAL_THRESHOLD).length,
     });
   }
+  const axialSamplesByAxis = new Map();
+  axialSamples.forEach((sample) => {
+    const samples = axialSamplesByAxis.get(sample.axis) ?? [];
+    samples.push(sample);
+    axialSamplesByAxis.set(sample.axis, samples);
+  });
+  const persistentAxialRuns = Array.from(axialSamplesByAxis.entries()).flatMap(([axis, samples]) => (
+    persistentDivergenceRuns(samples, AXIAL_THRESHOLD).map((run) => ({ axis, run }))
+  ));
+  if (persistentAxialRuns.length > 0) {
+    failures.push({
+      code: "three-party-axial-sustained-divergence",
+      count: persistentAxialRuns.reduce((sum, entry) => sum + entry.run.length, 0),
+    });
+  }
+  const missingAxialFrameCount = Math.max(0, frameInspection.frameCount - new Set(
+    axialSamples.map((sample) => sample.frameIndex),
+  ).size);
+  if (missingAxialFrameCount > 0) {
+    failures.push({ code: "three-party-axial-render-missing", count: missingAxialFrameCount });
+  }
 
   return {
     axial: {
       p95Difference: round(axialP95),
+      persistentDivergenceRuns: persistentAxialRuns.slice(0, 20).map(({ axis, run }) => ({
+        axis,
+        frameEnd: run.at(-1).frameIndex,
+        frameStart: run[0].frameIndex,
+        length: run.length,
+        maxDifference: round(Math.max(...run.map((sample) => sample.difference))),
+      })),
       sampleCount: axialSamples.length,
       threshold: AXIAL_THRESHOLD,
-      worstFrames: axialSamples.slice(-20).reverse().map((sample) => ({
+      worstFrames: sortedAxialSamples.slice(-20).reverse().map((sample) => ({
         ...sample,
         difference: round(sample.difference),
       })),
     },
     failures,
-    frameCount: telemetry.frameCount ?? frames.length,
-    missingFrameCount: telemetry.missingFrameCount ?? 0,
+    frameAccounting: {
+      compared: frameInspection.compared,
+      complete: frameInspection.complete,
+      expected: frameInspection.frameCount,
+      missing: frameInspection.missingFrameIndexes.length,
+      rendered: frameInspection.rendered,
+    },
+    frameCount: frameInspection.frameCount,
+    frameIntegrity: {
+      duplicateFrameIndexes: frameInspection.duplicateFrameIndexes,
+      invalidFrameEntries: frameInspection.invalidFrameEntries,
+      missingFrameIndexes: frameInspection.missingFrameIndexes,
+      missingRenderedFrameIndexes: frameInspection.missingRenderedFrameIndexes,
+      unexpectedFrameIndexes: frameInspection.unexpectedFrameIndexes,
+    },
+    missingFrameCount: frameInspection.missingFrameIndexes.length,
     missingRoleFrameCount: missingRoleFrames.length,
     missingRoleFrames: missingRoleFrames.slice(0, 100),
     proofMode: telemetry.proofMode ?? "unknown",

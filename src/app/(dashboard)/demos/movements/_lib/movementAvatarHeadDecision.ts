@@ -110,13 +110,21 @@ export function resolveMovementAvatarHeadDecision({
   shouldApplySpine?: boolean;
 }): MovementAvatarHeadDecision {
   const isPlayer = avatarRole === "player";
+  const sharedPoseHeadTrackingReady =
+    isPlayer && rawHead.source === "pose" && rawHead.confidence >= 0.75;
   const recordedHeadTrackingReady =
     !isPlayer &&
     (
       (rawHead.source === "face" && rawHead.confidence >= 0.35) ||
       (rawHead.source === "pose" && rawHead.confidence >= 0.75)
     );
-  const shouldApplyPlayerHeadMotion = isPlayer && Boolean(calibration);
+  // Pose-only head evidence is already in the same display/anatomical space
+  // for the instructor and the opposite-player imitation. Sending it through
+  // player-only calibration, deadzones, and intent offsets creates two visible
+  // head paths from identical source angles. Face tracking remains calibrated;
+  // pose-only tracking uses one shared recorded transform for both avatars.
+  const shouldApplyPlayerHeadMotion =
+    isPlayer && Boolean(calibration) && !sharedPoseHeadTrackingReady;
   const calibratedPlayerHead = shouldApplyPlayerHeadMotion
     ? applyHeadCalibration({
         rawHead,
@@ -129,7 +137,7 @@ export function resolveMovementAvatarHeadDecision({
         preserveActiveSpineYaw: shouldApplySpine,
       })
     : null;
-  const sharedPoseHead = isPlayer && shouldApplySpine && rawHead.source === "pose"
+  const sharedPoseHead = sharedPoseHeadTrackingReady
     ? resolveMovementAvatarRecordedHeadAngles({ profile, rawHead })
     : null;
   const appliedHead = sharedPoseHead ?? (stabilizedPlayerHead
@@ -145,8 +153,11 @@ export function resolveMovementAvatarHeadDecision({
           rawHead,
         })
       : getNeutralMovementHeadAngles(profile));
-  const shouldApplyHeadMotion = shouldApplyPlayerHeadMotion || recordedHeadTrackingReady;
-  const headOwner = shouldApplyPlayerHeadMotion
+  const shouldApplyHeadMotion =
+    shouldApplyPlayerHeadMotion || recordedHeadTrackingReady || sharedPoseHeadTrackingReady;
+  const headOwner = sharedPoseHeadTrackingReady
+    ? "shared-pose"
+    : shouldApplyPlayerHeadMotion
     ? "player-calibrated"
     : recordedHeadTrackingReady
       ? `recorded-${rawHead.source}`

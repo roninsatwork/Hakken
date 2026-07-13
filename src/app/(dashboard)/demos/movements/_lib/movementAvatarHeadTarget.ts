@@ -75,7 +75,10 @@ export function resolveMovementAvatarHeadTarget({
     headPitch: headDecision.headPitch,
   });
   const applyOptions = resolveMovementAvatarHeadApplyOptions({
-    avatarRole,
+    // Shared pose-only head targets also share their interpolation semantics.
+    // Role-specific slerp after a common target would still create a rendered
+    // three-party mismatch during continuous movement.
+    avatarRole: headDecision.headOwner === "shared-pose" ? "instructor" : avatarRole,
     profile,
   });
   const applicationPose = resolveMovementAvatarHeadApplicationPose({

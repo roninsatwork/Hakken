@@ -1,0 +1,70 @@
+{
+  "failures": [],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 4,
+        "rootHeadingYaw": 0.04,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.04,
+          "lowerOwner": "player-right-leg-raise",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "support-presentation-none",
+          "upperBodyDirectionError": 0.03
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [],
+        "frameIndex": 4,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.94,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "pass"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 0,
+      "failureCount": 0,
+      "recordingId": "accepted-leg-raise-minimal",
+      "reviewedFrameCount": 1,
+      "status": "pass",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.04,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0.96
+      },
+      "worstFrames": []
+    }
+  },
+  "sessionId": "accepted-leg-raise-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

@@ -81,6 +81,7 @@ describe("movement avatar head target", () => {
       avatarRole: "player",
       avatarRootYaw: Math.PI,
       calibration: neutralCalibration,
+      faceLandmarks: faceLandmarks(),
       headMotionIntent: {
         ...neutralHeadIntent,
         vertical: 0.7,
@@ -95,7 +96,7 @@ describe("movement avatar head target", () => {
     expect(target.applyOptions.headSlerp).toBeGreaterThan(0);
   });
 
-  it("keeps moderate pose-only player head noise facing forward", () => {
+  it("keeps moderate pose-only player head evidence on the shared transform", () => {
     const pose = withCorePose();
     pose[7] = { ...pose[7]!, z: 0.02 };
     pose[8] = { ...pose[8]!, z: -0.02 };
@@ -112,7 +113,18 @@ describe("movement avatar head target", () => {
 
     expect(target.rawHeadDecision.rawHead.source).toBe("pose");
     expect(Math.abs(target.rawHeadDecision.rawHead.yaw)).toBeGreaterThan(0.35);
-    expect(Math.abs(target.headDecision.headYaw)).toBeLessThan(0.03);
+    const instructor = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+    expect(target.headDecision.headOwner).toBe("shared-pose");
+    expect(target.headDecision.headYaw).toBeCloseTo(instructor.headDecision.headYaw, 5);
+    expect(target.headDecision.shouldApplyPlayerHeadMotion).toBe(false);
   });
 
   it("preserves strong pose-only player head yaw while spine is actively driven", () => {
@@ -179,6 +191,35 @@ describe("movement avatar head target", () => {
     expect(player.headDecision.appliedHead.pitch).toBeCloseTo(instructor.headDecision.appliedHead.pitch, 5);
     expect(player.headDecision.appliedHead.yaw).toBeCloseTo(instructor.headDecision.appliedHead.yaw, 5);
     expect(player.headDecision.appliedHead.roll).toBeCloseTo(instructor.headDecision.appliedHead.roll, 5);
+  });
+
+  it("uses the same pose-head transform when the spine solver is inactive", () => {
+    const pose = withCorePose();
+    pose[0] = { ...pose[0]!, x: 0.56, y: 0.35 };
+    pose[7] = { ...pose[7]!, y: 0.27, z: 0.08 };
+    pose[8] = { ...pose[8]!, y: 0.34, z: -0.08 };
+    const common = {
+      avatarRootYaw: 0,
+      calibration: neutralCalibration,
+      headMotionIntent: {
+        ...neutralHeadIntent,
+        depth: 0.7,
+        lateral: 0.6,
+      },
+      mirrorHeadForDisplay: false,
+      poseLandmarks: pose,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    };
+
+    const instructor = resolveMovementAvatarHeadTarget({ avatarRole: "instructor", ...common });
+    const player = resolveMovementAvatarHeadTarget({ avatarRole: "player", ...common });
+
+    expect(player.headDecision.appliedHead).toEqual(instructor.headDecision.appliedHead);
+    expect(player.headDecision.headPitch).toBe(instructor.headDecision.headPitch);
+    expect(player.headDecision.headYaw).toBe(instructor.headDecision.headYaw);
+    expect(player.headDecision.headRoll).toBe(instructor.headDecision.headRoll);
+    expect(player.applyOptions).toEqual(instructor.applyOptions);
   });
 
   it("keeps recorded pose-only pitch and roll visually close to the source", () => {

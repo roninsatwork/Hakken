@@ -51,8 +51,11 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlan({
 
   let plantedSquatIkDepth: number | null = null;
 
-  if (plan.mode === "inactive-neutral" || plan.mode === "player-neutral") {
+  if (plan.mode === "inactive-neutral") {
     applyNeutral();
+  } else if (plan.mode === "player-neutral") {
+    applyNeutral();
+    plantInstructorFeet(plan.plantInstructorFeet);
   } else if (plan.mode === "player-leg-raise") {
     applyLegRaise(plan.side, plan.depth);
   } else if (plan.mode === "player-squat") {

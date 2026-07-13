@@ -1,0 +1,159 @@
+{
+  "failures": [
+    {
+      "code": "lower_body_owner_flicker",
+      "detail": "Lower-body owner changed during a stable leg raise window.",
+      "frameIndex": 12,
+      "severity": "warning"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 12,
+        "rootHeadingYaw": 0.05,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1,
+    "lowerBodyOwnerTransitions": 3,
+    "ownerTransitionsPerSecond": 1.8
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.16,
+          "lowerOwner": "player-right-leg-raise",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "none",
+          "upperBodyDirectionError": 0.06
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [
+          {
+            "analyzerCode": "lower_body_owner_flicker",
+            "code": "owner-flicker",
+            "detail": "Lower-body owner changed during a stable leg raise window.",
+            "doNotPatch": [
+              "Do not patch Game Studio separately from Replay; change the shared motion decision layer."
+            ],
+            "evidenceStatus": "suspected",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipeline.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipeline.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipelineDecision.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.ts"
+            ],
+            "nextFixArea": "lower-body owner smoothing / hysteresis",
+            "repairStage": "motion-decision",
+            "severity": "warning"
+          }
+        ],
+        "frameIndex": 12,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.93,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "review"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 0,
+      "failureCount": 1,
+      "recordingId": "owner-flicker-minimal",
+      "reviewedFrameCount": 1,
+      "status": "review",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.16,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 1.8,
+        "visualMatchScore": 0.9
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "neutral",
+            "lowerBodyDirectionError": 0.16,
+            "lowerOwner": "player-right-leg-raise",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "none",
+            "upperBodyDirectionError": 0.06
+          },
+          "expected": {
+            "motion": "leg-raise",
+            "owner": "player-right-leg-raise",
+            "side": "right"
+          },
+          "failures": [
+            {
+              "analyzerCode": "lower_body_owner_flicker",
+              "code": "owner-flicker",
+              "detail": "Lower-body owner changed during a stable leg raise window.",
+              "doNotPatch": [
+                "Do not patch Game Studio separately from Replay; change the shared motion decision layer."
+              ],
+              "evidenceStatus": "suspected",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipeline.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/_lib/movementMotionFrame.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipeline.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarPipelineDecision.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.ts"
+              ],
+              "nextFixArea": "lower-body owner smoothing / hysteresis",
+              "repairStage": "motion-decision",
+              "severity": "warning"
+            }
+          ],
+          "frameIndex": 12,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.93,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "review"
+        }
+      ]
+    }
+  },
+  "sessionId": "owner-flicker-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

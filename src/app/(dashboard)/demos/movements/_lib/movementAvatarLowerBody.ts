@@ -170,6 +170,8 @@ export function resolveMovementAvatarLowerBodyDrive({
 }
 
 export function resolveMovementAvatarPlayerLowerBodyOwners({
+  applicableLegSegments,
+  hasBilateralApplicableThighs,
   lowerBodyDrive,
   lowerBodySegmentMotion,
   lowerBodyTrackingReady,
@@ -178,9 +180,10 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   shouldApplyLowerBody,
   shouldHoldPlayerSquatPose,
   solvedFootSegments,
-  solvedLegSegments,
   solvedLowerBodySegments,
 }: {
+  applicableLegSegments: number;
+  hasBilateralApplicableThighs: boolean;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   lowerBodySegmentMotion: number;
   lowerBodyTrackingReady: boolean;
@@ -189,13 +192,14 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   shouldApplyLowerBody: boolean;
   shouldHoldPlayerSquatPose: boolean;
   solvedFootSegments: number;
-  solvedLegSegments: number;
   solvedLowerBodySegments: number;
   totalSolvedSegments: number;
 }): MovementAvatarPlayerLowerBodyOwnerDecision {
-  const hasUsablePlayerLegRetarget = solvedLegSegments >= 4;
+  const hasUsablePlayerLegRetarget = applicableLegSegments >= 4;
   const hasCompleteLegRetarget =
     hasUsablePlayerLegRetarget && retargetSourceQuality >= 0.45;
+  const hasUsablePartialLegRetarget =
+    hasBilateralApplicableThighs && retargetSourceQuality >= 0.45;
   const canUsePlayerRetargetLegRaise =
     lowerBodyDrive.shouldDrivePlayerLegRaise &&
     hasCompleteLegRetarget;
@@ -212,12 +216,21 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
         : "player-leg-raise-planted-flat"
       : null;
   const shouldUsePlayerFootFallback =
-    solvedLegSegments >= 4 &&
+    applicableLegSegments >= 4 &&
     solvedFootSegments === 0 &&
     lowerBodySegmentMotion > 0.16 &&
     retargetSourceQuality >= 0.45;
 
-  if (!lowerBodyTrackingReady && !shouldHoldPlayerSquatPose) {
+  // A complete applicable retarget is independent evidence that the leg chain
+  // is usable. Do not discard the same four leg directions merely because the
+  // stricter fresh-solve readiness flag dips for the frame. Applicability uses
+  // the conservative continuation band enforced by the bone applier.
+  if (
+    !lowerBodyTrackingReady &&
+    !shouldHoldPlayerSquatPose &&
+    !hasCompleteLegRetarget &&
+    !hasUsablePartialLegRetarget
+  ) {
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
@@ -261,12 +274,24 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
     };
   }
 
+  if (!lowerBodyTrackingReady && hasUsablePartialLegRetarget) {
+    return {
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      hasCompleteLegRetarget,
+      lowerBodyOwner: hasCompleteLegRetarget
+        ? "player-retarget"
+        : "retarget-partial-fallback",
+      shouldUsePlayerFootFallback,
+    };
+  }
+
   if (playerRetargetLowerBodyMotion < 0.16) {
     return {
       canUsePlayerRetargetLegRaise,
       feetOwner: "neutral",
       hasCompleteLegRetarget,
-      lowerBodyOwner: retargetSourceQuality >= 0.65
+      lowerBodyOwner: hasCompleteLegRetarget || retargetSourceQuality >= 0.65
         ? "player-retarget"
         : "player-lower-body-neutral",
       shouldUsePlayerFootFallback,

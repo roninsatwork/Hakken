@@ -46,6 +46,7 @@ Active plans are still useful as sources of truth for current or future implemen
 - [Posture Studio Spine Intelligence Plan](./active/posture-studio-spine-intelligence-plan.md)
 - [Replay Avatar-Follow Correction Plan](./active/replay-avatar-follow-correction-plan.md)
 - [Replay Lab Visual Acceptance Tightening Plan](./active/replay-lab-visual-acceptance-tightening-plan.md)
+- [Replay Studio Agent Repair Harness Plan](./active/replay-studio-agent-repair-harness-plan.md)
 - [Replay Studio Avatar-Follow Observability Plan](./active/replay-studio-avatar-follow-observability-plan.md)
 - [Roadmap And Debt](./active/roadmap-and-debt.md)
 - [Starter Platform Expansion Plan](./active/starter-platform-expansion-plan.md)

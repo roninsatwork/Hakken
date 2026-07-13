@@ -28,6 +28,7 @@ export type MovementAvatarLowerBodyApplicationPlan =
       feetOwner: string;
       lowerBodyOwner: string;
       mode: "player-neutral";
+      plantInstructorFeet: Array<"left" | "right">;
       shouldEaseLowerBodyToNeutral: true;
       stageDecision: MovementAvatarLowerBodyApplicationStageDecision;
     }
@@ -117,6 +118,7 @@ export function resolveMovementAvatarLowerBodyApplicationPlan({
       feetOwner: stageDecision.feetOwner,
       lowerBodyOwner: stageDecision.lowerBodyOwner,
       mode: "player-neutral",
+      plantInstructorFeet: ["right", "left"],
       shouldEaseLowerBodyToNeutral: true,
       stageDecision,
     };

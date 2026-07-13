@@ -7,7 +7,10 @@ import {
   type MovementMotionFrame,
 } from "./movementMotionFrame";
 import { resolveMovementDisplayLandmarkFrame } from "./movementDisplayLandmarks";
-import type { MovementRetargetSourceModel } from "./movementRetargeting";
+import {
+  mapMovementRetargetSourceModelForDisplay,
+  type MovementRetargetSourceModel,
+} from "./movementRetargeting";
 import type {
   MovementCalibration,
   MovementHandsForConfidence,
@@ -68,6 +71,10 @@ export function buildLiveMovementMotionFrame({
     avatarRole: "player",
     calibration,
     displayPoseLandmarks: displayFrame.pose,
+    displayRetargetSourceModel: mapMovementRetargetSourceModelForDisplay({
+      mirrorMode: "facing-player",
+      sourceModel: retargetSourceModel,
+    }),
     displayWorldPoseLandmarks: displayFrame.worldPose,
     mirrorMode: "facing-player",
     previousMotionFrame,

@@ -81,6 +81,11 @@ export function applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones
         isPlayer,
         lookupBone,
         sides,
+        // Neutral/planted ownership is an exact shared local target. Easing
+        // from role-specific retarget quaternions left the two avatars on
+        // different world-space foot arcs even though both had entered the
+        // same neutral stage.
+        slerp: 1,
       });
     },
   });
@@ -97,7 +102,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   plan,
   singleLegRaiseSlerp,
   squatFlexionBendBoost,
-  squatFlexionSlerp,
 }: {
   applyPlantedSquatIk: (depth: number) => number;
   contacts?: MovementAvatarInstructorFootPlantContacts;
@@ -109,7 +113,6 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
   plan: MovementAvatarLowerBodyRetargetApplicationPlan;
   singleLegRaiseSlerp: number;
   squatFlexionBendBoost?: number;
-  squatFlexionSlerp: number;
 }): MovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBonesResult {
   let feetOwner = currentFeetOwner;
   const result = applyMovementAvatarLowerBodyRetargetPostPlanApplication({
@@ -129,7 +132,7 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
         bendBoost: squatFlexionBendBoost,
         depth,
         lookupBone,
-        slerp: squatFlexionSlerp,
+        slerp: plan.squatFlexionSlerp,
       });
     },
     plan,

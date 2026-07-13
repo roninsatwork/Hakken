@@ -106,7 +106,10 @@ export function resolveMovementAvatarBoneEaseOptions({
   return {
     armRelaxedSlerp: isPlayer ? 0.16 : 0.1,
     demoFallbackSlerp: isPlayer ? 0.18 : 0.12,
-    lowerBodyNeutralSlerp: isPlayer ? 0.12 : 0.08,
+    // Neutral is a shared rendered pose. Different role-specific easing here
+    // makes instructor and player feet visibly separate for several frames
+    // after both paths release the same low-confidence source.
+    lowerBodyNeutralSlerp: 0.12,
     singleLegRaiseSlerp: isPlayer ? 0.72 : 0.58,
     squatFlexionSlerp: isPlayer ? 0.84 : 0.62,
   };

@@ -16,6 +16,26 @@ function smoothLowerBodyValue(current: number, target: number, rise: number, fal
 
 const INSTRUCTOR_SQUAT_ENTRY_MIN_VISIBLE_DEPTH = 0.18;
 
+export function resolveMovementAvatarEstablishedLegRetarget({
+  applicableLegs,
+  applicableThighs,
+  previousState,
+  sourceQuality,
+}: {
+  applicableLegs: number;
+  applicableThighs: number;
+  previousState: MovementAvatarLowerBodyVisualState;
+  sourceQuality: number;
+}) {
+  if (sourceQuality < 0.45) return false;
+  if (applicableLegs >= 4) return true;
+
+  // A bilateral-thigh partial solve is a continuity fallback, not an
+  // acquisition path. Starting it from neutral lets uncertain startup vectors
+  // flip the rig before a complete leg solve has ever established ownership.
+  return applicableThighs >= 2 && previousState.hasEstablishedLegRetarget === true;
+}
+
 function smoothInstructorSquatDepth(current: number, sourceDepth: number) {
   const enterThreshold = current > 0.08 ? 0.08 : 0.2;
   const target = sourceDepth >= enterThreshold ? sourceDepth : 0;
@@ -38,6 +58,7 @@ export function resolveMovementAvatarLowerBodyVisualDecision({
 }): MovementAvatarLowerBodyVisualDecision {
   if (avatarRole === "player") {
     const state = {
+      hasEstablishedLegRetarget: previousState.hasEstablishedLegRetarget ?? false,
       squatPresentationDepth: smoothLowerBodyValue(
         previousState.squatPresentationDepth,
         lowerBodyDrive.playerSquatPresentationDepth,
@@ -71,6 +92,7 @@ export function resolveMovementAvatarLowerBodyVisualDecision({
     0.12,
   );
   const state = {
+    hasEstablishedLegRetarget: previousState.hasEstablishedLegRetarget ?? false,
     squatPresentationDepth,
     visualRootDrop,
   };

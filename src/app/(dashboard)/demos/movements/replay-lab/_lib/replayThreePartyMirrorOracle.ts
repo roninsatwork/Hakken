@@ -42,14 +42,14 @@ const REPLAY_THREE_PARTY_SEGMENT_PAIRS = [
 
 function cloneLandmark(
   landmark: VrmPoseLandmark,
-  mapX: (x: number) => number,
+  mapX: (x: number) => number = (x) => x,
 ): VrmPoseLandmark {
   return { ...landmark, x: mapX(landmark.x) };
 }
 
 export function buildOppositePlayerPoseOracle(
   landmarks: VrmPoseLandmark[] | null | undefined,
-  mapX: (x: number) => number = (x) => 1 - x,
+  mapX: (x: number) => number = (x) => x,
 ): VrmPoseLandmark[] | null {
   if (!landmarks) return null;
   const opposite = landmarks.map((landmark) => cloneLandmark(landmark, mapX));
@@ -67,13 +67,13 @@ function buildOppositeFaceOracle(
   landmarks: VrmPoseLandmark[] | null | undefined,
 ): VrmPoseLandmark[] | null {
   if (!landmarks) return null;
-  const opposite = landmarks.map((landmark) => cloneLandmark(landmark, (x) => 1 - x));
+  const opposite = landmarks.map((landmark) => cloneLandmark(landmark));
   REPLAY_THREE_PARTY_FACE_PAIRS.forEach(([leftIndex, rightIndex]) => {
     const sourceLeft = landmarks[leftIndex];
     const sourceRight = landmarks[rightIndex];
     if (!sourceLeft || !sourceRight) return;
-    opposite[leftIndex] = cloneLandmark(sourceRight, (x) => 1 - x);
-    opposite[rightIndex] = cloneLandmark(sourceLeft, (x) => 1 - x);
+    opposite[leftIndex] = cloneLandmark(sourceRight);
+    opposite[rightIndex] = cloneLandmark(sourceLeft);
   });
   return opposite;
 }
@@ -82,8 +82,8 @@ function buildOppositeHandsOracle(hands: VrmHandsPayload | undefined): VrmHandsP
   if (!hands) return undefined;
   const reflectHand = (hand: NonNullable<VrmHandsPayload["left"]>) => ({
     ...structuredClone(hand),
-    landmarks: hand.landmarks.map((landmark) => cloneLandmark(landmark, (x) => 1 - x)),
-    worldLandmarks: hand.worldLandmarks?.map((landmark) => cloneLandmark(landmark, (x) => -x)),
+    landmarks: hand.landmarks.map((landmark) => cloneLandmark(landmark)),
+    worldLandmarks: hand.worldLandmarks?.map((landmark) => cloneLandmark(landmark)),
   });
   return {
     left: hands.right ? reflectHand(hands.right) : undefined,
@@ -115,7 +115,7 @@ export function buildOppositePlayerImitationOracle(payload: VrmMotionPayload): V
     hands: buildOppositeHandsOracle(payload.hands),
     landmarks,
     pose: buildOppositePlayerPoseOracle(payload.pose) ?? undefined,
-    worldLandmarks: buildOppositePlayerPoseOracle(payload.worldLandmarks, (x) => -x) ?? undefined,
+    worldLandmarks: buildOppositePlayerPoseOracle(payload.worldLandmarks) ?? undefined,
   };
 }
 

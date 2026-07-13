@@ -547,6 +547,14 @@ describe("movement replay analyzer", () => {
         }),
       ]),
     );
+    expect(analysis.replayStudio.frames[0]?.failures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "source-normalization-mismatch",
+          repairStage: "source-normalization",
+        }),
+      ]),
+    );
   });
 
   it("counts exercise posture transitions from the simulated game path", () => {
@@ -1244,9 +1252,14 @@ describe("movement replay analyzer", () => {
     }));
     expect(analysis.replayStudio.session.worstFrames[0]?.failures[0]).toEqual(expect.objectContaining({
       code: "avatar-not-following-leg",
+      evidenceStatus: "proven",
+      repairStage: "vrm-application",
       nextFixArea: "VRM lower-body application / leg-retarget output",
       severity: "error",
     }));
+    expect(analysis.replayStudio.session.worstFrames[0]?.failures[0]?.likelyFiles).toContain(
+      "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.ts",
+    );
   });
 
   it("flags upper-body avatar divergence when torso and arms do not match the source", () => {
@@ -1395,10 +1408,11 @@ describe("movement replay analyzer", () => {
       row.recordingId === analysis.sessionId && row.proofCase === "side-bend"
     ));
 
-    expect(analysis.gamePath.frames[1]?.spineSideBend ?? 0).not.toBe(0);
+    const recordedSideBend = analysis.gamePath.frames[1]?.spineSideBend ?? 0;
+    expect(recordedSideBend).not.toBe(0);
     expect(sideBendRow).toEqual(expect.objectContaining({
       automatedStatus: "passed",
-      directionSign: "positive",
+      directionSign: recordedSideBend > 0 ? "positive" : "negative",
       evidenceFrameCount: expect.any(Number),
       nextAction: expect.stringContaining("movement:replay:proof-set"),
       observedAmplitude: expect.any(Number),

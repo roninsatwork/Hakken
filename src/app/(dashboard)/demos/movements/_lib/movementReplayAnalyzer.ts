@@ -65,6 +65,11 @@ import {
   type MovementStartReadinessState,
 } from "./movementSourceFrame";
 import { getMovementStartReadinessMessage } from "./movementSetupRecoveryCue";
+import {
+  replayStudioRepairRouteForFailureCode,
+  type ReplayStudioEvidenceStatus,
+  type ReplayStudioRepairStage,
+} from "./movementReplayStudioRepairPacket";
 import type { MovementHeadMotionIntent, TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementReplayFailureCode =
@@ -130,7 +135,12 @@ export type MovementReplayFailure = {
 
 export type ReplayStudioFailureCode =
   | "source-not-trustworthy"
+  | "source-normalization-mismatch"
+  | "calibration-unreliable"
+  | "avatar-head-diverged"
   | "avatar-not-following-leg"
+  | "avatar-planted-foot-diverged"
+  | "avatar-upper-body-diverged"
   | "avatar-wrong-side"
   | "avatar-collapsed-to-squat"
   | "avatar-seated-while-source-standing"
@@ -146,7 +156,12 @@ export type MovementReplayStudioFrameFailure = {
   analyzerCode?: MovementReplayFailureCode;
   code: ReplayStudioFailureCode;
   detail: string;
+  doNotPatch: string[];
+  evidenceStatus: ReplayStudioEvidenceStatus;
+  focusedTests: string[];
+  likelyFiles: string[];
   nextFixArea: string;
+  repairStage: ReplayStudioRepairStage;
   severity: "error" | "warning";
 };
 
@@ -211,6 +226,9 @@ export type MovementReplayGamePathFrame = {
   lowerBodyTrackingReady: boolean;
   lowerLabel: string;
   lowerOwner: string;
+  retargetApplicableLegs: number;
+  retargetApplicableThighs: number;
+  retargetSolvedLegs: number;
   rootMotionJumpResponseHeightOffset: number;
   rootMotionJumpResponseOwner: string;
   rootMotionJumpResponseApplied: boolean;
@@ -783,12 +801,20 @@ function replayStudioFailureCodeFor(
   if (failure.code === "support_constraint_partial" && !sourceIsReady) {
     return "source-not-trustworthy";
   }
+  if (failure.code === "start_readiness_replay_mismatch") {
+    return "source-normalization-mismatch";
+  }
+  if (
+    failure.code === "retarget_quality_drop" ||
+    failure.code === "spine_vertical_reference_missing" ||
+    failure.code === "uncalibrated_arms_would_freeze"
+  ) {
+    return "calibration-unreliable";
+  }
   if (
     failure.code === "source_feet_weak" ||
     failure.code === "source_lower_body_out_of_frame" ||
     failure.code === "start_readiness_blocked_at_capture" ||
-    failure.code === "start_readiness_replay_mismatch" ||
-    failure.code === "retarget_quality_drop" ||
     failure.code === "world_landmarks_missing" ||
     failure.code === "heading_unavailable"
   ) {
@@ -823,6 +849,27 @@ function replayStudioFailureCodeFor(
     return "root-motion-wrong";
   }
   if (
+    failure.code === "avatar_head_alignment_diverged" ||
+    failure.code === "avatar_head_not_applied" ||
+    failure.code === "avatar_head_root_diverged" ||
+    failure.code === "avatar_head_spine_diverged"
+  ) {
+    return "avatar-head-diverged";
+  }
+  if (
+    failure.code === "avatar_arm_pose_diverged" ||
+    failure.code === "avatar_spine_angle_diverged" ||
+    failure.code === "avatar_upper_body_diverged"
+  ) {
+    return "avatar-upper-body-diverged";
+  }
+  if (
+    failure.code === "avatar_planted_foot_diverged" ||
+    failure.code === "support_constraint_missing"
+  ) {
+    return "avatar-planted-foot-diverged";
+  }
+  if (
     failure.code === "false_knee_raise_candidate" ||
     failure.semanticCode === "mirror-side-mismatch" ||
     failure.semanticCode === "leg-lift-wrong-side"
@@ -853,31 +900,6 @@ function replayStudioFailureCodeFor(
   }
   if (failure.code === "avatar_output_diverged") return "avatar-output-missing";
   return "visual-proof-missing";
-}
-
-function nextFixAreaForReplayStudioFailure(code: ReplayStudioFailureCode) {
-  switch (code) {
-    case "source-not-trustworthy":
-      return "source setup / visibility";
-    case "avatar-not-following-leg":
-      return "VRM lower-body application / leg-retarget output";
-    case "avatar-wrong-side":
-      return "mirror mapping / side ownership";
-    case "avatar-collapsed-to-squat":
-      return "lower-body owner selection / squat-vs-leg classification";
-    case "avatar-seated-while-source-standing":
-      return "support intent / seated presentation guard";
-    case "avatar-output-missing":
-      return "avatar visual telemetry / VRM bone application";
-    case "owner-flicker":
-      return "lower-body owner smoothing / hysteresis";
-    case "visual-proof-missing":
-      return "Replay visual proof capture / avatar-follow gate";
-    case "replay-game-diverged":
-      return "Replay/Game shared motion pipeline parity";
-    case "root-motion-wrong":
-      return "root yaw / root travel solver";
-  }
 }
 
 function expectedReplayStudioMotion(gameFrame?: MovementReplayGamePathFrame): MovementReplayStudioFrameVerdict["expected"] {
@@ -950,11 +972,17 @@ function buildReplayStudioFrameVerdicts({
 
     const replayStudioFailures = frameFailures.map((failure): MovementReplayStudioFrameFailure => {
       const code = replayStudioFailureCodeFor(failure, gameFrame, sourceFrame);
+      const repairRoute = replayStudioRepairRouteForFailureCode(code);
       return {
         analyzerCode: failure.code,
         code,
         detail: failure.detail,
-        nextFixArea: nextFixAreaForReplayStudioFailure(code),
+        doNotPatch: [...repairRoute.doNotPatch],
+        evidenceStatus: repairRoute.evidenceStatus,
+        focusedTests: [...repairRoute.focusedTests],
+        likelyFiles: [...repairRoute.likelyFiles],
+        nextFixArea: repairRoute.nextFixArea,
+        repairStage: repairRoute.stage,
         severity: failure.severity,
       };
     });
@@ -1482,6 +1510,9 @@ function toGamePathFrames(
       lowerBodyTrackingReady: decision.lowerBodyTrackingReady,
       lowerLabel: decision.lowerLabel,
       lowerOwner: decision.lowerOwner,
+      retargetApplicableLegs: decision.retargetApplicableLegs,
+      retargetApplicableThighs: decision.retargetApplicableThighs,
+      retargetSolvedLegs: decision.retargetSolvedLegs,
       rootMotionJumpResponseHeightOffset: jumpResponse.heightOffset,
       rootMotionJumpResponseOwner: jumpResponse.owner,
       rootMotionJumpResponseApplied: jumpResponse.shouldApply,

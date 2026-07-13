@@ -5,9 +5,11 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import { sourceHashForReplaySession } from "./lib/replay-proof-identity.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultStorageState = "e2e/.auth/super-admin.json";
+let requestedOutputPath = "";
 
 function printHelp() {
   console.log(`Collect rendered-avatar telemetry for every frame during uninterrupted Replay Lab playback.
@@ -198,6 +200,7 @@ async function captureDeterministicFrames(page, lab, frameCount, threeParty) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  requestedOutputPath = args.out;
   if (args.help) return printHelp();
   if (!args.debugSessionJson) throw new Error("Pass --debug-session-json <file>.");
   if (!args.out) throw new Error("Pass --out <file>.");
@@ -228,7 +231,20 @@ async function main() {
     await page.goto(replayUrl(args), { waitUntil: "domcontentloaded" });
 
     const lab = page.getByTestId("movement-replay-lab");
-    await lab.waitFor();
+    try {
+      await lab.waitFor();
+    } catch (error) {
+      const pageState = await page.evaluate(() => ({
+        bodyText: document.body?.innerText?.slice(0, 500) ?? "",
+        title: document.title,
+        url: window.location.href,
+      }));
+      throw new Error(
+        `Replay Lab root did not render: ${JSON.stringify(pageState)}. ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     const requestedSession = page.locator(
       `[data-testid="movement-replay-session"][data-session-id="${expectedSessionId}"]`,
     );
@@ -273,27 +289,25 @@ async function main() {
       const root = document.querySelector('[data-testid="movement-replay-lab"]');
       if (!root) throw new Error("Replay Lab root is missing.");
 
-      let lastScheduledFrame = -1;
-      const scheduleCapture = () => {
+      let captureActive = true;
+      let lastCapturedFrame = -1;
+      const captureCurrentRenderedFrame = () => {
         const frameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
-        if (frameIndex < 0 || frameIndex === lastScheduledFrame) return;
-        lastScheduledFrame = frameIndex;
-        requestAnimationFrame(() => {
+        if (frameIndex >= 0 && frameIndex !== lastCapturedFrame) {
           const debug = window.__sonaeMovementAvatarDebug?.player;
           window.__sonaeFullSequenceCapture.frames.push({
             debug: debug ? structuredClone(debug) : null,
             frameIndex,
           });
-        });
+          lastCapturedFrame = frameIndex;
+        }
+        if (captureActive) requestAnimationFrame(captureCurrentRenderedFrame);
       };
 
-      const observer = new MutationObserver(scheduleCapture);
-      observer.observe(root, {
-        attributeFilter: ["data-current-frame-index"],
-        attributes: true,
-      });
-      window.__sonaeFullSequenceCapture.disconnect = () => observer.disconnect();
-      scheduleCapture();
+      window.__sonaeFullSequenceCapture.disconnect = () => {
+        captureActive = false;
+      };
+      captureCurrentRenderedFrame();
     });
 
     let playbackError = "";
@@ -341,7 +355,9 @@ async function main() {
         ? "deterministic-rendered-frame-step"
         : "uninterrupted-rendered-sequence",
       proofMode: args.threeParty ? "three-party-mirror" : "player-avatar",
+      recordingId: expectedSessionId,
       sessionId: meta.sessionId,
+      sourceHash: sourceHashForReplaySession(debugSession),
     };
 
     const outPath = path.resolve(args.out);
@@ -359,7 +375,20 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+main().catch(async (error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  if (requestedOutputPath) {
+    try {
+      const failurePath = path.resolve(`${requestedOutputPath}.failure.json`);
+      await mkdir(path.dirname(failurePath), { recursive: true });
+      await writeFile(failurePath, `${JSON.stringify({
+        error: message,
+        failedAt: new Date().toISOString(),
+      }, null, 2)}\n`);
+    } catch {
+      // Preserve the original capture error even when its diagnostic artifact cannot be written.
+    }
+  }
+  console.error(message);
   process.exitCode = 1;
 });

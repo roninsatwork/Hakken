@@ -896,6 +896,8 @@ describe("movementAvatarInactiveLowerBodyRuntime (merged)", () => {
   describe("movementAvatarInactiveLowerBodyRuntime", () => {
     it("marks unreliable recorded lower body as source-limited while easing neutral bones", () => {
       const bones = lowerBodyBones();
+      bones.get("leftFoot")?.rotation.set(0.4, -0.6, 0.2);
+      bones.get("rightFoot")?.rotation.set(-0.3, 0.5, -0.1);
 
       const result = applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones({
         avatarRole: "instructor",
@@ -910,6 +912,8 @@ describe("movementAvatarInactiveLowerBodyRuntime (merged)", () => {
         lowerBodyOwner: "recorded-source-limited",
       });
       expect(bones.get("rightUpperLeg")?.quaternion.w).toBe(1);
+      expect(bones.get("leftFoot")?.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+      expect(bones.get("rightFoot")?.quaternion.toArray()).toEqual([0, 0, 0, 1]);
     });
 
     it("keeps owners unchanged for reliable or player inactive paths", () => {
@@ -936,6 +940,22 @@ describe("movementAvatarInactiveLowerBodyRuntime (merged)", () => {
         feetOwner: null,
         lowerBodyOwner: null,
       });
+    });
+
+    it("settles inactive player feet to the same exact neutral target", () => {
+      const bones = lowerBodyBones();
+      bones.get("leftFoot")?.rotation.set(-0.5, 0.8, -0.2);
+      bones.get("rightFoot")?.rotation.set(0.3, -0.7, 0.4);
+
+      applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones({
+        avatarRole: "player",
+        lookupBone: (bone) => bones.get(bone) ?? null,
+        lowerBodyNeutralSlerp: 0.12,
+        lowerBodySourceReliable: true,
+      });
+
+      expect(bones.get("leftFoot")?.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+      expect(bones.get("rightFoot")?.quaternion.toArray()).toEqual([0, 0, 0, 1]);
     });
   });
 });
@@ -1079,6 +1099,33 @@ describe("movementAvatarLowerBodyFrameRuntime (merged)", () => {
       });
     });
 
+    it("keeps player-neutral feet neutral instead of reapplying weak foot segments", () => {
+      const applyRetargetMappings = vi.fn(() => ({
+        applied: 2,
+        feet: 2,
+        legs: 0,
+      }));
+      const updateWorldMatrix = vi.fn();
+
+      const result = applyRuntime({
+        applyRetargetMappings,
+        lowerBodyTarget: target(stage("player-neutral", {
+          feetOwner: "neutral",
+          lowerBodyOwner: "player-lower-body-neutral",
+        }), {
+          feetOwner: "neutral",
+          lowerBodyOwner: "player-lower-body-neutral",
+        }),
+        updateWorldMatrix,
+      });
+
+      expect(updateWorldMatrix).not.toHaveBeenCalled();
+      expect(applyRetargetMappings).not.toHaveBeenCalled();
+      expect(result.footOwner).toBe("neutral");
+      expect(result.retargetAppliedFeet).toBe(0);
+      expect(result.retargetAppliedLowerBody).toBe(0);
+    });
+
     it("continues retarget lower-body application and returns updated segment counts", () => {
       const applyRetargetMappings = vi.fn(() => ({
         applied: 3,
@@ -1113,6 +1160,60 @@ describe("movementAvatarLowerBodyFrameRuntime (merged)", () => {
       expect(result.retargetAppliedFeet).toBe(1);
       expect(result.footOwner).not.toBe("neutral");
       expect(result.lowerBodyOwner).not.toBe("neutral");
+    });
+
+    it("applies an approved bilateral-thigh target during a tracking-readiness dip", () => {
+      const applyRetargetMappings = vi.fn((mappings: MovementAvatarRetargetBoneMapping[]) => (
+        mappings.every((mapping) => mapping.type === "foot")
+          ? { applied: 0, feet: 0, legs: 0 }
+          : { applied: 2, feet: 0, legs: 2 }
+      ));
+      const result = applyRuntime({
+        applyRetargetMappings,
+        lowerBodySegmentMotion: 0.14,
+        lowerBodyTarget: target(stage("retarget"), {
+          feetOwner: "neutral",
+          lowerBodyOwner: "retarget-partial-fallback",
+        }),
+        lowerBodyTrackingReady: false,
+        playerRetargetLowerBodyMotion: 0.14,
+        retargetFrame: retargetFrame({
+          debug: {
+            heldSegments: ["leftShin", "rightShin"],
+            solvedSegments: ["leftThigh", "rightThigh"],
+            sourceQuality: 0.5,
+          },
+          segments: {
+            leftShin: { confidence: 0.1, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+            leftThigh: { confidence: 0.31, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+            rightShin: { confidence: 0.1, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+            rightThigh: { confidence: 0.35, direction: { x: 0, y: -1, z: 0 }, length: 1 },
+          },
+        }),
+      });
+
+      expect(applyRetargetMappings).toHaveBeenCalledTimes(1);
+      expect(result.retargetAppliedLegs).toBe(2);
+      expect(result.retargetAppliedLowerBody).toBe(2);
+      expect(result.lowerBodyOwner).toBe("retarget-partial-fallback");
+    });
+
+    it("uses the raw recorded squat target instead of role-smoothed depth during partial retarget", () => {
+      const result = applyRuntime({
+        applyPlantedSquatIk: (depth) => depth,
+        applyRetargetMappings: () => ({
+          applied: 3,
+          feet: 0,
+          legs: 3,
+        }),
+        balancedPlantedSquatDepth: 0.8,
+        instructorSquatPresentationDepth: 0.2,
+        lowerBodyTarget: target(stage("retarget"), {
+          recordedSquatPresentationDepth: 0.72,
+        }),
+      });
+
+      expect(result.plantedSquatIkDepth).toBe(0.72);
     });
 
     it("refines foot world directions after applying a player squat fallback", () => {

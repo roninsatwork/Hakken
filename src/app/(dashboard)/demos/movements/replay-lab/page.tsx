@@ -21,8 +21,11 @@ import {
 } from "../_lib/movementDebugReplay";
 import {
   analyzeMovementDebugReplaySession,
-  type MovementReplayFailure,
 } from "../_lib/movementReplayAnalyzer";
+import {
+  buildReplayStudioRepairPacket,
+} from "../_lib/movementReplayStudioRepairPacket";
+import { sourceHashForReplaySession } from "../_lib/movementReplaySourceIdentity";
 import {
   resolveMovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
@@ -56,6 +59,15 @@ import ReplayAnalysisReviewSections from "./_components/ReplayAnalysisReviewSect
 import { useReplayLabCaptures } from "./_hooks/useReplayLabCaptures";
 import { useReplayLabRecordings } from "./_hooks/useReplayLabRecordings";
 import { useReplayLabBatch } from "./_hooks/useReplayLabBatch";
+import {
+  buildAvatarFollowCriteria,
+  buildAvatarFollowAcceptanceSummary,
+  buildAvatarFollowCurrentFrameFailures,
+  buildAvatarFollowCriterionStatuses,
+  buildAvatarFollowFrameSeverityMap,
+  buildAvatarFollowSessionFailures,
+  buildReplayStudioParityFailure,
+} from "./_lib/replayAvatarFollowDiagnosis";
 import { getReplayLabLiveCurrentFrameFailures } from "./_lib/replayLabFrameFailures";
 import {
   buildOppositePlayerImitationOracle,
@@ -64,9 +76,6 @@ import {
 
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD,
-  AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD,
-  AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD,
-  AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD,
   avatarPlantedFootClearance,
   avatarPlantedFootSide,
   avatarSegmentVectorAttr,
@@ -85,9 +94,6 @@ import {
   maxAvatarSegmentError,
   minNumber,
   replayCalibrationNeutralScore,
-} from "./_lib/replayLabHelpers";
-import type {
-  AvatarFollowCriterionStatus,
 } from "./_lib/replayLabHelpers";
 
 function publishReplayLabDebug(value: unknown) {
@@ -152,6 +158,25 @@ export default function MovementReplayLabPage() {
     onDebugSessionReady: handleDebugSessionReady,
     selectedRecordingIds,
   });
+  const [replaySourceIdentity, setReplaySourceIdentity] = useState<{
+    session: NonNullable<typeof replaySession>;
+    sourceHash: string;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!replaySession) return undefined;
+    void sourceHashForReplaySession(replaySession)
+      .then((sourceHash) => {
+        if (!cancelled) setReplaySourceIdentity({ session: replaySession, sourceHash });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [replaySession]);
+  const replaySourceHash = replaySourceIdentity?.session === replaySession
+    ? replaySourceIdentity.sourceHash
+    : null;
   const currentAvatarDebug = replaySession ? polledAvatarDebug : null;
   const currentAvatarVisual = currentAvatarDebug?.avatarVisual;
 
@@ -551,110 +576,51 @@ export default function MovementReplayLabPage() {
     safeFrameIndex,
     torsoConfidence,
   });
-  const replayStudioParityFailure = ((): MovementReplayFailure | null => {
-    if (!replayStudioParity || replayStudioParity.diffs.length === 0) return null;
-
-    return {
-      code: "replay_game_path_diverged",
-      detail: `Replay wrapper diverges from Studio wrapper on frame ${safeFrameIndex}: ${replayStudioParity.diffs.join("; ")}.`,
-      frameIndex: safeFrameIndex,
-      severity: "warning",
-    };
-  })();
-  const avatarFollowSessionFailures = useMemo<MovementReplayFailure[]>(() => {
-    if (!analysis) return [];
-    const failures: MovementReplayFailure[] = [];
-    const visualMatchScore = analysis.metrics.visualMatchScore;
-    const ownerTransitionsPerSecond = analysis.metrics.ownerTransitionsPerSecond;
-    const lowerError = analysis.metrics.averageAvatarLowerBodyDirectionError;
-
-    if (visualMatchScore < AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD) {
-      failures.push({
-        code: "visual_match_low",
-        detail: `Replay avatar-follow visual match is ${Math.round(visualMatchScore * 100)}%; target is ${Math.round(AVATAR_FOLLOW_VISUAL_MATCH_THRESHOLD * 100)}%.`,
-        severity: "error",
-      });
-    }
-
-    if (
-      ownerTransitionsPerSecond > AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD &&
-      analysis.metrics.lowerBodyOwnerTransitions >= 2
-    ) {
-      failures.push({
-        code: "lower_body_owner_flicker",
-        detail: `Lower-body owner changes ${ownerTransitionsPerSecond.toFixed(2)} times/sec; target is <= ${AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD.toFixed(2)}.`,
-        severity: "warning",
-      });
-    }
-
-    if (analysis.metrics.avatarVisualFrameCount === 0) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: "This replay has no persisted VRM bone telemetry, so visual follow must be proven by capture frames before it can pass.",
-        severity: "error",
-      });
-    }
-
-    if (lowerError > AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD) {
-      failures.push({
-        code: "avatar_output_diverged",
-        detail: `Average avatar lower-body direction error is ${lowerError.toFixed(2)}; target is <= ${AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD.toFixed(2)}.`,
-        severity: "error",
-      });
-    }
-
-    return failures;
-  }, [analysis]);
-  const currentFrameFailures = [
-    ...(analysis?.failures.filter((failure) => failure.frameIndex === safeFrameIndex) ?? []),
-    ...liveCurrentFrameFailures,
-    ...(replayStudioParityFailure ? [replayStudioParityFailure] : []),
-  ];
-  const replayStudioFrameStatus = currentReplayStudioFrameVerdict?.status;
-  const replayStudioSessionStatus = analysis?.replayStudio.session.status;
+  const replayStudioParityFailure = buildReplayStudioParityFailure({
+    diffs: replayStudioParity?.diffs ?? [],
+    safeFrameIndex,
+  });
+  const avatarFollowSessionFailures = useMemo(
+    () => buildAvatarFollowSessionFailures(analysis),
+    [analysis],
+  );
+  const currentFrameFailures = buildAvatarFollowCurrentFrameFailures({
+    analysis,
+    liveCurrentFrameFailures,
+    replayStudioParityFailure,
+    safeFrameIndex,
+  });
   const currentReplayStudioPrimaryFailure = currentReplayStudioFrameVerdict?.failures[0] ?? null;
-  const avatarFollowHasSessionError = avatarFollowSessionFailures.some((failure) => (
-    failure.severity === "error"
-  ));
-  const avatarFollowProofMissing = Boolean(analysis && analysis.metrics.avatarVisualFrameCount === 0);
-  const avatarFollowStatus = currentFrameFailures.some((failure) => failure.severity === "error") ||
-    avatarFollowHasSessionError ||
-    replayStudioFrameStatus === "blocked"
-    ? "blocked"
-    : avatarFollowSessionFailures.length > 0 ||
-        currentFrameFailures.length > 0 ||
-        replayStudioFrameStatus === "review" ||
-        replayStudioSessionStatus === "review" ||
-        replayStudioSessionStatus === "blocked"
-      ? "review"
-      : analysis
-        ? "pass"
-        : "--";
-  const avatarFollowAcceptanceStatus = avatarFollowStatus === "blocked"
-    ? "blocked-for-acceptance"
-    : avatarFollowStatus === "review"
-      ? "review-only"
-      : avatarFollowStatus === "pass"
-        ? "accepted"
-        : "--";
-  const avatarFollowJudgeText = currentReplayStudioFrameVerdict
-    ? `${currentReplayStudioFrameVerdict.status} frame / ${analysis?.replayStudio.session.status ?? "--"} session`
-    : analysis?.replayStudio.session.status
-      ? `${analysis.replayStudio.session.status} session`
-      : "--";
-  const avatarFollowCurrentFailureCodes = currentFrameFailures.map((failure) => failure.code).join(",");
-  const avatarFollowCriterionStatus = (
-    codes: string[],
-  ): AvatarFollowCriterionStatus => {
-    const matchingFailures = currentFrameFailures.filter((failure) => (
-      codes.includes(failure.code)
-    ));
-    if (matchingFailures.some((failure) => failure.severity === "error")) return "blocked";
-    if (avatarFollowProofMissing) return "blocked";
-    if (matchingFailures.length > 0) return "review";
-    if (avatarFollowHasSessionError) return "review";
-    return currentFrameSourceReady ? "pass" : "--";
-  };
+  const avatarFollowRepairPacket = (() => {
+    if (!analysis) return null;
+    const recordingId = String(activeRecordingId ?? analysis.sessionId);
+    return buildReplayStudioRepairPacket(analysis, {
+      code: {
+        commit: "unknown",
+        motionPipelineFingerprint: "unknown",
+      },
+      frameIndex: safeFrameIndex,
+      recording: {
+        id: recordingId,
+        sourceHash: replaySourceHash ?? "sha256:pending",
+        sourceHashBasis: "source-session",
+        title: recordingTitleById.get(recordingId) ?? recordingId,
+      },
+      supplementalFailures: [
+        ...avatarFollowSessionFailures,
+        ...liveCurrentFrameFailures,
+        ...(replayStudioParityFailure ? [replayStudioParityFailure] : []),
+      ],
+    });
+  })();
+  const avatarFollowAcceptanceSummary = buildAvatarFollowAcceptanceSummary({
+    currentFrameFailures,
+    repairPacket: avatarFollowRepairPacket,
+  });
+  const avatarFollowStatus = avatarFollowAcceptanceSummary.status;
+  const avatarFollowAcceptanceStatus = avatarFollowAcceptanceSummary.acceptanceStatus;
+  const avatarFollowJudgeText = avatarFollowAcceptanceSummary.judgeText;
+  const avatarFollowCurrentFailureCodes = avatarFollowAcceptanceSummary.currentFailureCodes;
   const currentArmPoseError = maxAvatarSegmentError(currentAvatarVisual, [
     "leftUpperArm",
     "leftLowerArm",
@@ -679,68 +645,26 @@ export default function MovementReplayLabPage() {
       currentLegRaise?.side,
     ),
   );
-  const avatarFollowHeadCriterionStatus = avatarFollowCriterionStatus(["avatar_head_alignment_diverged"]);
-  const avatarFollowSpineCriterionStatus = avatarFollowCriterionStatus(["avatar_spine_angle_diverged"]);
-  const avatarFollowArmCriterionStatus = avatarFollowCriterionStatus(["avatar_arm_pose_diverged"]);
-  const avatarFollowFootCriterionStatus = avatarFollowCriterionStatus(["avatar_planted_foot_diverged"]);
-  const avatarFollowCriteria = [
-    {
-      key: "head",
-      label: "Head",
-      metric: `raw ${formatAnglesCompact(currentAvatarDebug?.headRaw)} · applied ${formatAnglesCompact(currentAvatarDebug?.headApplied)}`,
-      status: avatarFollowHeadCriterionStatus,
+  const avatarFollowCriterionStatuses = buildAvatarFollowCriterionStatuses({
+    currentFrameFailures,
+    currentFrameSourceReady,
+    repairStage: avatarFollowRepairPacket?.divergence.firstDivergentStage,
+    repairStatus: avatarFollowRepairPacket?.verdict.status,
+  });
+  const avatarFollowCriteria = buildAvatarFollowCriteria({
+    metrics: {
+      arms: `e ${formatNumber(currentArmPoseError)} · conf ${formatNumber(armConfidence)}`,
+      foot: `e ${formatNumber(currentFootPoseError)} · clear ${formatNumber(currentPlantedFootClearance)} · ${liveFeetOwner ?? "--"}`,
+      head: `raw ${formatAnglesCompact(currentAvatarDebug?.headRaw)} · applied ${formatAnglesCompact(currentAvatarDebug?.headApplied)}`,
+      spine: `e ${formatNumber(currentSpinePoseError)} · conf ${formatNumber(torsoConfidence)}`,
     },
-    {
-      key: "spine",
-      label: "Body / spine",
-      metric: `e ${formatNumber(currentSpinePoseError)} · conf ${formatNumber(torsoConfidence)}`,
-      status: avatarFollowSpineCriterionStatus,
-    },
-    {
-      key: "arms",
-      label: "Arms",
-      metric: `e ${formatNumber(currentArmPoseError)} · conf ${formatNumber(armConfidence)}`,
-      status: avatarFollowArmCriterionStatus,
-    },
-    {
-      key: "foot",
-      label: "Planted foot",
-      metric: `e ${formatNumber(currentFootPoseError)} · clear ${formatNumber(currentPlantedFootClearance)} · ${liveFeetOwner ?? "--"}`,
-      status: avatarFollowFootCriterionStatus,
-    },
-  ];
-  const frameSeverity = (() => {
-    const severityByFrame = new Map<number, "error" | "warning">();
-    analysis?.failures.forEach((failure) => {
-      if (typeof failure.frameIndex !== "number") return;
-      const currentSeverity = severityByFrame.get(failure.frameIndex);
-      if (failure.severity === "error" || !currentSeverity) {
-        severityByFrame.set(failure.frameIndex, failure.severity);
-      }
-    });
-    liveCurrentFrameFailures.forEach((failure) => {
-      if (typeof failure.frameIndex !== "number") return;
-      const currentSeverity = severityByFrame.get(failure.frameIndex);
-      if (failure.severity === "error" || !currentSeverity) {
-        severityByFrame.set(failure.frameIndex, failure.severity);
-      }
-    });
-    if (replayStudioParityFailure && typeof replayStudioParityFailure.frameIndex === "number") {
-      const currentSeverity = severityByFrame.get(replayStudioParityFailure.frameIndex);
-      if (replayStudioParityFailure.severity === "error" || !currentSeverity) {
-        severityByFrame.set(replayStudioParityFailure.frameIndex, replayStudioParityFailure.severity);
-      }
-    }
-    analysis?.replayStudio.frames.forEach((frame) => {
-      if (frame.status === "pass") return;
-      const currentSeverity = severityByFrame.get(frame.frameIndex);
-      const replayStudioSeverity = frame.status === "blocked" ? "error" : "warning";
-      if (replayStudioSeverity === "error" || !currentSeverity) {
-        severityByFrame.set(frame.frameIndex, replayStudioSeverity);
-      }
-    });
-    return severityByFrame;
-  })();
+    statuses: avatarFollowCriterionStatuses,
+  });
+  const frameSeverity = buildAvatarFollowFrameSeverityMap({
+    analysis,
+    liveCurrentFrameFailures,
+    replayStudioParityFailure,
+  });
 
   useEffect(() => {
     replayMotionFrameRef.current = isThreePartyMirrorProof
@@ -848,6 +772,7 @@ export default function MovementReplayLabPage() {
     analysis,
     currentReplayStudioFrameVerdict,
     frameCount,
+    repairPacket: avatarFollowRepairPacket,
     replaySession,
     safeFrameIndex,
     setIsPlaying,
@@ -883,11 +808,14 @@ export default function MovementReplayLabPage() {
         data-avatar-follow-session-issue-count={avatarFollowSessionFailures.length}
         data-avatar-follow-acceptance-status={avatarFollowAcceptanceStatus}
         data-avatar-follow-current-failure-codes={avatarFollowCurrentFailureCodes}
-        data-avatar-follow-head-status={avatarFollowHeadCriterionStatus}
-        data-avatar-follow-spine-status={avatarFollowSpineCriterionStatus}
-        data-avatar-follow-arm-status={avatarFollowArmCriterionStatus}
-        data-avatar-follow-foot-status={avatarFollowFootCriterionStatus}
+        data-avatar-follow-head-status={avatarFollowCriterionStatuses.head}
+        data-avatar-follow-spine-status={avatarFollowCriterionStatuses.spine}
+        data-avatar-follow-arm-status={avatarFollowCriterionStatuses.arms}
+        data-avatar-follow-foot-status={avatarFollowCriterionStatuses.foot}
         data-avatar-follow-status={avatarFollowStatus}
+        data-replay-studio-repair-evidence-status={avatarFollowRepairPacket?.verdict.evidenceStatus ?? ""}
+        data-replay-studio-repair-failure-code={avatarFollowRepairPacket?.verdict.failureCode ?? ""}
+        data-replay-studio-repair-stage={avatarFollowRepairPacket?.divergence.firstDivergentStage ?? ""}
         data-avatar-follow-current-arm-error={currentArmPoseError ?? ""}
         data-avatar-follow-current-foot-error={currentFootPoseError ?? ""}
         data-avatar-follow-current-left-foot-error={currentLeftFootPoseError ?? ""}
@@ -1424,6 +1352,7 @@ export default function MovementReplayLabPage() {
               }}
               replayFeetOwner={replayFeetOwner}
               replayLowerOwner={replayLowerOwner}
+              repairPacket={avatarFollowRepairPacket}
               replayStudioParity={replayStudioParity}
               replayStudioWorstFrames={replayStudioWorstFrames}
               rootMotionLabel={rootMotionLabel}

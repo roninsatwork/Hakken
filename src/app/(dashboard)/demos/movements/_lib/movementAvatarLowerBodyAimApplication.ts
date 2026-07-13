@@ -49,14 +49,9 @@ export function applyMovementAvatarInstructorFootPlantPose({
   side: MovementAvatarInstructorFootPlantSide;
   slerp?: number;
 }): MovementAvatarInstructorFootPlantPoseResult {
-  if (isPlayer) {
-    return {
-      applied: false,
-      appliedRotations: 0,
-      feetOwner: currentFeetOwner,
-    };
-  }
-
+  // Foot planting is deliberately role-neutral. Keep the compatibility field
+  // explicit so callers cannot accidentally infer player-specific behavior.
+  void isPlayer;
   const rotation = { x: 0, y: 0, z: 0 };
   const specs = [
     { bone: `${side}Foot` as const, rotation, slerp },
@@ -75,7 +70,5 @@ export function applyMovementAvatarInstructorFootPlantPose({
     feetOwner: resolveMovementAvatarPlantedFootOwner(currentFeetOwner),
   };
 }
-
-
 
 

@@ -4,6 +4,10 @@ import type {
 } from "./movementAvatarPipeline";
 import { resolveMovementAvatarAppliedLowerBodyDecision } from "./movementAvatarPipeline";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
+import {
+  countMovementApplicableRetargetSegments,
+  THIGH_SEGMENTS,
+} from "./movementAvatarRetargetDebugDecision";
 import type { MovementRetargetFrame } from "./movementRetargeting";
 
 export type MovementAvatarLowerBodyRetargetApplicationPlan = {
@@ -14,7 +18,10 @@ export type MovementAvatarLowerBodyRetargetApplicationPlan = {
   plantedSquatIkDepth: number;
   plantInstructorFeet: Array<"left" | "right">;
   squatFlexionDepth: number | null;
+  squatFlexionSlerp: number;
 };
+
+const SHARED_RETARGET_SQUAT_FLEXION_SLERP = 0.62;
 
 export type MovementAvatarLowerBodyRetargetAppliedCounts = {
   feet: number;
@@ -47,6 +54,7 @@ export type MovementAvatarLowerBodyRetargetDecisionApplicationInput = {
   avatarRole: "instructor" | "player";
   balancedPlantedSquatDepth: number;
   instructorSquatPresentationDepth: number;
+  hasBilateralApplicableThighs?: boolean;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   lowerBodySegmentMotion: number;
   lowerBodyTrackingReady: boolean;
@@ -79,37 +87,45 @@ export function applyMovementAvatarLowerBodyRetargetSegmentCounts({
 
 export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
   appliedDecision,
-  avatarRole,
   balancedPlantedSquatDepth,
+  hasBilateralApplicableThighs = false,
   instructorSquatPresentationDepth,
   lowerBodyDrive,
-  playerSquatPresentationDepth,
   retargetAppliedLowerBody,
   stageDecision,
 }: {
   appliedDecision: MovementAvatarAppliedLowerBodyDecision;
   avatarRole: "instructor" | "player";
   balancedPlantedSquatDepth: number;
+  hasBilateralApplicableThighs?: boolean;
   instructorSquatPresentationDepth: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   playerSquatPresentationDepth: number;
   retargetAppliedLowerBody: number;
   stageDecision: MovementAvatarLowerBodyApplicationStageDecision;
 }): MovementAvatarLowerBodyRetargetApplicationPlan {
-  const isPlayer = avatarRole === "player";
-  const plantedSquatIkDepth = isPlayer
-    ? appliedDecision.hasCompleteLegRetarget
-      ? 0
-      : playerSquatPresentationDepth
-    : !appliedDecision.hasCompleteLegRetarget && balancedPlantedSquatDepth > 0
+  // Once a frame has entered the shared retarget path, fallback ownership must
+  // remain with the recorded source. Player-only squat classification and
+  // smoothing used to add planted IK on one avatar while the matching
+  // instructor frame had none, leaving two rendered results from one source.
+  const plantedSquatIkDepth =
+    !appliedDecision.hasCompleteLegRetarget &&
+    !hasBilateralApplicableThighs &&
+    balancedPlantedSquatDepth > 0
       ? instructorSquatPresentationDepth
       : 0;
   // A complete four-segment leg solve already contains the visible squat.
   // Adding the canned flexion pose afterwards makes the instructor diverge
   // from the player mirror even though both received the same source skeleton.
   // Keep the fallback only for incomplete leg solves.
-  const squatFlexionDepth = !appliedDecision.hasCompleteLegRetarget
-    ? Math.max(instructorSquatPresentationDepth, playerSquatPresentationDepth)
+  // If both recorded thigh directions are applicable, keep them as the
+  // visible source of truth. A bilateral canned squat applied after retarget
+  // overwrites those moving targets and can make the avatar visibly static
+  // even while the instructor thighs continue to move. The canned fallback is
+  // only for frames that cannot provide both thigh directions.
+  const squatFlexionDepth =
+    !appliedDecision.hasCompleteLegRetarget && !hasBilateralApplicableThighs
+    ? instructorSquatPresentationDepth
     : null;
   const legRaiseOverlay = stageDecision.anchoredPlayerLegRaiseSide && retargetAppliedLowerBody < 4
     ? {
@@ -124,6 +140,7 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
     plantedSquatIkDepth,
     plantInstructorFeet,
     squatFlexionDepth,
+    squatFlexionSlerp: SHARED_RETARGET_SQUAT_FLEXION_SLERP,
   };
 }
 
@@ -131,6 +148,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
   appliedDecision,
   avatarRole,
   balancedPlantedSquatDepth,
+  hasBilateralApplicableThighs = false,
   instructorSquatPresentationDepth,
   lowerBodyDrive,
   playerSquatPresentationDepth,
@@ -140,6 +158,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
   appliedDecision: MovementAvatarAppliedLowerBodyDecision;
   avatarRole: "instructor" | "player";
   balancedPlantedSquatDepth: number;
+  hasBilateralApplicableThighs?: boolean;
   instructorSquatPresentationDepth: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   playerSquatPresentationDepth: number;
@@ -154,6 +173,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
       appliedDecision,
       avatarRole,
       balancedPlantedSquatDepth,
+      hasBilateralApplicableThighs,
       instructorSquatPresentationDepth,
       lowerBodyDrive,
       playerSquatPresentationDepth,
@@ -200,6 +220,8 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInp
     appliedDecision,
     avatarRole,
     balancedPlantedSquatDepth,
+    hasBilateralApplicableThighs:
+      countMovementApplicableRetargetSegments(retargetFrame, THIGH_SEGMENTS, "leg") >= 2,
     instructorSquatPresentationDepth,
     lowerBodyDrive,
     playerSquatPresentationDepth,

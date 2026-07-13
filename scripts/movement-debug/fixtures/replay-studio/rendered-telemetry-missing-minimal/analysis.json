@@ -1,0 +1,157 @@
+{
+  "failures": [
+    {
+      "code": "avatar_output_diverged",
+      "detail": "Frame 2 expected visible leg motion but rendered avatar telemetry was missing.",
+      "frameIndex": 2,
+      "severity": "error"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 2,
+        "rootHeadingYaw": 0,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 0
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 0,
+          "comparedUpperBodySegments": 0,
+          "feetOwner": "unknown",
+          "lowerBodyDirectionError": null,
+          "lowerOwner": "unknown",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "unknown",
+          "upperBodyDirectionError": null
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [
+          {
+            "analyzerCode": "avatar_output_diverged",
+            "code": "avatar-output-missing",
+            "detail": "Frame 2 expected visible leg motion but rendered avatar telemetry was missing.",
+            "doNotPatch": [
+              "Do not infer rendered avatar success from solver owners alone; capture post-application VRM telemetry."
+            ],
+            "evidenceStatus": "insufficient-evidence",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.integration.test.ts",
+              "scripts/movement-debug/avatar-follow-gate.test.mjs"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarVisualTelemetry.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts"
+            ],
+            "nextFixArea": "avatar visual telemetry / VRM bone application",
+            "repairStage": "rendered-telemetry",
+            "severity": "error"
+          }
+        ],
+        "frameIndex": 2,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.88,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "blocked"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 1,
+      "failureCount": 1,
+      "recordingId": "rendered-telemetry-missing-minimal",
+      "reviewedFrameCount": 0,
+      "status": "blocked",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": null,
+        "avatarVisualFrameCount": 0,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 0,
+            "comparedUpperBodySegments": 0,
+            "feetOwner": "unknown",
+            "lowerBodyDirectionError": null,
+            "lowerOwner": "unknown",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "unknown",
+            "upperBodyDirectionError": null
+          },
+          "expected": {
+            "motion": "leg-raise",
+            "owner": "player-right-leg-raise",
+            "side": "right"
+          },
+          "failures": [
+            {
+              "analyzerCode": "avatar_output_diverged",
+              "code": "avatar-output-missing",
+              "detail": "Frame 2 expected visible leg motion but rendered avatar telemetry was missing.",
+              "doNotPatch": [
+                "Do not infer rendered avatar success from solver owners alone; capture post-application VRM telemetry."
+              ],
+              "evidenceStatus": "insufficient-evidence",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.integration.test.ts",
+                "scripts/movement-debug/avatar-follow-gate.test.mjs"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarVisualTelemetry.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarDebugTelemetry.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarFrameApplication.ts"
+              ],
+              "nextFixArea": "avatar visual telemetry / VRM bone application",
+              "repairStage": "rendered-telemetry",
+              "severity": "error"
+            }
+          ],
+          "frameIndex": 2,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.88,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "blocked"
+        }
+      ]
+    }
+  },
+  "sessionId": "rendered-telemetry-missing-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

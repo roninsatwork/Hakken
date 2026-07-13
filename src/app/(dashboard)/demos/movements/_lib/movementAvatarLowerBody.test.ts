@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isMovementAvatarLowerBodyTrackingReady,
   resolveMovementAvatarLowerBodyDrive,
+  resolveMovementAvatarPlayerLowerBodyOwners,
 } from "./movementAvatarLowerBody";
 import type { MovementLowerBodyIntent } from "./movementTrackingCalibration";
 
@@ -81,6 +82,66 @@ describe("movement avatar lower-body drive", () => {
         lowerBodyIntent: neutralIntent,
       }),
     ).toBe(false);
+  });
+
+  it("keeps a complete leg retarget as owner during a visibility readiness dip", () => {
+    const lowerBodyDrive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: neutralIntent,
+      lowerBodyTrackingReady: false,
+      retargetContactsBothFeet: false,
+      retargetHipDrop: 0.03,
+      retargetSquatDepth: 0,
+    });
+    const owner = resolveMovementAvatarPlayerLowerBodyOwners({
+      applicableLegSegments: 4,
+      hasBilateralApplicableThighs: true,
+      lowerBodyDrive,
+      lowerBodySegmentMotion: 0.14,
+      lowerBodyTrackingReady: false,
+      playerRetargetLowerBodyMotion: 0.14,
+      retargetSourceQuality: 0.5,
+      shouldApplyLowerBody: true,
+      shouldHoldPlayerSquatPose: false,
+      solvedFootSegments: 0,
+      solvedLowerBodySegments: 4,
+      totalSolvedSegments: 7,
+    });
+
+    expect(owner.hasCompleteLegRetarget).toBe(true);
+    expect(owner.lowerBodyOwner).toBe("player-retarget");
+    expect(owner.feetOwner).toBe("neutral");
+  });
+
+  it("keeps bilateral applicable thighs on partial retarget during a readiness dip", () => {
+    const lowerBodyDrive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: neutralIntent,
+      lowerBodyTrackingReady: false,
+      retargetContactsBothFeet: false,
+      retargetHipDrop: 0.03,
+      retargetSquatDepth: 0,
+    });
+    const owner = resolveMovementAvatarPlayerLowerBodyOwners({
+      applicableLegSegments: 2,
+      hasBilateralApplicableThighs: true,
+      lowerBodyDrive,
+      lowerBodySegmentMotion: 0.14,
+      lowerBodyTrackingReady: false,
+      playerRetargetLowerBodyMotion: 0.14,
+      retargetSourceQuality: 0.5,
+      shouldApplyLowerBody: true,
+      shouldHoldPlayerSquatPose: false,
+      solvedFootSegments: 0,
+      solvedLowerBodySegments: 2,
+      totalSolvedSegments: 7,
+    });
+
+    expect(owner.hasCompleteLegRetarget).toBe(false);
+    expect(owner.lowerBodyOwner).toBe("retarget-partial-fallback");
+    expect(owner.feetOwner).toBe("neutral");
   });
 
   it("keeps lower-body tracking ready for far-camera single-leg evidence", () => {

@@ -1,0 +1,158 @@
+{
+  "failures": [
+    {
+      "code": "root_path_detected",
+      "detail": "Frame 9 introduced root travel during a stable in-place leg raise.",
+      "frameIndex": 9,
+      "severity": "error"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 9,
+        "rootHeadingYaw": 0.42,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "forward",
+        "rootPathDistance": 0.24
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1,
+    "maxRootPathDistance": 0.24
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.18,
+          "lowerOwner": "player-right-leg-raise",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "none",
+          "upperBodyDirectionError": 0.05
+        },
+        "expected": {
+          "motion": "root-travel",
+          "owner": "in-place-feet-floor",
+          "side": "both"
+        },
+        "failures": [
+          {
+            "analyzerCode": "root_path_detected",
+            "code": "root-motion-wrong",
+            "detail": "Frame 9 introduced root travel during a stable in-place leg raise.",
+            "doNotPatch": [
+              "Do not drive body animation primarily from labels; prove source vectors and retarget outputs."
+            ],
+            "evidenceStatus": "proven",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementRetargeting.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementRootMotion.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/_lib/movementRetargeting.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplicationDecision.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementRootMotion.ts"
+            ],
+            "nextFixArea": "root yaw / root travel solver",
+            "repairStage": "retarget-solve",
+            "severity": "error"
+          }
+        ],
+        "frameIndex": 9,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.92,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "blocked"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 1,
+      "failureCount": 1,
+      "recordingId": "root-motion-drift-minimal",
+      "reviewedFrameCount": 0,
+      "status": "blocked",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.18,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0.7
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "neutral",
+            "lowerBodyDirectionError": 0.18,
+            "lowerOwner": "player-right-leg-raise",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "none",
+            "upperBodyDirectionError": 0.05
+          },
+          "expected": {
+            "motion": "root-travel",
+            "owner": "in-place-feet-floor",
+            "side": "both"
+          },
+          "failures": [
+            {
+              "analyzerCode": "root_path_detected",
+              "code": "root-motion-wrong",
+              "detail": "Frame 9 introduced root travel during a stable in-place leg raise.",
+              "doNotPatch": [
+                "Do not drive body animation primarily from labels; prove source vectors and retarget outputs."
+              ],
+              "evidenceStatus": "proven",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementRetargeting.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementRootMotion.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/_lib/movementRetargeting.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplication.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodyApplicationDecision.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementRootMotion.ts"
+              ],
+              "nextFixArea": "root yaw / root travel solver",
+              "repairStage": "retarget-solve",
+              "severity": "error"
+            }
+          ],
+          "frameIndex": 9,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.92,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "blocked"
+        }
+      ]
+    }
+  },
+  "sessionId": "root-motion-drift-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

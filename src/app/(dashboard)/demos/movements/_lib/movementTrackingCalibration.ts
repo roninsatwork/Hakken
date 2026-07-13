@@ -121,6 +121,9 @@ export type MovementTrackingDebugState = {
   avatarHead?: {
     appliedLocalPitch: number;
     appliedLocalRoll: number;
+    appliedWorldPitch?: number;
+    appliedWorldRoll?: number;
+    appliedWorldYaw?: number;
     boneYaw: number;
     bonePitch: number;
     boneRoll: number;

@@ -45,6 +45,22 @@ export function resolveMovementAvatarLowerBodyTarget({
     decision.shouldApplyLowerBody &&
     decision.lowerBodyDrive.liveSquatDepth > 0.12 &&
     playerSquatPresentationDepth > 0.18;
+  const hasCompleteLegRetarget =
+    decision.retargetApplicableLegs >= 4 &&
+    decision.retargetFrame.debug.sourceQuality >= 0.45;
+  const hasUsablePartialLegRetarget =
+    decision.retargetApplicableThighs >= 2 &&
+    decision.retargetFrame.debug.sourceQuality >= 0.45 &&
+    (
+      lowerBodyVisualState.hasEstablishedLegRetarget === true ||
+      (
+        // Three available leg segments (both thighs plus one child) are
+        // sufficient to acquire meaningful moving source motion without
+        // treating a two-thigh startup estimate as a complete leg solve.
+        decision.retargetApplicableLegs >= 3 &&
+        instructorLowerBodyMotion >= 0.18
+      )
+    );
   const playerSourceOwner = resolveMovementAvatarPlayerSourceOwnerDecision({
     avatarRole,
     decision,
@@ -52,11 +68,19 @@ export function resolveMovementAvatarLowerBodyTarget({
     shouldHoldPlayerSquatPose,
   });
 
-  if ((decision.lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && decision.shouldApplyLowerBody) {
+  if (
+    (
+      decision.lowerBodyTrackingReady ||
+      shouldHoldPlayerSquatPose ||
+      hasCompleteLegRetarget ||
+      hasUsablePartialLegRetarget
+    ) &&
+    decision.shouldApplyLowerBody
+  ) {
     const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
       avatarRole,
-      hasCompleteLegRetarget:
-        decision.retargetSolvedLegs >= 4 && decision.retargetFrame.debug.sourceQuality >= 0.45,
+      canContinuePartialLegRetarget: hasUsablePartialLegRetarget,
+      hasCompleteLegRetarget,
       instructorLowerBodyMotion,
       lowerBodyDrive: decision.lowerBodyDrive,
       playerRetargetLowerBodyMotion: playerSourceOwner.playerRetargetLowerBodyMotion,

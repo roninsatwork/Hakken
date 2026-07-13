@@ -40,6 +40,7 @@ describe("movementAvatarRuntimeState", () => {
     first.squatPresentationDepth = 0.5;
 
     expect(second).toEqual({
+      hasEstablishedLegRetarget: false,
       squatPresentationDepth: 0,
       visualRootDrop: 0,
     });

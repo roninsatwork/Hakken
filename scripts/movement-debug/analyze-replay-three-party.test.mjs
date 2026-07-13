@@ -7,6 +7,11 @@ function debug(direction) {
     "rightFoot", "rightLowerArm", "rightShin", "rightThigh", "rightUpperArm",
   ].map((segment) => [segment, { confidence: 0.9, direction }]));
   return {
+    avatarHead: {
+      appliedWorldPitch: 0.1,
+      appliedWorldRoll: 0.04,
+      appliedWorldYaw: 0.02,
+    },
     avatarSpine: {
       chest: { x: 0.1, y: 0.05, z: 0.02 },
       upperChest: { x: 0.08, y: 0.04, z: 0.01 },
@@ -33,6 +38,42 @@ function telemetry(playerDirection = { x: 1, y: 0, z: 0 }) {
 }
 
 describe("three-party rendered Replay analyzer", () => {
+  it("blocks an empty artifact even when its declared missing-frame count is zero", () => {
+    const analysis = analyzeThreePartyReplay({
+      telemetry: {
+        frameCount: 9,
+        frames: [],
+        missingFrameCount: 0,
+        proofMode: "three-party-mirror",
+        sessionId: "empty-three-party-proof",
+      },
+    });
+
+    expect(analysis.frameAccounting).toEqual({
+      compared: 0,
+      complete: false,
+      expected: 9,
+      missing: 9,
+      rendered: 0,
+    });
+    expect(analysis.failures).toContainEqual({ code: "three-party-rendered-frames-missing", count: 9 });
+    expect(analysis.failures).toContainEqual({ code: "three-party-frame-accounting-mismatch", count: 1 });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("blocks duplicate frame indexes rather than treating them as complete proof", () => {
+    const input = telemetry();
+    input.frameCount = 3;
+    input.frames.push({ ...input.frames[1], frameIndex: 1 });
+    input.missingFrameCount = 0;
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.failures).toContainEqual({ code: "three-party-rendered-frames-missing", count: 1 });
+    expect(analysis.failures).toContainEqual({ code: "three-party-frame-index-duplicate", count: 1 });
+    expect(analysis.status).toBe("blocked");
+  });
+
   it("passes matching actual instructor and player destination bones", () => {
     const analysis = analyzeThreePartyReplay({ telemetry: telemetry() });
     expect(analysis.status).toBe("passed");
@@ -83,5 +124,80 @@ describe("three-party rendered Replay analyzer", () => {
     const analysis = analyzeThreePartyReplay({ telemetry: input });
     expect(analysis.failures).toContainEqual({ code: "three-party-rendered-role-missing", count: 1 });
     expect(analysis.status).toBe("blocked");
+  });
+
+  it("blocks sustained segment divergence hidden below the session p95", () => {
+    const input = telemetry();
+    input.frameCount = 100;
+    input.frames = Array.from({ length: 100 }, (_, frameIndex) => ({
+      avatars: {
+        instructor: debug({ x: 1, y: 0, z: 0 }),
+        player: debug(
+          frameIndex >= 40 && frameIndex <= 42
+            ? { x: 0, y: 1, z: 0 }
+            : { x: 1, y: 0, z: 0 },
+        ),
+      },
+      frameIndex,
+    }));
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.segments.rightUpperArm.p95Difference).toBe(0);
+    expect(analysis.segments.rightUpperArm.persistentDivergenceRuns).toEqual([{
+      frameEnd: 42,
+      frameStart: 40,
+      length: 3,
+      maxDifference: 1.5708,
+    }]);
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-segment-sustained-divergence",
+      count: 3,
+      segment: "rightUpperArm",
+    });
+  });
+
+  it("blocks sustained axial divergence hidden by other axes and frames", () => {
+    const input = telemetry();
+    input.frameCount = 100;
+    input.frames = Array.from({ length: 100 }, (_, frameIndex) => {
+      const instructor = debug({ x: 1, y: 0, z: 0 });
+      const player = debug({ x: 1, y: 0, z: 0 });
+      if (frameIndex >= 60 && frameIndex <= 62) player.avatarHead.appliedWorldPitch = 0.5;
+      return { avatars: { instructor, player }, frameIndex };
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.axial.p95Difference).toBe(0);
+    expect(analysis.axial.persistentDivergenceRuns).toContainEqual({
+      axis: "head.pitch",
+      frameEnd: 62,
+      frameStart: 60,
+      length: 3,
+      maxDifference: 0.4,
+    });
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-axial-sustained-divergence",
+      count: 3,
+    });
+  });
+
+  it("blocks rendered head divergence even when the pre-application targets match", () => {
+    const input = telemetry();
+    input.frames.forEach((frame) => {
+      frame.avatars.player.avatarHead.appliedWorldYaw = 0.4;
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-axial-diverged",
+      count: 2,
+    });
+    expect(analysis.axial.worstFrames[0]).toMatchObject({
+      axis: "head.yaw",
+      difference: 0.38,
+    });
   });
 });

@@ -154,10 +154,12 @@ describe("movementAvatarRuntimeReset", () => {
       strength: 0,
     });
     expect(refs.playerLowerBodyStabilityRef.current).toEqual({
+      hasEstablishedLegRetarget: false,
       squatPresentationDepth: 0,
       visualRootDrop: 0,
     });
     expect(refs.instructorLowerBodyStabilityRef.current).toEqual({
+      hasEstablishedLegRetarget: false,
       squatPresentationDepth: 0,
       visualRootDrop: 0,
     });

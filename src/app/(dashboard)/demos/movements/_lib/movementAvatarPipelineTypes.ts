@@ -88,6 +88,8 @@ export type MovementAvatarAppliedLowerBodyDecision = {
 };
 
 export type MovementAvatarLowerBodyVisualState = {
+  /** True only after a complete leg solve has established retarget ownership. */
+  hasEstablishedLegRetarget?: boolean;
   squatPresentationDepth: number;
   visualRootDrop: number;
 };
@@ -406,6 +408,8 @@ export type MovementAvatarPipelineDecision = {
   playerRetargetLowerBodyMotion: number;
   rawLowerBodyTrackingReady: boolean;
   retargetFrame: MovementRetargetFrame;
+  retargetApplicableLegs: number;
+  retargetApplicableThighs: number;
   retargetSolvedFeet: number;
   retargetSolvedLegs: number;
   rootOrientation: MovementAvatarRootOrientationDecision;

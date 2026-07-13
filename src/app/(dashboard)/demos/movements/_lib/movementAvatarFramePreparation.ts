@@ -1,11 +1,12 @@
 import { type MovementAvatarExerciseTransitionState, resolveMovementAvatarExerciseTarget } from "./movementAvatarExerciseTarget";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import { type MovementAvatarMotionFrameInputDecision, resolveMovementAvatarMotionFrameInput } from "./movementAvatarMotionFrameInput";
-import type {
-  MovementAvatarLowerBodyVisualState,
-  MovementAvatarPipelineDecision,
-  MovementAvatarPlayerLegRaiseHoldDecision,
-  MovementAvatarPlayerLegRaiseHoldState,
+import {
+  resolveMovementAvatarEstablishedLegRetarget,
+  type MovementAvatarLowerBodyVisualState,
+  type MovementAvatarPipelineDecision,
+  type MovementAvatarPlayerLegRaiseHoldDecision,
+  type MovementAvatarPlayerLegRaiseHoldState,
 } from "./movementAvatarPipeline";
 import { type MovementAvatarLowerBodyRuntimeStateDecision, resolveMovementAvatarLowerBodyRuntimeState } from "./movementAvatarRuntimeState";
 import {
@@ -280,7 +281,7 @@ export function resolveMovementAvatarLowerBodyFrameStateRuntime({
   playerLowerBodyVisualState: MovementAvatarLowerBodyVisualState;
 }): MovementAvatarLowerBodyFrameStateRuntime {
   const recordedSquatPresentationDepth = getRecordedSquatPresentationDepth(avatarDecision.retargetFrame);
-  const lowerBodyRuntimeStateDecision = resolveMovementAvatarLowerBodyRuntimeState({
+  const baseLowerBodyRuntimeStateDecision = resolveMovementAvatarLowerBodyRuntimeState({
     avatarRole,
     instructorLowerBodyVisualState,
     lowerBodyDrive: avatarDecision.lowerBodyDrive,
@@ -289,8 +290,33 @@ export function resolveMovementAvatarLowerBodyFrameStateRuntime({
     playerLowerBodyVisualState,
     recordedSquatPresentationDepth,
   });
+  const previousVisualState = avatarRole === "player"
+    ? playerLowerBodyVisualState
+    : instructorLowerBodyVisualState;
+  const lowerBodyVisualState = {
+    ...baseLowerBodyRuntimeStateDecision.lowerBodyVisualDecision.state,
+    hasEstablishedLegRetarget: resolveMovementAvatarEstablishedLegRetarget({
+      applicableLegs: avatarDecision.retargetApplicableLegs,
+      applicableThighs: avatarDecision.retargetApplicableThighs,
+      previousState: previousVisualState,
+      sourceQuality: avatarDecision.retargetFrame.debug.sourceQuality,
+    }),
+  };
+  const lowerBodyVisualDecision = {
+    ...baseLowerBodyRuntimeStateDecision.lowerBodyVisualDecision,
+    state: lowerBodyVisualState,
+  };
+  const lowerBodyRuntimeStateDecision = {
+    ...baseLowerBodyRuntimeStateDecision,
+    lowerBodyVisualDecision,
+    nextInstructorLowerBodyVisualState: avatarRole === "instructor"
+      ? lowerBodyVisualState
+      : baseLowerBodyRuntimeStateDecision.nextInstructorLowerBodyVisualState,
+    nextPlayerLowerBodyVisualState: avatarRole === "player"
+      ? lowerBodyVisualState
+      : baseLowerBodyRuntimeStateDecision.nextPlayerLowerBodyVisualState,
+  };
   const lowerBodyDrive = lowerBodyRuntimeStateDecision.lowerBodyDrive;
-  const lowerBodyVisualDecision = lowerBodyRuntimeStateDecision.lowerBodyVisualDecision;
   const lowerBodyTarget = resolveMovementAvatarLowerBodyTarget({
     avatarRole,
     decision: avatarDecision,
@@ -527,4 +553,3 @@ export function applyMovementAvatarFramePreparationOrchestrationRuntime({
     status: "ready",
   };
 }
-

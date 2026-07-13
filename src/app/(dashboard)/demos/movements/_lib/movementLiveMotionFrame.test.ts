@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildLiveMovementMotionFrame } from "./movementLiveMotionFrame";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
-import { buildMovementRetargetSourceModel } from "./movementRetargeting";
+import {
+  buildMovementRetargetSourceModel,
+  mapMovementRetargetSourceModelForDisplay,
+} from "./movementRetargeting";
 import { buildMovementCalibration } from "./movementTrackingCalibration";
 
 describe("movementLiveMotionFrame", () => {
@@ -84,6 +87,33 @@ describe("movementLiveMotionFrame", () => {
     expect(motionFrame?.source.landmarks.pose[25]?.x).toBe(payload.landmarks[25]?.x);
     expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.displayLandmarks.pose[26]?.x).toBeCloseTo(1 - (payload.landmarks[25]?.x ?? 0));
+  });
+
+  it("solves mirrored display motion against a mirrored neutral source model", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const sourceModel = buildMovementRetargetSourceModel({ poseLandmarks: neutral });
+    const displayModel = mapMovementRetargetSourceModelForDisplay({
+      mirrorMode: "facing-player",
+      sourceModel,
+    });
+    const motionFrame = buildLiveMovementMotionFrame({
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      isPlaying: true,
+      motionRef: makeMovementAvatarProofMotionPayload("left-arm-raise"),
+      retargetSourceModel: sourceModel,
+    });
+
+    expect(displayModel?.hipCenter.x).toBeCloseTo(1 - (sourceModel?.hipCenter.x ?? 0));
+    expect(displayModel?.neutralKneeLift).toEqual({
+      left: sourceModel?.neutralKneeLift.right,
+      right: sourceModel?.neutralKneeLift.left,
+    });
+    expect(displayModel?.segments.leftUpperArm?.direction.x).toBeCloseTo(
+      -(sourceModel?.segments.rightUpperArm?.direction.x ?? 0),
+    );
+    expect(motionFrame?.avatarDisplayDecision.retargetFrame.segments.rightUpperArm?.direction.x).toBeCloseTo(
+      -(motionFrame?.avatarDecision.retargetFrame.segments.leftUpperArm?.direction.x ?? 0),
+    );
   });
 
   it("keeps live source world pose, hands, and blendshapes independent from display preparation", () => {

@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { applyMovementAvatarArmApplicationToVrmBones, type MovementAvatarArmApplicationResult } from "./movementAvatarArmApplication";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
 import {
+  applyMovementAvatarInstructorFootPlantRequestsToVrmBones,
   applyMovementAvatarLowerBodyNeutralPoseApplicationToVrmBones,
   applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones,
   applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBones,
@@ -645,6 +646,17 @@ export function applyMovementAvatarInactiveLowerBodyRuntimeToVrmBones({
     lookupBone,
     slerp: lowerBodyNeutralSlerp,
   });
+  // Inactive player frames and explicit recorded-neutral frames are two
+  // ownership routes to the same rendered neutral pose. Apply the same exact
+  // planted-foot target here so mirrored retarget twist cannot leak into a
+  // different player-only release arc.
+  applyMovementAvatarInstructorFootPlantRequestsToVrmBones({
+    currentFeetOwner: "neutral",
+    isPlayer: avatarRole === "player",
+    lookupBone,
+    sides: ["right", "left"],
+    slerp: 1,
+  });
 
   return {
     appliedNeutralRotations: neutralApplication.applied,
@@ -727,8 +739,16 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   let retargetAppliedLegs = 0;
   let retargetAppliedLowerBody = 0;
   const isPlayer = avatarRole === "player";
+  // This legacy role-smoothed value remains in the frame contract for debug
+  // telemetry, but shared partial-retarget application must use
+  // lowerBodyTarget.recordedSquatPresentationDepth instead.
+  void instructorSquatPresentationDepth;
 
-  if ((lowerBodyTrackingReady || shouldHoldPlayerSquatPose) && shouldApplyLowerBody) {
+  // Target resolution owns lower-body eligibility, including a complete leg
+  // solve that remains usable during a visibility-confidence dip. Repeating
+  // the raw readiness gate here used to turn that approved retarget target
+  // into an inactive neutral frame before any VRM leg bones were applied.
+  if (lowerBodyTarget.stageDecision && shouldApplyLowerBody) {
     const lowerBodyApplicationPlan = resolveMovementAvatarLowerBodyApplicationPlan({
       lowerBodyDrive,
       lowerBodyTarget,
@@ -754,15 +774,14 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         plantedSquatIkDepth = nonRetargetLowerBodyApplication.plantedSquatIkDepth;
       }
 
-      // Feet keep following the solved world directions while the legs hold
-      // neutral. Measured on the goldens: foot segments score ~0 error when
-      // they own the feet, and the worst foot cells were exactly the frames
-      // where "standing" bodies pivot while feet sat in the neutral hold.
-      // The neutral ease drives first, the foot segments refine after - the
-      // same application-order contract as the spine drive + segment refine.
+      // A player squat can still use solved foot directions after its
+      // presentation fallback rotates the leg chain. Player-neutral must not
+      // do that: the matching instructor stage is recorded-neutral, so
+      // reapplying low-confidence feet only on the player creates a visible
+      // three-party ownership split.
       if (
         isPlayer &&
-        (lowerBodyApplicationPlan.mode === "player-neutral" || lowerBodyApplicationPlan.mode === "player-squat")
+        lowerBodyApplicationPlan.mode === "player-squat"
       ) {
         updateWorldMatrix();
         const footRetargetCounts = applyRetargetMappings(MOVEMENT_AVATAR_FOOT_RETARGET_MAPPINGS);
@@ -796,7 +815,12 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         appliedLowerBodySegments: retargetAppliedLowerBody,
         avatarRole,
         balancedPlantedSquatDepth,
-        instructorSquatPresentationDepth,
+        // Partial retarget is shared recorded-source fallback. The role-local
+        // instructor presentation value is deliberately smoothed at a
+        // different rate from the player value, so feeding it into this plan
+        // recreates two leg poses from one source frame. Use the raw recorded
+        // target carried by the shared lower-body target instead.
+        instructorSquatPresentationDepth: lowerBodyTarget.recordedSquatPresentationDepth,
         lowerBodyDrive,
         lowerBodySegmentMotion,
         lowerBodyTrackingReady,
@@ -826,7 +850,6 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         plan: retargetApplicationPlan,
         singleLegRaiseSlerp: boneEaseOptions.singleLegRaiseSlerp,
         squatFlexionBendBoost,
-        squatFlexionSlerp: boneEaseOptions.squatFlexionSlerp,
       });
       plantedSquatIkDepth = retargetPostPlanApplication.plantedSquatIkDepth;
       footOwner = retargetPostPlanApplication.feetOwner;

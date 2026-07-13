@@ -66,6 +66,19 @@ describe("movementAvatarHeadRuntime (merged)", () => {
     return pose;
   }
 
+  function faceLandmarks(): TrackingLandmark[] {
+    const face = Array.from({ length: 264 }, () => ({
+      visibility: 0.9,
+      x: 0.5,
+      y: 0.5,
+      z: 0,
+    }));
+    face[1] = { x: 0.58, y: 0.48, z: 0, visibility: 0.9 };
+    face[33] = { x: 0.42, y: 0.45, z: 0, visibility: 0.9 };
+    face[263] = { x: 0.58, y: 0.45, z: 0, visibility: 0.9 };
+    return face;
+  }
+
   describe("movementAvatarHeadRuntime", () => {
     it("skips when required head landmarks or head bone are unavailable", () => {
       expect(applyMovementAvatarHeadRuntimeToVrmBones({
@@ -120,6 +133,7 @@ describe("movementAvatarHeadRuntime (merged)", () => {
         avatarRootYaw: Math.PI / 4,
         baseHeadPosition: null,
         calibration: neutralCalibration,
+        faceLandmarks: faceLandmarks(),
         headMotionIntent: {
           ...neutralHeadIntent,
           vertical: 0.7,
@@ -167,10 +181,17 @@ describe("movementAvatarHeadRuntime (merged)", () => {
         headNode: result.headNode,
         headTarget: result.headTarget,
       });
+      const worldRotation = new THREE.Euler().setFromQuaternion(
+        result.headNode.getWorldQuaternion(new THREE.Quaternion()),
+        "YXZ",
+      );
 
       expect(telemetry).toEqual({
         appliedLocalPitch: result.headNode.rotation.x,
         appliedLocalRoll: result.headNode.rotation.z,
+        appliedWorldPitch: worldRotation.x,
+        appliedWorldRoll: worldRotation.z,
+        appliedWorldYaw: worldRotation.y,
         boneYaw: result.headTarget.headDecision.headYaw,
         bonePitch: result.headTarget.headBonePitch,
         boneRoll: result.headTarget.headDecision.headRoll,
@@ -295,6 +316,19 @@ describe("movementAvatarHeadFrameRuntime (merged)", () => {
     pose[11] = { x: 0.38, y: 0.44, z: 0, visibility: 0.9 };
     pose[12] = { x: 0.62, y: 0.44, z: 0, visibility: 0.9 };
     return pose;
+  }
+
+  function faceLandmarks(): TrackingLandmark[] {
+    const face = Array.from({ length: 264 }, () => ({
+      visibility: 0.9,
+      x: 0.5,
+      y: 0.5,
+      z: 0,
+    }));
+    face[1] = { x: 0.58, y: 0.48, z: 0, visibility: 0.9 };
+    face[33] = { x: 0.42, y: 0.45, z: 0, visibility: 0.9 };
+    face[263] = { x: 0.58, y: 0.45, z: 0, visibility: 0.9 };
+    return face;
   }
 
   function positiveYawPoseLandmarks(): TrackingLandmark[] {
@@ -495,6 +529,7 @@ describe("movementAvatarHeadFrameRuntime (merged)", () => {
           avatarRootYaw: Math.PI / 4,
           baseHeadPosition: null,
           calibration: neutralCalibration,
+          faceLandmarks: faceLandmarks(),
           headMotionIntent: {
             ...neutralHeadIntent,
             vertical: 0.7,

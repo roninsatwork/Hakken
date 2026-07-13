@@ -1,0 +1,157 @@
+{
+  "failures": [
+    {
+      "code": "support_constraint_missing",
+      "detail": "Frame 6 rendered seated support while the source stayed standing.",
+      "frameIndex": 6,
+      "severity": "error"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 6,
+        "rootHeadingYaw": 0.02,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "support-contact",
+          "lowerBodyDirectionError": 0.26,
+          "lowerOwner": "seated-support",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "seated",
+          "upperBodyDirectionError": 0.07
+        },
+        "expected": {
+          "motion": "support",
+          "owner": "standing-feet-floor",
+          "side": "both"
+        },
+        "failures": [
+          {
+            "analyzerCode": "support_constraint_missing",
+            "code": "avatar-seated-while-source-standing",
+            "detail": "Frame 6 rendered seated support while the source stayed standing.",
+            "doNotPatch": [
+              "Do not add pose-specific seated or floor guards in the route; fix shared support/contact decisions."
+            ],
+            "evidenceStatus": "proven",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementSupportContact.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementSupportConstraint.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/_lib/movementSupportContact.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementSupportConstraint.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportPresentationDecision.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.ts"
+            ],
+            "nextFixArea": "support intent / seated presentation guard",
+            "repairStage": "support-contact",
+            "severity": "error"
+          }
+        ],
+        "frameIndex": 6,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.9,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "blocked"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 1,
+      "failureCount": 1,
+      "recordingId": "support-contact-seated-minimal",
+      "reviewedFrameCount": 0,
+      "status": "blocked",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.26,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0.68
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "support-contact",
+            "lowerBodyDirectionError": 0.26,
+            "lowerOwner": "seated-support",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "seated",
+            "upperBodyDirectionError": 0.07
+          },
+          "expected": {
+            "motion": "support",
+            "owner": "standing-feet-floor",
+            "side": "both"
+          },
+          "failures": [
+            {
+              "analyzerCode": "support_constraint_missing",
+              "code": "avatar-seated-while-source-standing",
+              "detail": "Frame 6 rendered seated support while the source stayed standing.",
+              "doNotPatch": [
+                "Do not add pose-specific seated or floor guards in the route; fix shared support/contact decisions."
+              ],
+              "evidenceStatus": "proven",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementSupportContact.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementSupportConstraint.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/_lib/movementSupportContact.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementSupportConstraint.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportPresentationDecision.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarSupportContactApplication.ts"
+              ],
+              "nextFixArea": "support intent / seated presentation guard",
+              "repairStage": "support-contact",
+              "severity": "error"
+            }
+          ],
+          "frameIndex": 6,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.9,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "blocked"
+        }
+      ]
+    }
+  },
+  "sessionId": "support-contact-seated-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

@@ -1,4 +1,4 @@
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   buildMovementAvatarFrameTrackingDebugState,
   type MovementAvatarFrameTrackingDebugInput,
@@ -46,6 +46,9 @@ export type MovementAvatarHeadRuntimeApplication =
 export type MovementAvatarHeadRuntimeDebugTelemetry = {
   appliedLocalPitch: number;
   appliedLocalRoll: number;
+  appliedWorldPitch: number;
+  appliedWorldRoll: number;
+  appliedWorldYaw: number;
   bonePitch: number;
   boneRoll: number;
   boneYaw: number;
@@ -62,10 +65,16 @@ export function buildMovementAvatarHeadRuntimeDebugTelemetry({
   headTarget: MovementAvatarHeadTargetDecision;
 }): MovementAvatarHeadRuntimeDebugTelemetry {
   const { rawHead } = headTarget.rawHeadDecision;
+  const worldQuaternion = new THREE.Quaternion();
+  headNode.getWorldQuaternion(worldQuaternion);
+  const worldRotation = new THREE.Euler().setFromQuaternion(worldQuaternion, "YXZ");
 
   return {
     appliedLocalPitch: headNode.rotation.x,
     appliedLocalRoll: headNode.rotation.z,
+    appliedWorldPitch: worldRotation.x,
+    appliedWorldRoll: worldRotation.z,
+    appliedWorldYaw: worldRotation.y,
     boneYaw: headTarget.headDecision.headYaw,
     bonePitch: headTarget.headBonePitch,
     boneRoll: headTarget.headDecision.headRoll,

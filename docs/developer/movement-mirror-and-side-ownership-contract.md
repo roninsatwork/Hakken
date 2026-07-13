@@ -1,6 +1,6 @@
 # Movement Mirror And Side-Ownership Contract
 
-Last reviewed: 2026-07-10
+Last reviewed: 2026-07-13
 Status: canonical contract; implementation and acceptance proof are currently reopened.
 Audience: product, movement-engine, Game Studio, Replay Studio, scoring, QA, and future coding agents.
 
@@ -267,7 +267,9 @@ As of 2026-07-10, the current implementation does not satisfy this contract cons
 
 2026-07-11 follow-up: the player-avatar retarget segment layer had been adding a second horizontal reflection after display-side ownership had already mapped player anatomy into the destination avatar side. That is forbidden by this contract. The head path also preserved raw pitch sign into a rig boundary where the visible Jane head pitch axis is opposite, causing down/up to render inverted. Both cases are examples of why anatomical ownership and coordinate/bone-axis conversion must remain separate.
 
-Until these gaps are corrected and the required proof passes, mirror-side ownership is blocked for acceptance.
+2026-07-13 adherence update: the three-party all-frame capture now exists for all nine recordings with complete 11,383/11,383 frame accounting on both proof paths. However, the strengthened analyzer detects sustained above-threshold instructor/player-avatar segment disagreement that the earlier session-p95 gate diluted; for example, the historical Spins artifact diverges on both shins for frames 645-647. Those artifacts also predate the current motion-pipeline fingerprint. The proof must therefore be rerendered through current code and the sustained disagreements repaired in the shared Replay/Game pipeline. Complete telemetry is evidence availability, not automatic adherence.
+
+Until the current-fingerprint all-nine gate passes the sustained rendered-bone checks, mirror-side ownership remains blocked for acceptance.
 
 ## Change Control
 

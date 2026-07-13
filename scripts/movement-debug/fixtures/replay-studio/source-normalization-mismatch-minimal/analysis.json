@@ -1,0 +1,157 @@
+{
+  "failures": [
+    {
+      "code": "start_readiness_replay_mismatch",
+      "detail": "Frame 10 stored readiness \"blocked\" but replay recomputed \"ready\".",
+      "frameIndex": 10,
+      "severity": "warning"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 10,
+        "rootHeadingYaw": 0.02,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.07,
+          "lowerOwner": "player-right-leg-raise",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "support-presentation-none",
+          "upperBodyDirectionError": 0.04
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [
+          {
+            "analyzerCode": "start_readiness_replay_mismatch",
+            "code": "source-normalization-mismatch",
+            "detail": "Frame 10 stored readiness \"blocked\" but replay recomputed \"ready\".",
+            "doNotPatch": [
+              "Do not compensate in avatar code for source-frame side, confidence, or timing normalization bugs."
+            ],
+            "evidenceStatus": "suspected",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementSourceFrame.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementRecordedMotionFrame.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementLiveMotionFrame.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/_lib/movementSourceFrame.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementRecordedMotionFrame.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementLiveMotionFrame.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementDisplayLandmarks.ts"
+            ],
+            "nextFixArea": "source normalization / recorded readiness replay",
+            "repairStage": "source-normalization",
+            "severity": "warning"
+          }
+        ],
+        "frameIndex": 10,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.9,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "review"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 0,
+      "failureCount": 1,
+      "recordingId": "source-normalization-mismatch-minimal",
+      "reviewedFrameCount": 1,
+      "status": "review",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.07,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0,
+        "visualMatchScore": 0.93
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "neutral",
+            "lowerBodyDirectionError": 0.07,
+            "lowerOwner": "player-right-leg-raise",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "support-presentation-none",
+            "upperBodyDirectionError": 0.04
+          },
+          "expected": {
+            "motion": "leg-raise",
+            "owner": "player-right-leg-raise",
+            "side": "right"
+          },
+          "failures": [
+            {
+              "analyzerCode": "start_readiness_replay_mismatch",
+              "code": "source-normalization-mismatch",
+              "detail": "Frame 10 stored readiness \"blocked\" but replay recomputed \"ready\".",
+              "doNotPatch": [
+                "Do not compensate in avatar code for source-frame side, confidence, or timing normalization bugs."
+              ],
+              "evidenceStatus": "suspected",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementSourceFrame.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementRecordedMotionFrame.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementLiveMotionFrame.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/_lib/movementSourceFrame.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementRecordedMotionFrame.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementLiveMotionFrame.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementDisplayLandmarks.ts"
+              ],
+              "nextFixArea": "source normalization / recorded readiness replay",
+              "repairStage": "source-normalization",
+              "severity": "warning"
+            }
+          ],
+          "frameIndex": 10,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.9,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "review"
+        }
+      ]
+    }
+  },
+  "sessionId": "source-normalization-mismatch-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

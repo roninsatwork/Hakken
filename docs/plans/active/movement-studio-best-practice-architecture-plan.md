@@ -4,6 +4,8 @@ Last reviewed: 2026-07-10
 Status: active architecture-hardening plan and standing audit board.
 Scope: keep Posture Studio / Game Studio movement code on a maintainable motion-engine path for visible, believable child gameplay before expanding broader human movement support.
 
+Replay diagnosis execution: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) is the controlling plan for turning the shared Replay/Game architecture into a record-once, deterministic agent repair loop. This plan remains authoritative for motion-engine boundaries and product support claims.
+
 ## Current Standing Board
 
 Current audit timestamp: 2026-07-10, Replay visual-correction audit on branch `dev`.

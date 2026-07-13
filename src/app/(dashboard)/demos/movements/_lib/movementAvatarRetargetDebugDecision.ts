@@ -4,6 +4,10 @@ import {
   type MovementRetargetSegmentName,
   type MovementRetargetSourceModel,
 } from "./movementRetargeting";
+import {
+  getMovementAvatarRetargetSegmentMinimumConfidence,
+} from "./movementAvatarRetargetSegmentApplicationDecision";
+import type { MovementAvatarRetargetSegmentType } from "./movementAvatarPipelineTypes";
 
 export type MovementAvatarRetargetDebugLabelInput = {
   appliedLowerBody: number;
@@ -37,6 +41,11 @@ export const LOWER_BODY_SEGMENTS = new Set<MovementRetargetSegmentName>([
   "rightShin",
 ]);
 
+export const THIGH_SEGMENTS = new Set<MovementRetargetSegmentName>([
+  "leftThigh",
+  "rightThigh",
+]);
+
 export const FOOT_SEGMENTS = new Set<MovementRetargetSegmentName>(["leftFoot", "rightFoot"]);
 
 export const UPPER_BODY_SEGMENTS = new Set<MovementRetargetSegmentName>([
@@ -52,6 +61,17 @@ export function countMovementRetargetSegments(
   segments: Set<MovementRetargetSegmentName>,
 ) {
   return frame.debug.solvedSegments.filter((name) => segments.has(name)).length;
+}
+
+export function countMovementApplicableRetargetSegments(
+  frame: MovementRetargetFrame,
+  segments: Set<MovementRetargetSegmentName>,
+  segmentType: MovementAvatarRetargetSegmentType,
+) {
+  const minimumConfidence = getMovementAvatarRetargetSegmentMinimumConfidence(segmentType);
+  return Array.from(segments).filter(
+    (name) => (frame.segments[name]?.confidence ?? 0) >= minimumConfidence,
+  ).length;
 }
 
 export function buildMovementAvatarRetargetDebug({

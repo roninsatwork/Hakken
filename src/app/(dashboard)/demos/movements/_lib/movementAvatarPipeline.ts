@@ -15,8 +15,10 @@ export {
 export {
   appendMovementAvatarFootLockDebugLabel,
   buildMovementAvatarRetargetDebug,
+  countMovementApplicableRetargetSegments,
   countMovementRetargetSegments,
   formatMovementAvatarRetargetDebugLabel,
+  THIGH_SEGMENTS,
 } from "./movementAvatarRetargetDebugDecision";
 export type {
   MovementAvatarFootLockDebugLabelInput,
@@ -79,6 +81,7 @@ export {
 } from "./movementAvatarHeadDecision";
 export {
   resolveMovementAvatarAppliedLowerBodyDecision,
+  resolveMovementAvatarEstablishedLegRetarget,
   resolveMovementAvatarInactiveLowerBodyDecision,
   resolveMovementAvatarLowerBodyApplicationStage,
   resolveMovementAvatarLowerBodyVisualDecision,

@@ -305,7 +305,11 @@ function compactReplayStudioWorstFrames(session) {
       ? frame.failures.map((failure) => ({
         code: failure.code,
         detail: failure.detail,
+        evidenceStatus: failure.evidenceStatus,
+        focusedTests: failure.focusedTests,
+        likelyFiles: failure.likelyFiles,
         nextFixArea: failure.nextFixArea,
+        repairStage: failure.repairStage,
         severity: failure.severity,
       }))
       : [],
@@ -456,15 +460,20 @@ function fixLogEntryForFailure(failure, index) {
     detail: failure.detail,
     expected: frame?.expected ?? null,
     actual: frame?.actual ?? null,
+    doNotPatch: primaryFrameFailure?.doNotPatch ?? [],
+    evidenceStatus: primaryFrameFailure?.evidenceStatus ?? null,
     frameIndex: typeof context.frameIndex === "number"
       ? context.frameIndex
       : typeof frame?.frameIndex === "number"
         ? frame.frameIndex
         : null,
+    focusedTests: primaryFrameFailure?.focusedTests ?? [],
+    likelyFiles: primaryFrameFailure?.likelyFiles ?? [],
     index,
     nextFixArea: primaryFrameFailure?.nextFixArea ?? fixAreaForFailureCode(failure.code),
     proofCase: context.proofCase ?? null,
     recordingId: context.recordingId ?? null,
+    repairStage: primaryFrameFailure?.repairStage ?? null,
     severity: primaryFrameFailure?.severity ?? fixLogSeverityForFailure(failure),
     source: frame?.source ?? null,
     status: context.status ?? frame?.status ?? null,

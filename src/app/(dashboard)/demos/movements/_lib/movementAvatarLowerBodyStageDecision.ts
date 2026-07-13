@@ -23,6 +23,7 @@ export function resolveMovementAvatarInactiveLowerBodyDecision({
 
 export function resolveMovementAvatarLowerBodyApplicationStage({
   avatarRole,
+  canContinuePartialLegRetarget = false,
   hasCompleteLegRetarget = false,
   instructorLowerBodyMotion,
   lowerBodyDrive,
@@ -31,6 +32,7 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
   shouldHoldPlayerSquatPose,
 }: {
   avatarRole: "instructor" | "player";
+  canContinuePartialLegRetarget?: boolean;
   hasCompleteLegRetarget?: boolean;
   instructorLowerBodyMotion: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
@@ -61,6 +63,27 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
       feetOwner: sourceOwnerDecision?.feetOwner ?? "neutral",
       lowerBodyOwner: playerLegRaiseOwner ?? sourceOwnerDecision?.lowerBodyOwner ?? "player-leg-raise",
       stage: "player-leg-raise",
+    };
+  }
+
+  // Once the shared source has acquired both thighs plus enough moving child
+  // segments to qualify as a usable partial retarget, those recorded
+  // directions outrank the player's pose label. Evaluating the detected squat
+  // first used to replace five source-driven lower-body segments with a
+  // two-bone canned squat for the player only.
+  if (
+    isPlayer &&
+    canContinuePartialLegRetarget &&
+    playerRetargetLowerBodyMotion >= 0.08
+  ) {
+    return {
+      anchoredPlayerLegRaiseSide,
+      canUsePlayerRetargetLegRaise,
+      feetOwner: sourceOwnerDecision?.feetOwner ?? "neutral",
+      lowerBodyOwner: sourceOwnerDecision?.hasCompleteLegRetarget
+        ? sourceOwnerDecision.lowerBodyOwner
+        : "retarget-partial-fallback",
+      stage: "retarget",
     };
   }
 
@@ -111,6 +134,10 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
     };
   }
 
+  // When both thigh directions remain applicable, a visibility dip should
+  // retain the partial retarget stage and leave unavailable child segments at
+  // their last rendered pose. Switching to player-neutral here eased those
+  // shins away from the instructor even though both paths shared the source.
   const shouldKeepNeutralPlayerLowerBody =
     isPlayer &&
     lowerBodyDrive.playerLowerBodyState === "neutral" &&
@@ -134,6 +161,16 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
       feetOwner: "neutral",
       lowerBodyOwner: "recorded-neutral",
       stage: "recorded-neutral",
+    };
+  }
+
+  if (!hasCompleteLegRetarget && !canContinuePartialLegRetarget) {
+    return {
+      anchoredPlayerLegRaiseSide,
+      canUsePlayerRetargetLegRaise,
+      feetOwner: "neutral",
+      lowerBodyOwner: isPlayer ? "player-lower-body-neutral" : "recorded-neutral",
+      stage: isPlayer ? "player-neutral" : "recorded-neutral",
     };
   }
 

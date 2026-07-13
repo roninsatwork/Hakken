@@ -4,6 +4,8 @@ Last reviewed: 2026-07-08
 Status: active reliability plan.
 Scope: make Replay Studio detect obvious avatar-follow failures from recorded video replay, surface the exact failing frames, and produce actionable logs before anyone relies on live camera testing.
 
+Controlling follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) owns the remaining work to turn these observability surfaces into a deterministic, durable agent diagnosis-to-repair loop. This plan remains authoritative for avatar-follow failure visibility and verdict behavior.
+
 Code audit snapshot: 2026-07-08. Direct inspection covered:
 
 - `src/app/(dashboard)/demos/movements/_lib/movementReplayAnalyzer.ts`

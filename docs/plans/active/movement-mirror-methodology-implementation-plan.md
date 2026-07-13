@@ -1,7 +1,7 @@
 # Movement Mirror Methodology Implementation Plan
 
-Last reviewed: 2026-07-11
-Status: active and reopened for live acceptance. Replay-only proof remains 9/9 recordings and 11,383/11,383 rendered frames, but the 2026-07-11 live Game check-in visibly mapped a player-left arm movement to the player avatar's left arm instead of its right arm. A 2026-07-11 follow-up removed a second player-side reflection in the retarget segment application and inverted head pitch only at the final VRM bone boundary; synthetic proof now shows player-left -> avatar-right and player-right -> avatar-left on the proof page, with head down/up using opposite raw-tracking and VRM-bone signs. This is not yet live human camera acceptance. Replay, injected-frame, internal bone-name, or mapping-metadata results must not be reported as live mirror acceptance.
+Last reviewed: 2026-07-13
+Status: active and reopened for rendered and live acceptance. The historical Replay proof reached 9/9 recordings and 11,383/11,383 rendered frames under its earlier gate, but the strengthened sustained-divergence gate and current motion-pipeline fingerprint require a fresh all-nine result. Current `Full Spinal Flow` passes both strict rendered paths; the fresh all-nine run was stopped at the user's request and is not an acceptance result. The 2026-07-11 live Game check-in also remains unaccepted pending human confirmation. Replay, injected-frame, internal bone-name, mapping-metadata, or historical artifacts must not be reported as current live acceptance.
 Owner: shared Movement Studio / Replay Studio / Game Studio motion pipeline.
 Canonical contract: [`docs/developer/movement-mirror-and-side-ownership-contract.md`](../../developer/movement-mirror-and-side-ownership-contract.md)
 
@@ -50,14 +50,14 @@ Mirror methodology slice:
 - Retarget segment boundary: updated on 2026-07-11 to forbid a second player-only horizontal reflection after display-side ownership has already mapped player left/right into avatar destination sides.
 - Head pitch boundary: updated on 2026-07-11 so raw player/instructor head intent is preserved until VRM application, then inverted once because the Jane rig's visible head pitch axis is opposite the tracking pitch sign.
 - Hand-authored three-party rendered regression proof: incomplete as an acceptance oracle because it asserts internal bone identity/direction without proving the final visible screen side in the real webcam lifecycle.
-- Deterministic player-avatar all-frame, all-nine proof: 100% (9/9 recordings; 11,383/11,383 rendered frames; zero missing; zero acceptance failures).
-- Deterministic independent three-party harness: 100% implemented; whole-recording acceptance is **9/9** with **11,383/11,383** rendered frames, zero missing, and zero failures on one shared runtime.
-- Uninterrupted all-nine capture and frame accounting: 100% (11,383/11,383, zero missing).
-- Uninterrupted all-nine automated acceptance: 100% on the current side-bend-owner runtime (9/9 recordings; 11,383/11,383 frames; zero missing).
-- Current same-runtime evidence: 9/9 strict pass with 12 review events, 238 owner transitions, and one suppressed-leg diagnostic frame.
+- Deterministic player-avatar all-frame, all-nine proof: historical 9/9 under the earlier gate; current strengthened-gate all-nine proof is open.
+- Deterministic independent three-party harness: 100% implemented; current `Full Spinal Flow` passes **1,290/1,290** rendered frames with zero missing and zero failures, while current all-nine acceptance remains incomplete.
+- Uninterrupted all-nine capture and frame accounting: historical 11,383/11,383 result retained as before-evidence; current-fingerprint recapture remains open.
+- Uninterrupted all-nine automated acceptance: reopened by the strengthened sustained-divergence gate.
+- Current same-runtime evidence: strict `Full Spinal Flow` pass on both rendered proof paths; no current all-nine claim.
 - Manual flagged-event confirmation: 100% across the controlling nine recordings.
 - Live Game mirror acceptance: **reopened / pending human confirmation**. The first human check-in failed visibly; the focused synthetic proof page now passes the basic left-arm/right-arm and head-sign boundary checks, but this does not replace a real camera check.
-- Combined implementation-and-acceptance estimate: mirror implementation is materially improved, but acceptance remains open until the real Game Studio camera path proves the same rule. Replay acceptance remains a separate completed evidence lane.
+- Combined implementation-and-acceptance estimate: mirror implementation is materially improved, but current all-nine Replay acceptance and real Game Studio camera acceptance remain separate open evidence lanes.
 
 Phase 8 in the standing architecture board remains reopened. The live human acceptance lane is now a confirmed failure, not merely an outstanding confirmation.
 
@@ -830,8 +830,8 @@ Stop and diagnose before continuing when:
 ### Acceptance
 
 - [ ] Actual-renderer three-party tests pass. Arms, legs, planted-foot contact, head pitch/yaw/roll, side bend, twist, lateral root, finger curls, and asymmetric blinks pass; scoring and broader face-side coverage remain open.
-- [x] Deterministic all-nine / 11,383-frame gate passes. Independent instructor/player three-party comparison passes **9/9 recordings**, **11,383/11,383** rendered frames, zero missing, and zero failures on one shared runtime.
-- [x] Uninterrupted all-nine playback gate passes.
+- [ ] Current-fingerprint deterministic all-nine / 11,383-frame gate passes under the strengthened sustained-divergence checks. `Full Spinal Flow` passes; the all-nine run is incomplete.
+- [ ] Current-fingerprint uninterrupted all-nine playback gate passes.
 - [x] Worst-frame visual review passes for all flagged uninterrupted events.
 - [ ] Manual whole-body mirror confirmation passes.
 - [ ] Full Node 22.13.0 repository gate passes.
@@ -899,3 +899,10 @@ Stop and diagnose before continuing when:
 - The remaining Full Spinal Flow failure was an application-order defect. A partial-chain squat fallback rotated thigh/shin parents after the instructor foot target was applied, while the player squat path performed no final foot refinement. Foot targets now refine after parent fallback application for both roles. When foot confidence falls during occlusion, the same world-direction refinement remains active from confidence `0.03` with a minimum blend of `0.02`, preventing a role-specific parent-chain offset without making noisy feet respond quickly.
 - `full-spinal-flow.occlusion-foot-refine.analysis.json` passes **1,290/1,290** frames with zero missing and zero failures. Left-foot p95 improves from `0.2579` to `0.1590`; right-foot p95 improves from `0.2585` to `0.1778`, both below the unchanged `0.20` threshold. Thighs, shins, arms, and axial motion remain passing.
 - Because the foot application path is shared, the other eight recordings were recaptured sequentially rather than inheriting prior results. The `*.final-foot-runtime.analysis.json` artifacts plus Full Spinal Flow establish the final same-runtime set: **9/9 recordings**, **11,383/11,383 rendered frames**, **zero missing**, and **zero failures**. Maximum per-recording segment p95 is `0.1778` and maximum axial p95 is `0.0891`, both from Full Spinal Flow and both within their unchanged thresholds.
+
+### 2026-07-13
+
+- The strengthened analyzers now fail three or more consecutive above-threshold rendered segment or axial frames and use actual post-application head world rotations. This reopens the historical session-p95 9/9 result instead of diluting short visible adherence failures.
+- The shared lower-body repair preserves applicable bilateral thigh targets ahead of player squat labels, prevents planted-squat and canned-flexion overwrites when those thigh targets exist, and gives explicit recorded-neutral and inactive-neutral paths the same exact planted-foot target.
+- The current `Full Spinal Flow` artifact under `tmp/movement-replay-lab/cycle-break-full-spinal-inactive-neutral-parity-2026-07-13/` passes **1,290/1,290** player-avatar frames and **1,290/1,290** independent three-party frames with zero missing and zero failures. This is a recording-level repair proof, not an all-nine claim.
+- A fresh all-nine run was started as the final shared-pipeline regression gate and stopped at the user's request during `Spins`. It is incomplete and must not be reported as current acceptance.

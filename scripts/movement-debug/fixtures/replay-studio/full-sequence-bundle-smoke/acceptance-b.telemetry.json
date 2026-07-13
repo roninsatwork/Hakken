@@ -1,0 +1,80 @@
+{
+  "frameCount": 3,
+  "frames": [
+    {
+      "debug": {
+        "avatarVisual": {
+          "averageLowerBodyDirectionError": 0,
+          "footing": {
+            "leftFootClearance": 0,
+            "rightFootClearance": 0
+          },
+          "segments": {}
+        },
+        "fallbacks": {
+          "owners": "head pose; torso player-spine-model; lower player-retarget; feet recorded-retarget"
+        },
+        "retarget": {
+          "appliedLowerBody": 6,
+          "sourceQuality": 0.9
+        },
+        "spineDrive": {
+          "sideBend": 0
+        }
+      },
+      "frameIndex": 0
+    },
+    {
+      "debug": {
+        "avatarVisual": {
+          "averageLowerBodyDirectionError": 0,
+          "footing": {
+            "leftFootClearance": 0,
+            "rightFootClearance": 0
+          },
+          "segments": {}
+        },
+        "fallbacks": {
+          "owners": "head pose; torso player-spine-model; lower player-retarget; feet recorded-retarget"
+        },
+        "retarget": {
+          "appliedLowerBody": 6,
+          "sourceQuality": 0.9
+        },
+        "spineDrive": {
+          "sideBend": 0
+        }
+      },
+      "frameIndex": 1
+    },
+    {
+      "debug": {
+        "avatarVisual": {
+          "averageLowerBodyDirectionError": 0,
+          "footing": {
+            "leftFootClearance": 0,
+            "rightFootClearance": 0
+          },
+          "segments": {}
+        },
+        "fallbacks": {
+          "owners": "head pose; torso player-spine-model; lower player-retarget; feet recorded-retarget"
+        },
+        "retarget": {
+          "appliedLowerBody": 6,
+          "sourceQuality": 0.9
+        },
+        "spineDrive": {
+          "sideBend": 0
+        }
+      },
+      "frameIndex": 2
+    }
+  ],
+  "missingFrames": [],
+  "playbackMode": "uninterrupted-rendered-sequence",
+  "proofMode": "player-avatar",
+  "recordingId": "full-sequence-smoke-b",
+  "sessionId": "full-sequence-smoke-b",
+  "sourceHash": "sha256:d645b536aa1207ef6943b10fa7f7a5d479521e4aa3bce09f0f1ba6c52c5cfc31"
+}

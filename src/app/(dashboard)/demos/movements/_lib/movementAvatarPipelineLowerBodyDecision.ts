@@ -4,9 +4,11 @@ import {
   resolveMovementAvatarPlayerLowerBodyOwners,
 } from "./movementAvatarLowerBody";
 import {
+  countMovementApplicableRetargetSegments,
   countMovementRetargetSegments,
   FOOT_SEGMENTS,
   LOWER_BODY_SEGMENTS,
+  THIGH_SEGMENTS,
 } from "./movementAvatarRetargetDebugDecision";
 import { getMovementAvatarLowerBodySourceBounds } from "./movementAvatarLowerBodySourceBounds";
 import {
@@ -31,6 +33,8 @@ export type MovementAvatarPipelineLowerBodyDecision = Pick<
   | "playerRetargetLowerBodyMotion"
   | "rawLowerBodyTrackingReady"
   | "retargetFrame"
+  | "retargetApplicableLegs"
+  | "retargetApplicableThighs"
   | "retargetSolvedFeet"
   | "retargetSolvedLegs"
   | "shouldApplyLowerBody"
@@ -93,6 +97,16 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   });
   const retargetSolvedLegs = countMovementRetargetSegments(retargetFrame, LOWER_BODY_SEGMENTS);
   const retargetSolvedFeet = countMovementRetargetSegments(retargetFrame, FOOT_SEGMENTS);
+  const retargetApplicableLegs = countMovementApplicableRetargetSegments(
+    retargetFrame,
+    LOWER_BODY_SEGMENTS,
+    "leg",
+  );
+  const retargetApplicableThighs = countMovementApplicableRetargetSegments(
+    retargetFrame,
+    THIGH_SEGMENTS,
+    "leg",
+  );
   const playerRetargetLowerBodyMotion = Math.max(
     lowerBodyDrive.playerSquatPresentationDepth,
     retargetFrame.squatDepth,
@@ -102,6 +116,8 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
   );
   const lowerBodyOwnerDecision = isPlayer
     ? resolveMovementAvatarPlayerLowerBodyOwners({
+        applicableLegSegments: retargetApplicableLegs,
+        hasBilateralApplicableThighs: retargetApplicableThighs >= 2,
         lowerBodyDrive,
         lowerBodySegmentMotion,
         lowerBodyTrackingReady,
@@ -110,8 +126,7 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
         shouldApplyLowerBody,
         shouldHoldPlayerSquatPose,
         solvedFootSegments: retargetSolvedFeet,
-        solvedLegSegments: retargetSolvedLegs,
-        solvedLowerBodySegments: retargetSolvedLegs + retargetSolvedFeet,
+        solvedLowerBodySegments: retargetApplicableLegs + retargetSolvedFeet,
         totalSolvedSegments: retargetFrame.debug.solvedSegments.length,
       })
     : null;
@@ -127,6 +142,8 @@ export function resolveMovementAvatarPipelineLowerBodyDecision({
     playerRetargetLowerBodyMotion,
     rawLowerBodyTrackingReady,
     retargetFrame,
+    retargetApplicableLegs,
+    retargetApplicableThighs,
     retargetSolvedFeet,
     retargetSolvedLegs,
     shouldApplyLowerBody,

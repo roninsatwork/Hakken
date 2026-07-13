@@ -2,6 +2,11 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  inspectReplayTelemetryFrames,
+  sourceHashForReplaySession,
+} from "./lib/replay-proof-identity.mjs";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
 
 const MIRRORED_SEGMENTS = [
   { avatar: "rightUpperArm", sameAvatar: "leftUpperArm", source: [11, 13], type: "arm" },
@@ -17,6 +22,7 @@ const MIRROR_LIMB_PAIRS = [
   {
     avatarLeft: "leftUpperArm",
     avatarRight: "rightUpperArm",
+    minimumSourceStep: 0.025,
     sourceLeft: [11, 13],
     sourceRight: [12, 14],
     type: "upper-arm",
@@ -24,6 +30,7 @@ const MIRROR_LIMB_PAIRS = [
   {
     avatarLeft: "leftLowerArm",
     avatarRight: "rightLowerArm",
+    minimumSourceStep: 0.025,
     sourceLeft: [13, 15],
     sourceRight: [14, 16],
     type: "lower-arm",
@@ -31,6 +38,9 @@ const MIRROR_LIMB_PAIRS = [
   {
     avatarLeft: "leftThigh",
     avatarRight: "rightThigh",
+    // Lower limbs can drift by a few hundredths during head/arm-only
+    // recordings. That is not a decisive side-ownership signal.
+    minimumSourceStep: 0.06,
     sourceLeft: [23, 25],
     sourceRight: [24, 26],
     type: "thigh",
@@ -38,6 +48,7 @@ const MIRROR_LIMB_PAIRS = [
   {
     avatarLeft: "leftShin",
     avatarRight: "rightShin",
+    minimumSourceStep: 0.06,
     sourceLeft: [25, 27],
     sourceRight: [26, 28],
     type: "shin",
@@ -53,6 +64,12 @@ const STABLE_SOURCE_FOOT_CLEARANCE_STEP = 0.005;
 const ARM_MIRROR_RECOVERY_CONFIDENCE = 0.75;
 const MIRROR_OWNERSHIP_DECISIVE_MARGIN = 0.006;
 const MIRROR_OWNERSHIP_WINDOW_TRANSITIONS = 3;
+const OWNER_FLICKER_RENDERED_STEP = 0.12;
+const OWNER_FLICKER_RETURN_STEP = 0.06;
+const MINIMUM_SIDE_BEND_SOURCE_RANGE = 0.04;
+const PERSISTENT_RENDERED_FAILURE_FRAMES = 3;
+const HARD_MIRROR_WRONG_SIDE_STEP = 0.06;
+const HARD_MIRROR_WRONG_SIDE_MARGIN = 0.02;
 
 function parseArgs(argv) {
   const args = { out: "", session: "", strict: false, telemetry: "" };
@@ -95,8 +112,8 @@ function accumulatedSourceSegmentStep(session, frames, endIndex, source) {
   const startIndex = Math.max(0, endIndex - MIRROR_OWNERSHIP_WINDOW_TRANSITIONS);
   let total = 0;
   for (let index = startIndex + 1; index <= endIndex; index += 1) {
-    const previousPose = replayPose(session, frames[index - 1].frameIndex);
-    const pose = replayPose(session, frames[index].frameIndex);
+    const previousPose = replayRetargetPose(session, frames[index - 1].frameIndex);
+    const pose = replayRetargetPose(session, frames[index].frameIndex);
     total += angle(
       vector(previousPose[source[0]], previousPose[source[1]]),
       vector(pose[source[0]], pose[source[1]]),
@@ -147,27 +164,106 @@ function correlation(left, right) {
   return denominator > 0.000001 ? numerator / denominator : 0;
 }
 
+function range(values) {
+  if (values.length === 0) return 0;
+  return Math.max(...values) - Math.min(...values);
+}
+
+function consecutiveFrameRuns(entries, frameIndex = (entry) => entry) {
+  const sorted = [...entries].sort((left, right) => frameIndex(left) - frameIndex(right));
+  const runs = [];
+  sorted.forEach((entry) => {
+    const currentRun = runs.at(-1);
+    if (!currentRun || frameIndex(entry) !== frameIndex(currentRun.at(-1)) + 1) {
+      runs.push([entry]);
+      return;
+    }
+    currentRun.push(entry);
+  });
+  return runs;
+}
+
+function persistentFrameRuns(entries, frameIndex = (entry) => entry) {
+  return consecutiveFrameRuns(entries, frameIndex)
+    .filter((run) => run.length >= PERSISTENT_RENDERED_FAILURE_FRAMES);
+}
+
 function round(value) {
   return Number.isFinite(value) ? Number(value.toFixed(4)) : null;
 }
 
-function renderedSideBendMagnitude(debug, visualSegments) {
+function renderedSideBend(debug, visualSegments) {
   const axialRotations = [
     debug.avatarSpine?.chest?.z,
     debug.avatarSpine?.upperChest?.z,
   ].filter((value) => Number.isFinite(value));
   if (axialRotations.length > 0) {
-    return Math.max(...axialRotations.map((value) => Math.abs(value)));
+    // Keep the sign of the dominant final VRM rotation. Side bend is an
+    // anatomical direction: comparing absolute magnitudes made a correct
+    // left/right sequence look uncorrelated whenever either direction had a
+    // different rest-pose offset, and it would also allow an inverted avatar
+    // to pass. The response-ratio check below still intentionally measures
+    // magnitude with absolute values.
+    return axialRotations.reduce((dominant, value) => (
+      Math.abs(value) > Math.abs(dominant) ? value : dominant
+    ));
   }
 
   const legacySpineDirectionX = visualSegments.spine?.direction?.x;
-  return Number.isFinite(legacySpineDirectionX)
-    ? Math.abs(legacySpineDirectionX)
-    : null;
+  return Number.isFinite(legacySpineDirectionX) ? legacySpineDirectionX : null;
+}
+
+function renderedHeadIntentPitch(debug) {
+  const bonePitch = debug.avatarHead?.bonePitch;
+  return Number.isFinite(bonePitch) ? -bonePitch : null;
+}
+
+function renderedPoseDifference(leftDebug, rightDebug) {
+  let largest = 0;
+  const leftSegments = leftDebug?.avatarVisual?.segments ?? {};
+  const rightSegments = rightDebug?.avatarVisual?.segments ?? {};
+  for (const segment of new Set([...Object.keys(leftSegments), ...Object.keys(rightSegments)])) {
+    largest = Math.max(
+      largest,
+      angle(leftSegments[segment]?.direction, rightSegments[segment]?.direction),
+    );
+  }
+
+  for (const bone of ["chest", "upperChest"]) {
+    for (const axis of ["x", "y", "z"]) {
+      const left = leftDebug?.avatarSpine?.[bone]?.[axis];
+      const right = rightDebug?.avatarSpine?.[bone]?.[axis];
+      if (Number.isFinite(left) && Number.isFinite(right)) {
+        largest = Math.max(largest, Math.abs(left - right));
+      }
+    }
+  }
+  return largest;
+}
+
+function renderedOwnerFlickerEvidence(previousDebug, currentDebug, nextDebug) {
+  const enteringStep = renderedPoseDifference(previousDebug, currentDebug);
+  const leavingStep = renderedPoseDifference(currentDebug, nextDebug);
+  const returnStep = renderedPoseDifference(previousDebug, nextDebug);
+  return {
+    enteringStep,
+    isVisibleFlicker: enteringStep >= OWNER_FLICKER_RENDERED_STEP &&
+      leavingStep >= OWNER_FLICKER_RENDERED_STEP &&
+      returnStep <= OWNER_FLICKER_RETURN_STEP,
+    leavingStep,
+    returnStep,
+  };
 }
 
 function replayPose(session, frameIndex) {
   return session.samples?.[frameIndex]?.tracking?.pose ?? [];
+}
+
+function replayRetargetPose(session, frameIndex) {
+  const tracking = session.samples?.[frameIndex]?.tracking;
+  return tracking?.worldPose?.length === 33
+    ? tracking.worldPose
+    : tracking?.pose ?? [];
 }
 
 function armSideFromSegment(segmentName) {
@@ -230,10 +326,22 @@ function mirroredSourceFootClearance(pose, avatarSide) {
   return (oppositeAnkle.y - sourceAnkle.y) / torsoLength;
 }
 
-export function analyzeFullSequence({ session, telemetry }) {
+export function analyzeFullSequence({
+  session,
+  telemetry,
+  expectedMotionPipelineFingerprint = null,
+  requireIdentity = false,
+}) {
   const isDeterministicFrameStep = telemetry.playbackMode === "deterministic-rendered-frame-step";
-  const frames = telemetry.frames ?? [];
-  const missingFrames = telemetry.missingFrames ?? [];
+  const frameInspection = inspectReplayTelemetryFrames({
+    frameCount: telemetry.frameCount,
+    frames: telemetry.frames,
+  });
+  const frames = frameInspection.uniqueExpectedFrames;
+  const sourceHash = sourceHashForReplaySession(session);
+  const declaredMissingFrames = Array.isArray(telemetry.missingFrames)
+    ? [...new Set(telemetry.missingFrames.filter(Number.isInteger))].sort((left, right) => left - right)
+    : null;
   const segmentSeries = Object.fromEntries(MIRRORED_SEGMENTS.map((segment) => [
     `${segment.type}:${segment.avatar}`,
     { avatar: [], same: [], source: [], staticFrames: [] },
@@ -244,10 +352,19 @@ export function analyzeFullSequence({ session, telemetry }) {
   const sideBendRendered = [];
   const suppressedLegFrames = [];
   const jerkFrames = [];
+  const ownerFlickers = [];
   const ownerTransitions = [];
+  const transientOwnerTransitions = [];
   const mirrorOwnership = Object.fromEntries(MIRROR_LIMB_PAIRS.map((pair) => [
     pair.type,
-    { ambiguousFrames: [], excludedFrames: [], failedFrames: [], passedFrames: [], samples: 0 },
+    {
+      ambiguousFrames: [],
+      excludedFrames: [],
+      failedFrames: [],
+      hardFailedFrames: [],
+      passedFrames: [],
+      samples: 0,
+    },
   ]));
   let previousFrame = null;
 
@@ -255,17 +372,19 @@ export function analyzeFullSequence({ session, telemetry }) {
     const debug = frame.debug;
     if (!debug) return;
     const pose = replayPose(session, frame.frameIndex);
+    const retargetPose = replayRetargetPose(session, frame.frameIndex);
     const sourceQuality = debug.retarget?.sourceQuality ?? 0;
     const visualSegments = debug.avatarVisual?.segments ?? {};
 
-    if (Math.abs(debug.headRaw?.pitch ?? 0) >= 0.06 && debug.avatarHead) {
+    const renderedHeadPitch = renderedHeadIntentPitch(debug);
+    if (Math.abs(debug.headRaw?.pitch ?? 0) >= 0.06 && renderedHeadPitch !== null) {
       headRaw.push(debug.headRaw.pitch);
-      headRendered.push(debug.avatarHead.bonePitch ?? 0);
+      headRendered.push(renderedHeadPitch);
     }
-    const renderedSideBend = renderedSideBendMagnitude(debug, visualSegments);
-    if (Math.abs(debug.spineDrive?.sideBend ?? 0) >= 0.08 && renderedSideBend !== null) {
-      sideBendRaw.push(Math.abs(debug.spineDrive.sideBend));
-      sideBendRendered.push(renderedSideBend);
+    const finalRenderedSideBend = renderedSideBend(debug, visualSegments);
+    if (Math.abs(debug.spineDrive?.sideBend ?? 0) >= 0.08 && finalRenderedSideBend !== null) {
+      sideBendRaw.push(debug.spineDrive.sideBend);
+      sideBendRendered.push(finalRenderedSideBend);
     }
     if (
       frame.frameIndex >= 5 &&
@@ -278,14 +397,18 @@ export function analyzeFullSequence({ session, telemetry }) {
 
     if (previousFrame?.debug && sourceQuality >= 0.45) {
       const previousPose = replayPose(session, previousFrame.frameIndex);
+      const previousRetargetPose = replayRetargetPose(session, previousFrame.frameIndex);
       const targetRootYawStep = wrappedAngleStep(
         previousFrame.debug.avatarRoot?.targetYaw,
         debug.avatarRoot?.targetYaw,
       );
       const intendedSpineStep = spineDriveStep(previousFrame.debug, debug);
       MIRRORED_SEGMENTS.forEach((segment) => {
-        const currentSource = vector(pose[segment.source[0]], pose[segment.source[1]]);
-        const previousSource = vector(previousPose[segment.source[0]], previousPose[segment.source[1]]);
+        const currentSource = vector(retargetPose[segment.source[0]], retargetPose[segment.source[1]]);
+        const previousSource = vector(
+          previousRetargetPose[segment.source[0]],
+          previousRetargetPose[segment.source[1]],
+        );
         const currentAvatar = visualSegments[segment.avatar]?.direction;
         const previousAvatar = previousFrame.debug.avatarVisual?.segments?.[segment.avatar]?.direction;
         const currentTarget = visualSegments[segment.avatar]?.sourceDirection;
@@ -302,6 +425,13 @@ export function analyzeFullSequence({ session, telemetry }) {
         if (
           !currentSource || !previousSource || !currentAvatar || !previousAvatar ||
           !currentTarget || !previousTarget || !currentSame || !previousSame
+        ) return;
+        const minimumApplicationConfidence = segment.type === "leg" ? 0.25 : 0.3;
+        const currentConfidence = visualSegments[segment.avatar]?.confidence ?? 0;
+        const previousConfidence = previousFrame.debug.avatarVisual?.segments?.[segment.avatar]?.confidence ?? 0;
+        if (
+          currentConfidence < minimumApplicationConfidence ||
+          previousConfidence < minimumApplicationConfidence
         ) return;
         const sourceStep = angle(previousSource, currentSource);
         const targetStep = angle(previousTarget, currentTarget);
@@ -336,7 +466,7 @@ export function analyzeFullSequence({ session, telemetry }) {
           frameArrayIndex,
           pair.sourceRight,
         );
-        if (Math.max(sourceLeftStep, sourceRightStep) < 0.025) return;
+        if (Math.max(sourceLeftStep, sourceRightStep) < pair.minimumSourceStep) return;
         if (Math.abs(sourceLeftStep - sourceRightStep) < 0.015) return;
         const sourceSide = sourceLeftStep > sourceRightStep ? "left" : "right";
         const expectedAvatar = sourceSide === "left" ? pair.avatarRight : pair.avatarLeft;
@@ -375,13 +505,35 @@ export function analyzeFullSequence({ session, telemetry }) {
           return;
         }
         result.samples += 1;
-        if (expectedStep > wrongStep) result.passedFrames.push(detail);
-        else result.failedFrames.push(detail);
+        if (expectedStep > wrongStep) {
+          result.passedFrames.push(detail);
+        } else {
+          result.failedFrames.push(detail);
+          if (
+            wrongStep >= HARD_MIRROR_WRONG_SIDE_STEP &&
+            wrongStep - expectedStep >= HARD_MIRROR_WRONG_SIDE_MARGIN &&
+            expectedStep <= wrongStep * 0.6
+          ) {
+            result.hardFailedFrames.push(detail);
+          }
+        }
       });
 
       const previousOwner = previousFrame.debug.fallbacks?.owners ?? "";
       const owner = debug.fallbacks?.owners ?? "";
       if (owner !== previousOwner) ownerTransitions.push({ frameIndex: frame.frameIndex, from: previousOwner, to: owner });
+      const nextOwner = frames[frameArrayIndex + 1]?.debug?.fallbacks?.owners ?? "";
+      if (previousOwner && owner && nextOwner && owner !== previousOwner && nextOwner === previousOwner) {
+        const evidence = renderedOwnerFlickerEvidence(previousFrame.debug, debug, frames[frameArrayIndex + 1]?.debug);
+        const transition = {
+          ...evidence,
+          frameIndex: frame.frameIndex,
+          from: previousOwner,
+          to: owner,
+        };
+        transientOwnerTransitions.push(transition);
+        if (evidence.isVisibleFlicker) ownerFlickers.push(transition);
+      }
       const previousFooting = previousFrame.debug.avatarVisual?.footing;
       const footing = debug.avatarVisual?.footing;
       if (previousFooting && footing) {
@@ -411,43 +563,123 @@ export function analyzeFullSequence({ session, telemetry }) {
     const sourceTotal = series.source.reduce((sum, value) => sum + value, 0);
     const avatarTotal = series.avatar.reduce((sum, value) => sum + value, 0);
     const sameTotal = series.same.reduce((sum, value) => sum + value, 0);
+    const persistentStaticRuns = persistentFrameRuns(series.staticFrames);
     return [key, {
       mirrorCorrelation: round(correlation(series.source, series.avatar)),
       mirrorResponseRatio: round(avatarTotal / Math.max(sourceTotal, 0.0001)),
       sameSideCorrelation: round(correlation(series.source, series.same)),
       sameSideResponseRatio: round(sameTotal / Math.max(sourceTotal, 0.0001)),
       staticFrameCount: series.staticFrames.length,
+      persistentStaticFrameCount: persistentStaticRuns.reduce((sum, run) => sum + run.length, 0),
+      persistentStaticRuns: persistentStaticRuns.slice(0, 10).map((run) => ({
+        frameEnd: run.at(-1),
+        frameStart: run[0],
+        length: run.length,
+      })),
       worstStaticFrames: series.staticFrames.slice(0, 20),
     }];
   }));
 
   const headResponseRatio = headRendered.reduce((sum, value) => sum + Math.abs(value), 0) /
     Math.max(headRaw.reduce((sum, value) => sum + Math.abs(value), 0), 0.0001);
-  const sideBendResponseRatio = sideBendRendered.reduce((sum, value) => sum + value, 0) /
-    Math.max(sideBendRaw.reduce((sum, value) => sum + value, 0), 0.0001);
+  const sideBendResponseRatio = sideBendRendered.reduce((sum, value) => sum + Math.abs(value), 0) /
+    Math.max(sideBendRaw.reduce((sum, value) => sum + Math.abs(value), 0), 0.0001);
+  const sideBendSourceRange = range(sideBendRaw);
   const eligibleFrameCount = frames.filter((frame) => (frame.debug?.retarget?.sourceQuality ?? 0) >= 0.45).length;
   const failures = [];
-  if (missingFrames.length > 0) failures.push({ code: "rendered-frames-missing", count: missingFrames.length });
-  if (suppressedLegFrames.length / Math.max(eligibleFrameCount, 1) > 0.02) {
+  if (frameInspection.frameCount === 0) {
+    failures.push({ code: "rendered-frame-count-invalid", count: 1 });
+  }
+  if (frameInspection.missingFrameIndexes.length > 0) {
+    failures.push({ code: "rendered-frames-missing", count: frameInspection.missingFrameIndexes.length });
+  }
+  if (frameInspection.duplicateFrameIndexes.length > 0) {
+    failures.push({ code: "rendered-frame-index-duplicate", count: frameInspection.duplicateFrameIndexes.length });
+  }
+  if (frameInspection.unexpectedFrameIndexes.length > 0 || frameInspection.invalidFrameEntries.length > 0) {
+    failures.push({
+      code: "rendered-frame-index-invalid",
+      count: frameInspection.unexpectedFrameIndexes.length + frameInspection.invalidFrameEntries.length,
+    });
+  }
+  if (frameInspection.missingDebugFrameIndexes.length > 0) {
+    failures.push({ code: "rendered-debug-missing", count: frameInspection.missingDebugFrameIndexes.length });
+  }
+  if (frameInspection.missingRenderedFrameIndexes.length > 0) {
+    failures.push({ code: "rendered-avatar-telemetry-missing", count: frameInspection.missingRenderedFrameIndexes.length });
+  }
+  if (
+    declaredMissingFrames &&
+    JSON.stringify(declaredMissingFrames) !== JSON.stringify(frameInspection.missingFrameIndexes)
+  ) {
+    failures.push({ code: "rendered-frame-accounting-mismatch", count: 1 });
+  }
+  if (requireIdentity && telemetry.sessionId !== session?.id) {
+    failures.push({ code: "rendered-session-identity-mismatch", count: 1 });
+  }
+  if (requireIdentity && telemetry.recordingId !== session?.id) {
+    failures.push({ code: "rendered-recording-identity-mismatch", count: 1 });
+  }
+  if (requireIdentity && telemetry.sourceHash !== sourceHash) {
+    failures.push({ code: "rendered-source-hash-mismatch", count: 1 });
+  }
+  if (
+    expectedMotionPipelineFingerprint &&
+    telemetry.motionPipelineFingerprint !== expectedMotionPipelineFingerprint
+  ) {
+    failures.push({ code: "rendered-pipeline-fingerprint-mismatch", count: 1 });
+  }
+  const suppressedLegRuns = persistentFrameRuns(suppressedLegFrames);
+  if (
+    suppressedLegFrames.length / Math.max(eligibleFrameCount, 1) > 0.02 ||
+    suppressedLegRuns.length > 0
+  ) {
     failures.push({ code: "rendered-leg-motion-suppressed", count: suppressedLegFrames.length });
   }
+  Object.entries(segmentMetrics).forEach(([segment, metrics]) => {
+    if (metrics.persistentStaticFrameCount > 0) {
+      failures.push({
+        code: "rendered-segment-held-static",
+        count: metrics.persistentStaticFrameCount,
+        segment,
+      });
+    }
+  });
   if (headRaw.length >= 5 && (correlation(headRaw, headRendered) < 0.7 || headResponseRatio < 0.55)) {
     failures.push({ code: "rendered-head-pitch-under-response", count: headRaw.length });
   }
-  if (sideBendRaw.length >= 5 && (correlation(sideBendRaw, sideBendRendered) < 0.55 || sideBendResponseRatio < 0.35)) {
+  if (
+    sideBendRaw.length >= 5 &&
+    sideBendSourceRange >= MINIMUM_SIDE_BEND_SOURCE_RANGE &&
+    (correlation(sideBendRaw, sideBendRendered) < 0.55 || sideBendResponseRatio < 0.35)
+  ) {
     failures.push({ code: "rendered-side-bend-under-response", count: sideBendRaw.length });
   }
   if (!isDeterministicFrameStep && jerkFrames.length / Math.max(eligibleFrameCount, 1) > 0.01) {
     failures.push({ code: "rendered-motion-jerk", count: jerkFrames.length });
   }
+  if (ownerFlickers.length > 0) {
+    failures.push({ code: "rendered-owner-flicker", count: ownerFlickers.length });
+  }
   const mirrorOwnershipSummary = Object.fromEntries(Object.entries(mirrorOwnership).map(([key, value]) => [
     key,
-    {
+    (() => {
+      const persistentHardMismatchRuns = persistentFrameRuns(
+        value.hardFailedFrames,
+        (frame) => frame.frameIndex,
+      );
+      return {
       ambiguousFrameCount: value.ambiguousFrames.length,
       excludedFrameCount: value.excludedFrames.length,
       failedFrameCount: value.failedFrames.length,
+      hardFailedFrameCount: value.hardFailedFrames.length,
       passRate: round(value.passedFrames.length / Math.max(value.samples, 1)),
       passedFrameCount: value.passedFrames.length,
+      persistentHardMismatchRuns: persistentHardMismatchRuns.slice(0, 10).map((run) => ({
+        frameEnd: run.at(-1).frameIndex,
+        frameStart: run[0].frameIndex,
+        length: run.length,
+      })),
       sampleCount: value.samples,
       worstFrames: value.failedFrames.slice(0, 20).map((frame) => ({
         ...frame,
@@ -455,18 +687,41 @@ export function analyzeFullSequence({ session, telemetry }) {
         sourceStep: round(frame.sourceStep),
         wrongStep: round(frame.wrongStep),
       })),
-    },
+      };
+    })(),
   ]));
   Object.entries(mirrorOwnershipSummary).forEach(([segment, summary]) => {
     if (summary.sampleCount >= 10 && summary.passRate < 0.6) {
       failures.push({ code: "rendered-mirror-side-mismatch", count: summary.failedFrameCount, segment });
+    }
+    if (summary.persistentHardMismatchRuns.length > 0) {
+      failures.push({
+        code: "rendered-mirror-side-persistent-mismatch",
+        count: summary.hardFailedFrameCount,
+        segment,
+      });
     }
   });
 
   return {
     eligibleFrameCount,
     failures,
-    frameCount: telemetry.frameCount,
+    frameAccounting: {
+      compared: frameInspection.compared,
+      complete: frameInspection.complete,
+      expected: frameInspection.frameCount,
+      missing: frameInspection.missingFrameIndexes.length,
+      rendered: frameInspection.rendered,
+    },
+    frameCount: frameInspection.frameCount,
+    frameIntegrity: {
+      duplicateFrameIndexes: frameInspection.duplicateFrameIndexes,
+      invalidFrameEntries: frameInspection.invalidFrameEntries,
+      missingDebugFrameIndexes: frameInspection.missingDebugFrameIndexes,
+      missingFrameIndexes: frameInspection.missingFrameIndexes,
+      missingRenderedFrameIndexes: frameInspection.missingRenderedFrameIndexes,
+      unexpectedFrameIndexes: frameInspection.unexpectedFrameIndexes,
+    },
     head: {
       correlation: round(correlation(headRaw, headRendered)),
       responseRatio: round(headResponseRatio),
@@ -484,20 +739,40 @@ export function analyzeFullSequence({ session, telemetry }) {
     playbackMode: telemetry.playbackMode ?? "timed-playback",
     mirrorSegments: segmentMetrics,
     mirrorSideOwnership: mirrorOwnershipSummary,
-    missingFrameCount: missingFrames.length,
+    missingFrameCount: frameInspection.missingFrameIndexes.length,
+    ownerFlickers: {
+      count: ownerFlickers.length,
+      worstFrames: ownerFlickers.slice(0, 30),
+    },
     ownerTransitions: {
       count: ownerTransitions.length,
       worstFrames: ownerTransitions.slice(0, 30),
     },
+    transientOwnerTransitions: {
+      count: transientOwnerTransitions.length,
+      worstFrames: transientOwnerTransitions.slice(0, 30).map((entry) => ({
+        ...entry,
+        enteringStep: round(entry.enteringStep),
+        leavingStep: round(entry.leavingStep),
+        returnStep: round(entry.returnStep),
+      })),
+    },
     sessionId: telemetry.sessionId,
+    sourceHash,
     sideBend: {
       correlation: round(correlation(sideBendRaw, sideBendRendered)),
       responseRatio: round(sideBendResponseRatio),
       sampleCount: sideBendRaw.length,
+      sourceRange: round(sideBendSourceRange),
     },
     status: failures.length === 0 ? "passed" : "blocked",
     suppressedLegMotion: {
       frameCount: suppressedLegFrames.length,
+      persistentRuns: suppressedLegRuns.slice(0, 10).map((run) => ({
+        frameEnd: run.at(-1),
+        frameStart: run[0],
+        length: run.length,
+      })),
       ratio: round(suppressedLegFrames.length / Math.max(eligibleFrameCount, 1)),
       worstFrames: suppressedLegFrames.slice(0, 30),
     },
@@ -511,7 +786,12 @@ async function main() {
   if (!args.session) throw new Error("Pass --session <file>.");
   const telemetry = JSON.parse(await readFile(path.resolve(args.telemetry), "utf8"));
   const session = JSON.parse(await readFile(path.resolve(args.session), "utf8"));
-  const report = analyzeFullSequence({ session, telemetry });
+  const report = analyzeFullSequence({
+    expectedMotionPipelineFingerprint: movementPipelineFingerprint(),
+    requireIdentity: true,
+    session,
+    telemetry,
+  });
   if (args.out) await writeFile(path.resolve(args.out), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
   if (args.strict && report.status !== "passed") process.exitCode = 1;

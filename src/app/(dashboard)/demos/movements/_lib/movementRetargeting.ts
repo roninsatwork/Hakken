@@ -1,3 +1,4 @@
+import type { MovementMirrorMode } from "./movementMirrorMapping";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 export type MovementRetargetVector = {
@@ -77,6 +78,65 @@ export type MovementRetargetFrame = {
   space?: MovementRetargetSpace;
   squatDepth: number;
 };
+
+const MIRRORED_RETARGET_SEGMENT_PAIRS = [
+  ["leftUpperArm", "rightUpperArm"],
+  ["leftLowerArm", "rightLowerArm"],
+  ["leftThigh", "rightThigh"],
+  ["leftShin", "rightShin"],
+  ["leftFoot", "rightFoot"],
+] as const satisfies ReadonlyArray<readonly [MovementRetargetSegmentName, MovementRetargetSegmentName]>;
+
+function mirrorRetargetVector(vector: MovementRetargetVector): MovementRetargetVector {
+  return { ...vector, x: -vector.x };
+}
+
+function mirrorRetargetSegment(segment: MovementRetargetSegment): MovementRetargetSegment {
+  return {
+    ...segment,
+    direction: mirrorRetargetVector(segment.direction),
+  };
+}
+
+/**
+ * Converts a neutral source model into the coordinate and anatomical space of
+ * a mirrored presentation. The live player source remains raw so scoring can
+ * retain anatomical truth; the avatar's display decision must use this mapped
+ * neutral, otherwise a reflected display frame is solved against an
+ * unreflected baseline and drives the avatar back to the player's raw side.
+ */
+export function mapMovementRetargetSourceModelForDisplay({
+  mirrorMode,
+  sourceModel,
+}: {
+  mirrorMode: MovementMirrorMode;
+  sourceModel: MovementRetargetSourceModel | null;
+}): MovementRetargetSourceModel | null {
+  if (!sourceModel || mirrorMode === "same-side") return sourceModel;
+
+  const segments = Object.fromEntries(Object.entries(sourceModel.segments).map(([name, segment]) => [
+    name,
+    segment ? mirrorRetargetSegment(segment) : segment,
+  ])) as MovementRetargetSourceModel["segments"];
+
+  MIRRORED_RETARGET_SEGMENT_PAIRS.forEach(([left, right]) => {
+    const sourceLeft = sourceModel.segments[left];
+    const sourceRight = sourceModel.segments[right];
+    segments[left] = sourceRight ? mirrorRetargetSegment(sourceRight) : undefined;
+    segments[right] = sourceLeft ? mirrorRetargetSegment(sourceLeft) : undefined;
+  });
+
+  return {
+    ...sourceModel,
+    hipCenter: { ...sourceModel.hipCenter, x: 1 - sourceModel.hipCenter.x },
+    neutralKneeLift: {
+      left: sourceModel.neutralKneeLift.right,
+      right: sourceModel.neutralKneeLift.left,
+    },
+    segments,
+    shoulderCenter: { ...sourceModel.shoulderCenter, x: 1 - sourceModel.shoulderCenter.x },
+  };
+}
 
 const SEGMENT_LANDMARKS: Record<MovementRetargetSegmentName, [number, number]> = {
   spine: [23, 11],

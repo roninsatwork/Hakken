@@ -202,6 +202,9 @@ export function buildMovementAvatarTrackingDebugState({
   avatarHead: {
     appliedLocalPitch: number;
     appliedLocalRoll: number;
+    appliedWorldPitch?: number;
+    appliedWorldRoll?: number;
+    appliedWorldYaw?: number;
     bonePitch: number;
     boneRoll: number;
     boneYaw: number;
@@ -239,6 +242,15 @@ export function buildMovementAvatarTrackingDebugState({
     avatarHead: {
       appliedLocalPitch: Number(avatarHead.appliedLocalPitch.toFixed(4)),
       appliedLocalRoll: Number(avatarHead.appliedLocalRoll.toFixed(4)),
+      ...(avatarHead.appliedWorldPitch === undefined ? {} : {
+        appliedWorldPitch: Number(avatarHead.appliedWorldPitch.toFixed(4)),
+      }),
+      ...(avatarHead.appliedWorldRoll === undefined ? {} : {
+        appliedWorldRoll: Number(avatarHead.appliedWorldRoll.toFixed(4)),
+      }),
+      ...(avatarHead.appliedWorldYaw === undefined ? {} : {
+        appliedWorldYaw: Number(avatarHead.appliedWorldYaw.toFixed(4)),
+      }),
       boneYaw: Number(avatarHead.boneYaw.toFixed(4)),
       bonePitch: Number(avatarHead.bonePitch.toFixed(4)),
       boneRoll: Number(avatarHead.boneRoll.toFixed(4)),

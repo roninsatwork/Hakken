@@ -5,6 +5,10 @@ import { buildRecordedMovementMotionFrame } from "./movementRecordedMotionFrame"
 import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import { buildMovementCalibration } from "./movementTrackingCalibration";
 import { prepareVrmSolverInput } from "./vrmRigging";
+import {
+  buildOppositePlayerImitationOracle,
+  buildOppositePlayerRetargetSourceModelOracle,
+} from "../replay-lab/_lib/replayThreePartyMirrorOracle";
 
 const expectedBilateralPosePairs = [
   [1, 4],
@@ -109,5 +113,31 @@ describe("movement mirror contract", () => {
         z: -leftIndex,
       });
     });
+  });
+
+  it("gives the display-side player retarget frame the instructor's final anatomical targets", () => {
+    const instructorPayload = makeMovementAvatarProofMotionPayload("right-arm-raise");
+    const instructorModel = buildMovementRetargetSourceModel({
+      poseLandmarks: neutralPayload.landmarks,
+    });
+    const playerPayload = buildOppositePlayerImitationOracle(instructorPayload);
+    if (!playerPayload.landmarks) {
+      throw new Error("The opposite-player oracle must preserve source landmarks.");
+    }
+    const instructor = buildRecordedMovementMotionFrame({
+      isPlaying: true,
+      motionRef: instructorPayload,
+      retargetSourceModel: instructorModel,
+    });
+    const player = buildLiveMovementMotionFrame({
+      calibration: buildMovementCalibration({ poseLandmarks: playerPayload.landmarks }),
+      isPlaying: true,
+      motionRef: playerPayload,
+      retargetSourceModel: buildOppositePlayerRetargetSourceModelOracle(instructorModel),
+    });
+
+    expect(player?.avatarDisplayDecision.retargetFrame.segments).toEqual(
+      instructor?.avatarDisplayDecision.retargetFrame.segments,
+    );
   });
 });

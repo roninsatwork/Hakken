@@ -22,15 +22,15 @@ describe("Replay three-party independent imitation oracle", () => {
     const oppositeLandmarks = opposite.landmarks ?? [];
 
     expect(REPLAY_THREE_PARTY_POSE_PAIRS).toHaveLength(16);
-    expect(oppositeLandmarks[0]).toEqual({ ...instructor[0], x: 1 });
+    expect(oppositeLandmarks[0]).toEqual(instructor[0]);
     REPLAY_THREE_PARTY_POSE_PAIRS.forEach(([leftIndex, rightIndex]) => {
       expect(oppositeLandmarks[leftIndex]).toEqual({
         ...instructor[rightIndex],
-        x: 1 - instructor[rightIndex]!.x,
+        x: instructor[rightIndex]!.x,
       });
       expect(oppositeLandmarks[rightIndex]).toEqual({
         ...instructor[leftIndex],
-        x: 1 - instructor[leftIndex]!.x,
+        x: instructor[leftIndex]!.x,
       });
     });
     expect(oppositeLandmarks).not.toBe(instructor);
@@ -51,8 +51,8 @@ describe("Replay three-party independent imitation oracle", () => {
     };
     const opposite = buildOppositePlayerImitationOracle(instructor);
 
-    expect(opposite.hands?.left?.landmarks[0]?.x).toBeCloseTo(0.1);
-    expect(opposite.hands?.right?.landmarks[0]?.x).toBeCloseTo(0.9);
+    expect(opposite.hands?.left?.landmarks[0]?.x).toBeCloseTo(0.9);
+    expect(opposite.hands?.right?.landmarks[0]?.x).toBeCloseTo(0.1);
     expect(opposite.blendshapes?.map((shape) => shape.categoryName)).toEqual([
       "eyeBlinkRight",
       "eyeBlinkLeft",

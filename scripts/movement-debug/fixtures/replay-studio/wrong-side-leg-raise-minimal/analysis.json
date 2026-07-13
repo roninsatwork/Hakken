@@ -1,0 +1,156 @@
+{
+  "failures": [
+    {
+      "code": "false_knee_raise_candidate",
+      "detail": "Frame 7 drove the left avatar leg for a right source leg raise.",
+      "frameIndex": 7,
+      "semanticCode": "leg-lift-wrong-side",
+      "severity": "error"
+    }
+  ],
+  "gamePath": {
+    "frames": [
+      {
+        "frameIndex": 7,
+        "rootHeadingYaw": 0.18,
+        "rootMotionIntentKey": "feet-floor",
+        "rootMotionTravelDirection": "none",
+        "rootPathDistance": 0.01
+      }
+    ]
+  },
+  "metrics": {
+    "avatarVisualFrameCount": 1
+  },
+  "replayStudio": {
+    "frames": [
+      {
+        "actual": {
+          "comparedLowerBodySegments": 4,
+          "comparedUpperBodySegments": 2,
+          "feetOwner": "neutral",
+          "lowerBodyDirectionError": 0.44,
+          "lowerOwner": "player-left-leg-raise",
+          "supportIntent": "feet-floor",
+          "supportPresentation": "none",
+          "upperBodyDirectionError": 0.08
+        },
+        "expected": {
+          "motion": "leg-raise",
+          "owner": "player-right-leg-raise",
+          "side": "right"
+        },
+        "failures": [
+          {
+            "analyzerCode": "false_knee_raise_candidate",
+            "code": "avatar-wrong-side",
+            "detail": "Frame 7 drove the left avatar leg for a right source leg raise.",
+            "doNotPatch": [
+              "Do not add route-local side swaps; update the shared mirror contract and prove rendered parity."
+            ],
+            "evidenceStatus": "proven",
+            "focusedTests": [
+              "src/app/(dashboard)/demos/movements/_lib/movementMirrorMapping.test.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementMirrorContract.test.ts",
+              "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayThreePartyMirrorOracle.test.ts"
+            ],
+            "likelyFiles": [
+              "src/app/(dashboard)/demos/movements/_lib/movementMirrorMapping.ts",
+              "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodySourceOwnerDecision.ts",
+              "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayThreePartyMirrorOracle.ts"
+            ],
+            "nextFixArea": "mirror mapping / side ownership",
+            "repairStage": "mirror-side-mapping",
+            "severity": "error"
+          }
+        ],
+        "frameIndex": 7,
+        "source": {
+          "readiness": "ready",
+          "sourceQuality": 0.91,
+          "visibleBodyParts": [
+            "head",
+            "torso",
+            "leftFoot",
+            "rightFoot"
+          ],
+          "weakestGroup": "feet"
+        },
+        "status": "blocked"
+      }
+    ],
+    "session": {
+      "blockedFrameCount": 1,
+      "failureCount": 1,
+      "recordingId": "wrong-side-leg-raise-minimal",
+      "reviewedFrameCount": 0,
+      "status": "blocked",
+      "summary": {
+        "averageAvatarLowerBodyDirectionError": 0.44,
+        "avatarVisualFrameCount": 1,
+        "lowerBodyOwnerTransitionsPerSecond": 0.2,
+        "visualMatchScore": 0.72
+      },
+      "worstFrames": [
+        {
+          "actual": {
+            "comparedLowerBodySegments": 4,
+            "comparedUpperBodySegments": 2,
+            "feetOwner": "neutral",
+            "lowerBodyDirectionError": 0.44,
+            "lowerOwner": "player-left-leg-raise",
+            "supportIntent": "feet-floor",
+            "supportPresentation": "none",
+            "upperBodyDirectionError": 0.08
+          },
+          "expected": {
+            "motion": "leg-raise",
+            "owner": "player-right-leg-raise",
+            "side": "right"
+          },
+          "failures": [
+            {
+              "analyzerCode": "false_knee_raise_candidate",
+              "code": "avatar-wrong-side",
+              "detail": "Frame 7 drove the left avatar leg for a right source leg raise.",
+              "doNotPatch": [
+                "Do not add route-local side swaps; update the shared mirror contract and prove rendered parity."
+              ],
+              "evidenceStatus": "proven",
+              "focusedTests": [
+                "src/app/(dashboard)/demos/movements/_lib/movementMirrorMapping.test.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementMirrorContract.test.ts",
+                "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayThreePartyMirrorOracle.test.ts"
+              ],
+              "likelyFiles": [
+                "src/app/(dashboard)/demos/movements/_lib/movementMirrorMapping.ts",
+                "src/app/(dashboard)/demos/movements/_lib/movementAvatarLowerBodySourceOwnerDecision.ts",
+                "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayThreePartyMirrorOracle.ts"
+              ],
+              "nextFixArea": "mirror mapping / side ownership",
+              "repairStage": "mirror-side-mapping",
+              "severity": "error"
+            }
+          ],
+          "frameIndex": 7,
+          "source": {
+            "readiness": "ready",
+            "sourceQuality": 0.91,
+            "visibleBodyParts": [
+              "head",
+              "torso",
+              "leftFoot",
+              "rightFoot"
+            ],
+            "weakestGroup": "feet"
+          },
+          "status": "blocked"
+        }
+      ]
+    }
+  },
+  "sessionId": "wrong-side-leg-raise-minimal",
+  "summary": {
+    "frameCount": 1
+  }
+}

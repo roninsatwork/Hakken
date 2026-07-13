@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { MovementDebugReplaySession } from "../../_lib/movementDebugReplay";
 import type { MovementReplayAnalysis } from "../../_lib/movementReplayAnalyzer";
+import type { ReplayStudioRepairPacket } from "../../_lib/movementReplayStudioRepairPacket";
 import { drawMovementSkeleton } from "../../_lib/movementSkeleton";
 import {
   captureFileName,
@@ -13,11 +14,31 @@ import {
   selectStripFrameIndexes,
 } from "../_lib/replayLabHelpers";
 
+export function buildReplayStudioFixLog({
+  analysis,
+  currentReplayStudioFrameVerdict,
+  repairPacket,
+}: {
+  analysis: MovementReplayAnalysis;
+  currentReplayStudioFrameVerdict: MovementReplayAnalysis["replayStudio"]["frames"][number] | undefined;
+  repairPacket: ReplayStudioRepairPacket;
+}) {
+  return {
+    currentFrame: currentReplayStudioFrameVerdict ?? null,
+    failures: analysis.failures,
+    generatedAt: repairPacket.generatedAt,
+    recordingId: repairPacket.recording.id,
+    repairPacket,
+    replayStudio: analysis.replayStudio.session,
+  };
+}
+
 export function useReplayLabCaptures({
   activeRecordingId,
   analysis,
   currentReplayStudioFrameVerdict,
   frameCount,
+  repairPacket,
   replaySession,
   safeFrameIndex,
   setIsPlaying,
@@ -26,6 +47,7 @@ export function useReplayLabCaptures({
   analysis: MovementReplayAnalysis | null;
   currentReplayStudioFrameVerdict: MovementReplayAnalysis["replayStudio"]["frames"][number] | undefined;
   frameCount: number;
+  repairPacket: ReplayStudioRepairPacket | null;
   replaySession: MovementDebugReplaySession | null;
   safeFrameIndex: number;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -126,15 +148,17 @@ export function useReplayLabCaptures({
   };
 
   const exportReplayStudioFixLog = () => {
-    if (!analysis) return;
+    if (!analysis || !repairPacket) return;
+    if (repairPacket.recording.sourceHash === "sha256:pending") {
+      setCaptureStatus("Source identity is still being calculated. Try the export again in a moment.");
+      return;
+    }
 
-    const fixLog = {
-      generatedAt: new Date().toISOString(),
-      recordingId: activeRecordingId,
-      replayStudio: analysis.replayStudio.session,
-      currentFrame: currentReplayStudioFrameVerdict ?? null,
-      failures: analysis.failures,
-    };
+    const fixLog = buildReplayStudioFixLog({
+      analysis,
+      currentReplayStudioFrameVerdict,
+      repairPacket,
+    });
     downloadDataUrl(
       captureFileName(activeRecordingId, "replay-studio-fix-log.json"),
       `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(fixLog, null, 2))}`,

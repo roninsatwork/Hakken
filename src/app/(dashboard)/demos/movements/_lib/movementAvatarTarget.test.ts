@@ -118,6 +118,7 @@ describe("movement avatar target", () => {
       avatarRole: "player",
       decision,
       lowerBodyVisualState: {
+        hasEstablishedLegRetarget: true,
         squatPresentationDepth: 0,
         visualRootDrop: 0,
       },
@@ -127,6 +128,111 @@ describe("movement avatar target", () => {
     expect(target.lowerBodyOwner).toBe("player-retarget");
     expect(target.feetOwner).toBe("neutral");
     expect(target.shouldHoldPlayerSquatPose).toBe(false);
+  });
+
+  it("keeps a bilateral partial player leg target active during a readiness dip", () => {
+    const readyDecision = resolveDecision({
+      avatarRole: "player",
+      pose: withCorePose(),
+    });
+    const decision = {
+      ...readyDecision,
+      lowerBodySegmentMotion: 0.14,
+      lowerBodyTrackingReady: false,
+      lowerOwner: "retarget-partial-fallback",
+      rawLowerBodyTrackingReady: false,
+      retargetApplicableLegs: 2,
+      retargetApplicableThighs: 2,
+      retargetSolvedLegs: 2,
+      retargetFrame: {
+        ...readyDecision.retargetFrame,
+        debug: {
+          ...readyDecision.retargetFrame.debug,
+          sourceQuality: 0.5,
+        },
+      },
+    };
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision,
+      lowerBodyVisualState: {
+        hasEstablishedLegRetarget: true,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(decision.retargetApplicableLegs).toBe(2);
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.lowerBodyOwner).toBe("retarget-partial-fallback");
+  });
+
+  it("does not acquire partial leg retarget before a complete solve establishes ownership", () => {
+    const readyDecision = resolveDecision({
+      avatarRole: "player",
+      pose: withCorePose(),
+    });
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision: {
+        ...readyDecision,
+        lowerBodySegmentMotion: 0.14,
+        lowerBodyTrackingReady: false,
+        lowerOwner: "retarget-partial-fallback",
+        rawLowerBodyTrackingReady: false,
+        retargetApplicableLegs: 2,
+        retargetApplicableThighs: 2,
+        retargetSolvedLegs: 2,
+        retargetFrame: {
+          ...readyDecision.retargetFrame,
+          debug: {
+            ...readyDecision.retargetFrame.debug,
+            sourceQuality: 0.5,
+          },
+        },
+      },
+      lowerBodyVisualState: {
+        hasEstablishedLegRetarget: false,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(target.stageDecision).toBeNull();
+  });
+
+  it("acquires a three-segment partial target when the recorded legs are clearly moving", () => {
+    const readyDecision = resolveDecision({
+      avatarRole: "player",
+      pose: withCorePose(),
+    });
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision: {
+        ...readyDecision,
+        lowerBodySegmentMotion: 0.24,
+        lowerBodyTrackingReady: false,
+        lowerOwner: "retarget-partial-fallback",
+        rawLowerBodyTrackingReady: false,
+        retargetApplicableLegs: 3,
+        retargetApplicableThighs: 2,
+        retargetSolvedLegs: 3,
+        retargetFrame: {
+          ...readyDecision.retargetFrame,
+          debug: {
+            ...readyDecision.retargetFrame.debug,
+            sourceQuality: 0.5,
+          },
+        },
+      },
+      lowerBodyVisualState: {
+        hasEstablishedLegRetarget: false,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(target.stageDecision?.stage).toBe("retarget");
   });
 
   it("keeps complete feet-floor side-bend legs on continuous retarget across the old threshold", () => {

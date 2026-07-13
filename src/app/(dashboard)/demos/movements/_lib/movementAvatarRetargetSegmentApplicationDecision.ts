@@ -1,7 +1,7 @@
 import type {
   MovementAvatarRetargetSegmentApplicationDecision,
   MovementAvatarRetargetSegmentType,
-} from "./movementAvatarPipeline";
+} from "./movementAvatarPipelineTypes";
 import {
   getMovementRetargetSegmentZScale,
   type MovementRetargetFrame,
@@ -11,6 +11,16 @@ import {
   DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   type MovementAvatarTrackingProfile,
 } from "./movementTrackingCalibration";
+
+export function getMovementAvatarRetargetSegmentMinimumConfidence(
+  segmentType: MovementAvatarRetargetSegmentType,
+) {
+  return segmentType === "foot"
+    ? 0.03
+    : segmentType === "leg"
+      ? 0.25
+      : 0.3;
+}
 
 export function resolveMovementAvatarRetargetSegmentApplication({
   avatarRole,
@@ -66,7 +76,15 @@ export function resolveMovementAvatarRetargetSegmentApplication({
     zScale,
   });
 
-  const minimumConfidence = segmentType === "foot" ? 0.03 : 0.3;
+  // A hard 0.30 leg cutoff caused a one-frame ownership flip whenever a
+  // partially occluded shin hovered around that boundary: the visual path
+  // alternated between a complete four-leg solve and a partial fallback even
+  // though the recorded direction itself remained continuous. Keep a small
+  // continuation band below the normal 0.30 recovery ramp. The existing
+  // 0.08 slerp and 0.08-radian local-angle cap make that band a conservative
+  // hold-and-refine path, while genuinely unavailable legs (< 0.25) still do
+  // not drive the rig.
+  const minimumConfidence = getMovementAvatarRetargetSegmentMinimumConfidence(segmentType);
   if (!segment || segment.confidence < minimumConfidence) return inactiveDecision("low-confidence");
 
   return {

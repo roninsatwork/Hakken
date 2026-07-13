@@ -90,6 +90,8 @@ Mirror acceptance requires actual rendered VRM-bone proof. For shared avatar-beh
 
 Replay Studio is the motion source of truth. If avatar motion is broken, fix the Replay/shared motion pipeline first, prove it with recorded data such as FULL MOTION EXERCISES, and then make Game Studio consume that same shared result. Do not patch Game Studio with separate bone rules, pose-specific tuning, or live-only presentation numbers that diverge from Replay. Any remaining Game Studio difference must be explicit input cleanup before the shared pipeline, or documented VRM application plumbing with parity proof.
 
+Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/replay-studio-agent-repair-harness-plan.md`. It defines the required record-once repair loop, canonical repair packet, durable fixture strategy, rendered telemetry, and one-command acceptance workflow. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
+
 When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
 
 ## Project Guardrails

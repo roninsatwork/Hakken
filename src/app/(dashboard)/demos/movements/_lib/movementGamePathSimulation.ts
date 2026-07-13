@@ -5,6 +5,7 @@ import type {
 } from "./movementDebugReplay";
 import {
   buildMovementAvatarRetargetDebug,
+  resolveMovementAvatarEstablishedLegRetarget,
   resolveMovementAvatarLowerBodyVisualDecision,
   type MovementAvatarLowerBodyVisualState,
   type MovementAvatarPipelineDecision,
@@ -181,6 +182,7 @@ export function buildMovementGamePathSimulation(
   );
 
   let lowerBodyVisualState: MovementAvatarLowerBodyVisualState = {
+    hasEstablishedLegRetarget: false,
     squatPresentationDepth: 0,
     visualRootDrop: 0,
   };
@@ -222,7 +224,15 @@ export function buildMovementGamePathSimulation(
       previousState: lowerBodyVisualState,
       recordedSquatPresentationDepth: getRecordedSquatPresentationDepth(decision.retargetFrame),
     });
-    lowerBodyVisualState = visualDecision.state;
+    lowerBodyVisualState = {
+      ...visualDecision.state,
+      hasEstablishedLegRetarget: resolveMovementAvatarEstablishedLegRetarget({
+        applicableLegs: decision.retargetApplicableLegs,
+        applicableThighs: decision.retargetApplicableThighs,
+        previousState: lowerBodyVisualState,
+        sourceQuality: decision.retargetFrame.debug.sourceQuality,
+      }),
+    };
     const lowerBodyTarget = resolveGamePathLowerBodyTarget({
       decision,
       lowerBodyVisualState,

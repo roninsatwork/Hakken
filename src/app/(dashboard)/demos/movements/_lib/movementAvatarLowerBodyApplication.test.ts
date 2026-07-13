@@ -160,6 +160,18 @@ describe("movement avatar lower-body application plan", () => {
     expect(plan.shouldEaseLowerBodyToNeutral).toBe(true);
   });
 
+  it("turns player neutral into the same neutral easing and bilateral foot plant", () => {
+    const plan = resolveMovementAvatarLowerBodyApplicationPlan({
+      lowerBodyDrive: drive(),
+      lowerBodyTarget: target(stage("player-neutral")),
+    });
+
+    expect(plan.mode).toBe("player-neutral");
+    if (plan.mode !== "player-neutral") throw new Error("Expected player-neutral plan.");
+    expect(plan.plantInstructorFeet).toEqual(["right", "left"]);
+    expect(plan.shouldEaseLowerBodyToNeutral).toBe(true);
+  });
+
   it("leaves retarget counts and fallback decisions to the retarget application path", () => {
     const plan = resolveMovementAvatarLowerBodyApplicationPlan({
       lowerBodyDrive: drive(),
@@ -301,6 +313,53 @@ describe("movement avatar lower-body application plan", () => {
     expect(result.handled).toBe(true);
     expect(result.plantedSquatIkDepth).toBeNull();
     expect(events).toEqual(["neutral", "plant:right,left"]);
+  });
+
+  it("settles neutral feet to the same exact local target after different mirrored retarget histories", () => {
+    const createBones = (footYaw: number) => {
+      const leftFoot = new THREE.Object3D();
+      const rightFoot = new THREE.Object3D();
+      leftFoot.rotation.y = footYaw;
+      rightFoot.rotation.y = -footYaw;
+
+      return {
+        leftFoot,
+        leftLowerLeg: new THREE.Object3D(),
+        leftToes: new THREE.Object3D(),
+        leftUpperLeg: new THREE.Object3D(),
+        rightFoot,
+        rightLowerLeg: new THREE.Object3D(),
+        rightToes: new THREE.Object3D(),
+        rightUpperLeg: new THREE.Object3D(),
+      };
+    };
+    const applyNeutralPlan = (isPlayer: boolean, bones: ReturnType<typeof createBones>) => {
+      const plan = resolveMovementAvatarLowerBodyApplicationPlan({
+        lowerBodyDrive: drive(),
+        lowerBodyTarget: target(stage(isPlayer ? "player-neutral" : "recorded-neutral")),
+      });
+
+      applyMovementAvatarLowerBodyNonRetargetApplicationPlanToVrmBones({
+        applyPlantedSquatIk: (depth) => depth,
+        currentFeetOwner: "neutral",
+        isPlayer,
+        lookupBone: (bone) => bones[bone as keyof typeof bones],
+        lowerBodyNeutralSlerp: 0.12,
+        plan,
+        singleLegRaiseSlerp: 0.4,
+        squatFlexionSlerp: 0.62,
+      });
+    };
+    const instructorBones = createBones(0.9);
+    const playerBones = createBones(-0.45);
+
+    applyNeutralPlan(false, instructorBones);
+    applyNeutralPlan(true, playerBones);
+
+    expect(instructorBones.leftFoot.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+    expect(playerBones.leftFoot.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+    expect(instructorBones.rightFoot.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+    expect(playerBones.rightFoot.quaternion.toArray()).toEqual([0, 0, 0, 1]);
   });
 
   it("leaves retarget application plans for the retarget branch", () => {
@@ -754,7 +813,7 @@ describe("movement avatar legacy lower-body aim requests", () => {
     expect(bones.rightToes.quaternion.w).toBe(1);
   });
 
-  it("skips instructor foot plant pose for player avatars", () => {
+  it("applies the shared neutral foot plant pose for player avatars", () => {
     const specs: string[] = [];
 
     const result = applyMovementAvatarInstructorFootPlantPose({
@@ -767,11 +826,11 @@ describe("movement avatar legacy lower-body aim requests", () => {
     });
 
     expect(result).toEqual({
-      applied: false,
-      appliedRotations: 0,
-      feetOwner: "player-retarget",
+      applied: true,
+      appliedRotations: 2,
+      feetOwner: "player-retarget+planted-flat",
     });
-    expect(specs).toEqual([]);
+    expect(specs).toEqual(["rightFoot", "rightToes"]);
   });
 
   it("gates instructor foot plant requests by recorded contacts when provided", () => {
@@ -915,12 +974,71 @@ describe("movement avatar lower-body retarget application plan", () => {
       balancedPlantedSquatDepth: 0,
       instructorSquatPresentationDepth: 0.72,
       lowerBodyDrive: drive(),
-      playerSquatPresentationDepth: 0,
+      playerSquatPresentationDepth: 0.96,
       retargetAppliedLowerBody: 3,
       stageDecision: stage("retarget"),
     });
 
     expect(plan.squatFlexionDepth).toBe(0.72);
+    expect(plan.squatFlexionSlerp).toBe(0.62);
+    expect(plan.plantedSquatIkDepth).toBe(0);
+  });
+
+  it("does not overwrite applicable bilateral thigh targets with canned squat flexion", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: false }),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0,
+      hasBilateralApplicableThighs: true,
+      instructorSquatPresentationDepth: 0.72,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0.96,
+      retargetAppliedLowerBody: 3,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.squatFlexionDepth).toBeNull();
+    expect(plan.plantedSquatIkDepth).toBe(0);
+  });
+
+  it("does not overwrite applicable bilateral thigh targets with planted squat IK", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: false }),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0.8,
+      hasBilateralApplicableThighs: true,
+      instructorSquatPresentationDepth: 0.72,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0.96,
+      retargetAppliedLowerBody: 5,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.plantedSquatIkDepth).toBe(0);
+    expect(plan.squatFlexionDepth).toBeNull();
+  });
+
+  it("uses recorded planted-squat ownership for both roles inside partial retarget", () => {
+    const input = {
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: false }),
+      balancedPlantedSquatDepth: 0.8,
+      instructorSquatPresentationDepth: 0.72,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0.96,
+      retargetAppliedLowerBody: 3,
+      stageDecision: stage("retarget"),
+    };
+    const instructorPlan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      ...input,
+      avatarRole: "instructor",
+    });
+    const playerPlan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      ...input,
+      avatarRole: "player",
+    });
+
+    expect(playerPlan).toEqual(instructorPlan);
+    expect(playerPlan.plantedSquatIkDepth).toBe(0.72);
   });
 
 

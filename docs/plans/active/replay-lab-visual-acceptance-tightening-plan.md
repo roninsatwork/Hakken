@@ -4,6 +4,8 @@ Last reviewed: 2026-07-10
 Status: active acceptance correction; the previous all-nine acceptance result is reopened.
 Scope: make Replay Lab and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if existing analyzer/parity gates are green.
 
+Controlling follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) owns durable fixtures, repair packets, one-command diagnosis, and agent workflow. This plan remains authoritative for false-green prevention and rendered visual acceptance thresholds.
+
 ## Why This Exists
 
 The current 9-recording avatar-follow gate can pass while Replay Lab still shows visible avatar mismatch. The screenshot reviewed on 2026-07-09 showed a frame with:

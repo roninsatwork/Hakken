@@ -1,6 +1,9 @@
 import { extractOwner, type MovementDebugReplaySession } from "../../_lib/movementDebugReplay";
 import type { MovementReplayAnalysis, MovementReplayFailure } from "../../_lib/movementReplayAnalyzer";
+import type { ReplayStudioRepairPacket } from "../../_lib/movementReplayStudioRepairPacket";
 import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
+import { buildReplayAgentDiagnosisNavigationTargets } from "../_lib/replayAgentDiagnosisNavigation";
+import type { AvatarFollowCriterionDisplay } from "../_lib/replayAvatarFollowDiagnosis";
 import {
   avatarFollowCriterionClass,
   buildPathStripPoints,
@@ -10,7 +13,7 @@ import {
   formatPoint,
   getReplayStudioParitySnapshot,
 } from "../_lib/replayLabHelpers";
-import type { AvatarFollowCriterionStatus } from "../_lib/replayLabHelpers";
+import ReplayAgentDiagnosisPanel from "./ReplayAgentDiagnosisPanel";
 
 type ReplayStudioParitySnapshot = ReturnType<typeof getReplayStudioParitySnapshot>;
 
@@ -18,12 +21,7 @@ type ReplayCurrentFramePanelProps = {
   analysis: MovementReplayAnalysis | null;
   armConfidence: number | undefined;
   avatarFollowAcceptanceStatus: string;
-  avatarFollowCriteria: Array<{
-    key: string;
-    label: string;
-    metric: string;
-    status: AvatarFollowCriterionStatus;
-  }>;
+  avatarFollowCriteria: AvatarFollowCriterionDisplay[];
   avatarFollowJudgeText: string;
   avatarFollowSessionFailures: MovementReplayFailure[];
   currentAvatarDebug: MovementTrackingDebugState | null;
@@ -56,6 +54,7 @@ type ReplayCurrentFramePanelProps = {
   onSeekFrame: (frameIndex: number) => void;
   replayFeetOwner: string | undefined;
   replayLowerOwner: string | undefined;
+  repairPacket: ReplayStudioRepairPacket | null;
   replayStudioParity: {
     diffs: string[];
     label: string;
@@ -105,6 +104,7 @@ export default function ReplayCurrentFramePanel({
   onSeekFrame,
   replayFeetOwner,
   replayLowerOwner,
+  repairPacket,
   replayStudioParity,
   replayStudioWorstFrames,
   rootMotionLabel,
@@ -117,6 +117,7 @@ export default function ReplayCurrentFramePanel({
   const currentRetarget = currentAvatarDebug?.retarget;
   const currentFallbacks = currentAvatarDebug?.fallbacks;
   const currentSpineDrive = currentAvatarDebug?.spineDrive;
+  const agentDiagnosisNavigationTargets = buildReplayAgentDiagnosisNavigationTargets(analysis);
 
   return (
     <div className="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-[8px] border border-border-dim bg-sidebar/35 p-2">
@@ -306,6 +307,13 @@ export default function ReplayCurrentFramePanel({
                   : "--"}
               </dd>
             </dl>
+            {repairPacket ? (
+              <ReplayAgentDiagnosisPanel
+                navigationTargets={agentDiagnosisNavigationTargets}
+                onSeekFrame={onSeekFrame}
+                repairPacket={repairPacket}
+              />
+            ) : null}
             {replayStudioWorstFrames.length > 0 ? (
               <div
                 className="mt-2 flex flex-col gap-1.5"

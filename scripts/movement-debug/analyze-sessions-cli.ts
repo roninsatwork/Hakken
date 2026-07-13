@@ -697,11 +697,14 @@ function rowsContainStorageBackedRecordings(rows: unknown) {
   return records.some((recording) => !isInlinePoseData(recording.poseData));
 }
 
-function resolveRecordingExportPath(args: CliArgs, rows: unknown) {
+export function resolveRecordingExportPath(args: CliArgs, rows: unknown) {
   if (args.source !== "recordings") return null;
   if (args.exportPath) return resolve(args.exportPath);
   if (!args.autoExport) return null;
   if (!rowsContainStorageBackedRecordings(rows)) return null;
+  if (args.createExport) {
+    return resolve(DEFAULT_REPLAY_RUNS_DIR, `${timestampForPath()}-movement-recordings.convex-export.zip`);
+  }
 
   return readLatestExportPath() ??
     resolve(DEFAULT_REPLAY_RUNS_DIR, `${timestampForPath()}-movement-recordings.convex-export.zip`);

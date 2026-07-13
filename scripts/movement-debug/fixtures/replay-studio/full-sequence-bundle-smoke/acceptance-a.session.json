@@ -1,0 +1,17 @@
+{
+  "id": "full-sequence-smoke-a",
+  "movementId": "full-sequence-smoke-a",
+  "sampleCount": 2,
+  "samples": [
+    {
+      "tracking": {
+        "pose": []
+      }
+    },
+    {
+      "tracking": {
+        "pose": []
+      }
+    }
+  ]
+}

@@ -42,6 +42,7 @@ export function createMovementAvatarPlayerLegRaiseHoldState(): MovementAvatarPla
 
 export function createMovementAvatarLowerBodyVisualState(): MovementAvatarLowerBodyVisualState {
   return {
+    hasEstablishedLegRetarget: false,
     squatPresentationDepth: 0,
     visualRootDrop: 0,
   };
