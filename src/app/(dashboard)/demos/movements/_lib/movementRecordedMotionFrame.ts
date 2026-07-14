@@ -1,67 +1,13 @@
 import {
-  buildMovementSourceFrame,
-} from "./movementSourceFrame";
-import {
-  resolveMovementMotionFrame,
-  type MovementMotionFrame,
-} from "./movementMotionFrame";
-import { resolveMovementDisplayLandmarkFrame } from "./movementDisplayLandmarks";
-import type { MovementRetargetSourceModel } from "./movementRetargeting";
-import type { MovementCalibration, TrackingLandmark } from "./movementTrackingCalibration";
-import {
-  getVrmMotionLandmarks,
-  type VrmMotionPayload,
-  type VrmMotionRef,
-} from "./vrmRigging";
+  buildMovementGameInstructorRuntimeFrame,
+  type BuildMovementGameInstructorRuntimeFrameInput,
+} from "./movementGameRuntimeFrame";
+import type { MovementMotionFrame } from "./movementMotionFrame";
 
-export type BuildRecordedMovementMotionFrameInput = {
-  calibration?: MovementCalibration | null;
-  capturedAt?: number;
-  isPlaying: boolean;
-  motionRef: VrmMotionRef;
-  previousMotionFrame?: MovementMotionFrame | null;
-  retargetSourceModel: MovementRetargetSourceModel | null;
-};
+export type BuildRecordedMovementMotionFrameInput = BuildMovementGameInstructorRuntimeFrameInput;
 
-export function buildRecordedMovementMotionFrame({
-  calibration = null,
-  capturedAt = Date.now(),
-  isPlaying,
-  motionRef,
-  previousMotionFrame = null,
-  retargetSourceModel,
-}: BuildRecordedMovementMotionFrameInput): MovementMotionFrame | null {
-  const payload = motionRef && !Array.isArray(motionRef) ? motionRef as VrmMotionPayload : null;
-  const rawLandmarks = getVrmMotionLandmarks(motionRef);
-  if (rawLandmarks.length < 33) return null;
-
-  const sourceWorldPoseLandmarks = payload?.worldLandmarks?.length === 33
-    ? payload.worldLandmarks as TrackingLandmark[]
-    : undefined;
-  const sourceFrame = buildMovementSourceFrame({
-    blendshapes: payload?.blendshapes,
-    capturedAt,
-    hands: payload?.hands,
-    poseLandmarks: rawLandmarks as TrackingLandmark[],
-    sourceOrigin: "recorded-replay",
-    sourceStatus: "decoded",
-    worldPoseLandmarks: sourceWorldPoseLandmarks,
-  });
-  const displayFrame = resolveMovementDisplayLandmarkFrame({
-    isPlaying,
-    payload,
-    rawLandmarks,
-    role: "recorded-instructor",
-  });
-
-  return resolveMovementMotionFrame({
-    avatarRole: "instructor",
-    calibration,
-    displayPoseLandmarks: displayFrame.pose,
-    displayWorldPoseLandmarks: displayFrame.worldPose,
-    mirrorMode: "same-side",
-    previousMotionFrame,
-    retargetSourceModel,
-    sourceFrame,
-  });
+export function buildRecordedMovementMotionFrame(
+  input: BuildRecordedMovementMotionFrameInput,
+): MovementMotionFrame | null {
+  return buildMovementGameInstructorRuntimeFrame(input);
 }

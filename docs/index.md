@@ -28,7 +28,7 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 ## Coverage Note
 
-The latest implementation audits found no concrete unlinked documentation file, missing app-route mention, unmentioned Convex source module, empty document, or broken local Markdown link. Future documentation upkeep should still treat broad guides and newly changed implementation areas as active audit targets, because coverage can drift as routes, Convex modules, workflows, scripts, and operator procedures change.
+The latest implementation audit refreshed central plan coverage and the movement/replay handoff notes. Future documentation upkeep should still treat broad guides and newly changed implementation areas as active audit targets, because coverage can drift as routes, Convex modules, workflows, scripts, and operator procedures change.
 
 ### Plans
 
@@ -52,6 +52,7 @@ The latest implementation audits found no concrete unlinked documentation file, 
 - [Company Workspace AI Navigation Plan](./plans/active/company-workspace-ai-navigation-plan.md)
 - [Comprehensive Test Coverage Plan](./plans/active/comprehensive-test-coverage-plan.md)
 - [Final Scale Readiness Plan](./plans/active/final-scale-readiness-plan.md)
+- [Full Agentic System Upgrade Plan](./plans/active/full-agentic-system-upgrade-plan.md)
 - [Global AI Models Split Navigation Plan](./plans/active/global-ai-models-split-navigation-plan.md)
 - [Global AI Navigation Consolidation Plan](./plans/active/global-ai-navigation-consolidation-plan.md)
 - [Global AI Widget Layout Alignment Plan](./plans/active/global-ai-widget-layout-alignment-plan.md)
@@ -71,6 +72,10 @@ The latest implementation audits found no concrete unlinked documentation file, 
 - [Posture Studio Pre-Demo Polish Plan](./plans/active/posture-studio-pre-demo-polish-plan.md)
 - [Posture Studio Skeleton Observability Plan](./plans/active/posture-studio-skeleton-observability-plan.md)
 - [Posture Studio Spine Intelligence Plan](./plans/active/posture-studio-spine-intelligence-plan.md)
+- [Replay Avatar-Follow Correction Plan](./plans/active/replay-avatar-follow-correction-plan.md)
+- [Replay Lab Visual Acceptance Tightening Plan](./plans/active/replay-lab-visual-acceptance-tightening-plan.md)
+- [Replay Studio Agent Repair Harness Plan](./plans/active/replay-studio-agent-repair-harness-plan.md)
+- [Replay Studio Avatar-Follow Observability Plan](./plans/active/replay-studio-avatar-follow-observability-plan.md)
 - [Roadmap And Debt](./plans/active/roadmap-and-debt.md)
 - [Starter Platform Expansion Plan](./plans/active/starter-platform-expansion-plan.md)
 - [System Health Alerts Plan](./plans/active/system-health-alerts-plan.md)
@@ -138,6 +143,10 @@ The latest implementation audits found no concrete unlinked documentation file, 
 #### Required Movement Mirror Methodology
 
 Before changing movement-side behaviour, read **[Movement Mirror And Side-Ownership Contract](./developer/movement-mirror-and-side-ownership-contract.md)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
+
+#### Required Replay Studio Repair Harness
+
+Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the movement agent debugging workflow, read **[Replay Studio Agent Repair Harness Plan](./plans/active/replay-studio-agent-repair-harness-plan.md)**. Replay Studio is the recorded-motion source of truth; use the targeted, fast-subset, and all-nine rendered proof tiers before claiming shared-avatar acceptance, and treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
 
 - [Movement Tracking](./developer/movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)

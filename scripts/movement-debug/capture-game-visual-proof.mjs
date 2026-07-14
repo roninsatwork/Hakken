@@ -10,6 +10,7 @@ const defaultBaseUrl = "http://localhost:3000";
 const defaultPlanPath = "tmp/movement-replay-lab/current-game-visual-proof-plan.json";
 const defaultOutDir = "tmp/movement-replay-lab/captures/game-visual-proof";
 const defaultStorageState = "e2e/.auth/super-admin.json";
+export const gameVisualDiagnosticsTitle = "Your Avatar Diagnostics";
 
 function printHelp() {
   console.log(`Capture focused Game Studio visual proof screenshots.
@@ -286,7 +287,7 @@ async function captureTarget(page, target, outDir) {
   }
 
   await page.locator("canvas").first().waitFor({ state: "visible", timeout: 45_000 });
-  await page.getByText("Student Diagnostics").waitFor({ state: "visible", timeout: 45_000 });
+  await page.getByText(gameVisualDiagnosticsTitle).waitFor({ state: "visible", timeout: 45_000 });
   await page.waitForTimeout(1_500);
 
   const requestedFrame = new URL(target.url).searchParams.get("debugGameFrame");
@@ -305,14 +306,22 @@ async function captureTarget(page, target, outDir) {
   const canvasBuffer = await canvas.screenshot({ path: canvasPath });
   const pageBuffer = await page.screenshot({ fullPage: false, path: pagePath });
   const metrics = canvasPixelMetrics(canvasBuffer);
+  const avatarDebug = await page.evaluate(() => (
+    window.__sonaeMovementAvatarDebug ?? null
+  ));
+  const runtimeSetup = await page.evaluate(() => (
+    window.__sonaeMovementRecordedPlayerSetup ?? null
+  ));
 
   return {
+    avatarDebug,
     canvasPath,
     capturedDebugFrameIndex,
     currentUrl: page.url(),
     metrics,
     pagePath,
     pageScreenshotBytes: pageBuffer.byteLength,
+    runtimeSetup,
     status: metrics.nonBackgroundPixels > 1_000 ? "captured" : "needs-review",
     target,
   };

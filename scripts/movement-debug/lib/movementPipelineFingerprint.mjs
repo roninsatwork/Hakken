@@ -9,6 +9,13 @@ const movementLibDir = path.join(
   "src/app/(dashboard)/demos/movements/_lib",
 );
 const vrmAvatarPath = "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx";
+const gamePlayPath = "src/app/(dashboard)/demos/movements/[id]/play/page.tsx";
+const gameRuntimeHookFiles = [
+  "src/app/(dashboard)/demos/movements/_hooks/useMovementInstructorPlayback.ts",
+  "src/app/(dashboard)/demos/movements/_hooks/useMovementLiveMotionFrame.ts",
+  "src/app/(dashboard)/demos/movements/_hooks/useMovementRecordedMotionFrame.ts",
+  "src/app/(dashboard)/demos/movements/_hooks/useMovementTrackingCalibration.ts",
+];
 const replayProofFiles = [
   "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabFrameFailures.ts",
   "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabHelpers.ts",
@@ -16,8 +23,13 @@ const replayProofFiles = [
 ];
 const sharedMotionFiles = new Set([
   "movementLiveMotionFrame.ts",
+  "movementGameRuntimeFrame.ts",
   "movementMotionFrame.ts",
+  "movementPlayerMotionFrame.ts",
   "movementRecordedMotionFrame.ts",
+  "movementRecordedPlayerSetup.ts",
+  "movementReplayPlaybackClock.ts",
+  "movementReplayPlayerMotionFrame.ts",
   "movementRetargeting.ts",
   "movementRootMotion.ts",
 ]);
@@ -35,7 +47,13 @@ export function movementPipelineFingerprintFiles() {
       fileName,
     ));
 
-  return [...movementFiles, ...replayProofFiles, vrmAvatarPath].sort();
+  return [
+    ...movementFiles,
+    ...replayProofFiles,
+    ...gameRuntimeHookFiles,
+    gamePlayPath,
+    vrmAvatarPath,
+  ].sort();
 }
 
 export function movementPipelineFingerprint() {

@@ -35,6 +35,7 @@ export type VrmHandCapture = {
 export type VrmHandsPayload = Partial<Record<MovementHandSide, VrmHandCapture | null>>;
 
 export type VrmMotionPayload = {
+  capturedAt?: number;
   pose?: VrmPoseLandmark[];
   landmarks?: VrmPoseLandmark[];
   worldLandmarks?: VrmPoseLandmark[] | null;

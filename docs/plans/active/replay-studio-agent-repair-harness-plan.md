@@ -11,7 +11,7 @@ Plan completion score: **90%** against the full Definition of Done.
 Current shape of the work:
 
 - Harness infrastructure is mostly built: canonical repair packets, fixture resolution, source identity, browser diagnosis/export parity, strict fail-closed accounting, and non-repository CLI bundle scratch handling are in place.
-- Current rendered acceptance passes **9 of 9** acceptance recordings under the current motion-pipeline fingerprint. Both the player-avatar and independent three-party rendered paths account for **11,383/11,383** frames, for **22,766/22,766** total rendered frame-path checks, with zero missing and zero failures.
+- Current rendered acceptance passes **9 of 9** acceptance recordings under the current motion-pipeline fingerprint and named `movement-game-runtime-v1` contract. Deterministic Game-player and independent paired Game instructor/player paths each account for **11,383/11,383** rendered frames, while intended-time Game-player playback processes **11,383/11,383** source frames. All three paths have zero missing frames and zero failures.
 - The final certification artifact is `tmp/movement-replay-lab/current-nine-recording-proof-final-v3-2026-07-14/`. It is local generated evidence and remains intentionally uncommitted; `manifest.json` and `bundle-report.json` hold the controlling result.
 - The repair retained the established partial lower-body chain through brief opposite-knee occlusion, made articulated arm depth use one coherent display-anatomical space, and strengthened the independent side-adherence analysis so it compares meaningful joint-relative/world-space motion without treating near-collinear upper-arm/spine geometry as side evidence.
 - The latest fast subset also passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises`, and a targeted `Body Capture 3D` rerun passes **1,815/1,815** frames on each strict path.
@@ -199,7 +199,7 @@ The final bundle resolves the acceptance-critical portions of the historical aud
 1. Full-sequence, three-party, and bundle gates now fail closed on missing debug/role data, absent or duplicate indexes, incomplete accounting, identity/source-hash mismatch, wrong proof mode, and stale pipeline fingerprints.
 2. Adversarial regressions cover zero rendered data, missing roles, duplicate indexes, stale fingerprints, wrong identity, inverted side bend, visible owner snaps, and incidental lower-limb drift.
 3. The source-only hash excludes retarget, fallback, ownership, and rendered output evidence; the Full Spinal before/fix/after exercise used the same saved source hash.
-4. `movement:replay:nine-proof` now performs the canonical export/session resolution, deterministic player and three-party capture, and strict aggregate gate for the configured nine recordings.
+4. `movement:replay:nine-proof` now performs canonical export/session resolution, intended-time Game-player capture, deterministic Game-player and paired Game instructor/player capture, runtime-contract validation, and one strict aggregate gate for the configured nine recordings.
 5. The real all-nine rendered bundle is no longer absent: it passed with 11,383/11,383 frames in each proof path.
 
 ### Remaining implementation order beyond acceptance proof

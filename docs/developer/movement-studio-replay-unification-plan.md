@@ -1,8 +1,10 @@
 # Movement Studio And Replay Unification Plan
 
-Last reviewed: 2026-07-04
-Status: shared decision parity is substantially complete; main Studio VRM application parity remains
+Last reviewed: 2026-07-14
+Status: historical unification plan; end-to-end alignment is reopened and controlled by [Replay Studio And Game Studio Runtime Alignment Plan](../plans/active/replay-game-runtime-alignment-plan.md)
 Audience: agents working on Posture Studio live player, Replay Alignment, avatar retargeting, or movement debug tooling
+
+> Current direction: use the active runtime-alignment plan for new work. This document retains the earlier shared-decision audit and rollback history, but its previous progress estimate does not prove current timed Replay/Game visual parity.
 
 ## Purpose
 

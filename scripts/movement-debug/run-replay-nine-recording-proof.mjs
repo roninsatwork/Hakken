@@ -20,6 +20,7 @@ const PROOF_TIER_SET_IDS = {
   "fast-subset": "replay-mirror-repair-fast-subset-current",
   targeted: "replay-mirror-repair-targeted-current",
 };
+const EXPECTED_GAME_RUNTIME_CONTRACT = "movement-game-runtime-v1";
 
 function parseArgs(argv) {
   const args = {
@@ -70,10 +71,10 @@ Usage:
   npm run movement:replay:nine-proof -- --proof-tier fast-subset --export <convex-export.zip|dir>
   npm run movement:replay:nine-proof -- --proof-tier targeted --recording-ids <ids> --export <convex-export.zip|dir>
 
-The command exports immutable Replay sessions, captures no-skip deterministic
-player-avatar telemetry plus deterministic instructor/player-avatar proof for
-every selected recording, writes a strict bundle manifest, and runs the
-aggregate gate.
+The command exports immutable Replay sessions, captures intended-time Game
+player telemetry, no-skip deterministic Game player telemetry, and deterministic
+Game instructor/player proof for every selected recording. It then runs one
+strict aggregate gate.
 
 Options:
   --export <path>           Convex export containing the nine recordings and storage payloads.
@@ -163,10 +164,13 @@ export function buildNineRecordingBundleManifest({ outDir, proofTier = "all-nine
       id: recording.id,
       proofMode: "player-avatar",
       requireCurrentFingerprint: true,
+      requireTimed: true,
       requireThreeParty: true,
+      runtimeContract: EXPECTED_GAME_RUNTIME_CONTRACT,
       session: `${outDir}/sessions/${recording.id}.session.json`,
       telemetry: `${outDir}/telemetry/${recording.id}.player-avatar-deterministic.json`,
       threePartyTelemetry: `${outDir}/telemetry/${recording.id}.three-party-deterministic.json`,
+      timedTelemetry: `${outDir}/telemetry/${recording.id}.player-avatar-intended-time.json`,
       title: recording.title,
     })),
     requiredRecordingIds: recordings.map((recording) => recording.id),
@@ -205,10 +209,17 @@ function ensureArtifact({ args, commandArgs, outPath }) {
         ? artifact.frames.map((frame) => frame?.frameIndex)
         : [];
       const uniqueIndexes = new Set(frameIndexes);
+      const hasCompleteDeterministicFrames =
+        artifact.playbackMode === "deterministic-rendered-frame-step" &&
+        uniqueIndexes.size === artifact.frameCount && frameIndexes.length === artifact.frameCount;
+      const hasCompleteSourceTimeProcessing =
+        artifact.playbackMode === "uninterrupted-source-time-sequence" &&
+        artifact.processedFrameCount === artifact.frameCount &&
+        artifact.processedMissingFrameCount === 0;
       const isComplete = artifact.playbackCompleted === true &&
         Array.isArray(artifact.missingFrames) && artifact.missingFrames.length === 0 &&
         Number.isInteger(artifact.frameCount) && artifact.frameCount > 0 &&
-        uniqueIndexes.size === artifact.frameCount && frameIndexes.length === artifact.frameCount;
+        (hasCompleteDeterministicFrames || hasCompleteSourceTimeProcessing);
       if (isComplete) {
         console.log(`Reusing complete ${outPath}`);
         return;
@@ -242,6 +253,7 @@ async function main() {
   for (const [index, recording] of recordings.entries()) {
     const sessionPath = `${outDir}/sessions/${recording.id}.session.json`;
     const playerAvatarPath = `${outDir}/telemetry/${recording.id}.player-avatar-deterministic.json`;
+    const timedPlayerAvatarPath = `${outDir}/telemetry/${recording.id}.player-avatar-intended-time.json`;
     const threePartyPath = `${outDir}/telemetry/${recording.id}.three-party-deterministic.json`;
     console.log(`\n[${index + 1}/${recordings.length}] ${recording.title} (${recording.id})`);
 
@@ -259,6 +271,11 @@ async function main() {
       args,
       commandArgs: captureArgs({ args, deterministic: true, outPath: playerAvatarPath, sessionPath, threeParty: false }),
       outPath: playerAvatarPath,
+    });
+    ensureArtifact({
+      args,
+      commandArgs: captureArgs({ args, deterministic: false, outPath: timedPlayerAvatarPath, sessionPath, threeParty: false }),
+      outPath: timedPlayerAvatarPath,
     });
     ensureArtifact({
       args,

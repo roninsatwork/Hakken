@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveMovementAvatarMotionFrameInput } from "./movementAvatarMotionFrameInput";
+import {
+  resolveMovementAvatarMotionFrameInput,
+  shouldHoldMovementAvatarLastPose,
+} from "./movementAvatarMotionFrameInput";
 import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
 
 type MovementAvatarPipelineDecisionInput = Parameters<typeof resolveMovementAvatarPipelineDecision>[0];
@@ -28,6 +31,11 @@ function baseInput(poseLandmarks: TrackingLandmark[]) {
 }
 
 describe("movement avatar motion-frame input", () => {
+  it("holds the last rendered pose across transient active-playback gaps", () => {
+    expect(shouldHoldMovementAvatarLastPose({ isPlaying: true, motionFrame: null })).toBe(true);
+    expect(shouldHoldMovementAvatarLastPose({ isPlaying: false, motionFrame: null })).toBe(false);
+  });
+
   it("prefers shared MovementMotionFrame decisions over renderer fallback decisions", () => {
     const poseLandmarks = makeMovementAvatarProofMotionPayload("standing").landmarks;
     const input = baseInput(poseLandmarks);

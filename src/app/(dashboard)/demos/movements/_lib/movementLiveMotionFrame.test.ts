@@ -44,6 +44,21 @@ describe("movementLiveMotionFrame", () => {
     })).toBeNull();
   });
 
+  it("uses the accepted source timestamp carried by the live payload", () => {
+    const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const motionFrame = buildLiveMovementMotionFrame({
+      calibration: buildMovementCalibration({ poseLandmarks: neutral }),
+      isPlaying: true,
+      motionRef: {
+        ...makeMovementAvatarProofMotionPayload("squat"),
+        capturedAt: 4321,
+      },
+      retargetSourceModel: buildMovementRetargetSourceModel({ poseLandmarks: neutral }),
+    });
+
+    expect(motionFrame?.source.capturedAt).toBe(4321);
+  });
+
   it("passes previous live motion frames into shared readability holds", () => {
     const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
     const previousMotionFrame = buildLiveMovementMotionFrame({

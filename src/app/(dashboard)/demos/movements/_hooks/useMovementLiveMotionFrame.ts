@@ -28,17 +28,24 @@ export function useMovementLiveMotionFrame({
   useEffect(() => {
     let active = true;
     let animationFrameId: number;
+    let lastProcessedMotionRef: VrmMotionRef = null;
 
     const updateMotionFrame = () => {
       if (!active) return;
-      motionFrameRef.current = buildLiveMovementMotionFrame({
-        calibration,
-        isPlaying,
-        motionRef: playerLiveLmRef.current,
-        previousMotionFrame: motionFrameRef.current,
-        requirements,
-        retargetSourceModel,
-      });
+      const currentMotionRef = playerLiveLmRef.current;
+      if (currentMotionRef !== lastProcessedMotionRef) {
+        lastProcessedMotionRef = currentMotionRef;
+        const nextMotionFrame = buildLiveMovementMotionFrame({
+          calibration,
+          isPlaying,
+          motionRef: currentMotionRef,
+          previousMotionFrame: motionFrameRef.current,
+          requirements,
+          retargetSourceModel,
+        });
+        // A detector gap is missing evidence, not a neutral human pose.
+        if (nextMotionFrame) motionFrameRef.current = nextMotionFrame;
+      }
       animationFrameId = requestAnimationFrame(updateMotionFrame);
     };
 

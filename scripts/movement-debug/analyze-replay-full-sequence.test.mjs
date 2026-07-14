@@ -59,6 +59,80 @@ describe("full-sequence rendered side-bend analysis", () => {
     );
   });
 
+  it("blocks a one-sample neutral reset while the source remains in the same bend", () => {
+    const frames = [0.3, 0.3, 0.3].map((sideBend, frameIndex) => (
+      renderedSideBendFrame(frameIndex, sideBend)
+    ));
+    frames[1].debug.avatarSpine.chest.z = 0;
+    frames[1].debug.avatarSpine.upperChest.z = 0;
+
+    const analysis = analyzeFullSequence({
+      session: {
+        samples: frames.map(() => ({ tracking: { pose: [] } })),
+      },
+      telemetry: {
+        frameCount: frames.length,
+        frames,
+        missingFrames: [],
+        sessionId: "neutral-reset-test",
+      },
+    });
+
+    expect(analysis.neutralResets).toMatchObject({ count: 1 });
+    expect(analysis.failures).toContainEqual({ code: "rendered-neutral-reset", count: 1 });
+  });
+
+  it("accepts sampled timed rendering when every source frame was processed", () => {
+    const frames = [
+      renderedSideBendFrame(0, 0.2),
+      renderedSideBendFrame(2, 0.24),
+    ];
+    const analysis = analyzeFullSequence({
+      session: {
+        samples: Array.from({ length: 3 }, () => ({ tracking: { pose: [] } })),
+      },
+      telemetry: {
+        frameCount: 3,
+        frames,
+        missingFrames: [],
+        playbackMode: "uninterrupted-source-time-sequence",
+        processedFrameCount: 3,
+        processedMissingFrameCount: 0,
+        processedMissingFrames: [],
+        sessionId: "source-time-sampling-test",
+      },
+    });
+
+    expect(analysis.frameAccounting).toMatchObject({ complete: true, missing: 0, rendered: 2 });
+    expect(analysis.failures).not.toContainEqual(
+      expect.objectContaining({ code: "rendered-frames-missing" }),
+    );
+  });
+
+  it("does not treat skipped source-time render samples as adjacent-frame jerk", () => {
+    const stablePose = footClearancePose(0.9);
+    const analysis = analyzeFullSequence({
+      session: {
+        samples: Array.from({ length: 3 }, () => ({ tracking: { pose: stablePose } })),
+      },
+      telemetry: {
+        frameCount: 3,
+        frames: [footClearanceFrame(0, 0), footClearanceFrame(2, 0.2)],
+        missingFrames: [],
+        playbackMode: "uninterrupted-source-time-sequence",
+        processedFrameCount: 3,
+        processedMissingFrameCount: 0,
+        processedMissingFrames: [],
+        sessionId: "source-time-sampled-jerk-test",
+      },
+    });
+
+    expect(analysis.jerk.frameCount).toBe(0);
+    expect(analysis.failures).not.toContainEqual(
+      expect.objectContaining({ code: "rendered-motion-jerk" }),
+    );
+  });
+
   it("blocks an inverted final VRM side bend even when its magnitude is plausible", () => {
     const sideBends = [-0.12, -0.18, 0.14, 0.22, -0.28, 0.32];
     const analysis = analyzeFullSequence({
@@ -220,6 +294,7 @@ describe("full-sequence rendered foot-clearance analysis", () => {
       complete: false,
       expected: 1,
       missing: 0,
+      processed: 0,
       rendered: 0,
     });
     expect(analysis.failures).toContainEqual({ code: "rendered-debug-missing", count: 1 });
@@ -441,6 +516,7 @@ describe("full-sequence owner-flicker analysis", () => {
       complete: true,
       expected: 3,
       missing: 0,
+      processed: 3,
       rendered: 3,
     });
     expect(analysis.ownerTransitions.count).toBe(1);

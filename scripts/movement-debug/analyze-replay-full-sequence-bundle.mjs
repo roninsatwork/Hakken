@@ -98,11 +98,16 @@ function normalizeManifest(manifest) {
         id,
         proofMode: typeof recording.proofMode === "string" ? recording.proofMode : "player-avatar",
         requireCurrentFingerprint: recording.requireCurrentFingerprint !== false,
+        requireTimed: recording.requireTimed === true,
         requireThreeParty: recording.requireThreeParty === true,
+        runtimeContract: typeof recording.runtimeContract === "string" ? recording.runtimeContract : "",
         session: typeof recording.session === "string" ? recording.session : "",
         telemetry: typeof recording.telemetry === "string" ? recording.telemetry : "",
         threePartyTelemetry: typeof recording.threePartyTelemetry === "string"
           ? recording.threePartyTelemetry
+          : "",
+        timedTelemetry: typeof recording.timedTelemetry === "string"
+          ? recording.timedTelemetry
           : "",
       };
     }),
@@ -118,13 +123,24 @@ function frameAccountingFromReport(report) {
     complete: false,
     expected: report.frameCount ?? 0,
     missing: report.missingFrameCount ?? 0,
+    processed: 0,
     rendered: 0,
   };
 }
 
 async function analyzeRecording(recording) {
-  const checkedPaths = [recording.session, recording.telemetry, recording.threePartyTelemetry].filter(Boolean);
-  if (!recording.session || !recording.telemetry || (recording.requireThreeParty && !recording.threePartyTelemetry)) {
+  const checkedPaths = [
+    recording.session,
+    recording.telemetry,
+    recording.timedTelemetry,
+    recording.threePartyTelemetry,
+  ].filter(Boolean);
+  if (
+    !recording.session ||
+    !recording.telemetry ||
+    (recording.requireTimed && !recording.timedTelemetry) ||
+    (recording.requireThreeParty && !recording.threePartyTelemetry)
+  ) {
     return {
       checkedPaths,
       failures: [{ code: "bundle-recording-input-missing", count: 1 }],
@@ -137,9 +153,7 @@ async function analyzeRecording(recording) {
       },
       id: recording.id,
       ok: false,
-      problem: recording.requireThreeParty
-        ? "Bundle row must declare session, uninterrupted telemetry, and three-party telemetry paths."
-        : "Bundle row must declare session and telemetry paths.",
+      problem: "Bundle row is missing a required session, deterministic, intended-time, or three-party telemetry path.",
       status: "missing-input",
     };
   }
@@ -147,6 +161,7 @@ async function analyzeRecording(recording) {
   if (
     !existsSync(path.resolve(recording.session)) ||
     !existsSync(path.resolve(recording.telemetry)) ||
+    (recording.requireTimed && !existsSync(path.resolve(recording.timedTelemetry))) ||
     (recording.requireThreeParty && !existsSync(path.resolve(recording.threePartyTelemetry)))
   ) {
     return {
@@ -183,6 +198,57 @@ async function analyzeRecording(recording) {
     const sessionIdentityMismatch = session?.id !== recording.id;
     const proofModeMismatch = telemetry.proofMode !== recording.proofMode;
     const sourceHashMismatch = telemetry.sourceHash !== sourceHashForReplaySession(session);
+    const runtimeContractMismatch = Boolean(recording.runtimeContract) &&
+      telemetry.runtimeContract !== recording.runtimeContract;
+    const playerRuntimeLaneMissing = Boolean(recording.runtimeContract) &&
+      !telemetry.runtimeLanes?.includes("game-player-simulated");
+    let timedReport = null;
+    let timedFailures = [];
+    let timedProblem = "";
+    if (recording.requireTimed) {
+      const timedTelemetry = await readJson(
+        recording.timedTelemetry,
+        "intended-time rendered telemetry JSON",
+      );
+      timedReport = analyzeFullSequence({
+        expectedMotionPipelineFingerprint: recording.requireCurrentFingerprint
+          ? movementPipelineFingerprint()
+          : null,
+        requireIdentity: true,
+        session,
+        telemetry: timedTelemetry,
+      });
+      timedFailures = [
+        ...timedReport.failures.map((failure) => ({
+          ...failure,
+          code: `timed-${failure.code}`,
+        })),
+        ...(timedTelemetry.playbackMode !== "uninterrupted-source-time-sequence"
+          ? [{ code: "timed-playback-mode-mismatch", count: 1 }]
+          : []),
+        ...(timedTelemetry.proofMode !== recording.proofMode
+          ? [{ code: "timed-proof-mode-mismatch", count: 1 }]
+          : []),
+        ...(timedTelemetry.sessionId !== session?.id
+          ? [{ code: "timed-session-identity-mismatch", count: 1 }]
+          : []),
+        ...(timedTelemetry.recordingId !== recording.id
+          ? [{ code: "timed-recording-identity-mismatch", count: 1 }]
+          : []),
+        ...(timedTelemetry.sourceHash !== sourceHashForReplaySession(session)
+          ? [{ code: "timed-source-hash-mismatch", count: 1 }]
+          : []),
+        ...(recording.runtimeContract && timedTelemetry.runtimeContract !== recording.runtimeContract
+          ? [{ code: "timed-runtime-contract-mismatch", count: 1 }]
+          : []),
+        ...(recording.runtimeContract && !timedTelemetry.runtimeLanes?.includes("game-player-simulated")
+          ? [{ code: "timed-game-player-runtime-lane-missing", count: 1 }]
+          : []),
+      ];
+      if (timedFailures.length > 0) {
+        timedProblem = `Intended-time proof blocked: ${timedFailures.map((failure) => failure.code).join(", ")}.`;
+      }
+    }
     let threePartyReport = null;
     let threePartyFailures = [];
     let threePartyProblem = "";
@@ -201,6 +267,15 @@ async function analyzeRecording(recording) {
           : []),
         ...(threePartyTelemetry.sourceHash !== sourceHashForReplaySession(session)
           ? [{ code: "three-party-source-hash-mismatch", count: 1 }]
+          : []),
+        ...(recording.runtimeContract && threePartyTelemetry.runtimeContract !== recording.runtimeContract
+          ? [{ code: "three-party-runtime-contract-mismatch", count: 1 }]
+          : []),
+        ...(recording.runtimeContract && !threePartyTelemetry.runtimeLanes?.includes("game-instructor")
+          ? [{ code: "three-party-game-instructor-runtime-lane-missing", count: 1 }]
+          : []),
+        ...(recording.runtimeContract && !threePartyTelemetry.runtimeLanes?.includes("game-player-simulated")
+          ? [{ code: "three-party-game-player-runtime-lane-missing", count: 1 }]
           : []),
         ...(
           recording.requireCurrentFingerprint &&
@@ -221,10 +296,13 @@ async function analyzeRecording(recording) {
       ...(sessionIdentityMismatch ? [{ code: "bundle-session-identity-mismatch", count: 1 }] : []),
       ...(proofModeMismatch ? [{ code: "bundle-proof-mode-mismatch", count: 1 }] : []),
       ...(sourceHashMismatch ? [{ code: "bundle-source-hash-mismatch", count: 1 }] : []),
+      ...(runtimeContractMismatch ? [{ code: "bundle-runtime-contract-mismatch", count: 1 }] : []),
+      ...(playerRuntimeLaneMissing ? [{ code: "bundle-game-player-runtime-lane-missing", count: 1 }] : []),
     ];
     const status = report.status === "passed" &&
       !frameCountMismatch &&
       identityFailures.length === 0 &&
+      timedFailures.length === 0 &&
       threePartyFailures.length === 0
       ? "passed"
       : "blocked";
@@ -236,6 +314,7 @@ async function analyzeRecording(recording) {
           ? [{ code: "bundle-frame-count-mismatch", count: 1 }]
           : []),
         ...identityFailures,
+        ...timedFailures,
         ...threePartyFailures,
       ],
       frameAccounting,
@@ -255,11 +334,24 @@ async function analyzeRecording(recording) {
         sourceHashMismatch
           ? "Telemetry source hash does not match the immutable source session."
           : "",
+        runtimeContractMismatch
+          ? `Telemetry runtime contract does not match ${recording.runtimeContract}.`
+          : "",
+        playerRuntimeLaneMissing
+          ? "Deterministic telemetry did not exercise the Game player runtime lane."
+          : "",
+        timedProblem,
         threePartyProblem,
       ].filter(Boolean).join(" "),
       sessionId: report.sessionId,
       sourceHash: report.sourceHash,
       status,
+      ...(timedReport
+        ? {
+            timedFrameAccounting: timedReport.frameAccounting,
+            timedStatus: timedFailures.length === 0 ? timedReport.status : "blocked",
+          }
+        : {}),
       ...(threePartyReport
         ? {
             threePartyFrameAccounting: threePartyReport.frameAccounting,
@@ -323,6 +415,17 @@ export async function buildFullSequenceBundleReport({
         rendered: row.threePartyFrameAccounting.rendered,
       }]
     : []);
+  const timedFrameTotals = rows.flatMap((row) => row.timedFrameAccounting
+    ? [{
+        compared: row.timedFrameAccounting.compared,
+        complete: row.timedFrameAccounting.complete,
+        expected: row.timedFrameAccounting.expected,
+        id: row.id,
+        missing: row.timedFrameAccounting.missing,
+        processed: row.timedFrameAccounting.processed,
+        rendered: row.timedFrameAccounting.rendered,
+      }]
+    : []);
   const ok = rows.every((row) => row.ok) && missingRequiredRecordingIds.length === 0;
 
   return {
@@ -340,6 +443,7 @@ export async function buildFullSequenceBundleReport({
     schemaVersion: 1,
     statusCounts,
     threePartyFrameTotals,
+    timedFrameTotals,
   };
 }
 
@@ -355,6 +459,12 @@ function printHumanSummary(report) {
     console.log(
       `${row.status.toUpperCase()} ${row.id}: rendered ${frames.rendered}/${frames.expected}, compared ${frames.compared}, missing ${frames.missing}${problem}`,
     );
+    if (row.timedFrameAccounting) {
+      const timed = row.timedFrameAccounting;
+      console.log(
+        `  intended-time ${row.timedStatus}: rendered samples ${timed.rendered}, processed ${timed.processed}/${timed.expected}, missing ${timed.missing}`,
+      );
+    }
   });
 }
 

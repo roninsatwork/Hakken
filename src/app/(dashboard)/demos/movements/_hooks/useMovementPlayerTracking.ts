@@ -27,6 +27,7 @@ type PlayerHandCapture = {
 type PlayerHandsPayload = Partial<Record<MovementHandSide, PlayerHandCapture | null>>;
 
 export type MovementPlayerMotionPayload = {
+  capturedAt?: number;
   landmarks?: PlayerPoseLandmark[];
   worldLandmarks?: PlayerPoseLandmark[] | null;
   faceLandmarks?: PlayerPoseLandmark[] | null;
@@ -74,7 +75,9 @@ export function useMovementPlayerTracking({
         const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
         const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
         const handResults = handLandmarker.detectForVideo(video, startTimeMs);
-        const currentData: MovementPlayerMotionPayload = {};
+        const currentData: MovementPlayerMotionPayload = {
+          capturedAt: Date.now(),
+        };
 
         if (poseResults.landmarks && poseResults.landmarks.length > 0) {
           const raw = poseResults.landmarks[0];

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   canvasPixelMetrics,
   flattenGameVisualCaptureTargets,
+  gameVisualDiagnosticsTitle,
   parseGameVisualCaptureArgs,
 } from "./capture-game-visual-proof.mjs";
 
@@ -84,6 +85,10 @@ function tinyPng() {
 }
 
 describe("capture game visual proof", () => {
+  it("waits for the current Game diagnostics panel", () => {
+    expect(gameVisualDiagnosticsTitle).toBe("Your Avatar Diagnostics");
+  });
+
   it("parses capture arguments", () => {
     expect(parseGameVisualCaptureArgs([
       "--plan",

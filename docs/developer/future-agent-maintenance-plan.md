@@ -17,12 +17,17 @@ The movement demo is temporary client-facing work. Do not spend refactor budget 
 
 - `src/app/(dashboard)/demos/movements/**`
 - `src/app/(dashboard)/demos/movement-capture/page.tsx`
+- `convex/movements.ts`
 
 Allowed exceptions:
 
 - Fix a build, typecheck, lint, or test failure.
 - Fix a security issue that can affect the rest of the app.
 - Make a minimal change explicitly requested by the user.
+- If the explicit task touches movement capture, display preparation, scoring, retargeting, VRM bone application, or movement proof, read `docs/developer/movement-mirror-and-side-ownership-contract.md` before editing.
+- If the explicit task touches Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/replay-studio-agent-repair-harness-plan.md` before editing.
+
+Replay Studio is the recorded-motion source of truth for movement debugging. Use the existing repair-packet, targeted-proof, fast-subset-proof, and all-nine rendered proof flow before claiming shared-avatar acceptance. Game Studio live-camera checks are final confirmation after Replay proof, not a replacement for the Replay harness.
 
 ## Phase 1: Make Drift Checks First-Class
 

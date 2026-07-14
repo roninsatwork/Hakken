@@ -391,11 +391,19 @@ async function main() {
 
       await page.getByTestId("movement-replay-avatar-section").screenshot({ path: avatarPath });
       await page.getByTestId("movement-replay-source-canvas").screenshot({ path: sourcePath });
+      const avatarDebug = await page.evaluate(() => (
+        window.__sonaeMovementAvatarDebug ?? null
+      ));
+      const runtimeSetup = await page.evaluate(() => (
+        window.__sonaeMovementRecordedPlayerSetup ?? null
+      ));
 
       captures.push({
+        avatarDebug,
         avatarPath,
         diagnostics,
         frame,
+        runtimeSetup,
         sourcePath,
       });
     }

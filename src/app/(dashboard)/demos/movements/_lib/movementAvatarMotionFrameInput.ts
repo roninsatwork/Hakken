@@ -9,6 +9,16 @@ export type MovementAvatarMotionFrameInputDecision = {
   sourceOrigin?: MovementMotionFrame["source"]["sourceOrigin"];
 };
 
+export function shouldHoldMovementAvatarLastPose({
+  isPlaying,
+  motionFrame,
+}: {
+  isPlaying: boolean;
+  motionFrame?: MovementMotionFrame | null;
+}) {
+  return isPlaying && !motionFrame;
+}
+
 export function resolveMovementAvatarMotionFrameInput({
   fallbackDecision,
   getFallbackDecision,

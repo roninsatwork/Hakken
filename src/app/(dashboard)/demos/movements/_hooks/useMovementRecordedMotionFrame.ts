@@ -22,15 +22,21 @@ export function useMovementRecordedMotionFrame({
   useEffect(() => {
     let active = true;
     let animationFrameId: number;
+    let lastProcessedMotionRef: VrmMotionRef = null;
 
     const updateMotionFrame = () => {
       if (!active) return;
-      motionFrameRef.current = buildRecordedMovementMotionFrame({
-        isPlaying,
-        motionRef: instructorFrameRef.current,
-        previousMotionFrame: motionFrameRef.current,
-        retargetSourceModel,
-      });
+      const currentMotionRef = instructorFrameRef.current;
+      if (currentMotionRef !== lastProcessedMotionRef) {
+        lastProcessedMotionRef = currentMotionRef;
+        const nextMotionFrame = buildRecordedMovementMotionFrame({
+          isPlaying,
+          motionRef: currentMotionRef,
+          previousMotionFrame: motionFrameRef.current,
+          retargetSourceModel,
+        });
+        if (nextMotionFrame) motionFrameRef.current = nextMotionFrame;
+      }
       animationFrameId = requestAnimationFrame(updateMotionFrame);
     };
 

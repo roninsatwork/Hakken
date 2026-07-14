@@ -7,17 +7,17 @@ import type { MovementSourceFrameRequirements } from "./movementSourceFrame";
 import type { MovementCalibration } from "./movementTrackingCalibration";
 import type { VrmMotionRef } from "./vrmRigging";
 
-export type BuildLiveMovementMotionFrameInput = {
+export type BuildReplayPlayerMovementMotionFrameInput = {
   calibration: MovementCalibration | null;
-  capturedAt?: number;
+  capturedAt: number;
   isPlaying: boolean;
   motionRef: VrmMotionRef;
   previousMotionFrame?: MovementMotionFrame | null;
-  retargetSourceModel: MovementRetargetSourceModel | null;
   requirements?: MovementSourceFrameRequirements;
+  retargetSourceModel: MovementRetargetSourceModel | null;
 };
 
-export function buildLiveMovementMotionFrame({
+export function buildReplayPlayerMovementMotionFrame({
   calibration,
   capturedAt,
   isPlaying,
@@ -25,7 +25,7 @@ export function buildLiveMovementMotionFrame({
   previousMotionFrame = null,
   requirements,
   retargetSourceModel,
-}: BuildLiveMovementMotionFrameInput): MovementMotionFrame | null {
+}: BuildReplayPlayerMovementMotionFrameInput): MovementMotionFrame | null {
   return buildMovementGamePlayerRuntimeFrame({
     calibration,
     capturedAt,
@@ -34,6 +34,6 @@ export function buildLiveMovementMotionFrame({
     previousMotionFrame,
     requirements,
     retargetSourceModel,
-    source: "live-webcam",
+    source: "recorded-replay",
   });
 }

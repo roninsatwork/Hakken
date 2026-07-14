@@ -304,6 +304,10 @@ async function main() {
 
     const meta = await lab.evaluate((element) => ({
       frameCount: Number(element.getAttribute("data-frame-count") || 0),
+      runtimeContract: element.getAttribute("data-runtime-contract") || "",
+      runtimeLanes: (element.getAttribute("data-runtime-lanes") || "")
+        .split(",")
+        .filter(Boolean),
       sessionId: element.getAttribute("data-active-session-id") || "",
     }));
 
@@ -317,9 +321,23 @@ async function main() {
       const captureCurrentRenderedFrame = () => {
         const frameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
         if (frameIndex >= 0 && frameIndex !== lastCapturedFrame) {
-          const debug = window.__sonaeMovementAvatarDebug?.player;
+          const sourceDebug = window.__sonaeMovementAvatarDebug?.player;
+          const debug = sourceDebug ? structuredClone({
+            avatarHead: sourceDebug.avatarHead,
+            avatarName: sourceDebug.avatarName,
+            avatarRoot: sourceDebug.avatarRoot,
+            avatarSpine: sourceDebug.avatarSpine,
+            avatarVisual: sourceDebug.avatarVisual,
+            calibrationQuality: sourceDebug.calibrationQuality,
+            fallbacks: sourceDebug.fallbacks,
+            frameUpdatedAt: sourceDebug.frameUpdatedAt,
+            headRaw: sourceDebug.headRaw,
+            profileName: sourceDebug.profileName,
+            retarget: sourceDebug.retarget,
+            spineDrive: sourceDebug.spineDrive,
+          }) : null;
           window.__sonaeFullSequenceCapture.frames.push({
-            debug: debug ? structuredClone(debug) : null,
+            debug,
             frameIndex,
           });
           lastCapturedFrame = frameIndex;
@@ -355,14 +373,22 @@ async function main() {
       capture = await page.evaluate(() => {
         const root = document.querySelector('[data-testid="movement-replay-lab"]');
         window.__sonaeFullSequenceCapture?.disconnect?.();
+        const playbackClock = window.__sonaeReplayLabPlaybackClock ?? null;
         return {
+          playbackClock,
+          processedFrameIndexes: playbackClock?.processedFrameIndexes ?? [],
           currentFrameIndex: Number(root?.getAttribute("data-current-frame-index") || -1),
           frames: window.__sonaeFullSequenceCapture?.frames ?? [],
         };
       });
     }
     const frames = capture.frames;
-    const missingFrames = missingFrameIndexes(frames, meta.frameCount);
+    const renderedMissingFrames = missingFrameIndexes(frames, meta.frameCount);
+    const processedFrames = (capture.processedFrameIndexes ?? []).map((frameIndex) => ({ frameIndex }));
+    const processedMissingFrames = args.deterministic
+      ? renderedMissingFrames
+      : missingFrameIndexes(processedFrames, meta.frameCount);
+    const missingFrames = args.deterministic ? renderedMissingFrames : processedMissingFrames;
     const playbackCompleted = capture.currentFrameIndex === meta.frameCount - 1;
     const result = {
       capturedAt: new Date().toISOString(),
@@ -373,12 +399,20 @@ async function main() {
       missingFrames,
       motionPipelineFingerprint: movementPipelineFingerprint(),
       playbackCompleted,
+      playbackClock: capture.playbackClock ?? null,
+      processedFrameCount: args.deterministic ? frames.length : processedFrames.length,
+      processedMissingFrameCount: processedMissingFrames.length,
+      processedMissingFrames,
+      renderedMissingFrameCount: renderedMissingFrames.length,
+      renderedMissingFrames,
       playbackError: playbackCompleted && missingFrames.length === 0 ? "" : playbackError,
       playbackMode: args.deterministic
         ? "deterministic-rendered-frame-step"
-        : "uninterrupted-rendered-sequence",
+        : "uninterrupted-source-time-sequence",
       proofMode: args.threeParty ? "three-party-mirror" : "player-avatar",
       recordingId: expectedSessionId,
+      runtimeContract: meta.runtimeContract,
+      runtimeLanes: meta.runtimeLanes,
       sessionId: meta.sessionId,
       sourceHash: sourceHashForReplaySession(debugSession),
     };

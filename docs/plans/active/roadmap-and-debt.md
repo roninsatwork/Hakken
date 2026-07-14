@@ -88,11 +88,18 @@ The shared upload policy accepts Excel document MIME types, and agent runtime at
 
 The movement demo is temporary and frozen. Documentation may describe its current routes, storage formats, tracking pipeline, and debug tools, but implementation refactors belong outside this automation unless the user explicitly reopens the demo.
 
-Relevant plans remain active for context only:
+The mirror and replay proof plans are the controlling documents when the user explicitly reopens movement behaviour. Do not treat solver labels, selected frames, or UI verdicts as rendered-avatar acceptance. Replay Studio is the recorded-motion source of truth; targeted and fast-subset proof tiers support active repair, while the current all-nine rendered proof tier is required before claiming global shared-avatar acceptance. Game Studio live-camera checks confirm the Replay-proven shared pipeline instead of replacing it.
+
+Relevant plans remain active for context:
 
 - [Movement Demo Client Pitch Excellence Plan](./movement-demo-client-pitch-excellence-plan.md)
 - [Movement Demo Refactor Plan](./movement-demo-refactor-plan.md)
 - [Movement Demo Whole Body Tracking Plan](./movement-demo-whole-body-tracking-plan.md)
+- [Movement Mirror Methodology Implementation Plan](./movement-mirror-methodology-implementation-plan.md)
+- [Replay Studio Agent Repair Harness Plan](./replay-studio-agent-repair-harness-plan.md)
+- [Replay Studio Avatar-Follow Observability Plan](./replay-studio-avatar-follow-observability-plan.md)
+- [Replay Avatar-Follow Correction Plan](./replay-avatar-follow-correction-plan.md)
+- [Replay Lab Visual Acceptance Tightening Plan](./replay-lab-visual-acceptance-tightening-plan.md)
 
 ## Roadmap Index
 

@@ -64,6 +64,19 @@ function fullSequenceTelemetry(session, frameCount = 2) {
   };
 }
 
+function intendedTimeTelemetry(session, frameCount = 2) {
+  return {
+    ...fullSequenceTelemetry(session, frameCount),
+    playbackCompleted: true,
+    playbackMode: "uninterrupted-source-time-sequence",
+    processedFrameCount: frameCount,
+    processedMissingFrameCount: 0,
+    processedMissingFrames: [],
+    runtimeContract: "movement-game-runtime-v1",
+    runtimeLanes: ["game-player-simulated"],
+  };
+}
+
 function threePartyDebug() {
   const direction = { x: 1, y: 0, z: 0 };
   const segments = Object.fromEntries([
@@ -263,6 +276,54 @@ describe("full-sequence rendered telemetry bundle", () => {
     expect(report.rows[0]).toMatchObject({
       status: "passed",
       threePartyStatus: "passed",
+    });
+  });
+
+  it("requires intended-time Game-player proof when declared", async () => {
+    const basePath = `tmp/movement-replay-lab/full-sequence-bundle-timed-${process.pid}-${Date.now()}`;
+    const id = "timed-acceptance";
+    const session = replaySession(id, 3);
+    const sessionPath = `${basePath}/${id}.session.json`;
+    const telemetryPath = `${basePath}/${id}.deterministic.json`;
+    const timedPath = `${basePath}/${id}.intended-time.json`;
+    const manifestPath = `${basePath}/manifest.json`;
+    writeJson(sessionPath, session);
+    writeJson(telemetryPath, {
+      ...fullSequenceTelemetry(session, 3),
+      runtimeContract: "movement-game-runtime-v1",
+      runtimeLanes: ["game-player-simulated"],
+    });
+    writeJson(timedPath, intendedTimeTelemetry(session, 3));
+    writeJson(manifestPath, {
+      recordings: [{
+        expectedFrameCount: 3,
+        id,
+        requireTimed: true,
+        runtimeContract: "movement-game-runtime-v1",
+        session: sessionPath,
+        telemetry: telemetryPath,
+        timedTelemetry: timedPath,
+      }],
+      recordingSetId: "timed-acceptance-smoke",
+      requiredRecordingIds: [id],
+      schemaVersion: 1,
+    });
+
+    const report = await buildFullSequenceBundleReport({ manifestPath });
+
+    expect(report.ok).toBe(true);
+    expect(report.timedFrameTotals).toEqual([{
+      compared: 3,
+      complete: true,
+      expected: 3,
+      id,
+      missing: 0,
+      processed: 3,
+      rendered: 3,
+    }]);
+    expect(report.rows[0]).toMatchObject({
+      status: "passed",
+      timedStatus: "passed",
     });
   });
 

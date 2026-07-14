@@ -314,6 +314,14 @@ function renderedHeadIntentPitch(debug) {
   return Number.isFinite(bonePitch) ? -bonePitch : null;
 }
 
+function renderedAxialMagnitude(debug) {
+  return Math.max(
+    Math.abs(debug?.avatarSpine?.spine?.z ?? 0),
+    Math.abs(debug?.avatarSpine?.chest?.z ?? 0),
+    Math.abs(debug?.avatarSpine?.upperChest?.z ?? 0),
+  );
+}
+
 function renderedPoseDifference(leftDebug, rightDebug) {
   let largest = 0;
   const leftSegments = leftDebug?.avatarVisual?.segments ?? {};
@@ -429,6 +437,7 @@ export function analyzeFullSequence({
   requireIdentity = false,
 }) {
   const isDeterministicFrameStep = telemetry.playbackMode === "deterministic-rendered-frame-step";
+  const isSourceTimeSequence = telemetry.playbackMode === "uninterrupted-source-time-sequence";
   const frameInspection = inspectReplayTelemetryFrames({
     frameCount: telemetry.frameCount,
     frames: telemetry.frames,
@@ -451,6 +460,7 @@ export function analyzeFullSequence({
   const ownerFlickers = [];
   const ownerTransitions = [];
   const transientOwnerTransitions = [];
+  const neutralResetFrames = [];
   const mirrorOwnership = Object.fromEntries(MIRROR_LIMB_PAIRS.map((pair) => [
     pair.type,
     {
@@ -471,6 +481,22 @@ export function analyzeFullSequence({
     const retargetPose = replayRetargetPose(session, frame.frameIndex);
     const sourceQuality = debug.retarget?.sourceQuality ?? 0;
     const visualSegments = debug.avatarVisual?.segments ?? {};
+    const previousRenderedDebug = frames[frameArrayIndex - 1]?.debug;
+    const nextRenderedDebug = frames[frameArrayIndex + 1]?.debug;
+    if (
+      previousRenderedDebug &&
+      nextRenderedDebug &&
+      Math.abs(debug.spineDrive?.sideBend ?? 0) >= 0.12 &&
+      renderedAxialMagnitude(previousRenderedDebug) >= 0.12 &&
+      renderedAxialMagnitude(debug) < 0.05 &&
+      renderedAxialMagnitude(nextRenderedDebug) >= 0.12
+    ) {
+      neutralResetFrames.push({
+        frameIndex: frame.frameIndex,
+        renderedMagnitude: renderedAxialMagnitude(debug),
+        sourceSideBend: Math.abs(debug.spineDrive?.sideBend ?? 0),
+      });
+    }
 
     const renderedHeadPitch = renderedHeadIntentPitch(debug);
     if (Math.abs(debug.headRaw?.pitch ?? 0) >= 0.06 && renderedHeadPitch !== null) {
@@ -491,7 +517,8 @@ export function analyzeFullSequence({
       suppressedLegFrames.push(frame.frameIndex);
     }
 
-    if (previousFrame?.debug && sourceQuality >= 0.45) {
+    const followsPreviousSourceFrame = previousFrame?.frameIndex === frame.frameIndex - 1;
+    if (previousFrame?.debug && sourceQuality >= 0.45 && followsPreviousSourceFrame) {
       const previousPose = replayPose(session, previousFrame.frameIndex);
       const previousRetargetPose = replayRetargetPose(session, previousFrame.frameIndex);
       const targetRootYawStep = wrappedAngleStep(
@@ -722,7 +749,7 @@ export function analyzeFullSequence({
   if (frameInspection.frameCount === 0) {
     failures.push({ code: "rendered-frame-count-invalid", count: 1 });
   }
-  if (frameInspection.missingFrameIndexes.length > 0) {
+  if (!isSourceTimeSequence && frameInspection.missingFrameIndexes.length > 0) {
     failures.push({ code: "rendered-frames-missing", count: frameInspection.missingFrameIndexes.length });
   }
   if (frameInspection.duplicateFrameIndexes.length > 0) {
@@ -740,9 +767,12 @@ export function analyzeFullSequence({
   if (frameInspection.missingRenderedFrameIndexes.length > 0) {
     failures.push({ code: "rendered-avatar-telemetry-missing", count: frameInspection.missingRenderedFrameIndexes.length });
   }
+  const declaredMissingFrameIndexes = isSourceTimeSequence
+    ? telemetry.processedMissingFrames ?? []
+    : frameInspection.missingFrameIndexes;
   if (
     declaredMissingFrames &&
-    JSON.stringify(declaredMissingFrames) !== JSON.stringify(frameInspection.missingFrameIndexes)
+    JSON.stringify(declaredMissingFrames) !== JSON.stringify(declaredMissingFrameIndexes)
   ) {
     failures.push({ code: "rendered-frame-accounting-mismatch", count: 1 });
   }
@@ -793,6 +823,9 @@ export function analyzeFullSequence({
   if (ownerFlickers.length > 0) {
     failures.push({ code: "rendered-owner-flicker", count: ownerFlickers.length });
   }
+  if (neutralResetFrames.length > 0) {
+    failures.push({ code: "rendered-neutral-reset", count: neutralResetFrames.length });
+  }
   const mirrorOwnershipSummary = Object.fromEntries(Object.entries(mirrorOwnership).map(([key, value]) => [
     key,
     (() => {
@@ -840,9 +873,17 @@ export function analyzeFullSequence({
     failures,
     frameAccounting: {
       compared: frameInspection.compared,
-      complete: frameInspection.complete,
+      complete: isSourceTimeSequence
+        ? telemetry.processedFrameCount === frameInspection.frameCount &&
+          (telemetry.processedMissingFrameCount ?? 0) === 0
+        : frameInspection.complete,
       expected: frameInspection.frameCount,
-      missing: frameInspection.missingFrameIndexes.length,
+      missing: isSourceTimeSequence
+        ? telemetry.processedMissingFrameCount ?? frameInspection.missingFrameIndexes.length
+        : frameInspection.missingFrameIndexes.length,
+      processed: isSourceTimeSequence
+        ? telemetry.processedFrameCount ?? 0
+        : frameInspection.compared,
       rendered: frameInspection.rendered,
     },
     frameCount: frameInspection.frameCount,
@@ -871,7 +912,17 @@ export function analyzeFullSequence({
     playbackMode: telemetry.playbackMode ?? "timed-playback",
     mirrorSegments: segmentMetrics,
     mirrorSideOwnership: mirrorOwnershipSummary,
-    missingFrameCount: frameInspection.missingFrameIndexes.length,
+    missingFrameCount: isSourceTimeSequence
+      ? telemetry.processedMissingFrameCount ?? frameInspection.missingFrameIndexes.length
+      : frameInspection.missingFrameIndexes.length,
+    neutralResets: {
+      count: neutralResetFrames.length,
+      worstFrames: neutralResetFrames.slice(0, 30).map((entry) => ({
+        ...entry,
+        renderedMagnitude: round(entry.renderedMagnitude),
+        sourceSideBend: round(entry.sourceSideBend),
+      })),
+    },
     ownerFlickers: {
       count: ownerFlickers.length,
       worstFrames: ownerFlickers.slice(0, 30),

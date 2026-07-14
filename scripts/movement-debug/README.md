@@ -52,7 +52,7 @@ npx -p node@22.13.0 npm run movement:replay:fast-subset-proof -- --export tmp/mo
 npx -p node@22.13.0 npm run movement:replay:nine-proof -- --export tmp/movement-replay-lab/runs/<export>.zip
 ```
 
-Use `targeted-proof` while repairing a known failure, such as `Spins` around frames 645-647. Use `fast-subset-proof` before calling a fix ready for broader proof; it runs `Full Spinal Flow`, `Spins`, and `Full Motion Exercises`. Use `nine-proof` only for final certification before claiming global shared-avatar acceptance. Subset runs write repair-labeled manifests so they cannot be mistaken for all-nine acceptance.
+Use `targeted-proof` while repairing a known failure, such as `Spins` around frames 645-647. Use `fast-subset-proof` before calling a fix ready for broader proof; it runs `Full Spinal Flow`, `Spins`, and `Full Motion Exercises`. Use `nine-proof` only for final certification before claiming global shared-avatar acceptance. Every tier requires intended-time Game-player processing, deterministic Game-player final rendering, and deterministic paired Game instructor/player rendering through the named runtime contract. Subset runs write repair-labeled manifests so they cannot be mistaken for all-nine acceptance.
 
 Run the fast architecture/proof drift guard before and after movement architecture work:
 

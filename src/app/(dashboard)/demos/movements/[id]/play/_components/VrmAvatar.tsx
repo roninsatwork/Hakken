@@ -29,6 +29,7 @@ import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAv
 import { VrmAvatarPresentation } from "./VrmAvatarPresentation";
 import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
 import { resetMovementAvatarRuntimeForFrameJump } from "../../../_lib/movementAvatarRuntimeReset";
+import { shouldHoldMovementAvatarLastPose } from "../../../_lib/movementAvatarMotionFrameInput";
 
 const AVATAR_BASE_Y = -2.8;
 const AVATAR_FRAME_FALLBACK_SLERP = 0.35;
@@ -47,6 +48,7 @@ type VrmAvatarProps = {
   trackingDebugRef?: MutableRefObject<MovementTrackingDebugState | null>;
   retargetSourceModel?: MovementRetargetSourceModel | null;
   rootMotionFrame?: MovementRootMotionFrame | null;
+  rootMotionFrameRef?: RefObject<MovementRootMotionFrame | null>;
   vrmUrl: string;
   name: string;
 };
@@ -65,6 +67,7 @@ export default function VrmAvatar({
   trackingDebugRef,
   retargetSourceModel = null,
   rootMotionFrame = null,
+  rootMotionFrameRef: externalRootMotionFrameRef,
   vrmUrl,
   name,
 }: VrmAvatarProps) {
@@ -119,6 +122,9 @@ export default function VrmAvatar({
   }, [frameResetKey, resetRefs, vrmRef]);
 
   useFrame((_, delta) => {
+    const motionFrame = motionFrameRef.current ?? null;
+    if (shouldHoldMovementAvatarLastPose({ isPlaying, motionFrame })) return;
+
     const frameEntryRuntime = resolveMovementAvatarFrameEntryRuntime({
       avatarRoot: group.current,
       avatarRole: usesPlayerMotionPath ? "player" : "instructor",
@@ -174,7 +180,7 @@ export default function VrmAvatar({
         lookupBone: lookupVrmBone,
         manualCalibration: trackingCalibration,
         mirrorPlayerDisplay,
-        motionFrame: motionFrameRef.current ?? null,
+        motionFrame,
         playerLegRaiseHoldRef,
         playerLowerBodyStabilityRef,
         plantedFootLockRef,
@@ -182,7 +188,7 @@ export default function VrmAvatar({
         profile: avatarTrackingProfile,
         profileName: avatarTrackingProfileName,
         providedRetargetSourceModel: displayRetargetSourceModel,
-        recordedRootMotionFrame: rootMotionFrameRef.current,
+        recordedRootMotionFrame: externalRootMotionFrameRef?.current ?? rootMotionFrameRef.current,
         retargetAvatarRestRef,
         retargetSourceModelRef,
         rigHands,

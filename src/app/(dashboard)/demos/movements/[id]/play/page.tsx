@@ -48,10 +48,9 @@ import {
 import { getMovementDebugQaPresets } from "../../_lib/movementDebugQaPresets";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import {
-  averageMovementRetargetSourceModels,
   buildMovementRetargetSourceModel,
-  type MovementRetargetSourceModel,
 } from "../../_lib/movementRetargeting";
+import { buildMovementRecordedPlayerSetup } from "../../_lib/movementRecordedPlayerSetup";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import {
@@ -60,10 +59,7 @@ import {
 } from "../../_lib/movementSpineMetrics";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
 import {
-  averageMovementCalibrations,
   buildMovementCalibration,
-  buildUprightMovementAutoCalibration,
-  type MovementCalibration,
   getMovementTrackingHealthSummary,
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
@@ -364,38 +360,25 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   ), [debugGameFrameIndex, loadedFrames]);
   const debugPlayerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
   debugPlayerLiveLmRef.current = debugGameFrameMotionPayload ?? debugPlayerMotionPayload;
-  const debugGameFrameCalibration = React.useMemo(() => {
+  const debugGameFrameSetup = React.useMemo(() => {
     if (!isDebugGameFrameRoute) return null;
 
-    const calibrations = loadedFrames
-      .map((frame) => toDebugPlayerMotionPayload(frame as unknown as MotionFrame))
-      .map((frame) => {
-        const poseLandmarks = frame?.landmarks ?? [];
-        if (poseLandmarks.length < 33) return null;
-        return buildUprightMovementAutoCalibration({ poseLandmarks }) ??
-          buildMovementCalibration({ poseLandmarks });
-      })
-      .filter((calibration): calibration is MovementCalibration => Boolean(calibration));
-
-    return averageMovementCalibrations(calibrations);
+    const frames = loadedFrames.map((frame) => (
+      toDebugPlayerMotionPayload(frame as unknown as MotionFrame) ?? {}
+    ));
+    return buildMovementRecordedPlayerSetup({
+      frameLimit: Math.min(59, frames.length - 1),
+      frames,
+    });
   }, [isDebugGameFrameRoute, loadedFrames]);
-  const debugGameFrameRetargetSourceModel = React.useMemo(() => {
-    if (!isDebugGameFrameRoute) return null;
-
-    const models = loadedFrames
-      .map((frame) => toDebugPlayerMotionPayload(frame as unknown as MotionFrame))
-      .map((frame, index) => {
-        const poseLandmarks = frame?.landmarks ?? [];
-        if (poseLandmarks.length < 33) return null;
-        return buildMovementRetargetSourceModel({
-          now: index,
-          poseLandmarks,
-        });
-      })
-      .filter((model): model is MovementRetargetSourceModel => Boolean(model));
-
-    return averageMovementRetargetSourceModels(models);
-  }, [isDebugGameFrameRoute, loadedFrames]);
+  const debugGameFrameCalibration = debugGameFrameSetup?.calibration ?? null;
+  const debugGameFrameRetargetSourceModel = debugGameFrameSetup?.retargetSourceModel ?? null;
+  React.useEffect(() => {
+    if (!isDebugGameFrameRoute) return;
+    (window as Window & {
+      __sonaeMovementRecordedPlayerSetup?: typeof debugGameFrameSetup;
+    }).__sonaeMovementRecordedPlayerSetup = debugGameFrameSetup;
+  }, [debugGameFrameSetup, isDebugGameFrameRoute]);
   const debugPlayerCalibration = React.useMemo(() => (
     isDebugPlayerPoseRoute && !shouldSkipDebugPoseCalibration
       ? buildMovementCalibration({
