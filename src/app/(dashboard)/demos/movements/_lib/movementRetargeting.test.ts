@@ -366,7 +366,7 @@ describe("movementRetargeting", () => {
       expect(frame.neutralSpineDirection).toEqual(calibration!.segments.spine?.direction);
     });
 
-    it("keeps world arm depth while matching the visible pose-plane arm angle", () => {
+    it("keeps the articulated arm in coherent display-anatomical space", () => {
       const pose = withCorePose();
       const worldPose = makeWorldPose();
       worldPose[13] = { x: -0.18, y: -0.2, z: -0.22, visibility: 0.9 };
@@ -390,7 +390,29 @@ describe("movementRetargeting", () => {
 
       expect(arm!.x / armPlanarLength).toBeCloseTo(visibleX / visiblePlanarLength, 5);
       expect(arm!.y / armPlanarLength).toBeCloseTo(visibleY / visiblePlanarLength, 5);
-      expect(Math.abs(arm!.z)).toBeGreaterThan(0.5);
+      expect(Math.abs(arm!.z)).toBeLessThan(0.1);
+    });
+
+    it("keeps lower-arm ownership aligned to display anatomy when world depth disagrees", () => {
+      const pose = withCorePose();
+      const worldPose = makeWorldPose();
+      worldPose[15] = { x: -0.18, y: -0.52, z: -0.8, visibility: 0.9 };
+
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: pose,
+        worldPoseLandmarks: makeWorldPose(),
+      });
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: pose,
+        worldPoseLandmarks: worldPose,
+      });
+
+      const lowerArm = frame.segments.leftLowerArm?.direction;
+      expect(lowerArm).toBeDefined();
+      expect(Math.abs(lowerArm!.z)).toBeLessThan(0.1);
+      expect(lowerArm!.x).toBeLessThan(0);
+      expect(lowerArm!.y).toBeGreaterThan(0);
     });
 
     it("falls back to image segments when a frame lacks world landmarks", () => {

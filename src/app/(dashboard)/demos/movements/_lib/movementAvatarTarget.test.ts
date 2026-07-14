@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveMovementAvatarPipelineDecision,
 } from "./movementAvatarPipeline";
+import { resolveMovementAvatarEstablishedLegRetarget } from "./movementAvatarLowerBodyVisualDecision";
 import { resolveMovementAvatarLowerBodyTarget } from "./movementAvatarTarget";
 import {
   buildMovementCalibration,
@@ -89,6 +90,30 @@ function resolveDecision({
 }
 
 describe("movement avatar target", () => {
+  it("retains established leg ownership while one complete leg chain remains visible", () => {
+    expect(resolveMovementAvatarEstablishedLegRetarget({
+      applicableLegs: 2,
+      applicableThighs: 1,
+      previousState: {
+        hasEstablishedLegRetarget: true,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+      sourceQuality: 0.63,
+    })).toBe(true);
+
+    expect(resolveMovementAvatarEstablishedLegRetarget({
+      applicableLegs: 2,
+      applicableThighs: 1,
+      previousState: {
+        hasEstablishedLegRetarget: false,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+      sourceQuality: 0.63,
+    })).toBe(false);
+  });
+
   it("keeps player squat target ownership outside the renderer", () => {
     const decision = resolveDecision({
       avatarRole: "player",
@@ -165,6 +190,75 @@ describe("movement avatar target", () => {
     expect(decision.retargetApplicableLegs).toBe(2);
     expect(target.stageDecision?.stage).toBe("retarget");
     expect(target.lowerBodyOwner).toBe("retarget-partial-fallback");
+  });
+
+  it("keeps an established visible leg chain active while the opposite knee is occluded", () => {
+    const readyDecision = resolveDecision({
+      avatarRole: "player",
+      pose: withCorePose(),
+    });
+    const decision = {
+      ...readyDecision,
+      lowerBodySegmentMotion: 0,
+      lowerOwner: "retarget-partial-fallback",
+      shouldApplyLowerBody: false,
+      retargetApplicableLegs: 2,
+      retargetApplicableThighs: 1,
+      retargetSolvedLegs: 2,
+      retargetFrame: {
+        ...readyDecision.retargetFrame,
+        debug: {
+          ...readyDecision.retargetFrame.debug,
+          sourceQuality: 0.63,
+        },
+      },
+    };
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "player",
+      decision,
+      lowerBodyVisualState: {
+        hasEstablishedLegRetarget: true,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.lowerBodyOwner).toBe("retarget-partial-fallback");
+  });
+
+  it("keeps the instructor on the same established partial chain as the mirrored player", () => {
+    const readyDecision = resolveDecision({
+      avatarRole: "instructor",
+      pose: withCorePose(),
+    });
+    const target = resolveMovementAvatarLowerBodyTarget({
+      avatarRole: "instructor",
+      decision: {
+        ...readyDecision,
+        lowerBodySegmentMotion: 0,
+        shouldApplyLowerBody: false,
+        retargetApplicableLegs: 2,
+        retargetApplicableThighs: 1,
+        retargetSolvedLegs: 2,
+        retargetFrame: {
+          ...readyDecision.retargetFrame,
+          debug: {
+            ...readyDecision.retargetFrame.debug,
+            sourceQuality: 0.63,
+          },
+        },
+      },
+      lowerBodyVisualState: {
+        hasEstablishedLegRetarget: true,
+        squatPresentationDepth: 0,
+        visualRootDrop: 0,
+      },
+    });
+
+    expect(target.stageDecision?.stage).toBe("retarget");
+    expect(target.lowerBodyOwner).toBe("retarget-partial-fallback");
+    expect(target.feetOwner).toBe("recorded-retarget");
   });
 
   it("does not acquire partial leg retarget before a complete solve establishes ownership", () => {

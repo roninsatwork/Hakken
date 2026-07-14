@@ -454,8 +454,10 @@ describe("full-sequence owner-flicker analysis", () => {
 
 function armOwnershipPose(leftLowerArmAngle, rightLowerArmAngle = 0) {
   const pose = Array.from({ length: 33 }, () => null);
+  pose[11] = { x: -1, y: 0, z: 0 };
   pose[13] = { x: 0, y: 0, z: 0 };
   pose[15] = { x: Math.cos(leftLowerArmAngle), y: Math.sin(leftLowerArmAngle), z: 0 };
+  pose[12] = { x: -1, y: 0, z: 0 };
   pose[14] = { x: 0, y: 0, z: 0 };
   pose[16] = {
     x: Math.cos(rightLowerArmAngle),
@@ -472,7 +474,9 @@ function armOwnershipFrame(frameIndex, { confidence, leftDirection, rightDirecti
         averageLowerBodyDirectionError: 0,
         footing: { leftFootClearance: 0, rightFootClearance: 0 },
         segments: {
+          leftUpperArm: { confidence, direction: { x: 1, y: 0, z: 0 }, sourceDirection: { x: 1, y: 0, z: 0 } },
           leftLowerArm: { confidence, direction: leftDirection, sourceDirection: leftDirection },
+          rightUpperArm: { confidence, direction: { x: 1, y: 0, z: 0 }, sourceDirection: { x: 1, y: 0, z: 0 } },
           rightLowerArm: { confidence, direction: rightDirection, sourceDirection: rightDirection },
         },
       },
@@ -631,6 +635,36 @@ describe("full-sequence mirrored arm ownership analysis", () => {
     expect(analysis.mirrorSideOwnership["lower-arm"]).toMatchObject({
       failedFrameCount: 0,
       passedFrameCount: 3,
+    });
+    expect(analysis.status).toBe("passed");
+  });
+
+  it("does not classify a bilateral turn as decisive one-sided lower-arm motion", () => {
+    const direction = (angle) => ({ x: Math.cos(angle), y: Math.sin(angle), z: 0 });
+    const frames = [0, 1, 2, 3, 4];
+    const analysis = analyzeFullSequence({
+      session: {
+        samples: frames.map((frameIndex) => ({
+          tracking: {
+            pose: armOwnershipPose(frameIndex * 0.08, frameIndex * 0.055),
+          },
+        })),
+      },
+      telemetry: {
+        frameCount: frames.length,
+        frames: frames.map((frameIndex) => armOwnershipFrame(frameIndex, {
+          confidence: 0.9,
+          leftDirection: direction(frameIndex * 0.12),
+          rightDirection: direction(frameIndex * 0.04),
+        })),
+        missingFrames: [],
+        sessionId: "bilateral-turn-arm-ownership-test",
+      },
+    });
+
+    expect(analysis.mirrorSideOwnership["lower-arm"]).toMatchObject({
+      hardFailedFrameCount: 0,
+      persistentHardMismatchRuns: [],
     });
     expect(analysis.status).toBe("passed");
   });

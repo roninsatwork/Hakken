@@ -1,30 +1,30 @@
 # Replay Studio Agent Repair Harness Plan
 
-Last reviewed: 2026-07-13
-Status: active controlling plan. Repair-packet fail-closed coverage and browser display/export parity are implemented, but current rendered acceptance is reopened: the 2026-07-12 bundle is complete evidence under its historical fingerprint, not a current passing proof after the strengthened sustained-adherence gates.
+Last reviewed: 2026-07-14
+Status: active controlling plan. Current-fingerprint rendered acceptance is now certified across all nine recordings with complete frame accounting. The remaining product acceptance lane is manual Replay review followed by a short Game Studio live-camera confirmation; broader repair-packet and timed-playback enhancements remain open.
 Scope: turn Replay Studio from a useful human QA screen into a deterministic repair harness that a coding agent can use to reproduce, diagnose, fix, and re-prove avatar motion from one saved recording.
 
-## Latest State Of Play, 2026-07-13
+## Latest State Of Play, 2026-07-14
 
-Plan completion score: **86%** against the full Definition of Done.
+Plan completion score: **90%** against the full Definition of Done.
 
 Current shape of the work:
 
 - Harness infrastructure is mostly built: canonical repair packets, fixture resolution, source identity, browser diagnosis/export parity, strict fail-closed accounting, and non-repository CLI bundle scratch handling are in place.
-- Current rendered acceptance is reopened. The 2026-07-12 all-nine bundle remains useful historical evidence, but it predates the strengthened sustained-adherence gate and the current motion-pipeline fingerprint.
-- Latest current-fingerprint fast-subset proof passes **3 of 9** acceptance recordings: `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` all pass player-avatar and independent three-party rendered paths with zero missing and zero failures.
-- Fast-subset frame coverage is complete under the current fingerprint: `Spins` **648/648 + 648/648**, `Full Spinal Flow` **1,290/1,290 + 1,290/1,290**, and `Full Motion Exercises` **3,026/3,026 + 3,026/3,026** across player-avatar and three-party paths.
-- The final current-fingerprint all-nine gate is still open. A fresh all-nine run was started only as the final regression gate and stopped during the first recording, so it is not an acceptance result.
+- Current rendered acceptance passes **9 of 9** acceptance recordings under the current motion-pipeline fingerprint. Both the player-avatar and independent three-party rendered paths account for **11,383/11,383** frames, for **22,766/22,766** total rendered frame-path checks, with zero missing and zero failures.
+- The final certification artifact is `tmp/movement-replay-lab/current-nine-recording-proof-final-v3-2026-07-14/`. It is local generated evidence and remains intentionally uncommitted; `manifest.json` and `bundle-report.json` hold the controlling result.
+- The repair retained the established partial lower-body chain through brief opposite-knee occlusion, made articulated arm depth use one coherent display-anatomical space, and strengthened the independent side-adherence analysis so it compares meaningful joint-relative/world-space motion without treating near-collinear upper-arm/spine geometry as side evidence.
+- The latest fast subset also passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises`, and a targeted `Body Capture 3D` rerun passes **1,815/1,815** frames on each strict path.
 - The repair loop does **not** need to run all nine recordings after every code change. The runner now has executable targeted and fast-subset tiers, with repair-labeled manifests that cannot be mistaken for all-nine acceptance.
-- The next implementation slice is the final all-nine rendered gate. Do not rerun all nine during inner-loop repair; run it once as certification, then perform final Game Studio live confirmation.
+- The next acceptance slice is human visual review in Replay Lab, followed by final Game Studio live confirmation. Replay acceptance must not be described as live-camera acceptance.
 
 Subscores:
 
 | Area | Score | Current status |
 | --- | ---: | --- |
 | Repair-harness infrastructure | 95% | Packets, routing, fixtures, strict accounting, tiered browser proof commands, browser diagnosis, and export parity are substantially implemented. |
-| Full Definition of Done | 86% | Missing per-bone target/final packet evidence, timed playback acceptance, all-nine current proof, and Game Studio live confirmation. |
-| Current strict rendered acceptance | 33% recording coverage | The current fast subset passes 3/9 recordings; the all-nine gate remains open and must not be described as 9/9 accepted. |
+| Full Definition of Done | 90% | Missing per-bone target/final packet evidence, timed playback acceptance, human Replay review, and Game Studio live confirmation. |
+| Current strict rendered acceptance | 100% recording coverage | Current-fingerprint proof passes 9/9 recordings and 22,766/22,766 rendered frame-path checks with zero missing and zero failures. |
 | Current tiered proof ergonomics | 100% | `movement:replay:targeted-proof`, `movement:replay:fast-subset-proof`, and final `movement:replay:nine-proof` are distinct commands with distinct manifest labels. |
 
 ## Tiered Proof Policy, 2026-07-13

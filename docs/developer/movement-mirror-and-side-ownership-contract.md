@@ -1,23 +1,22 @@
 # Movement Mirror And Side-Ownership Contract
 
-Last reviewed: 2026-07-13
-Status: canonical contract; implementation and acceptance proof are currently reopened.
+Last reviewed: 2026-07-14
+Status: canonical contract; automated current-fingerprint rendered acceptance passes all nine recordings. Manual Replay review and final Game Studio live confirmation remain open.
 Audience: product, movement-engine, Game Studio, Replay Studio, scoring, QA, and future coding agents.
 
-## Latest State Of Play, 2026-07-13
+## Latest State Of Play, 2026-07-14
 
 Contract/documentation score: **95%** complete. The intended anatomical side-ownership rules, pipeline order, vocabulary, diagnostics, and acceptance requirements are now explicit enough to govern implementation.
 
-Implementation/adherence score: **72%** complete against this contract. The shared repair work has fixed the currently proven `Full Spinal Flow` path, but final acceptance is still blocked until the current-fingerprint all-nine rendered gate passes.
+Implementation/adherence score: **96%** complete against this contract. The shared repair work now passes the current-fingerprint all-nine rendered gate; the remaining adherence evidence is human Replay review and a short Game Studio live-camera confirmation.
 
-Current rendered-acceptance score: **11% recording coverage**. `Full Spinal Flow` is the only current strict-passing acceptance recording: **1,290/1,290** player-avatar frames and **1,290/1,290** independent three-party frames, with zero missing and zero failures. The historical 2026-07-12 all-nine bundle has complete frame accounting, but it is no longer a current pass because the strengthened analyzer detects sustained segment disagreements and the artifacts predate the current motion-pipeline fingerprint.
+Current rendered-acceptance score: **100% recording coverage**. All nine acceptance recordings pass under the current motion-pipeline fingerprint: **11,383/11,383** player-avatar frames and **11,383/11,383** independent three-party frames, for **22,766/22,766** total rendered frame-path checks, with zero missing and zero failures.
 
 Remaining work:
 
-- rerender targeted failing recordings and a fast representative subset while repairing;
-- repair any sustained instructor/player-avatar disagreements in the shared Replay/Game pipeline;
 - keep preview mirroring, coordinate reflection, anatomical ownership, and scoring correspondence as separate named decisions;
-- run the full nine-recording frame-by-frame gate with zero silent skips only as final certification before claiming global acceptance;
+- preserve the current all-nine frame-by-frame gate as the final automated certification before any future global acceptance claim;
+- complete human visual review in Replay Lab;
 - use Game Studio live-camera testing only as final confirmation after Replay proof passes.
 
 ## Purpose
@@ -301,14 +300,16 @@ As of 2026-07-10, the current implementation does not satisfy this contract cons
 
 2026-07-13 fast-subset update: the current-fingerprint fast subset now passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` across both strict rendered paths. Frame accounting is complete with zero missing and zero failures: `Spins` **648/648** player-avatar plus **648/648** three-party, `Full Spinal Flow` **1,290/1,290** plus **1,290/1,290**, and `Full Motion Exercises` **3,026/3,026** plus **3,026/3,026**.
 
+2026-07-14 final automated-certification update: `movement:replay:nine-proof` passes all nine current-fingerprint recordings. Player-avatar and independent three-party proof each account for **11,383/11,383** rendered frames with zero missing and zero failures. The repair preserves established partial lower-body retargeting through brief knee occlusion, keeps articulated arm depth in a coherent display-anatomical space, and makes the independent sustained-side analyzer compare the motion representation actually owned by each segment. The generated controlling bundle is retained locally at `tmp/movement-replay-lab/current-nine-recording-proof-final-v3-2026-07-14/` and is intentionally not committed.
+
 Progress score as of this update:
 
 - Contract documentation: **96%** complete.
-- Shared implementation/adherence: **88%** complete.
-- Current strict rendered acceptance: **33% recording coverage** (`Spins`, `Full Spinal Flow`, and `Full Motion Exercises` under the latest fingerprint).
-- Next gate: run all nine only as final certification, then perform Game Studio live confirmation.
+- Shared implementation/adherence: **96%** complete.
+- Current strict rendered acceptance: **100% recording coverage** (all nine recordings and both rendered proof paths under the latest fingerprint).
+- Next gate: human Replay Lab review, then Game Studio live confirmation.
 
-Until the current-fingerprint all-nine gate passes the sustained rendered-bone checks, mirror-side ownership remains blocked for acceptance.
+Automated rendered-bone acceptance is no longer blocked. Product/live acceptance remains open until the human Replay and Game Studio checks are confirmed.
 
 ## Change Control
 

@@ -28,19 +28,27 @@ function missingAnalysisPath() {
 
 function withDefaultAnalysisArtifact(payload, callback) {
   const defaultPath = "tmp/movement-replay-lab/current-analysis.json";
-  const hadPrevious = existsSync(defaultPath);
-  const previous = hadPrevious ? readFileSync(defaultPath, "utf8") : null;
+  const previousFiles = DEFAULT_ANALYSIS_PATHS.map((path) => ({
+    path,
+    value: existsSync(path) ? readFileSync(path, "utf8") : null,
+  }));
+  previousFiles.forEach((file) => {
+    if (file.value !== null) unlinkSync(file.path);
+  });
   mkdirSync(dirname(defaultPath), { recursive: true });
   writeFileSync(defaultPath, `${JSON.stringify(payload, null, 2)}\n`);
 
   try {
     callback();
   } finally {
-    if (previous !== null) {
-      writeFileSync(defaultPath, previous);
-    } else {
-      unlinkSync(defaultPath);
-    }
+    DEFAULT_ANALYSIS_PATHS.forEach((path) => {
+      if (existsSync(path)) unlinkSync(path);
+    });
+    previousFiles.forEach((file) => {
+      if (file.value === null) return;
+      mkdirSync(dirname(file.path), { recursive: true });
+      writeFileSync(file.path, file.value);
+    });
   }
 }
 

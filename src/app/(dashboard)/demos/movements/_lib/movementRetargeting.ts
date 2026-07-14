@@ -322,8 +322,10 @@ function buildSegments(
 /**
  * MediaPipe world landmarks preserve useful limb depth, but their camera-plane
  * arm angle can drift away from the pose landmarks that the user actually sees.
- * Preserve the metric world-depth component while aligning the projected arm
- * direction to the visible source silhouette.
+ * World arm depth can switch which elbow appears to move during turns. Keep
+ * each articulated arm in one coherent display-anatomical space instead of
+ * mixing metric upper-arm depth with image-depth forearms, which creates a
+ * false elbow bend. Other body segments continue to use metric world depth.
  */
 function buildWorldSegmentsWithDisplayAlignedArms(
   poseLandmarks: TrackingLandmark[],
@@ -346,14 +348,14 @@ function buildWorldSegmentsWithDisplayAlignedArms(
     );
     if (displayPlanarLength <= 0.00001) return;
 
-    const worldDepth = clamp(worldSegment.direction.z, -1, 1);
-    const planarScale = Math.sqrt(Math.max(0, 1 - worldDepth * worldDepth));
+    const alignedDepth = clamp(displaySegment.direction.z * 0.18, -1, 1);
+    const planarScale = Math.sqrt(Math.max(0, 1 - alignedDepth * alignedDepth));
     worldSegments[name] = {
       ...worldSegment,
       direction: normalizeVector({
         x: (displaySegment.direction.x / displayPlanarLength) * planarScale,
         y: (displaySegment.direction.y / displayPlanarLength) * planarScale,
-        z: worldDepth,
+        z: alignedDepth,
       }),
     };
   });

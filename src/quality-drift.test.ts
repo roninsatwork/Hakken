@@ -58,6 +58,7 @@ const ignoredRepoPathPrefixes = [
   'package-lock.json',
   'playwright-report/',
   'public/models/',
+  'tmp/',
   'tsconfig.tsbuildinfo',
 ];
 

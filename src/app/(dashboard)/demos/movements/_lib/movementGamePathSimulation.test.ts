@@ -2969,7 +2969,7 @@ describe("movementGamePathSimulation", () => {
     expect(clippedLegDecision?.lowerOwner).toContain("leg-raise");
   });
 
-  it("keeps live squats active when feet are clipped but hips and knees are in frame", () => {
+  it("keeps live squats on the shared partial retarget when feet are clipped but hips and knees are in frame", () => {
     const simulation = buildMovementGamePathSimulation(session([
       frame(withCorePose()),
       frame(clippedFeetPose(squatPose())),
@@ -2980,7 +2980,7 @@ describe("movementGamePathSimulation", () => {
     expect(clippedSquatDecision?.lowerBodyTrackingReady).toBe(true);
     expect(clippedSquatDecision?.lowerBodyIntent.label).toBe("squat");
     expect(clippedSquatDecision?.lowerBodyDrive.shouldDrivePlayerSquat).toBe(true);
-    expect(clippedSquatDecision?.lowerOwner).toBe("player-stable-squat");
+    expect(clippedSquatDecision?.lowerOwner).toBe("retarget-partial-fallback");
   });
 
   it("does not apply lower-body ownership when the lower body is out of frame", () => {

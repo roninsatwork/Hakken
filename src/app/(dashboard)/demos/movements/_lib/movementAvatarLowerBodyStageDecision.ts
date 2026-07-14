@@ -1,4 +1,5 @@
 import type { MovementAvatarLowerBodyDrive, MovementAvatarPlayerLowerBodyOwnerDecision } from "./movementAvatarLowerBody";
+import { resolveMovementAvatarLowerBodyRetargetStage } from "./movementAvatarLowerBodyRetargetStageDecision";
 import type { MovementAvatarInactiveLowerBodyDecision, MovementAvatarLowerBodyApplicationStageDecision } from "./movementAvatarPipeline";
 
 export function resolveMovementAvatarInactiveLowerBodyDecision({
@@ -66,26 +67,16 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
     };
   }
 
-  // Once the shared source has acquired both thighs plus enough moving child
-  // segments to qualify as a usable partial retarget, those recorded
-  // directions outrank the player's pose label. Evaluating the detected squat
-  // first used to replace five source-driven lower-body segments with a
-  // two-bone canned squat for the player only.
-  if (
-    isPlayer &&
-    canContinuePartialLegRetarget &&
-    playerRetargetLowerBodyMotion >= 0.08
-  ) {
-    return {
-      anchoredPlayerLegRaiseSide,
-      canUsePlayerRetargetLegRaise,
-      feetOwner: sourceOwnerDecision?.feetOwner ?? "neutral",
-      lowerBodyOwner: sourceOwnerDecision?.hasCompleteLegRetarget
-        ? sourceOwnerDecision.lowerBodyOwner
-        : "retarget-partial-fallback",
-      stage: "retarget",
-    };
-  }
+  const retargetStage = resolveMovementAvatarLowerBodyRetargetStage({
+    anchoredPlayerLegRaiseSide,
+    avatarRole,
+    canContinuePartialLegRetarget,
+    canUsePlayerRetargetLegRaise,
+    hasCompleteLegRetarget,
+    sourceOwnerDecision,
+  });
+
+  if (retargetStage) return retargetStage;
 
   if (isPlayer && (lowerBodyDrive.shouldDrivePlayerSquat || shouldHoldPlayerSquatPose)) {
     if (sourceOwnerDecision?.hasCompleteLegRetarget) {
@@ -106,31 +97,6 @@ export function resolveMovementAvatarLowerBodyApplicationStage({
         ? "player-stable-squat"
         : "player-stable-squat-held"),
       stage: "player-squat",
-    };
-  }
-
-  // Complete leg directions remain the owner even when their
-  // frame-to-frame motion is small. Easing the rig to neutral by label and
-  // switching back at a motion threshold creates the observed bilateral leg
-  // snap despite a continuous source. This continuity rule applies equally to
-  // instructor identity and player mirror paths.
-  if (isPlayer && sourceOwnerDecision?.hasCompleteLegRetarget) {
-    return {
-      anchoredPlayerLegRaiseSide,
-      canUsePlayerRetargetLegRaise,
-      feetOwner: sourceOwnerDecision.feetOwner,
-      lowerBodyOwner: sourceOwnerDecision.lowerBodyOwner,
-      stage: "retarget",
-    };
-  }
-
-  if (!isPlayer && hasCompleteLegRetarget) {
-    return {
-      anchoredPlayerLegRaiseSide: null,
-      canUsePlayerRetargetLegRaise: false,
-      feetOwner: "recorded-retarget",
-      lowerBodyOwner: "recorded-retarget",
-      stage: "retarget",
     };
   }
 

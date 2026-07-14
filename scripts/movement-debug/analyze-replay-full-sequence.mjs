@@ -31,8 +31,8 @@ const MIRROR_LIMB_PAIRS = [
     avatarLeft: "leftLowerArm",
     avatarRight: "rightLowerArm",
     minimumSourceStep: 0.025,
-    sourceLeft: [13, 15],
-    sourceRight: [14, 16],
+    sourceLeft: [11, 13, 15],
+    sourceRight: [12, 14, 16],
     type: "lower-arm",
   },
   {
@@ -55,8 +55,10 @@ const MIRROR_LIMB_PAIRS = [
   },
 ];
 const SEGMENT_PARENT = {
+  leftUpperArm: "spine",
   leftLowerArm: "leftUpperArm",
   leftShin: "leftThigh",
+  rightUpperArm: "spine",
   rightLowerArm: "rightUpperArm",
   rightShin: "rightThigh",
 };
@@ -70,6 +72,8 @@ const MINIMUM_SIDE_BEND_SOURCE_RANGE = 0.04;
 const PERSISTENT_RENDERED_FAILURE_FRAMES = 3;
 const HARD_MIRROR_WRONG_SIDE_STEP = 0.06;
 const HARD_MIRROR_WRONG_SIDE_MARGIN = 0.02;
+const MIRROR_OWNERSHIP_MINIMUM_DOMINANCE_RATIO = 2.5;
+const UPPER_ARM_JOINT_SINGULARITY_MARGIN = 0.18;
 
 function parseArgs(argv) {
   const args = { out: "", session: "", strict: false, telemetry: "" };
@@ -102,6 +106,45 @@ function vector(start, end) {
   return length > 0.000001 ? { x: x / length, y: y / length, z: z / length } : null;
 }
 
+function displayAnatomicalVector(start, end) {
+  const raw = vector(start, end);
+  if (!raw) return null;
+  const planarLength = Math.hypot(raw.x, raw.y);
+  if (planarLength <= 0.00001) return raw;
+
+  // Match buildWorldSegmentsWithDisplayAlignedArms exactly: normalise the
+  // landmark segment first, damp its unit-depth component, then reconstruct
+  // the planar unit direction. Scaling raw z before normalisation can reverse
+  // which elbow looks dominant during a turn.
+  const alignedDepth = Math.max(-1, Math.min(1, raw.z * 0.18));
+  const planarScale = Math.sqrt(Math.max(0, 1 - alignedDepth * alignedDepth));
+  return {
+    x: (raw.x / planarLength) * planarScale,
+    y: (raw.y / planarLength) * planarScale,
+    z: alignedDepth,
+  };
+}
+
+function midpoint(left, right) {
+  if (!left || !right) return null;
+  return {
+    x: (left.x + right.x) / 2,
+    y: (left.y + right.y) / 2,
+    z: ((left.z ?? 0) + (right.z ?? 0)) / 2,
+  };
+}
+
+function sourceUpperArmJointAngle(session, frameIndex, source) {
+  const pose = replayPose(session, frameIndex);
+  return angle(
+    displayAnatomicalVector(
+      midpoint(pose[23], pose[24]),
+      midpoint(pose[11], pose[12]),
+    ),
+    displayAnatomicalVector(pose[source[0]], pose[source[1]]),
+  );
+}
+
 function angle(left, right) {
   if (!left || !right) return 0;
   const dot = Math.max(-1, Math.min(1, left.x * right.x + left.y * right.y + left.z * right.z));
@@ -112,28 +155,77 @@ function accumulatedSourceSegmentStep(session, frames, endIndex, source, segment
   const startIndex = Math.max(0, endIndex - MIRROR_OWNERSHIP_WINDOW_TRANSITIONS);
   let total = 0;
   for (let index = startIndex + 1; index <= endIndex; index += 1) {
-    const previousPose = segmentType === "raw-anatomical"
+    const previousPose = segmentType.startsWith("raw-display-anatomical")
       ? replayPose(session, frames[index - 1].frameIndex)
       : replayRetargetPose(session, frames[index - 1].frameIndex);
-    const pose = segmentType === "raw-anatomical"
+    const pose = segmentType.startsWith("raw-display-anatomical")
       ? replayPose(session, frames[index].frameIndex)
       : replayRetargetPose(session, frames[index].frameIndex);
-    total += angle(
-      vector(previousPose[source[0]], previousPose[source[1]]),
-      vector(pose[source[0]], pose[source[1]]),
-    );
+    if (segmentType === "raw-display-anatomical-upper-joint") {
+      const previousTorso = displayAnatomicalVector(
+        midpoint(previousPose[23], previousPose[24]),
+        midpoint(previousPose[11], previousPose[12]),
+      );
+      const torso = displayAnatomicalVector(
+        midpoint(pose[23], pose[24]),
+        midpoint(pose[11], pose[12]),
+      );
+      const previousJointAngle = angle(
+        previousTorso,
+        displayAnatomicalVector(previousPose[source[0]], previousPose[source[1]]),
+      );
+      const jointAngle = angle(
+        torso,
+        displayAnatomicalVector(pose[source[0]], pose[source[1]]),
+      );
+      total += Math.abs(jointAngle - previousJointAngle);
+    } else if (segmentType === "raw-display-anatomical-joint") {
+      const previousJointAngle = angle(
+        displayAnatomicalVector(previousPose[source[0]], previousPose[source[1]]),
+        displayAnatomicalVector(previousPose[source[1]], previousPose[source[2]]),
+      );
+      const jointAngle = angle(
+        displayAnatomicalVector(pose[source[0]], pose[source[1]]),
+        displayAnatomicalVector(pose[source[1]], pose[source[2]]),
+      );
+      total += Math.abs(jointAngle - previousJointAngle);
+    } else {
+      total += angle(
+        segmentType === "raw-display-anatomical"
+          ? displayAnatomicalVector(previousPose[source[0]], previousPose[source[1]])
+          : vector(previousPose[source[0]], previousPose[source[1]]),
+        segmentType === "raw-display-anatomical"
+          ? displayAnatomicalVector(pose[source[0]], pose[source[1]])
+          : vector(pose[source[0]], pose[source[1]]),
+      );
+    }
   }
   return total;
 }
 
-function accumulatedAvatarSegmentStep(frames, endIndex, segment) {
+function accumulatedAvatarSegmentStep(frames, endIndex, segment, relativeToParent = false) {
   const startIndex = Math.max(0, endIndex - MIRROR_OWNERSHIP_WINDOW_TRANSITIONS);
   let total = 0;
   for (let index = startIndex + 1; index <= endIndex; index += 1) {
-    total += angle(
-      frames[index - 1].debug?.avatarVisual?.segments?.[segment]?.direction,
-      frames[index].debug?.avatarVisual?.segments?.[segment]?.direction,
-    );
+    if (relativeToParent) {
+      const parent = SEGMENT_PARENT[segment];
+      const previousSegments = frames[index - 1].debug?.avatarVisual?.segments;
+      const segments = frames[index].debug?.avatarVisual?.segments;
+      const previousJointAngle = angle(
+        previousSegments?.[parent]?.direction,
+        previousSegments?.[segment]?.direction,
+      );
+      const jointAngle = angle(
+        segments?.[parent]?.direction,
+        segments?.[segment]?.direction,
+      );
+      total += Math.abs(jointAngle - previousJointAngle);
+    } else {
+      total += angle(
+        frames[index - 1].debug?.avatarVisual?.segments?.[segment]?.direction,
+        frames[index].debug?.avatarVisual?.segments?.[segment]?.direction,
+      );
+    }
   }
   return total;
 }
@@ -463,21 +555,53 @@ export function analyzeFullSequence({
           frames,
           frameArrayIndex,
           pair.sourceLeft,
-          pair.type === "lower-arm" ? "raw-anatomical" : "retarget",
+          pair.type === "lower-arm"
+            ? "raw-display-anatomical-joint"
+            : pair.type === "upper-arm"
+              ? "raw-display-anatomical"
+              : "retarget",
         );
         const sourceRightStep = accumulatedSourceSegmentStep(
           session,
           frames,
           frameArrayIndex,
           pair.sourceRight,
-          pair.type === "lower-arm" ? "raw-anatomical" : "retarget",
+          pair.type === "lower-arm"
+            ? "raw-display-anatomical-joint"
+            : pair.type === "upper-arm"
+              ? "raw-display-anatomical"
+              : "retarget",
         );
         if (Math.max(sourceLeftStep, sourceRightStep) < pair.minimumSourceStep) return;
         if (Math.abs(sourceLeftStep - sourceRightStep) < 0.015) return;
+        const dominantSourceStep = Math.max(sourceLeftStep, sourceRightStep);
+        const secondarySourceStep = Math.min(sourceLeftStep, sourceRightStep);
+        if (
+          secondarySourceStep > 0.0001 &&
+          dominantSourceStep / secondarySourceStep < MIRROR_OWNERSHIP_MINIMUM_DOMINANCE_RATIO
+        ) return;
         const sourceSide = sourceLeftStep > sourceRightStep ? "left" : "right";
         const expectedAvatar = sourceSide === "left" ? pair.avatarRight : pair.avatarLeft;
         const wrongAvatar = sourceSide === "left" ? pair.avatarLeft : pair.avatarRight;
         const result = mirrorOwnership[pair.type];
+        if (pair.type === "upper-arm") {
+          const jointAngle = sourceUpperArmJointAngle(
+            session,
+            frame.frameIndex,
+            sourceSide === "left" ? pair.sourceLeft : pair.sourceRight,
+          );
+          // A scalar torso/upper-arm angle loses side information when the arm
+          // is almost exactly collinear with the spine. Treat that geometry as
+          // non-decisive instead of turning tiny cross-axis changes into a
+          // three-frame wrong-side verdict.
+          if (
+            jointAngle <= UPPER_ARM_JOINT_SINGULARITY_MARGIN ||
+            Math.PI - jointAngle <= UPPER_ARM_JOINT_SINGULARITY_MARGIN
+          ) {
+            result.excludedFrames.push({ frameIndex: frame.frameIndex, sourceSide });
+            return;
+          }
+        }
         if (!isMirrorOwnershipFrameEligible({
           currentDebug: debug,
           expectedAvatar,
@@ -492,11 +616,13 @@ export function analyzeFullSequence({
           frames,
           frameArrayIndex,
           expectedAvatar,
+          pair.type === "lower-arm",
         );
         const wrongStep = accumulatedAvatarSegmentStep(
           frames,
           frameArrayIndex,
           wrongAvatar,
+          pair.type === "lower-arm",
         );
         const detail = {
           expectedAvatar,

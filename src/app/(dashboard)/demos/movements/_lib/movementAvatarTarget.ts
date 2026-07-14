@@ -48,19 +48,20 @@ export function resolveMovementAvatarLowerBodyTarget({
   const hasCompleteLegRetarget =
     decision.retargetApplicableLegs >= 4 &&
     decision.retargetFrame.debug.sourceQuality >= 0.45;
-  const hasUsablePartialLegRetarget =
+  const hasEstablishedPartialLegChain =
+    lowerBodyVisualState.hasEstablishedLegRetarget === true &&
+    decision.retargetApplicableThighs >= 1 &&
+    decision.retargetApplicableLegs >= 2;
+  const canAcquirePartialLegChain =
     decision.retargetApplicableThighs >= 2 &&
+    // Three available leg segments (both thighs plus one child) are
+    // sufficient to acquire meaningful moving source motion without
+    // treating a two-thigh startup estimate as a complete leg solve.
+    decision.retargetApplicableLegs >= 3 &&
+    instructorLowerBodyMotion >= 0.18;
+  const hasUsablePartialLegRetarget =
     decision.retargetFrame.debug.sourceQuality >= 0.45 &&
-    (
-      lowerBodyVisualState.hasEstablishedLegRetarget === true ||
-      (
-        // Three available leg segments (both thighs plus one child) are
-        // sufficient to acquire meaningful moving source motion without
-        // treating a two-thigh startup estimate as a complete leg solve.
-        decision.retargetApplicableLegs >= 3 &&
-        instructorLowerBodyMotion >= 0.18
-      )
-    );
+    (hasEstablishedPartialLegChain || canAcquirePartialLegChain);
   const playerSourceOwner = resolveMovementAvatarPlayerSourceOwnerDecision({
     avatarRole,
     decision,
@@ -75,7 +76,14 @@ export function resolveMovementAvatarLowerBodyTarget({
       hasCompleteLegRetarget ||
       hasUsablePartialLegRetarget
     ) &&
-    decision.shouldApplyLowerBody
+    (
+      decision.shouldApplyLowerBody ||
+      // Overall lower-body readiness uses a stricter framing threshold than
+      // the per-segment continuation band. Do not neutralize a previously
+      // established visible thigh/shin chain just because the opposite side
+      // is occluded enough to make the aggregate readiness gate false.
+      hasUsablePartialLegRetarget
+    )
   ) {
     const stageDecision = resolveMovementAvatarLowerBodyApplicationStage({
       avatarRole,
@@ -103,10 +111,10 @@ export function resolveMovementAvatarLowerBodyTarget({
     }
 
     return {
-      feetOwner: decision.feetOwner,
+      feetOwner: stageDecision.feetOwner,
       inactiveDecision: null,
       instructorLowerBodyMotion,
-      lowerBodyOwner: decision.lowerOwner,
+      lowerBodyOwner: stageDecision.lowerBodyOwner,
       playerSourceOwner,
       playerSquatPresentationDepth,
       recordedSquatPresentationDepth,

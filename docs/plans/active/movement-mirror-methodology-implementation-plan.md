@@ -1,7 +1,7 @@
 # Movement Mirror Methodology Implementation Plan
 
-Last reviewed: 2026-07-13
-Status: active and reopened for rendered and live acceptance. The historical Replay proof reached 9/9 recordings and 11,383/11,383 rendered frames under its earlier gate, but the strengthened sustained-divergence gate and current motion-pipeline fingerprint require a fresh all-nine result. Current `Full Spinal Flow` passes both strict rendered paths; the fresh all-nine run was stopped at the user's request and is not an acceptance result. The 2026-07-11 live Game check-in also remains unaccepted pending human confirmation. Replay, injected-frame, internal bone-name, mapping-metadata, or historical artifacts must not be reported as current live acceptance.
+Last reviewed: 2026-07-14
+Status: active for human Replay and live acceptance. Current-fingerprint deterministic Replay proof passes 9/9 recordings across both rendered paths with 22,766/22,766 total frame-path checks, zero missing, and zero failures. The 2026-07-11 live Game check-in remains unaccepted pending human confirmation. Replay, injected-frame, internal bone-name, mapping-metadata, or automated artifacts must not be reported as current live acceptance.
 Owner: shared Movement Studio / Replay Studio / Game Studio motion pipeline.
 Canonical contract: [`docs/developer/movement-mirror-and-side-ownership-contract.md`](../../developer/movement-mirror-and-side-ownership-contract.md)
 
@@ -39,7 +39,7 @@ No single Boolean or generic mirror-mode label may represent all four.
 
 ## Current Status
 
-Overall movement roadmap: about 80%.
+Overall movement roadmap: **73%** on the standing architecture board. The narrower automated mirror-methodology and rendered Replay acceptance slice is approximately **96%**; human Replay review and live Game confirmation remain open.
 
 Mirror methodology slice:
 
@@ -50,16 +50,16 @@ Mirror methodology slice:
 - Retarget segment boundary: updated on 2026-07-11 to forbid a second player-only horizontal reflection after display-side ownership has already mapped player left/right into avatar destination sides.
 - Head pitch boundary: updated on 2026-07-11 so raw player/instructor head intent is preserved until VRM application, then inverted once because the Jane rig's visible head pitch axis is opposite the tracking pitch sign.
 - Hand-authored three-party rendered regression proof: incomplete as an acceptance oracle because it asserts internal bone identity/direction without proving the final visible screen side in the real webcam lifecycle.
-- Deterministic player-avatar all-frame, all-nine proof: historical 9/9 under the earlier gate; current strengthened-gate all-nine proof is open.
-- Deterministic independent three-party harness: 100% implemented; current `Full Spinal Flow` passes **1,290/1,290** rendered frames with zero missing and zero failures, while current all-nine acceptance remains incomplete.
-- Uninterrupted all-nine capture and frame accounting: historical 11,383/11,383 result retained as before-evidence; current-fingerprint recapture remains open.
-- Uninterrupted all-nine automated acceptance: reopened by the strengthened sustained-divergence gate.
-- Current same-runtime evidence: strict `Full Spinal Flow` pass on both rendered proof paths; no current all-nine claim.
+- Deterministic player-avatar all-frame, all-nine proof: 100% under the current fingerprint, **11,383/11,383** frames with zero missing and zero failures.
+- Deterministic independent three-party harness: 100% implemented and passing all nine recordings, **11,383/11,383** frames with zero missing and zero failures.
+- Uninterrupted all-nine capture and frame accounting: 100% under the current fingerprint; **22,766/22,766** total rendered frame-path checks.
+- Uninterrupted all-nine automated acceptance: passed under the strengthened sustained-divergence gate.
+- Current same-runtime evidence: strict 9/9 pass on both rendered proof paths. The controlling local bundle is `tmp/movement-replay-lab/current-nine-recording-proof-final-v3-2026-07-14/` and is intentionally uncommitted.
 - Manual flagged-event confirmation: 100% across the controlling nine recordings.
 - Live Game mirror acceptance: **reopened / pending human confirmation**. The first human check-in failed visibly; the focused synthetic proof page now passes the basic left-arm/right-arm and head-sign boundary checks, but this does not replace a real camera check.
-- Combined implementation-and-acceptance estimate: mirror implementation is materially improved, but current all-nine Replay acceptance and real Game Studio camera acceptance remain separate open evidence lanes.
+- Combined implementation-and-acceptance estimate: automated mirror implementation and rendered Replay acceptance are approximately 96% complete; human Replay review and real Game Studio camera acceptance remain separate open evidence lanes.
 
-Phase 8 in the standing architecture board remains reopened. The live human acceptance lane is now a confirmed failure, not merely an outstanding confirmation.
+Phase 8 remains open only for human Replay review and live Game confirmation. The previous live human result is still not accepted, so automated Replay proof must not be used to claim that the camera lifecycle is fixed.
 
 ## Definition Of Done
 

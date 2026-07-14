@@ -30,10 +30,13 @@ export function resolveMovementAvatarEstablishedLegRetarget({
   if (sourceQuality < 0.45) return false;
   if (applicableLegs >= 4) return true;
 
-  // A bilateral-thigh partial solve is a continuity fallback, not an
-  // acquisition path. Starting it from neutral lets uncertain startup vectors
-  // flip the rig before a complete leg solve has ever established ownership.
-  return applicableThighs >= 2 && previousState.hasEstablishedLegRetarget === true;
+  // Partial solves are a continuity fallback, not an acquisition path.
+  // Once a complete solve has established ownership, keep the still-visible
+  // thigh/shin chain active while the opposite knee is briefly occluded.
+  // Starting the same partial shape from neutral remains forbidden.
+  return previousState.hasEstablishedLegRetarget === true &&
+    applicableThighs >= 1 &&
+    applicableLegs >= 2;
 }
 
 function smoothInstructorSquatDepth(current: number, sourceDepth: number) {
