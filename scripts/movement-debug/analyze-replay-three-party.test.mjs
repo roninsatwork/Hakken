@@ -200,4 +200,20 @@ describe("three-party rendered Replay analyzer", () => {
       difference: 0.38,
     });
   });
+
+  it("compares rendered head yaw across the signed angle boundary", () => {
+    const input = telemetry();
+    input.frames.forEach((frame) => {
+      frame.avatars.instructor.avatarHead.appliedWorldYaw = 3.13;
+      frame.avatars.player.avatarHead.appliedWorldYaw = -3.13;
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.status).toBe("passed");
+    expect(analysis.axial.worstFrames).toContainEqual(expect.objectContaining({
+      axis: "head.yaw",
+      difference: 0.0232,
+    }));
+  });
 });

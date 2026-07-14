@@ -4,6 +4,22 @@ Last reviewed: 2026-07-13
 Status: canonical contract; implementation and acceptance proof are currently reopened.
 Audience: product, movement-engine, Game Studio, Replay Studio, scoring, QA, and future coding agents.
 
+## Latest State Of Play, 2026-07-13
+
+Contract/documentation score: **95%** complete. The intended anatomical side-ownership rules, pipeline order, vocabulary, diagnostics, and acceptance requirements are now explicit enough to govern implementation.
+
+Implementation/adherence score: **72%** complete against this contract. The shared repair work has fixed the currently proven `Full Spinal Flow` path, but final acceptance is still blocked until the current-fingerprint all-nine rendered gate passes.
+
+Current rendered-acceptance score: **11% recording coverage**. `Full Spinal Flow` is the only current strict-passing acceptance recording: **1,290/1,290** player-avatar frames and **1,290/1,290** independent three-party frames, with zero missing and zero failures. The historical 2026-07-12 all-nine bundle has complete frame accounting, but it is no longer a current pass because the strengthened analyzer detects sustained segment disagreements and the artifacts predate the current motion-pipeline fingerprint.
+
+Remaining work:
+
+- rerender targeted failing recordings and a fast representative subset while repairing;
+- repair any sustained instructor/player-avatar disagreements in the shared Replay/Game pipeline;
+- keep preview mirroring, coordinate reflection, anatomical ownership, and scoring correspondence as separate named decisions;
+- run the full nine-recording frame-by-frame gate with zero silent skips only as final certification before claiming global acceptance;
+- use Game Studio live-camera testing only as final confirmation after Replay proof passes.
+
 ## Purpose
 
 This document defines how anatomical left and right must travel from an instructor recording and a live player through the movement pipeline into the two rendered avatars.
@@ -224,6 +240,18 @@ Assertions must read actual VRM bone transforms after application. Solver labels
 
 ### 4. Full nine-recording frame-by-frame gate
 
+The full nine-recording gate is the final certification gate. It is not required after every repair iteration.
+
+During active development, use a tiered proof loop:
+
+| Gate | Scope | When to run |
+| --- | --- | --- |
+| Targeted repro | The current failing recording or frame window | While repairing the failure with `movement:replay:targeted-proof` |
+| Fast representative subset | Two or three diverse recordings | Before saying a fix is ready for final proof with `movement:replay:fast-subset-proof` |
+| Full nine-recording gate | All nine acceptance recordings, every frame | Only before claiming global mirror-side ownership acceptance with `movement:replay:nine-proof` |
+
+The recommended fast subset for the current reopened adherence work is `Full Spinal Flow`, `Spins`, and either `Full Motion Exercises` or `Full Body Flow`.
+
 For every frame of every one of the nine acceptance recordings:
 
 1. Render the recorded source through the instructor path.
@@ -267,7 +295,18 @@ As of 2026-07-10, the current implementation does not satisfy this contract cons
 
 2026-07-11 follow-up: the player-avatar retarget segment layer had been adding a second horizontal reflection after display-side ownership had already mapped player anatomy into the destination avatar side. That is forbidden by this contract. The head path also preserved raw pitch sign into a rig boundary where the visible Jane head pitch axis is opposite, causing down/up to render inverted. Both cases are examples of why anatomical ownership and coordinate/bone-axis conversion must remain separate.
 
-2026-07-13 adherence update: the three-party all-frame capture now exists for all nine recordings with complete 11,383/11,383 frame accounting on both proof paths. However, the strengthened analyzer detects sustained above-threshold instructor/player-avatar segment disagreement that the earlier session-p95 gate diluted; for example, the historical Spins artifact diverges on both shins for frames 645-647. Those artifacts also predate the current motion-pipeline fingerprint. The proof must therefore be rerendered through current code and the sustained disagreements repaired in the shared Replay/Game pipeline. Complete telemetry is evidence availability, not automatic adherence.
+2026-07-13 adherence update: the three-party all-frame capture now exists for all nine recordings with complete 11,383/11,383 frame accounting on both proof paths. However, the strengthened analyzer detects sustained above-threshold instructor/player-avatar segment disagreement that the earlier session-p95 gate diluted; for example, the historical Spins artifact diverges on both shins for frames 645-647. Those artifacts also predate the current motion-pipeline fingerprint. Complete telemetry is evidence availability, not automatic adherence.
+
+2026-07-13 latest repair state: the current-fingerprint targeted proof for `Full Motion Exercises` now passes both strict paths: **3,026/3,026** player-avatar frames and **3,026/3,026** independent three-party frames, zero missing and zero failures. The fix keeps upper-arm and lower-body ownership in the retarget/world space consumed by those render paths, but measures lower-arm side dominance from raw anatomical pose so world-pose lower-arm flips cannot relabel the human arm that moved. Three-party startup also keeps the synthetic player head neutral until the instructor recorded head path is active, preventing the first three frames from using a role-specific calibrated-player head path while the instructor is still neutral.
+
+2026-07-13 fast-subset update: the current-fingerprint fast subset now passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` across both strict rendered paths. Frame accounting is complete with zero missing and zero failures: `Spins` **648/648** player-avatar plus **648/648** three-party, `Full Spinal Flow` **1,290/1,290** plus **1,290/1,290**, and `Full Motion Exercises` **3,026/3,026** plus **3,026/3,026**.
+
+Progress score as of this update:
+
+- Contract documentation: **96%** complete.
+- Shared implementation/adherence: **88%** complete.
+- Current strict rendered acceptance: **33% recording coverage** (`Spins`, `Full Spinal Flow`, and `Full Motion Exercises` under the latest fingerprint).
+- Next gate: run all nine only as final certification, then perform Game Studio live confirmation.
 
 Until the current-fingerprint all-nine gate passes the sustained rendered-bone checks, mirror-side ownership remains blocked for acceptance.
 

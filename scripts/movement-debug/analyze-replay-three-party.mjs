@@ -43,6 +43,13 @@ function vectorAngle(left, right) {
   return Math.acos(dot);
 }
 
+function axialAngleDifference(axis, left, right) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+  const difference = left - right;
+  if (axis === "yaw") return Math.abs(Math.atan2(Math.sin(difference), Math.cos(difference)));
+  return Math.abs(difference);
+}
+
 function percentile(sorted, fraction) {
   if (sorted.length === 0) return null;
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
@@ -77,8 +84,9 @@ function axialDifferences(frame) {
     const right = Number.isFinite(player.avatarHead?.[renderedKey])
       ? player.avatarHead[renderedKey]
       : player.headApplied?.[axis];
-    if (Number.isFinite(left) && Number.isFinite(right)) {
-      entries.push({ axis: `head.${axis}`, difference: Math.abs(left - right) });
+    const difference = axialAngleDifference(axis, left, right);
+    if (difference !== null) {
+      entries.push({ axis: `head.${axis}`, difference });
     }
   }
   for (const bone of ["chest", "upperChest"]) {

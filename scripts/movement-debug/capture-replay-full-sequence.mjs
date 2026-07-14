@@ -131,6 +131,31 @@ async function captureDeterministicFrames(page, lab, frameCount, threeParty) {
         }
 
         const chunkFrames = [];
+        if (startFrameIndex === 0 && endFrameIndex > 1) {
+          const warmupFrameIndex = stepToFrame(1);
+          if (warmupFrameIndex !== 1) {
+            throw new Error(`Deterministic warmup selected ${warmupFrameIndex}; expected 1.`);
+          }
+          await waitFor(
+            () => Number(root.getAttribute("data-current-frame-index") || -1) === 1,
+            "Replay Lab did not select deterministic warmup frame 1.",
+          );
+          await waitFor(
+            () => window.__sonaeReplayLabCommittedFrameIndex === 1,
+            "Replay refs did not commit deterministic warmup frame 1.",
+          );
+          await waitFor(
+            () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual),
+            "Player avatar telemetry did not render deterministic warmup frame 1.",
+          );
+          if (threeParty) {
+            await waitFor(
+              () => Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual),
+              "Instructor avatar telemetry did not render deterministic warmup frame 1.",
+            );
+          }
+        }
+
         for (let frameIndex = startFrameIndex; frameIndex < endFrameIndex; frameIndex += 1) {
           const previousPlayerUpdatedAt = window.__sonaeMovementAvatarDebug?.player?.frameUpdatedAt ?? -1;
           const previousInstructorUpdatedAt = window.__sonaeMovementAvatarDebug?.instructor?.frameUpdatedAt ?? -1;
@@ -146,17 +171,15 @@ async function captureDeterministicFrames(page, lab, frameCount, threeParty) {
             () => window.__sonaeReplayLabCommittedFrameIndex === frameIndex,
             `Replay refs did not commit deterministic frame ${frameIndex}.`,
           );
-          if (frameIndex > 0) {
+          await waitFor(
+            () => (window.__sonaeMovementAvatarDebug?.player?.frameUpdatedAt ?? -1) > previousPlayerUpdatedAt,
+            `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
+          );
+          if (threeParty) {
             await waitFor(
-              () => (window.__sonaeMovementAvatarDebug?.player?.frameUpdatedAt ?? -1) > previousPlayerUpdatedAt,
-              `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
+              () => (window.__sonaeMovementAvatarDebug?.instructor?.frameUpdatedAt ?? -1) > previousInstructorUpdatedAt,
+              `Instructor avatar telemetry did not render deterministic frame ${frameIndex}.`,
             );
-            if (threeParty) {
-              await waitFor(
-                () => (window.__sonaeMovementAvatarDebug?.instructor?.frameUpdatedAt ?? -1) > previousInstructorUpdatedAt,
-                `Instructor avatar telemetry did not render deterministic frame ${frameIndex}.`,
-              );
-            }
           }
 
           const renderedFrameIndex = Number(root.getAttribute("data-current-frame-index") || -1);

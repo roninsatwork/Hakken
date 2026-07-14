@@ -411,6 +411,30 @@ export default function MovementReplayLabPage() {
       })),
     );
   }, [replaySession]);
+  const replayInstructorCalibration = useMemo(() => {
+    if (!replaySession) return null;
+
+    const calibrationSamples = replaySession.samples
+      .map((sample, index) => ({
+        calibration: buildMovementCalibration({
+          now: index,
+          poseLandmarks: sample.tracking.pose,
+        }),
+        score: replayCalibrationNeutralScore(sample),
+      }))
+      .filter((sample): sample is {
+        calibration: NonNullable<ReturnType<typeof buildMovementCalibration>>;
+        score: number;
+      } => Boolean(sample.calibration) && Number.isFinite(sample.score))
+      .sort((left, right) => (
+        left.score - right.score ||
+        right.calibration.quality - left.calibration.quality
+      ))
+      .slice(0, 8)
+      .map((sample) => sample.calibration);
+
+    return averageMovementCalibrations(calibrationSamples);
+  }, [replaySession]);
   const replayPlayerCalibration = useMemo(() => {
     if (!replaySession) return null;
 
@@ -475,16 +499,26 @@ export default function MovementReplayLabPage() {
   const currentThreePartyInstructorFrame = useMemo(() => (
     currentThreePartyInstructorPayload && isThreePartyMirrorProof
       ? buildRecordedMovementMotionFrame({
+          calibration: replayInstructorCalibration ?? buildMovementCalibration({
+            poseLandmarks: currentThreePartyInstructorPayload.landmarks,
+          }),
           isPlaying: true,
           motionRef: currentThreePartyInstructorPayload,
           retargetSourceModel: replayRetargetSourceModel,
         })
       : null
-  ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof, replayRetargetSourceModel]);
+  ), [
+    currentThreePartyInstructorPayload,
+    isThreePartyMirrorProof,
+    replayInstructorCalibration,
+    replayRetargetSourceModel,
+  ]);
   const currentThreePartyPlayerFrame = useMemo(() => (
     currentThreePartyPlayerPayload && isThreePartyMirrorProof
       ? buildLiveMovementMotionFrame({
-          calibration: replayThreePartyPlayerCalibration,
+          calibration: currentThreePartyInstructorFrame?.avatarHeadTarget.headDecision.shouldApplyHeadMotion
+            ? replayThreePartyPlayerCalibration
+            : null,
           isPlaying: true,
           motionRef: currentThreePartyPlayerPayload,
           retargetSourceModel: replayThreePartyPlayerSourceModel,
@@ -492,6 +526,7 @@ export default function MovementReplayLabPage() {
       : null
   ), [
     currentThreePartyPlayerPayload,
+    currentThreePartyInstructorFrame,
     isThreePartyMirrorProof,
     replayThreePartyPlayerCalibration,
     replayThreePartyPlayerSourceModel,

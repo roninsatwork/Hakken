@@ -5,7 +5,21 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const ACCEPTANCE_REGISTRY_PATH = "scripts/movement-debug/fixtures/replay-studio/acceptance-recordings.json";
-const DEFAULT_OUT_DIR = "tmp/movement-replay-lab/current-nine-recording-proof";
+const DEFAULT_OUT_DIR_BY_TIER = {
+  "all-nine": "tmp/movement-replay-lab/current-nine-recording-proof",
+  "fast-subset": "tmp/movement-replay-lab/current-fast-subset-proof",
+  targeted: "tmp/movement-replay-lab/current-targeted-proof",
+};
+const FAST_SUBSET_TITLES = new Set([
+  "Full Spinal Flow",
+  "Spins",
+  "Full Motion Exercises",
+]);
+const PROOF_TIER_SET_IDS = {
+  "all-nine": "replay-mirror-acceptance-nine-current",
+  "fast-subset": "replay-mirror-repair-fast-subset-current",
+  targeted: "replay-mirror-repair-targeted-current",
+};
 
 function parseArgs(argv) {
   const args = {
@@ -14,7 +28,8 @@ function parseArgs(argv) {
     exportPath: "",
     headed: false,
     localTestAuth: false,
-    outDir: DEFAULT_OUT_DIR,
+    outDir: "",
+    proofTier: "",
     recordingIds: [],
     resume: false,
     role: "super-admin",
@@ -27,6 +42,7 @@ function parseArgs(argv) {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--export") args.exportPath = argv[++index] || "";
     else if (arg === "--out-dir") args.outDir = argv[++index] || args.outDir;
+    else if (arg === "--proof-tier") args.proofTier = argv[++index] || "";
     else if (arg === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
     else if (arg === "--storage-state") args.storageState = argv[++index] || "";
     else if (arg === "--avatar-url") args.avatarUrl = argv[++index] || "";
@@ -47,10 +63,12 @@ function parseIds(value) {
 }
 
 function printHelp() {
-  console.log(`Render and prove the canonical nine Replay recordings through current code.
+  console.log(`Render and prove Replay recordings through current code.
 
 Usage:
   npm run movement:replay:nine-proof -- --export <convex-export.zip|dir>
+  npm run movement:replay:nine-proof -- --proof-tier fast-subset --export <convex-export.zip|dir>
+  npm run movement:replay:nine-proof -- --proof-tier targeted --recording-ids <ids> --export <convex-export.zip|dir>
 
 The command exports immutable Replay sessions, captures no-skip deterministic
 player-avatar telemetry plus deterministic instructor/player-avatar proof for
@@ -59,14 +77,15 @@ aggregate gate.
 
 Options:
   --export <path>           Convex export containing the nine recordings and storage payloads.
-  --out-dir <path>          Generated proof directory. Defaults to ${DEFAULT_OUT_DIR}
+  --proof-tier <tier>       all-nine, fast-subset, or targeted. Defaults to all-nine unless --recording-ids is supplied.
+  --out-dir <path>          Generated proof directory. Defaults to a tier-specific tmp/movement-replay-lab path.
   --base-url <url>          Replay Lab URL origin. Defaults to http://localhost:3000
   --storage-state <path>    Playwright auth storage state.
   --local-test-auth         Sign in through local test auth instead of storage state.
   --secret <secret>         Local-test-auth secret.
   --role <role>             Local-test-auth role. Defaults to super-admin.
   --avatar-url <path>       VRM URL passed to Replay Lab.
-  --recording-ids <ids>     Run a named subset for diagnosis; omitted means the canonical nine.
+  --recording-ids <ids>     Run a named targeted subset; omitted means the tier's configured recording set.
   --resume                  Reuse already-written sessions and captures. The final gate still rejects stale fingerprints.
   --headed                  Show browser capture.
 `);
@@ -104,9 +123,41 @@ function selectRecordings(registry, requestedIds) {
   return records;
 }
 
-export function buildNineRecordingBundleManifest({ outDir, recordings }) {
+function normalizeProofTier({ proofTier, requestedIds }) {
+  const tier = proofTier || (requestedIds.length > 0 ? "targeted" : "all-nine");
+  if (!Object.hasOwn(PROOF_TIER_SET_IDS, tier)) {
+    throw new Error(`Unknown proof tier ${tier}. Use all-nine, fast-subset, or targeted.`);
+  }
+  if (tier === "targeted" && requestedIds.length === 0) {
+    throw new Error("--proof-tier targeted requires --recording-ids <ids>.");
+  }
+  if (tier === "all-nine" && requestedIds.length > 0) {
+    throw new Error("Use --proof-tier targeted with --recording-ids, or omit --recording-ids for final all-nine proof.");
+  }
+  return tier;
+}
+
+function configuredIdsForTier(registry, proofTier) {
+  if (proofTier === "all-nine") return [];
+  if (proofTier === "targeted") return [];
+  return registry.recordings
+    .filter((recording) => FAST_SUBSET_TITLES.has(recording.title))
+    .map((recording) => recording.id);
+}
+
+export function selectProofRecordings({ proofTier, registry, requestedIds = [] }) {
+  const tier = normalizeProofTier({ proofTier, requestedIds });
+  const tierIds = requestedIds.length > 0 ? requestedIds : configuredIdsForTier(registry, tier);
+  const recordings = selectRecordings(registry, tierIds);
+  if (tier === "fast-subset" && recordings.length !== FAST_SUBSET_TITLES.size) {
+    throw new Error(`Fast subset must resolve ${FAST_SUBSET_TITLES.size} recordings; found ${recordings.length}.`);
+  }
+  return { proofTier: tier, recordings };
+}
+
+export function buildNineRecordingBundleManifest({ outDir, proofTier = "all-nine", recordings }) {
   return {
-    recordingSetId: "replay-mirror-acceptance-nine-current",
+    recordingSetId: PROOF_TIER_SET_IDS[proofTier] ?? PROOF_TIER_SET_IDS["all-nine"],
     recordings: recordings.map((recording) => ({
       expectedFrameCount: recording.expectedFrameCount,
       id: recording.id,
@@ -178,10 +229,15 @@ async function main() {
   if (args.localTestAuth && !args.secret) throw new Error("--local-test-auth requires --secret or LOCAL_TEST_AUTH_SECRET.");
 
   const registry = readAcceptanceRegistry();
-  const recordings = selectRecordings(registry, args.recordingIds);
-  const outDir = args.outDir.replace(/\/$/, "");
+  const { proofTier, recordings } = selectProofRecordings({
+    proofTier: args.proofTier,
+    registry,
+    requestedIds: args.recordingIds,
+  });
+  const outDir = (args.outDir || DEFAULT_OUT_DIR_BY_TIER[proofTier]).replace(/\/$/, "");
   mkdirSync(resolve(`${outDir}/sessions`), { recursive: true });
   mkdirSync(resolve(`${outDir}/telemetry`), { recursive: true });
+  console.log(`Replay rendered proof tier: ${proofTier}`);
 
   for (const [index, recording] of recordings.entries()) {
     const sessionPath = `${outDir}/sessions/${recording.id}.session.json`;
@@ -211,7 +267,7 @@ async function main() {
     });
   }
 
-  const manifest = buildNineRecordingBundleManifest({ outDir, recordings });
+  const manifest = buildNineRecordingBundleManifest({ outDir, proofTier, recordings });
   const manifestPath = `${outDir}/manifest.json`;
   writeFileSync(resolve(manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
   const reportPath = `${outDir}/bundle-report.json`;
@@ -221,7 +277,7 @@ async function main() {
     "--out", reportPath,
     "--strict",
   ]);
-  console.log(`\nNine-recording rendered proof passed. Manifest: ${resolve(manifestPath)}`);
+  console.log(`\n${proofTier} rendered proof passed for ${recordings.length} recording(s). Manifest: ${resolve(manifestPath)}`);
   console.log(`Bundle report: ${resolve(reportPath)}`);
 }
 

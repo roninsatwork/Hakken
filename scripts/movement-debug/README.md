@@ -44,6 +44,16 @@ npx -p node@22.13.0 npm run movement:replay:iteration -- --limit 5 --label curre
 
 ## Useful Commands
 
+Run the tiered rendered Replay proof loop for mirror/adherence repairs:
+
+```bash
+npx -p node@22.13.0 npm run movement:replay:targeted-proof -- --recording-ids px71h2bsqg9xv8pxyffv5xgaed89wbx3 --export tmp/movement-replay-lab/runs/<export>.zip
+npx -p node@22.13.0 npm run movement:replay:fast-subset-proof -- --export tmp/movement-replay-lab/runs/<export>.zip
+npx -p node@22.13.0 npm run movement:replay:nine-proof -- --export tmp/movement-replay-lab/runs/<export>.zip
+```
+
+Use `targeted-proof` while repairing a known failure, such as `Spins` around frames 645-647. Use `fast-subset-proof` before calling a fix ready for broader proof; it runs `Full Spinal Flow`, `Spins`, and `Full Motion Exercises`. Use `nine-proof` only for final certification before claiming global shared-avatar acceptance. Subset runs write repair-labeled manifests so they cannot be mistaken for all-nine acceptance.
+
 Run the fast architecture/proof drift guard before and after movement architecture work:
 
 ```bash

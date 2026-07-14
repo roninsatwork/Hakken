@@ -604,6 +604,37 @@ describe("full-sequence mirrored arm ownership analysis", () => {
     });
   });
 
+  it("uses raw anatomical pose, not world-pose retarget space, for side ownership", () => {
+    const direction = (angle) => ({ x: Math.cos(angle), y: Math.sin(angle), z: 0 });
+    const angles = [0, 0.08, 0.16, 0.24];
+    const analysis = analyzeFullSequence({
+      session: {
+        samples: angles.map((angle) => ({
+          tracking: {
+            pose: armOwnershipPose(0, angle),
+            worldPose: armOwnershipPose(angle, 0),
+          },
+        })),
+      },
+      telemetry: {
+        frameCount: angles.length,
+        frames: angles.map((angle, frameIndex) => armOwnershipFrame(frameIndex, {
+          confidence: 0.9,
+          leftDirection: direction(angle),
+          rightDirection: direction(0),
+        })),
+        missingFrames: [],
+        sessionId: "raw-anatomical-side-ownership-test",
+      },
+    });
+
+    expect(analysis.mirrorSideOwnership["lower-arm"]).toMatchObject({
+      failedFrameCount: 0,
+      passedFrameCount: 3,
+    });
+    expect(analysis.status).toBe("passed");
+  });
+
   it("blocks a persistent high-confidence wrong-side rendered response", () => {
     const direction = (value) => ({ x: Math.cos(value), y: Math.sin(value), z: 0 });
     const angles = [0, 0.08, 0.16, 0.24, 0.32];

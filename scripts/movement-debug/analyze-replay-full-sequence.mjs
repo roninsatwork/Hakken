@@ -108,12 +108,16 @@ function angle(left, right) {
   return Math.acos(dot);
 }
 
-function accumulatedSourceSegmentStep(session, frames, endIndex, source) {
+function accumulatedSourceSegmentStep(session, frames, endIndex, source, segmentType) {
   const startIndex = Math.max(0, endIndex - MIRROR_OWNERSHIP_WINDOW_TRANSITIONS);
   let total = 0;
   for (let index = startIndex + 1; index <= endIndex; index += 1) {
-    const previousPose = replayRetargetPose(session, frames[index - 1].frameIndex);
-    const pose = replayRetargetPose(session, frames[index].frameIndex);
+    const previousPose = segmentType === "raw-anatomical"
+      ? replayPose(session, frames[index - 1].frameIndex)
+      : replayRetargetPose(session, frames[index - 1].frameIndex);
+    const pose = segmentType === "raw-anatomical"
+      ? replayPose(session, frames[index].frameIndex)
+      : replayRetargetPose(session, frames[index].frameIndex);
     total += angle(
       vector(previousPose[source[0]], previousPose[source[1]]),
       vector(pose[source[0]], pose[source[1]]),
@@ -459,12 +463,14 @@ export function analyzeFullSequence({
           frames,
           frameArrayIndex,
           pair.sourceLeft,
+          pair.type === "lower-arm" ? "raw-anatomical" : "retarget",
         );
         const sourceRightStep = accumulatedSourceSegmentStep(
           session,
           frames,
           frameArrayIndex,
           pair.sourceRight,
+          pair.type === "lower-arm" ? "raw-anatomical" : "retarget",
         );
         if (Math.max(sourceLeftStep, sourceRightStep) < pair.minimumSourceStep) return;
         if (Math.abs(sourceLeftStep - sourceRightStep) < 0.015) return;

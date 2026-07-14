@@ -4,9 +4,61 @@ Last reviewed: 2026-07-13
 Status: active controlling plan. Repair-packet fail-closed coverage and browser display/export parity are implemented, but current rendered acceptance is reopened: the 2026-07-12 bundle is complete evidence under its historical fingerprint, not a current passing proof after the strengthened sustained-adherence gates.
 Scope: turn Replay Studio from a useful human QA screen into a deterministic repair harness that a coding agent can use to reproduce, diagnose, fix, and re-prove avatar motion from one saved recording.
 
+## Latest State Of Play, 2026-07-13
+
+Plan completion score: **86%** against the full Definition of Done.
+
+Current shape of the work:
+
+- Harness infrastructure is mostly built: canonical repair packets, fixture resolution, source identity, browser diagnosis/export parity, strict fail-closed accounting, and non-repository CLI bundle scratch handling are in place.
+- Current rendered acceptance is reopened. The 2026-07-12 all-nine bundle remains useful historical evidence, but it predates the strengthened sustained-adherence gate and the current motion-pipeline fingerprint.
+- Latest current-fingerprint fast-subset proof passes **3 of 9** acceptance recordings: `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` all pass player-avatar and independent three-party rendered paths with zero missing and zero failures.
+- Fast-subset frame coverage is complete under the current fingerprint: `Spins` **648/648 + 648/648**, `Full Spinal Flow` **1,290/1,290 + 1,290/1,290**, and `Full Motion Exercises` **3,026/3,026 + 3,026/3,026** across player-avatar and three-party paths.
+- The final current-fingerprint all-nine gate is still open. A fresh all-nine run was started only as the final regression gate and stopped during the first recording, so it is not an acceptance result.
+- The repair loop does **not** need to run all nine recordings after every code change. The runner now has executable targeted and fast-subset tiers, with repair-labeled manifests that cannot be mistaken for all-nine acceptance.
+- The next implementation slice is the final all-nine rendered gate. Do not rerun all nine during inner-loop repair; run it once as certification, then perform final Game Studio live confirmation.
+
+Subscores:
+
+| Area | Score | Current status |
+| --- | ---: | --- |
+| Repair-harness infrastructure | 95% | Packets, routing, fixtures, strict accounting, tiered browser proof commands, browser diagnosis, and export parity are substantially implemented. |
+| Full Definition of Done | 86% | Missing per-bone target/final packet evidence, timed playback acceptance, all-nine current proof, and Game Studio live confirmation. |
+| Current strict rendered acceptance | 33% recording coverage | The current fast subset passes 3/9 recordings; the all-nine gate remains open and must not be described as 9/9 accepted. |
+| Current tiered proof ergonomics | 100% | `movement:replay:targeted-proof`, `movement:replay:fast-subset-proof`, and final `movement:replay:nine-proof` are distinct commands with distinct manifest labels. |
+
+## Tiered Proof Policy, 2026-07-13
+
+The all-nine rendered suite is intentionally expensive. It is the final certification gate, not the inner development loop.
+
+Use these gates in order:
+
+| Gate | Scope | When to run | What it proves |
+| --- | --- | --- | --- |
+| Targeted repro | The currently failing recording or frame window, for example `Spins` around frames 645-647 | During active repair | The known failure is reproducible and improves under current code. |
+| Fast representative subset | Two or three recordings that cover different motion families | Before calling a fix ready for broader proof | The fix generalizes beyond one recording without paying the full all-nine cost. |
+| Current all-nine rendered proof | All nine acceptance recordings, every frame, current fingerprint | Final certification only | Shared avatar behavior can be reported as accepted across the supported recording set. |
+| Game Studio live confirmation | Short live-camera check after Replay passes | Final product confirmation | Live camera timing, permissions, and smoothing still match the Replay-proven shared pipeline. |
+
+Recommended fast subset for the current mirror/adherence work:
+
+- `Full Spinal Flow`: current-passing baseline and record-once/reprove fixture.
+- `Spins`: historical sustained shin divergence; useful targeted regression case.
+- `Full Motion Exercises` or `Full Body Flow`: broad whole-body stress case.
+
+Do not use a subset pass to claim all-nine acceptance. A subset pass is enough to continue development or prepare for final proof; only the current-fingerprint all-nine gate can close the global mirror-side ownership acceptance item.
+
+Executable commands:
+
+```bash
+npm run movement:replay:targeted-proof -- --recording-ids px71h2bsqg9xv8pxyffv5xgaed89wbx3 --export <convex-export.zip|dir>
+npm run movement:replay:fast-subset-proof -- --export <convex-export.zip|dir>
+npm run movement:replay:nine-proof -- --export <convex-export.zip|dir>
+```
+
 ## Adherence Repair Update, 2026-07-13
 
-- Overall implementation is approximately 78% against the full Definition of Done. The repair packet, fixture resolver, canonical source identity, exact browser JSON export, fail-closed coverage, and non-repository CLI bundle scratch handling are substantially in place. Per-bone target/final evidence, remaining batch-policy consolidation, current all-nine recapture/repair, one-command browser orchestration, timed-playback acceptance, and Game Studio live confirmation remain.
+- Overall implementation is approximately 86% against the full Definition of Done. The repair packet, fixture resolver, canonical source identity, exact browser JSON export, fail-closed coverage, tiered proof commands, current fast-subset recertification, and non-repository CLI bundle scratch handling are substantially in place. Per-bone target/final evidence, current all-nine recapture, timed-playback acceptance, and Game Studio live confirmation remain.
 - `ReplayStudioRepairPacket` now blocks when rendered or compared frame coverage is incomplete. `silentSkipCount` reflects the larger rendered/compared gap, so analyzer labels alone cannot certify a source session.
 - The raw stable-squat source fixture now correctly blocks at `rendered-telemetry` with 0/3 rendered frames; it is no longer described as accepted proof.
 - Source-session packets use one source-only SHA-256 identity in the CLI and browser. Retarget, fallback, verdict, and rendered-output changes do not change the human-source hash.
@@ -15,7 +67,9 @@ Scope: turn Replay Studio from a useful human QA screen into a deterministic rep
 - Full-sequence analysis now blocks sustained moving-target/static-bone runs, sustained confident leg suppression, and persistent high-confidence wrong-side motion. Deterministic frame-step jerk remains diagnostic-only; uninterrupted timed playback owns the blocking jerk decision.
 - Three-party analysis retains session p95 metrics but also blocks three or more consecutive above-threshold segment or axial frames, preventing short but visible instructor/player-avatar disagreements from being diluted by a long recording.
 - Re-analysis of the complete 11,383-frame-per-path 2026-07-12 artifacts with the strengthened gate blocks all nine recordings. The old artifacts also carry a non-current motion-pipeline fingerprint, so a current rerender is mandatory. For example, Spins exposes sustained left/right shin divergence on frames 645-647 despite a low session p95. This is a newly visible adherence failure, not a reason to weaken the gate.
-- The current shared-pipeline repair now passes `Full Spinal Flow` under both strict paths: **1,290/1,290** player-avatar frames and **1,290/1,290** independent three-party frames, zero missing, and zero failures. The controlling local artifact is `tmp/movement-replay-lab/cycle-break-full-spinal-inactive-neutral-parity-2026-07-13/`; it remains intentionally uncommitted.
+- The latest current-fingerprint targeted repair now passes `Full Motion Exercises` under both strict paths: **3,026/3,026** player-avatar frames and **3,026/3,026** independent three-party frames, zero missing, and zero failures. The controlling local artifact is `tmp/movement-replay-lab/current-targeted-proof-full-motion-2026-07-13-repair/`; it remains intentionally uncommitted.
+- The repair made two shared proof fixes: lower-arm side ownership now uses raw anatomical source pose for lower-arm dominance while preserving retarget/world-space ownership for upper arms and lower body, and three-party synthetic player startup no longer applies player-calibrated head motion before the instructor recorded head path is active. The three-party analyzer also compares head yaw as a wrapped angle.
+- The latest current-fingerprint fast subset now passes. The controlling local artifact is `tmp/movement-replay-lab/current-fast-subset-proof-2026-07-13-after-full-motion-repair/`; it remains intentionally uncommitted. It covers `Spins` (**648/648** frames per path), `Full Spinal Flow` (**1,290/1,290** frames per path), and `Full Motion Exercises` (**3,026/3,026** frames per path), all with zero missing and zero failures.
 - A fresh current-fingerprint all-nine run was started only as the final regression gate and was stopped at the user's request during the first recording. It is not an acceptance result. Current all-nine status therefore remains open; the historical 9/9 result must not be reported as current strengthened-gate adherence.
 
 Historical implementation inventory, 2026-07-12. Completion claims below are superseded by the 2026-07-13 adherence repair update above:

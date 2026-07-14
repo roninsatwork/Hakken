@@ -39,6 +39,8 @@
     "movement:replay:full-sequence:analyze": "node scripts/movement-debug/analyze-replay-full-sequence.mjs",
     "movement:replay:full-sequence:bundle": "node scripts/movement-debug/analyze-replay-full-sequence-bundle.mjs",
     "movement:replay:nine-proof": "node scripts/movement-debug/run-replay-nine-recording-proof.mjs",
+    "movement:replay:fast-subset-proof": "node scripts/movement-debug/run-replay-nine-recording-proof.mjs --proof-tier fast-subset",
+    "movement:replay:targeted-proof": "node scripts/movement-debug/run-replay-nine-recording-proof.mjs --proof-tier targeted",
     "movement:replay:three-party:analyze": "node scripts/movement-debug/analyze-replay-three-party.mjs",
     "movement:replay:export-session": "node scripts/movement-debug/export-replay-session.mjs",
     "movement:replay:proof-set": "node scripts/movement-debug/capture-replay-proof-set.mjs",

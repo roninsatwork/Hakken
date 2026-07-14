@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildNineRecordingBundleManifest } from "./run-replay-nine-recording-proof.mjs";
+import {
+  buildNineRecordingBundleManifest,
+  selectProofRecordings,
+} from "./run-replay-nine-recording-proof.mjs";
 
 describe("nine-recording rendered proof manifest", () => {
   it("requires no-skip player and three-party proof for every canonical recording", () => {
@@ -40,5 +43,83 @@ describe("nine-recording rendered proof manifest", () => {
       requiredRecordingIds: ["recording-a", "recording-b"],
       schemaVersion: 1,
     });
+  });
+
+  it("labels fast-subset manifests as repair proof instead of final all-nine acceptance", () => {
+    const manifest = buildNineRecordingBundleManifest({
+      outDir: "tmp/movement-replay-lab/current-fast-subset-proof",
+      proofTier: "fast-subset",
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+        { expectedFrameCount: 1290, id: "full-spinal-flow-id", title: "Full Spinal Flow" },
+        { expectedFrameCount: 3026, id: "full-motion-exercises-id", title: "Full Motion Exercises" },
+      ],
+    });
+
+    expect(manifest.recordingSetId).toBe("replay-mirror-repair-fast-subset-current");
+    expect(manifest.requiredRecordingIds).toEqual([
+      "spins-id",
+      "full-spinal-flow-id",
+      "full-motion-exercises-id",
+    ]);
+  });
+
+  it("selects the documented fast subset by title", () => {
+    const registry = {
+      schemaVersion: 1,
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+        { expectedFrameCount: 632, id: "turning-id", title: "Turning Around in Circles" },
+        { expectedFrameCount: 1290, id: "full-spinal-flow-id", title: "Full Spinal Flow" },
+        { expectedFrameCount: 3026, id: "full-motion-exercises-id", title: "Full Motion Exercises" },
+      ],
+    };
+
+    expect(selectProofRecordings({ proofTier: "fast-subset", registry })).toEqual({
+      proofTier: "fast-subset",
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+        { expectedFrameCount: 1290, id: "full-spinal-flow-id", title: "Full Spinal Flow" },
+        { expectedFrameCount: 3026, id: "full-motion-exercises-id", title: "Full Motion Exercises" },
+      ],
+    });
+  });
+
+  it("requires targeted proof to name the recording ids explicitly", () => {
+    const registry = {
+      schemaVersion: 1,
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+      ],
+    };
+
+    expect(() => selectProofRecordings({ proofTier: "targeted", registry })).toThrow(
+      "--proof-tier targeted requires --recording-ids <ids>.",
+    );
+    expect(selectProofRecordings({
+      proofTier: "",
+      registry,
+      requestedIds: ["spins-id"],
+    })).toEqual({
+      proofTier: "targeted",
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+      ],
+    });
+  });
+
+  it("does not let recording ids masquerade as all-nine acceptance", () => {
+    const registry = {
+      schemaVersion: 1,
+      recordings: [
+        { expectedFrameCount: 648, id: "spins-id", title: "Spins" },
+      ],
+    };
+
+    expect(() => selectProofRecordings({
+      proofTier: "all-nine",
+      registry,
+      requestedIds: ["spins-id"],
+    })).toThrow("Use --proof-tier targeted with --recording-ids");
   });
 });
