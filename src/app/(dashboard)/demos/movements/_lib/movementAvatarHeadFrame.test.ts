@@ -311,6 +311,62 @@ describe("movementAvatarHeadRuntime (merged)", () => {
       expect(applied.headTarget.rawHeadDecision.rawHead.source).toBe("face");
       expect(Math.abs(applied.headTarget.headDecision.headYaw)).toBeGreaterThan(0.3);
     });
+
+    it("renders live face roll and replay pose roll in the same direction", () => {
+      const pose = poseLandmarks();
+      pose[7] = { ...pose[7]!, y: 0.27 };
+      pose[8] = { ...pose[8]!, y: 0.33 };
+      const face = faceLandmarks();
+      face[1] = { ...face[1]!, x: 0.5, y: 0.27 };
+      face[33] = { ...face[33]!, x: 0.42, y: 0.27 };
+      face[263] = { ...face[263]!, x: 0.58, y: 0.33 };
+
+      const renderHead = (renderFaceLandmarks?: TrackingLandmark[] | null) => {
+        const root = new THREE.Object3D();
+        const upperChest = new THREE.Object3D();
+        const neck = new THREE.Object3D();
+        const head = new THREE.Object3D();
+        root.add(upperChest);
+        upperChest.add(neck);
+        neck.add(head);
+        root.updateMatrixWorld(true);
+        const bones = new Map<string, THREE.Object3D>([
+          ["head", head],
+          ["neck", neck],
+          ["upperChest", upperChest],
+        ]);
+
+        const result = applyMovementAvatarHeadRuntimeToVrmBones({
+          avatarRole: "player",
+          avatarRootYaw: 0,
+          baseHeadPosition: null,
+          calibration: neutralCalibration,
+          faceLandmarks: renderFaceLandmarks,
+          frameDeltaSeconds: 1,
+          headMotionIntent: neutralHeadIntent,
+          lookupBone: (boneName) => bones.get(boneName) ?? null,
+          neckSlerp: 1,
+          poseLandmarks: pose,
+          shouldApplyLowerBody: false,
+          shouldApplySpine: false,
+        });
+
+        expect(result.applied).toBe(true);
+        if (!result.applied) throw new Error("expected rendered head target");
+        root.updateMatrixWorld(true);
+        return new THREE.Euler().setFromQuaternion(
+          head.getWorldQuaternion(new THREE.Quaternion()),
+          "YXZ",
+        ).z;
+      };
+
+      const replayPoseRoll = renderHead(null);
+      const liveFaceRoll = renderHead(face);
+
+      expect(replayPoseRoll).toBeGreaterThan(0);
+      expect(liveFaceRoll).toBeGreaterThan(0);
+      expect(Math.sign(liveFaceRoll)).toBe(Math.sign(replayPoseRoll));
+    });
   });
 });
 

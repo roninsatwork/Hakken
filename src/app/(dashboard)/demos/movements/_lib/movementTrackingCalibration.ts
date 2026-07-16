@@ -419,7 +419,10 @@ function estimateHeadAnglesFromFace(faceLandmarks?: TrackingLandmark[] | null): 
   const eyeCenter = midpoint(leftEye, rightEye);
   // Coordinate reflection can reverse the horizontal eye ordering. Roll is an
   // anatomical tilt, so its denominator must be independent of screen order.
-  const roll = -Math.atan2(rightEye.y - leftEye.y, Math.abs(rightEye.x - leftEye.x));
+  // Keep the vertical sign identical to the pose-ear estimator: Game prefers
+  // face landmarks while Replay can fall back to pose, and both represent the
+  // same already-mapped display-space head tilt at this boundary.
+  const roll = Math.atan2(rightEye.y - leftEye.y, Math.abs(rightEye.x - leftEye.x));
   const yaw = clamp(((nose.x - eyeCenter.x) / eyeDistance) * 1.4, -1.2, 1.2);
   const pitch = clamp(((nose.y - eyeCenter.y) / eyeDistance - 0.18) * 1.2, -1.2, 1.2);
 

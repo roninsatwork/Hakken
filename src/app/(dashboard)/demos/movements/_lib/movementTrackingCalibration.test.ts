@@ -112,6 +112,31 @@ describe("movementTrackingCalibration", () => {
     expect(Math.abs(left.roll)).toBeCloseTo(Math.abs(right.roll));
   });
 
+  it("keeps face and pose roll aligned for the same display-space head tilt", () => {
+    const pose = withCorePose();
+    pose[7] = { ...pose[7]!, y: 0.27 };
+    pose[8] = { ...pose[8]!, y: 0.33 };
+
+    const face = Array.from({ length: 264 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+    face[1] = { x: 0.5, y: 0.27, z: 0 };
+    face[33] = { x: 0.42, y: 0.27, z: 0 };
+    face[263] = { x: 0.58, y: 0.33, z: 0 };
+
+    const replayPoseHead = estimateMovementHeadAngles({
+      poseLandmarks: pose,
+      faceLandmarks: null,
+    });
+    const liveFaceHead = estimateMovementHeadAngles({
+      poseLandmarks: pose,
+      faceLandmarks: face,
+    });
+
+    expect(replayPoseHead.source).toBe("pose");
+    expect(liveFaceHead.source).toBe("face");
+    expect(replayPoseHead.roll).toBeGreaterThan(0);
+    expect(liveFaceHead.roll).toBeCloseTo(replayPoseHead.roll);
+  });
+
   it("builds a calibration sample from high-quality body landmarks", () => {
     const calibration = buildMovementCalibration({ poseLandmarks: withCorePose(), now: 1234 });
 
