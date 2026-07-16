@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "description": "Sanitized historical red baseline for Full Body Flow source frames 648-656. It preserves independent source posture/contact facts and final rendered semantic errors without raw landmarks, video, or user identity.",
+  "recording": {
+    "id": "px7fafa0wypmmc5rfz1nzmdvas88n6m0",
+    "title": "Full Body Flow",
+    "sourceFrameCount": 2169,
+    "sourceHash": "sha256:8a00b45ba5e3f1ec29ac2b5e224504b8cca4f680eca60da69eed9ac43e6f9e17"
+  },
+  "artifact": {
+    "acceptanceUse": "historical-red-baseline-only",
+    "playbackMode": "deterministic-rendered-frame-step",
+    "semanticEvidenceVersion": "2026-07-16.v1"
+  },
+  "scope": {
+    "localFrameCount": 9,
+    "sourceFrameIndexes": [648, 649, 650, 651, 652, 653, 654, 655, 656]
+  },
+  "passingFrameDefaults": {
+    "avatarScale": 2,
+    "headChain": {
+      "confidence": 0.99,
+      "sourceDirection": [0, 1, 0],
+      "renderedDirection": [0, 1, 0],
+      "sourceError": 0
+    },
+    "torso": {
+      "confidence": 0.99,
+      "sourceDirection": [0.0417, 0.9888, 0.1435],
+      "renderedDirection": [0.0417, 0.9888, 0.1435],
+      "sourceError": 0,
+      "sourceLeanRadians": 0.1499
+    },
+    "feet": {
+      "left": {
+        "sourceConfidence": 0.99,
+        "sourcePlanted": true,
+        "sourceClearanceRatio": 0,
+        "heelClearance": 0.005,
+        "soleClearance": 0.003,
+        "toeBaseClearance": 0.004,
+        "toeEndClearance": 0.005,
+        "planeAngleRadians": 0.03
+      },
+      "right": {
+        "sourceConfidence": 0.99,
+        "sourcePlanted": true,
+        "sourceClearanceRatio": 0.009,
+        "heelClearance": 0.006,
+        "soleClearance": 0.004,
+        "toeBaseClearance": 0.005,
+        "toeEndClearance": 0.006,
+        "planeAngleRadians": 0.03
+      }
+    }
+  },
+  "frames": [
+    { "sourceFrameIndex": 648 },
+    { "sourceFrameIndex": 649 },
+    { "sourceFrameIndex": 650 },
+    { "sourceFrameIndex": 651 },
+    {
+      "sourceFrameIndex": 652,
+      "decision": {
+        "forwardLean": 0.8303,
+        "headTargetEqualsApplied": true,
+        "supportIntent": "feet-floor",
+        "supportConstraint": "active",
+        "leftFootContact": false,
+        "rightFootContact": false,
+        "footLockStrength": 0,
+        "legacyLeftFootNodeClearance": 0,
+        "legacyRightFootNodeClearance": 0.0467
+      },
+      "semantic": {
+        "headChain": {
+          "confidence": 0.99,
+          "sourceDirection": [0, 1, 0],
+          "renderedDirection": [0, 0.55, 0.8352],
+          "sourceError": 0.45
+        },
+        "torso": {
+          "confidence": 0.99,
+          "sourceDirection": [0.0417, 0.9888, 0.1435],
+          "renderedDirection": [0, 0.45, 0.893],
+          "sourceError": 0.4269,
+          "sourceLeanRadians": 0.1499
+        },
+        "feet": {
+          "left": {
+            "sourceConfidence": 0.99,
+            "sourcePlanted": true,
+            "sourceClearanceRatio": 0,
+            "heelClearance": 0.031,
+            "soleClearance": 0.031,
+            "toeBaseClearance": 0.072,
+            "toeEndClearance": 0.094,
+            "planeAngleRadians": 0.47
+          },
+          "right": {
+            "sourceConfidence": 0.99,
+            "sourcePlanted": true,
+            "sourceClearanceRatio": 0.009,
+            "heelClearance": 0.0467,
+            "soleClearance": 0.0467,
+            "toeBaseClearance": 0.083,
+            "toeEndClearance": 0.101,
+            "planeAngleRadians": 0.42
+          }
+        }
+      }
+    },
+    { "sourceFrameIndex": 653 },
+    { "sourceFrameIndex": 654 },
+    { "sourceFrameIndex": 655 },
+    { "sourceFrameIndex": 656 }
+  ]
+}

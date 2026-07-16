@@ -91,6 +91,7 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
   hasBilateralApplicableThighs = false,
   instructorSquatPresentationDepth,
   lowerBodyDrive,
+  retargetContacts,
   retargetAppliedLowerBody,
   stageDecision,
 }: {
@@ -101,6 +102,7 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
   instructorSquatPresentationDepth: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   playerSquatPresentationDepth: number;
+  retargetContacts?: MovementRetargetFrame["contacts"];
   retargetAppliedLowerBody: number;
   stageDecision: MovementAvatarLowerBodyApplicationStageDecision;
 }): MovementAvatarLowerBodyRetargetApplicationPlan {
@@ -133,7 +135,14 @@ export function resolveMovementAvatarLowerBodyRetargetApplicationPlan({
         side: stageDecision.anchoredPlayerLegRaiseSide,
       }
     : null;
-  const plantInstructorFeet: Array<"left" | "right"> = [];
+  // A solved foot direction describes the source ankle-to-toe axis, but it
+  // does not by itself enforce the rendered sole/floor boundary. When the
+  // recorded source says a side is planted, finish both roles on the same
+  // exact neutral foot/toe target after retargeting.
+  const plantInstructorFeet: Array<"left" | "right"> = [
+    ...(retargetContacts?.leftFoot ? ["left" as const] : []),
+    ...(retargetContacts?.rightFoot ? ["right" as const] : []),
+  ];
 
   return {
     legRaiseOverlay,
@@ -151,6 +160,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
   hasBilateralApplicableThighs = false,
   instructorSquatPresentationDepth,
   lowerBodyDrive,
+  retargetContacts,
   playerSquatPresentationDepth,
   retargetAppliedLowerBody,
   stageDecision,
@@ -162,6 +172,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
   instructorSquatPresentationDepth: number;
   lowerBodyDrive: MovementAvatarLowerBodyDrive;
   playerSquatPresentationDepth: number;
+  retargetContacts?: MovementRetargetFrame["contacts"];
   retargetAppliedLowerBody: number;
   stageDecision: MovementAvatarLowerBodyApplicationStageDecision;
 }): MovementAvatarLowerBodyRetargetDecisionApplication {
@@ -176,6 +187,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplication({
       hasBilateralApplicableThighs,
       instructorSquatPresentationDepth,
       lowerBodyDrive,
+      retargetContacts,
       playerSquatPresentationDepth,
       retargetAppliedLowerBody,
       stageDecision,
@@ -225,6 +237,7 @@ export function resolveMovementAvatarLowerBodyRetargetDecisionApplicationFromInp
     instructorSquatPresentationDepth,
     lowerBodyDrive,
     playerSquatPresentationDepth,
+    retargetContacts: retargetFrame.contacts,
     retargetAppliedLowerBody: appliedLowerBodySegments,
     stageDecision,
   });

@@ -131,7 +131,16 @@ const getReflectedInstructorWorldLandmarks = (
 function getRetargetNeutralScore(model: MovementRetargetSourceModel) {
   const neutralKneeLift = (model.neutralKneeLift.left + model.neutralKneeLift.right) / 2;
   const torsoSideBend = Math.abs(model.shoulderCenter.x - model.hipCenter.x);
-  return neutralKneeLift + torsoSideBend * 2.4 + (1 - model.quality) * 0.08;
+  const semanticTorsoDirection = model.semanticNeutral?.torsoDirection;
+  const torsoForwardAngle = semanticTorsoDirection
+    ? Math.acos(Math.max(-1, Math.min(1, semanticTorsoDirection.y)))
+    : 0;
+  // A low knee-lift/side-bend score alone can select a deep forward hinge as
+  // the recording's neutral frame. Preserve a small camera-pitch allowance,
+  // then strongly prefer a visibly upright world-torso baseline.
+  const excessiveForwardAngle = Math.max(0, torsoForwardAngle - 0.18);
+  return neutralKneeLift + torsoSideBend * 2.4 + excessiveForwardAngle * 1.5 +
+    (1 - model.quality) * 0.08;
 }
 
 export function buildInstructorRetargetSourceModel(

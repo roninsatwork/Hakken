@@ -33,6 +33,7 @@ import {
   type MovementAvatarRetargetRestMap,
 } from "./movementAvatarRestPose";
 import {
+  applyMovementAvatarRestMappedWorldDirectionWithLookup,
   applyMovementAvatarPlantedSquatIkWorldDirectionSpecsToVrmBones,
   applyMovementAvatarRetargetSegmentMappings,
   applyMovementAvatarRetargetSegmentMappingToVrmBones,
@@ -283,6 +284,7 @@ export function applyMovementAvatarPlantedSquatIkRuntimeVrmFrame({
 // --- movementAvatarRetargetFrameRuntime ---
 
 export type MovementAvatarRetargetFrameRuntimeAdapters = {
+  applyPlantedFootWorldDirections: (sides: Array<"left" | "right">) => number;
   applyPlantedSquatIk: (depth: number) => number;
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => MovementAvatarRetargetSegmentRuntimeApplication;
   getRestMap: () => MovementAvatarRetargetRestMap;
@@ -316,6 +318,27 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   let restMap = currentRestMap;
 
   return {
+    applyPlantedFootWorldDirections: (sides) => {
+      let applied = 0;
+      sides.forEach((side) => {
+        const boneName = `${side}Foot` as const;
+        const desiredWorldDirection = restMap[boneName]?.worldDirection.clone();
+        if (!desiredWorldDirection) return;
+
+        const application = applyMovementAvatarRestMappedWorldDirectionWithLookup({
+          boneName,
+          currentRestMap: restMap,
+          desiredWorldDirection,
+          lookupBone,
+          refreshRestMap: () => vrm ? buildMovementAvatarRetargetRestMap(vrm) : restMap,
+          rememberLastGood: false,
+          slerp: 1,
+        });
+        restMap = application.restMap;
+        if (application.applied) applied += 1;
+      });
+      return applied;
+    },
     applyPlantedSquatIk: (depth) => {
       const application = applyMovementAvatarPlantedSquatIkRuntimeVrmFrame({
         avatarRoot,
@@ -699,6 +722,7 @@ export type MovementAvatarLowerBodyFrameRuntimeResult = {
 };
 
 export function applyMovementAvatarLowerBodyFrameRuntime({
+  applyPlantedFootWorldDirections,
   applyPlantedSquatIk,
   applyRetargetMappings,
   avatarRole,
@@ -723,6 +747,7 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
   squatFlexionBendBoost,
   updateWorldMatrix,
 }: {
+  applyPlantedFootWorldDirections?: (sides: Array<"left" | "right">) => number;
   applyPlantedSquatIk: (depth: number) => number;
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => MovementAvatarLowerBodyRetargetSegmentCounts;
   avatarRole: "instructor" | "player";
@@ -882,6 +907,31 @@ export function applyMovementAvatarLowerBodyFrameRuntime({
         if (refinedFootCounts.feet > 0) {
           footOwner = "recorded-retarget";
         }
+
+        // The refinement above intentionally reapplies source foot directions
+        // after parent-chain squat rotation. Restore the final planted support
+        // boundary last so the refinement cannot lift a recorded planted toe.
+        const finalFootPlant = applyMovementAvatarInstructorFootPlantRequestsToVrmBones({
+          contacts: retargetFrame.contacts,
+          currentFeetOwner: footOwner,
+          isPlayer,
+          lookupBone,
+          sides: retargetApplicationPlan.plantInstructorFeet,
+          slerp: 1,
+        });
+        footOwner = finalFootPlant.feetOwner;
+      }
+
+      // Local zero is not world-flat once retargeted thigh/shin parents have
+      // rotated. Reapply the bind-pose foot axis in world space after every
+      // lower-body overlay/refinement so the final sole plane, not merely the
+      // local quaternion, owns the recorded planted-contact boundary.
+      if (
+        applyPlantedFootWorldDirections &&
+        retargetApplicationPlan.plantInstructorFeet.length > 0
+      ) {
+        updateWorldMatrix();
+        applyPlantedFootWorldDirections(retargetApplicationPlan.plantInstructorFeet);
       }
     }
   } else {
@@ -954,6 +1004,7 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
   ...input
 }: Omit<
   MovementAvatarLowerBodyFrameRuntimeInput,
+  | "applyPlantedFootWorldDirections"
   | "applyPlantedSquatIk"
   | "applyRetargetMappings"
   | "updateWorldMatrix"
@@ -970,6 +1021,7 @@ export function applyMovementAvatarLowerBodyFrameOrchestrationRuntime({
   });
   const lowerBodyFrameRuntime = applyMovementAvatarLowerBodyFrameRuntime({
     ...input,
+    applyPlantedFootWorldDirections: retargetFrameRuntimeAdapters.applyPlantedFootWorldDirections,
     applyPlantedSquatIk: retargetFrameRuntimeAdapters.applyPlantedSquatIk,
     applyRetargetMappings: retargetFrameRuntimeAdapters.applyRetargetMappings,
     kneeRaiseLowerLegBoost: profile?.kneeRaiseLowerLegBoost,

@@ -121,6 +121,54 @@ describe("three-party rendered Replay analyzer", () => {
     expect(analysis.status).toBe("blocked");
   });
 
+  it("blocks independent semantic posture and planted-foot divergence for either rendered role", () => {
+    const input = telemetry();
+    input.frames.forEach((frame) => {
+      for (const role of ["instructor", "player"]) {
+        frame.avatars[role].avatarVisual.semantic = {
+          avatarScale: 2,
+          evidenceVersion: "2026-07-16.v1",
+          feet: {
+            left: {
+              heelClearance: 0.04,
+              planeAngleRadians: 0.3,
+              soleClearance: 0.04,
+              sourceConfidence: 0.99,
+              sourcePlanted: true,
+              toeBaseClearance: 0.08,
+              toeEndClearance: 0.1,
+            },
+            right: { sourcePlanted: false },
+          },
+          headChain: {
+            confidence: 0.99,
+            renderedDirection: { x: 0, y: 0, z: 1 },
+            sourceDirection: { x: 0, y: 1, z: 0 },
+            sourceError: 1,
+          },
+          torso: {
+            confidence: 0.99,
+            renderedDirection: { x: 0, y: 0, z: 1 },
+            sourceDirection: { x: 0, y: 1, z: 0 },
+            sourceError: 1,
+          },
+        };
+      }
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-rendered-torso-source-diverged",
+      count: 2,
+      role: "player",
+    });
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-rendered-planted-foot-contact-contradiction",
+      count: 2,
+      role: "instructor",
+    });
+  });
+
   it("grades held spine owners against each role's prior rendered pose", () => {
     const input = telemetry();
     input.frames.forEach((frame, frameIndex) => {

@@ -772,12 +772,17 @@ describe("movement avatar debug telemetry", () => {
       zScale: 1,
     });
 
-    expect(telemetry).toEqual({
+    expect(telemetry).toMatchObject({
       averageLowerBodyDirectionError: undefined,
       averageUpperBodyDirectionError: undefined,
       comparedLowerBodySegments: 0,
       comparedUpperBodySegments: 0,
       segments: {},
+    });
+    expect(telemetry?.semantic).toMatchObject({
+      evidenceVersion: "2026-07-16.v3",
+      headChain: { confidence: 0 },
+      torso: { confidence: 0 },
     });
   });
 

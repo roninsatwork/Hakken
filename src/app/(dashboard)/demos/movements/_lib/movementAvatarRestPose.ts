@@ -13,7 +13,14 @@ export type MovementAvatarRetargetRestBone = {
 
 export type MovementAvatarRetargetRestMap = Partial<
   Record<MovementAvatarRetargetBoneName, MovementAvatarRetargetRestBone>
->;
+> & {
+  semantic?: {
+    avatarScale?: number;
+    headChainDirection?: THREE.Vector3;
+    headForwardDirection?: THREE.Vector3;
+    torsoDirection?: THREE.Vector3;
+  };
+};
 
 export type MovementAvatarRetargetBoneMapping = {
   bone: MovementAvatarRetargetBoneName;
@@ -89,6 +96,33 @@ export function buildMovementAvatarRetargetRestMap(
       worldQuaternion,
     };
   });
+
+  const hips = movementAvatarBoneWorldPosition(vrm, "hips");
+  const chest = movementAvatarBoneWorldPosition(vrm, "chest") ??
+    movementAvatarBoneWorldPosition(vrm, "upperChest");
+  const upperChest = movementAvatarBoneWorldPosition(vrm, "upperChest") ?? chest;
+  const head = movementAvatarBoneWorldPosition(vrm, "head");
+  const headBone = vrm.humanoid.getNormalizedBoneNode("head");
+  const leftFoot = movementAvatarBoneWorldPosition(vrm, "leftFoot");
+  const rightFoot = movementAvatarBoneWorldPosition(vrm, "rightFoot");
+  const footY = averageSides(leftFoot?.y ?? null, rightFoot?.y ?? null);
+  const semantic = {
+    avatarScale: head && footY !== null ? Math.abs(head.y - footY) : undefined,
+    headChainDirection: upperChest && head
+      ? head.clone().sub(upperChest).normalize()
+      : undefined,
+    headForwardDirection: headBone
+      ? new THREE.Vector3(0, 0, 1).applyQuaternion(
+          headBone.getWorldQuaternion(new THREE.Quaternion()),
+        ).normalize()
+      : undefined,
+    torsoDirection: hips && chest
+      ? chest.clone().sub(hips).normalize()
+      : undefined,
+  };
+  if (Object.values(semantic).some((value) => value !== undefined)) {
+    restMap.semantic = semantic;
+  }
 
   return restMap;
 }

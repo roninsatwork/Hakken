@@ -81,6 +81,33 @@ export type MovementTrackingDebugState = {
       rightFootClearance?: number;
       rightFootY?: number;
     };
+    semantic?: {
+      avatarScale?: number;
+      evidenceVersion: string;
+      feet: Record<"left" | "right", {
+        heelClearance?: number;
+        planeAngleRadians?: number;
+        soleClearance?: number;
+        sourceClearanceRatio?: number;
+        sourceConfidence?: number;
+        sourcePlanted?: boolean;
+        toeBaseClearance?: number;
+        toeEndClearance?: number;
+      }>;
+      headChain: {
+        confidence?: number;
+        renderedDirection?: { x: number; y: number; z: number };
+        sourceDirection?: { x: number; y: number; z: number };
+        sourceError?: number;
+      };
+      torso: {
+        confidence?: number;
+        renderedDirection?: { x: number; y: number; z: number };
+        sourceDirection?: { x: number; y: number; z: number };
+        sourceError?: number;
+        sourceLeanRadians?: number;
+      };
+    };
     segments: Record<string, {
       confidence?: number;
       direction: {

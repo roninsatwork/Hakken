@@ -81,6 +81,8 @@ describe("movement avatar standing floor contacts", () => {
     });
 
     expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["rightFoot", "leftFoot"]);
+    expect(result.boneCorrectionScale).toBe(1);
+    expect(result.maxBoneCorrection).toBe(0.45);
   });
 
   it("anchors only the recorded instructor planted foot during a right leg raise", () => {
@@ -98,6 +100,39 @@ describe("movement avatar standing floor contacts", () => {
     } as Parameters<typeof resolveMovementAvatarStandingFeetFloorContactLocks>[0]);
 
     expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["leftFoot"]);
+  });
+
+  it("anchors both reacquired contacts even while a leg-raise drive is winding down", () => {
+    const result = resolveMovementAvatarStandingFeetFloorContactLocks({
+      contactLocks: standingContactLocks,
+      lowerBodyDrive: {
+        playerLegRaiseSide: "right",
+        shouldDrivePlayerLegRaise: true,
+      },
+      retargetContacts: {
+        leftFoot: true,
+        rightFoot: true,
+      },
+      shouldApply: true,
+    });
+
+    expect(result.anchors.map((anchor) => anchor.bone)).toEqual(["rightFoot", "leftFoot"]);
+  });
+
+  it("does not apply standing floor locks when the source reports no foot contacts", () => {
+    const result = resolveMovementAvatarStandingFeetFloorContactLocks({
+      contactLocks: standingContactLocks,
+      lowerBodyDrive: {
+        playerLegRaiseSide: null,
+        shouldDrivePlayerLegRaise: false,
+      },
+      retargetContacts: { leftFoot: false, rightFoot: false },
+      shouldApply: true,
+    });
+
+    expect(result.shouldApply).toBe(false);
+    expect(result.anchors).toEqual([]);
+    expect(result.owner).toBe("support-contact-feet-floor-no-source-contact");
   });
 });
 

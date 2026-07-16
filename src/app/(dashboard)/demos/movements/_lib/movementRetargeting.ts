@@ -1,3 +1,4 @@
+import { RENDERED_FIDELITY_POLICY } from "@/src/lib/movements/renderedFidelityPolicy.mjs";
 import type { MovementMirrorMode } from "./movementMirrorMapping";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
@@ -48,6 +49,12 @@ export type MovementRetargetSourceModel = {
   torsoHeight: number;
   quality: number;
   segments: Partial<Record<MovementRetargetSegmentName, MovementRetargetSegment>>;
+  semanticNeutral?: {
+    headChainDirection?: MovementRetargetVector;
+    headForwardDirection?: MovementRetargetVector;
+    headForwardImageDirection?: MovementRetargetVector;
+    torsoDirection?: MovementRetargetVector;
+  };
   worldTorsoHeight?: number;
 };
 
@@ -134,6 +141,22 @@ export function mapMovementRetargetSourceModelForDisplay({
       right: sourceModel.neutralKneeLift.left,
     },
     segments,
+    semanticNeutral: sourceModel.semanticNeutral
+      ? {
+          headChainDirection: sourceModel.semanticNeutral.headChainDirection
+            ? mirrorRetargetVector(sourceModel.semanticNeutral.headChainDirection)
+            : undefined,
+          headForwardDirection: sourceModel.semanticNeutral.headForwardDirection
+            ? mirrorRetargetVector(sourceModel.semanticNeutral.headForwardDirection)
+            : undefined,
+          headForwardImageDirection: sourceModel.semanticNeutral.headForwardImageDirection
+            ? mirrorRetargetVector(sourceModel.semanticNeutral.headForwardImageDirection)
+            : undefined,
+          torsoDirection: sourceModel.semanticNeutral.torsoDirection
+            ? mirrorRetargetVector(sourceModel.semanticNeutral.torsoDirection)
+            : undefined,
+        }
+      : undefined,
     shoulderCenter: { ...sourceModel.shoulderCenter, x: 1 - sourceModel.shoulderCenter.x },
   };
 }
@@ -263,6 +286,50 @@ function getCenters(poseLandmarks: TrackingLandmark[]) {
   };
 }
 
+function semanticNeutralFromWorldPose(
+  worldPoseLandmarks: TrackingLandmark[],
+  imagePoseLandmarks: TrackingLandmark[],
+) {
+  const centers = getCenters(worldPoseLandmarks);
+  if (!centers) return undefined;
+  const leftEar = worldPoseLandmarks[7];
+  const rightEar = worldPoseLandmarks[8];
+  const nose = worldPoseLandmarks[0];
+  const headCenter = leftEar && rightEar
+    ? midpoint(leftEar, rightEar)
+    : nose
+      ? { x: nose.x, y: nose.y, z: nose.z ?? 0 }
+      : null;
+  const avatarSpaceDirection = (start: MovementRetargetVector, end: MovementRetargetVector) => normalizeVector({
+    x: end.x - start.x,
+    y: -(end.y - start.y),
+    z: -(end.z - start.z),
+  });
+  const imageLeftEar = imagePoseLandmarks[7];
+  const imageRightEar = imagePoseLandmarks[8];
+  const imageNose = imagePoseLandmarks[0];
+  return {
+    headChainDirection: headCenter
+      ? avatarSpaceDirection(centers.shoulderCenter, headCenter)
+      : undefined,
+    headForwardDirection: leftEar && rightEar && nose
+      ? avatarSpaceDirection(midpoint(leftEar, rightEar), {
+          x: nose.x,
+          y: nose.y,
+          z: nose.z ?? 0,
+        })
+      : undefined,
+    headForwardImageDirection: imageLeftEar && imageRightEar && imageNose
+      ? avatarSpaceDirection(midpoint(imageLeftEar, imageRightEar), {
+          x: imageNose.x,
+          y: imageNose.y,
+          z: imageNose.z ?? 0,
+        })
+      : undefined,
+    torsoDirection: avatarSpaceDirection(centers.hipCenter, centers.shoulderCenter),
+  };
+}
+
 function getFloorY(poseLandmarks: TrackingLandmark[]) {
   return Math.max(
     poseLandmarks[27]?.y ?? 0,
@@ -270,6 +337,35 @@ function getFloorY(poseLandmarks: TrackingLandmark[]) {
     poseLandmarks[31]?.y ?? 0,
     poseLandmarks[32]?.y ?? 0,
   );
+}
+
+function getSourceFootClearanceRatio({
+  poseLandmarks,
+  side,
+  torsoHeight,
+}: {
+  poseLandmarks: TrackingLandmark[];
+  side: "left" | "right";
+  torsoHeight: number;
+}) {
+  const floorY = Math.max(
+    poseLandmarks[29]?.y ?? Number.NEGATIVE_INFINITY,
+    poseLandmarks[30]?.y ?? Number.NEGATIVE_INFINITY,
+    poseLandmarks[31]?.y ?? Number.NEGATIVE_INFINITY,
+    poseLandmarks[32]?.y ?? Number.NEGATIVE_INFINITY,
+  );
+  const heelIndex = side === "left" ? 29 : 30;
+  const toeIndex = side === "left" ? 31 : 32;
+  const soleY = Math.max(
+    poseLandmarks[heelIndex]?.y ?? Number.NEGATIVE_INFINITY,
+    poseLandmarks[toeIndex]?.y ?? Number.NEGATIVE_INFINITY,
+  );
+
+  if (!Number.isFinite(floorY) || !Number.isFinite(soleY) || torsoHeight <= 0.00001) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return (floorY - soleY) / torsoHeight;
 }
 
 function getFloorRelativeHipDrop({
@@ -512,6 +608,9 @@ export function buildMovementRetargetSourceModel({
           usableWorldPose.worldPoseLandmarks,
         )
       : buildSegments(poseLandmarks, centers.torsoHeight),
+    semanticNeutral: usableWorldPose
+      ? semanticNeutralFromWorldPose(usableWorldPose.worldPoseLandmarks, poseLandmarks)
+      : undefined,
     shoulderCenter: centers.shoulderCenter,
     space: usableWorldPose ? "world" : "image",
     torsoHeight: centers.torsoHeight,
@@ -555,6 +654,20 @@ export function averageMovementRetargetSourceModels(
     },
     quality: average(models.map((model) => model.quality)),
     segments: averagedSegments,
+    semanticNeutral: {
+      headChainDirection: normalizeVector(averageVector(models.flatMap((model) => (
+        model.semanticNeutral?.headChainDirection ? [model.semanticNeutral.headChainDirection] : []
+      )))),
+      headForwardDirection: normalizeVector(averageVector(models.flatMap((model) => (
+        model.semanticNeutral?.headForwardDirection ? [model.semanticNeutral.headForwardDirection] : []
+      )))),
+      headForwardImageDirection: normalizeVector(averageVector(models.flatMap((model) => (
+        model.semanticNeutral?.headForwardImageDirection ? [model.semanticNeutral.headForwardImageDirection] : []
+      )))),
+      torsoDirection: normalizeVector(averageVector(models.flatMap((model) => (
+        model.semanticNeutral?.torsoDirection ? [model.semanticNeutral.torsoDirection] : []
+      )))),
+    },
     shoulderCenter: averageVector(models.map((model) => model.shoulderCenter)),
     space,
     torsoHeight: average(models.map((model) => model.torsoHeight)),
@@ -677,29 +790,51 @@ export function solveMovementRetargetFrame({
     ? Math.max(hipSquatDepth, kneeBendDepth)
     : 0;
   const isSymmetricSquat = squatDepth > 0.25 && Math.abs(leftKneeLift - rightKneeLift) < 0.2;
-  const footContactWindow = calibration.torsoHeight * 0.22;
-  const leftFootY = Math.max(
-    poseLandmarks[27]?.y ?? 0,
-    poseLandmarks[31]?.y ?? 0,
+  // Replay calibration deliberately selects the most neutral frame from the
+  // whole recording. Its absolute image-space floor can therefore come from a
+  // different camera distance or vertical framing than this frame. Resolve
+  // contact from each sole's clearance above the current bilateral foot plane,
+  // normalized by current torso height, so camera translation/scale cannot
+  // turn two visible floor supports into airborne feet.
+  const contactLandmarks = usableWorldPose?.worldPoseLandmarks ?? poseLandmarks;
+  const contactCenters = getCenters(contactLandmarks) ?? centers;
+  const leftFootClearanceRatio = getSourceFootClearanceRatio({
+    poseLandmarks: contactLandmarks,
+    side: "left",
+    torsoHeight: contactCenters.torsoHeight,
+  });
+  const rightFootClearanceRatio = getSourceFootClearanceRatio({
+    poseLandmarks: contactLandmarks,
+    side: "right",
+    torsoHeight: contactCenters.torsoHeight,
+  });
+  const leftFootConfidence = Math.max(
+    visibility(poseLandmarks[29]),
+    visibility(poseLandmarks[31]),
   );
-  const rightFootY = Math.max(
-    poseLandmarks[28]?.y ?? 0,
-    poseLandmarks[32]?.y ?? 0,
+  const rightFootConfidence = Math.max(
+    visibility(poseLandmarks[30]),
+    visibility(poseLandmarks[32]),
   );
-  const leftFootConfidence = Math.max(visibility(poseLandmarks[27]), visibility(poseLandmarks[31]));
-  const rightFootConfidence = Math.max(visibility(poseLandmarks[28]), visibility(poseLandmarks[32]));
+  const symmetricSquatFallbackContact = isSymmetricSquat && !usableWorldPose;
 
   return {
     contacts: {
       leftFoot: leftFootConfidence >= 0.35 &&
         (
-          isSymmetricSquat ||
-          (leftFootY >= calibration.floorY - footContactWindow && leftKneeLift < 0.5)
+          symmetricSquatFallbackContact ||
+          (
+            leftFootClearanceRatio <= RENDERED_FIDELITY_POLICY.sourceContactMaxTorsoRatio &&
+            (leftKneeLift < 0.5 || isSymmetricSquat)
+          )
         ),
       rightFoot: rightFootConfidence >= 0.35 &&
         (
-          isSymmetricSquat ||
-          (rightFootY >= calibration.floorY - footContactWindow && rightKneeLift < 0.5)
+          symmetricSquatFallbackContact ||
+          (
+            rightFootClearanceRatio <= RENDERED_FIDELITY_POLICY.sourceContactMaxTorsoRatio &&
+            (rightKneeLift < 0.5 || isSymmetricSquat)
+          )
         ),
     },
     debug: {

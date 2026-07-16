@@ -119,12 +119,14 @@ export function resolveMovementAvatarPipelineDecision({
     poseLandmarks: source.poseLandmarks,
     retargetCalibration: retargetSourceModel,
     torsoTrackingReady,
+    worldPoseLandmarks: source.worldPoseLandmarks,
   });
   const recordedSpineDrive = resolveMovementAvatarRecordedSpineDrive({
     kneeLift: retargetFrame.kneeLift,
     poseLandmarks: source.poseLandmarks,
     retargetCalibration: retargetSourceModel,
     torsoTrackingReady,
+    worldPoseLandmarks: source.worldPoseLandmarks,
   });
   const spineDrive = shouldHoldUnsupportedBodyOrientation(bodyOrientation)
     ? buildUnsupportedOrientationSpineDrive(bodyOrientation)

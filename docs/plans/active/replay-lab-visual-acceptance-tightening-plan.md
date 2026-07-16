@@ -1,7 +1,7 @@
 # Replay Lab Visual Acceptance Tightening Plan
 
 Last reviewed: 2026-07-16
-Status: active and reopened. The July 15 final-fingerprint bundle remains valid evidence of complete lane accounting, temporal continuity, side ownership, and target-to-final VRM application, but it is not current visual acceptance. Human review of `Full Body Flow` frame 652 exposed two semantic proof gaps: the spine/head gates can prove that a wrong target was applied correctly, and the planted-foot gate measures the foot-bone origin rather than heel/sole/toe contact. Renewed acceptance requires the source-to-final torso/head-chain and calibrated sole-contact gates defined below, followed by fresh targeted, full-recording, fast-subset, and all-nine proof.
+Status: active and reopened. The July 15 final-fingerprint bundle remains valid evidence of complete lane accounting, temporal continuity, side ownership, and target-to-final VRM application, but it is not current visual acceptance. The July 16 frame-648-656 repair window and all three complete automated `Full Body Flow` lanes now pass the strengthened source-to-final torso/head and calibrated sole-contact contract: deterministic player, intended-time player, and independent three-party proof each account for 2,169/2,169 frames with zero missing and zero strict failures. Current manual-seek, fast-subset, all-nine, and broader human proof remain required before global acceptance is reclaimed.
 Scope: make Replay Lab, full-sequence rendered proof, three-party proof, and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if side ownership, parity, coverage, or aggregate analyzer gates are green.
 
 Controlling follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) owns durable fixtures, repair packets, one-command diagnosis, and agent workflow. This plan remains authoritative for false-green prevention and rendered visual acceptance thresholds.
@@ -43,6 +43,27 @@ Product decision:
 - Floor contact uses a separate avatar-scaled distance policy; `0.10` raw world units is not an acceptable sole-contact threshold.
 - A `feet-floor` frame cannot pass when required heel/toe evidence is missing, either foot lacks planted contact without a source-supported lift, or the support/contact/lock evidence is internally contradictory.
 - The immutable regression window is `Full Body Flow` frames 648-656, with frame 652 as the controlling first/worst example. It must fail before repair and pass after repair without changing the source recording.
+
+### July 16 implementation and targeted proof checkpoint
+
+The first record-once repair loop now passes against the unchanged `Full Body Flow` source hash `sha256:8a00b45ba5e3f1ec29ac2b5e224504b8cca4f680eca60da69eed9ac43e6f9e17`:
+
+- sanitized immutable regression fixture: `scripts/movement-debug/fixtures/full-body-flow-frames-648-656-semantic-contact.json`;
+- independent final rendered telemetry now covers calibrated torso direction, head-chain direction, avatar scale, per-foot source clearance ratio, heel/sole/toe clearances, and foot-plane angle;
+- full-sequence and three-party analyzers, plus Replay Lab selected-frame failures, now emit the semantic/contact failure codes defined by this plan and fail closed when required proof is absent;
+- the shared spine target now derives signed sagittal source geometry instead of the former projection-length heuristic;
+- Replay contact classification now uses current-frame torso-normalized bilateral sole clearance instead of an absolute floor coordinate from a potentially differently framed neutral source model;
+- planted retarget feet finish on the calibrated bind-pose world direction after all parent-chain and fallback writes, for both avatar roles.
+
+Fresh deterministic player proof at `tmp/movement-replay-lab/phase13/full-body-flow-648-656.player-v5.json` accounts for 9/9 frames with zero missing. Across 18 planted-foot samples it reports zero contact contradictions, zero heel/toe divergence, and zero foot-plane divergence. At frame 652, torso source error is `0.0011`, head-chain source error is `0.0599`, both foot-plane errors are `0`, and all heel/sole/toe clearances remain below the avatar-scaled threshold. The legacy head-response correlation reports a low-variance nine-frame window failure, but its direct target/final head-axis maximum is only `0.0005 rad`; complete-recording proof remains authoritative for that temporal statistic.
+
+Fresh three-party proof at `tmp/movement-replay-lab/phase13/full-body-flow-648-656.three-party-v1.json` passes 9/9 frames with no missing roles and no failures. Instructor and player semantic torso/head-chain/foot samples all pass; corresponding instructor/player rendered segment differences are effectively zero. This closes the targeted repair window only. It does not close Phase 14 or restore all-nine acceptance.
+
+Complete deterministic player proof at `tmp/movement-replay-lab/phase13/full-body-flow-full.player-v3.json` now passes **2,169/2,169** frames with zero missing and zero failures under analysis `full-body-flow-full.player-v3.analysis.json`. The result includes zero trustworthy torso, head-orientation, planted-foot, heel, toe, or foot-plane divergences; every eligible head quaternion is present; maximum head-axis error is `0.0013 rad`; and maximum spine target/final error is `0.0016 rad`. Source-limited and limited-review samples remain explicitly counted rather than accepted. Contact-constrained shin-side frames pass only when the mapped active shin independently stays within the `0.10` source-to-final ceiling; they are reported as contact-constrained, not silently skipped.
+
+Final-code Phase 14 proof supersedes that earlier deterministic checkpoint. `tmp/movement-replay-lab/phase14/full-body-flow-full.player-v4.json`, `full-body-flow-full.player-intended-v6.json`, and `full-body-flow-full.three-party-v6.json` each account for **2,169/2,169** frames with zero missing; their strict analyses all pass with zero failures. The three-party lane has zero missing roles and axial p95 difference `0`. This closes the complete automated `Full Body Flow` lanes under the current runtime. It does not substitute for manual seek/reset review or the renewed fast-subset and all-nine proof.
+
+The shared repair now also uses two-bone planted-foot endpoint IK. For bilateral plants, the shared root moves to the raised endpoint and the other leg bends back to the floor; foot world orientation is preserved and unreachable targets are refused rather than stretching bone translations. The recorded frames 2072-2108 transition window passes 37/37 after this change.
 
 ## 2026-07-15 Reopening Decision
 
@@ -523,7 +544,7 @@ Exit criteria:
 
 ### Phase 13: Close Source-Semantic And Sole-Contact Blind Spots
 
-Progress: 10%. Diagnosis and the controlling red baseline are complete; telemetry, gates, fixtures, and runtime repair are not implemented.
+Progress: 92%. The fixture, confidence-aware independent telemetry, focused gates, shared spine/contact/endpoint-IK repair, deterministic/three-party repair-window proof, and complete deterministic `Full Body Flow` player proof are complete. Remaining work is cross-surface packet/bundle/avatar-follow integration plus the other complete-recording lanes and broader acceptance proof.
 
 Tasks:
 
@@ -531,12 +552,12 @@ Tasks:
 - [x] Prove that source torso lean (`0.1499 rad`) and solver forward lean (`0.8303 rad`) disagree while target-to-final spine application passes.
 - [x] Prove that target/final head quaternions are identical while the combined torso/neck/head silhouette is visibly hunched.
 - [x] Prove that foot-floor telemetry samples normalized foot nodes while visible toe/sole contact remains unmeasured.
-- [ ] Commit a sanitized immutable `Full Body Flow` frames 648-656 source/telemetry regression fixture with the existing source hash and expected pre-repair failures.
-- [ ] Add independent source torso direction, final rendered torso-chain direction, source-relative cervical posture, and final neck/head-chain telemetry.
-- [ ] Add calibrated left/right heel, sole, toe-base/toe-end, foot-plane, and floor-contact telemetry.
-- [ ] Add canonical failure classification for source-to-target torso divergence, source-to-final head-chain divergence, planted-foot contact contradiction, toe clearance, and foot-plane angular divergence.
+- [ ] Commit a sanitized immutable `Full Body Flow` frames 648-656 source/telemetry regression fixture with the existing source hash and expected pre-repair failures. The fixture is added locally and test-covered; the repository commit is pending.
+- [x] Add independent source torso direction, final rendered torso-chain direction, source-relative cervical posture, and final neck/head-chain telemetry.
+- [x] Add calibrated left/right heel, sole, toe-base/toe-end, foot-plane, and floor-contact telemetry.
+- [x] Add canonical failure classification for source-to-target torso divergence, source-to-final head-chain divergence, planted-foot contact contradiction, toe clearance, and foot-plane angular divergence.
 - [ ] Make UI, full-sequence, intended-time, three-party, repair packet, bundle, and avatar-follow gates consume the same new evidence and fail closed when required evidence is missing.
-- [ ] Repair the shared source-to-spine target and foot/sole-contact boundaries without Replay-only, Game-only, recording-specific, frame-specific, or avatar-specific rules.
+- [x] Repair the shared source-to-spine target and foot/sole-contact boundaries without Replay-only, Game-only, recording-specific, frame-specific, or avatar-specific rules.
 
 Exit criteria:
 
@@ -547,7 +568,7 @@ Exit criteria:
 
 ### Phase 14: Renewed Tiered And Human Acceptance
 
-Progress: 0%.
+Progress: 10%. The first deterministic and three-party repair-window lanes pass with complete accounting. Manual seek, complete-recording, intended-time, fast-subset, all-nine, and human review remain open.
 
 Run in order:
 
@@ -754,10 +775,10 @@ Stop and reopen the acceptance contract if any of these happen:
 
 ## Progress
 
-- Overall movement roadmap: approximately 88%. The shared runtime, frame accounting, temporal proof, side ownership, and target-to-final application work remain valuable, but visual acceptance is reopened by the missing source-semantic torso/head-chain and rendered sole-contact gates.
+- Overall movement roadmap: approximately 96%. The shared runtime, frame accounting, temporal proof, side ownership, target-to-final application, semantic torso/head orientation, and rendered sole-contact gates now pass all three complete automated `Full Body Flow` lanes; broader renewed acceptance remains open.
 - July 16 diagnosis/documentation slice: 100%.
-- Phase 13 semantic/contact hardening: 10% overall; diagnosis and red-baseline definition are complete, implementation is 0%.
-- Phase 14 renewed tiered/human acceptance: 0%.
+- Phase 13 semantic/contact hardening: 96%; fixture, confidence classification, telemetry, focused gates, shared repair, targeted proof, and all three complete automated `Full Body Flow` lanes pass. Packet/bundle/avatar-follow propagation remains.
+- Phase 14 renewed tiered/human acceptance: 45%; deterministic player, intended-time player, and three-party `Full Body Flow` proof pass under the final runtime. Current manual seek, fast subset, all-nine, and broader human review remain open.
 - Earlier rendered-fidelity work remains historical implementation evidence, not current global visual acceptance. It must not be summarized as 9/9 accepted until the new gates are present and the proof is regenerated.
 - Phase 6 red baseline and metric proof: 100%.
 - Phase 7 canonical strengthened policy: 100%.

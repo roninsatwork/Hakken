@@ -160,6 +160,85 @@ describe("movementRetargeting", () => {
     expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
   });
 
+  it("preserves planted contacts across whole-frame camera translation", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const shiftedPose = withCorePose().map((landmark) => ({
+      ...landmark,
+      y: landmark.y - 0.14,
+    }));
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: shiftedPose,
+    });
+
+    expect(frame.contacts).toEqual({ leftFoot: true, rightFoot: true });
+  });
+
+  it("releases only the sole lifted above the current bilateral foot plane", () => {
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
+    const pose = withCorePose();
+    [27, 29, 31].forEach((index) => {
+      pose[index] = { ...pose[index]!, y: pose[index]!.y - 0.12 };
+    });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: pose,
+    });
+
+    expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
+  });
+
+  it("uses metric world sole clearance when image depth disagrees about contact", () => {
+    const calibrationPose = withCorePose();
+    const calibrationWorldPose = structuredClone(calibrationPose);
+    const calibration = buildMovementRetargetSourceModel({
+      poseLandmarks: calibrationPose,
+      worldPoseLandmarks: calibrationWorldPose,
+    });
+    const imagePose = withCorePose();
+    const worldPose = structuredClone(calibrationWorldPose);
+    [27, 29, 31].forEach((index) => {
+      worldPose[index] = { ...worldPose[index]!, y: worldPose[index]!.y - 0.12 };
+    });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: imagePose,
+      worldPoseLandmarks: worldPose,
+    });
+
+    expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
+  });
+
+  it("does not force a world-lifted sole into contact during a symmetric image squat", () => {
+    const calibrationPose = withCorePose();
+    const calibrationWorldPose = structuredClone(calibrationPose);
+    const calibration = buildMovementRetargetSourceModel({
+      poseLandmarks: calibrationPose,
+      worldPoseLandmarks: calibrationWorldPose,
+    });
+    const squatPose = withCorePose();
+    squatPose[23] = { ...squatPose[23]!, y: 0.8 };
+    squatPose[24] = { ...squatPose[24]!, y: 0.8 };
+    squatPose[25] = { ...squatPose[25]!, y: 0.73 };
+    squatPose[26] = { ...squatPose[26]!, y: 0.73 };
+    const worldPose = structuredClone(calibrationWorldPose);
+    [27, 29, 31].forEach((index) => {
+      worldPose[index] = { ...worldPose[index]!, y: worldPose[index]!.y - 0.12 };
+    });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: squatPose,
+      worldPoseLandmarks: worldPose,
+    });
+
+    expect(frame.squatDepth).toBeGreaterThan(0.55);
+    expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
+  });
+
   it("keeps standing neutral when the user steps farther back in camera frame", () => {
     const calibrationPose = withCorePose();
     const calibration = buildMovementRetargetSourceModel({ poseLandmarks: calibrationPose });

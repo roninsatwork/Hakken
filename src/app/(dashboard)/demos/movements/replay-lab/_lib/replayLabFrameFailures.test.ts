@@ -173,4 +173,45 @@ describe("replay lab current-frame failures", () => {
     });
     expect(failures.map((failure) => failure.code)).not.toContain("avatar_spine_angle_diverged");
   });
+
+  it("shows independent torso, head-chain, and toe-contact failures on the selected frame", () => {
+    const failures = getReplayLabLiveCurrentFrameFailures(failureInput({
+      currentAvatarDebug: {
+        avatarVisual: {
+          comparedLowerBodySegments: 0,
+          semantic: {
+            avatarScale: 2,
+            evidenceVersion: "2026-07-16.v1",
+            feet: {
+              left: {
+                heelClearance: 0.03,
+                planeAngleRadians: 0.4,
+                soleClearance: 0.03,
+                sourceConfidence: 0.99,
+                sourcePlanted: true,
+                toeBaseClearance: 0.07,
+                toeEndClearance: 0.09,
+              },
+              right: { sourcePlanted: false },
+            },
+            headChain: { confidence: 0.99, sourceError: 0.45 },
+            torso: { confidence: 0.99, sourceError: 0.43 },
+          },
+          segments: {},
+        },
+        bodyConfidence: {},
+        fallbacks: {},
+        headApplied: { pitch: 0, roll: 0, yaw: 0 },
+        headRaw: { confidence: 1, pitch: 0, roll: 0, source: "pose", yaw: 0 },
+        updatedAt: 0,
+      } as unknown as FailureInput["currentAvatarDebug"],
+      currentFrameSourceReady: true,
+    }));
+
+    expect(failures.map((failure) => failure.code)).toEqual(expect.arrayContaining([
+      "avatar_spine_angle_diverged",
+      "avatar_head_alignment_diverged",
+      "avatar_planted_foot_diverged",
+    ]));
+  });
 });

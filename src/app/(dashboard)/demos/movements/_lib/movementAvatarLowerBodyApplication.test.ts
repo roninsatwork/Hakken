@@ -868,7 +868,7 @@ function appliedDecision(
 }
 
 describe("movement avatar lower-body retarget application plan", () => {
-  it("does not overwrite complete instructor foot retarget with canned flat feet", () => {
+  it("finishes complete retarget on the shared planted-foot boundary", () => {
     const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
       appliedDecision: appliedDecision({ hasCompleteLegRetarget: true }),
       avatarRole: "instructor",
@@ -876,11 +876,28 @@ describe("movement avatar lower-body retarget application plan", () => {
       instructorSquatPresentationDepth: 0,
       lowerBodyDrive: drive(),
       playerSquatPresentationDepth: 0,
+      retargetContacts: { leftFoot: true, rightFoot: true },
       retargetAppliedLowerBody: 6,
       stageDecision: stage("retarget"),
     });
 
-    expect(plan.plantInstructorFeet).toEqual([]);
+    expect(plan.plantInstructorFeet).toEqual(["left", "right"]);
+  });
+
+  it("leaves a raised source foot under recorded retarget ownership", () => {
+    const plan = resolveMovementAvatarLowerBodyRetargetApplicationPlan({
+      appliedDecision: appliedDecision({ hasCompleteLegRetarget: true }),
+      avatarRole: "player",
+      balancedPlantedSquatDepth: 0,
+      instructorSquatPresentationDepth: 0,
+      lowerBodyDrive: drive(),
+      playerSquatPresentationDepth: 0,
+      retargetContacts: { leftFoot: true, rightFoot: false },
+      retargetAppliedLowerBody: 6,
+      stageDecision: stage("retarget"),
+    });
+
+    expect(plan.plantInstructorFeet).toEqual(["left"]);
   });
 
   it("does not overwrite a complete instructor leg retarget with canned squat flexion", () => {

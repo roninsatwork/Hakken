@@ -8,6 +8,7 @@ import {
   applyMovementAvatarSupportContactRootCorrection,
   resolveMovementAvatarSupportContactCorrectionApplication,
 } from "./movementAvatarSupportContactCorrectionApplication";
+import { applyMovementAvatarPlantedFootEndpointIk } from "./movementAvatarPlantedFootEndpointIk";
 
 export type MovementAvatarSupportContactObjectApplicationResult = {
   applied: boolean;
@@ -105,6 +106,26 @@ export function applyMovementAvatarSupportContactLocksToObjects({
         const bone = sample?.bone;
         if (!bone?.parent) return false;
 
+        const side = sample.anchor.bone === "leftFoot"
+          ? "left"
+          : sample.anchor.bone === "rightFoot"
+            ? "right"
+            : null;
+        if (side) {
+          const upperLeg = lookupBone(`${side}UpperLeg`);
+          const lowerLeg = lookupBone(`${side}LowerLeg`);
+          scene?.updateMatrixWorld(true);
+          const currentWorldY = bone.getWorldPosition(new THREE.Vector3()).y;
+          if (!upperLeg || !lowerLeg) return false;
+          return applyMovementAvatarPlantedFootEndpointIk({
+            foot: bone,
+            lowerLeg,
+            scene,
+            targetWorldY: currentWorldY + application.weightedCorrection,
+            upperLeg,
+          });
+        }
+
         bone.position.lerp(application.targetLocalPosition, contactLocks.slerp);
         return true;
       },
@@ -125,6 +146,31 @@ export function applyMovementAvatarSupportContactLocksToObjects({
     });
     appliedBoneCorrection = boneCorrectionApplication.appliedBoneCorrection;
   }
+
+  // A released foot may legitimately rise above the support plane, but it
+  // must never pass through it. If retarget depth and root support disagree,
+  // lift the endpoint back to the floor through the same translation-free leg
+  // IK used for planted contacts. This prevents a later contact reacquisition
+  // from snapping an already-penetrating foot across a large distance.
+  (["left", "right"] as const).forEach((side) => {
+    scene?.updateMatrixWorld(true);
+    avatarRoot.updateMatrixWorld(true);
+    const foot = lookupBone(`${side}Foot`);
+    const upperLeg = lookupBone(`${side}UpperLeg`);
+    const lowerLeg = lookupBone(`${side}LowerLeg`);
+    if (!foot || !upperLeg || !lowerLeg) return;
+    const currentWorldY = foot.getWorldPosition(new THREE.Vector3()).y;
+    const penetration = floorY - currentWorldY;
+    if (penetration <= 0.0001) return;
+    if (!applyMovementAvatarPlantedFootEndpointIk({
+      foot,
+      lowerLeg,
+      scene,
+      targetWorldY: floorY,
+      upperLeg,
+    })) return;
+    appliedBoneCorrection = Math.max(appliedBoneCorrection, penetration);
+  });
 
   if (appliedBoneCorrection > 0) {
     avatarRoot.updateMatrixWorld(true);

@@ -8,11 +8,13 @@ export function resolveMovementAvatarRecordedSpineDrive({
   poseLandmarks,
   retargetCalibration,
   torsoTrackingReady,
+  worldPoseLandmarks,
 }: {
   kneeLift?: { left: number; right: number } | null;
   poseLandmarks: MovementLandmark[];
   retargetCalibration?: MovementRetargetSourceModel | null;
   torsoTrackingReady: boolean;
+  worldPoseLandmarks?: MovementLandmark[] | null;
 }): MovementAvatarPlayerSpineDrive {
   if (!torsoTrackingReady || !retargetCalibration || retargetCalibration.quality < 0.45) {
     return {
@@ -26,5 +28,6 @@ export function resolveMovementAvatarRecordedSpineDrive({
     ownerRole: "instructor",
     poseLandmarks,
     retargetCalibration,
+    worldPoseLandmarks,
   });
 }

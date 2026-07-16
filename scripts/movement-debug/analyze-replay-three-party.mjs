@@ -296,6 +296,125 @@ function sourceFidelitySummary({ failures, frames }) {
   };
 }
 
+function semanticAcceptanceSummary({ failures, frames }) {
+  const roles = Object.fromEntries(["instructor", "player"].map((role) => {
+    const directionSummary = Object.fromEntries(["torso", "headChain"].map((segment) => {
+      const samples = frames.flatMap((frame) => {
+        const semantic = frame.avatars?.[role]?.avatarVisual?.semantic;
+        if (!semantic?.evidenceVersion) return [];
+        const value = semantic[segment];
+        return [{
+          confidence: value?.confidence,
+          error: value?.sourceError,
+          frameIndex: frame.frameIndex,
+          outcome: classifyRenderedFidelitySample({
+            confidence: value?.confidence,
+            error: value?.sourceError,
+            hasProof: Boolean(value?.sourceDirection && value?.renderedDirection),
+          }),
+        }];
+      });
+      const diverged = samples.filter((sample) => isRenderedFidelityRepairOutcome(sample.outcome));
+      const proofLimited = samples.filter((sample) => sample.outcome === "proof-limited");
+      if (diverged.length > 0) {
+        failures.push({
+          code: segment === "torso"
+            ? "three-party-rendered-torso-source-diverged"
+            : "three-party-rendered-head-chain-source-diverged",
+          count: diverged.length,
+          role,
+        });
+      }
+      if (proofLimited.length > 0) {
+        failures.push({
+          code: "three-party-rendered-semantic-proof-limited",
+          count: proofLimited.length,
+          role,
+          segment,
+        });
+      }
+      return [segment, {
+        divergedSampleCount: diverged.length,
+        limitedReviewSampleCount: samples.filter((sample) => sample.outcome === "limited-review").length,
+        proofLimitedSampleCount: proofLimited.length,
+        sampleCount: samples.length,
+        sourceLimitedSampleCount: samples.filter((sample) => sample.outcome === "source-limited").length,
+        worstFrames: [...samples]
+          .sort((left, right) => (right.error ?? -1) - (left.error ?? -1))
+          .slice(0, 20),
+      }];
+    }));
+
+    const feet = frames.flatMap((frame) => {
+      const debug = frame.avatars?.[role];
+      const semantic = debug?.avatarVisual?.semantic;
+      if (!semantic?.evidenceVersion) return [];
+      const threshold = Number.isFinite(semantic.avatarScale)
+        ? semantic.avatarScale * RENDERED_FIDELITY_POLICY.contactClearanceMaxAvatarScaleRatio
+        : null;
+      return ["left", "right"].flatMap((side) => {
+        const foot = semantic.feet?.[side];
+        if (!foot?.sourcePlanted) return [];
+        const hasProof = threshold !== null && [
+          foot.heelClearance,
+          foot.soleClearance,
+          foot.toeBaseClearance,
+          foot.toeEndClearance,
+          foot.planeAngleRadians,
+        ].every(Number.isFinite);
+        const rawDiverged = hasProof && (
+          foot.heelClearance > threshold ||
+          foot.toeBaseClearance > threshold ||
+          foot.toeEndClearance > threshold ||
+          Math.abs(foot.planeAngleRadians) > RENDERED_FIDELITY_POLICY.footPlaneMaxRadians ||
+          debug.retarget?.[`${side}FootContact`] === false
+        );
+        const outcome = classifyRenderedFidelitySample({
+          confidence: foot.sourceConfidence,
+          error: rawDiverged ? RENDERED_FIDELITY_POLICY.blockAbove + 0.001 : 0,
+          hasProof,
+        });
+        return [{
+          confidence: foot.sourceConfidence,
+          diverged: isRenderedFidelityRepairOutcome(outcome) && rawDiverged,
+          frameIndex: frame.frameIndex,
+          hasProof,
+          outcome,
+          side,
+        }];
+      });
+    });
+    const divergedFeet = feet.filter((sample) => sample.diverged);
+    const proofLimitedFeet = feet.filter((sample) => sample.outcome === "proof-limited");
+    if (divergedFeet.length > 0) {
+      failures.push({
+        code: "three-party-rendered-planted-foot-contact-contradiction",
+        count: divergedFeet.length,
+        role,
+      });
+    }
+    if (proofLimitedFeet.length > 0) {
+      failures.push({
+        code: "three-party-rendered-semantic-proof-limited",
+        count: proofLimitedFeet.length,
+        role,
+        segment: "feet",
+      });
+    }
+    return [role, {
+      ...directionSummary,
+      feet: {
+        divergedSampleCount: divergedFeet.length,
+        limitedReviewSampleCount: feet.filter((sample) => sample.outcome === "limited-review").length,
+        proofLimitedSampleCount: proofLimitedFeet.length,
+        sampleCount: feet.length,
+        sourceLimitedSampleCount: feet.filter((sample) => sample.outcome === "source-limited").length,
+      },
+    }];
+  }));
+  return { roles };
+}
+
 export function analyzeThreePartyReplay({ telemetry }) {
   const frameInspection = inspectReplayTelemetryFrames({
     frameCount: telemetry.frameCount,
@@ -347,6 +466,7 @@ export function analyzeThreePartyReplay({ telemetry }) {
     failures.push({ code: "three-party-rendered-role-missing", count: missingRoleFrames.length });
   }
   const sourceFidelity = sourceFidelitySummary({ failures, frames });
+  const semanticAcceptance = semanticAcceptanceSummary({ failures, frames });
 
   const segments = Object.fromEntries(Object.entries(SEGMENT_THRESHOLDS).map(([segment, threshold]) => {
     const samples = [];
@@ -471,6 +591,7 @@ export function analyzeThreePartyReplay({ telemetry }) {
     missingRoleFrames: missingRoleFrames.slice(0, 100),
     proofMode: telemetry.proofMode ?? "unknown",
     segments,
+    semanticAcceptance,
     sessionId: telemetry.sessionId,
     sourceFidelity,
     status: failures.length === 0 ? "passed" : "blocked",

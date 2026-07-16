@@ -448,6 +448,74 @@ function activeSpineDriveFidelitySample(debug, frameIndex, previousDebug) {
   };
 }
 
+function semanticDirectionSample(semanticSegment, frameIndex, segment) {
+  const confidence = semanticSegment?.confidence;
+  const error = semanticSegment?.sourceError;
+  return {
+    confidence,
+    error,
+    frameIndex,
+    metric: "independent-source-to-final-direction-dot-error",
+    outcome: classifyRenderedFidelitySample({
+      confidence,
+      error,
+      hasProof: Boolean(semanticSegment?.sourceDirection && semanticSegment?.renderedDirection),
+    }),
+    segment,
+  };
+}
+
+function semanticFootContactSamples(debug, frameIndex) {
+  const semantic = debug.avatarVisual?.semantic;
+  if (!semantic?.evidenceVersion) return [];
+  const scale = semantic.avatarScale;
+  const threshold = Number.isFinite(scale)
+    ? scale * RENDERED_FIDELITY_POLICY.contactClearanceMaxAvatarScaleRatio
+    : null;
+
+  return ["left", "right"].flatMap((side) => {
+    const foot = semantic.feet?.[side];
+    if (!foot?.sourcePlanted) return [];
+    const clearances = {
+      heel: foot.heelClearance,
+      sole: foot.soleClearance,
+      toeBase: foot.toeBaseClearance,
+      toeEnd: foot.toeEndClearance,
+    };
+    const hasContactProof = threshold !== null && Object.values(clearances).every(Number.isFinite) &&
+      Number.isFinite(foot.planeAngleRadians);
+    const heelDiverged = hasContactProof && foot.heelClearance > threshold;
+    const toeDiverged = hasContactProof &&
+      Math.max(foot.toeBaseClearance, foot.toeEndClearance) > threshold;
+    const planeDiverged = hasContactProof &&
+      Math.abs(foot.planeAngleRadians) > RENDERED_FIDELITY_POLICY.footPlaneMaxRadians;
+    const declaredContact = debug.retarget?.[`${side}FootContact`];
+    const rawDiverged = hasContactProof && (
+      declaredContact === false || heelDiverged || toeDiverged || planeDiverged
+    );
+    const outcome = classifyRenderedFidelitySample({
+      confidence: foot.sourceConfidence,
+      error: rawDiverged ? RENDERED_FIDELITY_POLICY.blockAbove + 0.001 : 0,
+      hasProof: hasContactProof,
+    });
+    const trustworthy = outcome === "pass" || isRenderedFidelityRepairOutcome(outcome);
+    return [{
+      clearances,
+      confidence: foot.sourceConfidence,
+      contactContradiction: trustworthy && rawDiverged,
+      frameIndex,
+      hasContactProof,
+      heelDiverged: trustworthy && heelDiverged,
+      outcome,
+      planeAngleRadians: foot.planeAngleRadians,
+      planeDiverged: trustworthy && planeDiverged,
+      side,
+      threshold,
+      toeDiverged: trustworthy && toeDiverged,
+    }];
+  });
+}
+
 function renderedAxialMagnitude(debug) {
   return Math.max(
     Math.abs(debug?.avatarSpine?.spine?.z ?? 0),
@@ -657,10 +725,14 @@ export function analyzeFullSequence({
   const transientOwnerTransitions = [];
   const neutralResetFrames = [];
   const renderedFidelitySamples = [];
+  const semanticFootSamples = [];
+  const semanticHeadChainSamples = [];
+  const semanticTorsoSamples = [];
   const mirrorOwnership = Object.fromEntries(MIRROR_LIMB_PAIRS.map((pair) => [
     pair.type,
     {
       ambiguousFrames: [],
+      contactConstrainedFrames: [],
       excludedFrames: [],
       failedFrames: [],
       hardFailedFrames: [],
@@ -675,10 +747,19 @@ export function analyzeFullSequence({
     if (!debug) return;
     const previousRenderedDebug = frames[frameArrayIndex - 1]?.debug;
     const nextRenderedDebug = frames[frameArrayIndex + 1]?.debug;
-    const pose = replayPose(session, frame.frameIndex);
-    const retargetPose = replayRetargetPose(session, frame.frameIndex);
+    const sourceFrameIndex = Number.isInteger(frame.sourceFrameIndex)
+      ? frame.sourceFrameIndex
+      : frame.frameIndex;
+    const pose = replayPose(session, sourceFrameIndex);
+    const retargetPose = replayRetargetPose(session, sourceFrameIndex);
     const sourceQuality = debug.retarget?.sourceQuality ?? 0;
     const visualSegments = debug.avatarVisual?.segments ?? {};
+    const semantic = debug.avatarVisual?.semantic;
+    if (semantic?.evidenceVersion) {
+      semanticTorsoSamples.push(semanticDirectionSample(semantic.torso, frame.frameIndex, "torso"));
+      semanticHeadChainSamples.push(semanticDirectionSample(semantic.headChain, frame.frameIndex, "headChain"));
+      semanticFootSamples.push(...semanticFootContactSamples(debug, frame.frameIndex));
+    }
     const hasUpperBodyFidelityProof =
       Number.isFinite(debug.avatarVisual?.averageUpperBodyDirectionError) ||
       (debug.avatarVisual?.comparedUpperBodySegments ?? 0) > 0;
@@ -921,6 +1002,28 @@ export function analyzeFullSequence({
           sourceStep: Math.max(sourceLeftStep, sourceRightStep),
           wrongStep,
         };
+        const expectedSide = expectedAvatar.startsWith("left") ? "left" : "right";
+        const wrongSide = wrongAvatar.startsWith("left") ? "left" : "right";
+        const contactConstrainedExpectedSide = [debug, previousFrame.debug].every((debugFrame) => (
+          debugFrame.retarget?.[`${expectedSide}FootContact`] === false &&
+          debugFrame.retarget?.[`${wrongSide}FootContact`] === true
+        ));
+        const expectedSourceError = debug.avatarVisual?.segments?.[expectedAvatar]?.sourceError;
+        if (
+          (pair.type === "thigh" || pair.type === "shin") &&
+          contactConstrainedExpectedSide &&
+          Number.isFinite(expectedSourceError) &&
+          expectedSourceError <= RENDERED_FIDELITY_POLICY.passMax
+        ) {
+          result.samples += 1;
+          result.passedFrames.push(detail);
+          result.contactConstrainedFrames.push({
+            ...detail,
+            expectedSourceError,
+            plantedAvatar: wrongAvatar,
+          });
+          return;
+        }
         if (Math.abs(expectedStep - wrongStep) < MIRROR_OWNERSHIP_DECISIVE_MARGIN) {
           result.ambiguousFrames.push(detail);
           return;
@@ -1148,6 +1251,40 @@ export function analyzeFullSequence({
   if (proofLimitedFidelitySamples.length > 0) {
     failures.push({ code: "rendered-fidelity-proof-limited", count: proofLimitedFidelitySamples.length });
   }
+  const divergedTorsoSamples = semanticTorsoSamples.filter((sample) =>
+    isRenderedFidelityRepairOutcome(sample.outcome));
+  const divergedHeadChainSamples = semanticHeadChainSamples.filter((sample) =>
+    isRenderedFidelityRepairOutcome(sample.outcome));
+  const semanticProofLimitedSamples = [
+    ...semanticTorsoSamples.filter((sample) => sample.outcome === "proof-limited"),
+    ...semanticHeadChainSamples.filter((sample) => sample.outcome === "proof-limited"),
+    ...semanticFootSamples.filter((sample) => sample.outcome === "proof-limited"),
+  ];
+  const contactContradictions = semanticFootSamples.filter((sample) => sample.contactContradiction);
+  const heelDivergences = semanticFootSamples.filter((sample) => sample.heelDiverged);
+  const toeDivergences = semanticFootSamples.filter((sample) => sample.toeDiverged);
+  const footPlaneDivergences = semanticFootSamples.filter((sample) => sample.planeDiverged);
+  if (divergedTorsoSamples.length > 0) {
+    failures.push({ code: "rendered-torso-source-diverged", count: divergedTorsoSamples.length });
+  }
+  if (divergedHeadChainSamples.length > 0) {
+    failures.push({ code: "rendered-head-chain-source-diverged", count: divergedHeadChainSamples.length });
+  }
+  if (contactContradictions.length > 0) {
+    failures.push({ code: "rendered-planted-foot-contact-contradiction", count: contactContradictions.length });
+  }
+  if (heelDivergences.length > 0) {
+    failures.push({ code: "rendered-heel-clearance-diverged", count: heelDivergences.length });
+  }
+  if (toeDivergences.length > 0) {
+    failures.push({ code: "rendered-toe-clearance-diverged", count: toeDivergences.length });
+  }
+  if (footPlaneDivergences.length > 0) {
+    failures.push({ code: "rendered-foot-plane-diverged", count: footPlaneDivergences.length });
+  }
+  if (semanticProofLimitedSamples.length > 0) {
+    failures.push({ code: "rendered-semantic-proof-limited", count: semanticProofLimitedSamples.length });
+  }
   if (
     telemetry.motionPipelineFingerprint === movementPipelineFingerprint() &&
     headQuaternionProofFrameCount < headProofEligibleFrames.length
@@ -1178,6 +1315,7 @@ export function analyzeFullSequence({
       );
       return {
       ambiguousFrameCount: value.ambiguousFrames.length,
+      contactConstrainedFrameCount: value.contactConstrainedFrames.length,
       excludedFrameCount: value.excludedFrames.length,
       failedFrameCount: value.failedFrames.length,
       hardFailedFrameCount: value.hardFailedFrames.length,
@@ -1189,6 +1327,13 @@ export function analyzeFullSequence({
         length: run.length,
       })),
       sampleCount: value.samples,
+      contactConstrainedFrames: value.contactConstrainedFrames.slice(0, 20).map((frame) => ({
+        ...frame,
+        expectedSourceError: round(frame.expectedSourceError),
+        expectedStep: round(frame.expectedStep),
+        sourceStep: round(frame.sourceStep),
+        wrongStep: round(frame.wrongStep),
+      })),
       worstFrames: value.failedFrames.slice(0, 20).map((frame) => ({
         ...frame,
         expectedStep: round(frame.expectedStep),
@@ -1267,6 +1412,41 @@ export function analyzeFullSequence({
     },
     playbackMode: telemetry.playbackMode ?? "timed-playback",
     renderedFidelity,
+    semanticAcceptance: {
+      footContact: {
+        contactContradictionCount: contactContradictions.length,
+        heelDivergenceCount: heelDivergences.length,
+        limitedReviewCount: semanticFootSamples.filter((sample) => sample.outcome === "limited-review").length,
+        proofLimitedCount: semanticFootSamples.filter((sample) => sample.outcome === "proof-limited").length,
+        sampleCount: semanticFootSamples.length,
+        sourceLimitedCount: semanticFootSamples.filter((sample) => sample.outcome === "source-limited").length,
+        toeDivergenceCount: toeDivergences.length,
+        footPlaneDivergenceCount: footPlaneDivergences.length,
+        worstFrames: semanticFootSamples.filter((sample) => (
+          sample.contactContradiction || sample.outcome !== "pass"
+        )).slice(0, 30),
+      },
+      headChain: {
+        divergedSampleCount: divergedHeadChainSamples.length,
+        limitedReviewSampleCount: semanticHeadChainSamples.filter((sample) => sample.outcome === "limited-review").length,
+        proofLimitedSampleCount: semanticHeadChainSamples.filter((sample) => sample.outcome === "proof-limited").length,
+        sampleCount: semanticHeadChainSamples.length,
+        sourceLimitedSampleCount: semanticHeadChainSamples.filter((sample) => sample.outcome === "source-limited").length,
+        worstFrames: [...semanticHeadChainSamples]
+          .sort((left, right) => (right.error ?? -1) - (left.error ?? -1))
+          .slice(0, 20),
+      },
+      torso: {
+        divergedSampleCount: divergedTorsoSamples.length,
+        limitedReviewSampleCount: semanticTorsoSamples.filter((sample) => sample.outcome === "limited-review").length,
+        proofLimitedSampleCount: semanticTorsoSamples.filter((sample) => sample.outcome === "proof-limited").length,
+        sampleCount: semanticTorsoSamples.length,
+        sourceLimitedSampleCount: semanticTorsoSamples.filter((sample) => sample.outcome === "source-limited").length,
+        worstFrames: [...semanticTorsoSamples]
+          .sort((left, right) => (right.error ?? -1) - (left.error ?? -1))
+          .slice(0, 20),
+      },
+    },
     mirrorSegments: segmentMetrics,
     mirrorSideOwnership: mirrorOwnershipSummary,
     missingFrameCount: isSourceTimeSequence

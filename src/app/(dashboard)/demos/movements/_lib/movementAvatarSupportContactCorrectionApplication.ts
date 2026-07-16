@@ -93,12 +93,29 @@ export function resolveMovementAvatarSupportContactCorrectionApplication({
   const weightedFloorCorrections = corrections.filter(
     (_correction, sampleIndex) => (samples[sampleIndex]?.anchor.weight ?? 0) > 0,
   );
+  const minimumFloorCorrection = Math.min(...weightedFloorCorrections);
+  const maximumFloorCorrection = Math.max(...weightedFloorCorrections);
+  const floorCorrectionRange = maximumFloorCorrection - minimumFloorCorrection;
   const rootCorrection = clamp(
     allAnchorsAreFloorContacts
-      // Multiple planted feet share one vertical root. Bring the lowest
-      // positive-weight foot to the floor; averaging opposing corrections
-      // puts one foot below the floor and snaps when the anchor count changes.
-      ? Math.max(...weightedFloorCorrections)
+      // Exact planted-foot IK can solve both endpoints after moving the shared
+      // root. A gap larger than one IK pass must use the exact root placement;
+      // this also keeps instructor/player startup convergence deterministic.
+      // For normal contact reacquisition, keep most of the correction in the
+      // root so the returning leg retains its source-driven bend, while
+      // distributing enough across both leg chains to avoid a one-leg snap.
+      // Approximate contact modes retain the conservative lowest-foot root
+      // rule because their endpoints are not guaranteed to be solved later.
+      ? contactLocks.boneCorrectionScale >= 1 &&
+        contactLocks.maxBoneCorrection > 0 &&
+        contactLocks.slerp >= 1
+        ? floorCorrectionRange > contactLocks.maxBoneCorrection
+          ? minimumFloorCorrection
+          : (
+              minimumFloorCorrection * 0.7 +
+              (weightedCorrection / totalWeight) * 0.3
+            )
+        : maximumFloorCorrection
       : weightedCorrection / totalWeight,
     -contactLocks.maxCorrection,
     contactLocks.maxCorrection,

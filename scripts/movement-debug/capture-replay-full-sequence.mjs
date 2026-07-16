@@ -30,6 +30,8 @@ Options:
   --playback-timeout-ms <ms>
                          Override the uninterrupted playback timeout
   --deterministic       Step and settle every source frame instead of timed playback
+  --frame-start <index> First source frame for a deterministic repair window
+  --frame-end <index>   Last source frame for a deterministic repair window (inclusive)
   --three-party         Render instructor identity and an independently constructed opposite player
   --headed               Show the browser while collecting
   --help                 Show this help
@@ -43,6 +45,8 @@ function parseArgs(argv) {
     deterministic: false,
     debugSessionJson: "",
     headed: false,
+    frameEnd: null,
+    frameStart: null,
     localTestAuth: false,
     out: "",
     playbackTimeoutMs: 0,
@@ -57,6 +61,8 @@ function parseArgs(argv) {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--headed") args.headed = true;
     else if (arg === "--deterministic") args.deterministic = true;
+    else if (arg === "--frame-start") args.frameStart = Number(argv[++index]);
+    else if (arg === "--frame-end") args.frameEnd = Number(argv[++index]);
     else if (arg === "--three-party") args.threeParty = true;
     else if (arg === "--local-test-auth") args.localTestAuth = true;
     else if (arg === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
@@ -109,13 +115,13 @@ function missingFrameIndexes(frames, frameCount) {
     .filter((index) => !observed.has(index));
 }
 
-async function captureDeterministicFrames(page, lab, frameCount, threeParty) {
+async function captureDeterministicFrames(page, lab, threeParty, frameStart, frameEnd) {
   const frames = [];
   let captureError = "";
   try {
-    for (let startFrameIndex = 0; startFrameIndex < frameCount; startFrameIndex += 250) {
-      const endFrameIndex = Math.min(frameCount, startFrameIndex + 250);
-      const chunk = await page.evaluate(async ({ endFrameIndex, startFrameIndex, threeParty }) => {
+    for (let startFrameIndex = frameStart; startFrameIndex <= frameEnd; startFrameIndex += 250) {
+      const endFrameIndex = Math.min(frameEnd + 1, startFrameIndex + 250);
+      const chunk = await page.evaluate(async ({ endFrameIndex, frameWindowStart, startFrameIndex, threeParty }) => {
         const waitForAnimationFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
         const waitFor = async (predicate, message) => {
           for (let attempt = 0; attempt < 240; attempt += 1) {
@@ -202,14 +208,15 @@ async function captureDeterministicFrames(page, lab, frameCount, threeParty) {
                 }
               : undefined,
             debug: structuredClone(playerDebug),
-            frameIndex,
+            frameIndex: frameIndex - frameWindowStart,
             renderedFrameIndex,
+            sourceFrameIndex: frameIndex,
           });
         }
         return chunkFrames;
-      }, { endFrameIndex, startFrameIndex, threeParty });
+      }, { endFrameIndex, frameWindowStart: frameStart, startFrameIndex, threeParty });
       frames.push(...chunk);
-      console.log(`Deterministic progress: ${frames.length}/${frameCount}.`);
+      console.log(`Deterministic progress: ${frames.length}/${frameEnd - frameStart + 1}.`);
     }
   } catch (error) {
     captureError = error instanceof Error ? error.message : String(error);
@@ -229,6 +236,9 @@ async function main() {
   if (!args.out) throw new Error("Pass --out <file>.");
   if (args.threeParty && !args.deterministic) {
     throw new Error("--three-party currently requires --deterministic frame accounting.");
+  }
+  if ((args.frameStart !== null || args.frameEnd !== null) && !args.deterministic) {
+    throw new Error("--frame-start/--frame-end require --deterministic.");
   }
   const debugSession = JSON.parse(await readFile(path.resolve(args.debugSessionJson), "utf8"));
   const expectedSessionId = typeof debugSession.id === "string" ? debugSession.id : "";
@@ -310,6 +320,15 @@ async function main() {
         .filter(Boolean),
       sessionId: element.getAttribute("data-active-session-id") || "",
     }));
+    const frameStart = args.frameStart ?? 0;
+    const frameEnd = args.frameEnd ?? meta.frameCount - 1;
+    if (
+      !Number.isInteger(frameStart) || !Number.isInteger(frameEnd) ||
+      frameStart < 0 || frameEnd < frameStart || frameEnd >= meta.frameCount
+    ) {
+      throw new Error(`Invalid deterministic frame window ${frameStart}-${frameEnd} for ${meta.frameCount} source frames.`);
+    }
+    const captureFrameCount = args.deterministic ? frameEnd - frameStart + 1 : meta.frameCount;
 
     if (!args.deterministic) await page.evaluate(() => {
       window.__sonaeFullSequenceCapture = { frames: [] };
@@ -354,7 +373,13 @@ async function main() {
     let playbackError = "";
     let capture;
     if (args.deterministic) {
-      capture = await captureDeterministicFrames(page, lab, meta.frameCount, args.threeParty);
+      capture = await captureDeterministicFrames(
+        page,
+        lab,
+        args.threeParty,
+        frameStart,
+        frameEnd,
+      );
       playbackError = capture.captureError;
     } else {
       await page.getByRole("button", { name: "Play replay" }).click();
@@ -383,17 +408,17 @@ async function main() {
       });
     }
     const frames = capture.frames;
-    const renderedMissingFrames = missingFrameIndexes(frames, meta.frameCount);
+    const renderedMissingFrames = missingFrameIndexes(frames, captureFrameCount);
     const processedFrames = (capture.processedFrameIndexes ?? []).map((frameIndex) => ({ frameIndex }));
     const processedMissingFrames = args.deterministic
       ? renderedMissingFrames
       : missingFrameIndexes(processedFrames, meta.frameCount);
     const missingFrames = args.deterministic ? renderedMissingFrames : processedMissingFrames;
-    const playbackCompleted = capture.currentFrameIndex === meta.frameCount - 1;
+    const playbackCompleted = capture.currentFrameIndex === frameEnd;
     const result = {
       capturedAt: new Date().toISOString(),
       currentFrameIndex: capture.currentFrameIndex,
-      frameCount: meta.frameCount,
+      frameCount: captureFrameCount,
       frames,
       missingFrameCount: missingFrames.length,
       missingFrames,
@@ -415,13 +440,16 @@ async function main() {
       runtimeLanes: meta.runtimeLanes,
       sessionId: meta.sessionId,
       sourceHash: sourceHashForReplaySession(debugSession),
+      sourceFrameCount: meta.frameCount,
+      sourceFrameEnd: frameEnd,
+      sourceFrameStart: frameStart,
     };
 
     const outPath = path.resolve(args.out);
     await mkdir(path.dirname(outPath), { recursive: true });
     await writeFile(outPath, `${JSON.stringify(result)}\n`);
-    console.log(`Collected ${frames.length}/${meta.frameCount} rendered replay frame(s) for ${meta.sessionId}.`);
-    console.log(`Playback reached frame ${capture.currentFrameIndex}/${meta.frameCount - 1}.`);
+    console.log(`Collected ${frames.length}/${captureFrameCount} rendered replay frame(s) for ${meta.sessionId}.`);
+    console.log(`Playback reached source frame ${capture.currentFrameIndex}/${frameEnd}.`);
     console.log(`Missing frames: ${missingFrames.length}.`);
     console.log(`Wrote ${outPath}`);
     if (!playbackCompleted || missingFrames.length > 0) process.exitCode = 1;

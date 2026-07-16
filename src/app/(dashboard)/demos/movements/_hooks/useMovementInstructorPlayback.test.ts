@@ -71,6 +71,47 @@ describe("buildInstructorRetargetSourceModel", () => {
     expect(Math.abs(model.shoulderCenter.x - model.hipCenter.x)).toBeLessThan(0.02);
   });
 
+  it("does not choose a forward hinge as the neutral world-torso baseline", () => {
+    const hingedPose = withCorePose();
+    const uprightPose = withCorePose();
+    const hingedWorldPose = structuredClone(hingedPose);
+    const uprightWorldPose = structuredClone(uprightPose);
+
+    [11, 12].forEach((index) => {
+      hingedWorldPose[index] = {
+        ...hingedWorldPose[index]!,
+        y: -0.18,
+        z: 0.34,
+      };
+      uprightWorldPose[index] = {
+        ...uprightWorldPose[index]!,
+        y: -0.42,
+        z: 0.03,
+      };
+    });
+    [23, 24].forEach((index) => {
+      hingedWorldPose[index] = {
+        ...hingedWorldPose[index]!,
+        y: 0,
+        z: 0,
+      };
+      uprightWorldPose[index] = {
+        ...uprightWorldPose[index]!,
+        y: 0,
+        z: 0,
+      };
+    });
+
+    const model = buildInstructorRetargetSourceModel([
+      { landmarks: hingedPose, worldLandmarks: hingedWorldPose },
+      { landmarks: uprightPose, worldLandmarks: uprightWorldPose },
+    ] satisfies MovementInstructorMotionFrame[]);
+
+    expect(model).not.toBeNull();
+    expect(model?.calibratedAt).toBe(1);
+    expect(model?.semanticNeutral?.torsoDirection?.y).toBeGreaterThan(0.98);
+  });
+
   it("reflects front-facing instructor coordinates without swapping anatomical sides", () => {
     const pose = withCorePose();
     pose[23] = { ...pose[23]!, x: 0.58 };

@@ -17,6 +17,7 @@ import {
 } from "./movementAvatarFramePreparation";
 import { applyMovementAvatarHeadFrameOrchestrationRuntime } from "./movementAvatarHeadFrame";
 import type { MovementAvatarLowerBodyDrive } from "./movementAvatarLowerBody";
+import type { MovementAvatarRigMeasurements } from "./movementAvatarRestPose";
 import { applyMovementAvatarLocomotionFrameOrchestrationRuntime, type MovementAvatarLocomotionFrameOrchestrationRuntime } from "./movementAvatarLocomotionFrame";
 import { partialSupportContactLocks, supportContactAnchor } from "./movementAvatarSupportContactAnchors";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrame";
@@ -142,6 +143,7 @@ export type MovementAvatarPostFrameDebugRuntimeResult = {
 export function applyMovementAvatarPostFrameDebugRuntime({
   avatarName,
   avatarRole,
+  avatarRestMap,
   floorY,
   footLock,
   footWorldSnapshot,
@@ -150,18 +152,27 @@ export function applyMovementAvatarPostFrameDebugRuntime({
     ? undefined
     : window as Window & MovementAvatarRetargetDebugRegistryWindow,
   retargetFrame,
+  retargetSourceModel,
+  rigMeasurements,
+  sourceImageLandmarks,
+  sourceWorldLandmarks,
   trackingDebugRef,
   vrm,
   zScale,
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  avatarRestMap?: import("./movementAvatarRestPose").MovementAvatarRetargetRestMap | null;
   floorY?: number;
   footLock: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footLock"];
   footWorldSnapshot?: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footWorldSnapshot"];
   frameUpdatedAt: number;
   registryWindow?: (Window & MovementAvatarRetargetDebugRegistryWindow) | undefined;
   retargetFrame: MovementRetargetFrame;
+  retargetSourceModel?: MovementRetargetSourceModel | null;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
+  sourceImageLandmarks?: TrackingLandmark[] | null;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   vrm: VRM;
   zScale: number;
@@ -176,12 +187,17 @@ export function applyMovementAvatarPostFrameDebugRuntime({
   const trackingDebugState = applyMovementAvatarOptionalPostFrameDebugTelemetry({
     avatarName,
     avatarRole,
+    avatarRestMap,
     floorY,
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
     registryWindow,
     retargetFrame,
+    retargetSourceModel,
+    rigMeasurements,
+    sourceImageLandmarks,
+    sourceWorldLandmarks,
     state: trackingDebugRef.current,
     vrm,
     zScale,
@@ -204,6 +220,7 @@ export type MovementAvatarFinalFrameOrchestrationRuntimeResult = {
 export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   avatarName,
   avatarRole,
+  avatarRestMap,
   blendshapes,
   expressionManager,
   floorY,
@@ -215,12 +232,17 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   lookupBone,
   mirrorForDisplay,
   retargetFrame,
+  retargetSourceModel,
+  rigMeasurements,
+  sourceImageLandmarks,
+  sourceWorldLandmarks,
   trackingDebugRef,
   vrm,
   zScale,
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  avatarRestMap?: import("./movementAvatarRestPose").MovementAvatarRetargetRestMap | null;
   blendshapes?: VrmBlendshapeCategory[] | null;
   expressionManager: VrmExpressionTargetWriter | null | undefined;
   floorY?: number;
@@ -232,6 +254,10 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   lookupBone: (vrmName: string) => THREE.Object3D | null | undefined;
   mirrorForDisplay: boolean;
   retargetFrame: MovementRetargetFrame;
+  retargetSourceModel?: MovementRetargetSourceModel | null;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
+  sourceImageLandmarks?: TrackingLandmark[] | null;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   vrm: VRM;
   zScale: number;
@@ -239,11 +265,16 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   const postFrameDebugRuntime = applyMovementAvatarPostFrameDebugRuntime({
     avatarName,
     avatarRole,
+    avatarRestMap,
     floorY,
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
     retargetFrame,
+    retargetSourceModel,
+    rigMeasurements,
+    sourceImageLandmarks,
+    sourceWorldLandmarks,
     trackingDebugRef,
     vrm,
     zScale,
@@ -327,13 +358,26 @@ export function resolveMovementAvatarStandingFeetFloorContactLocks({
     return contactLocks;
   }
 
-  const raisedSide = lowerBodyDrive.shouldDrivePlayerLegRaise
-    ? lowerBodyDrive.playerLegRaiseSide
+  // An explicit no-contact frame is not a standing support frame. This occurs
+  // during low-confidence startup as well as true airborne motion. Applying
+  // the floor-safety IK here makes independently calibrated instructor/player
+  // roots bend their legs differently before contact evidence exists.
+  if (retargetContacts && !retargetContacts.leftFoot && !retargetContacts.rightFoot) {
+    return partialSupportContactLocks({
+      anchors: [],
+      owner: "support-contact-feet-floor-no-source-contact",
+    });
+  }
+
+  const raisedSide = retargetContacts?.leftFoot && retargetContacts.rightFoot
+    ? null
     : retargetContacts?.leftFoot && !retargetContacts.rightFoot
       ? "right"
       : retargetContacts?.rightFoot && !retargetContacts.leftFoot
         ? "left"
-        : null;
+        : lowerBodyDrive.shouldDrivePlayerLegRaise
+          ? lowerBodyDrive.playerLegRaiseSide
+          : null;
   const anchors = raisedSide === "left"
     ? [supportContactAnchor("rightFoot", "right planted foot to floor", "floor", 0, 1)]
     : raisedSide === "right"
@@ -345,7 +389,9 @@ export function resolveMovementAvatarStandingFeetFloorContactLocks({
 
   return partialSupportContactLocks({
     anchors,
+    boneCorrectionScale: 1,
     maxCorrection: 0.9,
+    maxBoneCorrection: 0.45,
     owner: "support-contact-feet-floor-active-torso",
     rootCorrectionScale: 1,
     slerp: 1,
@@ -475,6 +521,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
   const finalFrameOrchestrationRuntime = applyMovementAvatarFinalFrameOrchestrationRuntime({
     avatarName: input.avatarName,
     avatarRole: input.avatarRole,
+    avatarRestMap: input.avatarRestMap,
     blendshapes: input.blendshapes,
     expressionManager: input.expressionManager,
     floorY,
@@ -486,6 +533,10 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     lookupBone: input.lookupBone,
     mirrorForDisplay: input.mirrorForDisplay,
     retargetFrame: input.retargetFrame,
+    retargetSourceModel: input.retargetSourceModel,
+    rigMeasurements: input.rigMeasurements,
+    sourceImageLandmarks: input.poseLandmarks,
+    sourceWorldLandmarks: input.sourceWorldLandmarks,
     trackingDebugRef: input.trackingDebugRef,
     vrm: input.vrm,
     zScale: input.zScale,
@@ -711,9 +762,11 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName,
   retargetAvatarRestRef,
   retargetSourceModelRef,
+  rigMeasurements,
   rigHands,
   scene,
   scenePreparationRuntime,
+  sourceWorldLandmarks,
   targetSolverLandmarks,
   trackingDebugRef,
   vrm,
@@ -741,9 +794,11 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName: MovementAvatarCompletionInput["profileName"];
   retargetAvatarRestRef: MovementAvatarBodyFrameInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
   rigHands: VrmHandsPayload | null | undefined;
   scene: MovementAvatarBodyFrameInput["scene"] & MovementAvatarCompletionInput["scene"];
   scenePreparationRuntime: MovementAvatarFrameScenePreparationRuntime;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   targetSolverLandmarks: MovementAvatarBodyFrameInput["targetSolverLandmarks"];
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
   vrm: VRM;
@@ -883,11 +938,14 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     retargetAppliedUpperBody,
     retargetFrame,
     retargetSourceModel: retargetSourceModelRef.current,
+    rigMeasurements,
     scene,
     shouldApplyLowerBody,
     shouldHoldPlayerSquatPose,
     stepResponse,
     supportPresentation: avatarDecision.supportPresentation,
+    avatarRestMap: retargetAvatarRestRef.current,
+    sourceWorldLandmarks,
     trackingDebugRef,
     visualRootDrop,
     vrm,
@@ -1094,9 +1152,11 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     profileName,
     retargetAvatarRestRef,
     retargetSourceModelRef,
+    rigMeasurements,
     rigHands,
     scene,
     scenePreparationRuntime,
+    sourceWorldLandmarks: displayPreparedInput,
     targetSolverLandmarks,
     trackingDebugRef,
     vrm,

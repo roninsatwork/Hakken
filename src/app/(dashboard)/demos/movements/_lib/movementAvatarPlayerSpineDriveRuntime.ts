@@ -5,6 +5,10 @@ import type { MovementLandmark } from "./movementTypes";
 import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
 import { applyMovementAnatomicalMappingToPlayerSpineDrive } from "./movementAvatarPlayerSpineDriveMapping";
 import { resolveMovementAvatarFullBodySpineDrive } from "./movementAvatarFullBodySpineDrive";
+import {
+  movementAvatarForwardPresentationDrive,
+  resolveMovementAvatarSourceForwardLean,
+} from "./movementAvatarSpineGeometry";
 import { resolveUpperBodyPlayerSpineDrive } from "./movementAvatarUpperBodyPlayerSpineDrive";
 import {
   average,
@@ -23,6 +27,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
   poseLandmarks,
   retargetCalibration,
   torsoTrackingReady,
+  worldPoseLandmarks,
 }: {
   anatomicalMapping?: MovementAnatomicalMapping;
   calibration?: MovementCalibration | null;
@@ -31,6 +36,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
   poseLandmarks: MovementLandmark[];
   retargetCalibration?: MovementRetargetSourceModel | null;
   torsoTrackingReady: boolean;
+  worldPoseLandmarks?: MovementLandmark[] | null;
 }): MovementAvatarPlayerSpineDrive {
   if (!isPlayer) return NEUTRAL_PLAYER_SPINE_DRIVE;
   if (!torsoTrackingReady) {
@@ -47,6 +53,7 @@ export function resolveMovementAvatarPlayerSpineDrive({
       ownerRole: "player",
       poseLandmarks,
       retargetCalibration,
+      worldPoseLandmarks,
     });
   }
 
@@ -80,17 +87,23 @@ export function resolveMovementAvatarPlayerSpineDrive({
   }
 
   const neutralSideBend = calibration.shoulderCenter.x - calibration.hipCenter.x;
-  const neutralLean = calibration.shoulderCenter.y - calibration.hipCenter.y;
-  const neutralDepthLean = calibration.shoulderCenter.z - calibration.hipCenter.z;
   const sideBend = clamp((spineModel.torsoSideBend - neutralSideBend) / 0.16, -1, 1);
   const presentationSideBend = capLivePresentationSideBend(sideBend);
-  const forwardLean = clamp((spineModel.torsoLean - neutralLean) / 0.18, -1, 1);
-  const depthLean = clamp((spineModel.torsoDepthLean - neutralDepthLean) / 0.18, -1, 1);
-  const presentationForwardLean = Math.abs(depthLean) > Math.abs(forwardLean)
-    ? depthLean
-    : forwardLean;
+  const forwardLean = clamp(resolveMovementAvatarSourceForwardLean({
+    current: {
+      x: spineModel.torsoSideBend,
+      y: spineModel.torsoLean,
+      z: spineModel.torsoDepthLean,
+    },
+    neutral: {
+      x: neutralSideBend,
+      y: calibration.shoulderCenter.y - calibration.hipCenter.y,
+      z: calibration.shoulderCenter.z - calibration.hipCenter.z,
+    },
+  }), -1, 1);
+  const presentationForwardLean = movementAvatarForwardPresentationDrive(forwardLean);
   const twist = clamp(spineModel.shoulderHipRotation / 0.65, -1, 1);
-  const activity = Math.max(Math.abs(sideBend), Math.abs(forwardLean), Math.abs(depthLean), Math.abs(twist));
+  const activity = Math.max(Math.abs(sideBend), Math.abs(forwardLean), Math.abs(twist));
   const owner = activity >= 0.06 ? "player-spine-model" : "player-spine-neutral";
 
   return applyMovementAnatomicalMappingToPlayerSpineDrive({

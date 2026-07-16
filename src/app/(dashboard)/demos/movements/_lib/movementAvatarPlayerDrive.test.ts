@@ -256,6 +256,37 @@ describe("movement avatar player drive", () => {
     expect(drive.rotations.chest.z).toBeLessThan(1.02);
   });
 
+  it("uses metric world torso direction when image depth has the opposite hinge sign", () => {
+    const neutralPose = makeNeutralPose();
+    const neutralWorldPose = makeNeutralPose();
+    [23, 24].forEach((index) => {
+      neutralWorldPose[index] = visible(neutralWorldPose[index]!.x, 0, 0);
+    });
+    [11, 12].forEach((index) => {
+      neutralWorldPose[index] = visible(neutralWorldPose[index]!.x, -0.4, 0);
+    });
+    const retargetCalibration = buildMovementRetargetSourceModel({
+      poseLandmarks: neutralPose,
+      worldPoseLandmarks: neutralWorldPose,
+    });
+    const hingedImagePose = makeNeutralPose();
+    const hingedWorldPose = structuredClone(neutralWorldPose);
+    [11, 12].forEach((index) => {
+      hingedImagePose[index] = { ...hingedImagePose[index]!, z: -0.2 };
+      hingedWorldPose[index] = { ...hingedWorldPose[index]!, z: -0.2 };
+    });
+
+    const drive = resolveMovementAvatarRecordedSpineDrive({
+      poseLandmarks: hingedImagePose,
+      retargetCalibration,
+      torsoTrackingReady: true,
+      worldPoseLandmarks: hingedWorldPose,
+    });
+
+    expect(drive.forwardLean).toBeGreaterThan(0.4);
+    expect(drive.rotations.chest.x).toBeLessThan(0);
+  });
+
   it("keeps modest recorded replay side-bend visible without overdriving it", () => {
     const neutralPose = makeNeutralPose();
     const retargetCalibration = buildMovementRetargetSourceModel({ poseLandmarks: neutralPose });

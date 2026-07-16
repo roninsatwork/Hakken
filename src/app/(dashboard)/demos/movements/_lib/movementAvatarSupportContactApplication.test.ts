@@ -125,6 +125,68 @@ describe("movement avatar support contact application", () => {
     expect(result.appliedRootCorrection).toBeCloseTo(0.4);
   });
 
+  it("splits an exact-IK foot-height difference across the root and both legs", () => {
+    const result = resolveMovementAvatarSupportContactCorrectionApplication({
+      contactLocks: contactLocks({
+        boneCorrectionScale: 1,
+        maxBoneCorrection: 0.45,
+        maxCorrection: 1,
+        rootCorrectionScale: 1,
+        slerp: 1,
+      }),
+      floorY: 0,
+      samples: [
+        {
+          anchor: { bone: "leftFoot", label: "left", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+          worldY: 0,
+        },
+        {
+          anchor: { bone: "rightFoot", label: "right", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+          worldY: 0.2,
+        },
+      ],
+    });
+
+    expect(result.appliedRootCorrection).toBeCloseTo(-0.17);
+    expect(result.boneCorrections).toContainEqual(expect.objectContaining({
+      sampleIndex: 0,
+      weightedCorrection: expect.closeTo(0.17),
+    }));
+    expect(result.boneCorrections).toContainEqual(expect.objectContaining({
+      sampleIndex: 1,
+      weightedCorrection: expect.closeTo(-0.03),
+    }));
+  });
+
+  it("uses exact root placement when the foot gap exceeds one IK pass", () => {
+    const result = resolveMovementAvatarSupportContactCorrectionApplication({
+      contactLocks: contactLocks({
+        boneCorrectionScale: 1,
+        maxBoneCorrection: 0.45,
+        maxCorrection: 1,
+        rootCorrectionScale: 1,
+        slerp: 1,
+      }),
+      floorY: 0,
+      samples: [
+        {
+          anchor: { bone: "leftFoot", label: "left", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+          worldY: 0,
+        },
+        {
+          anchor: { bone: "rightFoot", label: "right", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+          worldY: 0.8,
+        },
+      ],
+    });
+
+    expect(result.appliedRootCorrection).toBeCloseTo(-0.8);
+    expect(result.boneCorrections).toContainEqual(expect.objectContaining({
+      sampleIndex: 0,
+      weightedCorrection: expect.closeTo(0.45),
+    }));
+  });
+
   it("executes root correction only when support anchors were applied", () => {
     const applied: number[] = [];
 
@@ -299,5 +361,102 @@ describe("movement avatar support contact application", () => {
       appliedRootCorrection: 0,
       supportContactCorrection: 0,
     });
+  });
+
+  it("uses leg-chain IK to bring a raised planted foot to the shared floor", () => {
+    const scene = new THREE.Object3D();
+    const avatarRoot = new THREE.Object3D();
+    scene.add(avatarRoot);
+    const bones: Record<string, THREE.Object3D> = {};
+    const addLeg = (side: "left" | "right", yOffset: number) => {
+      const upperLeg = new THREE.Object3D();
+      const lowerLeg = new THREE.Object3D();
+      const foot = new THREE.Object3D();
+      upperLeg.position.set(side === "left" ? -0.3 : 0.3, 2 + yOffset, 0);
+      lowerLeg.position.set(0.45, -0.85, 0.1);
+      foot.position.set(-0.35, -0.72, 0.15);
+      avatarRoot.add(upperLeg);
+      upperLeg.add(lowerLeg);
+      lowerLeg.add(foot);
+      bones[`${side}UpperLeg`] = upperLeg;
+      bones[`${side}LowerLeg`] = lowerLeg;
+      bones[`${side}Foot`] = foot;
+    };
+    addLeg("left", 0);
+    addLeg("right", 0.1);
+    scene.updateMatrixWorld(true);
+    const floorY = bones.leftFoot.getWorldPosition(new THREE.Vector3()).y;
+    const rightFootLocalPosition = bones.rightFoot.position.clone();
+
+    const result = applyMovementAvatarSupportContactLocksToObjects({
+      avatarRoot,
+      contactLocks: contactLocks({
+        anchors: [
+          { bone: "leftFoot", label: "left", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+          { bone: "rightFoot", label: "right", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+        ],
+        boneCorrectionScale: 1,
+        maxBoneCorrection: 0.45,
+        maxCorrection: 0.9,
+        rootCorrectionScale: 1,
+        slerp: 1,
+      }),
+      floorY,
+      lookupBone: (bone) => bones[bone] ?? null,
+      scene,
+    });
+
+    scene.updateMatrixWorld(true);
+    expect(result.appliedBoneCorrection).toBeCloseTo(0.085);
+    expect(bones.leftFoot.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(floorY, 5);
+    expect(bones.rightFoot.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(floorY, 5);
+    expect(bones.rightFoot.position).toEqual(rightFootLocalPosition);
+  });
+
+  it("prevents an unanchored foot endpoint from penetrating the support floor", () => {
+    const scene = new THREE.Object3D();
+    const avatarRoot = new THREE.Object3D();
+    scene.add(avatarRoot);
+    const bones: Record<string, THREE.Object3D> = {};
+    const addLeg = (side: "left" | "right", footDrop: number) => {
+      const upperLeg = new THREE.Object3D();
+      const lowerLeg = new THREE.Object3D();
+      const foot = new THREE.Object3D();
+      upperLeg.position.set(side === "left" ? -0.3 : 0.3, 2, 0);
+      lowerLeg.position.set(0.35, -0.8, 0.1);
+      foot.position.set(-0.25, -0.7 - footDrop, 0.15);
+      avatarRoot.add(upperLeg);
+      upperLeg.add(lowerLeg);
+      lowerLeg.add(foot);
+      bones[`${side}UpperLeg`] = upperLeg;
+      bones[`${side}LowerLeg`] = lowerLeg;
+      bones[`${side}Foot`] = foot;
+    };
+    addLeg("left", 0.18);
+    addLeg("right", 0);
+    scene.updateMatrixWorld(true);
+    const floorY = bones.rightFoot.getWorldPosition(new THREE.Vector3()).y;
+    expect(bones.leftFoot.getWorldPosition(new THREE.Vector3()).y).toBeLessThan(floorY);
+
+    const result = applyMovementAvatarSupportContactLocksToObjects({
+      avatarRoot,
+      contactLocks: contactLocks({
+        anchors: [
+          { bone: "rightFoot", label: "right", surface: "floor", targetOffsetFromFloor: 0, weight: 1 },
+        ],
+        boneCorrectionScale: 1,
+        maxBoneCorrection: 0.45,
+        maxCorrection: 0.9,
+        rootCorrectionScale: 1,
+        slerp: 1,
+      }),
+      floorY,
+      lookupBone: (bone) => bones[bone] ?? null,
+      scene,
+    });
+
+    scene.updateMatrixWorld(true);
+    expect(result.appliedBoneCorrection).toBeGreaterThan(0.17);
+    expect(bones.leftFoot.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(floorY, 5);
   });
 });

@@ -419,6 +419,48 @@ describe("movementAvatarRetargetFrameRuntime (merged)", () => {
       expect(adapters.getRestMap().rightUpperLeg).toBeDefined();
       expect(rightUpperLeg.quaternion.w).toBeLessThan(1);
     });
+
+    it("restores a planted foot to its calibrated world direction after parent rotation", () => {
+      const scene = new THREE.Object3D();
+      const lowerLeg = new THREE.Object3D();
+      const rightFoot = new THREE.Object3D();
+      const rightToes = new THREE.Object3D();
+      scene.add(lowerLeg);
+      lowerLeg.add(rightFoot);
+      rightFoot.add(rightToes);
+      rightToes.position.set(0, 0, 1);
+      scene.updateMatrixWorld(true);
+      const neutralDirection = new THREE.Vector3(0, 0, 1);
+      const restMap: MovementAvatarRetargetRestMap = {
+        rightFoot: {
+          worldDirection: neutralDirection.clone(),
+          worldQuaternion: new THREE.Quaternion(),
+        },
+      };
+
+      lowerLeg.rotation.x = 0.62;
+      scene.updateMatrixWorld(true);
+      const bones = new Map<MovementAvatarRetargetBoneName, THREE.Object3D>([
+        ["rightFoot", rightFoot],
+      ]);
+      const adapters = createMovementAvatarRetargetFrameRuntimeAdapters({
+        avatarRole: "player",
+        avatarRoot: scene,
+        currentRestMap: restMap,
+        instructorSquatPresentationDepth: 0,
+        lastGood: {},
+        lookupBone: (boneName) => bones.get(boneName) ?? null,
+        lowerBodySegmentMotion: 0,
+        retargetFrame: retargetFrame(),
+        vrm: null,
+      });
+
+      expect(adapters.applyPlantedFootWorldDirections(["right"])).toBe(1);
+      const renderedDirection = rightToes.getWorldPosition(new THREE.Vector3())
+        .sub(rightFoot.getWorldPosition(new THREE.Vector3()))
+        .normalize();
+      expect(renderedDirection.angleTo(neutralDirection)).toBeLessThan(0.000001);
+    });
   });
 });
 
@@ -1270,12 +1312,13 @@ describe("movementAvatarLowerBodyFrameRuntime (merged)", () => {
         }),
         playerRetargetLowerBodyMotion: 0.35,
         retargetFrame: retargetFrame({
+          contacts: { leftFoot: true, rightFoot: false },
           kneeLift: { left: 0, right: 0.334 },
         }),
       });
 
       expect(result.lowerBodyOwner).toBe("player-retarget");
-      expect(result.footOwner).toBe("recorded-retarget");
+      expect(result.footOwner).toBe("recorded-retarget+planted-flat");
     });
   });
 });
@@ -1381,6 +1424,7 @@ describe("movementAvatarLowerBodyFrameOrchestrationRuntime (merged)", () => {
         },
       };
       const adapters: MovementAvatarRetargetFrameRuntimeAdapters = {
+        applyPlantedFootWorldDirections: () => 0,
         applyPlantedSquatIk: () => 0,
         applyRetargetMappings: () => ({
           applied: 0,

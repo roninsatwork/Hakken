@@ -1,7 +1,9 @@
-export const RENDERED_FIDELITY_POLICY_VERSION = "2026-07-15.v1";
+export const RENDERED_FIDELITY_POLICY_VERSION = "2026-07-16.v2";
 
 export const RENDERED_FIDELITY_POLICY = Object.freeze({
   blockAbove: 0.15,
+  contactClearanceMaxAvatarScaleRatio: 0.012,
+  footPlaneMaxRadians: 0.18,
   headAxisMaxRadians: 0.1,
   limitedConfidence: 0.45,
   passMax: 0.1,
@@ -13,6 +15,7 @@ export const RENDERED_FIDELITY_POLICY = Object.freeze({
     "rightLowerArm",
   ]),
   severeAbove: 0.25,
+  sourceContactMaxTorsoRatio: 0.1,
   sustainedRepairFrames: 3,
   trustworthyConfidence: 0.75,
 });

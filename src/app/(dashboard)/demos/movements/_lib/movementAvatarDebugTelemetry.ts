@@ -11,9 +11,14 @@ import {
 import { buildMovementAvatarSpineVisualTelemetry } from "./movementAvatarAxialVisualTelemetry";
 import type { MovementAvatarFootWorldRuntimeSnapshot } from "./movementAvatarFootingFrame";
 import type {
+  MovementAvatarRetargetRestMap,
+  MovementAvatarRigMeasurements,
+} from "./movementAvatarRestPose";
+import type {
   MovementRetargetFrame,
 } from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
+import type { TrackingLandmark } from "./movementTrackingCalibration";
 
 export {
   buildMovementAvatarFrameTrackingDebugState,
@@ -115,18 +120,24 @@ export function applyMovementAvatarFootLockDebugToTrackingState({
 export function applyMovementAvatarPostFrameDebugTelemetry({
   avatarName,
   avatarRole,
+  avatarRestMap,
   floorY,
   footLock,
   footWorldSnapshot,
   frameUpdatedAt,
   registryWindow,
   retargetFrame,
+  retargetSourceModel,
+  rigMeasurements,
+  sourceImageLandmarks,
+  sourceWorldLandmarks,
   state,
   vrm,
   zScale,
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  avatarRestMap?: MovementAvatarRetargetRestMap | null;
   floorY?: number;
   footLock: {
     correction: number;
@@ -137,6 +148,10 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   frameUpdatedAt: number;
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
+  retargetSourceModel?: import("./movementRetargeting").MovementRetargetSourceModel | null;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
+  sourceImageLandmarks?: TrackingLandmark[] | null;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   state: MovementTrackingDebugState;
   vrm: VRM;
   zScale: number;
@@ -148,9 +163,15 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
     avatarSpine: buildMovementAvatarSpineVisualTelemetry(vrm),
     avatarVisual: buildMovementAvatarVisualTelemetry({
       anatomicalMapping: avatarRole === "player" ? "opposite" : "identity",
+      avatarRestMap,
       floorY,
       footWorldSnapshot,
       retargetFrame,
+      retargetSourceModel,
+      rigMeasurements,
+      sourceImageLandmarks,
+      sourceHeadAngles: state.headApplied,
+      sourceWorldLandmarks,
       vrm,
       zScale,
     }),
@@ -189,18 +210,24 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
 export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   avatarName,
   avatarRole,
+  avatarRestMap,
   floorY,
   footLock,
   footWorldSnapshot,
   frameUpdatedAt,
   registryWindow,
   retargetFrame,
+  retargetSourceModel,
+  rigMeasurements,
+  sourceImageLandmarks,
+  sourceWorldLandmarks,
   state,
   vrm,
   zScale,
 }: {
   avatarName: string;
   avatarRole: "instructor" | "player";
+  avatarRestMap?: MovementAvatarRetargetRestMap | null;
   floorY?: number;
   footLock: {
     correction: number;
@@ -211,6 +238,10 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   frameUpdatedAt: number;
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
+  retargetSourceModel?: import("./movementRetargeting").MovementRetargetSourceModel | null;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
+  sourceImageLandmarks?: TrackingLandmark[] | null;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   state: MovementTrackingDebugState | null | undefined;
   vrm: VRM | null | undefined;
   zScale: number;
@@ -220,12 +251,17 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   return applyMovementAvatarPostFrameDebugTelemetry({
     avatarName,
     avatarRole,
+    avatarRestMap,
     floorY,
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
     registryWindow,
     retargetFrame,
+    retargetSourceModel,
+    rigMeasurements,
+    sourceImageLandmarks,
+    sourceWorldLandmarks,
     state,
     vrm,
     zScale,

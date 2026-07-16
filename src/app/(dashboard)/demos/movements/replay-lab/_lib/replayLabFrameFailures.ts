@@ -4,6 +4,7 @@ import type {
   MovementReplayFailure,
 } from "../../_lib/movementReplayAnalyzer";
 import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
+import { RENDERED_FIDELITY_POLICY } from "@/src/lib/movements/renderedFidelityPolicy.mjs";
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD,
   AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD,
@@ -107,6 +108,79 @@ export function getReplayLabLiveCurrentFrameFailures({
   const spineFidelityConfidence = usesActiveSpineDrive
     ? currentSpineDrive?.confidence
     : torsoConfidence;
+  const semantic = currentAvatarVisual?.semantic;
+
+  if (semantic?.evidenceVersion) {
+    if (
+      (semantic.torso.confidence ?? 0) >= 0.45 &&
+      typeof semantic.torso.sourceError === "number" &&
+      semantic.torso.sourceError > RENDERED_FIDELITY_POLICY.passMax
+    ) {
+      failures.push({
+        code: "avatar_spine_angle_diverged",
+        detail: `Independent source-to-final torso direction error is ${semantic.torso.sourceError.toFixed(2)}; the rendered-fidelity limit is ${RENDERED_FIDELITY_POLICY.passMax.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: (semantic.torso.confidence ?? 0) >= 0.75 ? "error" : "warning",
+      });
+    }
+    if (
+      (semantic.headChain.confidence ?? 0) >= 0.45 &&
+      typeof semantic.headChain.sourceError === "number" &&
+      semantic.headChain.sourceError > RENDERED_FIDELITY_POLICY.passMax
+    ) {
+      failures.push({
+        code: "avatar_head_alignment_diverged",
+        detail: `Independent source-to-final head-chain direction error is ${semantic.headChain.sourceError.toFixed(2)}; the rendered-fidelity limit is ${RENDERED_FIDELITY_POLICY.passMax.toFixed(2)}.`,
+        frameIndex: safeFrameIndex,
+        severity: (semantic.headChain.confidence ?? 0) >= 0.75 ? "error" : "warning",
+      });
+    }
+    const contactThreshold = typeof semantic.avatarScale === "number"
+      ? semantic.avatarScale * RENDERED_FIDELITY_POLICY.contactClearanceMaxAvatarScaleRatio
+      : undefined;
+    for (const side of ["left", "right"] as const) {
+      const foot = semantic.feet[side];
+      if (!foot.sourcePlanted) continue;
+      const sourceConfidence = foot.sourceConfidence ?? 0;
+      if (sourceConfidence < RENDERED_FIDELITY_POLICY.limitedConfidence) continue;
+      const contactValues = [
+        foot.heelClearance,
+        foot.soleClearance,
+        foot.toeBaseClearance,
+        foot.toeEndClearance,
+      ];
+      if (
+        typeof contactThreshold !== "number" ||
+        !contactValues.every((value) => typeof value === "number") ||
+        typeof foot.planeAngleRadians !== "number"
+      ) {
+        failures.push({
+          code: "visual_match_low",
+          detail: `Independent ${side} planted-foot heel/sole/toe proof is incomplete.`,
+          frameIndex: safeFrameIndex,
+          severity: currentFrameSourceReady &&
+            sourceConfidence >= RENDERED_FIDELITY_POLICY.trustworthyConfidence
+            ? "error"
+            : "warning",
+        });
+        continue;
+      }
+      const maxClearance = Math.max(...contactValues);
+      if (
+        maxClearance > contactThreshold ||
+        Math.abs(foot.planeAngleRadians) > RENDERED_FIDELITY_POLICY.footPlaneMaxRadians
+      ) {
+        failures.push({
+          code: "avatar_planted_foot_diverged",
+          detail: `Independent ${side} heel/sole/toe contact is raised ${maxClearance.toFixed(3)} above the floor with foot-plane angle ${foot.planeAngleRadians.toFixed(2)} rad.`,
+          frameIndex: safeFrameIndex,
+          severity: sourceConfidence >= RENDERED_FIDELITY_POLICY.trustworthyConfidence
+            ? "error"
+            : "warning",
+        });
+      }
+    }
+  }
 
   if (outOfFrameCount >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT || maxY > 1.08) {
     failures.push({

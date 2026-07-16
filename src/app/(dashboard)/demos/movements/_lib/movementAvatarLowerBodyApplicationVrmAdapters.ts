@@ -143,6 +143,9 @@ export function applyMovementAvatarLowerBodyRetargetPostPlanApplicationToVrmBone
         isPlayer,
         lookupBone,
         sides,
+        // Contact is a final support boundary, not a presentation blend. A
+        // partial slerp leaves the toe arc above the calibrated floor.
+        slerp: 1,
       });
       feetOwner = plantResult.feetOwner;
     },

@@ -13,7 +13,14 @@ import {
   type MovementRetargetFrame,
 } from "./movementRetargeting";
 import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
+import type { MovementHeadAngles, TrackingLandmark } from "./movementTrackingCalibration";
 import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
+import type {
+  MovementAvatarRetargetRestMap,
+  MovementAvatarRigMeasurements,
+} from "./movementAvatarRestPose";
+import type { MovementRetargetSourceModel } from "./movementRetargeting";
+import { buildMovementAvatarSemanticVisualTelemetry } from "./movementAvatarSemanticVisualTelemetry";
 
 function compactVector(vector: THREE.Vector3) {
   return {
@@ -25,16 +32,28 @@ function compactVector(vector: THREE.Vector3) {
 
 export function buildMovementAvatarVisualTelemetry({
   anatomicalMapping = "identity",
+  avatarRestMap,
   floorY,
   footWorldSnapshot,
   retargetFrame,
+  retargetSourceModel,
+  rigMeasurements,
+  sourceImageLandmarks,
+  sourceHeadAngles,
+  sourceWorldLandmarks,
   vrm,
   zScale,
 }: {
   anatomicalMapping?: MovementAnatomicalMapping;
+  avatarRestMap?: MovementAvatarRetargetRestMap | null;
   floorY?: number;
   footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   retargetFrame: MovementRetargetFrame;
+  retargetSourceModel?: MovementRetargetSourceModel | null;
+  rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
+  sourceImageLandmarks?: TrackingLandmark[] | null;
+  sourceHeadAngles?: MovementHeadAngles | null;
+  sourceWorldLandmarks?: TrackingLandmark[] | null;
   vrm: VRM;
   zScale: number;
 }): MovementTrackingDebugState["avatarVisual"] {
@@ -126,6 +145,18 @@ export function buildMovementAvatarVisualTelemetry({
         rightFootY: footWorldSnapshot.right ? Number(footWorldSnapshot.right.y.toFixed(4)) : undefined,
       }
       : undefined,
+    semantic: buildMovementAvatarSemanticVisualTelemetry({
+      avatarRestMap,
+      floorY,
+      retargetSourceModel,
+      rigMeasurements,
+      sourceImageLandmarks,
+      sourceHeadAngles,
+      sourceContacts: retargetFrame.contacts,
+      sourceQuality: retargetFrame.debug.sourceQuality,
+      sourceWorldLandmarks,
+      vrm,
+    }),
     segments,
   };
 }
