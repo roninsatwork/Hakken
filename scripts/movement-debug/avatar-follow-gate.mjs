@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import { RENDERED_FIDELITY_POLICY } from "../../src/lib/movements/renderedFidelityPolicy.mjs";
 
 const defaultAnalysisPath = "tmp/movement-replay-lab/current-analysis-with-captures.json";
 const defaultManifestPath = "tmp/movement-replay-lab/current-analysis-with-captures.proof-manifest.json";
@@ -16,7 +17,7 @@ export const DEFAULT_AVATAR_FOLLOW_THRESHOLDS = {
   maxMirrorSideDirectionError: 0.18,
   maxOwnerTransitionsPerSecond: 1.25,
   maxPlantedFootClearance: 0.08,
-  maxUpperBodyDirectionError: 0.18,
+  maxUpperBodyDirectionError: RENDERED_FIDELITY_POLICY.passMax,
   minVisualMatchScore: 0.85,
 };
 
@@ -121,9 +122,9 @@ function parseArgs(argv) {
         args.thresholds.maxMirrorSideDirectionError,
       );
     } else if (arg === "--max-upper-body-direction-error") {
-      args.thresholds.maxUpperBodyDirectionError = parseNumber(
-        argv[++index],
-        args.thresholds.maxUpperBodyDirectionError,
+      args.thresholds.maxUpperBodyDirectionError = Math.min(
+        RENDERED_FIDELITY_POLICY.passMax,
+        parseNumber(argv[++index], args.thresholds.maxUpperBodyDirectionError),
       );
     } else if (arg === "--max-owner-transitions-per-second") {
       args.thresholds.maxOwnerTransitionsPerSecond = parseNumber(

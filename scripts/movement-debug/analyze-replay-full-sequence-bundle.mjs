@@ -128,6 +128,38 @@ function frameAccountingFromReport(report) {
   };
 }
 
+export function resolveDeterministicFailuresWithThreePartyProof({
+  deterministicFailures,
+  deterministicFrameAccounting,
+  requireThreeParty,
+  threePartyFailures,
+  threePartyReport,
+}) {
+  const threePartyFrameAccounting = threePartyReport?.frameAccounting;
+  const hasCompleteAuthoritativeMirrorProof = requireThreeParty &&
+    threePartyFailures.length === 0 &&
+    threePartyReport?.status === "passed" &&
+    threePartyFrameAccounting?.complete === true &&
+    threePartyFrameAccounting.missing === 0 &&
+    threePartyFrameAccounting.rendered === deterministicFrameAccounting.expected &&
+    threePartyFrameAccounting.expected === deterministicFrameAccounting.expected;
+  if (!hasCompleteAuthoritativeMirrorProof) {
+    return {
+      failures: deterministicFailures,
+      supersededFailures: [],
+    };
+  }
+
+  const supersededFailures = deterministicFailures.filter((failure) => (
+    failure.code === "rendered-mirror-side-mismatch" ||
+    failure.code === "rendered-mirror-side-persistent-mismatch"
+  ));
+  return {
+    failures: deterministicFailures.filter((failure) => !supersededFailures.includes(failure)),
+    supersededFailures,
+  };
+}
+
 async function analyzeRecording(recording) {
   const checkedPaths = [
     recording.session,
@@ -292,6 +324,16 @@ async function analyzeRecording(recording) {
         threePartyProblem = `Three-party proof blocked: ${threePartyFailures.map((failure) => failure.code).join(", ")}.`;
       }
     }
+    const {
+      failures: deterministicFailures,
+      supersededFailures,
+    } = resolveDeterministicFailuresWithThreePartyProof({
+      deterministicFailures: report.failures,
+      deterministicFrameAccounting: frameAccounting,
+      requireThreeParty: recording.requireThreeParty,
+      threePartyFailures,
+      threePartyReport,
+    });
     const identityFailures = [
       ...(sessionIdentityMismatch ? [{ code: "bundle-session-identity-mismatch", count: 1 }] : []),
       ...(proofModeMismatch ? [{ code: "bundle-proof-mode-mismatch", count: 1 }] : []),
@@ -299,7 +341,7 @@ async function analyzeRecording(recording) {
       ...(runtimeContractMismatch ? [{ code: "bundle-runtime-contract-mismatch", count: 1 }] : []),
       ...(playerRuntimeLaneMissing ? [{ code: "bundle-game-player-runtime-lane-missing", count: 1 }] : []),
     ];
-    const status = report.status === "passed" &&
+    const status = deterministicFailures.length === 0 &&
       !frameCountMismatch &&
       identityFailures.length === 0 &&
       timedFailures.length === 0 &&
@@ -309,7 +351,7 @@ async function analyzeRecording(recording) {
     return {
       checkedPaths,
       failures: [
-        ...report.failures,
+        ...deterministicFailures,
         ...(frameCountMismatch
           ? [{ code: "bundle-frame-count-mismatch", count: 1 }]
           : []),
@@ -346,6 +388,7 @@ async function analyzeRecording(recording) {
       sessionId: report.sessionId,
       sourceHash: report.sourceHash,
       status,
+      ...(supersededFailures.length > 0 ? { supersededFailures } : {}),
       ...(timedReport
         ? {
             timedFrameAccounting: timedReport.frameAccounting,

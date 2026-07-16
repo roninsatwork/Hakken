@@ -138,4 +138,39 @@ describe("replay lab current-frame failures", () => {
 
     expect(failures.map((failure) => failure.code)).not.toContain("avatar_planted_foot_diverged");
   });
+
+  it("marks an active spine owner proof-limited when its target rotations are missing", () => {
+    const failures = getReplayLabLiveCurrentFrameFailures(failureInput({
+      currentAvatarDebug: {
+        avatarVisual: {
+          averageUpperBodyDirectionError: 0,
+          comparedUpperBodySegments: 4,
+          segments: {
+            spine: { sourceError: 0.8 },
+          },
+        },
+        bodyConfidence: {},
+        fallbacks: {},
+        headApplied: { pitch: 0, roll: 0, yaw: 0 },
+        headRaw: { confidence: 1, pitch: 0, roll: 0, source: "pose", yaw: 0 },
+        spineDrive: {
+          confidence: 0.9,
+          forwardLean: 0.2,
+          owner: "player-spine-model",
+          sideBend: 0.1,
+          twist: 0,
+        },
+        updatedAt: 0,
+      } as unknown as FailureInput["currentAvatarDebug"],
+      currentFrameSourceReady: true,
+    }));
+
+    expect(failures).toContainEqual({
+      code: "spine_vertical_reference_missing",
+      detail: expect.stringContaining("proof-limited"),
+      frameIndex: 12,
+      severity: "error",
+    });
+    expect(failures.map((failure) => failure.code)).not.toContain("avatar_spine_angle_diverged");
+  });
 });

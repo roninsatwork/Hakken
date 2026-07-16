@@ -320,6 +320,66 @@ describe("Replay Studio diagnosis CLI", () => {
     }));
   });
 
+  it("consolidates complete matching final-VRM telemetry into the source-session packet", () => {
+    const telemetryPath = `tmp/movement-replay-lab/diagnose-rendered-telemetry-${process.pid}-${Date.now()}.json`;
+    const outPath = `tmp/movement-replay-lab/diagnose-rendered-packet-${process.pid}-${Date.now()}.json`;
+    writeFileSync(telemetryPath, JSON.stringify({
+      frameCount: 3,
+      frames: [0, 1, 2].map((frameIndex) => ({
+        debug: {
+          avatarVisual: {
+            averageLowerBodyDirectionError: 0.01,
+            averageUpperBodyDirectionError: 0.01,
+            comparedLowerBodySegments: 6,
+            comparedUpperBodySegments: 4,
+          },
+        },
+        frameIndex,
+        renderedFrameIndex: frameIndex,
+      })),
+      missingFrameCount: 0,
+      motionPipelineFingerprint: movementPipelineFingerprint(),
+      playbackError: "",
+      sessionId: "source-session-accepted-squat-minimal",
+      sourceHash: "sha256:eacbc0d8e9cf273534bf2c492f5718f8d433fc3d49d252a8912de4a5c3a0d36d",
+    }, null, 2));
+
+    try {
+      const result = runDiagnose([
+        "--fixture",
+        "source-session-accepted-squat-minimal",
+        "--rendered-telemetry",
+        telemetryPath,
+        "--out",
+        outPath,
+        "--no-md",
+        "--strict",
+      ]);
+
+      expect(result.stderr).toBe("");
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("Replay Studio diagnosis: accepted / none / unknown");
+      const packet = JSON.parse(readFileSync(outPath, "utf8"));
+      expect(packet.scope).toEqual(expect.objectContaining({
+        silentSkipCount: 0,
+        totalFramesCompared: 3,
+        totalFramesExpected: 3,
+        totalFramesRendered: 3,
+      }));
+      expect(packet.actual.bones).toEqual(expect.objectContaining({
+        comparedLowerBodySegments: 6,
+        comparedUpperBodySegments: 4,
+        lowerBodyDirectionError: 0.01,
+        upperBodyDirectionError: 0.01,
+      }));
+      expect(packet.artifact.checkedPaths).toContain(telemetryPath);
+      expect(packet.commands.reproduce).toContain(`--rendered-telemetry ${telemetryPath}`);
+    } finally {
+      if (existsSync(telemetryPath)) unlinkSync(telemetryPath);
+      if (existsSync(outPath)) unlinkSync(outPath);
+    }
+  });
+
   it("records explicit analysis artifacts in the repair packet", () => {
     const analysisPath = "scripts/movement-debug/fixtures/replay-studio/accepted-leg-raise-minimal/analysis.json";
     const outPath = `tmp/movement-replay-lab/diagnose-explicit-analysis-${process.pid}-${Date.now()}.json`;

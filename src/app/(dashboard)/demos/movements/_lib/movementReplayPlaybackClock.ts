@@ -27,3 +27,23 @@ export function resolveMovementReplayFrameDelay({
 
   return Math.min(Math.max(delay, MIN_REPLAY_FRAME_DELAY_MS), MAX_REPLAY_FRAME_DELAY_MS);
 }
+
+export function resolveMovementReplayPlaybackStep({
+  currentFrameIndex,
+  fallbackFps,
+  samples,
+}: {
+  currentFrameIndex: number;
+  fallbackFps?: number;
+  samples: Pick<MovementDebugReplayFrame, "capturedAt">[];
+}) {
+  const frameIndex = Math.min(currentFrameIndex + 1, Math.max(samples.length - 1, 0));
+  return {
+    delayMs: resolveMovementReplayFrameDelay({
+      currentFrameIndex: frameIndex,
+      fallbackFps,
+      samples,
+    }),
+    frameIndex,
+  };
+}

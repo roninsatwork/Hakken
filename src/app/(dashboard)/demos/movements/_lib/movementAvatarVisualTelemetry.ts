@@ -79,7 +79,10 @@ export function buildMovementAvatarVisualTelemetry({
           segment: mapping.segment,
         })
       : null;
-    const sourceError = sourceDirection
+    // Spine is applied by the active spine-drive owner, not by this retarget
+    // segment direction. Its fidelity is proven against spineDrive target
+    // rotations after application; comparing it here crosses two owners.
+    const sourceError = sourceDirection && mapping.type !== "spine"
       ? 1 - THREE.MathUtils.clamp(avatarDirection.dot(sourceDirection), -1, 1)
       : undefined;
 

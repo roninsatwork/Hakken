@@ -8,6 +8,7 @@ import {
   applyMovementAvatarHeadApplicationToVrmBones,
   type MovementAvatarHeadApplicationResult,
 } from "./movementAvatarHeadApplication";
+import { resolveMovementAvatarHeadQuaternionTarget } from "./movementAvatarHeadQuaternionApplication";
 import {
   resolveMovementAvatarHeadTarget,
   type MovementAvatarHeadTargetDecision,
@@ -44,8 +45,10 @@ export type MovementAvatarHeadRuntimeApplication =
   };
 
 export type MovementAvatarHeadRuntimeDebugTelemetry = {
+  appliedWorldQuaternion: { w: number; x: number; y: number; z: number };
   appliedLocalPitch: number;
   appliedLocalRoll: number;
+  appliedLocalYaw: number;
   appliedWorldPitch: number;
   appliedWorldRoll: number;
   appliedWorldYaw: number;
@@ -55,6 +58,7 @@ export type MovementAvatarHeadRuntimeDebugTelemetry = {
   trackingPitch: number;
   trackingRoll: number;
   trackingYaw: number;
+  targetWorldQuaternion: { w: number; x: number; y: number; z: number };
 };
 
 export function buildMovementAvatarHeadRuntimeDebugTelemetry({
@@ -68,10 +72,22 @@ export function buildMovementAvatarHeadRuntimeDebugTelemetry({
   const worldQuaternion = new THREE.Quaternion();
   headNode.getWorldQuaternion(worldQuaternion);
   const worldRotation = new THREE.Euler().setFromQuaternion(worldQuaternion, "YXZ");
+  const { targetWorldQuaternion } = resolveMovementAvatarHeadQuaternionTarget({
+    headBonePitch: headTarget.headBonePitch,
+    headRoll: headTarget.headDecision.headRoll,
+    headWorldYaw: headTarget.headWorldYaw,
+  });
 
   return {
+    appliedWorldQuaternion: {
+      w: worldQuaternion.w,
+      x: worldQuaternion.x,
+      y: worldQuaternion.y,
+      z: worldQuaternion.z,
+    },
     appliedLocalPitch: headNode.rotation.x,
     appliedLocalRoll: headNode.rotation.z,
+    appliedLocalYaw: headNode.rotation.y,
     appliedWorldPitch: worldRotation.x,
     appliedWorldRoll: worldRotation.z,
     appliedWorldYaw: worldRotation.y,
@@ -81,7 +97,28 @@ export function buildMovementAvatarHeadRuntimeDebugTelemetry({
     trackingPitch: headTarget.headDecision.headPitch,
     trackingRoll: rawHead.roll,
     trackingYaw: rawHead.yaw,
+    targetWorldQuaternion: {
+      w: targetWorldQuaternion.w,
+      x: targetWorldQuaternion.x,
+      y: targetWorldQuaternion.y,
+      z: targetWorldQuaternion.z,
+    },
   };
+}
+
+export function resolveMovementAvatarHeadApplicationPoseOwnership({
+  headApplicationPose,
+  shouldApplySpine,
+}: {
+  headApplicationPose: MovementAvatarHeadTargetDecision["applicationPose"];
+  shouldApplySpine: boolean;
+}) {
+  return shouldApplySpine
+    ? {
+        ...headApplicationPose,
+        upperChestCompensation: null,
+      }
+    : headApplicationPose;
 }
 
 export function applyMovementAvatarHeadRuntimeToVrmBones({
@@ -90,6 +127,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   baseHeadPosition,
   calibration,
   faceLandmarks,
+  frameDeltaSeconds,
   headMotionIntent,
   lookupBone,
   mirrorHeadForDisplay,
@@ -105,6 +143,7 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
   baseHeadPosition: THREE.Vector3 | null | undefined;
   calibration: MovementCalibration | null;
   faceLandmarks?: TrackingLandmark[] | null;
+  frameDeltaSeconds?: number;
   headMotionIntent?: MovementHeadMotionIntent;
   lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
   mirrorHeadForDisplay?: boolean;
@@ -155,7 +194,11 @@ export function applyMovementAvatarHeadRuntimeToVrmBones({
     });
   const headApplication = applyMovementAvatarHeadApplicationToVrmBones({
     baseHeadPosition,
-    headApplicationPose: headTarget.applicationPose,
+    frameDeltaSeconds,
+    headApplicationPose: resolveMovementAvatarHeadApplicationPoseOwnership({
+      headApplicationPose: headTarget.applicationPose,
+      shouldApplySpine,
+    }),
     headBonePitch: headTarget.headBonePitch,
     headPositionSlerp: headTarget.applyOptions.headPositionSlerp,
     headRoll: headTarget.headDecision.headRoll,
@@ -436,6 +479,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   debugUpdatedAt,
   exerciseTransition,
   faceLandmarks,
+  frameDeltaSeconds,
   frameTargetRuntime,
   footLockCorrection,
   footLockDrift,
@@ -473,6 +517,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
   debugUpdatedAt: number;
   exerciseTransition: MovementAvatarHeadFrameDebugRuntimeInput["exerciseTransition"];
   faceLandmarks?: TrackingLandmark[] | null;
+  frameDeltaSeconds?: number;
   frameTargetRuntime: MovementAvatarFrameTargetRuntimeDecision;
   footLockCorrection: number;
   footLockDrift: number;
@@ -557,6 +602,7 @@ export function applyMovementAvatarHeadFrameOrchestrationRuntime({
       baseHeadPosition: baseBonePositionRef.current.head,
       calibration: activeCalibration,
       faceLandmarks,
+      frameDeltaSeconds,
       lookupBone,
       mirrorHeadForDisplay: avatarRole === "player",
       neckSlerp,

@@ -645,4 +645,40 @@ describe("movement avatar segment application", () => {
     expect(stored).toEqual(["rightUpperLeg"]);
     expect(rightUpperLeg.quaternion.w).toBeLessThan(1);
   });
+
+  it("scales arm easing with elapsed render time without a redundant local-angle cap", () => {
+    const mapping = MOVEMENT_AVATAR_UPPER_BODY_RECORDED_RETARGET_MAPPINGS.find(
+      (candidate) => candidate.segment === "rightUpperArm",
+    )!;
+    const armFrame = retargetFrame();
+    armFrame.segments.rightUpperArm = {
+      confidence: 0.9,
+      direction: { x: -1, y: 0, z: 0 },
+      length: 0.4,
+    };
+    const applyAtDelta = (frameDeltaSeconds: number) => {
+      const parent = new THREE.Object3D();
+      const arm = new THREE.Object3D();
+      parent.add(arm);
+      parent.updateMatrixWorld(true);
+      applyMovementAvatarRetargetSegmentMappingToVrmBones({
+        currentRestMap: {
+          rightUpperArm: {
+            worldDirection: new THREE.Vector3(0, -1, 0),
+            worldQuaternion: new THREE.Quaternion(),
+          },
+        },
+        frameDeltaSeconds,
+        lookupBone: (boneName) => boneName === "rightUpperArm" ? arm : null,
+        mapping,
+        refreshRestMap: () => ({}),
+        retargetFrame: armFrame,
+        segmentApplicationDecision: segmentDecision(),
+      });
+      return new THREE.Quaternion().angleTo(arm.quaternion);
+    };
+
+    expect(applyAtDelta(1 / 60)).toBeCloseTo((Math.PI / 2) * 0.42, 5);
+    expect(applyAtDelta(1 / 20)).toBeCloseTo((Math.PI / 2) * (1 - Math.pow(0.58, 3)), 5);
+  });
 });

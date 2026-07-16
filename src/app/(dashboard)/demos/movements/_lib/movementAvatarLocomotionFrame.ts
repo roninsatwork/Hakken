@@ -113,9 +113,11 @@ export type MovementAvatarRootTransformRuntimeResult = {
 
 export function applyMovementAvatarRootTransformRuntime({
   root,
+  rootCommandYRef,
   rootTarget,
 }: {
   root: THREE.Object3D | null | undefined;
+  rootCommandYRef?: MovementAvatarMutableRef<number | null>;
   rootTarget: MovementAvatarRootTargetDecision;
 }): MovementAvatarRootTransformRuntimeResult {
   if (!root) {
@@ -125,11 +127,15 @@ export function applyMovementAvatarRootTransformRuntime({
     };
   }
 
-  const application = resolveMovementAvatarRootTransformApplication({
+  const previousCommandY = rootCommandYRef?.current;
+  const supportContactOffsetY = previousCommandY === null || previousCommandY === undefined
+    ? 0
+    : root.position.y - previousCommandY;
+  const commandApplication = resolveMovementAvatarRootTransformApplication({
     current: {
       position: {
         x: root.position.x,
-        y: root.position.y,
+        y: previousCommandY ?? root.position.y,
         z: root.position.z,
       },
       rotation: {
@@ -140,6 +146,16 @@ export function applyMovementAvatarRootTransformRuntime({
     },
     rootTarget,
   });
+  if (rootCommandYRef) rootCommandYRef.current = commandApplication.position.y;
+  const application = {
+    ...commandApplication,
+    position: {
+      ...commandApplication.position,
+      // Preserve the previous support-contact solution in rendered space
+      // while advancing only the controller's underlying height command.
+      y: commandApplication.position.y + supportContactOffsetY,
+    },
+  };
 
   return {
     application,
@@ -170,6 +186,7 @@ export function applyMovementAvatarRootFrameRuntime({
   liveWorldPose,
   positionOffset,
   recordedRootMotionFrame,
+  rootCommandYRef,
   rootOrientation,
   visualRootDrop,
 }: {
@@ -181,6 +198,7 @@ export function applyMovementAvatarRootFrameRuntime({
   liveWorldPose?: MovementRootMotionInputFrame["worldPose"];
   positionOffset: readonly [number, number, number];
   recordedRootMotionFrame: MovementRootMotionFrame | null;
+  rootCommandYRef?: MovementAvatarMutableRef<number | null>;
   rootOrientation: MovementAvatarRootOrientationDecision;
   visualRootDrop: number;
 }): MovementAvatarRootFrameRuntimeResult {
@@ -200,6 +218,7 @@ export function applyMovementAvatarRootFrameRuntime({
   });
   const transformRuntime = applyMovementAvatarRootTransformRuntime({
     root: avatarRoot,
+    rootCommandYRef,
     rootTarget,
   });
   const rootApplication = transformRuntime.application;
@@ -362,6 +381,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
   profile,
   recordedRootMotionFrame,
   rigMeasurements,
+  rootCommandYRef,
   rootOrientation,
   shouldApplyLowerBody,
   trackingDebugRef,
@@ -384,6 +404,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
   profile: MovementAvatarTrackingProfile;
   recordedRootMotionFrame: MovementRootMotionFrame | null;
   rigMeasurements: { hipHeight: number; legLength: number } | null;
+  rootCommandYRef?: MovementAvatarMutableRef<number | null>;
   rootOrientation: MovementAvatarRootOrientationDecision;
   shouldApplyLowerBody: boolean;
   trackingDebugRef?: MovementAvatarMutableRef<MovementTrackingDebugState | null>;
@@ -420,6 +441,7 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
     liveWorldPose: mirrorPlayerDisplay && worldPose ? displayWorldPose : worldPose ?? null,
     positionOffset,
     recordedRootMotionFrame,
+    rootCommandYRef,
     rootOrientation,
     trackingDebugRef,
     visualRootDrop,
@@ -433,4 +455,3 @@ export function applyMovementAvatarLocomotionFrameOrchestrationRuntime({
     stepResponse: rootFrameOrchestrationRuntime.stepResponse,
   };
 }
-

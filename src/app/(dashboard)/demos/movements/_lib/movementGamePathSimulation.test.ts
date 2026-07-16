@@ -1699,9 +1699,60 @@ describe("movementGamePathSimulation", () => {
     expect(recoveringArm).toMatchObject({
       reason: "active",
       shouldApply: true,
-      slerp: 0.08,
+      slerp: 0.012,
     });
     expect(clearArm.slerp).toBe(0.72);
+  });
+
+  it("keeps a recovering lower arm responsive enough to compensate its moving parent", () => {
+    const recoveringLowerArm = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      retargetFrame: retargetFrame({
+        segments: {
+          rightLowerArm: { confidence: 0.3, direction: { x: -1, y: 0, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "rightLowerArm",
+      segmentType: "arm",
+    });
+
+    expect(recoveringLowerArm).toMatchObject({
+      reason: "active",
+      shouldApply: true,
+      slerp: 0.32,
+    });
+  });
+
+  it("keeps a source-limited lower arm attached to its world target before the upper-arm threshold", () => {
+    const sourceLimitedLowerArm = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      retargetFrame: retargetFrame({
+        segments: {
+          rightLowerArm: { confidence: 0.2, direction: { x: -1, y: 0, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "rightLowerArm",
+      segmentType: "arm",
+    });
+    const sourceLimitedUpperArm = resolveMovementAvatarRetargetSegmentApplication({
+      avatarRole: "player",
+      instructorSquatPresentationDepth: 0,
+      lowerBodySegmentMotion: 0,
+      retargetFrame: retargetFrame({
+        segments: {
+          rightUpperArm: { confidence: 0.2, direction: { x: -1, y: 0, z: 0 }, length: 1 },
+        },
+      }),
+      segmentName: "rightUpperArm",
+      segmentType: "arm",
+    });
+
+    expect(sourceLimitedLowerArm).toMatchObject({ reason: "active", shouldApply: true });
+    expect(sourceLimitedUpperArm).toMatchObject({ reason: "low-confidence", shouldApply: false });
   });
 
   it("ramps leg recovery through the low-confidence boundary without slowing clear tracking", () => {

@@ -443,6 +443,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     debugUpdatedAt: resolveMovementAvatarFrameCompletionNow(input.getNow),
     exerciseTransition: input.exerciseTransition,
     faceLandmarks: input.faceLandmarks,
+    frameDeltaSeconds: input.frameDeltaSeconds,
     footLockCorrection,
     footLockDrift,
     footLockState,
@@ -559,6 +560,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
   providedRetargetSourceModel,
   recordedRootMotionFrame,
   rigMeasurements,
+  rootCommandYRef,
   retargetSourceModelRef,
   setupStateRef,
   trackingDebugRef,
@@ -589,6 +591,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
   providedRetargetSourceModel: MovementAvatarFramePreparationInput["providedRetargetSourceModel"];
   recordedRootMotionFrame: MovementAvatarLocomotionFrameInput["recordedRootMotionFrame"];
   rigMeasurements: MovementAvatarLocomotionFrameInput["rigMeasurements"];
+  rootCommandYRef?: MovementAvatarLocomotionFrameInput["rootCommandYRef"];
   retargetSourceModelRef: MovementAvatarFramePreparationInput["retargetSourceModelRef"];
   setupStateRef: MovementAvatarFramePreparationInput["setupStateRef"];
   trackingDebugRef: MovementAvatarLocomotionFrameInput["trackingDebugRef"];
@@ -645,6 +648,7 @@ export function applyMovementAvatarPreBodyFrameOrchestrationRuntime({
     profile,
     recordedRootMotionFrame,
     rigMeasurements,
+    rootCommandYRef,
     rootOrientation: decisionSnapshotRuntime.rootOrientation,
     shouldApplyLowerBody: decisionSnapshotRuntime.shouldApplyLowerBody,
     trackingDebugRef,
@@ -692,6 +696,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   blendshapes,
   boneEaseOptions,
   faceLandmarks,
+  frameDeltaSeconds,
   frameWorldRuntime,
   imageLandmarks,
   isPlayer,
@@ -721,6 +726,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   blendshapes: MovementAvatarCompletionInput["blendshapes"];
   boneEaseOptions: MovementAvatarBodyFrameInput["boneEaseOptions"];
   faceLandmarks: MovementAvatarCompletionInput["faceLandmarks"];
+  frameDeltaSeconds?: number;
   frameWorldRuntime: MovementAvatarFrameWorldRuntime;
   imageLandmarks: MovementAvatarCompletionInput["poseLandmarks"];
   isPlayer: boolean;
@@ -791,6 +797,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     balancedPlantedSquatDepth,
     boneEaseOptions,
     currentRestMap: retargetAvatarRestRef.current,
+    frameDeltaSeconds,
     instructorSquatPresentationDepth,
     lastGoodQuaternionRef,
     leftArmDecision,
@@ -848,6 +855,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     exerciseTransition,
     expressionManager: vrm.expressionManager,
     faceLandmarks,
+    frameDeltaSeconds,
     footOwner,
     frameTargetRuntime,
     hands: rigHands ?? undefined,
@@ -933,6 +941,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   displayPreparedInput,
   exerciseTransitionStateRef,
   faceLandmarks,
+  frameDeltaSeconds,
   fallbackPoseSlerp = 0.35,
   forceStandby,
   imageLandmarks,
@@ -954,6 +963,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   recordedRootMotionFrame,
   retargetAvatarRestRef,
   rigMeasurements,
+  rootCommandYRef,
   retargetSourceModelRef,
   rigHands,
   scene,
@@ -975,6 +985,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   displayPreparedInput: Pick<MovementAvatarPreBodyInput, "displayWorldPose">["displayWorldPose"];
   exerciseTransitionStateRef: MovementAvatarPreBodyInput["exerciseTransitionStateRef"];
   faceLandmarks: MovementAvatarPreBodyInput["faceLandmarks"];
+  frameDeltaSeconds?: number;
   fallbackPoseSlerp?: number;
   forceStandby: MovementAvatarPreBodyInput["forceStandby"];
   imageLandmarks: MovementAvatarPreBodyInput["poseLandmarks"] &
@@ -999,6 +1010,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   retargetAvatarRestRef: MovementAvatarReadyFrameApplicationInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
   rigMeasurements: MovementAvatarPreBodyInput["rigMeasurements"];
+  rootCommandYRef?: MovementAvatarPreBodyInput["rootCommandYRef"];
   rigHands: MovementAvatarReadyFrameApplicationInput["rigHands"];
   scene: MovementAvatarFrameScenePreparationInput["scene"] &
     MovementAvatarReadyFrameApplicationInput["scene"];
@@ -1038,6 +1050,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     recordedRootMotionFrame,
     retargetSourceModelRef,
     rigMeasurements,
+    rootCommandYRef,
     setupStateRef,
     trackingDebugRef,
     worldPoseForLocomotion: frameWorldRuntime.worldPoseForLocomotion,
@@ -1066,6 +1079,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     blendshapes,
     boneEaseOptions,
     faceLandmarks,
+    frameDeltaSeconds,
     frameWorldRuntime,
     imageLandmarks,
     isPlayer,

@@ -296,4 +296,42 @@ describe("movement avatar head application", () => {
     expect(neck.quaternion.w).toBeLessThan(1);
     expect(upperChest.quaternion.w).toBeLessThan(1);
   });
+
+  it("solves the final head world target after moving its neck and chest parents", () => {
+    const upperChest = new THREE.Object3D();
+    const neck = new THREE.Object3D();
+    const head = new THREE.Object3D();
+    upperChest.add(neck);
+    neck.add(head);
+    upperChest.updateMatrixWorld(true);
+    const bones: Record<string, THREE.Object3D> = { head, neck, upperChest };
+
+    applyMovementAvatarHeadApplicationToVrmBones({
+      baseHeadPosition: null,
+      frameDeltaSeconds: 1 / 20,
+      headApplicationPose: {
+        headPositionOffset: null,
+        neckRotation: { rotationOrder: "YXZ", x: 0.12, y: -0.08, z: 0.06 },
+        upperChestCompensation: { x: 0.08, y: 0.03, z: -0.04 },
+      },
+      headBonePitch: 0.2,
+      headPositionSlerp: 1,
+      headRoll: -0.05,
+      headSlerp: 1,
+      headWorldYaw: 0.3,
+      lookupBone: (boneName) => bones[boneName] ?? null,
+      neckSlerp: 1,
+      shouldApplyHeadMotion: true,
+      upperChestCompensationSlerp: 1,
+    });
+
+    upperChest.updateMatrixWorld(true);
+    const actualWorld = head.getWorldQuaternion(new THREE.Quaternion());
+    const expectedWorld = resolveMovementAvatarHeadQuaternionTarget({
+      headBonePitch: 0.2,
+      headRoll: -0.05,
+      headWorldYaw: 0.3,
+    }).targetWorldQuaternion;
+    expect(actualWorld.angleTo(expectedWorld)).toBeLessThan(0.000001);
+  });
 });

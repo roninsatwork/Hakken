@@ -415,6 +415,70 @@ describe("movementRetargeting", () => {
       expect(lowerArm!.y).toBeGreaterThan(0);
     });
 
+    it("uses stable metric depth when a forearm is foreshortened toward the camera", () => {
+      const pose = withCorePose();
+      pose[13] = { x: 0.34, y: 0.56, z: 0, visibility: 0.9 };
+      pose[15] = { x: 0.341, y: 0.561, z: -0.4, visibility: 0.9 };
+      const worldPose = makeWorldPose();
+      worldPose[13] = { x: -0.24, y: -0.2, z: 0, visibility: 0.9 };
+      worldPose[15] = { x: -0.25, y: -0.19, z: -0.5, visibility: 0.9 };
+
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: pose,
+        worldPoseLandmarks: worldPose,
+      });
+
+      const lowerArm = frame.segments.leftLowerArm?.direction;
+      expect(lowerArm).toBeDefined();
+      const worldLength = Math.hypot(-0.01, 0.01, -0.5);
+      const worldDirection = {
+        x: -0.01 / worldLength,
+        y: 0.01 / worldLength,
+        z: -0.5 / worldLength,
+      };
+      const worldAgreement =
+        lowerArm!.x * worldDirection.x +
+        lowerArm!.y * worldDirection.y +
+        lowerArm!.z * worldDirection.z;
+
+      expect(worldAgreement).toBeGreaterThan(0.99);
+      expect(Math.abs(lowerArm!.z)).toBeGreaterThan(0.95);
+    });
+
+    it("does not flip a foreshortened forearm when its tiny planar direction crosses zero", () => {
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: withCorePose(),
+        worldPoseLandmarks: makeWorldPose(),
+      });
+      const worldPose = makeWorldPose();
+      worldPose[13] = { x: -0.24, y: -0.2, z: 0, visibility: 0.9 };
+      worldPose[15] = { x: -0.25, y: -0.19, z: -0.5, visibility: 0.9 };
+      const beforePose = withCorePose();
+      beforePose[13] = { x: 0.34, y: 0.56, z: 0, visibility: 0.9 };
+      beforePose[15] = { x: 0.341, y: 0.559, z: -0.4, visibility: 0.9 };
+      const afterPose = structuredClone(beforePose);
+      afterPose[15] = { ...afterPose[15]!, y: 0.561 };
+
+      const before = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: beforePose,
+        worldPoseLandmarks: worldPose,
+      }).segments.leftLowerArm!.direction;
+      const after = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: afterPose,
+        worldPoseLandmarks: worldPose,
+      }).segments.leftLowerArm!.direction;
+      const agreement = before.x * after.x + before.y * after.y + before.z * after.z;
+
+      expect(agreement).toBeGreaterThan(0.99);
+    });
+
     it("falls back to image segments when a frame lacks world landmarks", () => {
       const calibration = buildMovementRetargetSourceModel({
         poseLandmarks: withCorePose(),

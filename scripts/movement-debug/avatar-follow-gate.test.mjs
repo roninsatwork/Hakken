@@ -61,6 +61,26 @@ function manifest(rows) {
 }
 
 describe("avatar follow gate", () => {
+  it("blocks capture-backed upper-body deviation above the canonical 0.10 limit", () => {
+    const proofRow = row();
+    proofRow.visualCaptureDiagnostics.avatarUpperError = {
+      average: 0.1001,
+      count: 2,
+      max: 0.1001,
+    };
+
+    const result = evaluateAvatarFollowGate({
+      analyses: [analysis()],
+      manifest: manifest([proofRow]),
+    });
+
+    expect(result.thresholds.maxUpperBodyDirectionError).toBe(0.1);
+    expect(result.failures.map((failure) => failure.code)).toContain(
+      "upper-body-direction-error-above-threshold",
+    );
+    expect(result.status).toBe("blocked");
+  });
+
   it("blocks proof captured without a motion-pipeline fingerprint", () => {
     const result = evaluateAvatarFollowGate({
       analyses: [analysis()],

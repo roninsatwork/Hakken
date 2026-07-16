@@ -16,14 +16,24 @@ import {
   applyVrmRigRotationApplicationTarget,
   resolveVrmRigRotationApplicationTarget,
 } from "./vrmRigging";
+import {
+  movementAvatarFrameRateAdjustedAngleStep,
+  movementAvatarFrameRateAdjustedSlerp,
+} from "./movementAvatarFrameTiming";
 
-const ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP = 0.04;
+// The motion-frame target is limited to 2.4 rad/s. A 3.84 rad/s final writer
+// preserves the smooth 60 fps response while retaining enough headroom for a
+// held-to-active ownership handoff to remain inside the 0.10 rendered-fidelity
+// contract. The per-bone cap still bounds the visible reacquisition step.
+const ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP = 0.064;
 
 function applyMovementAvatarSpineNamedRotationToVrmBone({
   lookupBone,
+  frameDeltaSeconds,
   maxLocalAngleStep,
   spec,
 }: {
+  frameDeltaSeconds?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   maxLocalAngleStep?: number;
   spec: MovementAvatarSpineBoneRotationSpec;
@@ -45,7 +55,7 @@ function applyMovementAvatarSpineNamedRotationToVrmBone({
     targets: [{
       bone: spec.bone,
       rotation: spec.rotation,
-      slerp: spec.slerp,
+      slerp: movementAvatarFrameRateAdjustedSlerp(spec.slerp, frameDeltaSeconds),
     }],
   });
 }
@@ -81,6 +91,7 @@ function applyMovementAvatarSpineSolverRotationToVrmBone({
 export function applyMovementAvatarSpinePoseApplicationToVrmBones({
   activeSpineDrive,
   avatarRole,
+  frameDeltaSeconds,
   lookupBone,
   shouldApplySolverTorso,
   sources,
@@ -90,6 +101,7 @@ export function applyMovementAvatarSpinePoseApplicationToVrmBones({
 }: {
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
   avatarRole: "instructor" | "player";
+  frameDeltaSeconds?: number;
   lookupBone: (bone: string) => THREE.Object3D | null | undefined;
   shouldApplySolverTorso: boolean;
   sources: MovementAvatarSpineSolverSources;
@@ -110,8 +122,12 @@ export function applyMovementAvatarSpinePoseApplicationToVrmBones({
     applyMovementAvatarActiveSpinePoseApplication({
       applyRotation: (spec) => {
         applied += applyMovementAvatarSpineNamedRotationToVrmBone({
+          frameDeltaSeconds,
           lookupBone,
-          maxLocalAngleStep: ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP,
+          maxLocalAngleStep: movementAvatarFrameRateAdjustedAngleStep(
+            ACTIVE_SPINE_MAX_LOCAL_ANGLE_STEP,
+            frameDeltaSeconds,
+          ),
           spec,
         }).applied;
       },

@@ -12,6 +12,10 @@ import {
   resolveMovementAvatarRetargetCameraTiltCorrection,
   resolveMovementAvatarRetargetLimbAngleStep,
 } from "./movementAvatarRetargetSegmentWorldDirectionDecision";
+import {
+  movementAvatarFrameRateAdjustedAngleStep,
+  movementAvatarFrameRateAdjustedSlerp,
+} from "./movementAvatarFrameTiming";
 
 export type MovementAvatarRetargetSegmentWorldDirectionSpec = {
   bone: MovementAvatarRetargetBoneName;
@@ -62,6 +66,7 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   avatarRole = "instructor",
   canApply = true,
   currentRestMap,
+  frameDeltaSeconds,
   lookupBone,
   mapping,
   refreshRestMap,
@@ -73,6 +78,7 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
   avatarRole?: "instructor" | "player";
   canApply?: boolean;
   currentRestMap: MovementAvatarRetargetRestMap;
+  frameDeltaSeconds?: number;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
   mapping: MovementAvatarRetargetBoneMapping;
   refreshRestMap: () => MovementAvatarRetargetRestMap;
@@ -94,16 +100,30 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
     };
   }
 
+  const timedSegmentApplicationSpec = mapping.type === "arm"
+    ? {
+        ...segmentApplicationSpec,
+        maxLocalAngleStep: movementAvatarFrameRateAdjustedAngleStep(
+          segmentApplicationSpec.maxLocalAngleStep,
+          frameDeltaSeconds,
+        ),
+        slerp: movementAvatarFrameRateAdjustedSlerp(
+          segmentApplicationSpec.slerp,
+          frameDeltaSeconds,
+        ),
+      }
+    : segmentApplicationSpec;
+
   const result = applyMovementAvatarRestMappedWorldDirectionWithLookup({
-    boneName: segmentApplicationSpec.bone,
+    boneName: timedSegmentApplicationSpec.bone,
     canApply,
     currentRestMap,
-    desiredWorldDirection: segmentApplicationSpec.desiredWorldDirection,
+    desiredWorldDirection: timedSegmentApplicationSpec.desiredWorldDirection,
     lookupBone,
-    maxLocalAngleStep: segmentApplicationSpec.maxLocalAngleStep,
+    maxLocalAngleStep: timedSegmentApplicationSpec.maxLocalAngleStep,
     refreshRestMap,
     rememberLastGood,
-    slerp: segmentApplicationSpec.slerp,
+    slerp: timedSegmentApplicationSpec.slerp,
     storeLastGood,
   });
 
@@ -164,9 +184,10 @@ export function resolveMovementAvatarRetargetSegmentWorldDirection({
   return {
     bone: mapping.bone,
     desiredWorldDirection,
-    // Arms need a continuous bound through their long reacquisition ramp.
-    // Legs use a shorter linear ramp and reach the generous clear-tracking cap
-    // by 0.6 confidence, preserving turning and lateral leg direction.
+    // Arm continuity is bounded in world-target space before this application;
+    // a local cap would fight the compensation required when the parent arm
+    // moves. Legs use a shorter linear ramp and reach the generous
+    // clear-tracking cap by 0.6 confidence.
     maxLocalAngleStep: limbAngleStep,
     slerp: segmentApplicationDecision.slerp,
   };

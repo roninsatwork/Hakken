@@ -41,7 +41,10 @@ import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
 import { buildLiveMovementMotionFrame } from "../_lib/movementLiveMotionFrame";
 import { buildRecordedMovementMotionFrame } from "../_lib/movementRecordedMotionFrame";
 import { buildReplayPlayerMovementMotionFrame } from "../_lib/movementReplayPlayerMotionFrame";
-import { resolveMovementReplayFrameDelay } from "../_lib/movementReplayPlaybackClock";
+import {
+  resolveMovementReplayFrameDelay,
+  resolveMovementReplayPlaybackStep,
+} from "../_lib/movementReplayPlaybackClock";
 import { buildMovementRecordedPlayerSetup } from "../_lib/movementRecordedPlayerSetup";
 import { MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION } from "../_lib/movementGameRuntimeFrame";
 import type { MovementRootMotionFrame } from "../_lib/movementRootMotion";
@@ -92,6 +95,8 @@ import {
   maxAvatarSegmentError,
   minNumber,
   replayCalibrationNeutralScore,
+  replayMotionFrameHistoryForBuild,
+  replayShouldPresentTimedRootMotionRef,
 } from "./_lib/replayLabHelpers";
 
 function publishReplayLabDebug(value: unknown) {
@@ -492,6 +497,7 @@ export default function MovementReplayLabPage() {
   }, [isThreePartyMirrorProof, replaySession]);
   const currentThreePartyInstructorPayload = useMemo(() => currentFrame
     ? {
+        capturedAt: currentFrame.capturedAt,
         landmarks: currentFrame.tracking.pose,
         worldLandmarks: currentFrame.tracking.worldPose.length > 0
           ? currentFrame.tracking.worldPose
@@ -503,61 +509,6 @@ export default function MovementReplayLabPage() {
       ? buildOppositePlayerImitationOracle(currentThreePartyInstructorPayload)
       : null
   ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof]);
-  const currentThreePartyInstructorFrame = useMemo(() => (
-    currentThreePartyInstructorPayload && isThreePartyMirrorProof
-      ? buildRecordedMovementMotionFrame({
-          calibration: replayInstructorCalibration ?? buildMovementCalibration({
-            poseLandmarks: currentThreePartyInstructorPayload.landmarks,
-          }),
-          isPlaying: true,
-          motionRef: currentThreePartyInstructorPayload,
-          retargetSourceModel: replayRetargetSourceModel,
-        })
-      : null
-  ), [
-    currentThreePartyInstructorPayload,
-    isThreePartyMirrorProof,
-    replayInstructorCalibration,
-    replayRetargetSourceModel,
-  ]);
-  const currentThreePartyPlayerFrame = useMemo(() => (
-    currentThreePartyPlayerPayload && isThreePartyMirrorProof
-      ? buildLiveMovementMotionFrame({
-          calibration: currentThreePartyInstructorFrame?.avatarHeadTarget.headDecision.shouldApplyHeadMotion
-            ? replayThreePartyPlayerCalibration
-            : null,
-          isPlaying: true,
-          motionRef: currentThreePartyPlayerPayload,
-          retargetSourceModel: replayThreePartyPlayerSourceModel,
-        })
-      : null
-  ), [
-    currentThreePartyPlayerPayload,
-    currentThreePartyInstructorFrame,
-    isThreePartyMirrorProof,
-    replayThreePartyPlayerCalibration,
-    replayThreePartyPlayerSourceModel,
-  ]);
-  const currentReplayMotionFrame = useMemo(() => {
-    if (!currentFrame || currentPoseLandmarks.length < 33) return null;
-
-    const payload = {
-      landmarks: currentPoseLandmarks,
-      worldLandmarks: currentFrame.tracking.worldPose.length >= 33
-        ? currentFrame.tracking.worldPose
-        : undefined,
-    };
-
-    return buildReplayPlayerMovementMotionFrame({
-      calibration: replayPlayerCalibration ?? buildMovementCalibration({
-        poseLandmarks: currentPoseLandmarks,
-      }),
-      capturedAt: currentFrame.capturedAt,
-      isPlaying: true,
-      motionRef: payload,
-      retargetSourceModel: replayPlayerRetargetSourceModel,
-    });
-  }, [currentFrame, currentPoseLandmarks, replayPlayerCalibration, replayPlayerRetargetSourceModel]);
   const replayStudioParity = useMemo(() => {
     if (currentPoseLandmarks.length < 33) return null;
 
@@ -703,15 +654,78 @@ export default function MovementReplayLabPage() {
   ), [analysis]);
 
   useEffect(() => {
-    replayMotionFrameRef.current = isThreePartyMirrorProof
-      ? currentThreePartyPlayerFrame
-      : currentReplayMotionFrame;
-    replayInstructorMotionFrameRef.current = currentThreePartyInstructorFrame;
+    if (isThreePartyMirrorProof) {
+      const instructorFrame = currentThreePartyInstructorPayload
+        ? buildRecordedMovementMotionFrame({
+            calibration: replayInstructorCalibration ?? buildMovementCalibration({
+              poseLandmarks: currentThreePartyInstructorPayload.landmarks,
+            }),
+            capturedAt: currentThreePartyInstructorPayload.capturedAt,
+            isPlaying: true,
+            motionRef: currentThreePartyInstructorPayload,
+            previousMotionFrame: replayMotionFrameHistoryForBuild({
+              isPlaying: isPlaying || isDeterministicReplay,
+              previousMotionFrame: replayInstructorMotionFrameRef.current,
+            }),
+            retargetSourceModel: replayRetargetSourceModel,
+          })
+        : null;
+      replayInstructorMotionFrameRef.current = instructorFrame;
+      replayMotionFrameRef.current = currentThreePartyPlayerPayload
+        ? buildLiveMovementMotionFrame({
+            calibration: instructorFrame?.avatarHeadTarget.headDecision.shouldApplyHeadMotion
+              ? replayThreePartyPlayerCalibration
+              : null,
+            capturedAt: currentThreePartyPlayerPayload.capturedAt,
+            isPlaying: true,
+            motionRef: currentThreePartyPlayerPayload,
+            previousMotionFrame: replayMotionFrameHistoryForBuild({
+              isPlaying: isPlaying || isDeterministicReplay,
+              previousMotionFrame: replayMotionFrameRef.current,
+            }),
+            retargetSourceModel: replayThreePartyPlayerSourceModel,
+          })
+        : null;
+      return;
+    }
+
+    replayInstructorMotionFrameRef.current = null;
+    if (!currentFrame || currentPoseLandmarks.length < 33) {
+      replayMotionFrameRef.current = null;
+      return;
+    }
+    replayMotionFrameRef.current = buildReplayPlayerMovementMotionFrame({
+      calibration: replayPlayerCalibration ?? buildMovementCalibration({
+        poseLandmarks: currentPoseLandmarks,
+      }),
+      capturedAt: currentFrame.capturedAt,
+      isPlaying: true,
+      motionRef: {
+        landmarks: currentPoseLandmarks,
+        worldLandmarks: currentFrame.tracking.worldPose.length >= 33
+          ? currentFrame.tracking.worldPose
+          : undefined,
+      },
+      previousMotionFrame: replayMotionFrameHistoryForBuild({
+        isPlaying: isPlaying || isDeterministicReplay,
+        previousMotionFrame: replayMotionFrameRef.current,
+      }),
+      retargetSourceModel: replayPlayerRetargetSourceModel,
+    });
   }, [
-    currentReplayMotionFrame,
-    currentThreePartyInstructorFrame,
-    currentThreePartyPlayerFrame,
+    currentFrame,
+    currentPoseLandmarks,
+    currentThreePartyInstructorPayload,
+    currentThreePartyPlayerPayload,
+    isDeterministicReplay,
+    isPlaying,
     isThreePartyMirrorProof,
+    replayInstructorCalibration,
+    replayPlayerCalibration,
+    replayPlayerRetargetSourceModel,
+    replayRetargetSourceModel,
+    replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSourceModel,
   ]);
 
   useEffect(() => {
@@ -764,8 +778,6 @@ export default function MovementReplayLabPage() {
     let previousMotionFrame = replayMotionFrameRef.current;
     let previousInstructorMotionFrame = replayInstructorMotionFrameRef.current;
     let playbackFrameIndex = replayPlaybackFrameIndexRef.current;
-    const playbackStartedAt = performance.now();
-    const sourceStartedAt = replaySession.samples[playbackFrameIndex]?.capturedAt ?? 0;
     const processedFrameIndexes = [playbackFrameIndex];
     const root = document.querySelector('[data-testid="movement-replay-lab"]');
 
@@ -843,30 +855,26 @@ export default function MovementReplayLabPage() {
         return;
       }
 
-      const elapsedMs = performance.now() - playbackStartedAt;
-      let targetFrameIndex = playbackFrameIndex;
-      while (
-        targetFrameIndex + 1 < replaySession.samples.length &&
-        (replaySession.samples[targetFrameIndex + 1]?.capturedAt ?? Number.POSITIVE_INFINITY) - sourceStartedAt <= elapsedMs
-      ) {
-        targetFrameIndex += 1;
-      }
-      if (targetFrameIndex === playbackFrameIndex) targetFrameIndex += 1;
-      while (playbackFrameIndex < targetFrameIndex) {
-        playbackFrameIndex += 1;
-        applyFrame(playbackFrameIndex);
-        processedFrameIndexes.push(playbackFrameIndex);
-      }
+      // Present exactly one source frame per scheduled tick. Recorded captures
+      // contain long runs of duplicate/stalled timestamps; elapsed-time catch-up
+      // collapsed those runs into one render and made every avatar snap between
+      // distant poses. The delay resolver below already substitutes the nominal
+      // recording FPS for invalid timestamps, so each source frame now receives
+      // a real render opportunity without inventing neutral frames.
+      const playbackStep = resolveMovementReplayPlaybackStep({
+        currentFrameIndex: playbackFrameIndex,
+        fallbackFps: replaySession.fps,
+        samples: replaySession.samples,
+      });
+      playbackFrameIndex = playbackStep.frameIndex;
+      applyFrame(playbackFrameIndex);
+      processedFrameIndexes.push(playbackFrameIndex);
       if (playbackFrameIndex + 1 >= replaySession.samples.length) {
         setFrameIndex(playbackFrameIndex);
         setIsPlaying(false);
         return;
       }
-      const delayMs = resolveMovementReplayFrameDelay({
-        currentFrameIndex: playbackFrameIndex,
-        fallbackFps: replaySession.fps,
-        samples: replaySession.samples,
-      });
+      const delayMs = playbackStep.delayMs;
       (window as MovementReplayLabDeterministicDebugWindow).__sonaeReplayLabPlaybackClock = {
         currentCapturedAt: replaySession.samples[playbackFrameIndex]?.capturedAt,
         delayMs,
@@ -874,13 +882,7 @@ export default function MovementReplayLabPage() {
         nextCapturedAt: replaySession.samples[playbackFrameIndex + 1]?.capturedAt,
         processedFrameIndexes,
       };
-      const nextSourceElapsedMs = (
-        replaySession.samples[playbackFrameIndex + 1]?.capturedAt ?? sourceStartedAt
-      ) - sourceStartedAt;
-      timeout = window.setTimeout(
-        advance,
-        Math.max(0, nextSourceElapsedMs - (performance.now() - playbackStartedAt)),
-      );
+      timeout = window.setTimeout(advance, delayMs);
     };
 
     const firstDelayMs = resolveMovementReplayFrameDelay({
@@ -1348,9 +1350,8 @@ export default function MovementReplayLabPage() {
                           positionOffset={[0, 0, 0]}
                         />
                         <VrmAvatar
-                          frameResetKey={isPlaying || isDeterministicReplay
-                            ? undefined
-                            : `${replaySession.id}:${safeFrameIndex}`}
+                          frameResetKey={replaySession.id}
+                          frameSeekIndex={isPlaying || isDeterministicReplay ? undefined : safeFrameIndex}
                           landmarksRef={replayMotionRef}
                           motionFrameRef={replayMotionFrameRef}
                           positionOffset={isThreePartyMirrorProof ? [0.8, 0, 0] : [0, 0, 0]}
@@ -1361,7 +1362,9 @@ export default function MovementReplayLabPage() {
                             ? replayThreePartyPlayerSourceModel
                             : replayPlayerRetargetSourceModel}
                           rootMotionFrame={currentRootMotionFrame ?? null}
-                          rootMotionFrameRef={replayTimedRootMotionFrameRef}
+                          rootMotionFrameRef={replayShouldPresentTimedRootMotionRef(isPlaying)
+                            ? replayTimedRootMotionFrameRef
+                            : undefined}
                           showNameLabel={false}
                           trackingCalibration={isThreePartyMirrorProof
                             ? replayThreePartyPlayerCalibration
@@ -1379,7 +1382,9 @@ export default function MovementReplayLabPage() {
                             name="Replay instructor proof"
                             retargetSourceModel={replayRetargetSourceModel}
                             rootMotionFrame={currentRootMotionFrame ?? null}
-                            rootMotionFrameRef={replayTimedRootMotionFrameRef}
+                            rootMotionFrameRef={replayShouldPresentTimedRootMotionRef(isPlaying)
+                              ? replayTimedRootMotionFrameRef
+                              : undefined}
                             showNameLabel={false}
                             trackingDebugRef={replayInstructorAvatarDebugRef}
                             vrmUrl={replayAvatarVrmUrl}
@@ -1439,6 +1444,8 @@ export default function MovementReplayLabPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <input
                     ref={replayFrameSliderRef}
+                    aria-label="Replay frame"
+                    data-testid="movement-replay-frame-slider"
                     type="range"
                     min="0"
                     max={Math.max(frameCount - 1, 0)}

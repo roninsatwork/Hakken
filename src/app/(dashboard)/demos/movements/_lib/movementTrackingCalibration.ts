@@ -119,8 +119,10 @@ export type MovementTrackingDebugState = {
     source: string;
   };
   avatarHead?: {
+    appliedWorldQuaternion?: { w: number; x: number; y: number; z: number };
     appliedLocalPitch: number;
     appliedLocalRoll: number;
+    appliedLocalYaw: number;
     appliedWorldPitch?: number;
     appliedWorldRoll?: number;
     appliedWorldYaw?: number;
@@ -130,6 +132,7 @@ export type MovementTrackingDebugState = {
     trackingPitch: number;
     trackingRoll: number;
     trackingYaw: number;
+    targetWorldQuaternion?: { w: number; x: number; y: number; z: number };
   };
   avatarHands?: Partial<Record<"left" | "right", {
     curlMagnitude: number;
@@ -179,6 +182,11 @@ export type MovementTrackingDebugState = {
     forwardLean: number;
     owner: string;
     sideBend: number;
+    targetRotations?: Partial<Record<"hips" | "spine" | "chest" | "upperChest", {
+      x: number;
+      y: number;
+      z: number;
+    }>>;
     twist: number;
   };
   retarget?: {

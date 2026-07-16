@@ -273,6 +273,7 @@ describe("movement avatar debug telemetry", () => {
       avatarHead: {
         appliedLocalPitch: 0.12345,
         appliedLocalRoll: 0.13579,
+        appliedLocalYaw: 0.2468,
         bonePitch: 0.23456,
         boneRoll: -0.2468,
         boneYaw: -0.34567,
@@ -348,6 +349,7 @@ describe("movement avatar debug telemetry", () => {
       avatarHead: {
         appliedLocalPitch: 0.1235,
         appliedLocalRoll: 0.1358,
+        appliedLocalYaw: 0.2468,
         bonePitch: 0.2346,
         boneRoll: -0.2468,
         boneYaw: -0.3457,
@@ -656,7 +658,7 @@ describe("movement avatar debug telemetry", () => {
     });
   });
 
-  it("maps player spine and limb comparisons into opposite anatomical space", () => {
+  it("does not reflect the already-mapped player world direction a second time", () => {
     const spine = mapMovementAvatarVisualSourceDirection({
       anatomicalMapping: "opposite",
       direction: new THREE.Vector3(0.6, 0.8, 0),
@@ -668,8 +670,8 @@ describe("movement avatar debug telemetry", () => {
       segment: "rightUpperArm",
     });
 
-    expect(spine.toArray()).toEqual([-0.6, 0.8, 0]);
-    expect(arm.toArray()).toEqual([-0.6, 0.8, 0]);
+    expect(spine.toArray()).toEqual([0.6, 0.8, 0]);
+    expect(arm.toArray()).toEqual([0.6, 0.8, 0]);
   });
 
   it("reads rendered spine bone rotations after application", () => {

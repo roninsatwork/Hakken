@@ -1,5 +1,25 @@
+import { readFileSync } from "node:fs";
+import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { analyzeFullSequence } from "./analyze-replay-full-sequence.mjs";
+import {
+  analyzeFullSequence,
+  renderedVectorAngle,
+} from "./analyze-replay-full-sequence.mjs";
+import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+
+const fullMotionFrame281FidelityFixture = JSON.parse(readFileSync(
+  new URL("./fixtures/full-motion-frame-281-fidelity.json", import.meta.url),
+  "utf8",
+));
+
+describe("rendered telemetry vector measurement", () => {
+  it("measures movement between rounded near-unit vectors", () => {
+    const previous = { x: 0.0744, y: -0.9299, z: -0.3603 };
+    const current = { x: 0.0747, y: -0.9276, z: -0.3661 };
+
+    expect(renderedVectorAngle(previous, current)).toBeGreaterThan(0.004);
+  });
+});
 
 function renderedSideBendFrame(frameIndex, sideBend) {
   return {
@@ -238,6 +258,299 @@ describe("full-sequence rendered head analysis", () => {
     );
     expect(analysis.status).toBe("passed");
   });
+
+  it("blocks calibrated final head-bone deviation above the per-axis ceiling", () => {
+    const frames = [0, 1, 2, 3].map((frameIndex) => {
+      const frame = renderedHeadPitchFrame(frameIndex, 0.2);
+      frame.debug.avatarHead = {
+        appliedLocalPitch: 0,
+        appliedLocalRoll: 0,
+        appliedLocalYaw: 0,
+        appliedWorldPitch: frameIndex === 0 ? -0.2 : 0,
+        appliedWorldRoll: 0,
+        appliedWorldYaw: 0,
+        bonePitch: -0.2,
+        boneRoll: 0,
+        boneYaw: 0,
+      };
+      frame.debug.headRaw.confidence = 0.9;
+      return frame;
+    });
+    const analysis = analyzeFullSequence({
+      session: { samples: frames.map(() => ({ tracking: { pose: [] } })) },
+      telemetry: {
+        frameCount: frames.length,
+        frames,
+        missingFrames: [],
+        sessionId: "rendered-head-absolute-fidelity-test",
+      },
+    });
+
+    expect(analysis.head.fidelity.pitch).toMatchObject({
+      maxErrorRadians: 0.2,
+      repairSampleCount: 3,
+      thresholdRadians: 0.1,
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-head-fidelity-blocked", count: 3 });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("blocks a constant wrong world-head orientation instead of calibrating it away", () => {
+    const target = new THREE.Quaternion();
+    const rendered = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0, "YXZ"));
+    const frames = [0, 1, 2, 3].map((frameIndex) => {
+      const frame = renderedHeadPitchFrame(frameIndex, 0.2);
+      frame.debug.headRaw.confidence = 0.9;
+      frame.debug.avatarHead = {
+        appliedWorldQuaternion: rendered,
+        bonePitch: 0,
+        boneRoll: 0,
+        boneYaw: 0,
+        targetWorldQuaternion: target,
+      };
+      return frame;
+    });
+    const analysis = analyzeFullSequence({
+      session: { samples: frames.map(() => ({ tracking: { pose: [] } })) },
+      telemetry: {
+        frameCount: frames.length,
+        frames,
+        missingFrames: [],
+        sessionId: "rendered-head-constant-world-error-test",
+      },
+    });
+
+    expect(analysis.head.calibration.pitch).toMatchObject({
+      frameIndex: null,
+      offsetRadians: null,
+    });
+    expect(analysis.head.fidelity.pitch).toMatchObject({
+      maxErrorRadians: 0.2,
+      repairSampleCount: 4,
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-head-fidelity-blocked", count: 4 });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("fails current-fingerprint proof closed when target/final head quaternions are absent", () => {
+    const frame = renderedHeadPitchFrame(0, 0.2);
+    frame.debug.headRaw.confidence = 0.9;
+    const analysis = analyzeFullSequence({
+      session: { samples: [{ tracking: { pose: [] } }] },
+      telemetry: {
+        frameCount: 1,
+        frames: [frame],
+        missingFrames: [],
+        motionPipelineFingerprint: movementPipelineFingerprint(),
+        sessionId: "current-head-quaternion-proof-missing-test",
+      },
+    });
+
+    expect(analysis.head.proof).toEqual({
+      eligibleFrameCount: 1,
+      missingQuaternionFrameCount: 1,
+      quaternionFrameCount: 0,
+    });
+    expect(analysis.failures).toContainEqual({
+      code: "rendered-head-quaternion-proof-missing",
+      count: 1,
+    });
+    expect(analysis.status).toBe("blocked");
+  });
+});
+
+describe("full-sequence rendered fidelity acceptance", () => {
+  it("blocks the minimized FULL MOTION EXERCISES frame 281 regression", () => {
+    const analysis = analyzeFullSequence(fullMotionFrame281FidelityFixture);
+
+    expect(analysis.status).toBe("blocked");
+    expect(analysis.failures).toContainEqual({ code: "rendered-fidelity-severe", count: 3 });
+    expect(analysis.failures).toContainEqual({ code: "rendered-fidelity-repair-required", count: 1 });
+    expect(analysis.renderedFidelity.averageUpperBody).toMatchObject({
+      maxError: 0.2939,
+      repairSampleCount: 1,
+    });
+    expect(analysis.renderedFidelity.segments.leftUpperArm).toMatchObject({
+      maxError: 0.6694,
+      severeSampleCount: 1,
+    });
+    expect(analysis.renderedFidelity.segments.spine).toMatchObject({
+      maxError: 0.2592,
+      severeSampleCount: 1,
+    });
+  });
+
+  it("accepts 0.10 exactly and requires repair above it", () => {
+    const buildAnalysis = (sourceError) => {
+      const fixture = structuredClone(fullMotionFrame281FidelityFixture);
+      fixture.telemetry.frames[0].debug.avatarVisual.averageUpperBodyDirectionError = sourceError;
+      Object.values(fixture.telemetry.frames[0].debug.avatarVisual.segments).forEach((segment) => {
+        segment.sourceError = sourceError;
+      });
+      return analyzeFullSequence(fixture);
+    };
+
+    expect(buildAnalysis(0.1).status).toBe("passed");
+    expect(buildAnalysis(0.1001).failures).toContainEqual({
+      code: "rendered-fidelity-repair-required",
+      count: 6,
+    });
+  });
+
+  it("does not promote a source-limited arm into a trustworthy aggregate failure", () => {
+    const fixture = structuredClone(fullMotionFrame281FidelityFixture);
+    const debug = fixture.telemetry.frames[0].debug;
+    debug.avatarVisual.averageUpperBodyDirectionError = 0.12;
+    Object.values(debug.avatarVisual.segments).forEach((segment) => {
+      segment.sourceError = 0;
+      segment.confidence = 0.9;
+    });
+    debug.avatarVisual.segments.rightLowerArm.confidence = 0.3;
+
+    const analysis = analyzeFullSequence(fixture);
+
+    expect(analysis.failures).not.toContainEqual(expect.objectContaining({
+      code: "rendered-fidelity-repair-required",
+    }));
+    expect(analysis.renderedFidelity.averageUpperBody).toMatchObject({
+      maxError: 0.12,
+      repairSampleCount: 0,
+    });
+    expect(analysis.renderedFidelity.averageUpperBody.worstFrames[0].outcome).toBe("source-limited");
+  });
+
+  it("grades an active spine owner against its own final rotation targets", () => {
+    const fixture = structuredClone(fullMotionFrame281FidelityFixture);
+    const debug = fixture.telemetry.frames[0].debug;
+    debug.spineDrive = {
+      confidence: 0.99,
+      forwardLean: 0,
+      owner: "player-spine-model",
+      sideBend: 0,
+      targetRotations: {
+        spine: { x: 0, y: 0, z: 0 },
+        chest: { x: 0.2, y: 0, z: 0 },
+        upperChest: { x: 0, y: 0, z: 0 },
+      },
+      twist: 0,
+    };
+    debug.avatarSpine = {
+      spine: { x: 0, y: 0, z: 0 },
+      chest: { x: 0, y: 0, z: 0 },
+      upperChest: { x: 0, y: 0, z: 0 },
+    };
+    Object.values(debug.avatarVisual.segments).forEach((segment) => {
+      segment.sourceError = 0;
+    });
+    debug.avatarVisual.averageUpperBodyDirectionError = 0;
+
+    const analysis = analyzeFullSequence(fixture);
+
+    expect(analysis.renderedFidelity.segments.spine).toMatchObject({
+      blockedSampleCount: 1,
+      maxError: 0.2,
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-fidelity-blocked", count: 1 });
+  });
+
+  it("grades a held spine owner against the prior rendered pose instead of its zero no-op command", () => {
+    const fixture = structuredClone(fullMotionFrame281FidelityFixture);
+    const activeFrame = fixture.telemetry.frames[0];
+    activeFrame.frameIndex = 0;
+    activeFrame.renderedFrameIndex = 0;
+    activeFrame.debug.spineDrive = {
+      confidence: 0.99,
+      forwardLean: 0,
+      owner: "player-spine-model",
+      sideBend: 0,
+      targetRotations: {
+        spine: { x: 0.1, y: 0, z: 0 },
+        chest: { x: 0.2, y: 0, z: 0 },
+        upperChest: { x: 0.15, y: 0, z: 0 },
+      },
+      twist: 0,
+    };
+    activeFrame.debug.avatarSpine = structuredClone(activeFrame.debug.spineDrive.targetRotations);
+    Object.values(activeFrame.debug.avatarVisual.segments).forEach((segment) => {
+      segment.sourceError = 0;
+    });
+    activeFrame.debug.avatarVisual.averageUpperBodyDirectionError = 0;
+
+    const heldFrame = structuredClone(activeFrame);
+    heldFrame.frameIndex = 1;
+    heldFrame.renderedFrameIndex = 1;
+    heldFrame.debug.spineDrive = {
+      ...heldFrame.debug.spineDrive,
+      owner: "player-spine-held",
+      targetRotations: {
+        spine: { x: 0, y: 0, z: 0 },
+        chest: { x: 0, y: 0, z: 0 },
+        upperChest: { x: 0, y: 0, z: 0 },
+      },
+    };
+    fixture.telemetry.frameCount = 2;
+    fixture.telemetry.frames = [activeFrame, heldFrame];
+    fixture.telemetry.missingFrames = [];
+    fixture.session.samples = [fixture.session.samples[0], structuredClone(fixture.session.samples[0])];
+
+    const analysis = analyzeFullSequence(fixture);
+
+    expect(analysis.renderedFidelity.segments.spine).toMatchObject({
+      blockedSampleCount: 0,
+      maxError: 0,
+      severeSampleCount: 0,
+    });
+  });
+
+  it("blocks a held spine owner that jumps away from the prior rendered pose", () => {
+    const fixture = structuredClone(fullMotionFrame281FidelityFixture);
+    const activeFrame = fixture.telemetry.frames[0];
+    activeFrame.frameIndex = 0;
+    activeFrame.renderedFrameIndex = 0;
+    activeFrame.debug.spineDrive = {
+      confidence: 0.99,
+      forwardLean: 0,
+      owner: "player-spine-model",
+      sideBend: 0,
+      targetRotations: {
+        spine: { x: 0, y: 0, z: 0 },
+        chest: { x: 0.2, y: 0, z: 0 },
+        upperChest: { x: 0, y: 0, z: 0 },
+      },
+      twist: 0,
+    };
+    activeFrame.debug.avatarSpine = structuredClone(activeFrame.debug.spineDrive.targetRotations);
+    Object.values(activeFrame.debug.avatarVisual.segments).forEach((segment) => {
+      segment.sourceError = 0;
+    });
+    activeFrame.debug.avatarVisual.averageUpperBodyDirectionError = 0;
+
+    const heldFrame = structuredClone(activeFrame);
+    heldFrame.frameIndex = 1;
+    heldFrame.renderedFrameIndex = 1;
+    heldFrame.debug.spineDrive = {
+      ...heldFrame.debug.spineDrive,
+      owner: "player-spine-held",
+      targetRotations: {
+        spine: { x: 0, y: 0, z: 0 },
+        chest: { x: 0, y: 0, z: 0 },
+        upperChest: { x: 0, y: 0, z: 0 },
+      },
+    };
+    heldFrame.debug.avatarSpine.chest.x += 0.2;
+    fixture.telemetry.frameCount = 2;
+    fixture.telemetry.frames = [activeFrame, heldFrame];
+    fixture.telemetry.missingFrames = [];
+    fixture.session.samples = [fixture.session.samples[0], structuredClone(fixture.session.samples[0])];
+
+    const analysis = analyzeFullSequence(fixture);
+
+    expect(analysis.renderedFidelity.segments.spine).toMatchObject({
+      blockedSampleCount: 1,
+      maxError: 0.2,
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-fidelity-blocked", count: 1 });
+  });
 });
 
 function footClearancePose(rightAnkleY) {
@@ -342,7 +655,7 @@ describe("full-sequence rendered foot-clearance analysis", () => {
     expect(analysis.jerk.frameCount).toBe(0);
   });
 
-  it("keeps a clearance jump blocked when the mirrored source foot is stable", () => {
+  it("reports a non-severe isolated clearance jump without blocking", () => {
     const stablePose = footClearancePose(0.9);
     const analysis = analyzeFullSequence({
       session: {
@@ -365,6 +678,61 @@ describe("full-sequence rendered foot-clearance analysis", () => {
       segment: "leftFootClearance",
       sourceStep: 0,
     });
+    expect(analysis.jerk.severeFrameCount).toBe(0);
+  });
+
+  it("blocks one severe rendered snap even without a persistent run", () => {
+    const stablePose = footClearancePose(0.9);
+    const samples = Array.from({ length: 200 }, () => ({ tracking: { pose: stablePose } }));
+    const frames = Array.from({ length: 200 }, (_, frameIndex) => footClearanceFrame(
+      frameIndex,
+      frameIndex === 0 ? 0 : 0.3,
+    ));
+    const analysis = analyzeFullSequence({
+      session: { samples },
+      telemetry: {
+        frameCount: 200,
+        frames,
+        missingFrames: [],
+        sessionId: "severe-rendered-foot-snap-test",
+      },
+    });
+
+    expect(analysis.jerk).toMatchObject({
+      frameCount: 1,
+      severeFrameCount: 1,
+      severeStepThreshold: 0.25,
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-motion-jerk", count: 1 });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("blocks a persistent per-segment jerk run even below one percent of the recording", () => {
+    const stablePose = footClearancePose(0.9);
+    const samples = Array.from({ length: 400 }, () => ({ tracking: { pose: stablePose } }));
+    const frames = Array.from({ length: 400 }, (_, frameIndex) => footClearanceFrame(
+      frameIndex,
+      frameIndex <= 3 ? frameIndex * 0.2 : 0.6,
+    ));
+    const analysis = analyzeFullSequence({
+      session: { samples },
+      telemetry: {
+        frameCount: 400,
+        frames,
+        missingFrames: [],
+        sessionId: "persistent-rendered-foot-snap-test",
+      },
+    });
+
+    expect(analysis.jerk.frameCount / analysis.eligibleFrameCount).toBeLessThan(0.01);
+    expect(analysis.jerk.persistentRuns).toContainEqual({
+      frameEnd: 3,
+      frameStart: 1,
+      length: 3,
+      segment: "leftFootClearance",
+    });
+    expect(analysis.failures).toContainEqual({ code: "rendered-motion-jerk", count: 3 });
+    expect(analysis.status).toBe("blocked");
   });
 
   it("reports but does not gate temporal jerk during deterministic frame stepping", () => {
@@ -831,7 +1199,7 @@ describe("full-sequence sustained rendered response analysis", () => {
     expect(analysis.status).toBe("blocked");
   });
 
-  it("does not block a held segment whose source confidence is below its application gate", () => {
+  it("does not block a held leg segment when lower-body retargeting is not applied", () => {
     const direction = (angle) => ({ x: Math.sin(angle), y: Math.cos(angle), z: 0 });
     const pose = (angle) => {
       const landmarks = Array.from({ length: 33 }, () => null);
@@ -854,8 +1222,8 @@ describe("full-sequence sustained rendered response analysis", () => {
               averageLowerBodyDirectionError: 0,
               footing: { leftFootClearance: 0, rightFootClearance: 0 },
               segments: {
-                leftShin: { confidence: 0.1, direction: direction(0), sourceDirection: direction(targetAngle) },
-                rightShin: { confidence: 0.1, direction: direction(0), sourceDirection: direction(0) },
+                leftShin: { confidence: 0.3, direction: direction(0), sourceDirection: direction(targetAngle) },
+                rightShin: { confidence: 0.3, direction: direction(0), sourceDirection: direction(0) },
               },
             },
             fallbacks: { owners: "head pose; torso player-spine-model; lower neutral; feet neutral" },

@@ -13,7 +13,6 @@ import {
   AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD,
   LIVE_HEAD_DAMPING_REVIEW_THRESHOLD,
   LIVE_SPINE_DRIVE_MOTION_THRESHOLD,
-  LIVE_SPINE_DRIVE_REVIEW_THRESHOLD,
   LIVE_UPPER_BODY_REVIEW_THRESHOLD,
   SOURCE_OUT_OF_FRAME_REVIEW_COUNT,
   avatarPlantedFootClearance,
@@ -26,6 +25,21 @@ import {
 type ReplayFrame = MovementDebugReplaySession["samples"][number];
 type GamePathFrame = MovementReplayAnalysis["gamePath"]["frames"][number];
 type RootMotionFrame = MovementReplayAnalysis["rootMotion"]["frames"][number];
+
+function maxSpineTargetRotationError(debug: MovementTrackingDebugState | null) {
+  const targets = debug?.spineDrive?.targetRotations;
+  if (!targets) return undefined;
+  const errors = ["spine", "chest", "upperChest"].flatMap((bone) => (
+    ["x", "y", "z"].flatMap((axis) => {
+      const target = targets[bone as keyof typeof targets]?.[axis as "x" | "y" | "z"];
+      const rendered = debug?.avatarSpine?.[bone as keyof NonNullable<typeof debug.avatarSpine>]?.[axis as "x" | "y" | "z"];
+      return typeof target === "number" && typeof rendered === "number"
+        ? [Math.abs(target - rendered)]
+        : [];
+    })
+  ));
+  return errors.length === 9 ? Math.max(...errors) : undefined;
+}
 
 export function getReplayLabLiveCurrentFrameFailures({
   armConfidence,
@@ -83,7 +97,16 @@ export function getReplayLabLiveCurrentFrameFailures({
     "rightLowerArm",
   ]);
   const footPoseError = maxAvatarSegmentError(currentAvatarVisual, ["leftFoot", "rightFoot"]);
-  const spinePoseError = maxAvatarSegmentError(currentAvatarVisual, ["spine"]);
+  const spineTargetRotationError = maxSpineTargetRotationError(currentAvatarDebug);
+  const usesActiveSpineDrive = currentSpineDrive?.owner?.includes("spine-") ?? false;
+  const spinePoseError = typeof spineTargetRotationError === "number"
+    ? spineTargetRotationError
+    : usesActiveSpineDrive
+      ? undefined
+      : maxAvatarSegmentError(currentAvatarVisual, ["spine"]);
+  const spineFidelityConfidence = usesActiveSpineDrive
+    ? currentSpineDrive?.confidence
+    : torsoConfidence;
 
   if (outOfFrameCount >= SOURCE_OUT_OF_FRAME_REVIEW_COUNT || maxY > 1.08) {
     failures.push({
@@ -124,7 +147,7 @@ export function getReplayLabLiveCurrentFrameFailures({
   ) {
     failures.push({
       code: "avatar_arm_pose_diverged",
-      detail: `Live avatar upper-body direction error is ${upperBodyError.toFixed(2)} across ${upperBodySegments} segments; review visible spine/arm match.`,
+      detail: `Live avatar upper-body direction error is ${upperBodyError.toFixed(2)} across ${upperBodySegments} segments; the rendered-fidelity limit is ${LIVE_UPPER_BODY_REVIEW_THRESHOLD.toFixed(2)}.`,
       frameIndex: safeFrameIndex,
       severity: currentFrameSourceReady ? "error" : "warning",
     });
@@ -138,35 +161,16 @@ export function getReplayLabLiveCurrentFrameFailures({
   ) {
     failures.push({
       code: "avatar_arm_pose_diverged",
-      detail: `Avatar arm pose max segment error is ${armPoseError.toFixed(2)} with source arm confidence ${armConfidence.toFixed(2)}.`,
+      detail: `Avatar arm pose max segment error is ${armPoseError.toFixed(2)} with source arm confidence ${armConfidence.toFixed(2)}; the rendered-fidelity limit is ${AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD.toFixed(2)}.`,
       frameIndex: safeFrameIndex,
-      severity: currentFrameSourceReady ? "error" : "warning",
+      severity: currentFrameSourceReady && armConfidence >= 0.75 ? "error" : "warning",
     });
   }
 
-  if (
-    currentSpineDrive?.owner === "recorded-spine-model" &&
-    typeof upperBodyError === "number" &&
-    spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
-    upperBodyError > LIVE_SPINE_DRIVE_REVIEW_THRESHOLD
-  ) {
+  if (usesActiveSpineDrive && typeof spineTargetRotationError !== "number") {
     failures.push({
-      code: "avatar_spine_angle_diverged",
-      detail: `Recorded spine drive is strong (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}) but avatar upper-body error is ${upperBodyError.toFixed(2)}.`,
-      frameIndex: safeFrameIndex,
-      severity: currentFrameSourceReady ? "error" : "warning",
-    });
-  }
-
-  if (
-    currentSpineDrive?.owner === "recorded-spine-model" &&
-    typeof spinePoseError === "number" &&
-    spineDriveMagnitude >= LIVE_SPINE_DRIVE_MOTION_THRESHOLD &&
-    spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
-  ) {
-    failures.push({
-      code: "avatar_spine_angle_diverged",
-      detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} while recorded spine drive is visible (bend ${currentSpineDrive.sideBend.toFixed(2)}, lean ${currentSpineDrive.forwardLean.toFixed(2)}).`,
+      code: "spine_vertical_reference_missing",
+      detail: "Active spine drive is missing final target-rotation telemetry, so spine fidelity is proof-limited.",
       frameIndex: safeFrameIndex,
       severity: currentFrameSourceReady ? "error" : "warning",
     });
@@ -174,16 +178,18 @@ export function getReplayLabLiveCurrentFrameFailures({
 
   if (
     currentFrameSourceReady &&
-    typeof torsoConfidence === "number" &&
-    torsoConfidence >= 0.45 &&
+    typeof spineFidelityConfidence === "number" &&
+    spineFidelityConfidence >= 0.45 &&
     typeof spinePoseError === "number" &&
     spinePoseError > AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD
   ) {
     failures.push({
       code: "avatar_spine_angle_diverged",
-      detail: `Avatar spine segment error is ${spinePoseError.toFixed(2)} with source torso confidence ${torsoConfidence.toFixed(2)}.`,
+      detail: usesActiveSpineDrive
+        ? `Avatar spine target-rotation error is ${spinePoseError.toFixed(2)} rad with source torso confidence ${spineFidelityConfidence.toFixed(2)}; the rendered-fidelity limit is ${AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD.toFixed(2)} rad.`
+        : `Avatar spine segment error is ${spinePoseError.toFixed(2)} with source torso confidence ${spineFidelityConfidence.toFixed(2)}; the rendered-fidelity limit is ${AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD.toFixed(2)}.`,
       frameIndex: safeFrameIndex,
-      severity: "error",
+      severity: spineFidelityConfidence >= 0.75 ? "error" : "warning",
     });
   }
 

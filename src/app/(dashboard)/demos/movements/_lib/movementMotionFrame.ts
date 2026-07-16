@@ -18,6 +18,7 @@ import {
   buildMovementTruthSkeleton,
   type MovementTruthSkeleton,
 } from "./movementTruthSkeleton";
+import { stabilizeMovementAvatarPipelineDecision } from "./movementAvatarTemporalStabilization";
 
 export type MovementMotionOwnerMap = {
   feet: string;
@@ -237,7 +238,10 @@ export function resolveMovementMotionFrame({
   const sourcePoseLandmarks = sourceFrame.landmarks.pose;
   const poseLandmarks = displayPoseLandmarks ?? sourcePoseLandmarks;
   const worldPoseLandmarks = displayWorldPoseLandmarks ?? sourceFrame.landmarks.worldPose;
-  const avatarDecision = resolveMovementAvatarPipelineDecision({
+  const sourceDeltaMs = previousMotionFrame
+    ? sourceFrame.capturedAt - previousMotionFrame.source.capturedAt
+    : 0;
+  const rawAvatarDecision = resolveMovementAvatarPipelineDecision({
     ...pipelineInput,
     anatomicalMapping: "identity",
     source: {
@@ -249,9 +253,15 @@ export function resolveMovementMotionFrame({
   });
   // The display decision runs on mirrored landmarks; only pass world landmarks that
   // were mirrored alongside them, never the unmirrored source world pose.
+  const avatarDecision = stabilizeMovementAvatarPipelineDecision({
+    current: rawAvatarDecision,
+    previous: previousMotionFrame?.avatarDecision,
+    sourceDeltaMs,
+  });
   const avatarDisplayDecision = poseLandmarks === sourcePoseLandmarks && mirrorMode === "same-side"
     ? avatarDecision
-    : resolveMovementAvatarPipelineDecision({
+    : stabilizeMovementAvatarPipelineDecision({
+        current: resolveMovementAvatarPipelineDecision({
         ...pipelineInput,
         // Display preparation has already reflected coordinates and exchanged
         // bilateral landmark ownership for a facing player. Applying an
@@ -265,7 +275,10 @@ export function resolveMovementMotionFrame({
           worldPoseLandmarks: displayWorldPoseLandmarks,
         },
         sourceOrigin: sourceFrame.sourceOrigin === "recorded-replay" ? "replay" : "studio",
-        retargetSourceModel: displayRetargetSourceModel ?? pipelineInput.retargetSourceModel,
+          retargetSourceModel: displayRetargetSourceModel ?? pipelineInput.retargetSourceModel,
+        }),
+        previous: previousMotionFrame?.avatarDisplayDecision,
+        sourceDeltaMs,
       });
   const headAvatarRole = sourceFrame.sourceOrigin === "recorded-replay"
     ? "instructor"

@@ -42,6 +42,16 @@ export type MovementAvatarRuntimeResetRefs = {
   setupStateRef: MovementAvatarRuntimeRef<MovementAvatarSetupState>;
 };
 
+export function shouldResetMovementAvatarRuntimeForFrameSeek({
+  nextFrameIndex,
+  previousFrameIndex,
+}: {
+  nextFrameIndex: number;
+  previousFrameIndex: number | null;
+}) {
+  return previousFrameIndex !== null && Math.abs(nextFrameIndex - previousFrameIndex) > 1;
+}
+
 export function resetMovementAvatarRuntimeRefs({
   refs,
   vrm,
@@ -66,11 +76,34 @@ export function resetMovementAvatarRuntimeRefs({
 
 export function resetMovementAvatarRuntimeForFrameJump({
   refs,
-  vrm,
 }: {
   refs: MovementAvatarRuntimeResetRefs;
   vrm: VRM;
 }) {
-  vrm.humanoid.resetNormalizedPose();
-  resetMovementAvatarRuntimeRefs({ refs, vrm });
+  // A Replay seek is a temporal discontinuity, not a new avatar asset. Keep
+  // the visible bone pose and rig/model calibration intact so the first
+  // solved seek frame eases from the last visible pose instead of flashing
+  // through the VRM normalized stance.
+  refs.liveRootMotionHistoryRef.current = [];
+  refs.exerciseTransitionStateRef.current = createMovementAvatarExerciseTransitionState();
+  refs.playerLegRaiseHoldRef.current = createMovementAvatarPlayerLegRaiseHoldState();
+  refs.plantedFootLockRef.current = createMovementAvatarFootLockState();
+  refs.playerLowerBodyStabilityRef.current = createMovementAvatarLowerBodyVisualState();
+  refs.instructorLowerBodyStabilityRef.current = createMovementAvatarLowerBodyVisualState();
+  refs.lastGoodQuatRef.current = {};
+}
+
+export function consumeMovementAvatarRuntimeFrameJumpReset({
+  pendingResetRef,
+  refs,
+  vrm,
+}: {
+  pendingResetRef: MovementAvatarRuntimeRef<boolean>;
+  refs: MovementAvatarRuntimeResetRefs;
+  vrm: VRM;
+}) {
+  if (!pendingResetRef.current) return false;
+  resetMovementAvatarRuntimeForFrameJump({ refs, vrm });
+  pendingResetRef.current = false;
+  return true;
 }

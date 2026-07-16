@@ -200,8 +200,10 @@ export function buildMovementAvatarTrackingDebugState({
 }: {
   appliedHead: MovementTrackingDebugState["headApplied"];
   avatarHead: {
+    appliedWorldQuaternion?: { w: number; x: number; y: number; z: number };
     appliedLocalPitch: number;
     appliedLocalRoll: number;
+    appliedLocalYaw: number;
     appliedWorldPitch?: number;
     appliedWorldRoll?: number;
     appliedWorldYaw?: number;
@@ -211,6 +213,7 @@ export function buildMovementAvatarTrackingDebugState({
     trackingPitch: number;
     trackingRoll: number;
     trackingYaw: number;
+    targetWorldQuaternion?: { w: number; x: number; y: number; z: number };
   };
   avatarLegRaise: {
     appliedDepth: number;
@@ -240,8 +243,19 @@ export function buildMovementAvatarTrackingDebugState({
     headRaw: rawHead,
     headApplied: appliedHead,
     avatarHead: {
+      ...(avatarHead.appliedWorldQuaternion === undefined ? {} : {
+        appliedWorldQuaternion: Object.fromEntries(Object.entries(
+          avatarHead.appliedWorldQuaternion,
+        ).map(([axis, value]) => [axis, Number(value.toFixed(6))])) as {
+          w: number;
+          x: number;
+          y: number;
+          z: number;
+        },
+      }),
       appliedLocalPitch: Number(avatarHead.appliedLocalPitch.toFixed(4)),
       appliedLocalRoll: Number(avatarHead.appliedLocalRoll.toFixed(4)),
+      appliedLocalYaw: Number(avatarHead.appliedLocalYaw.toFixed(4)),
       ...(avatarHead.appliedWorldPitch === undefined ? {} : {
         appliedWorldPitch: Number(avatarHead.appliedWorldPitch.toFixed(4)),
       }),
@@ -257,6 +271,16 @@ export function buildMovementAvatarTrackingDebugState({
       trackingPitch: Number(avatarHead.trackingPitch.toFixed(4)),
       trackingRoll: Number(avatarHead.trackingRoll.toFixed(4)),
       trackingYaw: Number(avatarHead.trackingYaw.toFixed(4)),
+      ...(avatarHead.targetWorldQuaternion === undefined ? {} : {
+        targetWorldQuaternion: Object.fromEntries(Object.entries(
+          avatarHead.targetWorldQuaternion,
+        ).map(([axis, value]) => [axis, Number(value.toFixed(6))])) as {
+          w: number;
+          x: number;
+          y: number;
+          z: number;
+        },
+      }),
     },
     avatarLegRaise: {
       appliedDepth: Number(avatarLegRaise.appliedDepth.toFixed(4)),

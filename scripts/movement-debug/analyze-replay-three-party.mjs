@@ -2,7 +2,15 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import * as THREE from "three";
 import { inspectReplayTelemetryFrames } from "./lib/replay-proof-identity.mjs";
+import {
+  RENDERED_FIDELITY_POLICY,
+  RENDERED_FIDELITY_POLICY_VERSION,
+  classifyRenderedFidelitySample,
+  contiguousRenderedFidelityRuns,
+  isRenderedFidelityRepairOutcome,
+} from "../../src/lib/movements/renderedFidelityPolicy.mjs";
 
 const SEGMENT_THRESHOLDS = {
   leftFoot: 0.2,
@@ -39,7 +47,12 @@ function round(value) {
 
 function vectorAngle(left, right) {
   if (!left || !right) return null;
-  const dot = Math.max(-1, Math.min(1, left.x * right.x + left.y * right.y + left.z * right.z));
+  const leftLength = Math.hypot(left.x, left.y, left.z);
+  const rightLength = Math.hypot(right.x, right.y, right.z);
+  if (leftLength <= 0.000001 || rightLength <= 0.000001) return null;
+  const dot = Math.max(-1, Math.min(1, (
+    left.x * right.x + left.y * right.y + left.z * right.z
+  ) / (leftLength * rightLength)));
   return Math.acos(dot);
 }
 
@@ -48,6 +61,33 @@ function axialAngleDifference(axis, left, right) {
   const difference = left - right;
   if (axis === "yaw") return Math.abs(Math.atan2(Math.sin(difference), Math.cos(difference)));
   return Math.abs(difference);
+}
+
+function signedAxialDifference(axis, left, right) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+  const difference = left - right;
+  return axis === "yaw" ? Math.atan2(Math.sin(difference), Math.cos(difference)) : difference;
+}
+
+function telemetryQuaternion(value) {
+  return [value?.x, value?.y, value?.z, value?.w].every(Number.isFinite)
+    ? new THREE.Quaternion(value.x, value.y, value.z, value.w).normalize()
+    : null;
+}
+
+function headQuaternionAxisError(avatarHead, axis) {
+  const targetWorldQuaternion = telemetryQuaternion(avatarHead?.targetWorldQuaternion);
+  const appliedWorldQuaternion = telemetryQuaternion(avatarHead?.appliedWorldQuaternion);
+  if (!targetWorldQuaternion || !appliedWorldQuaternion) return null;
+
+  const delta = targetWorldQuaternion.clone().invert().multiply(appliedWorldQuaternion).normalize();
+  if (delta.w < 0) delta.set(-delta.x, -delta.y, -delta.z, -delta.w);
+  const rotationError = new THREE.Euler().setFromQuaternion(delta, "YXZ");
+  return Math.abs({
+    pitch: rotationError.x,
+    roll: rotationError.z,
+    yaw: rotationError.y,
+  }[axis]);
 }
 
 function percentile(sorted, fraction) {
@@ -101,6 +141,161 @@ function axialDifferences(frame) {
   return entries;
 }
 
+function sourceFidelitySummary({ failures, frames }) {
+  const roles = Object.fromEntries(["instructor", "player"].map((role) => {
+    const segments = Object.fromEntries(RENDERED_FIDELITY_POLICY.requiredUpperBodySegments.map((segment) => {
+      const samples = frames.map((frame, frameArrayIndex) => {
+        const debug = frame.avatars?.[role];
+        const visualSegment = debug?.avatarVisual?.segments?.[segment];
+        const usesSpineDriveOwner = segment === "spine" &&
+          typeof debug?.spineDrive?.owner === "string" &&
+          debug.spineDrive.owner.includes("spine-");
+        const isHeldSpineOwner = usesSpineDriveOwner &&
+          debug.spineDrive.owner.endsWith("-spine-held");
+        const previousDebug = frameArrayIndex > 0
+          ? frames[frameArrayIndex - 1]?.avatars?.[role]
+          : undefined;
+        const spineRotationErrors = usesSpineDriveOwner
+          ? ["spine", "chest", "upperChest"].flatMap((bone) => (
+              ["x", "y", "z"].flatMap((axis) => {
+                // A held drive emits zero rotations as a no-op command. Its
+                // rendered target is the prior pose, not those command zeros.
+                const target = isHeldSpineOwner
+                  ? previousDebug?.avatarSpine?.[bone]?.[axis]
+                  : debug.spineDrive?.targetRotations?.[bone]?.[axis];
+                const rendered = debug.avatarSpine?.[bone]?.[axis];
+                return Number.isFinite(target) && Number.isFinite(rendered)
+                  ? [Math.abs(target - rendered)]
+                  : [];
+              })
+            ))
+          : [];
+        const confidence = usesSpineDriveOwner ? debug.spineDrive?.confidence : visualSegment?.confidence;
+        const error = usesSpineDriveOwner
+          ? spineRotationErrors.length > 0 ? Math.max(...spineRotationErrors) : null
+          : visualSegment?.sourceError;
+        return {
+          confidence,
+          error,
+          frameIndex: frame.frameIndex,
+          outcome: classifyRenderedFidelitySample({
+            confidence,
+            error,
+            hasProof: usesSpineDriveOwner ? spineRotationErrors.length === 9 : Boolean(visualSegment),
+          }),
+        };
+      });
+      const sorted = [...samples].sort((left, right) => (right.error ?? -1) - (left.error ?? -1));
+      const repairSamples = samples.filter((sample) => isRenderedFidelityRepairOutcome(sample.outcome));
+      const proofLimitedSamples = samples.filter((sample) => sample.outcome === "proof-limited");
+      const severeSamples = samples.filter((sample) => sample.outcome === "severe");
+      const blockedSamples = samples.filter((sample) => sample.outcome === "blocked");
+      const repairRequiredSamples = samples.filter((sample) => sample.outcome === "repair-required");
+      if (severeSamples.length > 0) {
+        failures.push({ code: "three-party-source-fidelity-severe", count: severeSamples.length, role, segment });
+      }
+      if (blockedSamples.length > 0) {
+        failures.push({ code: "three-party-source-fidelity-blocked", count: blockedSamples.length, role, segment });
+      }
+      if (repairRequiredSamples.length > 0) {
+        failures.push({ code: "three-party-source-fidelity-repair-required", count: repairRequiredSamples.length, role, segment });
+      }
+      if (proofLimitedSamples.length > 0) {
+        failures.push({ code: "three-party-source-fidelity-proof-limited", count: proofLimitedSamples.length, role, segment });
+      }
+      return [segment, {
+        maxError: round(sorted[0]?.error),
+        proofLimitedSampleCount: proofLimitedSamples.length,
+        repairSampleCount: repairSamples.length,
+        sampleCount: samples.length,
+        sustainedRepairRuns: contiguousRenderedFidelityRuns(
+          samples,
+          (sample) => isRenderedFidelityRepairOutcome(sample.outcome),
+        )
+          .filter((run) => run.length >= RENDERED_FIDELITY_POLICY.sustainedRepairFrames)
+          .slice(0, 10)
+          .map((run) => ({
+            frameEnd: run.at(-1).frameIndex,
+            frameStart: run[0].frameIndex,
+            length: run.length,
+            maxError: round(Math.max(...run.map((sample) => sample.error ?? 0))),
+          })),
+        worstFrames: sorted.slice(0, 20).map((sample) => ({
+          confidence: round(sample.confidence),
+          error: round(sample.error),
+          frameIndex: sample.frameIndex,
+          outcome: sample.outcome,
+        })),
+      }];
+    }));
+    const head = Object.fromEntries(["pitch", "roll", "yaw"].map((axis) => {
+      const targetKey = `bone${axis[0].toUpperCase()}${axis.slice(1)}`;
+      const renderedKey = `appliedWorld${axis[0].toUpperCase()}${axis.slice(1)}`;
+      const calibrationFrame = frames.find((frame) => {
+        const debug = frame.avatars?.[role];
+        return (
+          (debug?.headRaw?.confidence ?? 0) >= RENDERED_FIDELITY_POLICY.trustworthyConfidence &&
+          Number.isFinite(debug?.avatarHead?.[targetKey]) &&
+          Number.isFinite(debug?.avatarHead?.[renderedKey])
+        );
+      });
+      const calibrationDebug = calibrationFrame?.avatars?.[role];
+      const baselineOffset = signedAxialDifference(
+        axis,
+        calibrationDebug?.avatarHead?.[renderedKey],
+        calibrationDebug?.avatarHead?.[targetKey],
+      );
+      const samples = frames.flatMap((frame) => {
+        const debug = frame.avatars?.[role];
+        const target = debug?.avatarHead?.[targetKey];
+        const rendered = debug?.avatarHead?.[renderedKey];
+        const quaternionError = headQuaternionAxisError(debug?.avatarHead, axis);
+        const error = Number.isFinite(quaternionError)
+          ? quaternionError
+          : Number.isFinite(target) && Number.isFinite(rendered) && Number.isFinite(baselineOffset)
+            ? Math.abs(signedAxialDifference(axis, rendered - baselineOffset, target))
+            : null;
+        if (!Number.isFinite(error)) return [];
+        const confidence = debug?.headRaw?.confidence;
+        return [{
+          confidence,
+          error,
+          frameIndex: frame.frameIndex,
+          outcome: classifyRenderedFidelitySample({ confidence, error }),
+        }];
+      });
+      const sorted = [...samples].sort((left, right) => right.error - left.error);
+      for (const [outcome, code] of [
+        ["severe", "three-party-source-head-fidelity-severe"],
+        ["blocked", "three-party-source-head-fidelity-blocked"],
+        ["repair-required", "three-party-source-head-fidelity-repair-required"],
+      ]) {
+        const count = samples.filter((sample) => sample.outcome === outcome).length;
+        if (count > 0) failures.push({ code, count, role, axis });
+      }
+      return [axis, {
+        calibrationFrameIndex: calibrationFrame?.frameIndex ?? null,
+        calibrationOffsetRadians: round(baselineOffset),
+        maxErrorRadians: round(sorted[0]?.error),
+        repairSampleCount: samples.filter((sample) => isRenderedFidelityRepairOutcome(sample.outcome)).length,
+        sampleCount: samples.length,
+        thresholdRadians: RENDERED_FIDELITY_POLICY.headAxisMaxRadians,
+        worstFrames: sorted.slice(0, 20).map((sample) => ({
+          errorRadians: round(sample.error),
+          frameIndex: sample.frameIndex,
+          outcome: sample.outcome,
+        })),
+      }];
+    }));
+    return [role, { head, segments }];
+  }));
+  return {
+    policy: RENDERED_FIDELITY_POLICY,
+    policyVersion: RENDERED_FIDELITY_POLICY_VERSION,
+    roles,
+  };
+}
+
 export function analyzeThreePartyReplay({ telemetry }) {
   const frameInspection = inspectReplayTelemetryFrames({
     frameCount: telemetry.frameCount,
@@ -151,6 +346,7 @@ export function analyzeThreePartyReplay({ telemetry }) {
   if (missingRoleFrames.length > 0) {
     failures.push({ code: "three-party-rendered-role-missing", count: missingRoleFrames.length });
   }
+  const sourceFidelity = sourceFidelitySummary({ failures, frames });
 
   const segments = Object.fromEntries(Object.entries(SEGMENT_THRESHOLDS).map(([segment, threshold]) => {
     const samples = [];
@@ -276,6 +472,7 @@ export function analyzeThreePartyReplay({ telemetry }) {
     proofMode: telemetry.proofMode ?? "unknown",
     segments,
     sessionId: telemetry.sessionId,
+    sourceFidelity,
     status: failures.length === 0 ? "passed" : "blocked",
   };
 }

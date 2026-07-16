@@ -2,8 +2,10 @@ import type { VRM } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
+  consumeMovementAvatarRuntimeFrameJumpReset,
   resetMovementAvatarRuntimeForFrameJump,
   resetMovementAvatarRuntimeRefs,
+  shouldResetMovementAvatarRuntimeForFrameSeek,
   type MovementAvatarRuntimeResetRefs,
 } from "./movementAvatarRuntimeReset";
 
@@ -94,7 +96,29 @@ function buildRefs(): MovementAvatarRuntimeResetRefs {
 }
 
 describe("movementAvatarRuntimeReset", () => {
-  it("restores normalized bones before rebuilding frame-jump state", () => {
+  it("preserves temporal continuity for adjacent Replay frames", () => {
+    expect(shouldResetMovementAvatarRuntimeForFrameSeek({
+      nextFrameIndex: 281,
+      previousFrameIndex: 280,
+    })).toBe(false);
+    expect(shouldResetMovementAvatarRuntimeForFrameSeek({
+      nextFrameIndex: 280,
+      previousFrameIndex: 281,
+    })).toBe(false);
+    expect(shouldResetMovementAvatarRuntimeForFrameSeek({
+      nextFrameIndex: 281,
+      previousFrameIndex: null,
+    })).toBe(false);
+  });
+
+  it("clears temporal history for discontinuous Replay seeks", () => {
+    expect(shouldResetMovementAvatarRuntimeForFrameSeek({
+      nextFrameIndex: 281,
+      previousFrameIndex: 12,
+    })).toBe(true);
+  });
+
+  it("clears temporal frame-jump state without resetting the visible rig", () => {
     const refs = buildRefs();
     const resetNormalizedPose = vi.fn();
     const vrm = {
@@ -109,9 +133,40 @@ describe("movementAvatarRuntimeReset", () => {
 
     resetMovementAvatarRuntimeForFrameJump({ refs, vrm });
 
-    expect(resetNormalizedPose).toHaveBeenCalledOnce();
-    expect(refs.baseHipsPositionRef.current).toBeNull();
+    expect(resetNormalizedPose).not.toHaveBeenCalled();
+    expect(refs.baseHipsPositionRef.current).toEqual(new THREE.Vector3(1, 1, 1));
+    expect(refs.baseBonePositionRef.current).toHaveProperty("head");
+    expect(refs.retargetSourceModelRef.current).not.toBeNull();
+    expect(refs.rigMeasurementsRef.current).not.toBeNull();
+    expect(refs.setupStateRef.current.autoCalibration.calibration).not.toBeNull();
+    expect(refs.liveRootMotionHistoryRef.current).toEqual([]);
+    expect(refs.plantedFootLockRef.current).toMatchObject({
+      left: null,
+      right: null,
+      strength: 0,
+    });
     expect(refs.lastGoodQuatRef.current).toEqual({});
+  });
+
+  it("consumes a queued frame jump once when the new pose is ready to apply", () => {
+    const refs = buildRefs();
+    const pendingResetRef = ref(true);
+    const resetNormalizedPose = vi.fn();
+    const vrm = {
+      humanoid: {
+        getNormalizedBoneNode: vi.fn(() => null),
+        resetNormalizedPose,
+      },
+      scene: {
+        updateMatrixWorld: vi.fn(),
+      },
+    } as unknown as VRM;
+
+    expect(consumeMovementAvatarRuntimeFrameJumpReset({ pendingResetRef, refs, vrm })).toBe(true);
+    expect(pendingResetRef.current).toBe(false);
+    expect(resetNormalizedPose).not.toHaveBeenCalled();
+    expect(consumeMovementAvatarRuntimeFrameJumpReset({ pendingResetRef, refs, vrm })).toBe(false);
+    expect(resetNormalizedPose).not.toHaveBeenCalled();
   });
 
   it("resets avatar runtime refs when a new VRM is loaded", () => {

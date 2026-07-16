@@ -35,7 +35,9 @@ export type MovementAvatarSpineApplicationMode = "active" | "solver" | "neutral"
 export type MovementAvatarSpineRuntimeDebugTelemetry = Pick<
   MovementAvatarPlayerSpineDrive,
   "confidence" | "forwardLean" | "owner" | "sideBend" | "twist"
->;
+> & {
+  targetRotations: MovementAvatarPlayerSpineDrive["rotations"];
+};
 
 export function buildMovementAvatarSpineRuntimeDebugTelemetry(
   spineDrive: MovementAvatarPlayerSpineDrive,
@@ -45,6 +47,7 @@ export function buildMovementAvatarSpineRuntimeDebugTelemetry(
     forwardLean: spineDrive.forwardLean,
     owner: spineDrive.owner,
     sideBend: spineDrive.sideBend,
+    targetRotations: spineDrive.rotations,
     twist: spineDrive.twist,
   };
 }

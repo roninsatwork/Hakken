@@ -148,6 +148,8 @@ Before changing movement-side behaviour, read **[Movement Mirror And Side-Owners
 
 Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the movement agent debugging workflow, read **[Replay Studio Agent Repair Harness Plan](./plans/active/replay-studio-agent-repair-harness-plan.md)**. Replay Studio is the recorded-motion source of truth; use the targeted, fast-subset, and all-nine rendered proof tiers before claiming shared-avatar acceptance, and treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
 
+For rendered fidelity thresholds, absolute head/spine/arm matching, neutral/standing continuity, and manual seek acceptance, also read **[Replay Lab Visual Acceptance Tightening Plan](./plans/active/replay-lab-visual-acceptance-tightening-plan.md)**. Human review reopened acceptance at `Full Motion Exercises` frame 281; the strengthened plan defines the `0.10` clean-frame ceiling and the ordered targeted-to-all-nine repair proof.
+
 - [Movement Tracking](./developer/movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)
 - [Movement Demo Game And Replay Parity Plan](./developer/movement-demo-game-replay-parity-plan.md)

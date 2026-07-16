@@ -64,15 +64,14 @@ export function applyMovementAvatarHeadApplication({
   shouldApplyHeadMotion: boolean;
   upperChestCompensationSlerp: number;
 }): MovementAvatarHeadApplicationResult {
-  const headResult = applyMovementAvatarHeadQuaternionTarget({
-    headBonePitch,
-    headNode,
-    headRoll,
-    headWorldYaw,
-    slerp: headSlerp,
-  });
-
   if (!shouldApplyHeadMotion) {
+    const headResult = applyMovementAvatarHeadQuaternionTarget({
+      headBonePitch,
+      headNode,
+      headRoll,
+      headWorldYaw,
+      slerp: headSlerp,
+    });
     return {
       appliedHead: headResult.applied,
       appliedHeadPositionOffset: false,
@@ -97,6 +96,15 @@ export function applyMovementAvatarHeadApplication({
     apply: applyUpperChestCompensation,
     compensation: headApplicationPose.upperChestCompensation,
     slerp: upperChestCompensationSlerp,
+  });
+  // Neck and upper chest are parents of the head. Apply them first so the
+  // final head-local solve uses the parent transforms rendered this frame.
+  const headResult = applyMovementAvatarHeadQuaternionTarget({
+    headBonePitch,
+    headNode,
+    headRoll,
+    headWorldYaw,
+    slerp: headSlerp,
   });
 
   return {

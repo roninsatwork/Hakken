@@ -60,6 +60,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   avatarRole,
   canApply = true,
   currentRestMap,
+  frameDeltaSeconds,
   instructorSquatPresentationDepth,
   lookupBone,
   lowerBodySegmentMotion,
@@ -72,6 +73,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
   avatarRole: "instructor" | "player";
   canApply?: boolean;
   currentRestMap: MovementAvatarRetargetRestMap;
+  frameDeltaSeconds?: number;
   instructorSquatPresentationDepth: number;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
   lowerBodySegmentMotion: number;
@@ -97,6 +99,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
         avatarRole,
         canApply,
         currentRestMap: restMap,
+        frameDeltaSeconds,
         lookupBone,
         mapping,
         refreshRestMap,
@@ -120,6 +123,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeMappingsToVrmBones({
 export function applyMovementAvatarRetargetSegmentRuntimeFrame({
   avatarRole,
   currentRestMap,
+  frameDeltaSeconds,
   instructorSquatPresentationDepth,
   lastGood,
   lookupBone,
@@ -131,6 +135,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
 }: {
   avatarRole: "instructor" | "player";
   currentRestMap: MovementAvatarRetargetRestMap;
+  frameDeltaSeconds?: number;
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -144,6 +149,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
     avatarRole,
     canApply: Boolean(vrm),
     currentRestMap,
+    frameDeltaSeconds,
     instructorSquatPresentationDepth,
     lookupBone,
     lowerBodySegmentMotion,
@@ -151,7 +157,7 @@ export function applyMovementAvatarRetargetSegmentRuntimeFrame({
     profile,
     refreshRestMap: () => vrm ? buildMovementAvatarRetargetRestMap(vrm) : currentRestMap,
     retargetFrame,
-      storeLastGood: (lastGoodBoneName, quaternion) => {
+    storeLastGood: (lastGoodBoneName, quaternion) => {
       lastGood[lastGoodBoneName] = quaternion;
     },
   });
@@ -286,6 +292,7 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   avatarRole,
   avatarRoot,
   currentRestMap,
+  frameDeltaSeconds,
   instructorSquatPresentationDepth,
   lastGood,
   lookupBone,
@@ -297,6 +304,7 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
   currentRestMap: MovementAvatarRetargetRestMap;
+  frameDeltaSeconds?: number;
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -325,6 +333,7 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
       const application = applyMovementAvatarRetargetSegmentRuntimeFrame({
         avatarRole,
         currentRestMap: restMap,
+        frameDeltaSeconds,
         instructorSquatPresentationDepth,
         lastGood,
         lookupBone,
@@ -332,7 +341,7 @@ export function createMovementAvatarRetargetFrameRuntimeAdapters({
         mappings,
         profile,
         retargetFrame,
-              vrm,
+        vrm,
       });
       restMap = application.restMap;
 
@@ -374,6 +383,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   avatarRole,
   avatarRoot,
   currentRestMap,
+  frameDeltaSeconds,
   instructorSquatPresentationDepth,
   lastGood,
   lookupBone,
@@ -386,6 +396,7 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
   avatarRole: "instructor" | "player";
   avatarRoot: THREE.Object3D | null | undefined;
   currentRestMap: MovementAvatarRetargetRestMap;
+  frameDeltaSeconds?: number;
   instructorSquatPresentationDepth: number;
   lastGood: Record<string, THREE.Quaternion>;
   lookupBone: (boneName: MovementAvatarRetargetBoneName) => THREE.Object3D | null | undefined;
@@ -406,13 +417,14 @@ export function resolveMovementAvatarFrameTargetRetargetOrchestrationRuntime({
       avatarRole,
       avatarRoot,
       currentRestMap,
+      frameDeltaSeconds,
       instructorSquatPresentationDepth,
       lastGood,
       lookupBone,
       lowerBodySegmentMotion,
       profile,
       retargetFrame,
-          vrm,
+      vrm,
     }),
   };
 }
@@ -430,6 +442,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   activeSpineDrive,
   armRelaxedSlerp,
   avatarRole,
+  frameDeltaSeconds,
   lastGood,
   leftArmDecision,
   leftArmRetargetApplied,
@@ -443,6 +456,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   activeSpineDrive: MovementAvatarPlayerSpineDrive;
   armRelaxedSlerp: number;
   avatarRole: "instructor" | "player";
+  frameDeltaSeconds?: number;
   lastGood: Record<string, THREE.Quaternion>;
   leftArmDecision: MovementAvatarArmDecision;
   leftArmRetargetApplied: boolean;
@@ -456,6 +470,7 @@ export function applyMovementAvatarUpperBodyRuntimeToVrmBones({
   const spine = applyMovementAvatarSpinePoseApplicationToVrmBones({
     activeSpineDrive,
     avatarRole,
+    frameDeltaSeconds,
     lookupBone,
     shouldApplySolverTorso,
     // The Kalidokit solver torso is retired: with no solver sources the solver
@@ -506,6 +521,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   applyRetargetMappings,
   avatarRole,
   boneEaseOptions,
+  frameDeltaSeconds,
   lastGood,
   leftArmDecision,
   lookupBone,
@@ -517,6 +533,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
   applyRetargetMappings: (mappings: MovementAvatarRetargetBoneMapping[]) => { applied: number };
   avatarRole: "instructor" | "player";
   boneEaseOptions: Pick<MovementAvatarBoneEaseOptionsDecision, "armRelaxedSlerp">;
+  frameDeltaSeconds?: number;
   lastGood: Record<string, THREE.Quaternion>;
   leftArmDecision: MovementAvatarArmDecision;
   lookupBone: (boneName: string) => THREE.Object3D | null | undefined;
@@ -534,6 +551,7 @@ export function applyMovementAvatarUpperBodyFrameRuntime({
     activeSpineDrive,
     armRelaxedSlerp: boneEaseOptions.armRelaxedSlerp,
     avatarRole,
+    frameDeltaSeconds,
     lastGood,
     leftArmDecision,
     leftArmRetargetApplied: true,
@@ -997,6 +1015,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   balancedPlantedSquatDepth,
   boneEaseOptions,
   currentRestMap,
+  frameDeltaSeconds,
   instructorSquatPresentationDepth,
   lastGoodQuaternionRef,
   leftArmDecision,
@@ -1028,6 +1047,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
   boneEaseOptions: MovementAvatarUpperBodyFrameOrchestrationInput["boneEaseOptions"] &
     MovementAvatarLowerBodyFrameOrchestrationInput["boneEaseOptions"];
   currentRestMap: MovementAvatarFrameTargetRetargetInput["currentRestMap"];
+  frameDeltaSeconds?: number;
   instructorSquatPresentationDepth: number;
   lastGoodQuaternionRef: MovementAvatarUpperBodyFrameOrchestrationInput["lastGoodQuaternionRef"];
   leftArmDecision: MovementAvatarUpperBodyFrameOrchestrationInput["leftArmDecision"];
@@ -1056,6 +1076,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     avatarRole,
     avatarRoot,
     currentRestMap,
+    frameDeltaSeconds,
     instructorSquatPresentationDepth,
     lastGood: lastGoodQuaternionRef.current,
     lookupBone,
@@ -1074,6 +1095,7 @@ export function applyMovementAvatarBodyFrameOrchestrationRuntime({
     activeSpineDrive,
     avatarRole,
     boneEaseOptions,
+    frameDeltaSeconds,
     lastGoodQuaternionRef,
     leftArmDecision,
     lookupBone,

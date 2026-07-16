@@ -1,31 +1,65 @@
 # Replay Studio Agent Repair Harness Plan
 
-Last reviewed: 2026-07-14
-Status: active controlling plan. Current-fingerprint rendered acceptance is now certified across all nine recordings with complete frame accounting. The remaining product acceptance lane is manual Replay review followed by a short Game Studio live-camera confirmation; broader repair-packet and timed-playback enhancements remain open.
+Last reviewed: 2026-07-16
+Status: active controlling plan. The final-fingerprint all-nine refresh passes 9/9 recordings with all `34,149/34,149` lane-frames accounted for and zero missing. Replay rendered acceptance, real slider-drag convergence, and the final telemetry-backed repair packet are reclaimed under the strengthened `0.10` contract. Only final Game Studio live confirmation remains open.
 Scope: turn Replay Studio from a useful human QA screen into a deterministic repair harness that a coding agent can use to reproduce, diagnose, fix, and re-prove avatar motion from one saved recording.
 
-## Latest State Of Play, 2026-07-14
+Current visual-fidelity execution plan: [`replay-lab-visual-acceptance-tightening-plan.md`](./replay-lab-visual-acceptance-tightening-plan.md). Read it before changing rendered fidelity thresholds, head/spine/arm acceptance, neutral/standing continuity, or manual Replay seeking.
 
-Plan completion score: **90%** against the full Definition of Done.
+## Latest State Of Play, 2026-07-15
+
+Plan completion score: **99%** against the full Definition of Done after repairing and proving the real Replay playback/seek path, durable slider dragging, the Full Spinal Flow root/support and strict `0.10` handoff failures, final-fingerprint all-nine acceptance, and telemetry-backed packet consolidation; only Game Studio live confirmation remains.
 
 Current shape of the work:
 
 - Harness infrastructure is mostly built: canonical repair packets, fixture resolution, source identity, browser diagnosis/export parity, strict fail-closed accounting, and non-repository CLI bundle scratch handling are in place.
-- Current rendered acceptance passes **9 of 9** acceptance recordings under the current motion-pipeline fingerprint and named `movement-game-runtime-v1` contract. Deterministic Game-player and independent paired Game instructor/player paths each account for **11,383/11,383** rendered frames, while intended-time Game-player playback processes **11,383/11,383** source frames. All three paths have zero missing frames and zero failures.
-- The final certification artifact is `tmp/movement-replay-lab/current-nine-recording-proof-final-v3-2026-07-14/`. It is local generated evidence and remains intentionally uncommitted; `manifest.json` and `bundle-report.json` hold the controlling result.
+- The July 14 run reported **9 of 9** acceptance recordings under the then-current motion-pipeline fingerprint and named `movement-game-runtime-v1` contract. Deterministic Game-player and independent paired Game instructor/player paths each accounted for **11,383/11,383** rendered frames, while intended-time Game-player playback processed **11,383/11,383** source frames. This remains historical coverage/mirror/parity evidence, not current strengthened visual-fidelity acceptance.
+- The missing July 14 directory is not reused. The fresh controlling proof is `tmp/movement-replay-lab/current-nine-recording-proof-2026-07-15-final-timing/`, with the strict accepted report at `bundle-report.final.json`.
+- Human review at `Full Motion Exercises` frame 281 found visible neutral/standing jerk and incorrect head/arm presentation. The retained passing artifact reports average upper-body error `0.2939`, left upper-arm error `0.6694`, and spine error `0.2592`; the strengthened plan sets `0.10` as the clean-frame ceiling for trustworthy comparisons.
+- The shared seek runtime no longer resets visible VRM bones: adjacent Previous/Next frames preserve continuity, while discontinuous seeks clear temporal history without clearing rig/source calibration. Previous/Next, slider, and seek-then-play now have rendered interaction proof in addition to deterministic certification.
 - The repair retained the established partial lower-body chain through brief opposite-knee occlusion, made articulated arm depth use one coherent display-anatomical space, and strengthened the independent side-adherence analysis so it compares meaningful joint-relative/world-space motion without treating near-collinear upper-arm/spine geometry as side evidence.
-- The latest fast subset also passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises`, and a targeted `Body Capture 3D` rerun passes **1,815/1,815** frames on each strict path.
+- The prior fast subset and all-nine bundle passed their then-current fingerprint. Final-fingerprint timed browser proof now passes `Full Motion Exercises` (`3,026/3,026` rendered), `Star Jumps` (`708/708`), and `Body Capture 3D` (`1,815/1,815`) with zero missing frames and no persistent jerk or neutral-reset failure.
 - The repair loop does **not** need to run all nine recordings after every code change. The runner now has executable targeted and fast-subset tiers, with repair-labeled manifests that cannot be mistaken for all-nine acceptance.
-- The next acceptance slice is human visual review in Replay Lab, followed by final Game Studio live confirmation. Replay acceptance must not be described as live-camera acceptance.
+- Human Replay review now covers frames 279-283, Previous/Next, discontinuous selection, seek-then-play, and uninterrupted playback. The final-fingerprint all-nine refresh and durable slider proof pass; the next acceptance slice is Game Studio live confirmation.
+- The sanitized historical frames 279-283 red fixture now exists with immutable source identity and independent expected/final direction evidence. Current head telemetry also preserves target/final world quaternions, so absolute head application proof cannot hide a constant error behind first-frame calibration. Fresh current-fingerprint rendering remains the next gate.
+- Fresh current-fingerprint deterministic proof now passes `Full Motion Exercises` across **3,026/3,026** rendered frames with zero missing frames, zero neutral resets, zero owner flickers, and zero strict `0.10` fidelity failures. Frame 281 now reports zero average upper-body error instead of the historical `0.2939` false green.
+- Uninterrupted timed proof no longer sparsely samples a catch-up clock: Replay schedules one source frame per visible tick and substitutes nominal FPS for stalled timestamps. A persistent three-frame per-segment jerk blocks even below one percent of a recording. Arm targets are capped at `4.8 rad/s`; low-confidence upper-arm reacquisition is flattened, while a source-limited lower arm remains attached to its world target so its moving parent cannot create a delayed forearm snap.
+- The complete `current-nine-recording-proof-2026-07-15-delta-aware` refresh accounted for **34,149 lane-frames**: `11,383/11,383` deterministic player frames, `11,383/11,383` intended-time processed source frames, and `11,383/11,383` three-party frames, with zero missing. After correcting held-spine and rounded-vector analyzer defects, the bundle was honestly **7/9**, with Star Jumps and Body Capture still blocked by rendered fidelity. Later runtime changes make this bundle stale rather than accepted.
+- A later latest-runtime all-nine refresh at `current-nine-recording-proof-2026-07-15-final-jerk` again accounted for all **34,149 lane-frames** with zero missing and advanced to **8/9**: Star Jumps and Body Capture passed. Full Spinal Flow alone blocked because timed frame 898 measured spine error `0.1001`, and the held-static detector counted final frames 1287-1289 even though they reported `appliedLowerBody: 0` with neutral fallback.
+- The final-fingerprint refresh at `current-nine-recording-proof-2026-07-15-final-0-10` passes **9/9**. Deterministic player, intended-time player, and three-party lanes each render and compare/process `11,383/11,383` frames with zero missing, for **34,149/34,149** total lane-frames and zero failures.
+- Durable browser proof at `full-motion-slider-seek-final-0-10` physically drags the Replay range control through `281 -> 1500 -> 281 -> 3025 -> 281`, then uses exact range-key convergence where pixel resolution requires it. All **5/5** events commit the requested frame, remain paused, refresh final VRM telemetry, and pass the shared `0.10` head/spine/arm policy with zero repair samples; the worst trustworthy settled error is below `0.000047`.
+- `movement:diagnose` now accepts `--rendered-telemetry` and fails closed unless that telemetry matches the recording/session, source hash, expected frame count, zero-missing accounting, and final-VRM frame shape. The consolidated frame-281 packet at `final-replay-repair-packet-2026-07-16.json` reports **accepted / none**, `3,026/3,026` rendered and compared frames, zero silent skips, and preserves the exact telemetry-backed reproduce command.
+- Full Spinal Flow exposed a real two-frame root/foot snap around frames 801-802 even though the then-current persistent-jerk gate passed it. Root command history is now isolated from the post-command support correction, low-confidence contact changes retain planted ownership, and the planted-squat presentation model remains active when that contact change is suppressed.
+- The analyzer now blocks any isolated rendered step of `0.25` or more in timed playback, in addition to its percentage and persistent-run gates. This prevents the former approximately `0.52` foot-clearance plunge from passing merely because it lasted fewer than three frames.
+- The held-static analyzer now requires lower-body retargeting to be applied on both adjacent frames before an unused leg source target can block. The active spine final-writer cap is `0.064` radians per 60 fps step, retaining bounded reacquisition while providing deterministic margin below `0.10`.
+- Final-fingerprint Full Spinal Flow proof at `full-spinal-final-0-10-proof` passes all three lanes at **1,290/1,290** frames each with zero missing and zero failures. Timed playback has zero severe snaps and no persistent jerk; frame 898 and the sequence-wide spine maximum are `0.0802`, below the unchanged `0.10` limit. The right-thigh static count is now correctly zero because the final neutral-fallback targets were not applied.
 
 Subscores:
 
 | Area | Score | Current status |
 | --- | ---: | --- |
-| Repair-harness infrastructure | 95% | Packets, routing, fixtures, strict accounting, tiered browser proof commands, browser diagnosis, and export parity are substantially implemented. |
-| Full Definition of Done | 90% | Missing per-bone target/final packet evidence, timed playback acceptance, human Replay review, and Game Studio live confirmation. |
-| Current strict rendered acceptance | 100% recording coverage | Current-fingerprint proof passes 9/9 recordings and 22,766/22,766 rendered frame-path checks with zero missing and zero failures. |
+| Repair-harness infrastructure | 98% | Packets, routing, fixtures, strict accounting, tiered browser proof commands, physical slider-drag convergence, browser diagnosis, export parity, and all-nine orchestration are substantially implemented. |
+| Full Definition of Done | 99% | Real Replay seeking/playback, durable slider proof, focused Full Spinal proof, final-fingerprint all-nine acceptance, and telemetry-backed packet consolidation pass; only Game Studio live confirmation remains. |
+| Current strict rendered acceptance | Global pass | All nine recordings pass deterministic, intended-time, and three-party proof at `11,383/11,383` frames per lane, zero missing and zero failures. |
 | Current tiered proof ergonomics | 100% | `movement:replay:targeted-proof`, `movement:replay:fast-subset-proof`, and final `movement:replay:nine-proof` are distinct commands with distinct manifest labels. |
+
+## Rendered Fidelity Reopening, 2026-07-15
+
+The record-once repair loop now starts with `Full Motion Exercises` frames 279-283. The repair packet must preserve independent expected and final rendered evidence for spine, both upper arms, both lower arms, head forward/up axes, calibrated head pitch/yaw/roll, hips/root height, and manual seek continuity.
+
+The strengthened acceptance policy is controlled by [`replay-lab-visual-acceptance-tightening-plan.md`](./replay-lab-visual-acceptance-tightening-plan.md):
+
+- trustworthy segment error `<= 0.10` passes;
+- error above `0.10` is repair-required and cannot be silently accepted;
+- three consecutive trustworthy frames above `0.10` block;
+- a trustworthy frame above `0.15` blocks immediately;
+- any trustworthy comparison above `0.25` is severe and blocking;
+- source-limited comparisons remain in full frame accounting and do not count as accepted;
+- every required segment is judged independently, so averages cannot hide a broken arm or spine;
+- instructor/player agreement is insufficient when both avatars disagree with the independent expected source pose;
+- Previous, Next, slider, and seek-then-play must not expose a normalized-pose or neutral/standing reset.
+
+Do not rerun all nine recordings as the first response. First make the known-bad targeted window fail under the new gate, repair the owning shared boundary, pass the complete recording, then use the fast subset before final all-nine certification.
 
 ## Tiered Proof Policy, 2026-07-13
 
@@ -70,7 +104,7 @@ npm run movement:replay:nine-proof -- --export <convex-export.zip|dir>
 - The latest current-fingerprint targeted repair now passes `Full Motion Exercises` under both strict paths: **3,026/3,026** player-avatar frames and **3,026/3,026** independent three-party frames, zero missing, and zero failures. The controlling local artifact is `tmp/movement-replay-lab/current-targeted-proof-full-motion-2026-07-13-repair/`; it remains intentionally uncommitted.
 - The repair made two shared proof fixes: lower-arm side ownership now uses raw anatomical source pose for lower-arm dominance while preserving retarget/world-space ownership for upper arms and lower body, and three-party synthetic player startup no longer applies player-calibrated head motion before the instructor recorded head path is active. The three-party analyzer also compares head yaw as a wrapped angle.
 - The latest current-fingerprint fast subset now passes. The controlling local artifact is `tmp/movement-replay-lab/current-fast-subset-proof-2026-07-13-after-full-motion-repair/`; it remains intentionally uncommitted. It covers `Spins` (**648/648** frames per path), `Full Spinal Flow` (**1,290/1,290** frames per path), and `Full Motion Exercises` (**3,026/3,026** frames per path), all with zero missing and zero failures.
-- A fresh current-fingerprint all-nine run was started only as the final regression gate and was stopped at the user's request during the first recording. It is not an acceptance result. Current all-nine status therefore remains open; the historical 9/9 result must not be reported as current strengthened-gate adherence.
+- The pre-playback-clock all-nine run passed its then-current strengthened gate. Player-avatar and three-party deterministic lanes each covered **11,383/11,383** rendered frames, while intended-time playback processed **11,383/11,383** source frames across **3,673** sparse rendered samples. Human playback review proved that sparse timed sampling did not certify every presented frame. Retain this bundle as historical mirror/fidelity evidence until all nine lanes are refreshed under the final fingerprint and one-frame-per-tick contract.
 
 Historical implementation inventory, 2026-07-12. Completion claims below are superseded by the 2026-07-13 adherence repair update above:
 
@@ -126,7 +160,7 @@ Historical implementation inventory, 2026-07-12. Completion claims below are sup
 - Full-sequence telemetry analysis now emits explicit expected/rendered/compared/missing frame accounting and blocks visible one-frame rendered owner snaps as `rendered-owner-flicker` while leaving stable longer transitions and smooth label-only handoffs visible but non-blocking.
 - `npm run movement:replay:full-sequence:bundle` validates a schemaVersion 1 bundle manifest, runs full-sequence analysis for every listed recording, and reports required recording ids plus expected/rendered/compared/missing frame totals. Zero-rendered, malformed, incomplete, wrong-identity, and stale-fingerprint evidence are fail-closed.
 - A committed full-sequence smoke bundle fixture now exercises `movement:replay:full-sequence:bundle -- --json --strict` from source-controlled session/telemetry files, so the bundle validator no longer depends only on ignored `tmp` test artifacts for fresh-checkout proof.
-- Still pending: per-bone expected-versus-final telemetry in repair packets; final canonical batch-policy consolidation; broader durable real-source fixtures; current all-nine rerender/repair; timed-playback acceptance; one-command orchestration; and Game Studio live confirmation.
+- Still pending: final canonical batch-policy consolidation; broader durable real-source fixtures; current all-nine rerender/repair; one-command orchestration; and Game Studio live confirmation. Final target-versus-VRM telemetry and timed-playback acceptance now pass for the controlling `Full Motion Exercises` recording.
 
 ## Rendered Proof Update, 2026-07-12
 
@@ -200,7 +234,7 @@ The final bundle resolves the acceptance-critical portions of the historical aud
 2. Adversarial regressions cover zero rendered data, missing roles, duplicate indexes, stale fingerprints, wrong identity, inverted side bend, visible owner snaps, and incidental lower-limb drift.
 3. The source-only hash excludes retarget, fallback, ownership, and rendered output evidence; the Full Spinal before/fix/after exercise used the same saved source hash.
 4. `movement:replay:nine-proof` now performs canonical export/session resolution, intended-time Game-player capture, deterministic Game-player and paired Game instructor/player capture, runtime-contract validation, and one strict aggregate gate for the configured nine recordings.
-5. The real all-nine rendered bundle is no longer absent: it passed with 11,383/11,383 frames in each proof path.
+5. The real all-nine rendered bundle is no longer absent: its deterministic and three-party paths passed with 11,383/11,383 frames. It is historical until refreshed after the final playback-clock and arm-reacquisition changes.
 
 ### Remaining implementation order beyond acceptance proof
 
@@ -914,14 +948,14 @@ This plan is complete only when all of the following are true:
 - A documented end-to-end exercise proves `record once -> fix -> rerun same proof -> pass`.
 - Game Studio needs only final live confirmation after Replay passes.
 
-The current `Full Spinal Flow` rerun satisfies the strict-rendered-proof and record-once/replay/reprove loop for that recording. The final current-fingerprint all-nine bundle remains open because the fresh run was intentionally stopped; historical 9/9 artifacts do not satisfy the strengthened sustained-divergence gate.
+The Full Motion, Star Jumps, and Body Capture `*.final-child-continuation.*` timed reruns satisfy the real-browser record-once/replay/reprove loop at `5,549/5,549` rendered frames. Final-fingerprint all-nine proof now passes all 34,149 lane-frames with zero missing or failed frames. Latest-fingerprint Full Spinal Flow passes timed, deterministic, and three-party proof at `1,290/1,290` frames per lane after repairing its root/support feedback snap and spine handoff. Human Replay interaction checks pass, including the cross-recording paused-root regression from turned Body Capture frame 1044 to forward-facing Full Motion frame 281, and the durable five-event Full Motion slider proof passes with fresh final-VRM telemetry and zero `0.10` repair samples. Game Studio live confirmation remains open.
 
 ## Progress Baseline
 
-- Overall movement roadmap: approximately 95% for the Replay/avatar acceptance slice; final Game Studio confirmation remains separate.
+- Overall movement roadmap: approximately 98%; real Replay playback/seeking, durable slider convergence, final-fingerprint focused Full Spinal proof, current all-nine acceptance, and packet consolidation pass. Final Game Studio confirmation remains.
 - Existing Replay observability and diagnostic UI capability: approximately 90%.
-- Agent repair harness infrastructure: approximately 92% for contracts, routing, packet writing, fixture discovery, artifact resolution, focused tests, browser diagnosis display, non-repository CLI scratch handling, and strict rendered proof.
-- Agent repair harness against this plan's full Definition of Done: approximately 78%; per-bone packet evidence, final one-command browser orchestration, current all-nine acceptance, timed playback, and final live confirmation remain.
-- Strict real rendered-avatar acceptance proof: **recording-level pass, all-nine open** — current `Full Spinal Flow` passes 1,290/1,290 frames on both proof paths with zero missing and zero failures; the strengthened-gate all-nine run is incomplete.
-- Remaining harness work: complete the current-fingerprint all-nine gate when requested, repair any remaining recordings without weakening thresholds, then perform final Game Studio live confirmation.
+- Agent repair harness infrastructure: 100% for contracts, routing, telemetry-backed packet writing, fixture discovery, artifact resolution, focused tests, browser diagnosis display, durable slider-drag capture, non-repository CLI scratch handling, orchestration, and strict rendered proof.
+- Agent repair harness against this plan's full Definition of Done: approximately 99%; final-fingerprint all-nine recertification, durable slider automation, and packet consolidation pass, while Game Studio live confirmation remains.
+- Strict real rendered-avatar acceptance proof: **final-fingerprint global pass** — all nine recordings pass deterministic, intended-time, and three-party paths at `11,383/11,383` frames per lane, zero missing and zero failures. Full Spinal Flow frame 898 remains `0.0802` against the unchanged `0.10` limit in its focused diagnostic artifact.
+- Remaining work: perform final Game Studio live confirmation without route-specific motion rules and append its result to the accepted Replay handoff.
 - Current planning/documentation correction slice: 100%; implementation changes and this plan update remain uncommitted.

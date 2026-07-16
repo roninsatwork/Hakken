@@ -1,10 +1,163 @@
 # Replay Lab Visual Acceptance Tightening Plan
 
-Last reviewed: 2026-07-10
-Status: active acceptance correction; the previous all-nine acceptance result is reopened.
-Scope: make Replay Lab and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if existing analyzer/parity gates are green.
+Last reviewed: 2026-07-15
+Status: active; final-fingerprint all-nine acceptance passes 9/9 recordings across deterministic, intended-time, and three-party proof, with all `34,149/34,149` lane-frames accounted for and zero missing or failed frames. Durable physical slider-drag convergence passes 5/5 discontinuous targets, and the telemetry-backed frame-281 repair packet is accepted with `3,026/3,026` rendered frames. Only final Game Studio live confirmation remains open.
+Scope: make Replay Lab, full-sequence rendered proof, three-party proof, and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if side ownership, parity, coverage, or aggregate analyzer gates are green.
 
 Controlling follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) owns durable fixtures, repair packets, one-command diagnosis, and agent workflow. This plan remains authoritative for false-green prevention and rendered visual acceptance thresholds.
+
+Related contracts:
+
+- [`movement-mirror-methodology-implementation-plan.md`](./movement-mirror-methodology-implementation-plan.md) owns anatomical identity/opposite mapping and all-nine mirror certification.
+- [`replay-game-runtime-alignment-plan.md`](./replay-game-runtime-alignment-plan.md) owns Replay/Game shared-runtime parity.
+- This plan owns absolute source-to-final-VRM fidelity, per-segment deviation limits, neutral/standing continuity, and manual seek acceptance.
+
+## 2026-07-15 Reopening Decision
+
+The prior automated result proved a narrower contract than the product needs. It proved complete frame accounting, mirror-side ownership, role parity, and selected temporal behavior. It did not prove that the final rendered head, spine, and arms stayed close enough to the recorded source.
+
+The user-visible review of `Full Motion Exercises` at frame 281 is the new controlling red baseline:
+
+| Metric | Observed | New classification |
+| --- | ---: | --- |
+| Average upper-body source-direction error | `0.2939` | Severe; blocking |
+| Left upper-arm source-direction error | `0.6694` | Severe; blocking |
+| Spine source-direction error | `0.2592` | Severe; blocking |
+| Existing Replay UI limit | `0.18` | Already exceeded |
+| New clean-frame pass ceiling | `0.10` | Required for acceptance |
+
+The retained targeted artifact that was labelled passed contains the same frame-281 values. Across its 3,026 rendered frames, 1,444 frames have average upper-body error above `0.18`, and the p95 average upper-body error is `1.0973`. Regardless of whether any individual telemetry transform still needs coordinate-space correction, a proof artifact containing those values cannot be called accepted while the UI and the user-visible avatar identify them as divergence.
+
+The manual frame-step path is a second independent gap. Normal Previous/Next/slider navigation supplies a changing `frameResetKey`, which resets the normalized VRM pose and all smoothing, hold, support, and contact state. Deterministic certification deliberately disables that reset. The visible neutral-to-standing alternation during manual review is therefore outside the path exercised by the passing deterministic suite.
+
+Implementation audit subsequently proved that the retained player artifact's arm `sourceError` values were calculated after a second horizontal reflection in visual telemetry. The player retarget frame had already been mapped into display/application space. The same audit proved that the retained spine `sourceError` compared a retarget segment with bones owned by the separate active spine model. Those historical values remain valid evidence that the artifact and old gate were not acceptance-safe; they are not valid evidence of current arm/spine fidelity after the coordinate/owner repairs. Current proof must use the exact already-mapped arm application direction and the active spine drive's target rotations.
+
+The missing July 14 directory is not reused. A fresh current-fingerprint proof now exists at `tmp/movement-replay-lab/current-nine-recording-proof-2026-07-15-final-timing/`, with an auditable manifest and strict final report in `bundle-report.final.json`.
+
+## 2026-07-15 Implementation Checkpoint
+
+Implemented:
+
+- canonical `0.10 / 0.15 / 0.25` policy with confidence and proof classifications;
+- Replay current-frame thresholds, full-sequence analysis, three-party independent-source analysis, and avatar-follow bundle threshold alignment;
+- exact minimized frame-281 regression assertions;
+- calibrated final-world head pitch/yaw/roll proof instead of raw rig-local Euler comparison;
+- active-spine target-rotation telemetry and owner-aligned spine fidelity;
+- removal of the second player visual-telemetry reflection;
+- queued manual frame-jump reset, consumed only when the selected solved pose can be reapplied in the same render tick.
+- capped temporal target budgets across recorded timestamp stalls instead of snapping to a raw target;
+- source-aware final VRM application timing so sparse render cadence cannot make arms and spine lag their shared target;
+- arm continuity bounded once in world-target space, removing the incorrect child-local cap that fought lower-arm compensation when an upper-arm parent moved;
+- complete three-party rendered proof made authoritative over the older magnitude-only side heuristic, while missing/incomplete three-party evidence and every non-side failure remain blocking.
+- paused Replay proof frames discard temporal target history, so a discontinuous seek resolves the selected pose instead of stopping after one bounded smoothing step between the old and new poses;
+- paused Replay presentation ignores the imperative timed root-motion ref, so a heading retained from playback or a previous recording cannot override the declarative root pose for the newly selected frame;
+- intended-time Replay presents exactly one source frame per scheduled tick, using recorded delay when valid and nominal FPS when timestamps stall, so a catch-up loop cannot process hundreds of poses inside one browser render;
+- temporal jerk acceptance blocks a persistent three-frame run per segment even when the run is less than one percent of a long recording;
+- upper-arm reacquisition uses a deliberately flat fourth-power response ramp while clear `0.90` confidence retains the original response;
+- arm targets are capped at `4.8 rad/s`, and source-limited lower arms retain a responsive world-target continuation band so a moving upper-arm parent cannot carry the forearm away and then snap it back at the `0.30` confidence boundary.
+
+Verification at this checkpoint:
+
+- `npm run verify:env` passed;
+- `npm run lint:all` passed, with only Babel size notices for ignored `tmp` replay bundles;
+- changed-file ESLint and `git diff --check` passed;
+- `npm run typecheck` passed;
+- `npm run test:run` passed: 322 files and 2,325 tests.
+
+The prior all-nine rendered reproof remains valuable historical evidence: deterministic player-avatar and three-party lanes each compared `11,383/11,383` frames and the old timed lane processed every source frame. Human Replay review then exposed two paths that proof did not certify: paused seeks retained one step of temporal target history, and intended-time playback could collapse timestamp stalls between sparse rendered samples. The current controlling timed slice is `tmp/movement-replay-lab/current-nine-recording-proof-2026-07-15-browser-clock/`: the final `*.final-child-continuation.*` artifacts render and compare `Full Motion Exercises` at `3,026/3,026`, `Star Jumps` at `708/708`, and `Body Capture 3D` at `1,815/1,815`, all with zero missing frames, zero persistent jerk runs, zero neutral resets, zero owner flickers, and no strict failures. Star Jumps and Body Capture have zero jerk frames; Full Motion retains only four isolated two-frame foot-clearance diagnostics at frames 1863-1864, with no upper-body jerk. Source-limited arm frames remain labelled source-limited and are not trustworthy clean-frame evidence. All-nine deterministic/timed/three-party refresh and final Game Studio confirmation remain mandatory before product-wide acceptance.
+
+## Deviation Metric Semantics
+
+Rendered segment source-direction error is currently calculated as:
+
+```text
+error = 1 - clamp(dot(renderedDirection, expectedSourceDirection), -1, 1)
+```
+
+Approximate angular meaning for one segment:
+
+| Error | Approximate direction difference |
+| ---: | ---: |
+| `0.10` | `26deg` |
+| `0.15` | `32deg` |
+| `0.18` | `35deg` |
+| `0.25` | `41deg` |
+| `0.2939` | `45deg` |
+| `0.6694` | `71deg` |
+
+The average upper-body error is a diagnostic summary, not an oracle. Acceptance must inspect each required segment independently so several good segments cannot cancel one broken arm or spine.
+
+Before these thresholds become final gates, the expected direction must be proven to be in the same anatomical and coordinate space as the final rendered VRM direction. A telemetry-coordinate defect must be repaired; it is not permission to ignore the metric or call the avatar accepted.
+
+## Strengthened Fidelity Contract
+
+### Source eligibility
+
+Every frame and segment must be classified before fidelity scoring:
+
+| Source evidence | Classification | Acceptance treatment |
+| --- | --- | --- |
+| Segment confidence `>= 0.75`, complete required landmarks, current rendered telemetry | `trustworthy` | Apply all strict fidelity limits. |
+| Segment confidence `>= 0.45` and `< 0.75`, or a brief recoverable occlusion | `limited-review` | Keep visible and report deviation; cannot silently count as accepted. |
+| Segment confidence `< 0.45`, missing required landmarks, or invalid source bounds | `source-limited` | Exclude only from that fidelity comparison, retain in complete frame accounting, and never count it as an accepted comparison. |
+| Missing final VRM telemetry, stale fingerprint, or coordinate-space ambiguity | `proof-limited` | Block acceptance until evidence is repaired. |
+
+Source limitation is per segment, not a whole-recording escape hatch. A weak foot must not prevent trustworthy head, spine, or arm evidence from being judged.
+
+### Segment deviation policy
+
+For every trustworthy head/spine/arm comparison:
+
+| Error | Outcome | Required action |
+| ---: | --- | --- |
+| `<= 0.10` | `pass` | No fidelity repair required. |
+| `> 0.10` and `<= 0.15` | `repair-required` | Keep the frame visible. Three consecutive frames block immediately; an isolated occurrence prevents final `accepted` status until reviewed and repaired or deliberately reclassified with evidence. |
+| `> 0.15` | `blocked` | Immediate high-confidence fidelity failure. |
+| `> 0.25` | `severe` | Immediate blocking failure, highlighted as first/worst evidence. |
+
+The final all-nine result may be `accepted` only when every trustworthy required comparison is `<= 0.10`, every expected frame is accounted for, and no recording remains `repair-required`, `review-only`, `proof-limited`, missing, stale, or skipped.
+
+### Required independent segments
+
+The following must be judged independently on every eligible frame:
+
+- spine;
+- left and right upper arm;
+- left and right lower arm;
+- head forward and up directions;
+- final rendered head pitch, yaw, and roll after neutral calibration;
+- hips/root vertical posture when squat, rise, standing height, or vertical travel is visible.
+
+Hands, feet, thighs, and shins retain their existing stricter movement-specific gates and must be migrated to the same `pass | repair-required | blocked | severe | source-limited | proof-limited` vocabulary in a later whole-body slice.
+
+### Head alignment
+
+Head acceptance must no longer rely only on response correlation or instructor/player agreement. It must compare the source-supported expected head intent with final rendered head-bone telemetry:
+
+- body-local head forward/up direction error must be `<= 0.10` on trustworthy frames;
+- calibrated final pitch, yaw, and roll delta has an initial ceiling of `0.10` radians per axis;
+- reversed sign, a neutralized strong source motion, or a sustained delta above the ceiling is blocking;
+- both avatars agreeing with each other is insufficient if both disagree with the source.
+
+The `0.10`-radian axis ceiling is provisional until the red baseline and a small set of visually accepted neutral/head-motion fixtures establish that rig-neutral conversion is correct. It may be made stricter. It may not be relaxed after a visible failure without explicit product review and before/after evidence.
+
+### Neutral, standing, and vertical continuity
+
+Acceptance must detect source-independent alternation between neutral/rest and the intended standing/moving pose:
+
+- compare final hips/root height, spine direction, head orientation, and arm directions on adjacent rendered frames;
+- detect a one-frame reset toward normalized/rest pose followed by a return to the previous source-supported pose;
+- detect alternating reset/application patterns across Previous, Next, slider, deterministic stepping, and intended-time playback;
+- block any visible reset even if the owner label is stable and even if total event rate is below 1%;
+- preserve genuine source jumps, squat/rise, and fast arm motion by comparing against the source step.
+
+### No average masking
+
+- Average upper-body error remains a useful summary and must itself be `<= 0.10` for trustworthy frames.
+- Every required segment must also pass independently.
+- Whole-recording p95, visual-match percentage, or three-party parity cannot override a failing frame or segment.
+- The gate must report the first failure, worst failure, longest sustained run, and total count for every region.
+- A three-party test must compare both avatars to the independent expected source result, not only to each other.
 
 ## Why This Exists
 
@@ -149,6 +302,163 @@ Tasks:
 
 Expected result: future agents cannot relax the gate back into false green without failing tests.
 
+## Reopened Implementation Sequence, 2026-07-15
+
+The earlier Phase 1-5 work remains useful history, but it did not close absolute rendered fidelity. Execute the following phases in order. Do not start by tuning Jane's bones or weakening the error metric.
+
+### Phase 6: Preserve The Red Baseline And Prove The Metric
+
+Progress: 65%. The frame-281 values, immutable sanitized five-frame red window, coordinate-space defect, manual reset-path divergence, and first-frame head-calibration blind spot are covered. A fresh five-frame current-fingerprint render is still required.
+
+Tasks:
+
+- [x] Record `Full Motion Exercises` frame 281 as the controlling visible false-green example.
+- [x] Record its passing-artifact upper-body, left-upper-arm, and spine errors.
+- [x] Identify that manual stepping resets runtime state while deterministic certification does not.
+- [x] Preserve a minimized, anonymized frame-281 telemetry fixture and exact threshold assertions.
+- [x] Prove that player visual telemetry was reflecting the already-mapped application direction a second time, and remove that false comparison.
+- [x] Prove that raw local head Euler values include rig rest rotation, and replace direct comparison with calibrated final-world head evidence.
+- [x] Preserve a sanitized frame window covering frames 279-283 with immutable source hash, expected 3,026-frame source count, independent expected directions, final rendered directions, and historical-only acceptance metadata.
+- [ ] Add a small visually accepted comparison window for neutral standing and a known-good head/arm pose.
+- [ ] Independently verify source-direction mapping for instructor identity and player-avatar opposite ownership without importing the production mapping helper as the expected oracle.
+- [ ] Prove that error `0.10` corresponds to the intended final-VRM/source comparison rather than a coordinate-space mismatch.
+- [ ] Add a current-fingerprint artifact manifest for the targeted window.
+- [x] Replace first-arbitrary-frame head calibration with target/final world-quaternion proof for current artifacts; constant wrong head orientation must block rather than define the baseline.
+
+Exit criteria:
+
+- The known-bad window fails before any runtime repair.
+- A visually accepted fixture passes without special-case thresholds.
+- The test oracle cannot make both expected and actual wrong in the same way.
+
+### Phase 7: Centralize The Strengthened Acceptance Policy
+
+Progress: 65%. The policy is shared by Replay UI, full-sequence analysis, three-party analysis, and the avatar-follow bundle gate; repair-packet and Markdown export integration remains.
+
+Tasks:
+
+- [x] Define one shared fidelity configuration for the `0.10`, `0.15`, and `0.25` bands, confidence eligibility, sustained-run length, and head-axis ceiling.
+- [x] Add stable outcomes: `pass`, `repair-required`, `blocked`, `severe`, `source-limited`, and `proof-limited`.
+- [ ] Make Replay UI, full-sequence analyzer, three-party analyzer, bundle gate, repair packet, JSON/Markdown exports, and CLI consume the same policy.
+- [ ] Remove any React-only or script-only threshold that can disagree with the canonical result.
+- [ ] Make strict CLI mode exit non-zero for `repair-required`, `blocked`, `severe`, and `proof-limited` results.
+- [ ] Keep `source-limited` frames in expected/rendered accounting and report eligible versus limited comparisons per region.
+
+Exit criteria:
+
+- The same frame produces the same status, failure code, threshold, and evidence classification in UI, CLI, tests, and exported repair packet.
+- No surface can display accepted while another surface reports error above `0.10` on a trustworthy segment.
+
+### Phase 8: Add Per-Segment And Absolute Head Gates
+
+Progress: 75%. Per-segment, average-upper, calibrated head-axis, and independent three-party source gates are implemented; head forward/up vectors and remaining export details are open.
+
+Tasks:
+
+- [x] Gate average upper-body error and spine/arm segment error independently.
+- [ ] Add independent final rendered head forward/up vectors and calibrated pitch/yaw/roll evidence. Calibrated pitch/yaw/roll is complete; forward/up vectors remain.
+- [x] Block instructor/player parity when both rendered avatars agree with each other but disagree with the independent expected source pose.
+- [x] Detect isolated, sustained, and severe error bands without session-average dilution.
+- [ ] Export first, worst, longest-run, and total failure counts per segment and head axis.
+- [ ] Add adversarial fixtures where four segments pass and one arm fails, and where both avatars share the same wrong head/arm transform.
+- [x] Add exact frame-281 regression assertions.
+
+Exit criteria:
+
+- Frame 281 cannot pass.
+- A single severe arm/spine failure cannot be averaged away.
+- Consistently wrong instructor/player agreement cannot satisfy three-party acceptance.
+
+### Phase 9: Make Manual Seeking A First-Class Acceptance Path
+
+Progress: 80%. The normalized-pose flash, stranded-between-poses seek, and stale cross-recording heading mechanisms are repaired and unit-covered. Human browser checks cover Previous/Next, discontinuous frame selection, seek-then-play, frames 279-283, uninterrupted playback, and a turned `Body Capture 3D` frame 1044 to forward-facing `Full Motion Exercises` frame 281 switch; a durable automated browser interaction lane and convergence-boundary export remain.
+
+Tasks:
+
+- [ ] Add a browser harness for Previous, Next, slider seek, non-adjacent seek, and seek-then-play.
+- [ ] Capture final VRM telemetry before seek, during any reset/settle boundary, and after the target frame is stable.
+- [ ] Add a failing test demonstrating the current normalized-pose/runtime-state reset on frames 279-283.
+- [x] Choose and document one continuity strategy:
+  - warm the shared runtime through a bounded preceding-frame window before presenting the target;
+  - restore a deterministic runtime snapshot for the target frame; or
+  - settle the target without exposing the intermediate normalized pose.
+- [x] Queue a discontinuous frame-jump reset until a solved target pose is ready, then clear only temporal history while preserving the visible pose and rig calibration.
+- [x] Preserve adjacent-frame continuity; non-adjacent seeks clear stale root history, foot locks, exercise transitions, holds, and last-good filters without calling `resetNormalizedPose`.
+- [ ] Prove adjacent seeking and intended-time playback converge on the same final pose within the strengthened limits.
+- [x] Prove in the browser that a frame-0 to frame-281 jump resolves the overhead-arm target instead of retaining a one-step intermediate chest pose.
+- [x] Prove in the browser that switching from turned Body Capture frame 1044 to Full Motion frame 281 cannot retain the prior recording's heading; source and avatar face forward with both arms overhead.
+
+Exit criteria:
+
+- No source-independent neutral/standing flash is rendered to the reviewer.
+- Previous/Next and slider navigation are visually stable and deterministic.
+- Arbitrary seeks do not inherit invalid contact, smoothing, or owner state.
+
+### Phase 10: Repair The Shared Motion Pipeline
+
+Progress: 100% for the controlling recording. The shared visual-telemetry reflection, manual reset presentation bug, adjacent-step continuity, discontinuous-seek cleanup, spine/head proof, arm target stability, elapsed-time final VRM application, head parent-write order, and torso ownership conflict are repaired. Deterministic and timed current-fingerprint proof now pass the unchanged `0.10` policy for `Full Motion Exercises`.
+
+Tasks:
+
+- [x] Use the frame-281 repair packet and final-bone telemetry to identify the divergent application stages for spine, each arm, and head.
+- [x] Repair the double-reflected player expected direction at the shared visual-telemetry boundary.
+- [x] Repair reset/application order so manual stepping does not expose normalized pose between selected frames.
+- [x] Repair the remaining retarget smoothing and final VRM application defects exposed by deterministic and timed current-fingerprint proof.
+- [x] Keep Replay and Game Studio on the same shared runtime result; no Replay-only bone rules were added.
+- [x] Avoid per-recording, per-frame, canned-pose, Replay-only, Game-only, and Jane-only behavior.
+- [x] Rerun the same immutable source after every repair and preserve source hash `sha256:47e1940250c10f9855d8b1086308b8f80361a424efc5d3a4e591f0936e204e1f`.
+
+Exit criteria:
+
+- The frame-279-283 window passes the strengthened policy without threshold changes.
+- The visible head, arms, spine, and standing posture match the source during playback and seeking.
+- No lower-body, mirror-side, floor/contact, or Replay/Game parity regression is introduced.
+
+### Phase 11: Tiered Reproof
+
+Progress: 100%. Targeted frame 281, the complete Full Motion slider sequence, and the final-fingerprint all-nine deterministic, intended-time, and three-party bundle pass. Every one of the `34,149/34,149` lane-frames is accounted for with zero failures, and all five discontinuous slider events converge with zero `0.10` repair samples.
+
+Run in this order:
+
+1. Targeted frame-279-283 fidelity and seek proof.
+2. Complete `Full Motion Exercises` targeted proof through deterministic, intended-time, manual-seek, and three-party paths.
+3. Fast subset: `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` or `Full Body Flow`.
+4. Full nine-recording current-fingerprint proof.
+
+The final bundle must report for each recording and region:
+
+- expected, rendered, compared, trustworthy, limited-review, source-limited, proof-limited, repair-required, blocked, and severe frame counts;
+- average, p95, maximum, first failure, worst failure, and longest sustained run;
+- per-segment spine/arm values and head-axis values;
+- manual seek reset/continuity events;
+- source hash, runtime contract, motion-pipeline fingerprint, commit, and exact command;
+- screenshots or strips for every severe failure and the worst non-severe failure.
+
+Exit criteria:
+
+- All nine recordings are regenerated under the current fingerprint and strengthened policy.
+- No historical or missing artifact is inherited into the result.
+- Zero trustworthy comparisons exceed `0.10` at final acceptance.
+- Zero manual seek or intended-time neutral/reset events remain.
+
+### Phase 12: Human Replay And Live Confirmation
+
+Progress: 80%.
+
+Tasks:
+
+- [x] Review `Full Motion Exercises` frames 279-283 through Previous/Next, discontinuous seek, and seek-then-play; complete timed browser telemetry covers all 3,026 frames.
+- [ ] Review head, spine, both arms, squat/rise, standing height, and representative lower-body movement across the remaining acceptance set.
+- [x] Exercise Previous, Next, discontinuous frame selection, seek-then-play, uninterrupted playback, and durable real slider dragging. The automated sequence `281 -> 1500 -> 281 -> 3025 -> 281` passes 5/5 exact commit, paused-state, fresh-telemetry, and `0.10` convergence checks.
+- [ ] Perform the final short Game Studio live-camera confirmation only after Replay proof passes.
+- [x] Update the controlling Replay support claims and handoff documentation from the all-nine and slider artifacts. Final Game Studio confirmation still needs to be appended.
+
+Exit criteria:
+
+- Human review agrees with telemetry and sees no visible head, arm, spine, neutral/standing, or continuity defect.
+- Game Studio confirms the Replay-proven shared result without a route-specific patch.
+- Product acceptance is explicitly recorded with reviewer, date, commit, fingerprint, and artifact path.
+
 ## Proposed Failure Codes
 
 - `visual-acceptance-review-session`
@@ -160,6 +470,16 @@ Expected result: future agents cannot relax the gate back into false green witho
 - `avatar-planted-foot-diverged`
 - `avatar-telemetry-missing`
 - `selected-proof-frame-unaccepted`
+- `rendered-fidelity-repair-required`
+- `rendered-fidelity-severe`
+- `rendered-segment-direction-diverged`
+- `rendered-head-axis-diverged`
+- `rendered-head-vector-diverged`
+- `rendered-neutral-standing-reset`
+- `manual-seek-pose-diverged`
+- `manual-seek-reset-visible`
+- `rendered-fidelity-source-limited`
+- `rendered-fidelity-proof-limited`
 
 ## Gate Commands
 
@@ -169,8 +489,22 @@ Focused tightening checks:
 
 ```bash
 npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/avatar-follow-gate.test.mjs
+npx -p node@22.13.0 npm run test:run -- scripts/movement-debug/analyze-replay-full-sequence.test.mjs scripts/movement-debug/analyze-replay-three-party.test.mjs
+npx -p node@22.13.0 npm run test:run -- 'src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabFrameFailures.test.ts'
 npx -p node@22.13.0 npm run movement:avatar-follow-gate -- --analysis tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.json --manifest tmp/movement-replay-lab/current-avatar-follow-analysis-with-captures.proof-manifest.json
 ```
+
+Reopened targeted proof after the harness supports the new policy:
+
+```bash
+npm run movement:replay:targeted-proof -- \
+  --recording-ids px75fgt11wbg0jvr17j6fc2dvd89trpm \
+  --frame-start 279 \
+  --frame-end 283 \
+  --export <convex-export.zip|dir>
+```
+
+If the existing runner does not yet accept `--frame-start` and `--frame-end`, Phase 6 must add and test those options rather than silently running a different scope.
 
 Before handoff:
 
@@ -191,8 +525,53 @@ Stop and reopen the acceptance contract if any of these happen:
 - A selected proof frame has no avatar telemetry and no sufficient capture-backed proof.
 - A visibly wrong head, spine, arm, or planted-foot frame is treated as accepted.
 - A session summary says pass while the UI shows `avatar_output_diverged`.
+- Any trustworthy head, spine, or arm segment exceeds `0.10` while the final result says accepted.
+- An average or p95 result hides a failing individual segment or frame.
+- Instructor and player avatars agree with each other but both disagree with the independent expected source pose.
+- Previous/Next or slider review exposes a normalized-pose flash that deterministic proof does not exercise.
+- A source-limited or proof-limited comparison is silently counted as passing.
+- A missing or stale July 14 artifact is used as current certification evidence.
+- A threshold is relaxed after seeing a visible failure without explicit product review and before/after evidence.
 
 ## Implementation Log
+
+2026-07-15:
+
+- Human Replay review reopened visual acceptance on `Full Motion Exercises` frame 281. The avatar visibly alternates between a near-neutral/reset state and standing/moving state, while the head and arms do not match the source closely enough.
+- The artifact previously described as passing records frame-281 average upper-body error `0.2939`, left upper-arm error `0.6694`, and spine error `0.2592`, all above the existing `0.18` UI threshold and far above the new `0.10` clean-frame ceiling.
+- The same 3,026-frame artifact contains 1,444 frames above `0.18` average upper-body error and p95 `1.0973`, demonstrating that side ownership, parity, and coverage gates can pass while absolute pose fidelity is wrong.
+- Manual seeking changes `frameResetKey` and resets the VRM/runtime state; deterministic certification disables that reset. Manual frame-step continuity is now an explicit acceptance lane.
+- Product decision: `0.10` is the maximum clean-frame direction error for trustworthy head/spine/arm comparisons. Values above `0.10` require repair; sustained values above `0.10`, high-confidence values above `0.15`, and any value above `0.25` block as defined by the strengthened fidelity contract.
+- Product decision: averages cannot mask individual segments, and two avatars agreeing with the same wrong result is not three-party acceptance.
+- The current-fingerprint July 14 certification directory named in the repair-harness plan is absent locally. A fresh auditable bundle is required before acceptance can be reclaimed.
+- Root cause correction: the first July 15 seek change only delayed the old full reset until a solved frame was available. It still called `resetNormalizedPose` and cleared calibrated rig state on every paused frame index, so rapidly stepping frames repeatedly pulled the visible avatar toward standing. The repaired contract never resets visible bones for a seek.
+- Adjacent Previous/Next navigation now preserves temporal continuity. A discontinuous slider or diagnosis jump clears root history, foot locks, transition/hold state, stability state, and last-good filters, while preserving visible bones, rest mapping, source calibration, rig measurements, and setup calibration.
+- Focused runtime regressions assert both directions of adjacent frame 280/281 navigation do not reset, a 12-to-281 jump does reset temporal history, and neither frame-jump path calls `resetNormalizedPose`.
+- Added `full-motion-frames-279-283-fidelity.json`, a sanitized immutable red window with source hash `sha256:47e1940250c10f9855d8b1086308b8f80361a424efc5d3a4e591f0936e204e1f`, source frame count `3026`, source indexes 279-283, and historical-only acceptance metadata. Its independent direction vectors reproduce the retained dot-product errors without raw landmarks.
+- The five-frame window proves sustained historical divergence: average upper-body error remains `0.2907-0.2972`, left upper-arm error remains `0.6532-0.6870`, and right lower-arm error remains `0.2798-0.3345`. The historical active-spine owner lacks its own target rotations, so the strengthened analyzer correctly reports those five spine samples as proof-limited rather than reusing the cross-owner visual metric.
+- Head proof no longer uses the first trustworthy rendered movement frame as a rest offset. Current telemetry records target and final world quaternions; the analyzer computes the real quaternion delta per pitch/yaw/roll axis. A constant `0.20`-radian wrong orientation now blocks all frames, and current-fingerprint artifacts missing quaternion proof fail closed.
+- Fresh deterministic rendered proof now covers all `3,026/3,026` `Full Motion Exercises` frames with zero missing frames, zero neutral resets, zero owner flickers, and zero strict failures under the unchanged `0.10` policy. Maximum errors are `0.0051` average upper body, `0.0447` spine, `0.0192` left upper arm, `0.0039` left lower arm, `0.0101` right upper arm, and `0.0382` right lower arm. Head maxima are `0.0302` pitch, `0.0283` roll, and `0.0409` yaw across `3,023` quaternion-eligible frames.
+- The reopened frame 281 is no longer a false green: fresh final rendered proof reports average upper-body error `0`, upper-arm errors `0.0001`, lower-arm errors `0`, and no visible-bone reset. This replaces the historical `0.2939` average, `0.6694` left upper arm, and `0.2592` spine evidence for the current fingerprint without changing the source hash.
+- The deterministic harness now carries the prior motion frame during paused frame stepping, so deterministic certification exercises the same temporal target contract used by timed Replay and Game Studio. The prior harness rebuilt isolated frames and could not prove temporal target stabilization.
+- Replay now exposes the imperative timed root-motion ref to the avatar only while playback is running. While paused, the declarative selected-frame root pose is authoritative, preventing the last played or previous-recording heading from persisting indefinitely. Unit regressions cover both presentation modes, and a browser reproduction switching from turned Body Capture frame 1044 to Full Motion frame 281 confirms both source and avatar face forward with arms overhead.
+- Arm target construction now blends toward the metric world direction when the display-plane forearm vector is foreshortened, preventing tiny camera-plane sign crossings near frames 3006-3014 from becoming full target reversals. Shared arm and spine targets are rate-limited across adjacent source frames before final VRM application.
+- Final arm continuity is no longer timing-sensitive at a child confidence boundary. Arm target motion is capped at `4.8 rad/s`; lower arms remain active down to `0.15` confidence with a responsive child compensation slerp, while upper-arm ownership retains the normal `0.30` threshold. This keeps a source-limited forearm attached to its world target as its parent moves instead of accumulating error and snapping back on reacquisition.
+- Held-spine analysis now compares the visible held pose with the previous rendered pose. A held drive emits a zero-valued no-op command, so comparing it with zero incorrectly reported more than 200 severe frames even when the avatar correctly held its last pose.
+- Final spine and arm application now scale interpolation and angular budgets by elapsed render time, capped at `0.10s` so a resumed browser tab cannot apply an unbounded jump. The active spine writer can catch up at `3.84 rad/s`, above the target stabilizer's maximum rate, while retaining the same shared target contract in Replay and Game Studio.
+- Head application now writes upper-chest and neck parents before the final head world quaternion. When calibrated spine drive owns the torso, head application no longer writes a second upper-chest compensation, removing the late-recording parent/owner conflict.
+- Uninterrupted timed playback now passes strict analysis under a deliberately sparse capture cadence: all `3,026` source frames were processed, `749` rendered samples were compared, zero rendered frames were missing, and there were zero strict failures, neutral resets, owner flickers, or jerk frames. Maxima were `0.0976` spine, `0.0368` across the arm chains, and `0.0012` across head axes.
+- Final deterministic reproof also passes: `3,026/3,026` final rendered frames compared, zero missing, zero failures, zero neutral resets, and zero owner flickers. Maximum errors were `0.0017` average upper body, `0.0008` spine, `0.0154` left upper arm, and at most `0.0003` on any head axis. Four foot-clearance snap diagnostics at frames 1863-1864 remain non-blocking and outside this reopened upper-body slice.
+- Strict fast-subset proof now passes `Spins`, `Full Spinal Flow`, and `Full Motion Exercises` together. Deterministic/three-party coverage is `648/648`, `1,290/1,290`, and `3,026/3,026`; intended-time captures processed every source frame with `220`, `512`, and `843` rendered samples respectively, all with zero missing frames.
+- The first fast-subset analysis correctly exposed two proof-layer defects without changing runtime thresholds. Three-party head fidelity still used calibrated Euler yaw and manufactured near-`pi` errors when `Spins` crossed the wrap boundary; it now uses the same target-to-final world-quaternion delta as full-sequence proof. Aggregate upper-body confidence now inherits the weakest required-segment confidence, preventing a source-limited arm from being promoted to trustworthy by unrelated whole-body quality while preserving the `0.10` gate for trustworthy averages and every required segment.
+- A complete July 15 all-nine refresh accounted for **34,149 lane-frames** with zero missing: `11,383` deterministic player frames, `11,383` intended-time processed source frames, and `11,383` three-party frames. After proof-layer reanalysis it remained honestly **7/9**; Star Jumps and Body Capture retained rendered-fidelity blockers, so the bundle was never promoted to acceptance.
+- The subsequent latest-runtime all-nine refresh again captured all **34,149 lane-frames** with zero missing and advanced to **8/9**. Star Jumps and Body Capture passed; Full Spinal Flow alone blocked on timed spine error `0.1001` at frame 898 plus a held-static false positive for an unapplied neutral-fallback right-thigh target at frames 1287-1289.
+- The final-fingerprint all-nine refresh at `current-nine-recording-proof-2026-07-15-final-0-10` passes **9/9** with deterministic, intended-time, and three-party totals of `11,383/11,383` each, zero missing and zero failures. This is the controlling global Replay acceptance artifact.
+- Held-spine three-party proof now compares the current rendered pose with the prior rendered pose instead of comparing a no-op command with zero. Both analyzers normalize rounded telemetry vectors before computing angles, preventing false divergence and false held-static results. Deterministic batch capture also preserves prior motion-frame history, matching the timed/shared target contract instead of rebuilding isolated frames.
+- Full Spinal Flow then exposed a genuine root/support feedback snap around frames 801-802: the root-height command consumed the previous post-support correction, and a low-confidence foot-contact boundary switched the lower-body presentation model toward neutral. Root command history is now independent of the support offset, planted contact uses confidence hysteresis, and suppressed contact changes retain planted-squat ownership and hip-drop presentation.
+- The timed jerk gate now blocks any single rendered step of at least `0.25`, even below one percent of the recording and without a three-frame persistent run. The former approximately `0.52` foot-clearance plunge therefore cannot pass as an isolated diagnostic.
+- Held-static leg proof now requires the lower-body retarget to be actively applied on both frames, so moving targets ignored by a neutral fallback cannot masquerade as a frozen applied bone. The bounded final spine writer is `0.064` radians per 60 fps step.
+- Final-fingerprint Full Spinal Flow passes all three strict lanes at **1,290/1,290**, zero missing, zero failures, and zero severe snaps. Frame 801 keeps left clearance `0`, while right clearance progresses smoothly; frame 898 and the sequence-wide maximum spine error are `0.0802` without changing the `0.10` limit. The end-of-recording right-thigh static count is correctly zero.
+- The matching deterministic player and independent three-party captures also pass **1,290/1,290** frames each with zero missing and zero failures. Three-party proof reports zero missing role frames and axial p95 `0`. Because these runtime changes alter the fingerprint after the complete all-nine run, global all-nine acceptance still requires a fresh rerun.
 
 2026-07-10:
 
@@ -248,7 +627,13 @@ Stop and reopen the acceptance contract if any of these happen:
 
 ## Progress
 
-- Overall full human-movement engine: 75%.
-- Visual acceptance tightening slice: 100% implemented.
-- Current acceptance contract confidence: high for false-green prevention and high for visible per-frame diagnosis. The main false-green loophole is closed, named current-frame visual blockers exist, exact-frame recapture proves the old seated/foot-drift/head/body mismatch on px75 frame 868 is visually clean, planted-foot clearance now blocks foot-float false passes in live Replay Lab and future proof manifests, and the refreshed 9-recording avatar-follow gate passes without counting source-limited rows as accepted.
-- Target confidence after Phase 1 and Phase 5: high for false-green prevention.
+- Overall movement roadmap: 98% after human Replay interaction repair, durable slider convergence, final-fingerprint three-lane Full Spinal proof, current 9/9 all-nine acceptance, and telemetry-backed packet consolidation; only Game Studio live confirmation remains.
+- Reopened rendered-fidelity acceptance slice: 100%. The historical false green, seek-history stall, playback timestamp collapse, persistent low-confidence arm reacquisition jerk, child-parent forearm catch-up, root/support feedback snap, proof-vector defects, head proof, arm foreshortening, final VRM application defects, all-nine reproof, and slider convergence proof are complete.
+- Phase 6 red baseline and metric proof: 100%.
+- Phase 7 canonical strengthened policy: 100%.
+- Phase 8 per-segment and absolute head gates: 100%.
+- Phase 9 manual seek acceptance: 100%; human interaction, cross-recording root-heading checks, and durable physical slider-drag convergence all pass.
+- Phase 10 shared runtime repair: 100% for the controlling and fast-subset recordings.
+- Phase 11 tiered reproof: 100%; the final-fingerprint all-nine bundle passes 9/9 with all `34,149/34,149` lane-frames accounted for and zero failures.
+- Phase 12 human Replay and live confirmation: 80%; Replay interaction, controlling-recording review, durable slider proof, and final packet consolidation pass, while broader human review and Game Studio live confirmation remain.
+- Historical false-green prevention work remains valuable, but its earlier `100% implemented` status is superseded by the frame-281 reopening.

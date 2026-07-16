@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveMovementReplayFrameDelay } from "./movementReplayPlaybackClock";
+import {
+  resolveMovementReplayFrameDelay,
+  resolveMovementReplayPlaybackStep,
+} from "./movementReplayPlaybackClock";
 
 describe("movementReplayPlaybackClock", () => {
   it("preserves recorded frame timing instead of imposing the nominal fps", () => {
@@ -20,5 +23,31 @@ describe("movementReplayPlaybackClock", () => {
       currentFrameIndex: 0,
       samples: [{ capturedAt: 1000 }, { capturedAt: 2000 }],
     })).toBe(250);
+  });
+
+  it("advances only one rendered frame per tick across stalled timestamps", () => {
+    const samples = [
+      { capturedAt: 1000 },
+      { capturedAt: 1000 },
+      { capturedAt: 1000 },
+      { capturedAt: 1000 },
+    ];
+
+    expect(resolveMovementReplayPlaybackStep({
+      currentFrameIndex: 0,
+      fallbackFps: 25,
+      samples,
+    })).toEqual({
+      delayMs: 40,
+      frameIndex: 1,
+    });
+    expect(resolveMovementReplayPlaybackStep({
+      currentFrameIndex: 1,
+      fallbackFps: 25,
+      samples,
+    })).toEqual({
+      delayMs: 40,
+      frameIndex: 2,
+    });
   });
 });

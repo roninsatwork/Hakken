@@ -5,6 +5,12 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import {
+  buildReplaySliderSeekFidelity,
+  parseReplaySliderSeekFrames,
+  replaySliderSeekEventPasses,
+  replaySliderTargetRatio,
+} from "./lib/replaySliderSeekProof.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultOutDir = "tmp/movement-replay-lab/captures";
@@ -25,6 +31,9 @@ Options:
   --debug-session-json <file>
                          Serve one exported Replay Lab session fixture in local/dev capture mode
   --frames <list|auto>   Comma-separated frame indexes, or auto. Defaults to auto
+  --slider-seek-frames <list>
+                         Ordered frame targets for real slider-drag convergence proof
+  --e2e-auth             Use the deterministic sonae_e2e_auth role cookie in memory
   --local-test-auth      Sign in through /local-test-auth before capture
   --role <role>          Local-test-auth role. Defaults to super-admin
   --secret <secret>      Local-test-auth secret. Defaults to LOCAL_TEST_AUTH_SECRET
@@ -38,6 +47,7 @@ function parseArgs(argv) {
     baseUrl: defaultBaseUrl,
     frames: "auto",
     debugSessionJson: "",
+    e2eAuth: false,
     headed: false,
     localTestAuth: false,
     outDir: defaultOutDir,
@@ -45,6 +55,7 @@ function parseArgs(argv) {
     session: "",
     avatarUrl: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
+    sliderSeekFrames: "",
     storageState: "",
   };
 
@@ -56,6 +67,8 @@ function parseArgs(argv) {
       args.headed = true;
     } else if (arg === "--local-test-auth") {
       args.localTestAuth = true;
+    } else if (arg === "--e2e-auth") {
+      args.e2eAuth = true;
     } else if (arg === "--base-url") {
       args.baseUrl = argv[++index] || args.baseUrl;
     } else if (arg === "--out") {
@@ -70,6 +83,8 @@ function parseArgs(argv) {
       args.debugSessionJson = argv[++index] || "";
     } else if (arg === "--frames") {
       args.frames = argv[++index] || "auto";
+    } else if (arg === "--slider-seek-frames") {
+      args.sliderSeekFrames = argv[++index] || "";
     } else if (arg === "--role") {
       args.role = argv[++index] || "super-admin";
     } else if (arg === "--secret") {
@@ -102,6 +117,9 @@ function replayUrl(baseUrl, args) {
   }
   if (args.avatarUrl) {
     url.searchParams.set("avatarUrl", args.avatarUrl);
+  }
+  if (args.sliderSeekFrames) {
+    url.searchParams.set("debugDeterministicReplay", "1");
   }
   return url.toString();
 }
@@ -181,6 +199,166 @@ async function signInWithLocalTestAuth(page, args) {
   ]);
 }
 
+async function readPlayerAvatarDebug(page) {
+  return page.evaluate(() => {
+    const debug = window.__sonaeMovementAvatarDebug?.player;
+    return debug ? structuredClone(debug) : null;
+  });
+}
+
+async function waitForCleanSliderTelemetry(page, previousUpdatedAt, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  let debug = null;
+  let fidelity = null;
+  while (Date.now() < deadline) {
+    debug = await readPlayerAvatarDebug(page);
+    fidelity = buildReplaySliderSeekFidelity(debug);
+    if ((debug?.frameUpdatedAt ?? -1) > previousUpdatedAt && fidelity.clean) {
+      return { debug, fidelity, telemetryRefreshed: true };
+    }
+    await page.waitForTimeout(50);
+  }
+  return {
+    debug,
+    fidelity: fidelity ?? buildReplaySliderSeekFidelity(debug),
+    telemetryRefreshed: (debug?.frameUpdatedAt ?? -1) > previousUpdatedAt,
+  };
+}
+
+async function dragSliderToFrame({ frameCount, page, requestedFrameIndex, slider }) {
+  await slider.scrollIntoViewIfNeeded();
+  const box = await slider.boundingBox();
+  if (!box || box.width <= 0 || box.height <= 0) {
+    throw new Error("Replay frame slider has no draggable bounds.");
+  }
+  const currentFrameIndex = Number.parseInt(await slider.inputValue(), 10);
+  const thumbInset = Math.min(10, box.width / 4);
+  const trackWidth = Math.max(1, box.width - thumbInset * 2);
+  const xFor = (frameIndex) => (
+    box.x + thumbInset + replaySliderTargetRatio(frameIndex, frameCount) * trackWidth
+  );
+  const y = box.y + box.height / 2;
+
+  await page.mouse.move(xFor(currentFrameIndex), y);
+  await page.mouse.down();
+  await page.mouse.move(xFor(requestedFrameIndex), y, { steps: 8 });
+  await page.mouse.up();
+
+  let observedFrameIndex = Number.parseInt(await slider.inputValue(), 10);
+  let correctionCount = 0;
+  while (observedFrameIndex !== requestedFrameIndex && correctionCount < 200) {
+    await slider.press(observedFrameIndex < requestedFrameIndex ? "ArrowRight" : "ArrowLeft");
+    observedFrameIndex = Number.parseInt(await slider.inputValue(), 10);
+    correctionCount += 1;
+  }
+  return { correctionCount, observedFrameIndex };
+}
+
+async function captureSliderSeekProof({
+  frameCount,
+  lab,
+  outDir,
+  page,
+  requestedFrames,
+  sessionPart,
+}) {
+  if (requestedFrames.length === 0) return null;
+  const slider = page.getByTestId("movement-replay-frame-slider");
+  await slider.waitFor({ state: "visible" });
+  await page.waitForFunction(() => (
+    typeof window.__sonaeReplayLabStepToFrame === "function" &&
+    Number.isFinite(window.__sonaeReplayLabCommittedFrameIndex)
+  ));
+  const events = [];
+
+  for (let sequenceIndex = 0; sequenceIndex < requestedFrames.length; sequenceIndex += 1) {
+    const requestedFrameIndex = requestedFrames[sequenceIndex];
+    const previousDebug = await readPlayerAvatarDebug(page);
+    const startedAt = Date.now();
+    const drag = await dragSliderToFrame({ frameCount, page, requestedFrameIndex, slider });
+    if (drag.observedFrameIndex !== requestedFrameIndex) {
+      throw new Error(
+        `Replay slider drag stopped at ${drag.observedFrameIndex}; expected ${requestedFrameIndex} ` +
+        `after ${drag.correctionCount} keyboard correction(s).`,
+      );
+    }
+    try {
+      await page.waitForFunction((frameIndex) => {
+        const root = document.querySelector('[data-testid="movement-replay-lab"]');
+        const range = document.querySelector('[data-testid="movement-replay-frame-slider"]');
+        return (
+          Number(root?.getAttribute("data-current-frame-index") || -1) === frameIndex &&
+          Number(range?.value || -1) === frameIndex &&
+          window.__sonaeReplayLabCommittedFrameIndex === frameIndex
+        );
+      }, requestedFrameIndex);
+    } catch (error) {
+      const failedState = await page.evaluate(() => ({
+        committedFrameIndex: window.__sonaeReplayLabCommittedFrameIndex ?? null,
+        currentFrameIndex: Number(
+          document.querySelector('[data-testid="movement-replay-lab"]')
+            ?.getAttribute("data-current-frame-index") ?? -1,
+        ),
+        sliderValue: Number(
+          document.querySelector('[data-testid="movement-replay-frame-slider"]')?.value ?? -1,
+        ),
+        url: window.location.href,
+      }));
+      throw new Error(
+        `Replay slider did not commit requested frame ${requestedFrameIndex}: ${JSON.stringify(failedState)}. ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
+    const telemetry = await waitForCleanSliderTelemetry(
+      page,
+      previousDebug?.frameUpdatedAt ?? -1,
+    );
+    const state = await lab.evaluate((element) => ({
+      committedFrameIndex: window.__sonaeReplayLabCommittedFrameIndex ?? -1,
+      observedFrameIndex: Number(element.getAttribute("data-current-frame-index") || -1),
+    }));
+    const sliderValue = Number.parseInt(await slider.inputValue(), 10);
+    const playbackPaused = await page.getByRole("button", { name: "Play replay" }).count() === 1;
+    const screenshotPath = path.join(
+      outDir,
+      `movement-replay-${sessionPart}-slider-seek-${sequenceIndex}-${requestedFrameIndex}.png`,
+    );
+    await page.getByTestId("movement-replay-avatar-section").screenshot({ path: screenshotPath });
+    const event = {
+      committedFrameIndex: state.committedFrameIndex,
+      correctionCount: drag.correctionCount,
+      durationMs: Date.now() - startedAt,
+      fidelity: telemetry.fidelity,
+      observedFrameIndex: state.observedFrameIndex,
+      playbackPaused,
+      requestedFrameIndex,
+      screenshotPath,
+      sequenceIndex,
+      sliderValue,
+      telemetryFrameUpdatedAt: telemetry.debug?.frameUpdatedAt ?? null,
+      telemetryRefreshed: telemetry.telemetryRefreshed,
+    };
+    event.passed = replaySliderSeekEventPasses(event);
+    events.push(event);
+  }
+
+  return {
+    eventCount: events.length,
+    events,
+    failures: events.filter(({ passed }) => !passed).map((event) => ({
+      observedFrameIndex: event.observedFrameIndex,
+      repairSamples: event.fidelity?.repairSamples ?? [],
+      requestedFrameIndex: event.requestedFrameIndex,
+      sequenceIndex: event.sequenceIndex,
+    })),
+    ok: events.every(({ passed }) => passed),
+    requestedFrames,
+    schemaVersion: 1,
+  };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -188,7 +366,12 @@ async function main() {
     return;
   }
 
-  const storageState = args.storageState || (await fileExists(defaultStorageState) ? defaultStorageState : "");
+  if (args.e2eAuth && args.localTestAuth) {
+    throw new Error("Choose either --e2e-auth or --local-test-auth, not both.");
+  }
+  const storageState = args.e2eAuth
+    ? ""
+    : args.storageState || (await fileExists(defaultStorageState) ? defaultStorageState : "");
   await mkdir(args.outDir, { recursive: true });
 
   const browser = await chromium.launch({ headless: !args.headed });
@@ -197,6 +380,19 @@ async function main() {
       storageState: storageState || undefined,
       viewport: { width: 1440, height: 1100 },
     });
+    if (args.e2eAuth) {
+      const baseUrl = new URL(args.baseUrl);
+      await context.addCookies([{
+        domain: baseUrl.hostname,
+        expires: -1,
+        httpOnly: false,
+        name: "sonae_e2e_auth",
+        path: "/",
+        sameSite: "Lax",
+        secure: baseUrl.protocol === "https:",
+        value: args.role,
+      }]);
+    }
     const page = await context.newPage();
     page.setDefaultTimeout(45_000);
 
@@ -221,7 +417,20 @@ async function main() {
     }
 
     const lab = page.getByTestId("movement-replay-lab");
-    await lab.waitFor();
+    try {
+      await lab.waitFor();
+    } catch (error) {
+      const pageState = await page.evaluate(() => ({
+        bodyText: document.body?.innerText?.slice(0, 500) ?? "",
+        title: document.title,
+        url: window.location.href,
+      }));
+      throw new Error(
+        `Replay Lab root did not render: ${JSON.stringify(pageState)}. ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     await selectSession(page, args.session);
 
     await page.getByTestId("movement-replay-source-canvas").waitFor();
@@ -247,6 +456,15 @@ async function main() {
     await page.screenshot({
       fullPage: false,
       path: path.join(args.outDir, `movement-replay-${sessionPart}-page.png`),
+    });
+
+    const sliderSeekProof = await captureSliderSeekProof({
+      frameCount: labMeta.frameCount,
+      lab,
+      outDir: args.outDir,
+      page,
+      requestedFrames: parseReplaySliderSeekFrames(args.sliderSeekFrames, labMeta.frameCount),
+      sessionPart,
     });
 
     for (const frame of frames) {
@@ -415,14 +633,25 @@ async function main() {
       frameCount: labMeta.frameCount,
       frames,
       motionPipelineFingerprint: movementPipelineFingerprint(),
+      authMode: args.e2eAuth ? "deterministic-e2e" : args.localTestAuth ? "local-test-auth" : "storage-state",
       sessionId: labMeta.sessionId,
+      sliderSeekProof,
       storageState: storageState || null,
     };
     const manifestPath = path.join(args.outDir, `movement-replay-${sessionPart}-manifest.json`);
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     console.log(`Captured ${captures.length} replay frame(s) for ${labMeta.sessionId || "latest session"}.`);
+    if (sliderSeekProof) {
+      console.log(
+        `Slider seek proof: ${sliderSeekProof.ok ? "passed" : "failed"} (${sliderSeekProof.eventCount} event(s)).`,
+      );
+    }
     console.log(`Wrote ${path.resolve(args.outDir)}`);
+
+    if (sliderSeekProof && !sliderSeekProof.ok) {
+      throw new Error(`Replay slider seek proof failed for ${sliderSeekProof.failures.length} event(s).`);
+    }
 
     await context.close();
   } finally {

@@ -418,7 +418,21 @@ Capture replay proof images from the visual replay page:
 npx -p node@22.13.0 npm run movement:replay:capture -- --frames auto
 ```
 
-If the capture script redirects to `/login`, either pass an authenticated Playwright storage state with `--storage-state`, or run the app with local test auth enabled and pass `--local-test-auth`.
+Add `--slider-seek-frames` to exercise the real range control in the provided order. The capture physically drags the slider, uses range-key correction only where track pixel resolution cannot address the exact frame, waits for the React commit and fresh final-VRM telemetry, and fails if any trustworthy head, spine, or arm result exceeds the shared `0.10` policy:
+
+```bash
+npm run movement:replay:capture -- --debug-session-json path/to/session.json --frames 281 --slider-seek-frames 281,1500,281,3025,281
+```
+
+If the capture script redirects to `/login`, either pass an authenticated Playwright storage state with `--storage-state`, run the normal app with local test auth enabled and pass `--local-test-auth`, or start the documented deterministic E2E-auth app and pass `--e2e-auth`. The explicit `--e2e-auth` path creates the role cookie in memory and does not trust a potentially stale storage-state file.
+
+Build the canonical repair packet from the immutable source session and its complete final-VRM telemetry together:
+
+```bash
+npm run movement:diagnose -- --session path/to/session.json --rendered-telemetry path/to/player-avatar-deterministic.json --frame 281 --strict
+```
+
+The telemetry input must match the session/recording identity and source hash, contain every expected rendered frame with zero missing/playback errors, and expose final avatar visual telemetry for every frame. The command fails closed when any of those conditions is absent and preserves `--rendered-telemetry` in its reproduce and comparison commands.
 
 Gate avatar-follow reliability after Replay visual captures are attached:
 

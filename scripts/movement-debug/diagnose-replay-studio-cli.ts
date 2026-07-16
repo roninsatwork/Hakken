@@ -39,6 +39,7 @@ type CliArgs = {
   mdOutPath: string | null;
   outPath: string;
   recordingId: string | null;
+  renderedTelemetryPath: string | null;
   refreshArtifact: boolean;
   requireFreshArtifact: boolean;
   sessionPath: string | null;
@@ -137,6 +138,7 @@ function parseArgs(argv: string[]): CliArgs {
     mdOutPath: DEFAULT_PACKET_MARKDOWN_PATH,
     outPath: DEFAULT_PACKET_PATH,
     recordingId: null,
+    renderedTelemetryPath: null,
     refreshArtifact: false,
     requireFreshArtifact: false,
     sessionPath: null,
@@ -162,6 +164,9 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--recording-id" || arg === "--session-id") {
       args.recordingId = optionValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--rendered-telemetry") {
+      args.renderedTelemetryPath = optionValue(argv, index, arg);
       index += 1;
     } else if (arg === "--frame") {
       const frameValue = optionValue(argv, index, arg);
@@ -237,6 +242,8 @@ Options:
   --fixture-id <id>      Mark the packet as coming from a committed Replay Studio fixture.
   --list-fixtures        List committed Replay Studio fixture ids, or JSON with --json.
   --recording-id <id>    Select one recording/session from an analysis array, or a committed fixture id when no artifact exists.
+  --rendered-telemetry <file>
+                         Complete final-VRM full-sequence telemetry for the same recording.
   --frame <index>        Focus the packet on one frame. Defaults to the worst Replay Studio frame.
   --out <file>           Write packet JSON. Defaults to ${DEFAULT_PACKET_PATH}.
   --md-out <file>        Write packet Markdown. Defaults to ${DEFAULT_PACKET_MARKDOWN_PATH}.
@@ -567,6 +574,109 @@ function normalizeAnalyses(value: unknown): MovementReplayAnalysis[] {
   if (isRecord(value) && Array.isArray(value.analyses)) return value.analyses as MovementReplayAnalysis[];
   if (isRecord(value) && isRecord(value.replayStudio)) return [value as MovementReplayAnalysis];
   throw new Error("Expected a MovementReplayAnalysis object, an array of analyses, or { analyses }.");
+}
+
+type AppliedRenderedTelemetry = {
+  analysis: MovementReplayAnalysis;
+  motionPipelineFingerprint: string | null;
+  sourceHash: string | null;
+};
+
+function applyRenderedTelemetryToAnalysis(
+  analysis: MovementReplayAnalysis,
+  telemetryPath: string,
+): AppliedRenderedTelemetry {
+  const telemetry = readJson(telemetryPath, "rendered telemetry JSON");
+  if (!isRecord(telemetry) || !Array.isArray(telemetry.frames)) {
+    missingInput(
+      `Expected ${telemetryPath} to contain full-sequence rendered telemetry frames.`,
+      "Pass a player-avatar telemetry JSON produced by movement:replay:full-sequence.",
+      telemetryPath,
+    );
+  }
+
+  const expectedFrameCount = analysis.summary.frameCount || analysis.replayStudio.frames.length;
+  const telemetryFrameCount = numberValue(telemetry.frameCount);
+  const recordingId = analysisRecordingId(analysis);
+  const telemetrySessionId = maybeString(telemetry.sessionId) ?? maybeString(telemetry.recordingId);
+  if (telemetryFrameCount !== expectedFrameCount) {
+    missingInput(
+      `Rendered telemetry frame count ${telemetryFrameCount ?? "missing"} does not match expected ${expectedFrameCount}.`,
+      "Regenerate complete rendered telemetry for the same immutable Replay session.",
+      telemetryPath,
+    );
+  }
+  if (telemetrySessionId && telemetrySessionId !== analysis.sessionId && telemetrySessionId !== recordingId) {
+    missingInput(
+      `Rendered telemetry session ${telemetrySessionId} does not match analysis ${analysis.sessionId}/${recordingId}.`,
+      "Pass rendered telemetry generated from the same Replay recording as the diagnosis input.",
+      telemetryPath,
+    );
+  }
+  if (numberValue(telemetry.missingFrameCount) !== 0 || maybeString(telemetry.playbackError)) {
+    missingInput(
+      `Rendered telemetry is incomplete${maybeString(telemetry.playbackError) ? `: ${maybeString(telemetry.playbackError)}` : "."}`,
+      "Regenerate the full sequence with zero missing frames and no playback error before packet generation.",
+      telemetryPath,
+    );
+  }
+
+  const framesByIndex = new Map<number, Record<string, unknown>>();
+  telemetry.frames.forEach((candidate) => {
+    if (!isRecord(candidate)) return;
+    const frameIndex = numberValue(candidate.frameIndex);
+    const debug = isRecord(candidate.debug) ? candidate.debug : null;
+    if (!Number.isInteger(frameIndex) || !debug || !isRecord(debug.avatarVisual)) return;
+    if (numberValue(candidate.renderedFrameIndex) !== undefined && candidate.renderedFrameIndex !== frameIndex) return;
+    framesByIndex.set(frameIndex!, debug);
+  });
+  const missingFrameIndexes = Array.from({ length: expectedFrameCount }, (_, frameIndex) => frameIndex)
+    .filter((frameIndex) => !framesByIndex.has(frameIndex));
+  if (missingFrameIndexes.length > 0 || framesByIndex.size !== expectedFrameCount) {
+    missingInput(
+      `Rendered telemetry has ${framesByIndex.size}/${expectedFrameCount} unique final-VRM frames; first missing ${missingFrameIndexes[0] ?? "duplicate/out-of-range"}.`,
+      "Regenerate deterministic full-sequence telemetry with complete frame accounting and zero silent skips.",
+      telemetryPath,
+    );
+  }
+
+  const nextAnalysis = structuredClone(analysis);
+  const lowerErrors: number[] = [];
+  nextAnalysis.replayStudio.frames = nextAnalysis.replayStudio.frames.map((frame) => {
+    const debug = framesByIndex.get(frame.frameIndex);
+    const avatarVisual = isRecord(debug?.avatarVisual) ? debug.avatarVisual : {};
+    const lowerBodyDirectionError = numberValue(avatarVisual.averageLowerBodyDirectionError);
+    if (lowerBodyDirectionError !== undefined) lowerErrors.push(lowerBodyDirectionError);
+    return {
+      ...frame,
+      actual: {
+        ...frame.actual,
+        comparedLowerBodySegments: numberValue(avatarVisual.comparedLowerBodySegments) ?? 0,
+        comparedUpperBodySegments: numberValue(avatarVisual.comparedUpperBodySegments) ?? 0,
+        lowerBodyDirectionError: lowerBodyDirectionError ?? null,
+        upperBodyDirectionError: numberValue(avatarVisual.averageUpperBodyDirectionError) ?? null,
+      },
+    };
+  });
+  const averageLowerError = lowerErrors.length > 0
+    ? lowerErrors.reduce((sum, value) => sum + value, 0) / lowerErrors.length
+    : 0;
+  nextAnalysis.metrics.avatarVisualFrameCount = expectedFrameCount;
+  nextAnalysis.metrics.averageAvatarLowerBodyDirectionError = averageLowerError;
+  nextAnalysis.replayStudio.session = {
+    ...nextAnalysis.replayStudio.session,
+    summary: {
+      ...nextAnalysis.replayStudio.session.summary,
+      averageAvatarLowerBodyDirectionError: averageLowerError,
+      avatarVisualFrameCount: expectedFrameCount,
+    },
+  };
+
+  return {
+    analysis: nextAnalysis,
+    motionPipelineFingerprint: maybeString(telemetry.motionPipelineFingerprint),
+    sourceHash: maybeString(telemetry.sourceHash),
+  };
 }
 
 function readFixtureRegistry(): ReplayStudioFixtureRegistryEntry[] {
@@ -1068,14 +1178,17 @@ function packetCommands({
   const recordingArg = `--recording-id ${shellQuote(recordingId)}`;
   const frameArg = typeof args.frameIndex === "number" ? ` --frame ${args.frameIndex}` : "";
   const fixtureArg = args.fixtureId ? ` --fixture-id ${shellQuote(args.fixtureId)}` : "";
+  const renderedTelemetryArg = args.renderedTelemetryPath
+    ? ` --rendered-telemetry ${shellQuote(args.renderedTelemetryPath)}`
+    : "";
   const compareMarkdownArg = markdownPath
     ? " --md-out tmp/movement-replay-lab/current-repair-packet.after.md"
     : " --no-md";
   const compareBeforeArg = ` --before ${shellQuote(args.outPath)}`;
   return {
     acceptance: "npm run movement:replay-studio-verdict-gate",
-    compareAfterChange: `npm run movement:diagnose -- ${inputArg} ${recordingArg}${frameArg}${fixtureArg}${compareBeforeArg} --out tmp/movement-replay-lab/current-repair-packet.after.json${compareMarkdownArg}`,
-    reproduce: `npm run movement:diagnose -- ${inputArg} ${recordingArg}${frameArg}${fixtureArg}`,
+    compareAfterChange: `npm run movement:diagnose -- ${inputArg} ${recordingArg}${frameArg}${fixtureArg}${renderedTelemetryArg}${compareBeforeArg} --out tmp/movement-replay-lab/current-repair-packet.after.json${compareMarkdownArg}`,
+    reproduce: `npm run movement:diagnose -- ${inputArg} ${recordingArg}${frameArg}${fixtureArg}${renderedTelemetryArg}`,
   };
 }
 
@@ -1293,11 +1406,30 @@ export async function runMovementReplayStudioDiagnoseCli(
   }
   assertRefreshArtifactIfRequested(artifact, effectiveArgs.refreshArtifact);
   assertFreshArtifactIfRequired(artifact, effectiveArgs.requireFreshArtifact);
+  const renderedTelemetry = effectiveArgs.renderedTelemetryPath
+    ? applyRenderedTelemetryToAnalysis(analysis, effectiveArgs.renderedTelemetryPath)
+    : null;
+  if (renderedTelemetry) {
+    analysis = renderedTelemetry.analysis;
+    if (artifact) {
+      artifact = {
+        ...artifact,
+        checkedPaths: [...new Set([...(artifact.checkedPaths ?? []), effectiveArgs.renderedTelemetryPath!])],
+      };
+    }
+  }
   const sourceSession = matchingSourceSession(sessions, analysis);
   const sourceHashInput = sourceSession ?? analysis;
   const sourceHash = sourceSession
     ? await sourceHashForReplaySession(sourceSession)
     : stableReplayStudioSourceHash(analysis);
+  if (renderedTelemetry?.sourceHash && renderedTelemetry.sourceHash !== sourceHash) {
+    missingInput(
+      `Rendered telemetry source hash ${renderedTelemetry.sourceHash} does not match diagnosis source ${sourceHash}.`,
+      "Use final-VRM telemetry captured from the same immutable Replay source session.",
+      effectiveArgs.renderedTelemetryPath ?? undefined,
+    );
+  }
   const recordingId = analysis.replayStudio.session.recordingId || analysis.sessionId;
   const markdownPath = effectiveArgs.mdOutPath === DEFAULT_PACKET_MARKDOWN_PATH && effectiveArgs.outPath !== DEFAULT_PACKET_PATH
     ? defaultMarkdownPath(effectiveArgs.outPath)
@@ -1305,7 +1437,8 @@ export async function runMovementReplayStudioDiagnoseCli(
   const packet = buildReplayStudioRepairPacket(analysis, {
     code: {
       commit: gitCommit(),
-      motionPipelineFingerprint: runtime.motionPipelineFingerprint ?? "unknown",
+      motionPipelineFingerprint:
+        renderedTelemetry?.motionPipelineFingerprint ?? runtime.motionPipelineFingerprint ?? "unknown",
     },
     ...(artifact ? { artifact } : {}),
     commands: packetCommands({ analysisPath, args: effectiveArgs, markdownPath, recordingId }),

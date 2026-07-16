@@ -28,13 +28,18 @@ import {
 import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntry";
 import { VrmAvatarPresentation } from "./VrmAvatarPresentation";
 import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
-import { resetMovementAvatarRuntimeForFrameJump } from "../../../_lib/movementAvatarRuntimeReset";
+import {
+  consumeMovementAvatarRuntimeFrameJumpReset,
+  shouldResetMovementAvatarRuntimeForFrameSeek,
+} from "../../../_lib/movementAvatarRuntimeReset";
 import { shouldHoldMovementAvatarLastPose } from "../../../_lib/movementAvatarMotionFrameInput";
+import { movementAvatarSourceAwareApplicationDeltaSeconds } from "../../../_lib/movementAvatarFrameTiming";
 
 const AVATAR_BASE_Y = -2.8;
 const AVATAR_FRAME_FALLBACK_SLERP = 0.35;
 
 type VrmAvatarProps = {
+  frameSeekIndex?: number;
   frameResetKey?: number | string;
   landmarksRef: RefObject<VrmMotionRef>;
   motionFrameRef: RefObject<MovementMotionFrame | null | undefined>;
@@ -54,6 +59,7 @@ type VrmAvatarProps = {
 };
 
 export default function VrmAvatar({
+  frameSeekIndex,
   frameResetKey,
   landmarksRef,
   motionFrameRef,
@@ -72,6 +78,13 @@ export default function VrmAvatar({
   name,
 }: VrmAvatarProps) {
   const group = useRef<THREE.Group>(null);
+  const pendingFrameResetRef = useRef(false);
+  const previousFrameSeekIndexRef = useRef<number | null>(null);
+  const previousAppliedSourceCapturedAtRef = useRef<number | null>(null);
+  // Floor/support contact applies a correction after the root command. Keep
+  // the command history separate so that correction cannot feed back into the
+  // next frame's height interpolation and make the two controllers oscillate.
+  const rootCommandYRef = useRef<number | null>(null);
   const runtimeRefs = useMovementAvatarRuntimeRefs(rootMotionFrame);
   const {
     baseBonePositionRef,
@@ -116,10 +129,28 @@ export default function VrmAvatar({
   });
 
   useEffect(() => {
-    const vrm = vrmRef.current;
-    if (frameResetKey === undefined || !vrm) return;
-    resetMovementAvatarRuntimeForFrameJump({ refs: resetRefs, vrm });
-  }, [frameResetKey, resetRefs, vrmRef]);
+    if (frameResetKey === undefined) return;
+    pendingFrameResetRef.current = true;
+    previousAppliedSourceCapturedAtRef.current = null;
+    rootCommandYRef.current = null;
+  }, [frameResetKey]);
+
+  useEffect(() => {
+    if (frameSeekIndex === undefined) {
+      previousFrameSeekIndexRef.current = null;
+      previousAppliedSourceCapturedAtRef.current = null;
+      return;
+    }
+    if (shouldResetMovementAvatarRuntimeForFrameSeek({
+      nextFrameIndex: frameSeekIndex,
+      previousFrameIndex: previousFrameSeekIndexRef.current,
+    })) {
+      pendingFrameResetRef.current = true;
+      previousAppliedSourceCapturedAtRef.current = null;
+      rootCommandYRef.current = null;
+    }
+    previousFrameSeekIndexRef.current = frameSeekIndex;
+  }, [frameSeekIndex]);
 
   useFrame((_, delta) => {
     const motionFrame = motionFrameRef.current ?? null;
@@ -137,6 +168,24 @@ export default function VrmAvatar({
     });
     if (frameEntryRuntime.status !== "ready") return;
     const { avatarRoot, vrm } = frameEntryRuntime.context;
+    const sourceCapturedAt = motionFrame?.source.capturedAt;
+    const applicationDeltaSeconds = movementAvatarSourceAwareApplicationDeltaSeconds({
+      currentSourceCapturedAt: sourceCapturedAt,
+      previousSourceCapturedAt: previousAppliedSourceCapturedAtRef.current,
+      renderDeltaSeconds: delta,
+    });
+    if (Number.isFinite(sourceCapturedAt)) {
+      previousAppliedSourceCapturedAtRef.current = sourceCapturedAt!;
+    }
+
+    // Queue frame-jump resets until a solved pose is ready. The seek reset
+    // clears only temporal history; it deliberately preserves visible bones
+    // and rig calibration so Replay cannot flash through normalized standing.
+    consumeMovementAvatarRuntimeFrameJumpReset({
+      pendingResetRef: pendingFrameResetRef,
+      refs: resetRefs,
+      vrm,
+    });
 
     const {
       avatarRole,
@@ -170,6 +219,7 @@ export default function VrmAvatar({
         displayPreparedInput: displayPreparedInput.solverLandmarks,
         exerciseTransitionStateRef,
         faceLandmarks,
+        frameDeltaSeconds: applicationDeltaSeconds,
         fallbackPoseSlerp: AVATAR_FRAME_FALLBACK_SLERP,
         forceStandby,
         imageLandmarks,
@@ -193,6 +243,7 @@ export default function VrmAvatar({
         retargetSourceModelRef,
         rigHands,
         rigMeasurements: rigMeasurementsRef.current,
+        rootCommandYRef,
         scene: vrm.scene,
         setupStateRef,
         targetSolverLandmarks,

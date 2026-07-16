@@ -4,19 +4,26 @@ import { analyzeThreePartyReplay } from "./analyze-replay-three-party.mjs";
 function debug(direction) {
   const segments = Object.fromEntries([
     "leftFoot", "leftLowerArm", "leftShin", "leftThigh", "leftUpperArm",
-    "rightFoot", "rightLowerArm", "rightShin", "rightThigh", "rightUpperArm",
-  ].map((segment) => [segment, { confidence: 0.9, direction }]));
+    "rightFoot", "rightLowerArm", "rightShin", "rightThigh", "rightUpperArm", "spine",
+  ].map((segment) => [segment, { confidence: 0.9, direction, sourceError: 0 }]));
   return {
     avatarHead: {
+      appliedLocalPitch: 0.1,
+      appliedLocalRoll: 0.04,
+      appliedLocalYaw: 0.02,
       appliedWorldPitch: 0.1,
       appliedWorldRoll: 0.04,
       appliedWorldYaw: 0.02,
+      bonePitch: 0.1,
+      boneRoll: 0.04,
+      boneYaw: 0.02,
     },
     avatarSpine: {
       chest: { x: 0.1, y: 0.05, z: 0.02 },
       upperChest: { x: 0.08, y: 0.04, z: 0.01 },
     },
     avatarVisual: { segments },
+    headRaw: { confidence: 0.9 },
     headApplied: { pitch: 0.1, roll: 0.04, yaw: 0.02 },
   };
 }
@@ -86,6 +93,163 @@ describe("three-party rendered Replay analyzer", () => {
     expect(analysis.failures).toContainEqual(expect.objectContaining({
       code: "three-party-segment-diverged",
       segment: "rightUpperArm",
+    }));
+  });
+
+  it("blocks avatars that agree with each other but both miss their own source", () => {
+    const input = telemetry();
+    input.frames.forEach((frame) => {
+      frame.avatars.instructor.avatarVisual.segments.leftUpperArm.sourceError = 0.3;
+      frame.avatars.player.avatarVisual.segments.leftUpperArm.sourceError = 0.3;
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.segments.leftUpperArm.p95Difference).toBe(0);
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-source-fidelity-severe",
+      count: 2,
+      role: "instructor",
+      segment: "leftUpperArm",
+    });
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-source-fidelity-severe",
+      count: 2,
+      role: "player",
+      segment: "leftUpperArm",
+    });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("grades held spine owners against each role's prior rendered pose", () => {
+    const input = telemetry();
+    input.frames.forEach((frame, frameIndex) => {
+      for (const role of ["instructor", "player"]) {
+        const rotations = {
+          chest: { x: 0.2, y: 0.03, z: -0.02 },
+          spine: { x: 0.12, y: 0.02, z: -0.01 },
+          upperChest: { x: 0.15, y: 0.025, z: -0.015 },
+        };
+        frame.avatars[role].avatarSpine = structuredClone(rotations);
+        frame.avatars[role].spineDrive = {
+          confidence: 0.99,
+          owner: frameIndex === 0 ? "player-spine-model" : "player-spine-held",
+          targetRotations: frameIndex === 0
+            ? structuredClone(rotations)
+            : {
+                chest: { x: 0, y: 0, z: 0 },
+                spine: { x: 0, y: 0, z: 0 },
+                upperChest: { x: 0, y: 0, z: 0 },
+              },
+        };
+      }
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.sourceFidelity.roles.instructor.segments.spine).toMatchObject({
+      maxError: 0,
+      repairSampleCount: 0,
+    });
+    expect(analysis.sourceFidelity.roles.player.segments.spine).toMatchObject({
+      maxError: 0,
+      repairSampleCount: 0,
+    });
+    expect(analysis.status).toBe("passed");
+  });
+
+  it("blocks a held spine owner that jumps away from its prior rendered pose", () => {
+    const input = telemetry();
+    input.frames.forEach((frame, frameIndex) => {
+      for (const role of ["instructor", "player"]) {
+        const priorRotations = {
+          chest: { x: 0.2, y: 0, z: 0 },
+          spine: { x: 0.1, y: 0, z: 0 },
+          upperChest: { x: 0.15, y: 0, z: 0 },
+        };
+        frame.avatars[role].avatarSpine = structuredClone(priorRotations);
+        frame.avatars[role].spineDrive = {
+          confidence: 0.99,
+          owner: frameIndex === 0 ? "player-spine-model" : "player-spine-held",
+          targetRotations: frameIndex === 0
+            ? structuredClone(priorRotations)
+            : {
+                chest: { x: 0, y: 0, z: 0 },
+                spine: { x: 0, y: 0, z: 0 },
+                upperChest: { x: 0, y: 0, z: 0 },
+              },
+        };
+        if (frameIndex === 1) frame.avatars[role].avatarSpine.chest.x += 0.2;
+      }
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-source-fidelity-blocked",
+      count: 1,
+      role: "instructor",
+      segment: "spine",
+    });
+    expect(analysis.failures).toContainEqual({
+      code: "three-party-source-fidelity-blocked",
+      count: 1,
+      role: "player",
+      segment: "spine",
+    });
+    expect(analysis.status).toBe("blocked");
+  });
+
+  it("blocks matching avatars when both final head bones miss their own target", () => {
+    const input = telemetry();
+    input.frames.forEach((frame, frameIndex) => {
+      for (const role of ["instructor", "player"]) {
+        frame.avatars[role].avatarHead.boneYaw = 0.3;
+        frame.avatars[role].avatarHead.appliedWorldYaw = frameIndex === 0 ? 0.3 : 0;
+      }
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.axial.p95Difference).toBe(0);
+    expect(analysis.failures).toContainEqual({
+      axis: "yaw",
+      code: "three-party-source-head-fidelity-severe",
+      count: 1,
+      role: "instructor",
+    });
+    expect(analysis.failures).toContainEqual({
+      axis: "yaw",
+      code: "three-party-source-head-fidelity-severe",
+      count: 1,
+      role: "player",
+    });
+  });
+
+  it("uses final world quaternion deltas so yaw wrapping cannot create a false severe failure", () => {
+    const input = telemetry();
+    input.frames.forEach((frame, frameIndex) => {
+      const yaw = frameIndex === 0 ? Math.PI : -0.9;
+      const quaternion = {
+        w: Math.cos(yaw / 2),
+        x: 0,
+        y: Math.sin(yaw / 2),
+        z: 0,
+      };
+      for (const role of ["instructor", "player"]) {
+        frame.avatars[role].avatarHead.boneYaw = yaw;
+        frame.avatars[role].avatarHead.appliedWorldYaw = yaw;
+        frame.avatars[role].avatarHead.targetWorldQuaternion = quaternion;
+        frame.avatars[role].avatarHead.appliedWorldQuaternion = quaternion;
+      }
+    });
+
+    const analysis = analyzeThreePartyReplay({ telemetry: input });
+
+    expect(analysis.sourceFidelity.roles.instructor.head.yaw.maxErrorRadians).toBe(0);
+    expect(analysis.sourceFidelity.roles.player.head.yaw.maxErrorRadians).toBe(0);
+    expect(analysis.failures).not.toContainEqual(expect.objectContaining({
+      code: "three-party-source-head-fidelity-severe",
     }));
   });
 

@@ -5,28 +5,17 @@ import type { MovementTrackingDebugState } from "./movementTrackingCalibration";
 import type { MovementAnatomicalMapping } from "./movementMirrorMapping";
 
 export function mapMovementAvatarVisualSourceDirection({
-  anatomicalMapping,
   direction,
-  segment,
 }: {
   anatomicalMapping: MovementAnatomicalMapping;
   direction: THREE.Vector3;
   segment: MovementRetargetFrame["debug"]["solvedSegments"][number];
 }) {
-  const mappedDirection = direction.clone();
-  if (
-    anatomicalMapping === "opposite" &&
-    (
-      segment === "spine" ||
-      segment.includes("Arm") ||
-      segment.includes("Thigh") ||
-      segment.includes("Shin") ||
-      segment.includes("Foot")
-    )
-  ) {
-    mappedDirection.x = -mappedDirection.x;
-  }
-  return mappedDirection;
+  // The retarget frame has already passed through the role-specific display
+  // landmark mapping before application. Fidelity telemetry must compare the
+  // final bone against the exact world direction sent to the VRM; reflecting
+  // player X here again creates a false near-opposite arm error.
+  return direction.clone();
 }
 
 export function buildMovementAvatarSpineVisualTelemetry(

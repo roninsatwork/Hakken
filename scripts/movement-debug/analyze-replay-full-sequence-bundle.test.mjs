@@ -2,7 +2,10 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildFullSequenceBundleReport } from "./analyze-replay-full-sequence-bundle.mjs";
+import {
+  buildFullSequenceBundleReport,
+  resolveDeterministicFailuresWithThreePartyProof,
+} from "./analyze-replay-full-sequence-bundle.mjs";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
 import { sourceHashForReplaySession } from "./lib/replay-proof-identity.mjs";
 
@@ -81,8 +84,8 @@ function threePartyDebug() {
   const direction = { x: 1, y: 0, z: 0 };
   const segments = Object.fromEntries([
     "leftFoot", "leftLowerArm", "leftShin", "leftThigh", "leftUpperArm",
-    "rightFoot", "rightLowerArm", "rightShin", "rightThigh", "rightUpperArm",
-  ].map((segment) => [segment, { confidence: 0.9, direction }]));
+    "rightFoot", "rightLowerArm", "rightShin", "rightThigh", "rightUpperArm", "spine",
+  ].map((segment) => [segment, { confidence: 0.9, direction, sourceError: 0 }]));
   return {
     avatarSpine: {
       chest: { x: 0.1, y: 0.05, z: 0.02 },
@@ -127,6 +130,58 @@ function writeRecordingBundleFixture(basePath, id, frameCount = 2) {
 }
 
 describe("full-sequence rendered telemetry bundle", () => {
+  it("lets complete three-party rendered proof supersede only magnitude-based side heuristics", () => {
+    const mirrorFailure = {
+      code: "rendered-mirror-side-persistent-mismatch",
+      count: 5,
+      segment: "lower-arm",
+    };
+    const result = resolveDeterministicFailuresWithThreePartyProof({
+      deterministicFailures: [mirrorFailure, { code: "rendered-motion-jerk", count: 1 }],
+      deterministicFrameAccounting: { expected: 648 },
+      requireThreeParty: true,
+      threePartyFailures: [],
+      threePartyReport: {
+        frameAccounting: {
+          complete: true,
+          expected: 648,
+          missing: 0,
+          rendered: 648,
+        },
+        status: "passed",
+      },
+    });
+
+    expect(result.failures).toEqual([{ code: "rendered-motion-jerk", count: 1 }]);
+    expect(result.supersededFailures).toEqual([mirrorFailure]);
+  });
+
+  it("keeps side-ownership failures when three-party proof is incomplete", () => {
+    const mirrorFailure = {
+      code: "rendered-mirror-side-persistent-mismatch",
+      count: 5,
+      segment: "lower-arm",
+    };
+    const result = resolveDeterministicFailuresWithThreePartyProof({
+      deterministicFailures: [mirrorFailure],
+      deterministicFrameAccounting: { expected: 648 },
+      requireThreeParty: true,
+      threePartyFailures: [],
+      threePartyReport: {
+        frameAccounting: {
+          complete: false,
+          expected: 648,
+          missing: 1,
+          rendered: 647,
+        },
+        status: "passed",
+      },
+    });
+
+    expect(result.failures).toEqual([mirrorFailure]);
+    expect(result.supersededFailures).toEqual([]);
+  });
+
   it("reports required recording ids and frame totals for a passing bundle", async () => {
     const basePath = `tmp/movement-replay-lab/full-sequence-bundle-test-${process.pid}-${Date.now()}`;
     const recordings = [

@@ -292,6 +292,23 @@ describe("movementAvatarRootTransformRuntime (merged)", () => {
         result: { applied: false },
       });
     });
+
+    it("keeps support-contact correction out of the next root-height command", () => {
+      const root = new THREE.Object3D();
+      const rootCommandYRef = { current: -2.5 as number | null };
+      // The rendered root includes a +0.9 floor-contact correction.
+      root.position.set(0, -1.6, 0);
+
+      const runtime = applyMovementAvatarRootTransformRuntime({
+        root,
+        rootCommandYRef,
+        rootTarget: rootTarget({ targetY: -2 }),
+      });
+
+      expect(runtime.application?.position.y).toBeCloseTo(-1.35);
+      expect(rootCommandYRef.current).toBeCloseTo(-2.25);
+      expect(root.position.y).toBeCloseTo(-1.35);
+    });
   });
 });
 

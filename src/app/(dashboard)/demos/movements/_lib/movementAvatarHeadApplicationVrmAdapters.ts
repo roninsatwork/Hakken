@@ -5,9 +5,11 @@ import type {
   MovementAvatarHeadApplicationPoseDecision,
   MovementAvatarHeadApplicationResult,
 } from "./movementAvatarHeadApplicationTypes";
+import { movementAvatarFrameRateAdjustedSlerp } from "./movementAvatarFrameTiming";
 
 export function applyMovementAvatarHeadApplicationToVrmBones({
   baseHeadPosition,
+  frameDeltaSeconds,
   headApplicationPose,
   headBonePitch,
   headPositionSlerp,
@@ -20,6 +22,7 @@ export function applyMovementAvatarHeadApplicationToVrmBones({
   upperChestCompensationSlerp,
 }: {
   baseHeadPosition: THREE.Vector3 | null | undefined;
+  frameDeltaSeconds?: number;
   headApplicationPose: MovementAvatarHeadApplicationPoseDecision;
   headBonePitch: number;
   headPositionSlerp: number;
@@ -42,13 +45,16 @@ export function applyMovementAvatarHeadApplicationToVrmBones({
     headApplicationPose,
     headBonePitch,
     headNode: lookupBone("head"),
-    headPositionSlerp,
+    headPositionSlerp: movementAvatarFrameRateAdjustedSlerp(headPositionSlerp, frameDeltaSeconds),
     headRoll,
-    headSlerp,
+    headSlerp: movementAvatarFrameRateAdjustedSlerp(headSlerp, frameDeltaSeconds),
     headWorldYaw,
     neckNode: lookupBone("neck"),
-    neckSlerp,
+    neckSlerp: movementAvatarFrameRateAdjustedSlerp(neckSlerp, frameDeltaSeconds),
     shouldApplyHeadMotion,
-    upperChestCompensationSlerp,
+    upperChestCompensationSlerp: movementAvatarFrameRateAdjustedSlerp(
+      upperChestCompensationSlerp,
+      frameDeltaSeconds,
+    ),
   });
 }

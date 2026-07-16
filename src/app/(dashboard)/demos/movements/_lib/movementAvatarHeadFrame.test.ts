@@ -4,6 +4,7 @@ import { resolveMovementAvatarFrameTargetRuntime } from "./movementAvatarBodyFra
 import type { MovementAvatarHeadFrameDebugInput } from "./movementAvatarHeadFrame";
 import {
   applyMovementAvatarHeadRuntimeToVrmBones,
+  resolveMovementAvatarHeadApplicationPoseOwnership,
   buildMovementAvatarHeadRuntimeDebugTelemetry,
 } from "./movementAvatarHeadFrame";
 import {
@@ -50,6 +51,23 @@ describe("movementAvatarHeadRuntime (merged)", () => {
     shoulderWidth: 0.22,
     torsoHeight: 0.24,
   };
+
+  it("prevents head extras from becoming a second upper-chest owner", () => {
+    const pose = {
+      headPositionOffset: null,
+      neckRotation: null,
+      upperChestCompensation: { x: 0.1, y: 0.02, z: -0.03 },
+    };
+
+    expect(resolveMovementAvatarHeadApplicationPoseOwnership({
+      headApplicationPose: pose,
+      shouldApplySpine: true,
+    }).upperChestCompensation).toBeNull();
+    expect(resolveMovementAvatarHeadApplicationPoseOwnership({
+      headApplicationPose: pose,
+      shouldApplySpine: false,
+    })).toBe(pose);
+  });
 
   function poseLandmarks(): TrackingLandmark[] {
     const pose = Array.from({ length: 33 }, (_, index) => ({
@@ -185,10 +203,24 @@ describe("movementAvatarHeadRuntime (merged)", () => {
         result.headNode.getWorldQuaternion(new THREE.Quaternion()),
         "YXZ",
       );
+      const appliedWorldQuaternion = result.headNode.getWorldQuaternion(new THREE.Quaternion());
+      const targetWorldQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+        result.headTarget.headBonePitch,
+        result.headTarget.headWorldYaw,
+        result.headTarget.headDecision.headRoll,
+        "YXZ",
+      ));
 
       expect(telemetry).toEqual({
+        appliedWorldQuaternion: {
+          w: appliedWorldQuaternion.w,
+          x: appliedWorldQuaternion.x,
+          y: appliedWorldQuaternion.y,
+          z: appliedWorldQuaternion.z,
+        },
         appliedLocalPitch: result.headNode.rotation.x,
         appliedLocalRoll: result.headNode.rotation.z,
+        appliedLocalYaw: result.headNode.rotation.y,
         appliedWorldPitch: worldRotation.x,
         appliedWorldRoll: worldRotation.z,
         appliedWorldYaw: worldRotation.y,
@@ -198,6 +230,12 @@ describe("movementAvatarHeadRuntime (merged)", () => {
         trackingPitch: result.headTarget.headDecision.headPitch,
         trackingRoll: result.headTarget.rawHeadDecision.rawHead.roll,
         trackingYaw: result.headTarget.rawHeadDecision.rawHead.yaw,
+        targetWorldQuaternion: {
+          w: targetWorldQuaternion.w,
+          x: targetWorldQuaternion.x,
+          y: targetWorldQuaternion.y,
+          z: targetWorldQuaternion.z,
+        },
       });
     });
 

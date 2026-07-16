@@ -159,6 +159,8 @@ const ARM_SEGMENT_NAMES: MovementRetargetSegmentName[] = [
   "rightUpperArm",
   "rightLowerArm",
 ];
+const ARM_DISPLAY_PLANAR_RELIABILITY_MIN = 0.08;
+const ARM_DISPLAY_PLANAR_RELIABILITY_MAX = 0.25;
 const LOWER_BODY_MOTION_SEGMENTS: MovementRetargetSegmentName[] = [
   "leftThigh",
   "leftShin",
@@ -350,12 +352,34 @@ function buildWorldSegmentsWithDisplayAlignedArms(
 
     const alignedDepth = clamp(displaySegment.direction.z * 0.18, -1, 1);
     const planarScale = Math.sqrt(Math.max(0, 1 - alignedDepth * alignedDepth));
+    const displayAlignedDirection = normalizeVector({
+      x: (displaySegment.direction.x / displayPlanarLength) * planarScale,
+      y: (displaySegment.direction.y / displayPlanarLength) * planarScale,
+      z: alignedDepth,
+    });
+    const linearDisplayReliability = clamp(
+      (displayPlanarLength - ARM_DISPLAY_PLANAR_RELIABILITY_MIN) /
+        (ARM_DISPLAY_PLANAR_RELIABILITY_MAX - ARM_DISPLAY_PLANAR_RELIABILITY_MIN),
+      0,
+      1,
+    );
+    const displayReliability =
+      linearDisplayReliability * linearDisplayReliability * (3 - 2 * linearDisplayReliability);
+
+    // When an arm points almost directly into the camera, its image-plane
+    // vector approaches zero. Normalizing that tiny vector amplifies a
+    // sub-pixel sign change into a 90-180 degree forearm flip. Blend toward
+    // metric world depth through that foreshortened region; return smoothly
+    // to display anatomy once the planar direction is readable again.
     worldSegments[name] = {
       ...worldSegment,
       direction: normalizeVector({
-        x: (displaySegment.direction.x / displayPlanarLength) * planarScale,
-        y: (displaySegment.direction.y / displayPlanarLength) * planarScale,
-        z: alignedDepth,
+        x: worldSegment.direction.x * (1 - displayReliability) +
+          displayAlignedDirection.x * displayReliability,
+        y: worldSegment.direction.y * (1 - displayReliability) +
+          displayAlignedDirection.y * displayReliability,
+        z: worldSegment.direction.z * (1 - displayReliability) +
+          displayAlignedDirection.z * displayReliability,
       }),
     };
   });

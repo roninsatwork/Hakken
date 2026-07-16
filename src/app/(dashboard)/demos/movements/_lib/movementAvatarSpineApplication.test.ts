@@ -155,6 +155,7 @@ describe("movement avatar spine application", () => {
       forwardLean: 0.2,
       owner: "player-spine-model",
       sideBend: 0.1,
+      targetRotations: spineDrive().rotations,
       twist: 0.2,
     });
   });
@@ -221,8 +222,32 @@ describe("movement avatar spine application", () => {
     expect(result).toEqual({ applied: 4, mode: "active" });
     expect(bones.hips.quaternion.w).toBeLessThan(1);
     expect(bones.upperChest.quaternion.w).toBeLessThan(1);
-    expect(new THREE.Quaternion().angleTo(bones.chest.quaternion)).toBeLessThanOrEqual(0.040001);
-    expect(new THREE.Quaternion().angleTo(bones.upperChest.quaternion)).toBeLessThanOrEqual(0.040001);
+    expect(new THREE.Quaternion().angleTo(bones.chest.quaternion)).toBeLessThanOrEqual(0.064001);
+    expect(new THREE.Quaternion().angleTo(bones.upperChest.quaternion)).toBeLessThanOrEqual(0.064001);
+  });
+
+  it("scales active spine application with elapsed render time", () => {
+    const bones = {
+      chest: new THREE.Object3D(),
+      hips: new THREE.Object3D(),
+      spine: new THREE.Object3D(),
+      upperChest: new THREE.Object3D(),
+    };
+
+    applyMovementAvatarSpinePoseApplicationToVrmBones({
+      activeSpineDrive: spineDrive(),
+      avatarRole: "player",
+      frameDeltaSeconds: 1 / 20,
+      lookupBone: (bone) => bones[bone as keyof typeof bones],
+      shouldApplySolverTorso: true,
+      sources: {},
+      spineApplyOptions: spineApplyOptions(),
+      torsoTrackingReady: true,
+    });
+
+    const chestStep = new THREE.Quaternion().angleTo(bones.chest.quaternion);
+    expect(chestStep).toBeGreaterThan(0.12);
+    expect(chestStep).toBeLessThanOrEqual(0.192001);
   });
 
   it("genuinely holds the rendered spine while tracking is unavailable", () => {

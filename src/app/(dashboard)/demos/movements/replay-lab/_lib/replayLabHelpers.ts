@@ -1,6 +1,7 @@
 // Pure helpers, thresholds, and local types for the replay lab page.
 
 import type { Id } from "@/convex/_generated/dataModel";
+import { RENDERED_FIDELITY_POLICY } from "@/src/lib/movements/renderedFidelityPolicy.mjs";
 import {
   extractOwner,
   type MovementDebugReplayFrame,
@@ -20,6 +21,26 @@ import {
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
 
+export function replayMotionFrameHistoryForBuild<T>({
+  isPlaying,
+  previousMotionFrame,
+}: {
+  isPlaying: boolean;
+  previousMotionFrame: T | null | undefined;
+}): T | null | undefined {
+  // A paused Replay frame is an independently selected proof frame. Carrying
+  // the prior frame into temporal stabilization turns a seek into one bounded
+  // smoothing step, leaving the avatar stranded between the old and new pose.
+  // Timed playback remains continuous and keeps its prior frame history.
+  return isPlaying ? previousMotionFrame : null;
+}
+
+export function replayShouldPresentTimedRootMotionRef(isPlaying: boolean): boolean {
+  // The imperative ref advances between React renders only during timed
+  // playback. A paused frame must use its declarative current-frame value;
+  // otherwise the last played/previous-recording heading wins indefinitely.
+  return isPlaying;
+}
 
 export function formatTime(value?: number) {
   if (!value) return "unknown";
@@ -135,7 +156,7 @@ export function replayCalibrationNeutralScore(frame: MovementDebugReplayFrame) {
   return kneeLift + sideBend * 2.4;
 }
 
-export const LIVE_UPPER_BODY_REVIEW_THRESHOLD = 0.18;
+export const LIVE_UPPER_BODY_REVIEW_THRESHOLD = RENDERED_FIDELITY_POLICY.passMax;
 export const LIVE_SPINE_DRIVE_MOTION_THRESHOLD = 0.18;
 export const LIVE_SPINE_DRIVE_REVIEW_THRESHOLD = 0.1;
 export const LIVE_HEAD_DAMPING_REVIEW_THRESHOLD = 0.05;
@@ -144,11 +165,11 @@ export const AVATAR_FOLLOW_OWNER_FLICKER_THRESHOLD = 1.25;
 export const AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD = 0.18;
 export const AVATAR_FOLLOW_ACTIVE_LEG_ERROR_THRESHOLD = 0.12;
 export const AVATAR_FOLLOW_AVERAGE_LOWER_REVIEW_THRESHOLD = 0.52;
-export const AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD = 0.18;
+export const AVATAR_FOLLOW_ARM_POSE_ERROR_THRESHOLD = RENDERED_FIDELITY_POLICY.passMax;
 export const AVATAR_FOLLOW_CURRENT_LOWER_REVIEW_THRESHOLD = 0.24;
 export const AVATAR_FOLLOW_PLANTED_FOOT_CLEARANCE_THRESHOLD = 0.08;
 export const AVATAR_FOLLOW_PLANTED_FOOT_ERROR_THRESHOLD = 0.12;
-export const AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD = 0.14;
+export const AVATAR_FOLLOW_SPINE_ANGLE_ERROR_THRESHOLD = RENDERED_FIDELITY_POLICY.passMax;
 export type AvatarFollowBatchStatus = "blocked" | "review" | "pass";
 export type AvatarFollowCriterionStatus = "blocked" | "review" | "pass" | "--";
 export const SOURCE_OUT_OF_FRAME_REVIEW_COUNT = 3;

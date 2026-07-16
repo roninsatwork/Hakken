@@ -2,11 +2,19 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import * as THREE from "three";
 import {
   inspectReplayTelemetryFrames,
   sourceHashForReplaySession,
 } from "./lib/replay-proof-identity.mjs";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import {
+  RENDERED_FIDELITY_POLICY,
+  RENDERED_FIDELITY_POLICY_VERSION,
+  classifyRenderedFidelitySample,
+  contiguousRenderedFidelityRuns,
+  isRenderedFidelityRepairOutcome,
+} from "../../src/lib/movements/renderedFidelityPolicy.mjs";
 
 const MIRRORED_SEGMENTS = [
   { avatar: "rightUpperArm", sameAvatar: "leftUpperArm", source: [11, 13], type: "arm" },
@@ -68,6 +76,9 @@ const MIRROR_OWNERSHIP_DECISIVE_MARGIN = 0.006;
 const MIRROR_OWNERSHIP_WINDOW_TRANSITIONS = 3;
 const OWNER_FLICKER_RENDERED_STEP = 0.12;
 const OWNER_FLICKER_RETURN_STEP = 0.06;
+// A single snap this large is visibly unacceptable even when it does not last
+// for the three frames required by the persistent-jerk gate.
+const SEVERE_RENDERED_JERK_STEP = 0.25;
 const MINIMUM_SIDE_BEND_SOURCE_RANGE = 0.04;
 const PERSISTENT_RENDERED_FAILURE_FRAMES = 3;
 const HARD_MIRROR_WRONG_SIDE_STEP = 0.06;
@@ -145,11 +156,18 @@ function sourceUpperArmJointAngle(session, frameIndex, source) {
   );
 }
 
-function angle(left, right) {
+export function renderedVectorAngle(left, right) {
   if (!left || !right) return 0;
-  const dot = Math.max(-1, Math.min(1, left.x * right.x + left.y * right.y + left.z * right.z));
+  const leftLength = Math.hypot(left.x, left.y, left.z);
+  const rightLength = Math.hypot(right.x, right.y, right.z);
+  if (leftLength <= 0.000001 || rightLength <= 0.000001) return 0;
+  const dot = Math.max(-1, Math.min(1, (
+    left.x * right.x + left.y * right.y + left.z * right.z
+  ) / (leftLength * rightLength)));
   return Math.acos(dot);
 }
+
+const angle = renderedVectorAngle;
 
 function accumulatedSourceSegmentStep(session, frames, endIndex, source, segmentType) {
   const startIndex = Math.max(0, endIndex - MIRROR_OWNERSHIP_WINDOW_TRANSITIONS);
@@ -314,6 +332,122 @@ function renderedHeadIntentPitch(debug) {
   return Number.isFinite(bonePitch) ? -bonePitch : null;
 }
 
+function signedWrappedAngleDifference(left, right) {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+  const difference = left - right;
+  return Math.atan2(Math.sin(difference), Math.cos(difference));
+}
+
+function telemetryQuaternion(value) {
+  return [value?.x, value?.y, value?.z, value?.w].every(Number.isFinite)
+    ? new THREE.Quaternion(value.x, value.y, value.z, value.w).normalize()
+    : null;
+}
+
+function renderedHeadFidelityCalibration(frames) {
+  return Object.fromEntries(["pitch", "roll", "yaw"].map((axis) => {
+    const targetKey = `bone${axis[0].toUpperCase()}${axis.slice(1)}`;
+    const renderedKey = `appliedWorld${axis[0].toUpperCase()}${axis.slice(1)}`;
+    const calibrationFrame = frames.find((frame) => (
+      (frame.debug?.headRaw?.confidence ?? 0) >= RENDERED_FIDELITY_POLICY.trustworthyConfidence &&
+      Number.isFinite(frame.debug?.avatarHead?.[targetKey]) &&
+      Number.isFinite(frame.debug?.avatarHead?.[renderedKey])
+    ));
+    const target = calibrationFrame?.debug?.avatarHead?.[targetKey];
+    const rendered = calibrationFrame?.debug?.avatarHead?.[renderedKey];
+    const offset = axis === "yaw"
+      ? signedWrappedAngleDifference(rendered, target)
+      : Number.isFinite(target) && Number.isFinite(rendered)
+        ? rendered - target
+        : null;
+    return [axis, { frameIndex: calibrationFrame?.frameIndex ?? null, offset }];
+  }));
+}
+
+function renderedHeadAxisFidelitySamples(debug, frameIndex, calibration) {
+  const avatarHead = debug.avatarHead;
+  if (!avatarHead) return [];
+  const targetWorldQuaternion = telemetryQuaternion(avatarHead.targetWorldQuaternion);
+  const appliedWorldQuaternion = telemetryQuaternion(avatarHead.appliedWorldQuaternion);
+  if (targetWorldQuaternion && appliedWorldQuaternion) {
+    const delta = targetWorldQuaternion.clone().invert().multiply(appliedWorldQuaternion).normalize();
+    if (delta.w < 0) delta.set(-delta.x, -delta.y, -delta.z, -delta.w);
+    const rotationError = new THREE.Euler().setFromQuaternion(delta, "YXZ");
+    const errors = {
+      pitch: Math.abs(signedWrappedAngleDifference(rotationError.x, 0)),
+      roll: Math.abs(signedWrappedAngleDifference(rotationError.z, 0)),
+      yaw: Math.abs(signedWrappedAngleDifference(rotationError.y, 0)),
+    };
+    return Object.entries(errors).map(([axis, error]) => ({
+      axis,
+      confidence: debug.headRaw?.confidence,
+      error,
+      frameIndex,
+      metric: "target-final-world-quaternion-delta",
+      outcome: classifyRenderedFidelitySample({
+        confidence: debug.headRaw?.confidence,
+        error,
+      }),
+    }));
+  }
+  return [
+    ["pitch", avatarHead.bonePitch, avatarHead.appliedWorldPitch],
+    ["roll", avatarHead.boneRoll, avatarHead.appliedWorldRoll],
+    ["yaw", avatarHead.boneYaw, avatarHead.appliedWorldYaw],
+  ].flatMap(([axis, target, rendered]) => {
+    const baselineOffset = calibration[axis]?.offset;
+    if (!Number.isFinite(target) || !Number.isFinite(rendered) || !Number.isFinite(baselineOffset)) return [];
+    const error = axis === "yaw"
+      ? Math.abs(signedWrappedAngleDifference(rendered - baselineOffset, target))
+      : Math.abs((rendered - baselineOffset) - target);
+    const confidence = debug.headRaw?.confidence;
+    return [{
+      axis,
+      confidence,
+      error,
+      frameIndex,
+      outcome: classifyRenderedFidelitySample({ confidence, error }),
+    }];
+  });
+}
+
+function activeSpineDriveFidelitySample(debug, frameIndex, previousDebug) {
+  const spineDrive = debug.spineDrive;
+  const usesSpineDriveOwner = typeof spineDrive?.owner === "string" && spineDrive.owner.includes("spine-");
+  if (!usesSpineDriveOwner) return null;
+  const isHeldOwner = spineDrive.owner.endsWith("-spine-held");
+  const errors = ["spine", "chest", "upperChest"].flatMap((bone) => (
+    ["x", "y", "z"].flatMap((axis) => {
+      // A held drive intentionally emits zero command rotations because the
+      // runtime must not apply a new pose. Its actual target is therefore the
+      // prior rendered pose, not the zero-valued no-op command.
+      const target = isHeldOwner
+        ? previousDebug?.avatarSpine?.[bone]?.[axis]
+        : spineDrive.targetRotations?.[bone]?.[axis];
+      const rendered = debug.avatarSpine?.[bone]?.[axis];
+      return Number.isFinite(target) && Number.isFinite(rendered)
+        ? [Math.abs(target - rendered)]
+        : [];
+    })
+  ));
+  const error = errors.length > 0 ? Math.max(...errors) : null;
+  const confidence = spineDrive.confidence;
+  return {
+    confidence,
+    error,
+    frameIndex,
+    metric: isHeldOwner
+      ? "held-prior-rendered-rotation-radians"
+      : "target-rotation-radians",
+    outcome: classifyRenderedFidelitySample({
+      confidence,
+      error,
+      hasProof: errors.length === 9,
+    }),
+    segment: "spine",
+  };
+}
+
 function renderedAxialMagnitude(debug) {
   return Math.max(
     Math.abs(debug?.avatarSpine?.spine?.z ?? 0),
@@ -430,6 +564,57 @@ function mirroredSourceFootClearance(pose, avatarSide) {
   return (oppositeAnkle.y - sourceAnkle.y) / torsoLength;
 }
 
+function summarizeRenderedFidelity(samples) {
+  const bySegment = Object.fromEntries(RENDERED_FIDELITY_POLICY.requiredUpperBodySegments.map((segment) => {
+    const segmentSamples = samples.filter((sample) => sample.segment === segment);
+    const sorted = [...segmentSamples].sort((left, right) => (right.error ?? -1) - (left.error ?? -1));
+    const repairRuns = contiguousRenderedFidelityRuns(
+      segmentSamples,
+      (sample) => isRenderedFidelityRepairOutcome(sample.outcome),
+    );
+    return [segment, {
+      blockedSampleCount: segmentSamples.filter((sample) => sample.outcome === "blocked").length,
+      limitedReviewSampleCount: segmentSamples.filter((sample) => sample.outcome === "limited-review").length,
+      maxError: round(sorted[0]?.error),
+      proofLimitedSampleCount: segmentSamples.filter((sample) => sample.outcome === "proof-limited").length,
+      repairRequiredSampleCount: segmentSamples.filter((sample) => sample.outcome === "repair-required").length,
+      sampleCount: segmentSamples.length,
+      severeSampleCount: segmentSamples.filter((sample) => sample.outcome === "severe").length,
+      sourceLimitedSampleCount: segmentSamples.filter((sample) => sample.outcome === "source-limited").length,
+      sustainedRepairRuns: repairRuns
+        .filter((run) => run.length >= RENDERED_FIDELITY_POLICY.sustainedRepairFrames)
+        .slice(0, 10)
+        .map((run) => ({
+          frameEnd: run.at(-1).frameIndex,
+          frameStart: run[0].frameIndex,
+          length: run.length,
+          maxError: round(Math.max(...run.map((sample) => sample.error ?? 0))),
+        })),
+      worstFrames: sorted.slice(0, 20).map((sample) => ({
+        confidence: round(sample.confidence),
+        error: round(sample.error),
+        frameIndex: sample.frameIndex,
+        outcome: sample.outcome,
+      })),
+    }];
+  }));
+  const averageSamples = samples.filter((sample) => sample.segment === "averageUpperBody");
+  return {
+    averageUpperBody: {
+      maxError: round(Math.max(...averageSamples.map((sample) => sample.error ?? 0), 0)),
+      repairSampleCount: averageSamples.filter((sample) => isRenderedFidelityRepairOutcome(sample.outcome)).length,
+      sampleCount: averageSamples.length,
+      worstFrames: [...averageSamples]
+        .sort((left, right) => (right.error ?? -1) - (left.error ?? -1))
+        .slice(0, 20)
+        .map((sample) => ({ error: round(sample.error), frameIndex: sample.frameIndex, outcome: sample.outcome })),
+    },
+    policy: RENDERED_FIDELITY_POLICY,
+    policyVersion: RENDERED_FIDELITY_POLICY_VERSION,
+    segments: bySegment,
+  };
+}
+
 export function analyzeFullSequence({
   session,
   telemetry,
@@ -443,6 +628,15 @@ export function analyzeFullSequence({
     frames: telemetry.frames,
   });
   const frames = frameInspection.uniqueExpectedFrames;
+  const headFidelityCalibration = renderedHeadFidelityCalibration(frames);
+  const headProofEligibleFrames = frames.filter((frame) => (
+    (frame.debug?.headRaw?.confidence ?? 0) >= RENDERED_FIDELITY_POLICY.trustworthyConfidence &&
+    frame.debug?.avatarHead
+  ));
+  const headQuaternionProofFrameCount = headProofEligibleFrames.filter((frame) => (
+    telemetryQuaternion(frame.debug.avatarHead.targetWorldQuaternion) &&
+    telemetryQuaternion(frame.debug.avatarHead.appliedWorldQuaternion)
+  )).length;
   const sourceHash = sourceHashForReplaySession(session);
   const declaredMissingFrames = Array.isArray(telemetry.missingFrames)
     ? [...new Set(telemetry.missingFrames.filter(Number.isInteger))].sort((left, right) => left - right)
@@ -453,6 +647,7 @@ export function analyzeFullSequence({
   ]));
   const headRaw = [];
   const headRendered = [];
+  const headFidelitySamples = [];
   const sideBendRaw = [];
   const sideBendRendered = [];
   const suppressedLegFrames = [];
@@ -461,6 +656,7 @@ export function analyzeFullSequence({
   const ownerTransitions = [];
   const transientOwnerTransitions = [];
   const neutralResetFrames = [];
+  const renderedFidelitySamples = [];
   const mirrorOwnership = Object.fromEntries(MIRROR_LIMB_PAIRS.map((pair) => [
     pair.type,
     {
@@ -477,12 +673,63 @@ export function analyzeFullSequence({
   frames.forEach((frame, frameArrayIndex) => {
     const debug = frame.debug;
     if (!debug) return;
+    const previousRenderedDebug = frames[frameArrayIndex - 1]?.debug;
+    const nextRenderedDebug = frames[frameArrayIndex + 1]?.debug;
     const pose = replayPose(session, frame.frameIndex);
     const retargetPose = replayRetargetPose(session, frame.frameIndex);
     const sourceQuality = debug.retarget?.sourceQuality ?? 0;
     const visualSegments = debug.avatarVisual?.segments ?? {};
-    const previousRenderedDebug = frames[frameArrayIndex - 1]?.debug;
-    const nextRenderedDebug = frames[frameArrayIndex + 1]?.debug;
+    const hasUpperBodyFidelityProof =
+      Number.isFinite(debug.avatarVisual?.averageUpperBodyDirectionError) ||
+      (debug.avatarVisual?.comparedUpperBodySegments ?? 0) > 0;
+    if (hasUpperBodyFidelityProof) {
+      RENDERED_FIDELITY_POLICY.requiredUpperBodySegments.forEach((segment) => {
+        const spineDriveSample = segment === "spine"
+          ? activeSpineDriveFidelitySample(debug, frame.frameIndex, previousRenderedDebug)
+          : null;
+        if (spineDriveSample) {
+          renderedFidelitySamples.push(spineDriveSample);
+          return;
+        }
+        const visualSegment = visualSegments[segment];
+        const error = visualSegment?.sourceError;
+        const confidence = visualSegment?.confidence;
+        renderedFidelitySamples.push({
+          confidence,
+          error,
+          frameIndex: frame.frameIndex,
+          metric: "direction-dot-error",
+          outcome: classifyRenderedFidelitySample({
+            confidence,
+            error,
+            hasProof: Boolean(visualSegment),
+          }),
+          segment,
+        });
+      });
+      const averageError = debug.avatarVisual?.averageUpperBodyDirectionError;
+      const requiredSegmentConfidences = RENDERED_FIDELITY_POLICY.requiredUpperBodySegments.flatMap((segment) => {
+        if (segment === "spine" && activeSpineDriveFidelitySample(debug, frame.frameIndex, previousRenderedDebug)) {
+          return Number.isFinite(debug.spineDrive?.confidence) ? [debug.spineDrive.confidence] : [];
+        }
+        const confidence = visualSegments[segment]?.confidence;
+        return Number.isFinite(confidence) ? [confidence] : [];
+      });
+      const averageConfidence = requiredSegmentConfidences.length > 0
+        ? Math.min(...requiredSegmentConfidences)
+        : sourceQuality;
+      renderedFidelitySamples.push({
+        confidence: averageConfidence,
+        error: averageError,
+        frameIndex: frame.frameIndex,
+        outcome: classifyRenderedFidelitySample({
+          confidence: averageConfidence,
+          error: averageError,
+        }),
+        segment: "averageUpperBody",
+        metric: "direction-dot-error",
+      });
+    }
     if (
       previousRenderedDebug &&
       nextRenderedDebug &&
@@ -499,6 +746,11 @@ export function analyzeFullSequence({
     }
 
     const renderedHeadPitch = renderedHeadIntentPitch(debug);
+    headFidelitySamples.push(...renderedHeadAxisFidelitySamples(
+      debug,
+      frame.frameIndex,
+      headFidelityCalibration,
+    ));
     if (Math.abs(debug.headRaw?.pitch ?? 0) >= 0.06 && renderedHeadPitch !== null) {
       headRaw.push(debug.headRaw.pitch);
       headRendered.push(renderedHeadPitch);
@@ -571,7 +823,17 @@ export function analyzeFullSequence({
         series.source.push(sourceStep);
         series.avatar.push(avatarStep);
         series.same.push(sameStep);
-        if (targetStep >= 0.025 && avatarStep < 0.004) series.staticFrames.push(frame.frameIndex);
+        const segmentApplicationReady = segment.type !== "leg" || (
+          (debug.retarget?.appliedLowerBody ?? 0) >= 4 &&
+          (previousFrame.debug.retarget?.appliedLowerBody ?? 0) >= 4
+        );
+        if (
+          segmentApplicationReady &&
+          targetStep >= 0.025 &&
+          avatarStep < 0.004
+        ) {
+          series.staticFrames.push(frame.frameIndex);
+        }
         if (frame.frameIndex >= 5 && avatarStep >= 0.18 && intendedWorldStep < 0.06) {
           jerkFrames.push({ frameIndex: frame.frameIndex, segment: segment.avatar, sourceStep: intendedWorldStep, avatarStep });
         }
@@ -746,6 +1008,32 @@ export function analyzeFullSequence({
   const sideBendSourceRange = range(sideBendRaw);
   const eligibleFrameCount = frames.filter((frame) => (frame.debug?.retarget?.sourceQuality ?? 0) >= 0.45).length;
   const failures = [];
+  const renderedFidelity = summarizeRenderedFidelity(renderedFidelitySamples);
+  const headFidelity = Object.fromEntries(["pitch", "roll", "yaw"].map((axis) => {
+    const samples = headFidelitySamples.filter((sample) => sample.axis === axis);
+    const sorted = [...samples].sort((left, right) => right.error - left.error);
+    const sustainedRepairRuns = contiguousRenderedFidelityRuns(
+      samples,
+      (sample) => isRenderedFidelityRepairOutcome(sample.outcome),
+    ).filter((run) => run.length >= RENDERED_FIDELITY_POLICY.sustainedRepairFrames);
+    return [axis, {
+      maxErrorRadians: round(sorted[0]?.error),
+      repairSampleCount: samples.filter((sample) => isRenderedFidelityRepairOutcome(sample.outcome)).length,
+      sampleCount: samples.length,
+      sustainedRepairRuns: sustainedRepairRuns.slice(0, 10).map((run) => ({
+        frameEnd: run.at(-1).frameIndex,
+        frameStart: run[0].frameIndex,
+        length: run.length,
+        maxErrorRadians: round(Math.max(...run.map((sample) => sample.error))),
+      })),
+      thresholdRadians: RENDERED_FIDELITY_POLICY.headAxisMaxRadians,
+      worstFrames: sorted.slice(0, 20).map((sample) => ({
+        errorRadians: round(sample.error),
+        frameIndex: sample.frameIndex,
+        outcome: sample.outcome,
+      })),
+    }];
+  }));
   if (frameInspection.frameCount === 0) {
     failures.push({ code: "rendered-frame-count-invalid", count: 1 });
   }
@@ -817,7 +1105,25 @@ export function analyzeFullSequence({
   ) {
     failures.push({ code: "rendered-side-bend-under-response", count: sideBendRaw.length });
   }
-  if (!isDeterministicFrameStep && jerkFrames.length / Math.max(eligibleFrameCount, 1) > 0.01) {
+  const persistentJerkRuns = Object.entries(Object.groupBy(jerkFrames, (frame) => frame.segment))
+    .flatMap(([segment, frames]) => persistentFrameRuns(
+      frames ?? [],
+      (frame) => frame.frameIndex,
+    ).map((run) => ({
+      frameEnd: run.at(-1).frameIndex,
+      frameStart: run[0].frameIndex,
+      length: run.length,
+      segment,
+    })));
+  const severeJerkFrames = jerkFrames.filter((frame) => frame.avatarStep >= SEVERE_RENDERED_JERK_STEP);
+  if (
+    !isDeterministicFrameStep &&
+    (
+      severeJerkFrames.length > 0 ||
+      jerkFrames.length / Math.max(eligibleFrameCount, 1) > 0.01 ||
+      persistentJerkRuns.length > 0
+    )
+  ) {
     failures.push({ code: "rendered-motion-jerk", count: jerkFrames.length });
   }
   if (ownerFlickers.length > 0) {
@@ -825,6 +1131,43 @@ export function analyzeFullSequence({
   }
   if (neutralResetFrames.length > 0) {
     failures.push({ code: "rendered-neutral-reset", count: neutralResetFrames.length });
+  }
+  const severeFidelitySamples = renderedFidelitySamples.filter((sample) => sample.outcome === "severe");
+  const blockedFidelitySamples = renderedFidelitySamples.filter((sample) => sample.outcome === "blocked");
+  const repairFidelitySamples = renderedFidelitySamples.filter((sample) => sample.outcome === "repair-required");
+  const proofLimitedFidelitySamples = renderedFidelitySamples.filter((sample) => sample.outcome === "proof-limited");
+  if (severeFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-fidelity-severe", count: severeFidelitySamples.length });
+  }
+  if (blockedFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-fidelity-blocked", count: blockedFidelitySamples.length });
+  }
+  if (repairFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-fidelity-repair-required", count: repairFidelitySamples.length });
+  }
+  if (proofLimitedFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-fidelity-proof-limited", count: proofLimitedFidelitySamples.length });
+  }
+  if (
+    telemetry.motionPipelineFingerprint === movementPipelineFingerprint() &&
+    headQuaternionProofFrameCount < headProofEligibleFrames.length
+  ) {
+    failures.push({
+      code: "rendered-head-quaternion-proof-missing",
+      count: headProofEligibleFrames.length - headQuaternionProofFrameCount,
+    });
+  }
+  const severeHeadFidelitySamples = headFidelitySamples.filter((sample) => sample.outcome === "severe");
+  const blockedHeadFidelitySamples = headFidelitySamples.filter((sample) => sample.outcome === "blocked");
+  const repairHeadFidelitySamples = headFidelitySamples.filter((sample) => sample.outcome === "repair-required");
+  if (severeHeadFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-head-fidelity-severe", count: severeHeadFidelitySamples.length });
+  }
+  if (blockedHeadFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-head-fidelity-blocked", count: blockedHeadFidelitySamples.length });
+  }
+  if (repairHeadFidelitySamples.length > 0) {
+    failures.push({ code: "rendered-head-fidelity-repair-required", count: repairHeadFidelitySamples.length });
   }
   const mirrorOwnershipSummary = Object.fromEntries(Object.entries(mirrorOwnership).map(([key, value]) => [
     key,
@@ -896,13 +1239,26 @@ export function analyzeFullSequence({
       unexpectedFrameIndexes: frameInspection.unexpectedFrameIndexes,
     },
     head: {
+      calibration: Object.fromEntries(Object.entries(headFidelityCalibration).map(([axis, value]) => [axis, {
+        frameIndex: value.frameIndex,
+        offsetRadians: round(value.offset),
+      }])),
       correlation: round(correlation(headRaw, headRendered)),
+      fidelity: headFidelity,
+      proof: {
+        eligibleFrameCount: headProofEligibleFrames.length,
+        missingQuaternionFrameCount: headProofEligibleFrames.length - headQuaternionProofFrameCount,
+        quaternionFrameCount: headQuaternionProofFrameCount,
+      },
       responseRatio: round(headResponseRatio),
       sampleCount: headRaw.length,
     },
     jerk: {
       blocking: !isDeterministicFrameStep,
       frameCount: jerkFrames.length,
+      persistentRuns: persistentJerkRuns,
+      severeFrameCount: severeJerkFrames.length,
+      severeStepThreshold: SEVERE_RENDERED_JERK_STEP,
       worstFrames: jerkFrames.slice(0, 30).map((entry) => ({
         ...entry,
         avatarStep: round(entry.avatarStep),
@@ -910,6 +1266,7 @@ export function analyzeFullSequence({
       })),
     },
     playbackMode: telemetry.playbackMode ?? "timed-playback",
+    renderedFidelity,
     mirrorSegments: segmentMetrics,
     mirrorSideOwnership: mirrorOwnershipSummary,
     missingFrameCount: isSourceTimeSequence

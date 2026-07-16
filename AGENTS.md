@@ -92,6 +92,8 @@ Replay Studio is the motion source of truth. If avatar motion is broken, fix the
 
 Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/replay-studio-agent-repair-harness-plan.md`. It defines the required record-once repair loop, canonical repair packet, durable fixture strategy, rendered telemetry, and one-command acceptance workflow. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
 
+Before changing rendered fidelity thresholds, head/spine/arm acceptance, neutral/standing continuity, manual Replay seeking, or claiming renewed visual acceptance, also read `docs/plans/active/replay-lab-visual-acceptance-tightening-plan.md`. The strengthened contract uses a `0.10` clean-frame segment ceiling for trustworthy evidence, forbids averages from hiding a broken segment, and requires manual seek/reset proof in addition to deterministic and intended-time playback.
+
 When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
 
 ## Project Guardrails
