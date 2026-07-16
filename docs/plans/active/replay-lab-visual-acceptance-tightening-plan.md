@@ -1,7 +1,7 @@
 # Replay Lab Visual Acceptance Tightening Plan
 
-Last reviewed: 2026-07-15
-Status: active; final-fingerprint all-nine acceptance passes 9/9 recordings across deterministic, intended-time, and three-party proof, with all `34,149/34,149` lane-frames accounted for and zero missing or failed frames. Durable physical slider-drag convergence passes 5/5 discontinuous targets, and the telemetry-backed frame-281 repair packet is accepted with `3,026/3,026` rendered frames. Only final Game Studio live confirmation remains open.
+Last reviewed: 2026-07-16
+Status: active and reopened. The July 15 final-fingerprint bundle remains valid evidence of complete lane accounting, temporal continuity, side ownership, and target-to-final VRM application, but it is not current visual acceptance. Human review of `Full Body Flow` frame 652 exposed two semantic proof gaps: the spine/head gates can prove that a wrong target was applied correctly, and the planted-foot gate measures the foot-bone origin rather than heel/sole/toe contact. Renewed acceptance requires the source-to-final torso/head-chain and calibrated sole-contact gates defined below, followed by fresh targeted, full-recording, fast-subset, and all-nine proof.
 Scope: make Replay Lab, full-sequence rendered proof, three-party proof, and `movement:avatar-follow-gate` fail loudly when the avatar does not visually match the recorded source, even if side ownership, parity, coverage, or aggregate analyzer gates are green.
 
 Controlling follow-on: [`replay-studio-agent-repair-harness-plan.md`](./replay-studio-agent-repair-harness-plan.md) owns durable fixtures, repair packets, one-command diagnosis, and agent workflow. This plan remains authoritative for false-green prevention and rendered visual acceptance thresholds.
@@ -11,6 +11,38 @@ Related contracts:
 - [`movement-mirror-methodology-implementation-plan.md`](./movement-mirror-methodology-implementation-plan.md) owns anatomical identity/opposite mapping and all-nine mirror certification.
 - [`replay-game-runtime-alignment-plan.md`](./replay-game-runtime-alignment-plan.md) owns Replay/Game shared-runtime parity.
 - This plan owns absolute source-to-final-VRM fidelity, per-segment deviation limits, neutral/standing continuity, and manual seek acceptance.
+
+## 2026-07-16 Semantic Proof Reopening: Full Body Flow Frame 652
+
+Human review of `Full Body Flow` frame 652 (`px7fafa0wypmmc5rfz1nzmdvas88n6m0`) found a visibly hunched head/upper torso and raised toes while the source remained substantially upright with both feet on the floor. The final-fingerprint artifact at `tmp/movement-replay-lab/current-nine-recording-proof-2026-07-15-final-0-10/` reports the recording as passed across all three lanes. That acceptance claim is withdrawn.
+
+Saved source and final-render telemetry establish the following red baseline:
+
+| Evidence | Frame-652 value | Acceptance meaning |
+| --- | ---: | --- |
+| Source hip-midpoint to shoulder-midpoint lean, derived from saved world landmarks | `0.1499 rad` / `8.6deg` | Trustworthy upright source reference |
+| Solver `spineDrive.forwardLean` | `0.8303 rad` / `47.6deg` | Wrong motion target; source-to-target delta is about `0.6804 rad` |
+| Applied spine/chest/upper-chest rotations | Equal the solver target to telemetry precision | Proves application consistency only; does not prove source fidelity |
+| Head target world quaternion versus applied world quaternion | Identical | Zero application error can coexist with a visibly wrong head/neck/torso silhouette |
+| Support intent / constraint | `feet-floor` / `active` | Both feet are expected to be planted |
+| Retarget contacts | left `false`, right `false` | Contradicts the active planted-foot support claim |
+| Foot-lock strength | `0` | No effective legacy foot lock is present |
+| Reported foot clearance | left `0`, right `0.0467` | Measures foot-bone origins, not heel/sole/toe contact |
+
+The frame passed for four specific reasons:
+
+1. Head fidelity compared the requested world quaternion with the applied world quaternion. It did not independently compare the source-supported head/neck relationship with the final avatar relationship.
+2. Active-spine fidelity compared `spineDrive.targetRotations` with `avatarSpine`. It did not compare the source torso vector with the final rendered torso chain, so a wrong `0.8303`-radian lean target received a zero-error result.
+3. The average upper-body direction value contained the four arm segments while the active spine used a separate target-application metric. The displayed average therefore could not reveal this source-to-spine-target error.
+4. Foot-floor telemetry sampled the normalized `leftFoot` and `rightFoot` node positions. Standing support corrected those nodes to the floor, but no telemetry sampled the rendered heel, sole, or toe contact points. The analyzer checked sudden clearance changes, not persistent absolute toe lift.
+
+Product decision:
+
+- `0.10` remains the maximum clean-frame angular or direction-error ceiling for every trustworthy source-to-final anatomical comparison.
+- Target-to-final equality is application proof, not visual-fidelity proof. Both layers are required.
+- Floor contact uses a separate avatar-scaled distance policy; `0.10` raw world units is not an acceptable sole-contact threshold.
+- A `feet-floor` frame cannot pass when required heel/toe evidence is missing, either foot lacks planted contact without a source-supported lift, or the support/contact/lock evidence is internally contradictory.
+- The immutable regression window is `Full Body Flow` frames 648-656, with frame 652 as the controlling first/worst example. It must fail before repair and pass after repair without changing the source recording.
 
 ## 2026-07-15 Reopening Decision
 
@@ -121,14 +153,15 @@ The final all-nine result may be `accepted` only when every trustworthy required
 
 The following must be judged independently on every eligible frame:
 
-- spine;
+- source hip-to-shoulder torso vector versus the final rendered hips/spine/chest/upper-chest chain;
 - left and right upper arm;
 - left and right lower arm;
-- head forward and up directions;
+- source-supported head-to-torso relationship versus final rendered neck/head forward and up directions;
 - final rendered head pitch, yaw, and roll after neutral calibration;
 - hips/root vertical posture when squat, rise, standing height, or vertical travel is visible.
+- left and right heel, sole, and toe contact when the source and support intent say the foot is planted.
 
-Hands, feet, thighs, and shins retain their existing stricter movement-specific gates and must be migrated to the same `pass | repair-required | blocked | severe | source-limited | proof-limited` vocabulary in a later whole-body slice.
+Hands, thighs, and shins retain their existing movement-specific gates and must be migrated to the same `pass | repair-required | blocked | severe | source-limited | proof-limited` vocabulary in a later whole-body slice. Planted feet are no longer deferred: heel/sole/toe contact is required by the current reopened slice.
 
 ### Head alignment
 
@@ -136,10 +169,39 @@ Head acceptance must no longer rely only on response correlation or instructor/p
 
 - body-local head forward/up direction error must be `<= 0.10` on trustworthy frames;
 - calibrated final pitch, yaw, and roll delta has an initial ceiling of `0.10` radians per axis;
+- source torso lean and source-relative cervical/head posture must be compared with the final rendered torso/neck/head chain after avatar-neutral calibration;
+- target-to-final world-quaternion delta must remain as VRM-application proof, but it cannot substitute for the independent source-to-final comparison;
+- a correct final head quaternion cannot pass when a wrong spine/chest target makes the combined silhouette visibly hunched;
 - reversed sign, a neutralized strong source motion, or a sustained delta above the ceiling is blocking;
 - both avatars agreeing with each other is insufficient if both disagree with the source.
 
 The `0.10`-radian axis ceiling is provisional until the red baseline and a small set of visually accepted neutral/head-motion fixtures establish that rig-neutral conversion is correct. It may be made stricter. It may not be relaxed after a visible failure without explicit product review and before/after evidence.
+
+### Torso and cervical-chain alignment
+
+Active-spine proof requires two independent comparisons:
+
+1. **Decision/application proof:** each final spine/chest/upper-chest rotation must remain within `0.10` radians of the active target so late VRM application defects are caught.
+2. **Source/final visual proof:** the final hips-to-shoulders torso direction and calibrated torso/neck/head chain must remain within `0.10` radians of the trustworthy source-supported direction.
+
+Neither comparison can replace the other. A source-to-target divergence above `0.10` is repair-required even when the target is applied exactly. A final-to-target divergence above `0.10` is repair-required even when the target itself matches the source.
+
+The source/final comparison must use independently derived saved-landmark geometry and final rendered VRM joint positions/world axes. It must not derive both expected and actual from `spineDrive.targetRotations`, production rest-pose mapping, or one shared solver output.
+
+### Planted-foot and sole-contact alignment
+
+Planted-foot acceptance must measure the visible contact surface, not only a foot bone origin:
+
+- infer source contact separately for each foot from ankle, heel, and toe height plus short-window velocity and confidence hysteresis;
+- capture final rendered heel, toe-base/toe-end, and calibrated sole contact anchors for each avatar foot;
+- normalize clearance thresholds by avatar scale and calibrated shoe/sole thickness rather than using raw world units;
+- require both heel and toe/forefoot contact within the calibrated tolerance while the source foot is planted;
+- compare final foot pitch/roll with the source-supported foot plane, using the same `0.10`-radian ceiling for trustworthy angular error;
+- treat `feet-floor` plus false contacts, absent contact strength/correction, missing contact anchors, or visible clearance as a blocking support-contact contradiction;
+- judge left and right independently, with no averaging and no use of the lower foot to define a self-fulfilling floor;
+- retain temporal jerk checks, but also block a stable floating foot or toe because an absolute contact violation does not need to move to be wrong.
+
+The exact distance ceiling must be calibrated from the avatar's neutral rendered sole and expressed as a small fraction of avatar height or foot length. It must be fixed before the regression fixture is repaired and cannot be loosened to make frame 652 pass.
 
 ### Neutral, standing, and vertical continuity
 
@@ -443,7 +505,7 @@ Exit criteria:
 
 ### Phase 12: Human Replay And Live Confirmation
 
-Progress: 80%.
+Progress: reopened. The earlier interaction checks remain useful, but broader human Replay acceptance and Game confirmation cannot close until Phases 13-14 pass.
 
 Tasks:
 
@@ -458,6 +520,50 @@ Exit criteria:
 - Human review agrees with telemetry and sees no visible head, arm, spine, neutral/standing, or continuity defect.
 - Game Studio confirms the Replay-proven shared result without a route-specific patch.
 - Product acceptance is explicitly recorded with reviewer, date, commit, fingerprint, and artifact path.
+
+### Phase 13: Close Source-Semantic And Sole-Contact Blind Spots
+
+Progress: 10%. Diagnosis and the controlling red baseline are complete; telemetry, gates, fixtures, and runtime repair are not implemented.
+
+Tasks:
+
+- [x] Preserve and document `Full Body Flow` frame 652 evidence from the final-fingerprint artifact.
+- [x] Prove that source torso lean (`0.1499 rad`) and solver forward lean (`0.8303 rad`) disagree while target-to-final spine application passes.
+- [x] Prove that target/final head quaternions are identical while the combined torso/neck/head silhouette is visibly hunched.
+- [x] Prove that foot-floor telemetry samples normalized foot nodes while visible toe/sole contact remains unmeasured.
+- [ ] Commit a sanitized immutable `Full Body Flow` frames 648-656 source/telemetry regression fixture with the existing source hash and expected pre-repair failures.
+- [ ] Add independent source torso direction, final rendered torso-chain direction, source-relative cervical posture, and final neck/head-chain telemetry.
+- [ ] Add calibrated left/right heel, sole, toe-base/toe-end, foot-plane, and floor-contact telemetry.
+- [ ] Add canonical failure classification for source-to-target torso divergence, source-to-final head-chain divergence, planted-foot contact contradiction, toe clearance, and foot-plane angular divergence.
+- [ ] Make UI, full-sequence, intended-time, three-party, repair packet, bundle, and avatar-follow gates consume the same new evidence and fail closed when required evidence is missing.
+- [ ] Repair the shared source-to-spine target and foot/sole-contact boundaries without Replay-only, Game-only, recording-specific, frame-specific, or avatar-specific rules.
+
+Exit criteria:
+
+- Frame 652 fails before the runtime repair for both the torso/head-chain and toe/sole-contact reasons.
+- The repaired frames 648-656 pass the unchanged `0.10` angular ceiling and the predeclared scale-normalized contact threshold.
+- A deliberately wrong target that is applied perfectly still fails source-to-final acceptance.
+- A foot bone placed on the floor while the toe/sole remains raised still fails planted-foot acceptance.
+
+### Phase 14: Renewed Tiered And Human Acceptance
+
+Progress: 0%.
+
+Run in order:
+
+1. `Full Body Flow` frames 648-656 deterministic rendered proof and manual seek proof.
+2. Complete `Full Body Flow` deterministic, intended-time, three-party, Previous/Next, slider, and seek-then-play proof.
+3. Fast subset covering `Full Body Flow`, `Full Motion Exercises`, and `Full Spinal Flow`.
+4. Fresh all-nine current-fingerprint proof with the new semantic and sole-contact fields present on every eligible frame.
+5. Broad human Replay review of head/torso silhouette and planted feet before the final Game Studio live confirmation.
+
+Exit criteria:
+
+- Zero trustworthy source-to-final torso/head-chain comparisons exceed `0.10`.
+- Zero trustworthy planted feet exceed the calibrated heel/sole/toe clearance or `0.10` foot-plane angular limits.
+- Zero required semantic/contact samples are proof-limited, silently skipped, or replaced by target-to-final self-consistency.
+- Human review agrees with telemetry on the controlling frame and representative frames across all nine recordings.
+- Only after all preceding gates pass may all-nine visual acceptance and final Game Studio confirmation be reclaimed.
 
 ## Proposed Failure Codes
 
@@ -475,7 +581,13 @@ Exit criteria:
 - `rendered-segment-direction-diverged`
 - `rendered-head-axis-diverged`
 - `rendered-head-vector-diverged`
+- `rendered-torso-source-diverged`
+- `rendered-head-chain-source-diverged`
 - `rendered-neutral-standing-reset`
+- `rendered-planted-foot-contact-contradiction`
+- `rendered-heel-clearance-diverged`
+- `rendered-toe-clearance-diverged`
+- `rendered-foot-plane-diverged`
 - `manual-seek-pose-diverged`
 - `manual-seek-reset-visible`
 - `rendered-fidelity-source-limited`
@@ -532,8 +644,23 @@ Stop and reopen the acceptance contract if any of these happen:
 - A source-limited or proof-limited comparison is silently counted as passing.
 - A missing or stale July 14 artifact is used as current certification evidence.
 - A threshold is relaxed after seeing a visible failure without explicit product review and before/after evidence.
+- A wrong torso/head target passes because the final bones accurately applied that target.
+- A `feet-floor` frame passes while required rendered heel/sole/toe evidence is missing or while retarget contact and support evidence contradict each other.
+- A foot-bone origin on the floor is treated as proof that the visible shoe sole and toes are planted.
+- A persistent floating toe passes because only frame-to-frame clearance change is evaluated.
 
 ## Implementation Log
+
+2026-07-16:
+
+- Human Replay review reopened acceptance on `Full Body Flow` frame 652. The source is substantially upright with planted feet, while the avatar shows a hunched torso/head silhouette and visibly raised toes.
+- The saved world landmarks produce an approximately `0.1499`-radian source torso lean, while `spineDrive.forwardLean` is `0.8303` radians. The roughly `0.6804`-radian source-to-target mismatch is not measured by the existing active-spine gate.
+- Existing active-spine proof reports success because `avatarSpine` matches `spineDrive.targetRotations`. Existing head proof reports zero application error because the target and applied world quaternions are identical. Both are valid application checks but invalid as the only visual-fidelity oracle.
+- Existing upper-body averaging contains four arm segments and does not include a source-direction spine sample while active spine ownership is present. This allows a wrong torso target to remain absent from the displayed average.
+- Existing foot clearance reads normalized `leftFoot` and `rightFoot` node origins. At frame 652 it reports left `0` and right `0.0467`, while the rendered toes visibly remain above the floor.
+- The same frame reports `feet-floor` support intent and an active support constraint, but left/right retarget contact are both false and foot-lock strength is `0`. This contradiction was not blocking.
+- Product decision: retain the `0.10` angular/direction ceiling, add an independent source-to-final torso/head-chain layer, and add scale-normalized rendered heel/sole/toe contact proof. Target-to-final equality and foot-node-on-floor are no longer sufficient acceptance evidence.
+- The July 15 9/9 artifact is retained as coverage, temporal, side-ownership, and application evidence, but its visual-acceptance claim is withdrawn until Phases 13-14 pass.
 
 2026-07-15:
 
@@ -565,7 +692,7 @@ Stop and reopen the acceptance contract if any of these happen:
 - The first fast-subset analysis correctly exposed two proof-layer defects without changing runtime thresholds. Three-party head fidelity still used calibrated Euler yaw and manufactured near-`pi` errors when `Spins` crossed the wrap boundary; it now uses the same target-to-final world-quaternion delta as full-sequence proof. Aggregate upper-body confidence now inherits the weakest required-segment confidence, preventing a source-limited arm from being promoted to trustworthy by unrelated whole-body quality while preserving the `0.10` gate for trustworthy averages and every required segment.
 - A complete July 15 all-nine refresh accounted for **34,149 lane-frames** with zero missing: `11,383` deterministic player frames, `11,383` intended-time processed source frames, and `11,383` three-party frames. After proof-layer reanalysis it remained honestly **7/9**; Star Jumps and Body Capture retained rendered-fidelity blockers, so the bundle was never promoted to acceptance.
 - The subsequent latest-runtime all-nine refresh again captured all **34,149 lane-frames** with zero missing and advanced to **8/9**. Star Jumps and Body Capture passed; Full Spinal Flow alone blocked on timed spine error `0.1001` at frame 898 plus a held-static false positive for an unapplied neutral-fallback right-thigh target at frames 1287-1289.
-- The final-fingerprint all-nine refresh at `current-nine-recording-proof-2026-07-15-final-0-10` passes **9/9** with deterministic, intended-time, and three-party totals of `11,383/11,383` each, zero missing and zero failures. This is the controlling global Replay acceptance artifact.
+- The final-fingerprint all-nine refresh at `current-nine-recording-proof-2026-07-15-final-0-10` passed **9/9** under the July 15 fields with deterministic, intended-time, and three-party totals of `11,383/11,383` each, zero missing and zero failures. It was promoted as the controlling global Replay artifact at that checkpoint; the July 16 frame-652 reopening now classifies it as historical coverage/application evidence rather than visual acceptance.
 - Held-spine three-party proof now compares the current rendered pose with the prior rendered pose instead of comparing a no-op command with zero. Both analyzers normalize rounded telemetry vectors before computing angles, preventing false divergence and false held-static results. Deterministic batch capture also preserves prior motion-frame history, matching the timed/shared target contract instead of rebuilding isolated frames.
 - Full Spinal Flow then exposed a genuine root/support feedback snap around frames 801-802: the root-height command consumed the previous post-support correction, and a low-confidence foot-contact boundary switched the lower-body presentation model toward neutral. Root command history is now independent of the support offset, planted contact uses confidence hysteresis, and suppressed contact changes retain planted-squat ownership and hip-drop presentation.
 - The timed jerk gate now blocks any single rendered step of at least `0.25`, even below one percent of the recording and without a three-frame persistent run. The former approximately `0.52` foot-clearance plunge therefore cannot pass as an isolated diagnostic.
@@ -627,13 +754,16 @@ Stop and reopen the acceptance contract if any of these happen:
 
 ## Progress
 
-- Overall movement roadmap: 98% after human Replay interaction repair, durable slider convergence, final-fingerprint three-lane Full Spinal proof, current 9/9 all-nine acceptance, and telemetry-backed packet consolidation; only Game Studio live confirmation remains.
-- Reopened rendered-fidelity acceptance slice: 100%. The historical false green, seek-history stall, playback timestamp collapse, persistent low-confidence arm reacquisition jerk, child-parent forearm catch-up, root/support feedback snap, proof-vector defects, head proof, arm foreshortening, final VRM application defects, all-nine reproof, and slider convergence proof are complete.
+- Overall movement roadmap: approximately 88%. The shared runtime, frame accounting, temporal proof, side ownership, and target-to-final application work remain valuable, but visual acceptance is reopened by the missing source-semantic torso/head-chain and rendered sole-contact gates.
+- July 16 diagnosis/documentation slice: 100%.
+- Phase 13 semantic/contact hardening: 10% overall; diagnosis and red-baseline definition are complete, implementation is 0%.
+- Phase 14 renewed tiered/human acceptance: 0%.
+- Earlier rendered-fidelity work remains historical implementation evidence, not current global visual acceptance. It must not be summarized as 9/9 accepted until the new gates are present and the proof is regenerated.
 - Phase 6 red baseline and metric proof: 100%.
 - Phase 7 canonical strengthened policy: 100%.
 - Phase 8 per-segment and absolute head gates: 100%.
 - Phase 9 manual seek acceptance: 100%; human interaction, cross-recording root-heading checks, and durable physical slider-drag convergence all pass.
 - Phase 10 shared runtime repair: 100% for the controlling and fast-subset recordings.
-- Phase 11 tiered reproof: 100%; the final-fingerprint all-nine bundle passes 9/9 with all `34,149/34,149` lane-frames accounted for and zero failures.
-- Phase 12 human Replay and live confirmation: 80%; Replay interaction, controlling-recording review, durable slider proof, and final packet consolidation pass, while broader human review and Game Studio live confirmation remain.
+- Phase 11 historical tiered reproof: 100% for the July 15 policy and fields; the artifact accounts for all `34,149/34,149` lane-frames but is insufficient for July 16 visual acceptance.
+- Phase 12 human Replay and live confirmation: reopened; broader human Replay review remains mandatory before Game Studio confirmation.
 - Historical false-green prevention work remains valuable, but its earlier `100% implemented` status is superseded by the frame-281 reopening.
