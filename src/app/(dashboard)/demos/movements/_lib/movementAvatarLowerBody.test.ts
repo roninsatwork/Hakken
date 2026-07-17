@@ -114,6 +114,36 @@ describe("movement avatar lower-body drive", () => {
     expect(owner.feetOwner).toBe("neutral");
   });
 
+  it("keeps a complete far-camera leg chain even when whole-body quality is below 0.45", () => {
+    const lowerBodyDrive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: leftLegRaiseIntent,
+      lowerBodyTrackingReady: true,
+      retargetContactsBothFeet: false,
+      retargetHipDrop: 0,
+      retargetSquatDepth: 0,
+    });
+    const owner = resolveMovementAvatarPlayerLowerBodyOwners({
+      applicableLegSegments: 4,
+      hasBilateralApplicableThighs: true,
+      lowerBodyDrive,
+      lowerBodySegmentMotion: 0.64,
+      lowerBodyTrackingReady: true,
+      playerRetargetLowerBodyMotion: 0.72,
+      retargetSourceQuality: 0.43,
+      shouldApplyLowerBody: true,
+      shouldHoldPlayerSquatPose: false,
+      solvedFootSegments: 0,
+      solvedLowerBodySegments: 4,
+      totalSolvedSegments: 11,
+    });
+
+    expect(owner.hasCompleteLegRetarget).toBe(true);
+    expect(owner.canUsePlayerRetargetLegRaise).toBe(true);
+    expect(owner.lowerBodyOwner).toBe("player-retarget");
+  });
+
   it("keeps bilateral applicable thighs on partial retarget during a readiness dip", () => {
     const lowerBodyDrive = resolveMovementAvatarLowerBodyDrive({
       hasLiveBodyCalibration: true,

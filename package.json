@@ -98,8 +98,13 @@
     "movement:upper-body-standing-capture-final-audit": "node scripts/movement-debug/upper-body-standing-support-readiness-audit.mjs --capture-contract tmp/movement-replay-lab/current-upper-body-standing-broad-capture-contract.json",
     "movement:game-visual-plan": "node scripts/movement-debug/game-visual-proof-plan.mjs",
     "movement:game-visual-capture": "node scripts/movement-debug/capture-game-visual-proof.mjs",
+    "movement:game:packet-proof": "node scripts/movement-debug/capture-mounted-game-packet.mjs",
+    "movement:game:nine-proof": "node scripts/movement-debug/run-mounted-game-nine-proof.mjs",
+    "movement:replay-game:compare": "node scripts/movement-debug/compare-replay-mounted-game-checksums.mjs",
+    "movement:replay-game:nine-compare": "node scripts/movement-debug/run-replay-mounted-game-nine-comparison.mjs",
     "movement:game-visual-review": "node scripts/movement-debug/write-game-visual-review.mjs",
-    "movement:architecture-guard": "node scripts/movement-debug/movement-architecture-guard.mjs"
+    "movement:architecture-guard": "node scripts/movement-debug/movement-architecture-guard.mjs",
+    "movement:acquisition-contract-guard": "node scripts/movement-debug/movement-acquisition-contract-guard.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

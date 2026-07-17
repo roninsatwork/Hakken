@@ -2,16 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import {
-  averageMovementCalibrations,
   buildMovementCalibration,
   type MovementCalibration,
 } from "../_lib/movementTrackingCalibration";
+import type { MovementRetargetSourceModel } from "../_lib/movementRetargeting";
 import {
-  averageMovementRetargetSourceModels,
-  buildMovementRetargetSourceModel,
-  type MovementRetargetSourceModel,
-} from "../_lib/movementRetargeting";
-import { getVrmMotionLandmarks, type VrmMotionRef } from "../_lib/vrmRigging";
+  MOVEMENT_PLAYER_INPUT_CONTRACT,
+  buildMovementPlayerSetupFromPrefix,
+} from "../_lib/movementPlayerInputContract";
+import type { VrmMotionPayload, VrmMotionRef } from "../_lib/vrmRigging";
 
 type UseMovementTrackingCalibrationInput = {
   isVisionReady: boolean;
@@ -20,7 +19,6 @@ type UseMovementTrackingCalibrationInput = {
 
 const CALIBRATION_DURATION_MS = 1600;
 const CALIBRATION_COUNTDOWN_MS = 3000;
-const MIN_CALIBRATION_SAMPLES = 12;
 
 export function useMovementTrackingCalibration({
   isVisionReady,
@@ -61,8 +59,7 @@ export function useMovementTrackingCalibration({
     setRetargetSourceModel(null);
 
     const startedAt = performance.now();
-    const samples: MovementCalibration[] = [];
-    const retargetSamples: MovementRetargetSourceModel[] = [];
+    const samples: VrmMotionPayload[] = [];
 
     const sample = () => {
       const elapsedFromStartMs = performance.now() - startedAt;
@@ -80,26 +77,15 @@ export function useMovementTrackingCalibration({
       setCalibrationStatus("Stand neutral");
 
       const motionRef = playerLiveLmRef.current;
-      const payload = motionRef && !Array.isArray(motionRef) ? motionRef : null;
-      const poseLandmarks = getVrmMotionLandmarks(motionRef);
-      const calibrationSample = buildMovementCalibration({
-        poseLandmarks,
-        faceLandmarks: payload?.faceLandmarks,
-        now: Date.now(),
-      });
-
-      if (calibrationSample) {
-        samples.push(calibrationSample);
+      const payload: VrmMotionPayload | null = motionRef
+        ? Array.isArray(motionRef)
+          ? { landmarks: motionRef }
+          : motionRef
+        : null;
+      const poseLandmarks = payload?.landmarks ?? payload?.pose ?? [];
+      if (buildMovementCalibration({ poseLandmarks })) {
+        samples.push(payload!);
         setCalibrationSampleCount(samples.length);
-      }
-
-      const retargetSample = buildMovementRetargetSourceModel({
-        poseLandmarks,
-        now: Date.now(),
-        worldPoseLandmarks: payload?.worldLandmarks ?? null,
-      });
-      if (retargetSample) {
-        retargetSamples.push(retargetSample);
       }
 
       const elapsedMs = elapsedFromStartMs - CALIBRATION_COUNTDOWN_MS;
@@ -116,8 +102,7 @@ export function useMovementTrackingCalibration({
       setCalibrationProgress(100);
 
       if (
-        samples.length < MIN_CALIBRATION_SAMPLES ||
-        retargetSamples.length < MIN_CALIBRATION_SAMPLES
+        samples.length < MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount
       ) {
         setCalibration(null);
         setRetargetSourceModel(null);
@@ -125,17 +110,16 @@ export function useMovementTrackingCalibration({
         return;
       }
 
-      const averagedCalibration = averageMovementCalibrations(samples);
-      const averagedRetargetSourceModel = averageMovementRetargetSourceModels(retargetSamples);
-      if (!averagedCalibration || !averagedRetargetSourceModel) {
+      const setup = buildMovementPlayerSetupFromPrefix(samples);
+      if (!setup?.calibration || !setup.retargetSourceModel) {
         setCalibration(null);
         setRetargetSourceModel(null);
         setCalibrationStatus("Needs stronger tracking");
         return;
       }
 
-      setCalibration(averagedCalibration);
-      setRetargetSourceModel(averagedRetargetSourceModel);
+      setCalibration(setup.calibration);
+      setRetargetSourceModel(setup.retargetSourceModel);
       setIsCalibrationSkipped(false);
       setCalibrationStatus("Calibrated");
     };

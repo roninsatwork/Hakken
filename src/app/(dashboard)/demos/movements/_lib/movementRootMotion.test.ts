@@ -102,6 +102,18 @@ describe("movement root motion", () => {
     expect(history).toHaveLength(0);
   });
 
+  it("does not append repeated renders of the same live source frame", () => {
+    const history: MovementRootMotionInputFrame[] = [];
+    const pose = standingWorldPose();
+
+    const first = appendMovementRootMotionHistoryFrame({ history, pose, worldPose: pose });
+    const repeated = appendMovementRootMotionHistoryFrame({ history, pose, worldPose: pose });
+
+    expect(first?.frameIndex).toBe(0);
+    expect(repeated?.frameIndex).toBe(0);
+    expect(history).toHaveLength(1);
+  });
+
   it("stores null world pose when the provided live world landmarks are incomplete", () => {
     const history: MovementRootMotionInputFrame[] = [];
 

@@ -22,7 +22,8 @@ export type MovementBodyFocus =
 export type MovementDataFormat =
   | "legacy-inline-json"
   | "legacy-storage-json"
-  | "storage-json-v1";
+  | "storage-json-v1"
+  | "storage-json-v2";
 
 export type MovementLandmark = {
   x: number;
@@ -39,23 +40,65 @@ export type MovementHandCapture = {
 };
 
 export type MovementFramePayload = {
+  acquisitionProfileId?: string;
+  camera?: {
+    facingMode?: string;
+    frameHeight?: number;
+    frameWidth?: number;
+  };
+  capturedAt?: number;
   timestamp?: number;
+  sourceTimestampMs?: number;
   pose?: MovementLandmark[];
   landmarks?: MovementLandmark[];
   worldLandmarks?: MovementLandmark[] | null;
   faceLandmarks?: MovementLandmark[] | null;
   blendshapes?: unknown[];
   hands?: Partial<Record<MovementHandSide, MovementHandCapture | null>>;
+  startReadiness?: MovementStartReadiness;
 };
 
 export type MovementFrame = MovementFramePayload | MovementLandmark[];
 
+export type MovementRecordingChannelSummary = Record<
+  "blendshapes" | "camera" | "face" | "hands" | "pose" | "worldPose",
+  {
+    complete: boolean;
+    presentFrames: number;
+    totalFrames: number;
+  }
+>;
+
 export type MovementFrameEnvelope = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   capturedAt?: number;
   captureStartReadiness?: MovementStartReadiness;
+  channelSummary?: MovementRecordingChannelSummary;
   fps?: number;
   frames: MovementFrame[];
+  inputContract?: {
+    detector: {
+      faceModelUrl: string;
+      handConfidence: number;
+      handModelUrl: string;
+      id: string;
+      poseConfidence: number;
+      poseModelUrl: string;
+      wasmUrl: string;
+    };
+    filters: {
+      hand: { beta: number; frequency: number; landmarkCount: number; minCutoff: number };
+      pose: { beta: number; frequency: number; landmarkCount: number; minCutoff: number };
+    };
+    id: string;
+    setup: { prefixFrameCount: number; sampleLimit: number };
+  };
+  setupPrefix?: {
+    complete: boolean;
+    frameIndexes: number[];
+    requiredFrameCount: number;
+  };
+  sourcePacketHash?: string;
 };
 
 export type MovementFrameParseResult = {
@@ -63,5 +106,9 @@ export type MovementFrameParseResult = {
   format: MovementDataFormat;
   fps: number;
   captureStartReadiness?: MovementStartReadiness;
+  channelSummary?: MovementRecordingChannelSummary;
+  inputContract?: MovementFrameEnvelope["inputContract"];
   schemaVersion?: number;
+  setupPrefix?: MovementFrameEnvelope["setupPrefix"];
+  sourcePacketHash?: string;
 };

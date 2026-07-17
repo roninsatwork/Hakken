@@ -63,6 +63,7 @@ export function buildPlayerMovementMotionFrame({
   const sourceFrame = buildMovementSourceFrame({
     blendshapes: payload?.blendshapes,
     capturedAt: resolvedCapturedAt,
+    frameId: payload?.frameId,
     hands: payload?.hands as MovementHandsForConfidence | undefined,
     poseLandmarks: rawLandmarks as TrackingLandmark[],
     requirements: {

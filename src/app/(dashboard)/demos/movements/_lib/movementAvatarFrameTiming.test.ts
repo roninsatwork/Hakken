@@ -35,6 +35,14 @@ describe("movement avatar frame timing", () => {
     })).toBe(0.1);
   });
 
+  it("keeps valid source time authoritative when rendering is slower", () => {
+    expect(movementAvatarSourceAwareApplicationDeltaSeconds({
+      currentSourceCapturedAt: 1027,
+      previousSourceCapturedAt: 1000,
+      renderDeltaSeconds: 0.1,
+    })).toBeCloseTo(0.027, 8);
+  });
+
   it("falls back to render time when source time repeats or seeks backward", () => {
     expect(movementAvatarSourceAwareApplicationDeltaSeconds({
       currentSourceCapturedAt: 900,

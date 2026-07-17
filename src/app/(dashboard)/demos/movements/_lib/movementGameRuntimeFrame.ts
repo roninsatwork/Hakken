@@ -70,7 +70,7 @@ export function buildMovementGamePlayerRuntimeFrame({
 /** The canonical Game recorded-instructor adapter, also exercised by Replay. */
 export function buildMovementGameInstructorRuntimeFrame({
   calibration = null,
-  capturedAt = Date.now(),
+  capturedAt,
   isPlaying,
   motionRef,
   previousMotionFrame = null,
@@ -85,7 +85,8 @@ export function buildMovementGameInstructorRuntimeFrame({
     : undefined;
   const sourceFrame = buildMovementSourceFrame({
     blendshapes: payload?.blendshapes,
-    capturedAt,
+    capturedAt: capturedAt ?? payload?.capturedAt ?? Date.now(),
+    frameId: payload?.frameId,
     hands: payload?.hands,
     poseLandmarks: rawLandmarks as TrackingLandmark[],
     sourceOrigin: "recorded-replay",

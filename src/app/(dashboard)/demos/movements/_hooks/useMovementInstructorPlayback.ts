@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import type { Classifications } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import {
@@ -31,6 +31,7 @@ type InstructorHandCapture = {
 type InstructorHandsPayload = Partial<Record<MovementHandSide, InstructorHandCapture | null>>;
 
 export type MovementInstructorMotionPayload = {
+  frameId?: string;
   pose?: InstructorPoseLandmark[];
   landmarks?: InstructorPoseLandmark[];
   worldLandmarks?: InstructorPoseLandmark[] | null;
@@ -280,7 +281,10 @@ const cloneFramePayload = (
   };
 };
 
-export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMotionFrame[]) {
+export function useMovementInstructorPlayback(
+  loadedFrames: MovementInstructorMotionFrame[],
+  options: { sourceFrameIndexRef?: RefObject<{ frameIndex: number }> } = {},
+) {
   const instructorFramesRef = useRef<MovementInstructorMotionFrame[]>([]);
   const instructorCurrentLmRef = useRef<MovementInstructorMotionRef>([]);
   const frameIndexRef = useRef(0);
@@ -391,12 +395,27 @@ export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMo
       return { status: "empty", frames, frameIndex: frameIndexRef.current };
     }
 
+    const requestedFrameIndex = options.sourceFrameIndexRef
+      ? Math.max(0, Math.min(totalFrames - 1, options.sourceFrameIndexRef.current.frameIndex))
+      : frameIndexRef.current + 1;
+
     if (frameIndexRef.current + 1 >= totalFrames) {
       return { status: "complete", frames, frameIndex: frameIndexRef.current };
     }
 
-    frameIndexRef.current += 1;
-    instructorCurrentLmRef.current = buildFilteredFrame(frames[frameIndexRef.current]!);
+    if (requestedFrameIndex <= frameIndexRef.current) {
+      return {
+        status: "advanced",
+        frames,
+        frameIndex: frameIndexRef.current,
+        lagFrame: frames[Math.max(0, frameIndexRef.current - INSTRUCTOR_LAG_COMPENSATION_FRAMES)],
+      };
+    }
+
+    while (frameIndexRef.current < requestedFrameIndex) {
+      frameIndexRef.current += 1;
+      instructorCurrentLmRef.current = buildFilteredFrame(frames[frameIndexRef.current]!);
+    }
 
     const lagCompIndex = Math.max(
       0,
@@ -409,7 +428,7 @@ export function useMovementInstructorPlayback(loadedFrames: MovementInstructorMo
       frameIndex: frameIndexRef.current,
       lagFrame: frames[lagCompIndex],
     };
-  }, [buildFilteredFrame]);
+  }, [buildFilteredFrame, options.sourceFrameIndexRef]);
 
   return {
     frameCount: loadedFrames.length,

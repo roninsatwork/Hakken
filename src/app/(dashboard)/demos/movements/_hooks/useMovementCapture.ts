@@ -1,37 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import type {
-  Classifications,
-  FaceLandmarker,
-  HandLandmarker,
-  Landmark,
-  NormalizedLandmark,
-  PoseLandmarker,
-} from "@mediapipe/tasks-vision";
+import type { FaceLandmarker, HandLandmarker, NormalizedLandmark, PoseLandmarker } from "@mediapipe/tasks-vision";
 import type Webcam from "react-webcam";
-import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
-import { resolveHandSideByWrist } from "../_lib/handMatching";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
+import {
+  createMovementAcquisitionFilters,
+  prepareMovementAcquisitionFrame,
+  type MovementAcquisitionFrame,
+} from "../_lib/movementPlayerInputContract";
 import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
 import {
   buildLiveMovementSourceFrame,
   type MovementStartReadiness,
 } from "../_lib/movementSourceFrame";
-import type { MovementHandSide } from "../_lib/movementTypes";
-
-type HandCapture = {
-  landmarks: NormalizedLandmark[];
-  worldLandmarks: Landmark[] | null;
-};
-
-export type MovementCaptureFrame = {
+export type MovementCaptureFrame = MovementAcquisitionFrame & {
   timestamp: number;
   landmarks: NormalizedLandmark[];
-  worldLandmarks: Landmark[] | null;
-  faceLandmarks?: NormalizedLandmark[] | null;
-  blendshapes?: Classifications["categories"];
-  hands?: Record<MovementHandSide, HandCapture | null>;
+  startReadiness: MovementStartReadiness;
 };
 
 type UseMovementCaptureInput = {
@@ -113,12 +99,7 @@ export function useMovementCapture({
     useState<MovementStartReadiness | null>(null);
   const isRecordingRef = useRef(false);
   const recordedFramesRef = useRef<MovementCaptureFrame[]>([]);
-  const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
-  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
-  const leftHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.6, 0.08));
-  const rightHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.6, 0.08));
-  const leftHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.6, 0.08));
-  const rightHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 1.6, 0.08));
+  const acquisitionFiltersRef = useRef(createMovementAcquisitionFilters());
 
   useEffect(() => {
     isRecordingRef.current = isRecording;
@@ -152,9 +133,24 @@ export function useMovementCapture({
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           if (poseResults.landmarks && poseResults.landmarks.length > 0) {
-            const smoothedLandmarks = poseFilterRef.current.filter(poseResults.landmarks[0], startTimeMs);
-            const rawWorld = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
-            const smoothedWorld = rawWorld ? worldPoseFilterRef.current.filter(rawWorld, startTimeMs) : null;
+            const acquisitionFrame = prepareMovementAcquisitionFrame({
+              camera: {
+                facingMode: "user",
+                frameHeight: video.videoHeight,
+                frameWidth: video.videoWidth,
+              },
+              capturedAt: Date.now(),
+              faceResults,
+              filters: acquisitionFiltersRef.current,
+              handResults,
+              poseResults,
+              sourceTimestampMs: startTimeMs,
+            });
+            const smoothedLandmarks = acquisitionFrame.landmarks;
+            if (!smoothedLandmarks) {
+              animationFrameId = requestAnimationFrame(processVideo);
+              return;
+            }
             const fullBodyVisibility = getMovementCaptureFullBodyVisibility(smoothedLandmarks);
             const startReadiness = resolveMovementCaptureStartReadiness(smoothedLandmarks);
             const spineModel = buildMovementSpineModel(smoothedLandmarks);
@@ -165,46 +161,11 @@ export function useMovementCapture({
 
             if (shouldRecordMovementCaptureFrame(smoothedLandmarks)) {
               const currentData: MovementCaptureFrame = {
+                ...acquisitionFrame,
                 timestamp: startTimeMs,
                 landmarks: smoothedLandmarks,
-                worldLandmarks: smoothedWorld,
+                startReadiness,
               };
-
-              if (faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0) {
-                currentData.faceLandmarks = faceResults.faceLandmarks[0];
-              }
-
-              if (faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
-                currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
-              }
-
-              if (handResults.landmarks && handResults.landmarks.length > 0) {
-                const handsPayload: Record<MovementHandSide, HandCapture | null> = { left: null, right: null };
-                currentData.hands = handsPayload;
-
-                const leftWristPose = smoothedLandmarks[15];
-                const rightWristPose = smoothedLandmarks[16];
-
-                handResults.landmarks.forEach((handLms, index) => {
-                  const side = resolveHandSideByWrist({
-                    handWrist: handLms[0],
-                    leftWrist: leftWristPose,
-                    rightWrist: rightWristPose,
-                  });
-
-                  const filterRef = side === "left" ? leftHandFilterRef.current : rightHandFilterRef.current;
-                  const worldFilterRef = side === "left" ? leftHandWorldFilterRef.current : rightHandWorldFilterRef.current;
-                  const smoothedHandLms = filterRef.filter(handLms, startTimeMs);
-                  const smoothedHandWorld = handResults.worldLandmarks?.[index]
-                    ? worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs)
-                    : null;
-
-                  handsPayload[side] = {
-                    landmarks: smoothedHandLms,
-                    worldLandmarks: smoothedHandWorld,
-                  };
-                });
-              }
 
               if (isRecordingRef.current) {
                 recordedFramesRef.current.push(currentData);

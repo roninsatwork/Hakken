@@ -394,8 +394,20 @@ function getFloorRelativeHipDrop({
     0,
     1,
   );
-  const calibratedHipToFloorRatio = calibratedHipToFloor / Math.max(calibration.torsoHeight, 0.001);
-  const currentHipToFloorRatio = currentHipToFloor / Math.max(centers.torsoHeight, 0.001);
+  // Use vertical torso height for camera-scale normalization. Euclidean torso
+  // length grows when the player bends sideways, even though camera distance
+  // and hip-to-floor scale have not changed. Treating that growth as zoom made
+  // a side bend look like a squat in the live Game path.
+  const calibratedVerticalTorsoHeight = Math.abs(
+    calibration.hipCenter.y - calibration.shoulderCenter.y,
+  );
+  const currentVerticalTorsoHeight = Math.abs(
+    centers.hipCenter.y - centers.shoulderCenter.y,
+  );
+  const calibratedHipToFloorRatio = calibratedHipToFloor /
+    Math.max(calibratedVerticalTorsoHeight, 0.001);
+  const currentHipToFloorRatio = currentHipToFloor /
+    Math.max(currentVerticalTorsoHeight, 0.001);
   const bodyRatioDrop = clamp(
     (calibratedHipToFloorRatio - currentHipToFloorRatio) / 0.76,
     0,

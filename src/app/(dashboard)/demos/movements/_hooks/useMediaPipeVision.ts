@@ -2,14 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FilesetResolver, FaceLandmarker, HandLandmarker, PoseLandmarker } from "@mediapipe/tasks-vision";
-import {
-  MEDIAPIPE_FACE_MODEL_URL,
-  MEDIAPIPE_HAND_CONFIDENCE,
-  MEDIAPIPE_HAND_MODEL_URL,
-  MEDIAPIPE_POSE_CONFIDENCE,
-  MEDIAPIPE_POSE_MODEL_URL,
-  MEDIAPIPE_VISION_WASM_URL,
-} from "../_lib/mediaPipeConfig";
+import { MOVEMENT_PLAYER_INPUT_CONTRACT } from "../_lib/movementPlayerInputContract";
 
 export type MediaPipeVisionStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -65,30 +58,31 @@ export function useMediaPipeVision() {
       });
 
       try {
-        const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_VISION_WASM_URL);
+        const { detector } = MOVEMENT_PLAYER_INPUT_CONTRACT;
+        const vision = await FilesetResolver.forVisionTasks(detector.wasmUrl);
         const [pose, face, hands] = await Promise.all([
           PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: MEDIAPIPE_POSE_MODEL_URL, delegate: "GPU" },
+            baseOptions: { modelAssetPath: detector.poseModelUrl, delegate: "GPU" },
             runningMode: "VIDEO",
             numPoses: 1,
-            minPoseDetectionConfidence: MEDIAPIPE_POSE_CONFIDENCE,
-            minPosePresenceConfidence: MEDIAPIPE_POSE_CONFIDENCE,
-            minTrackingConfidence: MEDIAPIPE_POSE_CONFIDENCE,
+            minPoseDetectionConfidence: detector.poseConfidence,
+            minPosePresenceConfidence: detector.poseConfidence,
+            minTrackingConfidence: detector.poseConfidence,
           }),
           FaceLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: MEDIAPIPE_FACE_MODEL_URL, delegate: "GPU" },
+            baseOptions: { modelAssetPath: detector.faceModelUrl, delegate: "GPU" },
             runningMode: "VIDEO",
             numFaces: 1,
             outputFaceBlendshapes: true,
             outputFacialTransformationMatrixes: false,
           }),
           HandLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: MEDIAPIPE_HAND_MODEL_URL, delegate: "GPU" },
+            baseOptions: { modelAssetPath: detector.handModelUrl, delegate: "GPU" },
             runningMode: "VIDEO",
             numHands: 2,
-            minHandDetectionConfidence: MEDIAPIPE_HAND_CONFIDENCE,
-            minHandPresenceConfidence: MEDIAPIPE_HAND_CONFIDENCE,
-            minTrackingConfidence: MEDIAPIPE_HAND_CONFIDENCE,
+            minHandDetectionConfidence: detector.handConfidence,
+            minHandPresenceConfidence: detector.handConfidence,
+            minTrackingConfidence: detector.handConfidence,
           }),
         ]);
 

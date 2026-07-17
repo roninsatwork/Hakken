@@ -1,5 +1,8 @@
 import type { Id } from "@/convex/_generated/dataModel";
-import { buildMovementFrameEnvelope } from "./movementFrameCodec";
+import {
+  buildMovementFrameEnvelope,
+  hashMovementFrameEnvelopeSource,
+} from "./movementFrameCodec";
 import type {
   MovementBodyFocus,
   MovementDifficulty,
@@ -8,14 +11,14 @@ import type {
 } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
 
-export const MIN_MOVEMENT_CAPTURE_FRAMES = 5;
+export const MIN_MOVEMENT_CAPTURE_FRAMES = 60;
 
 type MovementCreateInput = {
   title: string;
   difficulty: MovementDifficulty;
   poseData: Id<"_storage">;
   poseStorageId: Id<"_storage">;
-  poseDataFormat: "storage-json-v1";
+  poseDataFormat: "storage-json-v2";
   frameCount: number;
   durationMs: number;
   captureFps: number;
@@ -87,6 +90,7 @@ export async function saveMovementRecording({
   const payload = buildMovementFrameEnvelope(frames, 30, {
     captureStartReadiness,
   });
+  payload.sourcePacketHash = await hashMovementFrameEnvelopeSource(payload);
   const postUrl = await generateUploadUrl();
   const uploadResponse = await uploadFetch(postUrl, {
     method: "POST",
@@ -107,7 +111,7 @@ export async function saveMovementRecording({
     difficulty,
     poseData: storageId,
     poseStorageId: storageId,
-    poseDataFormat: "storage-json-v1",
+    poseDataFormat: "storage-json-v2",
     frameCount: frames.length,
     durationMs,
     captureFps: payload.fps ?? 30,

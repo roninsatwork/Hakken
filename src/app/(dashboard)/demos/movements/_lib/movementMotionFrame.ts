@@ -15,6 +15,11 @@ import {
 import type { MovementSourceFrame } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 import {
+  appendMovementRootMotionHistoryFrame,
+  type MovementRootMotionFrame,
+  type MovementRootMotionInputFrame,
+} from "./movementRootMotion";
+import {
   buildMovementTruthSkeleton,
   type MovementTruthSkeleton,
 } from "./movementTruthSkeleton";
@@ -80,6 +85,8 @@ export type MovementMotionFrame = {
   readability: MovementMotionReadabilityTarget;
   rejected: string[];
   rootTarget: MovementAvatarPipelineDecision["rootOrientation"];
+  rootMotionFrame: MovementRootMotionFrame | null;
+  rootMotionHistory: MovementRootMotionInputFrame[];
   source: MovementSourceFrame;
   startReadiness: MovementSourceFrame["startReadiness"];
   support: MovementAvatarPipelineDecision["bodySupport"];
@@ -241,6 +248,12 @@ export function resolveMovementMotionFrame({
   const sourceDeltaMs = previousMotionFrame
     ? sourceFrame.capturedAt - previousMotionFrame.source.capturedAt
     : 0;
+  const rootMotionHistory = [...(previousMotionFrame?.rootMotionHistory ?? [])];
+  const rootMotionFrame = appendMovementRootMotionHistoryFrame({
+    history: rootMotionHistory,
+    pose: poseLandmarks,
+    worldPose: worldPoseLandmarks,
+  });
   const rawAvatarDecision = resolveMovementAvatarPipelineDecision({
     ...pipelineInput,
     anatomicalMapping: "identity",
@@ -280,10 +293,14 @@ export function resolveMovementMotionFrame({
         previous: previousMotionFrame?.avatarDisplayDecision,
         sourceDeltaMs,
       });
-  const headAvatarRole = sourceFrame.sourceOrigin === "recorded-replay"
+  // Replay is the accepted player-avatar reference. Player head behaviour must
+  // not change merely because the same player frame came from a live camera
+  // instead of a recording.
+  const usesReplayReferencePlayerHead = pipelineInput.avatarRole === "player";
+  const headAvatarRole = usesReplayReferencePlayerHead
     ? "instructor"
     : pipelineInput.avatarRole;
-  const headCalibration = sourceFrame.sourceOrigin === "recorded-replay"
+  const headCalibration = usesReplayReferencePlayerHead
     ? null
     : pipelineInput.calibration;
   const avatarHeadTarget = resolveMovementAvatarHeadTarget({
@@ -335,6 +352,8 @@ export function resolveMovementMotionFrame({
     readability,
     rejected: [],
     rootTarget: avatarDecision.rootOrientation,
+    rootMotionFrame,
+    rootMotionHistory,
     source: sourceFrame,
     startReadiness: sourceFrame.startReadiness,
     support: avatarDecision.bodySupport,

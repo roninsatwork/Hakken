@@ -256,6 +256,27 @@ describe("movementRetargeting", () => {
     expect(getBalancedPlantedSquatDepth(frame)).toBe(0);
   });
 
+  it("does not turn a far-camera side bend into retarget squat depth", () => {
+    const calibrationPose = withCorePose();
+    const calibration = buildMovementRetargetSourceModel({ poseLandmarks: calibrationPose });
+    const sideBendPose = withCorePose();
+    [0, 7, 8, 11, 12].forEach((index) => {
+      sideBendPose[index] = {
+        ...sideBendPose[index]!,
+        x: sideBendPose[index]!.x + 0.15,
+      };
+    });
+    const farSideBendPose = scalePoseInFrame(sideBendPose, 0.68, { x: 0.5, y: 0.62, z: 0 });
+
+    const frame = solveMovementRetargetFrame({
+      calibration,
+      poseLandmarks: farSideBendPose,
+    });
+
+    expect(frame.hipDrop).toBeLessThan(0.05);
+    expect(frame.squatDepth).toBe(0);
+  });
+
   it("still solves a smaller-in-frame planted squat after distance normalization", () => {
     const calibration = buildMovementRetargetSourceModel({ poseLandmarks: withCorePose() });
     const squatPose = withCorePose();

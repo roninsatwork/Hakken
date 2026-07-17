@@ -121,7 +121,12 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
   try {
     for (let startFrameIndex = frameStart; startFrameIndex <= frameEnd; startFrameIndex += 250) {
       const endFrameIndex = Math.min(frameEnd + 1, startFrameIndex + 250);
-      const chunk = await page.evaluate(async ({ endFrameIndex, frameWindowStart, startFrameIndex, threeParty }) => {
+      const chunk = await page.evaluate(async ({
+        endFrameIndex,
+        frameWindowStart,
+        startFrameIndex,
+        threeParty,
+      }) => {
         const waitForAnimationFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
         const waitFor = async (predicate, message) => {
           for (let attempt = 0; attempt < 240; attempt += 1) {
@@ -137,34 +142,49 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
         }
 
         const chunkFrames = [];
-        if (startFrameIndex === 0 && endFrameIndex > 1) {
-          const warmupFrameIndex = stepToFrame(1);
-          if (warmupFrameIndex !== 1) {
-            throw new Error(`Deterministic warmup selected ${warmupFrameIndex}; expected 1.`);
+        const firstSteppedFrameIndex = startFrameIndex === 0 ? 1 : startFrameIndex;
+        if (startFrameIndex === 0) {
+          const initialFrameIndex = stepToFrame(0);
+          if (initialFrameIndex !== 0) {
+            throw new Error(`Deterministic initial frame selected ${initialFrameIndex}; expected 0.`);
           }
           await waitFor(
-            () => Number(root.getAttribute("data-current-frame-index") || -1) === 1,
-            "Replay Lab did not select deterministic warmup frame 1.",
+            () => Number(root.getAttribute("data-current-frame-index") || -1) === 0,
+            "Replay Lab did not select deterministic initial frame 0.",
           );
           await waitFor(
-            () => window.__sonaeReplayLabCommittedFrameIndex === 1,
-            "Replay refs did not commit deterministic warmup frame 1.",
+            () => window.__sonaeReplayLabCommittedFrameIndex === 0,
+            "Replay refs did not commit deterministic initial frame 0.",
           );
           await waitFor(
-            () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual),
-            "Player avatar telemetry did not render deterministic warmup frame 1.",
+            () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual) &&
+              window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(":0"),
+            "Player avatar telemetry did not render deterministic initial frame 0.",
           );
           if (threeParty) {
             await waitFor(
-              () => Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual),
-              "Instructor avatar telemetry did not render deterministic warmup frame 1.",
+              () => Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual) &&
+                window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(":0"),
+              "Instructor avatar telemetry did not render deterministic initial frame 0.",
             );
           }
+          const playerDebug = window.__sonaeMovementAvatarDebug?.player;
+          const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
+          chunkFrames.push({
+            avatars: threeParty
+              ? {
+                  instructor: structuredClone(instructorDebug),
+                  player: structuredClone(playerDebug),
+                }
+              : undefined,
+            debug: structuredClone(playerDebug),
+            frameIndex: 0 - frameWindowStart,
+            renderedFrameIndex: 0,
+            sourceFrameIndex: 0,
+          });
         }
 
-        for (let frameIndex = startFrameIndex; frameIndex < endFrameIndex; frameIndex += 1) {
-          const previousPlayerUpdatedAt = window.__sonaeMovementAvatarDebug?.player?.frameUpdatedAt ?? -1;
-          const previousInstructorUpdatedAt = window.__sonaeMovementAvatarDebug?.instructor?.frameUpdatedAt ?? -1;
+        for (let frameIndex = firstSteppedFrameIndex; frameIndex < endFrameIndex; frameIndex += 1) {
           const selectedFrameIndex = stepToFrame(frameIndex);
           if (selectedFrameIndex !== frameIndex) {
             throw new Error(`Deterministic step selected ${selectedFrameIndex}; expected ${frameIndex}.`);
@@ -178,16 +198,15 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
             `Replay refs did not commit deterministic frame ${frameIndex}.`,
           );
           await waitFor(
-            () => (window.__sonaeMovementAvatarDebug?.player?.frameUpdatedAt ?? -1) > previousPlayerUpdatedAt,
+            () => window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(`:${frameIndex}`),
             `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
           );
           if (threeParty) {
             await waitFor(
-              () => (window.__sonaeMovementAvatarDebug?.instructor?.frameUpdatedAt ?? -1) > previousInstructorUpdatedAt,
+              () => window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(`:${frameIndex}`),
               `Instructor avatar telemetry did not render deterministic frame ${frameIndex}.`,
             );
           }
-
           const renderedFrameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
           const playerDebug = window.__sonaeMovementAvatarDebug?.player;
           const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
@@ -214,7 +233,12 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           });
         }
         return chunkFrames;
-      }, { endFrameIndex, frameWindowStart: frameStart, startFrameIndex, threeParty });
+      }, {
+        endFrameIndex,
+        frameWindowStart: frameStart,
+        startFrameIndex,
+        threeParty,
+      });
       frames.push(...chunk);
       console.log(`Deterministic progress: ${frames.length}/${frameEnd - frameStart + 1}.`);
     }

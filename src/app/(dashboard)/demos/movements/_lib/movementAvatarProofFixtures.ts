@@ -20,7 +20,10 @@ export type MovementAvatarProofMotionPayload = {
 export type MovementAvatarProofMode =
   | "bear-crawl"
   | "far-left-leg-raise"
+  | "far-left-leg-out-45"
   | "far-right-leg-raise"
+  | "far-right-leg-out-45"
+  | "far-side-bend"
   | "far-squat"
   | "forward-lunge"
   | "hands-front"
@@ -39,6 +42,7 @@ export type MovementAvatarProofMode =
   | "lower-body-out-of-frame"
   | "low-lunge"
   | "right-leg-raise"
+  | "right-leg-out-45"
   | "right-hand-curl"
   | "right-arm-raise"
   | "root-travel-back"
@@ -128,14 +132,18 @@ export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
   "wink-right",
   "squat",
   "far-squat",
+  "far-side-bend",
   "forward-lunge",
   "side-lunge",
   "jumping-jack",
   "left-leg-raise",
   "left-leg-out-45",
+  "far-left-leg-out-45",
   "far-left-leg-raise",
   "right-leg-raise",
   "far-right-leg-raise",
+  "right-leg-out-45",
+  "far-right-leg-out-45",
   "root-turn-left",
   "root-turn-right",
   "root-travel-left",
@@ -181,7 +189,10 @@ export const MOVEMENT_AVATAR_PROOF_MODES: MovementAvatarProofMode[] = [
 export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, string> = {
   "bear-crawl": "Bear crawl prep",
   "far-left-leg-raise": "Far left leg raise",
+  "far-left-leg-out-45": "Far left leg out 45 degrees",
   "far-right-leg-raise": "Far right leg raise",
+  "far-right-leg-out-45": "Far right leg out 45 degrees",
+  "far-side-bend": "Far side bend",
   "far-squat": "Far squat",
   "forward-lunge": "Forward lunge prep",
   "hands-front": "Hands front",
@@ -200,6 +211,7 @@ export const MOVEMENT_AVATAR_PROOF_LABELS: Record<MovementAvatarProofMode, strin
   "lower-body-out-of-frame": "Lower body out of frame",
   "low-lunge": "Low lunge",
   "right-leg-raise": "Right leg raise",
+  "right-leg-out-45": "Right leg out 45 degrees",
   "right-hand-curl": "Right hand curl",
   "right-arm-raise": "Right arm raise",
   "root-travel-back": "Root travel back",
@@ -368,6 +380,7 @@ export function makeMovementAvatarProofFaceLandmarks(
 
 function getBaseProofMode(mode: MovementAvatarProofMode): MovementAvatarProofMode {
   if (mode === "far-squat") return "squat";
+  if (mode === "far-side-bend") return "side-bend";
   if (mode === "forward-lunge" || mode === "jumping-jack" || mode === "side-lunge") return "standing";
   if (
     mode === "standing-arm-raise" ||
@@ -400,8 +413,9 @@ function getBaseProofMode(mode: MovementAvatarProofMode): MovementAvatarProofMod
   ) return "standing";
   if (mode === "side-bend-left" || mode === "side-bend-right") return "side-bend";
   if (mode === "far-left-leg-raise") return "left-leg-raise";
-  if (mode === "left-leg-out-45") return "standing";
+  if (mode === "left-leg-out-45" || mode === "far-left-leg-out-45") return "standing";
   if (mode === "far-right-leg-raise") return "right-leg-raise";
+  if (mode === "right-leg-out-45" || mode === "far-right-leg-out-45") return "standing";
   if (mode === "upper-body-auto") return "standing";
   if (mode === "upper-body-auto-rejected") return "side-bend";
   if (
@@ -440,7 +454,7 @@ function getBaseProofMode(mode: MovementAvatarProofMode): MovementAvatarProofMod
 }
 
 function isFarProofMode(mode: MovementAvatarProofMode) {
-  return mode === "far-squat" || mode === "far-left-leg-raise" || mode === "far-right-leg-raise";
+  return mode === "far-squat" || mode === "far-side-bend" || mode === "far-left-leg-raise" || mode === "far-left-leg-out-45" || mode === "far-right-leg-raise" || mode === "far-right-leg-out-45";
 }
 
 export function scaleMovementAvatarProofLandmarkAround(
@@ -1139,7 +1153,7 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
     pose[30] = movementAvatarProofLandmark(0.6, 0.97);
     pose[31] = movementAvatarProofLandmark(0.36, 0.98);
     pose[32] = movementAvatarProofLandmark(0.64, 0.98);
-  } else if (mode === "left-leg-out-45") {
+  } else if (mode === "left-leg-out-45" || mode === "far-left-leg-out-45") {
     pose[23] = movementAvatarProofLandmark(0.42, 0.66);
     pose[24] = movementAvatarProofLandmark(0.58, 0.66);
     pose[25] = movementAvatarProofLandmark(0.25, 0.74);
@@ -1150,6 +1164,17 @@ export function makeMovementAvatarProofPose(mode: MovementAvatarProofMode): VrmP
     pose[30] = movementAvatarProofLandmark(0.57, 0.95);
     pose[31] = movementAvatarProofLandmark(0.08, 0.88);
     pose[32] = movementAvatarProofLandmark(0.58, 0.96);
+  } else if (mode === "right-leg-out-45" || mode === "far-right-leg-out-45") {
+    pose[23] = movementAvatarProofLandmark(0.42, 0.66);
+    pose[24] = movementAvatarProofLandmark(0.58, 0.66);
+    pose[25] = movementAvatarProofLandmark(0.44, 0.8);
+    pose[26] = movementAvatarProofLandmark(0.75, 0.74);
+    pose[27] = movementAvatarProofLandmark(0.44, 0.94);
+    pose[28] = movementAvatarProofLandmark(0.88, 0.86);
+    pose[29] = movementAvatarProofLandmark(0.43, 0.95);
+    pose[30] = movementAvatarProofLandmark(0.89, 0.87);
+    pose[31] = movementAvatarProofLandmark(0.42, 0.96);
+    pose[32] = movementAvatarProofLandmark(0.92, 0.88);
   } else if (baseMode === "left-leg-raise") {
     pose[23] = movementAvatarProofLandmark(0.42, 0.66);
     pose[24] = movementAvatarProofLandmark(0.58, 0.66);

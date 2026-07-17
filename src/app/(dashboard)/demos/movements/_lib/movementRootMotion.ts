@@ -147,6 +147,32 @@ export function appendMovementRootMotionHistoryFrame({
 }) {
   if (pose.length < 33) return null;
 
+  // VrmAvatar renders more often than MediaPipe publishes source frames. Do
+  // not turn repeated renders of one camera result into fake stationary input
+  // frames, because that suppresses real steps, travel and jump transitions.
+  const previous = history.at(-1);
+  const previousLandmarks = previous?.worldPose?.length === 33
+    ? previous.worldPose
+    : previous?.pose;
+  const nextLandmarks = worldPose?.length === 33 ? worldPose : pose;
+  const isRepeatedRenderFrame = Boolean(
+    previousLandmarks &&
+      [11, 12, 23, 24, 27, 28, 29, 30, 31, 32].every((index) => {
+        const previousLandmark = previousLandmarks[index];
+        const nextLandmark = nextLandmarks[index];
+        return Boolean(
+          previousLandmark &&
+            nextLandmark &&
+            previousLandmark.x === nextLandmark.x &&
+            previousLandmark.y === nextLandmark.y &&
+            (previousLandmark.z ?? 0) === (nextLandmark.z ?? 0),
+        );
+      }),
+  );
+  if (isRepeatedRenderFrame) {
+    return buildMovementRootMotionAnalysis(history).frames.at(-1) ?? null;
+  }
+
   history.push({
     pose,
     worldPose: worldPose && worldPose.length >= 33 ? worldPose : null,

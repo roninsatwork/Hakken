@@ -11,7 +11,7 @@ export function resolveMovementReplayFrameDelay({
 }: {
   currentFrameIndex: number;
   fallbackFps?: number;
-  samples: Pick<MovementDebugReplayFrame, "capturedAt">[];
+  samples: Array<Pick<MovementDebugReplayFrame, "capturedAt"> | { capturedAt?: number }>;
 }) {
   const fallbackDelay = fallbackFps && fallbackFps > 0
     ? 1000 / fallbackFps
@@ -35,7 +35,7 @@ export function resolveMovementReplayPlaybackStep({
 }: {
   currentFrameIndex: number;
   fallbackFps?: number;
-  samples: Pick<MovementDebugReplayFrame, "capturedAt">[];
+  samples: Array<Pick<MovementDebugReplayFrame, "capturedAt"> | { capturedAt?: number }>;
 }) {
   const frameIndex = Math.min(currentFrameIndex + 1, Math.max(samples.length - 1, 0));
   return {

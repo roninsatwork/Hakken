@@ -67,7 +67,7 @@ function numberValue(value: unknown) {
 }
 
 function movementDataFormat(value: unknown): MovementDataFormat | undefined {
-  return value === "legacy-inline-json" || value === "legacy-storage-json" || value === "storage-json-v1"
+  return value === "legacy-inline-json" || value === "legacy-storage-json" || value === "storage-json-v1" || value === "storage-json-v2"
     ? value
     : undefined;
 }
@@ -157,7 +157,13 @@ export async function runMovementReplaySessionExportCli(argv: string[]) {
     recording,
     parsed.frames,
     recording.captureFps ?? parsed.fps,
-    { captureStartReadiness: parsed.captureStartReadiness },
+    {
+      captureStartReadiness: parsed.captureStartReadiness,
+      channelSummary: parsed.channelSummary,
+      inputContract: parsed.inputContract,
+      setupPrefix: parsed.setupPrefix,
+      sourcePacketHash: parsed.sourcePacketHash,
+    },
   );
 
   const outPath = resolve(args.out);

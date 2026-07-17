@@ -18,6 +18,7 @@ export type MovementRecordedPlayerSetup = {
   provenance: {
     builder: "recorded-player-neutral-prefix-v1";
     frameLimit: number;
+    inputContractId?: string;
     sampleIndexes: number[];
     sampleLimit: number;
   };

@@ -23,13 +23,19 @@ import MovementTrackingDebugOverlay from "./_components/MovementTrackingDebugOve
 import VrmAvatar from "./_components/VrmAvatar";
 import Webcam from "react-webcam";
 import { useMovementInstructorPlayback } from "../../_hooks/useMovementInstructorPlayback";
-import { useMovementLiveMotionFrame } from "../../_hooks/useMovementLiveMotionFrame";
+import {
+  useMovementLiveMotionFrame,
+  type MovementLiveInitialFrame,
+} from "../../_hooks/useMovementLiveMotionFrame";
+import { useMovementLivePlayerSetup } from "../../_hooks/useMovementLivePlayerSetup";
+import { useMovementGameProofPacket } from "../../_hooks/useMovementGameProofPacket";
 import { useMovementMatchScoring } from "../../_hooks/useMovementMatchScoring";
 import { useMovementMatchSession } from "../../_hooks/useMovementMatchSession";
 import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
 import { useMovementRecordedMotionFrame } from "../../_hooks/useMovementRecordedMotionFrame";
 import {
+  createMovementRecordedSourcePlaybackState,
   useMovementPlayerTracking,
   type MovementPlayerMotionPayload,
 } from "../../_hooks/useMovementPlayerTracking";
@@ -41,16 +47,22 @@ import {
   makeMovementAvatarProofRootBaselinePayload,
   toMovementAvatarProofMode,
 } from "../../_lib/movementAvatarProofFixtures";
+import { movementBoundaryChecksum } from "../../_lib/movementBoundaryChecksum";
+import type { MovementMotionFrame } from "../../_lib/movementMotionFrame";
 import {
   parseMovementDebugGameFrameIndex,
   shouldShowMovementDebugPlayerPausedPose,
 } from "../../_lib/movementGameDebugRoute";
+import {
+  MOVEMENT_GAME_START_FRESH_FRAME_DELAY_MS,
+  MOVEMENT_GAME_START_FRESH_FRAME_INTERVAL_MS,
+  shouldContinueMovementGameStartFreshFrameCheck,
+} from "../../_lib/movementGameStartFreshFrame";
 import { getMovementDebugQaPresets } from "../../_lib/movementDebugQaPresets";
 import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import {
   buildMovementRetargetSourceModel,
 } from "../../_lib/movementRetargeting";
-import { buildMovementRecordedPlayerSetup } from "../../_lib/movementRecordedPlayerSetup";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import {
@@ -73,7 +85,7 @@ import {
   getMovementSetupRecoveryCue,
   getMovementStartReadinessMessage,
 } from "../../_lib/movementSetupRecoveryCue";
-import type { VrmMotionFrame, VrmPoseLandmark } from "../../_lib/vrmRigging";
+import type { VrmMotionFrame, VrmMotionPayload, VrmPoseLandmark } from "../../_lib/vrmRigging";
 
 type MotionFrame = VrmMotionFrame;
 
@@ -276,6 +288,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const searchParams = useSearchParams();
   const movementId = unwrappedParams.id as Id<"movements">;
   const isDebugTracking = searchParams.get("debugTracking") === "1";
+  const debugGamePacketUrl = isDebugTracking ? searchParams.get("debugGamePacketUrl") : null;
+  const isDebugGamePacketRoute = Boolean(debugGamePacketUrl);
   const isGuidedPreviewRoute = searchParams.get("guidedPreview") === "1";
   const isDebugAutoBaselineRoute = isDebugTracking && searchParams.get("debugAutoBaseline") === "1";
   const debugGameFrameIndex = isDebugTracking
@@ -292,19 +306,27 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const shouldSkipDebugPoseCalibration = isDebugTracking && searchParams.get("debugSkipPoseCalibration") === "1";
   const isDebugPlayerPoseRoute = Boolean(debugPlayerPoseMode);
   const isDebugInstructorPoseRoute = Boolean(debugInstructorPoseMode);
-  const isDebugPlayerInjectionRoute = isDebugPlayerPoseRoute || isDebugGameFrameRoute;
+  const isDebugPlayerInjectionRoute = isDebugPlayerPoseRoute || isDebugGameFrameRoute || isDebugGamePacketRoute;
   const isDebugMovementInjectionRoute = isDebugPlayerInjectionRoute || isDebugInstructorPoseRoute;
   const shouldUseDebugStartGate = isDebugPlayerInjectionRoute && searchParams.get("debugStartGate") === "1";
   const shouldBypassStartReadinessForDebug =
-    isDebugPlayerInjectionRoute && !shouldUseDebugStartGate;
+    (isDebugPlayerPoseRoute || isDebugGameFrameRoute) && !shouldUseDebugStartGate;
   const shouldShowPlayerPausedPose = shouldShowMovementDebugPlayerPausedPose({ isDebugTracking });
-  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || isDebugMovementInjectionRoute;
+  const shouldAutoStartGuidedPreview = (isGuidedPreviewRoute && isDebugTracking) || (
+    isDebugMovementInjectionRoute && !isDebugGamePacketRoute
+  );
   const [cameraStatus, setCameraStatus] = useState<"pending" | "ready" | "error">("pending");
   const [cameraError, setCameraError] = useState<string | null>(null);
   
   const movement = useQuery(api.movements.get, { id: movementId });
   const saveDebugTrackingSession = useMutation(api.movements.saveDebugTrackingSession);
   const { frames: loadedFrames, isLoading: isFramesLoading } = useMovementFrames(movement);
+  const {
+    error: gameProofPacketError,
+    isLoading: isGameProofPacketLoading,
+    packet: gameProofPacket,
+  } = useMovementGameProofPacket(debugGamePacketUrl);
+  const effectiveLoadedFrames = gameProofPacket?.instructorFrames ?? loadedFrames;
 
   const webcamRef = useRef<Webcam>(null);
   const trackingDebugRef = useRef<MovementTrackingDebugState | null>(null);
@@ -353,32 +375,19 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   }, [debugInstructorPoseMode, debugPoseTransitionActive, isDebugPoseTransitionRoute]);
   const debugInstructorLmRef = useRef<MovementPlayerMotionPayload | null>(null);
   debugInstructorLmRef.current = debugInstructorMotionPayload;
-  const debugGameFrameMotionPayload = React.useMemo<MovementPlayerMotionPayload | null>(() => (
-    debugGameFrameIndex === null
-      ? null
-      : toDebugPlayerMotionPayload(loadedFrames[debugGameFrameIndex] as unknown as MotionFrame | undefined)
-  ), [debugGameFrameIndex, loadedFrames]);
-  const debugPlayerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
-  debugPlayerLiveLmRef.current = debugGameFrameMotionPayload ?? debugPlayerMotionPayload;
-  const debugGameFrameSetup = React.useMemo(() => {
-    if (!isDebugGameFrameRoute) return null;
+  const debugGameFrameMotionSequence = React.useMemo<MovementPlayerMotionPayload[] | null>(() => {
+    if (debugGameFrameIndex === null) return null;
 
-    const frames = loadedFrames.map((frame) => (
-      toDebugPlayerMotionPayload(frame as unknown as MotionFrame) ?? {}
-    ));
-    return buildMovementRecordedPlayerSetup({
-      frameLimit: Math.min(59, frames.length - 1),
-      frames,
-    });
-  }, [isDebugGameFrameRoute, loadedFrames]);
-  const debugGameFrameCalibration = debugGameFrameSetup?.calibration ?? null;
-  const debugGameFrameRetargetSourceModel = debugGameFrameSetup?.retargetSourceModel ?? null;
-  React.useEffect(() => {
-    if (!isDebugGameFrameRoute) return;
-    (window as Window & {
-      __sonaeMovementRecordedPlayerSetup?: typeof debugGameFrameSetup;
-    }).__sonaeMovementRecordedPlayerSetup = debugGameFrameSetup;
-  }, [debugGameFrameSetup, isDebugGameFrameRoute]);
+    const prefix = loadedFrames
+      .slice(0, Math.min(60, loadedFrames.length))
+      .map((frame) => toDebugPlayerMotionPayload(frame as unknown as MotionFrame))
+      .filter((frame): frame is MovementPlayerMotionPayload => Boolean(frame));
+    const target = toDebugPlayerMotionPayload(
+      loadedFrames[debugGameFrameIndex] as unknown as MotionFrame | undefined,
+    );
+    if (target && debugGameFrameIndex !== prefix.length - 1) prefix.push(target);
+    return prefix;
+  }, [debugGameFrameIndex, loadedFrames]);
   const debugPlayerCalibration = React.useMemo(() => (
     isDebugPlayerPoseRoute && !shouldSkipDebugPoseCalibration
       ? buildMovementCalibration({
@@ -413,14 +422,37 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     togglePlaying,
     resetMatch,
   } = useMovementMatchSession({ isVisionReady: isVisionReadyForSession });
+  const recordedGameControlRef = useRef({ isCheckingStart: false, isPlaying: false });
+  const recordedGamePlaybackStateRef = useRef(createMovementRecordedSourcePlaybackState());
+  const recordedGameMotionFrameIndexRef = useRef(-1);
+  const recordedGameRenderedFrameIndexRef = useRef(-1);
+  recordedGameControlRef.current.isPlaying = isPlaying;
+  const recordedSourcePlayback = React.useMemo(() => (
+    gameProofPacket
+      ? {
+          controlRef: recordedGameControlRef,
+          fallbackFps: gameProofPacket.session.fps,
+          motionFrameIndexRef: recordedGameMotionFrameIndexRef,
+          renderedFrameIndexRef: recordedGameRenderedFrameIndexRef,
+          setupFrameCount: gameProofPacket.setupFrameCount,
+          stateRef: recordedGamePlaybackStateRef,
+        }
+      : null
+  ), [gameProofPacket]);
   const playerLiveLmRef = useMovementPlayerTracking({
     webcamRef,
     poseLandmarker,
     faceLandmarker,
     handLandmarker,
     onBodyTracked: markBodyTracked,
+    recordedSourcePlayback,
+    recordedSourceSequence: gameProofPacket?.playerFrames ?? (
+      isDebugPlayerInjectionRoute
+        ? debugGameFrameMotionSequence ?? (debugPlayerMotionPayload ? [debugPlayerMotionPayload] : null)
+        : null
+    ),
   });
-  const effectivePlayerLiveLmRef = isDebugPlayerInjectionRoute ? debugPlayerLiveLmRef : playerLiveLmRef;
+  const effectivePlayerLiveLmRef = playerLiveLmRef;
   const {
     calibration,
     isCalibrated,
@@ -438,13 +470,38 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isVisionReady: isVisionReadyForSession,
     playerLiveLmRef: effectivePlayerLiveLmRef,
   });
-  const effectivePlayerCalibration = debugGameFrameCalibration ?? debugPlayerCalibration ?? calibration;
+  const automaticPlayerSetupPrefixFramesRef = useRef<VrmMotionPayload[]>([]);
+  const automaticPlayerSetup = useMovementLivePlayerSetup({
+    isVisionReady: isVisionReadyForSession,
+    playerLiveLmRef: effectivePlayerLiveLmRef,
+    setupPrefixFramesRef: automaticPlayerSetupPrefixFramesRef,
+  });
+  React.useEffect(() => {
+    if (!isDebugGameFrameRoute) return;
+    (window as Window & {
+      __sonaeMovementRecordedPlayerSetup?: typeof automaticPlayerSetup;
+    }).__sonaeMovementRecordedPlayerSetup = automaticPlayerSetup;
+  }, [automaticPlayerSetup, isDebugGameFrameRoute]);
+  const effectivePlayerCalibration =
+    debugPlayerCalibration ?? calibration ?? automaticPlayerSetup?.calibration ?? null;
   const effectivePlayerRetargetSourceModel =
-    debugGameFrameRetargetSourceModel ?? debugPlayerRetargetSourceModel ?? playerRetargetSourceModel;
-  const isTrackingReady = isDebugPlayerInjectionRoute || isCalibrated || isCalibrationSkipped;
+    debugPlayerRetargetSourceModel ??
+    playerRetargetSourceModel ??
+    automaticPlayerSetup?.retargetSourceModel ??
+    null;
+  const isTrackingReady = isDebugGamePacketRoute
+    ? Boolean(automaticPlayerSetup)
+    : isDebugPlayerInjectionRoute || isCalibrated || isCalibrationSkipped;
   const [gameStartGate, setGameStartGate] = useState<MovementGameStartGateState>(
     createIdleGameStartGate,
   );
+  recordedGameControlRef.current.isCheckingStart = gameStartGate.status === "checking-visibility";
+  const gameStartGateRef = useRef(gameStartGate);
+  const gameStartFreshFrameCheckRef = useRef({
+    attempts: 0,
+    lastProofFrameIndex: -1,
+  });
+  gameStartGateRef.current = gameStartGate;
   const liveMotionFrameRequirements = React.useMemo(() => ({
     calibrationQuality: effectivePlayerCalibration?.quality ?? null,
     countdownMsRemaining: gameStartGate.status === "countdown"
@@ -455,9 +512,55 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     gameStartGate.countdownMsRemaining,
     gameStartGate.status,
   ]);
+  const isPlayerAvatarMotionActive = isPlaying || (
+    isDebugGameFrameRoute && Boolean(automaticPlayerSetup)
+  ) || (
+    isDebugGamePacketRoute &&
+    Boolean(automaticPlayerSetup) &&
+    recordedGamePlaybackStateRef.current.startedAt === undefined
+  );
+  const recordedGameSetupMotionSequence = React.useMemo(() => (
+    gameProofPacket
+      ? gameProofPacket.playerFrames.slice(0, gameProofPacket.setupFrameCount)
+      : null
+  ), [gameProofPacket]);
+  const playerInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
+  const playerMotionFrameProcessingDebugRef = useRef({
+    effectRunCount: 0,
+    processedFrames: [] as Array<{
+      effectRun: number;
+      frameId: string;
+      rootHistoryLength: number;
+    }>,
+    processedFrameIds: [] as string[],
+  });
+  const playerFrameApplicationProofRef = useRef({
+    currentSourceCapturedAt: null as number | null,
+    lastAppliedSourceCapturedAt: null as number | null,
+    status: "waiting-motion" as "applied" | "duplicate" | "fallback" | "not-ready" | "waiting-motion",
+    warmupFrameCount: 0,
+    warmupFrameIndex: 0,
+  });
+  const instructorFrameApplicationProofRef = useRef({
+    currentSourceCapturedAt: null as number | null,
+    lastAppliedSourceCapturedAt: null as number | null,
+    status: "waiting-motion" as "applied" | "duplicate" | "fallback" | "not-ready" | "waiting-motion",
+    warmupFrameCount: 0,
+    warmupFrameIndex: 0,
+  });
   const playerMotionFrameRef = useMovementLiveMotionFrame({
     calibration: effectivePlayerCalibration,
-    isPlaying,
+    debugProcessingRef: isDebugGamePacketRoute
+      ? playerMotionFrameProcessingDebugRef
+      : undefined,
+    initialFrameSequenceRef: playerInitialFrameSequenceRef,
+    initialMotionSequence: gameProofPacket
+      ? recordedGameSetupMotionSequence
+      : automaticPlayerSetup
+        ? automaticPlayerSetupPrefixFramesRef.current
+        : null,
+    isPlaying: isPlayerAvatarMotionActive,
+    motionSequence: null,
     playerLiveLmRef: effectivePlayerLiveLmRef,
     requirements: liveMotionFrameRequirements,
     retargetSourceModel: effectivePlayerRetargetSourceModel,
@@ -477,12 +580,243 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     advanceInstructorFrame,
     resetInstructorPlayback,
     setInstructorFrame,
-  } = useMovementInstructorPlayback(loadedFrames as unknown as MotionFrame[]);
+  } = useMovementInstructorPlayback(
+    effectiveLoadedFrames as unknown as MotionFrame[],
+    isDebugGamePacketRoute
+      ? { sourceFrameIndexRef: recordedGamePlaybackStateRef }
+      : undefined,
+  );
   const effectiveInstructorCurrentLmRef = isDebugInstructorPoseRoute
     ? debugInstructorLmRef
     : instructorCurrentLmRef;
   const effectiveInstructorRetargetSourceModel =
     debugInstructorRetargetSourceModel ?? instructorRetargetSourceModel;
+  const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking;
+  const instructorMotionFrameRef = useMovementRecordedMotionFrame({
+    instructorFrameRef: effectiveInstructorCurrentLmRef,
+    isPlaying: shouldKeepInstructorMotionFrameVisible,
+    retargetSourceModel: effectiveInstructorRetargetSourceModel,
+  });
+  const recordedGameRenderedFramesRef = useRef(new Map<number, {
+    checksums: {
+      acquisition: string;
+      calibration: string;
+      instructorRendered: string;
+      motionFrame: string;
+      ownersRootSupport: string;
+      playerRendered: string;
+      setup: string;
+    };
+    playerApplied: Pick<MovementTrackingDebugState,
+      "avatarExpressions" | "avatarHands" | "avatarHead" | "avatarRoot" | "avatarSpine">;
+    playerMotionRoot: MovementMotionFrame["rootMotionFrame"];
+    playerVisual: NonNullable<MovementTrackingDebugState["avatarVisual"]>;
+  }>());
+  const recordedGameFirstRenderedBoundaryRef = useRef<{
+    frameIndex: number;
+    playerDebug: MovementTrackingDebugState;
+  } | null>(null);
+  React.useEffect(() => {
+    if (!gameProofPacket) return;
+    const debugWindow = window as Window & {
+      __sonaeMovementGamePacketProof?: unknown;
+    };
+    recordedGameRenderedFramesRef.current.clear();
+    recordedGameFirstRenderedBoundaryRef.current = null;
+    let pendingRenderedFrameIndex = -1;
+    let pendingInstructorUpdatedAt = -1;
+    let pendingPlayerUpdatedAt = -1;
+    let pendingPlayerMotionFrame = playerMotionFrameRef.current;
+    const publish = () => {
+      const playback = recordedGamePlaybackStateRef.current;
+      const playerDebug = trackingDebugRef.current;
+      const instructorDebug = instructorTrackingDebugRef.current;
+      if (playback.frameIndex !== pendingRenderedFrameIndex) {
+        pendingRenderedFrameIndex = playback.frameIndex;
+        pendingInstructorUpdatedAt = instructorDebug?.updatedAt ?? -1;
+        pendingPlayerUpdatedAt = playerDebug?.updatedAt ?? -1;
+        pendingPlayerMotionFrame = playerMotionFrameRef.current;
+      }
+      if (playerMotionFrameRef.current !== pendingPlayerMotionFrame) {
+        pendingPlayerMotionFrame = playerMotionFrameRef.current;
+        pendingPlayerUpdatedAt = playerDebug?.updatedAt ?? -1;
+      }
+      const currentPlayerPayload = effectivePlayerLiveLmRef.current;
+      const playerSourceCapturedAt = Array.isArray(currentPlayerPayload)
+        ? undefined
+        : currentPlayerPayload?.capturedAt;
+      const playerSourceFrameId = Array.isArray(currentPlayerPayload)
+        ? undefined
+        : currentPlayerPayload?.frameId;
+      const instructorSourceCapturedAt = instructorMotionFrameRef.current?.source.capturedAt;
+      const instructorSourceFrameId = instructorMotionFrameRef.current?.source.frameId;
+      const isPlayerMotionCurrent = playerSourceFrameId
+        ? playerMotionFrameRef.current?.source.frameId === playerSourceFrameId
+        : playerSourceCapturedAt === undefined || (
+            playerMotionFrameRef.current?.source.capturedAt === playerSourceCapturedAt
+          );
+      if (isPlayerMotionCurrent) {
+        recordedGameMotionFrameIndexRef.current = Math.max(
+          recordedGameMotionFrameIndexRef.current,
+          playback.frameIndex,
+        );
+      }
+      const isPlayerRenderCurrent = playerSourceFrameId
+        ? playerDebug?.sourceFrameId === playerSourceFrameId
+        : playerSourceCapturedAt === undefined
+        ? (playerDebug?.updatedAt ?? -1) > pendingPlayerUpdatedAt
+        : playerDebug?.sourceCapturedAt === playerSourceCapturedAt;
+      const isInstructorRenderCurrent = instructorSourceFrameId
+        ? instructorDebug?.sourceFrameId === instructorSourceFrameId
+        : instructorSourceCapturedAt === undefined
+        ? (instructorDebug?.updatedAt ?? -1) > pendingInstructorUpdatedAt
+        : instructorDebug?.sourceCapturedAt === instructorSourceCapturedAt;
+      if (
+        !isLobby &&
+        playback.activeFrameStartIndex !== undefined &&
+        playback.frameIndex >= playback.activeFrameStartIndex &&
+        instructorFrameIndexRef.current === playback.frameIndex &&
+        isPlayerMotionCurrent &&
+        isInstructorRenderCurrent &&
+        isPlayerRenderCurrent &&
+        playerDebug?.avatarVisual &&
+        instructorDebug?.avatarVisual &&
+        !recordedGameRenderedFramesRef.current.has(playback.frameIndex)
+      ) {
+        if (!recordedGameFirstRenderedBoundaryRef.current) {
+          recordedGameFirstRenderedBoundaryRef.current = {
+            frameIndex: playback.frameIndex,
+            playerDebug: structuredClone(playerDebug),
+          };
+        }
+        recordedGameRenderedFramesRef.current.set(playback.frameIndex, {
+          checksums: {
+            acquisition: movementBoundaryChecksum(effectivePlayerLiveLmRef.current),
+            calibration: movementBoundaryChecksum(effectivePlayerCalibration),
+            instructorRendered: movementBoundaryChecksum(instructorDebug.avatarVisual),
+            motionFrame: movementBoundaryChecksum(playerMotionFrameRef.current),
+            ownersRootSupport: movementBoundaryChecksum({
+              avatarRoot: playerDebug.avatarRoot,
+              bodySupport: playerDebug.bodySupport,
+              fallbacks: playerDebug.fallbacks,
+              retarget: playerDebug.retarget,
+              supportConstraint: playerDebug.supportConstraint,
+              supportIntent: playerDebug.supportIntent,
+            }),
+            playerRendered: movementBoundaryChecksum(playerDebug.avatarVisual),
+            setup: movementBoundaryChecksum(automaticPlayerSetup),
+          },
+          playerApplied: structuredClone({
+            avatarExpressions: playerDebug.avatarExpressions,
+            avatarHands: playerDebug.avatarHands,
+            avatarHead: playerDebug.avatarHead,
+            avatarRoot: playerDebug.avatarRoot,
+            avatarSpine: playerDebug.avatarSpine,
+          }),
+          playerMotionRoot: structuredClone(playerMotionFrameRef.current?.rootMotionFrame ?? null),
+          playerVisual: structuredClone(playerDebug.avatarVisual),
+        });
+        recordedGameRenderedFrameIndexRef.current = Math.max(
+          recordedGameRenderedFrameIndexRef.current,
+          playback.frameIndex,
+        );
+      }
+      const isCompletePlayback = playback.phase === "complete";
+      const processedFrameIndexes = isCompletePlayback
+        ? [...playback.processedFrameIndexes]
+        : [];
+      const expectedFrameIndexes = Array.from(
+        { length: gameProofPacket.playerFrames.length },
+        (_, frameIndex) => frameIndex,
+      );
+      const processedSet = new Set(processedFrameIndexes);
+      const renderedFrames = isCompletePlayback
+        ? [...recordedGameRenderedFramesRef.current.entries()]
+            .sort(([left], [right]) => left - right)
+            .map(([frameIndex, renderedFrame]) => ({ frameIndex, ...renderedFrame }))
+        : [];
+      const renderedSet = new Set(renderedFrames.map((frame) => frame.frameIndex));
+      const activeFrameStartIndex = playback.activeFrameStartIndex ?? null;
+      const expectedRenderedFrameIndexes = activeFrameStartIndex === null
+        ? []
+        : expectedFrameIndexes.slice(activeFrameStartIndex);
+      const preStartFrameIndexes = activeFrameStartIndex === null
+        ? expectedFrameIndexes.slice(gameProofPacket.setupFrameCount, playback.frameIndex + 1)
+        : expectedFrameIndexes.slice(gameProofPacket.setupFrameCount, activeFrameStartIndex);
+      debugWindow.__sonaeMovementGamePacketProof = {
+        activeFrameStartIndex,
+        contractStatus: gameProofPacket.contractStatus,
+        expectedFrameCount: expectedFrameIndexes.length,
+        firstRenderedBoundary: recordedGameFirstRenderedBoundaryRef.current,
+        inputContractId: gameProofPacket.session.inputContract?.id ?? null,
+        instructorFrameIndex: instructorFrameIndexRef.current,
+        isLobby,
+        isPlaying: recordedGameControlRef.current.isPlaying,
+        lastRenderedFrameIndex: recordedGameRenderedFrameIndexRef.current,
+        motionFrameIndex: recordedGameMotionFrameIndexRef.current,
+        motionFrameProcessing: {
+          effectRunCount: playerMotionFrameProcessingDebugRef.current.effectRunCount,
+          processedFrameIds: isCompletePlayback
+            ? [...playerMotionFrameProcessingDebugRef.current.processedFrameIds]
+            : [],
+          processedFrameIdCount: playerMotionFrameProcessingDebugRef.current.processedFrameIds.length,
+          processedFrames: isCompletePlayback
+            ? [...playerMotionFrameProcessingDebugRef.current.processedFrames]
+            : [],
+        },
+        missingFrameIndexes: isCompletePlayback
+          ? expectedFrameIndexes.filter((frameIndex) => !processedSet.has(frameIndex))
+          : [],
+        missingRenderedFrameIndexes: isCompletePlayback
+          ? expectedRenderedFrameIndexes.filter((frameIndex) => !renderedSet.has(frameIndex))
+          : [],
+        packetId: gameProofPacket.session.id,
+        phase: playback.phase,
+        playerFrameIndex: playback.frameIndex,
+        preStartFrameCount: preStartFrameIndexes.length,
+        preStartFrameIndexes,
+        processedFrameIndexes,
+        processedFrameCount: playback.processedFrameIndexes.length,
+        renderDiagnostics: {
+          instructorDebugSourceCapturedAt: instructorDebug?.sourceCapturedAt ?? null,
+          instructorDebugUpdatedAt: instructorDebug?.updatedAt ?? null,
+          instructorMotionSourceCapturedAt: instructorSourceCapturedAt ?? null,
+          instructorMotionSourceFrameId: instructorSourceFrameId ?? null,
+          instructorRenderer: instructorFrameApplicationProofRef.current,
+          playerDebugSourceCapturedAt: playerDebug?.sourceCapturedAt ?? null,
+          playerDebugUpdatedAt: playerDebug?.updatedAt ?? null,
+          playerMotionSourceCapturedAt: playerMotionFrameRef.current?.source.capturedAt ?? null,
+          playerMotionSourceFrameId: playerMotionFrameRef.current?.source.frameId ?? null,
+          playerPayloadCapturedAt: playerSourceCapturedAt ?? null,
+          playerPayloadFrameId: playerSourceFrameId ?? null,
+          playerRenderer: playerFrameApplicationProofRef.current,
+        },
+        renderedFrames,
+        renderedFrameCount: recordedGameRenderedFramesRef.current.size,
+        setupFrameCount: gameProofPacket.setupFrameCount,
+        startGate: gameStartGateRef.current,
+        startGateFreshFrameCheck: gameStartFreshFrameCheckRef.current,
+        sourcePacketHash: gameProofPacket.session.sourcePacketHash ?? null,
+      };
+      animationFrameId = window.requestAnimationFrame(publish);
+    };
+    let animationFrameId = 0;
+    publish();
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      delete debugWindow.__sonaeMovementGamePacketProof;
+    };
+  }, [
+    automaticPlayerSetup,
+    effectivePlayerCalibration,
+    effectiveInstructorCurrentLmRef,
+    effectivePlayerLiveLmRef,
+    gameProofPacket,
+    instructorMotionFrameRef,
+    instructorFrameIndexRef,
+    isLobby,
+    playerMotionFrameRef,
+  ]);
   const debugQaPresets = React.useMemo(
     () => getMovementDebugQaPresets(movementId, instructorFrameCount),
     [instructorFrameCount, movementId],
@@ -495,12 +829,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     nextParams.set("debugGameFrame", String(frameIndex));
     router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
   }, [isDebugTracking, pathname, router, searchParams]);
-  const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking;
-  const instructorMotionFrameRef = useMovementRecordedMotionFrame({
-    instructorFrameRef: effectiveInstructorCurrentLmRef,
-    isPlaying: shouldKeepInstructorMotionFrameVisible,
-    retargetSourceModel: effectiveInstructorRetargetSourceModel,
-  });
   useEffect(() => {
     if (debugGameFrameIndex === null || loadedFrames.length === 0) return;
     setInstructorFrame(Math.min(debugGameFrameIndex, loadedFrames.length - 1));
@@ -588,7 +916,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     return evaluateMovementSpineReadiness(buildMovementSpineModel(poseLandmarks)).status;
   }, [playerMotionFrameRef]);
 
-  const completeGameStartGate = React.useCallback(() => {
+  const completeGameStartGate = React.useCallback((deferBlockedResult = false) => {
     const sourceFrame = playerMotionFrameRef.current?.source;
     const readiness = sourceFrame
       ? resolveMovementStartReadiness({
@@ -611,8 +939,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       resetScoring();
       setGameStartGate(createIdleGameStartGate());
       setIsPlaying(true);
-      return;
+      return true;
     }
+
+    if (deferBlockedResult) return false;
 
     setGameStartGate({
       countdownMsRemaining: 0,
@@ -624,6 +954,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       }),
       status: "blocked",
     });
+    return false;
   }, [
     effectivePlayerCalibration?.quality,
     playerMotionFrameRef,
@@ -677,15 +1008,57 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       return undefined;
     }
 
-    const startCheckTimeoutId = window.setTimeout(completeGameStartGate, 120);
-    return () => window.clearTimeout(startCheckTimeoutId);
+    let active = true;
+    let attempts = gameStartFreshFrameCheckRef.current.attempts;
+    let startCheckTimeoutId = 0;
+    const checkFreshMotionFrame = () => {
+      if (!active) return;
+      const currentProofFrameIndex = recordedGamePlaybackStateRef.current.frameIndex;
+      if (
+        isDebugGamePacketRoute &&
+        currentProofFrameIndex === gameStartFreshFrameCheckRef.current.lastProofFrameIndex
+      ) {
+        startCheckTimeoutId = window.setTimeout(
+          checkFreshMotionFrame,
+          MOVEMENT_GAME_START_FRESH_FRAME_INTERVAL_MS,
+        );
+        return;
+      }
+      gameStartFreshFrameCheckRef.current.lastProofFrameIndex = currentProofFrameIndex;
+      attempts += 1;
+      gameStartFreshFrameCheckRef.current.attempts = attempts;
+      const shouldKeepChecking = shouldContinueMovementGameStartFreshFrameCheck({
+        attempt: attempts,
+        didStart: false,
+      });
+      const didStart = completeGameStartGate(shouldKeepChecking);
+      if (shouldContinueMovementGameStartFreshFrameCheck({ attempt: attempts, didStart })) {
+        startCheckTimeoutId = window.setTimeout(
+          checkFreshMotionFrame,
+          MOVEMENT_GAME_START_FRESH_FRAME_INTERVAL_MS,
+        );
+      }
+    };
+    startCheckTimeoutId = window.setTimeout(
+      checkFreshMotionFrame,
+      MOVEMENT_GAME_START_FRESH_FRAME_DELAY_MS,
+    );
+    return () => {
+      active = false;
+      window.clearTimeout(startCheckTimeoutId);
+    };
   }, [
     completeGameStartGate,
     gameStartGate.status,
+    isDebugGamePacketRoute,
+    playerMotionFrameRef,
   ]);
 
   const handleTogglePlaying = React.useCallback(() => {
     if (isPlaying) {
+      if (isDebugGamePacketRoute) {
+        recordedGameControlRef.current.isPlaying = false;
+      }
       setGameStartGate(createIdleGameStartGate());
       togglePlaying();
       return;
@@ -703,6 +1076,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
     if (!isVisionReadyForSession || !isTrackingReady || isCalibrating) return;
 
+    gameStartFreshFrameCheckRef.current = {
+      attempts: 0,
+      lastProofFrameIndex: -1,
+    };
     setIsPlaying(false);
     setGameStartGate({
       countdownMsRemaining: MOVEMENT_GAME_START_COUNTDOWN_MS,
@@ -716,6 +1093,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     isPlaying,
     isTrackingReady,
     isVisionReadyForSession,
+    isDebugGamePacketRoute,
     setIsPlaying,
     shouldBypassStartReadinessForDebug,
     togglePlaying,
@@ -896,7 +1274,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     };
   }, [effectivePlayerLiveLmRef, isDebugTracking]);
 
-  if (!movement || isFramesLoading) {
+  if (!movement || isFramesLoading || isGameProofPacketLoading) {
     const loadingStudio = (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] text-[#f6ccbe] animate-pulse font-medium">
         <style>{`nextjs-portal { display: none !important; }`}</style>
@@ -905,6 +1283,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     );
 
     return typeof document === "undefined" ? loadingStudio : createPortal(loadingStudio, document.body);
+  }
+
+  if (gameProofPacketError) {
+    const packetError = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] px-8 text-center text-[#f6ccbe] font-medium">
+        Game proof packet failed: {gameProofPacketError}
+      </div>
+    );
+    return typeof document === "undefined" ? packetError : createPortal(packetError, document.body);
   }
 
   if (isLobby) {
@@ -930,6 +1317,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
+          frameApplicationProofRef={isDebugGamePacketRoute ? instructorFrameApplicationProofRef : undefined}
           landmarksRef={effectiveInstructorCurrentLmRef}
           motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}
@@ -961,10 +1349,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         ) : null}
 
         <VrmAvatar
+          frameApplicationProofRef={isDebugGamePacketRoute ? playerFrameApplicationProofRef : undefined}
+          frameWarmupSequenceRef={isDebugGamePacketRoute ? playerInitialFrameSequenceRef : undefined}
           landmarksRef={effectivePlayerLiveLmRef}
           positionOffset={[5, 0, 0]}
           isPlayer={true}
-          isPlaying={isPlaying}
+          isPlaying={isPlayerAvatarMotionActive}
           showPausedPose={shouldShowPlayerPausedPose}
           motionFrameRef={playerMotionFrameRef}
           trackingCalibration={effectivePlayerCalibration}
@@ -1010,7 +1400,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         setupRecoveryCue={setupRecoveryCue}
         visionStatus={visionStatus}
         visionError={visionError}
-        isCameraReady={isDebugPlayerPoseRoute || cameraStatus === "ready"}
+        isCameraReady={isDebugPlayerInjectionRoute || cameraStatus === "ready"}
         cameraError={cameraError}
         calibrationStatus={displayedCalibrationStatus}
         webcamRef={webcamRef}

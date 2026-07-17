@@ -91,7 +91,7 @@ describe("saveMovementRecording", () => {
       primaryCue: "  Keep ribs over hips  ",
       bodyFocus: ["ribcage", "pelvis"],
       captureStartReadiness,
-      frames: makeFrames(6),
+      frames: makeFrames(),
       generateUploadUrl: vi.fn(async () => "https://upload.example"),
       createMovement,
       uploadFetch,
@@ -102,6 +102,10 @@ describe("saveMovementRecording", () => {
     expect(JSON.parse(uploadBody as string)).toEqual(
       expect.objectContaining({
         captureStartReadiness,
+        schemaVersion: 2,
+        inputContract: expect.objectContaining({ id: "movement-player-input-v1" }),
+        setupPrefix: expect.objectContaining({ complete: true, requiredFrameCount: 60 }),
+        sourcePacketHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       }),
     );
     expect(createMovement).toHaveBeenCalledWith(expect.objectContaining({
@@ -109,11 +113,11 @@ describe("saveMovementRecording", () => {
       difficulty: "Intermediate",
       poseData: "storage-id",
       poseStorageId: "storage-id",
-      poseDataFormat: "storage-json-v1",
-      frameCount: 6,
-      durationMs: 165,
+      poseDataFormat: "storage-json-v2",
+      frameCount: 60,
+      durationMs: 1947,
       captureFps: 30,
-      schemaVersion: 1,
+      schemaVersion: 2,
       spineGoal: "hipHinge",
       primaryCue: "Keep ribs over hips",
       bodyFocus: ["ribcage", "pelvis"],

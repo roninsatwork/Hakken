@@ -2,7 +2,13 @@ import {
   getFrameLandmarks,
   parseMovementFramePayload,
 } from "./movementFrameCodec";
-import type { MovementDataFormat, MovementFrame, MovementLandmark } from "./movementTypes";
+import type {
+  MovementDataFormat,
+  MovementFrame,
+  MovementFrameEnvelope,
+  MovementLandmark,
+  MovementRecordingChannelSummary,
+} from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
 import type {
   MovementDebugReplayLandmark,
@@ -29,6 +35,10 @@ export type MovementReplayRecordingLoadResult = {
 
 type MovementReplaySessionBuildOptions = {
   captureStartReadiness?: MovementStartReadiness;
+  channelSummary?: MovementRecordingChannelSummary;
+  inputContract?: MovementFrameEnvelope["inputContract"];
+  setupPrefix?: MovementFrameEnvelope["setupPrefix"];
+  sourcePacketHash?: string;
 };
 
 function isFramePayload(frame: MovementFrame): frame is Exclude<MovementFrame, MovementLandmark[]> {
@@ -37,6 +47,10 @@ function isFramePayload(frame: MovementFrame): frame is Exclude<MovementFrame, M
 
 function getWorldLandmarks(frame: MovementFrame): MovementLandmark[] {
   return isFramePayload(frame) && Array.isArray(frame.worldLandmarks) ? frame.worldLandmarks : [];
+}
+
+function getFramePayload(frame: MovementFrame) {
+  return isFramePayload(frame) ? frame : null;
 }
 
 function getFrameTimestamp(frame: MovementFrame, fallback: number) {
@@ -98,7 +112,23 @@ export function buildMovementReplaySessionFromRecording(
         primaryAction: "recorded movement",
       },
       poseBounds: buildPoseBounds(pose),
+      startReadiness: getFramePayload(frame)?.startReadiness,
       tracking: {
+        blendshapes: getFramePayload(frame)?.blendshapes as MovementDebugReplaySession["samples"][number]["tracking"]["blendshapes"],
+        face: toReplayLandmarks(getFramePayload(frame)?.faceLandmarks ?? []),
+        hands: Object.fromEntries(
+          (["left", "right"] as const).map((side) => {
+            const hand = getFramePayload(frame)?.hands?.[side];
+            return [side, hand
+              ? {
+                  landmarks: toReplayLandmarks(hand.landmarks),
+                  worldLandmarks: hand.worldLandmarks
+                    ? toReplayLandmarks(hand.worldLandmarks)
+                    : null,
+                }
+              : null];
+          }),
+        ),
         pose,
         worldPose,
       },
@@ -113,14 +143,18 @@ export function buildMovementReplaySessionFromRecording(
   return {
     baselineSummary: "saved movement recording",
     captureStartReadiness: options.captureStartReadiness,
+    channelSummary: options.channelSummary,
     createdAt: recording.createdAt,
     durationMs,
     endedAt: startedAt + durationMs,
     fps,
     id: recording._id,
+    inputContract: options.inputContract,
     movementId: recording._id,
     sampleCount: samples.length,
     samples,
+    setupPrefix: options.setupPrefix,
+    sourcePacketHash: options.sourcePacketHash,
     startedAt,
     trigger: "saved-movement-recording",
     warningSummary: recording.title ?? "saved movement recording",
@@ -147,6 +181,10 @@ export async function loadMovementReplayRecording(
       recording.captureFps ?? parsed.fps,
       {
         captureStartReadiness: parsed.captureStartReadiness,
+        channelSummary: parsed.channelSummary,
+        inputContract: parsed.inputContract,
+        setupPrefix: parsed.setupPrefix,
+        sourcePacketHash: parsed.sourcePacketHash,
       },
     ),
   };

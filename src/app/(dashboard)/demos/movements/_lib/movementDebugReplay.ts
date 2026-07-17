@@ -1,5 +1,9 @@
 import type { MovementStartReadiness } from "./movementSourceFrame";
 import { isMovementStartReadiness } from "./movementFrameCodec";
+import type {
+  MovementFrameEnvelope,
+  MovementRecordingChannelSummary,
+} from "./movementTypes";
 
 export type MovementDebugReplayCamera = {
   aspectRatio?: number;
@@ -87,6 +91,17 @@ export type MovementDebugReplayFrame = {
   retarget?: MovementDebugReplayRetarget;
   startReadiness?: MovementStartReadiness;
   tracking: {
+    blendshapes?: Array<{
+      categoryName: string;
+      displayName: string;
+      index: number;
+      score: number;
+    }>;
+    face?: MovementDebugReplayLandmark[];
+    hands?: Partial<Record<"left" | "right", {
+      landmarks: MovementDebugReplayLandmark[];
+      worldLandmarks?: MovementDebugReplayLandmark[] | null;
+    } | null>>;
     pose: MovementDebugReplayLandmark[];
     worldPose: MovementDebugReplayLandmark[];
   };
@@ -96,14 +111,18 @@ export type MovementDebugReplayFrame = {
 export type MovementDebugReplaySession = {
   baselineSummary: string;
   captureStartReadiness?: MovementStartReadiness;
+  channelSummary?: MovementRecordingChannelSummary;
   createdAt?: number;
   durationMs: number;
   endedAt: number;
   fps?: number;
   id: string;
+  inputContract?: MovementFrameEnvelope["inputContract"];
   movementId: string;
   sampleCount: number;
   samples: MovementDebugReplayFrame[];
+  setupPrefix?: MovementFrameEnvelope["setupPrefix"];
+  sourcePacketHash?: string;
   startedAt: number;
   trigger: string;
   warningSummary: string;
@@ -302,6 +321,32 @@ function parseTracking(value: unknown): MovementDebugReplayFrame["tracking"] {
   }
 
   return {
+    blendshapes: Array.isArray(value.blendshapes)
+      ? value.blendshapes.flatMap((blendshape) => {
+          if (!isRecord(blendshape) || typeof blendshape.categoryName !== "string") return [];
+          return [{
+            categoryName: blendshape.categoryName,
+            displayName: typeof blendshape.displayName === "string"
+              ? blendshape.displayName
+              : blendshape.categoryName,
+            index: typeof blendshape.index === "number" ? blendshape.index : 0,
+            score: numberValue(blendshape.score),
+          }];
+        })
+      : undefined,
+    face: Array.isArray(value.face) ? parseLandmarks(value.face) : undefined,
+    hands: isRecord(value.hands)
+      ? Object.fromEntries(["left", "right"].map((side) => {
+          const hand = value.hands && isRecord(value.hands) ? value.hands[side] : null;
+          if (!isRecord(hand)) return [side, null];
+          return [side, {
+            landmarks: parseLandmarks(hand.landmarks),
+            worldLandmarks: Array.isArray(hand.worldLandmarks)
+              ? parseLandmarks(hand.worldLandmarks)
+              : null,
+          }];
+        }))
+      : undefined,
     pose: parseLandmarks(value.pose),
     worldPose: parseLandmarks(value.worldPose),
   };
@@ -339,7 +384,7 @@ export function parseMovementDebugReplayFrame(value: unknown): MovementDebugRepl
 export function parseMovementDebugReplaySession(value: unknown): MovementDebugReplaySession {
   if (!isRecord(value)) throw new Error("Expected a movement debug session object.");
 
-  const samples = parseSamplesJson(value.samplesJson)
+  const samples = parseSamplesJson(value.samples ?? value.samplesJson)
     .map(parseMovementDebugReplayFrame)
     .filter((frame): frame is MovementDebugReplayFrame => Boolean(frame));
 
@@ -348,14 +393,26 @@ export function parseMovementDebugReplaySession(value: unknown): MovementDebugRe
     captureStartReadiness: isMovementStartReadiness(value.captureStartReadiness)
       ? value.captureStartReadiness
       : undefined,
+    channelSummary: isRecord(value.channelSummary)
+      ? value.channelSummary as MovementRecordingChannelSummary
+      : undefined,
     createdAt: typeof value.createdAt === "number" ? value.createdAt : undefined,
     durationMs: numberValue(value.durationMs),
     endedAt: numberValue(value.endedAt),
     fps: typeof value.fps === "number" ? value.fps : undefined,
     id: stringValue(value._id, stringValue(value.id, "unknown")),
+    inputContract: isRecord(value.inputContract)
+      ? value.inputContract as MovementFrameEnvelope["inputContract"]
+      : undefined,
     movementId: stringValue(value.movementId, "unknown"),
     sampleCount: numberValue(value.sampleCount, samples.length),
     samples,
+    setupPrefix: isRecord(value.setupPrefix)
+      ? value.setupPrefix as MovementFrameEnvelope["setupPrefix"]
+      : undefined,
+    sourcePacketHash: typeof value.sourcePacketHash === "string"
+      ? value.sourcePacketHash
+      : undefined,
     startedAt: numberValue(value.startedAt),
     trigger: stringValue(value.trigger, "unknown"),
     warningSummary: stringValue(value.warningSummary, "none"),

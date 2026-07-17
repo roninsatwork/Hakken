@@ -196,8 +196,13 @@ export function resolveMovementAvatarPlayerLowerBodyOwners({
   totalSolvedSegments: number;
 }): MovementAvatarPlayerLowerBodyOwnerDecision {
   const hasUsablePlayerLegRetarget = applicableLegSegments >= 4;
-  const hasCompleteLegRetarget =
-    hasUsablePlayerLegRetarget && retargetSourceQuality >= 0.45;
+  // Applicability is decided per segment by the bone applier, including its
+  // conservative low-confidence continuation band. A far-camera frame can
+  // have four individually usable thigh/shin segments while the average
+  // whole-body quality sits just below 0.45 because feet or hands are faint.
+  // Rejecting that complete leg chain by the global average replaces real
+  // lateral motion with a canned knee-raise/squat fallback in Game Studio.
+  const hasCompleteLegRetarget = hasUsablePlayerLegRetarget;
   const hasUsablePartialLegRetarget =
     hasBilateralApplicableThighs && retargetSourceQuality >= 0.45;
   const canUsePlayerRetargetLegRaise =

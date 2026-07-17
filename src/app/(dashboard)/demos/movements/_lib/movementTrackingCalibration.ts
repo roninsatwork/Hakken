@@ -61,6 +61,8 @@ export type MovementAvatarTrackingProfile = {
 
 export type MovementTrackingDebugState = {
   updatedAt: number;
+  sourceCapturedAt?: number;
+  sourceFrameId?: string;
   bodyOrientation?: MovementBodyOrientationDecision;
   bodySupport?: MovementSupportContactDecision;
   exercisePose?: MovementExercisePoseDecision;
@@ -893,14 +895,14 @@ export function getCalibratedFloorCorrection({
 function getFloorRelativeSquatDepth({
   calibration,
   currentFloorY,
-  currentTorsoScale,
+  currentVerticalTorsoScale,
   floorConfidence,
   hips,
   torsoScale,
 }: {
   calibration: MovementCalibration;
   currentFloorY: number;
-  currentTorsoScale: number;
+  currentVerticalTorsoScale: number;
   floorConfidence: number;
   hips: { x: number; y: number; z: number };
   torsoScale: number;
@@ -911,8 +913,13 @@ function getFloorRelativeSquatDepth({
   const calibratedHipToFloor = calibration.floorY - calibration.hipCenter.y;
   const currentHipToFloor = currentFloorY - hips.y;
   const floorDistanceDrop = clamp((calibratedHipToFloor - currentHipToFloor) / (torsoScale * 0.8), 0, 1);
-  const calibratedHipToFloorRatio = calibratedHipToFloor / Math.max(torsoScale, 0.001);
-  const currentHipToFloorRatio = currentHipToFloor / Math.max(currentTorsoScale, 0.001);
+  const calibratedVerticalTorsoScale = calibration.shoulderCenter
+    ? Math.abs(calibration.hipCenter.y - calibration.shoulderCenter.y)
+    : torsoScale;
+  const calibratedHipToFloorRatio = calibratedHipToFloor /
+    Math.max(calibratedVerticalTorsoScale, 0.001);
+  const currentHipToFloorRatio = currentHipToFloor /
+    Math.max(currentVerticalTorsoScale, 0.001);
   const bodyRatioDrop = clamp((calibratedHipToFloorRatio - currentHipToFloorRatio) / 0.76, 0, 1);
 
   return Math.min(floorDistanceDrop, bodyRatioDrop);
@@ -1076,6 +1083,9 @@ export function getMovementLowerBodyIntent({
   const currentTorsoScale = shoulders
     ? Math.max(distance2D(shoulders, hips), 0.12)
     : Math.max(calibration.torsoHeight, 0.12);
+  const currentVerticalTorsoScale = shoulders
+    ? Math.max(Math.abs(hips.y - shoulders.y), 0.12)
+    : Math.max(calibration.torsoHeight, 0.12);
   const torsoScale = Math.max(calibration.torsoHeight, 0.12);
   const hipConfidence = average([visibility(leftHip), visibility(rightHip)]);
   const kneeConfidence = average([visibility(leftKnee), visibility(rightKnee)]);
@@ -1101,7 +1111,7 @@ export function getMovementLowerBodyIntent({
   const rawSquatDepth = getFloorRelativeSquatDepth({
     calibration,
     currentFloorY,
-    currentTorsoScale,
+    currentVerticalTorsoScale,
     floorConfidence: footConfidence,
     hips,
     torsoScale,

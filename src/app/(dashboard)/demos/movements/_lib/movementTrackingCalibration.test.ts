@@ -583,6 +583,28 @@ describe("movementTrackingCalibration", () => {
     expect(intent.squatSignals.hipDrop).toBe(0);
   });
 
+  it("does not classify a far-camera side bend as a squat", () => {
+    const neutralPose = withCorePose();
+    const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });
+    const sideBendPose = withCorePose();
+    [0, 7, 8, 11, 12].forEach((index) => {
+      sideBendPose[index] = {
+        ...sideBendPose[index]!,
+        x: sideBendPose[index]!.x + 0.15,
+      };
+    });
+    const farSideBendPose = scalePoseInFrame(sideBendPose, 0.68, { x: 0.5, y: 0.62, z: 0 });
+
+    const intent = getMovementLowerBodyIntent({
+      poseLandmarks: farSideBendPose,
+      calibration,
+    });
+
+    expect(intent.label).toBe("neutral");
+    expect(intent.squatDepth).toBe(0);
+    expect(intent.squatSignals.hipDrop).toBeLessThan(0.05);
+  });
+
   it("still reads a calibrated squat when the user is farther back in camera frame", () => {
     const neutralPose = withCorePose();
     const calibration = buildMovementCalibration({ poseLandmarks: neutralPose });

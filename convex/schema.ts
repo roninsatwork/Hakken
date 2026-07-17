@@ -1869,7 +1869,8 @@ export default defineSchema({
     poseDataFormat: v.optional(v.union(
       v.literal("legacy-inline-json"),
       v.literal("legacy-storage-json"),
-      v.literal("storage-json-v1")
+      v.literal("storage-json-v1"),
+      v.literal("storage-json-v2")
     )),
     poseStorageId: v.optional(v.id("_storage")),
     frameCount: v.optional(v.number()),

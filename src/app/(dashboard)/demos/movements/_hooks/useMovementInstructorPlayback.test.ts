@@ -1,7 +1,9 @@
+import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   buildInstructorRetargetAnalysis,
   buildInstructorRetargetSourceModel,
+  useMovementInstructorPlayback,
 } from "./useMovementInstructorPlayback";
 import type { MovementInstructorMotionFrame } from "./useMovementInstructorPlayback";
 
@@ -227,5 +229,30 @@ describe("buildInstructorRetargetSourceModel", () => {
 
     expect(analysis.peakSquat?.frameIndex).toBe(2);
     expect(analysis.peakSquat?.sourceQuality).toBeGreaterThan(0.7);
+  });
+});
+
+describe("useMovementInstructorPlayback source frame synchronisation", () => {
+  it("holds and advances against the controlled recorded Game frame", () => {
+    const sourceFrameIndexRef = { current: { frameIndex: 0 } };
+    const frames = [0, 1, 2].map((capturedAt) => ({
+      capturedAt,
+      landmarks: withCorePose(),
+    })) satisfies MovementInstructorMotionFrame[];
+    const { result } = renderHook(() => useMovementInstructorPlayback(
+      frames,
+      { sourceFrameIndexRef },
+    ));
+
+    act(() => {
+      expect(result.current.advanceInstructorFrame().frameIndex).toBe(0);
+    });
+    sourceFrameIndexRef.current.frameIndex = 2;
+    act(() => {
+      expect(result.current.advanceInstructorFrame().frameIndex).toBe(2);
+    });
+    act(() => {
+      expect(result.current.advanceInstructorFrame().status).toBe("complete");
+    });
   });
 });

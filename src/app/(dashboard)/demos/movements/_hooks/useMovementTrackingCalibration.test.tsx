@@ -34,7 +34,7 @@ function installAnimationFrameMock() {
   vi.spyOn(performance, "now").mockImplementation(() => now);
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     return window.setTimeout(() => {
-      now += 100;
+      now += 16;
       callback(now);
     }, 0);
   });
@@ -75,7 +75,7 @@ describe("useMovementTrackingCalibration", () => {
     expect(result.current.calibrationStatus).toBe("Calibrated");
     expect(result.current.calibrationCountdownSeconds).toBe(0);
     expect(result.current.calibrationProgress).toBe(100);
-    expect(result.current.calibrationSampleCount).toBeGreaterThanOrEqual(12);
+    expect(result.current.calibrationSampleCount).toBeGreaterThanOrEqual(60);
     expect(result.current.calibration?.quality).toBeGreaterThan(0.8);
     expect(result.current.retargetSourceModel?.quality).toBeGreaterThan(0.8);
     expect(result.current.retargetSourceModel?.segments.leftThigh?.confidence).toBeGreaterThan(0.7);

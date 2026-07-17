@@ -22,7 +22,9 @@ export function movementAvatarSourceAwareApplicationDeltaSeconds({
     currentSourceCapturedAt! > previousSourceCapturedAt!
     ? (currentSourceCapturedAt! - previousSourceCapturedAt!) / 1000
     : 0;
-  return movementAvatarApplicationDeltaSeconds(Math.max(renderDeltaSeconds, sourceDeltaSeconds));
+  return movementAvatarApplicationDeltaSeconds(
+    sourceDeltaSeconds > 0 ? sourceDeltaSeconds : renderDeltaSeconds,
+  );
 }
 
 export function movementAvatarFrameRateAdjustedSlerp(

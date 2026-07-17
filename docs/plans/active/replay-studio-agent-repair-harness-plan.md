@@ -1,14 +1,14 @@
 # Replay Studio Agent Repair Harness Plan
 
 Last reviewed: 2026-07-16
-Status: active controlling plan; visual acceptance reopened. The final-fingerprint all-nine refresh still proves all `34,149/34,149` lane-frames were accounted for with zero missing under the July 15 fields, but it is not current visual acceptance. The July 16 confidence-aware semantic telemetry, durable frame-648-656 fixture, shared spine/contact/endpoint-IK repair, repair-window proof, and all three complete automated `Full Body Flow` lanes now pass: deterministic player, intended-time player, and three-party proof each account for 2,169/2,169 frames with zero missing and zero strict failures. Packet/bundle propagation, current manual seek, renewed tiered/all-nine proof, and broader human review remain required before Game Studio confirmation.
+Status: active controlling Replay repair plan; visual acceptance reopened. The final-fingerprint all-nine refresh still proves all `34,149/34,149` lane-frames were accounted for with zero missing under the July 15 fields, but it is not current visual acceptance. The July 16 confidence-aware semantic telemetry, durable frame-648-656 fixture, shared spine/contact/endpoint-IK repair, repair-window proof, and all three complete automated `Full Body Flow` lanes now pass: deterministic player, intended-time player, and three-party proof each account for 2,169/2,169 frames with zero missing and zero strict failures. Packet/bundle propagation, current manual seek, renewed tiered/all-nine proof, and broader human review remain required. End-to-end Game acceptance is separately blocked on the complete-packet and mounted-session phases in the Replay/Game alignment plan.
 Scope: turn Replay Studio from a useful human QA screen into a deterministic repair harness that a coding agent can use to reproduce, diagnose, fix, and re-prove avatar motion from one saved recording.
 
 Current visual-fidelity execution plan: [`replay-lab-visual-acceptance-tightening-plan.md`](./replay-lab-visual-acceptance-tightening-plan.md). Read it before changing rendered fidelity thresholds, head/spine/arm acceptance, neutral/standing continuity, or manual Replay seeking.
 
 ## Latest State Of Play, 2026-07-16
 
-Plan completion score: approximately **96%** against the full Definition of Done. Playback/seek proof, slider dragging, strict accounting, side ownership, temporal checks, target-to-final application, and packet consolidation remain implemented. The July 16 source-semantic and visible sole-contact evidence passes both the same-source repair window and all three complete automated `Full Body Flow` lanes; current manual seek, packet/bundle propagation, renewed all-nine review, and Game Studio confirmation remain.
+Plan completion score: approximately **96%** for the Replay repair harness itself. Playback/seek proof, slider dragging, strict accounting, side ownership, temporal checks, target-to-final application, and packet consolidation remain implemented. The July 16 source-semantic and visible sole-contact evidence passes both the same-source repair window and all three complete automated `Full Body Flow` lanes; current manual seek, packet/bundle propagation, and renewed all-nine review remain. This percentage does not represent end-to-end Replay/Game product parity, which is approximately 80% in the alignment plan.
 
 Current shape of the work:
 
@@ -43,7 +43,7 @@ Subscores:
 | Area | Score | Current status |
 | --- | ---: | --- |
 | Repair-harness infrastructure | 98% | Packets, routing, fixtures, strict accounting, tiered browser proof commands, browser diagnosis/export parity, confidence-aware semantic torso/head/sole-contact telemetry, contact-constrained mirror accounting, and all-nine orchestration are implemented; final packet/bundle propagation remains. |
-| Full Definition of Done | 96% | Real Replay playback, durable prior slider proof, target-to-final application, packet consolidation, targeted semantic proof, and all three complete automated `Full Body Flow` lanes pass; current manual seek, tiered review, and Game Studio confirmation remain. |
+| Replay harness Definition of Done | 96% | Real Replay playback, durable prior slider proof, target-to-final application, packet consolidation, targeted semantic proof, and all three complete automated `Full Body Flow` lanes pass; current manual seek and tiered review remain. End-to-end Game parity is a separate blocked alignment-plan scope. |
 | Current strict rendered acceptance | Reopened / blocked | The July 15 bundle has complete accounting but lacks required source-to-final torso/head-chain and visible heel/sole/toe contact evidence. |
 | Current tiered proof ergonomics | 100% | `movement:replay:targeted-proof`, `movement:replay:fast-subset-proof`, and final `movement:replay:nine-proof` are distinct commands with distinct manifest labels. |
 
@@ -105,7 +105,8 @@ Use these gates in order:
 | Targeted repro | The currently failing recording or frame window, for example `Spins` around frames 645-647 | During active repair | The known failure is reproducible and improves under current code. |
 | Fast representative subset | Two or three recordings that cover different motion families | Before calling a fix ready for broader proof | The fix generalizes beyond one recording without paying the full all-nine cost. |
 | Current all-nine rendered proof | All nine acceptance recordings, every frame, current fingerprint | Final certification only | Shared avatar behavior can be reported as accepted across the supported recording set. |
-| Game Studio live confirmation | Short live-camera check after Replay passes | Final product confirmation | Live camera timing, permissions, and smoothing still match the Replay-proven shared pipeline. |
+| Mounted Game-session parity | The same complete packet through the normal Game setup/readiness/play lifecycle | Required automated product gate | Replay-accepted motion survives the real Game lifecycle with identical acquisition/setup fingerprints. |
+| Game Studio commissioning | One short live-camera capture after automated Replay and mounted Game parity pass | One-time acquisition confirmation | Physical camera and MediaPipe acquisition agree with the replayable packet; the saved packet becomes a durable regression. |
 
 Recommended fast subset for the current mirror/adherence work:
 
@@ -275,7 +276,8 @@ The final bundle resolves the acceptance-critical portions of the historical aud
 2. Make browser display and fix-log export consume the exact same packet instance and supplemental evidence.
 3. Complete final canonical-policy consolidation across batch, current-frame, session, unsupported, and proof-missing decisions.
 4. Make `movement:diagnose` delegate to the current capture/aggregate proof workflow where source access is available, without adding hidden local-artifact prerequisites.
-5. Perform the final Game Studio live-camera confirmation; this is confirmation after Replay proof, not a replacement for it.
+5. Implement the complete-packet and normal mounted Game-session parity phases in [`replay-game-runtime-alignment-plan.md`](./replay-game-runtime-alignment-plan.md).
+6. Perform one Game Studio live-camera commissioning capture only after automated Replay and mounted Game proof pass; save the complete packet for future reruns.
 
 ## Executive Decision
 
@@ -291,8 +293,10 @@ record a human movement once
   -> produce a ranked, machine-readable repair packet
   -> change the owning shared motion module
   -> rerun the same recording and compare before/after
-  -> pass deterministic Replay gates
-  -> perform one final live-camera confirmation in Game Studio
+  -> pass deterministic and intended-time Replay gates
+  -> run the same complete packet through the normal mounted Game session
+  -> perform one live-camera commissioning capture when acquisition boundaries changed
+  -> retain that packet so later shared-runtime fixes need no repeated live performance
 ```
 
 The recording must be reusable across code changes. Generated analysis, screenshots, bone telemetry, and verdicts may change because the code changed; the source recording must not.
@@ -384,7 +388,7 @@ The words "source of truth" refer to different layers and must remain explicit:
 2. **Motion decision truth:** the shared `MovementMotionFrame` and avatar pipeline decision produced by current code.
 3. **Rendered output truth:** post-application VRM bone transforms and root/floor/contact telemetry from the actual renderer.
 4. **Diagnosis truth:** the canonical verdict and repair packet generated by comparing layers 1-3.
-5. **Product acceptance truth:** strict gates over the supported recording set, followed by a short live confirmation.
+5. **Product acceptance truth:** strict Replay and normal mounted Game-session gates over the same complete packets, followed by one-time live commissioning when acquisition boundaries changed.
 
 No lower layer may be inferred from a higher one. In particular, an owner label is not evidence that a VRM bone visibly moved.
 
@@ -402,7 +406,7 @@ Immutable recording or committed minimized fixture
   -> UI + CLI + tests + acceptance gates
 ```
 
-Game Studio must continue to consume the same shared motion result. Route-specific differences are limited to input cleanup, camera lifecycle, presentation, and documented VRM plumbing. They must be represented in diagnosis data rather than hidden in route-local rules.
+Game Studio must continue to consume the same shared motion result. The acquisition/filter profile and setup/calibration policy are shared, versioned inputs rather than route-specific allowances. Only physical camera permissions/device invocation, presentation, and documented VRM plumbing may remain route-specific, and they must be represented in diagnosis data rather than hidden in route-local rules. The alignment plan owns the complete packet and mounted Game-session proof.
 
 ## Canonical Data Contracts
 
@@ -893,7 +897,8 @@ Run this controlled exercise:
 5. Rerun the same source with `--before`.
 6. Confirm the target failure improves or clears with no new blocked frames.
 7. Run the golden suite, full supported recording gate, mirror gate, and full-sequence temporal gate.
-8. Open Game Studio for the matching movement and perform one live confirmation.
+8. Run the same complete packet through the normal mounted Game session and require a combined Replay/Game pass.
+9. If acquisition boundaries changed, perform one live Game commissioning capture and immediately save/replay its complete packet.
 
 Acceptance:
 
@@ -901,7 +906,8 @@ Acceptance:
 - Before and after packets have the same source hash.
 - The repaired recording passes without weakening thresholds or changing fixture expectations to hide the defect.
 - Replay and Game use the same shared decision and final application path.
-- Live confirmation agrees with Replay; any difference generates a new packet classified as live input cleanup or documented application plumbing.
+- Mounted Game-session output agrees with Replay automatically; any difference blocks acceptance at its first divergent boundary.
+- Commissioning agrees with the saved packet reproduction; later shared-runtime repairs reuse that packet without asking the user to repeat the movement.
 
 ## Required Tests
 
@@ -998,7 +1004,8 @@ This plan is complete only when all of the following are true:
 - Temporal failures such as flicker, snaps, and drift are tested over uninterrupted sequences.
 - Unsupported and missing-evidence recordings remain visible and never count as accepted.
 - A documented end-to-end exercise proves `record once -> fix -> rerun same proof -> pass`.
-- Game Studio needs only final live confirmation after Replay passes.
+- The same complete packet passes Replay and the normal mounted Game lifecycle with identical acquisition/setup fingerprints.
+- Live Game is a one-time commissioning source for camera/acquisition changes, not the repeated debugging or regression harness.
 
 The Full Motion, Star Jumps, Body Capture, Full Spinal, all-nine accounting, and slider artifacts remain valuable historical evidence for the fields they captured. They do not satisfy the complete Definition of Done after the frame-652 reopening because they lack independent source-to-final torso/head-chain and rendered heel/sole/toe contact proof. Those fields, the same-source repair exercise, renewed tiered/all-nine proof, broad human Replay review, and Game Studio confirmation remain open.
 
@@ -1009,5 +1016,5 @@ The Full Motion, Star Jumps, Body Capture, Full Spinal, all-nine accounting, and
 - Agent repair harness infrastructure: approximately 98%; confidence-aware semantic torso/head and calibrated sole-contact telemetry/fixtures plus exact planted-foot endpoint IK now exist, while final packet/bundle/avatar-follow propagation remains.
 - Agent repair harness against this plan's full Definition of Done: approximately 96%.
 - Strict real rendered-avatar acceptance proof: **reopened / blocked**. The July 15 artifact accounts for `11,383/11,383` frames per lane and zero missing, but its visual result is insufficient under the July 16 semantic/contact contract.
-- Remaining work: finish packet/bundle/avatar-follow propagation, complete current manual-seek proof, run the renewed fast subset and all-nine proof, complete human Replay review, then perform Game Studio live confirmation without route-specific motion rules.
+- Remaining harness work: finish packet/bundle/avatar-follow propagation, complete current manual-seek proof, run the renewed fast subset and all-nine proof, and complete human Replay review. End-to-end acquisition/setup and mounted Game-session closure is governed by the alignment plan and remains blocked.
 - Current planning/documentation correction slice: 100%; implementation changes and this plan update remain uncommitted.

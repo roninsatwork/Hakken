@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import MovementSaveDialog from "./MovementSaveDialog";
+import { MIN_MOVEMENT_CAPTURE_FRAMES } from "../_lib/saveMovementRecording";
 import type {
   MovementBodyFocus,
   MovementDifficulty,
@@ -57,7 +58,9 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Capture at least 5 posture moments before saving. Current moments: 3.")).toBeInTheDocument();
+    expect(screen.getByText(
+      `Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} posture moments before saving. Current moments: 3.`,
+    )).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Practice" })).toBeDisabled();
 
     fireEvent.change(screen.getByPlaceholderText("e.g., Tall Spine Flow"), {
@@ -71,7 +74,7 @@ describe("MovementSaveDialog", () => {
         isOpen
         title="Roll Down"
         difficulty={"Beginner" as MovementDifficulty}
-        frameCount={5}
+        frameCount={MIN_MOVEMENT_CAPTURE_FRAMES}
         isSaving={false}
         saveError={null}
         {...baseProps}
@@ -104,7 +107,7 @@ describe("MovementSaveDialog", () => {
         spineGoal="hipHinge"
         primaryCue="Keep ribs over hips"
         bodyFocus={["ribcage"]}
-        frameCount={9}
+        frameCount={MIN_MOVEMENT_CAPTURE_FRAMES + 4}
         isSaving
         saveError="Upload failed"
         onClose={vi.fn()}
@@ -117,7 +120,9 @@ describe("MovementSaveDialog", () => {
       />,
     );
 
-    expect(screen.getByText("9 posture moments ready to save.")).toBeInTheDocument();
+    expect(screen.getByText(
+      `${MIN_MOVEMENT_CAPTURE_FRAMES + 4} posture moments ready to save.`,
+    )).toBeInTheDocument();
     expect(screen.getByText("Upload failed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
     expect(screen.getByText("Let the hips lead while the spine stays long.")).toBeInTheDocument();

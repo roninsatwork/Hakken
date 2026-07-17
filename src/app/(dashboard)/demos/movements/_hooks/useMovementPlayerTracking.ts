@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
 import type {
   Classifications,
   FaceLandmarker,
@@ -10,9 +10,14 @@ import type {
   PoseLandmarker,
 } from "@mediapipe/tasks-vision";
 import type Webcam from "react-webcam";
-import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
-import { resolveHandSideByWrist } from "../_lib/handMatching";
+import {
+  createMovementAcquisitionFilters,
+  prepareMovementAcquisitionFrame,
+  type MovementAcquisitionCameraMetadata,
+  type MovementPlayerInputContractId,
+} from "../_lib/movementPlayerInputContract";
 import type { MovementHandSide } from "../_lib/movementTypes";
+import { resolveMovementReplayFrameDelay } from "../_lib/movementReplayPlaybackClock";
 
 type PlayerPoseLandmark = (NormalizedLandmark | Landmark) & {
   visibility?: number;
@@ -27,12 +32,16 @@ type PlayerHandCapture = {
 type PlayerHandsPayload = Partial<Record<MovementHandSide, PlayerHandCapture | null>>;
 
 export type MovementPlayerMotionPayload = {
+  acquisitionProfileId?: MovementPlayerInputContractId;
   capturedAt?: number;
+  frameId?: string;
+  camera?: MovementAcquisitionCameraMetadata;
   landmarks?: PlayerPoseLandmark[];
   worldLandmarks?: PlayerPoseLandmark[] | null;
   faceLandmarks?: PlayerPoseLandmark[] | null;
   blendshapes?: Classifications["categories"];
   hands?: PlayerHandsPayload;
+  sourceTimestampMs?: number;
 };
 
 type UseMovementPlayerTrackingInput = {
@@ -41,7 +50,36 @@ type UseMovementPlayerTrackingInput = {
   faceLandmarker: FaceLandmarker | null;
   handLandmarker: HandLandmarker | null;
   onBodyTracked?: () => void;
+  recordedSourceSequence?: MovementPlayerMotionPayload[] | null;
+  recordedSourcePlayback?: {
+    controlRef: MutableRefObject<{
+      isCheckingStart?: boolean;
+      isPlaying: boolean;
+    }>;
+    fallbackFps?: number;
+    motionFrameIndexRef?: MutableRefObject<number>;
+    renderedFrameIndexRef?: MutableRefObject<number>;
+    setupFrameCount: number;
+    stateRef: MutableRefObject<MovementRecordedSourcePlaybackState>;
+  } | null;
 };
+
+export type MovementRecordedSourcePlaybackState = {
+  activeFrameStartIndex?: number;
+  completedAt?: number;
+  frameIndex: number;
+  phase: "idle" | "setup" | "ready" | "checking-start" | "playing" | "paused" | "complete";
+  processedFrameIndexes: number[];
+  startedAt?: number;
+};
+
+export function createMovementRecordedSourcePlaybackState(): MovementRecordedSourcePlaybackState {
+  return {
+    frameIndex: -1,
+    phase: "idle",
+    processedFrameIndexes: [],
+  };
+}
 
 export function useMovementPlayerTracking({
   webcamRef,
@@ -49,19 +87,180 @@ export function useMovementPlayerTracking({
   faceLandmarker,
   handLandmarker,
   onBodyTracked,
+  recordedSourceSequence = null,
+  recordedSourcePlayback = null,
 }: UseMovementPlayerTrackingInput) {
   const playerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
-  const poseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
-  const worldPoseFilterRef = useRef(new PoseFilterWrapper(33, 60, 0.05, 0.1));
-  const leftHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 2.2, 0.08));
-  const rightHandFilterRef = useRef(new PoseFilterWrapper(21, 60, 2.2, 0.08));
-  const leftHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 2.2, 0.08));
-  const rightHandWorldFilterRef = useRef(new PoseFilterWrapper(21, 60, 2.2, 0.08));
+  const acquisitionFiltersRef = useRef(createMovementAcquisitionFilters());
 
   useEffect(() => {
     let animationFrameId: number | null = null;
+    let timeoutId: number | null = null;
+    let recordedFrameIndex = 0;
+
+    const scheduleRecordedFrame = (callback: () => void, delayMs: number) => {
+      timeoutId = window.setTimeout(callback, delayMs);
+    };
+
+    const continueAfterMotionFrame = (frameIndex: number, callback: () => void) => {
+      const motionFrameIndex = recordedSourcePlayback?.motionFrameIndexRef?.current;
+      if (motionFrameIndex !== undefined && motionFrameIndex < frameIndex) {
+        animationFrameId = requestAnimationFrame(() => (
+          continueAfterMotionFrame(frameIndex, callback)
+        ));
+        return;
+      }
+      callback();
+    };
+
+    const publishRecordedFrame = (frameIndex: number) => {
+      const frame = recordedSourceSequence?.[frameIndex] ?? null;
+      playerLiveLmRef.current = frame;
+      if (frame?.landmarks) onBodyTracked?.();
+      if (recordedSourcePlayback) {
+        const state = recordedSourcePlayback.stateRef.current;
+        state.frameIndex = frameIndex;
+        if (!state.processedFrameIndexes.includes(frameIndex)) {
+          state.processedFrameIndexes.push(frameIndex);
+        }
+      }
+    };
+
+    const processControlledRecordedSource = () => {
+      if (!recordedSourceSequence || !recordedSourcePlayback) return;
+      const state = recordedSourcePlayback.stateRef.current;
+      const lastFrameIndex = recordedSourceSequence.length - 1;
+      const setupLastFrameIndex = Math.min(
+        Math.max(recordedSourcePlayback.setupFrameCount - 1, -1),
+        lastFrameIndex,
+      );
+
+      if (recordedFrameIndex <= setupLastFrameIndex) {
+        state.phase = "setup";
+        publishRecordedFrame(recordedFrameIndex);
+        if (recordedFrameIndex === lastFrameIndex) {
+          state.phase = "complete";
+          state.completedAt = performance.now();
+          return;
+        }
+        if (recordedFrameIndex === setupLastFrameIndex) {
+          state.phase = "ready";
+          recordedFrameIndex += 1;
+          animationFrameId = requestAnimationFrame(processControlledRecordedSource);
+          return;
+        }
+        const delayMs = resolveMovementReplayFrameDelay({
+          currentFrameIndex: recordedFrameIndex,
+          fallbackFps: recordedSourcePlayback.fallbackFps,
+          samples: recordedSourceSequence,
+        });
+        recordedFrameIndex += 1;
+        scheduleRecordedFrame(processControlledRecordedSource, delayMs);
+        return;
+      }
+
+      if (!recordedSourcePlayback.controlRef.current.isPlaying) {
+        if (
+          recordedSourcePlayback.controlRef.current.isCheckingStart &&
+          state.startedAt === undefined
+        ) {
+          state.phase = "checking-start";
+          const previousFrameIndex = Math.max(0, recordedFrameIndex - 1);
+          const delayMs = resolveMovementReplayFrameDelay({
+            currentFrameIndex: previousFrameIndex,
+            fallbackFps: recordedSourcePlayback.fallbackFps,
+            samples: recordedSourceSequence,
+          });
+          scheduleRecordedFrame(() => {
+            if (recordedSourcePlayback.controlRef.current.isPlaying) {
+              processControlledRecordedSource();
+              return;
+            }
+            if (!recordedSourcePlayback.controlRef.current.isCheckingStart) {
+              processControlledRecordedSource();
+              return;
+            }
+            publishRecordedFrame(recordedFrameIndex);
+            const publishedFrameIndex = recordedFrameIndex;
+            continueAfterMotionFrame(publishedFrameIndex, () => {
+              if (publishedFrameIndex >= lastFrameIndex) {
+                recordedFrameIndex += 1;
+                state.phase = "ready";
+                return;
+              }
+              recordedFrameIndex += 1;
+              processControlledRecordedSource();
+            });
+          }, delayMs);
+          return;
+        }
+        state.phase = state.startedAt === undefined ? "ready" : "paused";
+        animationFrameId = requestAnimationFrame(processControlledRecordedSource);
+        return;
+      }
+
+      if (state.startedAt === undefined) {
+        if (recordedFrameIndex > lastFrameIndex) {
+          state.phase = "complete";
+          state.completedAt = performance.now();
+          return;
+        }
+        state.activeFrameStartIndex = recordedFrameIndex;
+        state.startedAt = performance.now();
+      }
+      state.phase = "playing";
+      const previousFrameIndex = Math.max(0, recordedFrameIndex - 1);
+      const delayMs = resolveMovementReplayFrameDelay({
+        currentFrameIndex: previousFrameIndex,
+        fallbackFps: recordedSourcePlayback.fallbackFps,
+        samples: recordedSourceSequence,
+      });
+      scheduleRecordedFrame(() => {
+        if (!recordedSourcePlayback.controlRef.current.isPlaying) {
+          processControlledRecordedSource();
+          return;
+        }
+        publishRecordedFrame(recordedFrameIndex);
+        const publishedFrameIndex = recordedFrameIndex;
+        const continueAfterRender = () => {
+          const renderedFrameIndex = recordedSourcePlayback.renderedFrameIndexRef?.current;
+          if (
+            renderedFrameIndex !== undefined &&
+            renderedFrameIndex < publishedFrameIndex
+          ) {
+            animationFrameId = requestAnimationFrame(continueAfterRender);
+            return;
+          }
+          if (publishedFrameIndex >= lastFrameIndex) {
+            state.phase = "complete";
+            state.completedAt = performance.now();
+            return;
+          }
+          recordedFrameIndex += 1;
+          processControlledRecordedSource();
+        };
+        continueAfterRender();
+      }, delayMs);
+    };
 
     const processVideo = () => {
+      if (recordedSourceSequence && recordedSourceSequence.length > 0) {
+        if (recordedSourcePlayback) {
+          processControlledRecordedSource();
+          return;
+        }
+        const frame = recordedSourceSequence[
+          Math.min(recordedFrameIndex, recordedSourceSequence.length - 1)
+        ];
+        playerLiveLmRef.current = frame ?? null;
+        if (frame?.landmarks) onBodyTracked?.();
+        if (recordedFrameIndex < recordedSourceSequence.length - 1) {
+          recordedFrameIndex += 1;
+        }
+        animationFrameId = requestAnimationFrame(processVideo);
+        return;
+      }
+
       const video = webcamRef.current?.video;
 
       if (
@@ -75,53 +274,22 @@ export function useMovementPlayerTracking({
         const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
         const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
         const handResults = handLandmarker.detectForVideo(video, startTimeMs);
-        const currentData: MovementPlayerMotionPayload = {
+        const currentData: MovementPlayerMotionPayload = prepareMovementAcquisitionFrame({
+          camera: {
+            facingMode: "user",
+            frameHeight: video.videoHeight,
+            frameWidth: video.videoWidth,
+          },
           capturedAt: Date.now(),
-        };
+          faceResults,
+          filters: acquisitionFiltersRef.current,
+          handResults,
+          poseResults,
+          sourceTimestampMs: startTimeMs,
+        });
 
-        if (poseResults.landmarks && poseResults.landmarks.length > 0) {
-          const raw = poseResults.landmarks[0];
-          const worldRaw = poseResults.worldLandmarks ? poseResults.worldLandmarks[0] : null;
-
-          currentData.landmarks = poseFilterRef.current.filter(raw, startTimeMs);
-          currentData.worldLandmarks = worldRaw ? worldPoseFilterRef.current.filter(worldRaw, startTimeMs) : null;
+        if (currentData.landmarks) {
           onBodyTracked?.();
-        }
-
-        if (faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0) {
-          currentData.faceLandmarks = faceResults.faceLandmarks[0];
-        }
-
-        if (faceResults.faceBlendshapes && faceResults.faceBlendshapes.length > 0) {
-          currentData.blendshapes = faceResults.faceBlendshapes[0].categories;
-        }
-
-        if (handResults.landmarks && handResults.landmarks.length > 0) {
-          const handsPayload: PlayerHandsPayload = { left: null, right: null };
-          const leftWristPose = currentData.landmarks ? currentData.landmarks[15] : null;
-          const rightWristPose = currentData.landmarks ? currentData.landmarks[16] : null;
-
-          handResults.landmarks.forEach((handLms, index) => {
-            const side = resolveHandSideByWrist({
-              handWrist: handLms[0],
-              leftWrist: leftWristPose,
-              rightWrist: rightWristPose,
-            });
-
-            const filterRef = side === "left" ? leftHandFilterRef.current : rightHandFilterRef.current;
-            const worldFilterRef = side === "left" ? leftHandWorldFilterRef.current : rightHandWorldFilterRef.current;
-            const smoothedHandLms = filterRef.filter(handLms, startTimeMs);
-            const smoothedHandWorld = handResults.worldLandmarks?.[index]
-              ? worldFilterRef.filter(handResults.worldLandmarks[index], startTimeMs)
-              : null;
-
-            handsPayload[side] = {
-              landmarks: smoothedHandLms,
-              worldLandmarks: smoothedHandWorld,
-            };
-          });
-
-          currentData.hands = handsPayload;
         }
 
         playerLiveLmRef.current = currentData;
@@ -130,7 +298,10 @@ export function useMovementPlayerTracking({
       animationFrameId = requestAnimationFrame(processVideo);
     };
 
-    if (poseLandmarker && faceLandmarker && handLandmarker) {
+    if (
+      (recordedSourceSequence && recordedSourceSequence.length > 0) ||
+      (poseLandmarker && faceLandmarker && handLandmarker)
+    ) {
       processVideo();
     }
 
@@ -138,8 +309,19 @@ export function useMovementPlayerTracking({
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
       }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [faceLandmarker, handLandmarker, onBodyTracked, poseLandmarker, webcamRef]);
+  }, [
+    faceLandmarker,
+    handLandmarker,
+    onBodyTracked,
+    poseLandmarker,
+    recordedSourceSequence,
+    recordedSourcePlayback,
+    webcamRef,
+  ]);
 
   return playerLiveLmRef;
 }
