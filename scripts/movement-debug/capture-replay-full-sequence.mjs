@@ -4,7 +4,10 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
-import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import {
+  movementCodeCommit,
+  movementPipelineFingerprint,
+} from "./lib/movementPipelineFingerprint.mjs";
 import { sourceHashForReplaySession } from "./lib/replay-proof-identity.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
@@ -167,6 +170,10 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
                 window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(":0"),
               "Instructor avatar telemetry did not render deterministic initial frame 0.",
             );
+            await waitFor(
+              () => window.__sonaeReplayGameBoundaryProof?.frameIndex === 0,
+              "Replay/Game boundary proof did not commit deterministic initial frame 0.",
+            );
           }
           const playerDebug = window.__sonaeMovementAvatarDebug?.player;
           const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
@@ -176,6 +183,9 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
                   instructor: structuredClone(instructorDebug),
                   player: structuredClone(playerDebug),
                 }
+              : undefined,
+            boundaries: threeParty
+              ? structuredClone(window.__sonaeReplayGameBoundaryProof?.boundaries)
               : undefined,
             debug: structuredClone(playerDebug),
             frameIndex: 0 - frameWindowStart,
@@ -206,6 +216,10 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
               () => window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(`:${frameIndex}`),
               `Instructor avatar telemetry did not render deterministic frame ${frameIndex}.`,
             );
+            await waitFor(
+              () => window.__sonaeReplayGameBoundaryProof?.frameIndex === frameIndex,
+              `Replay/Game boundary proof did not commit deterministic frame ${frameIndex}.`,
+            );
           }
           const renderedFrameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
           const playerDebug = window.__sonaeMovementAvatarDebug?.player;
@@ -225,6 +239,9 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
                   instructor: structuredClone(instructorDebug),
                   player: structuredClone(playerDebug),
                 }
+              : undefined,
+            boundaries: threeParty
+              ? structuredClone(window.__sonaeReplayGameBoundaryProof?.boundaries)
               : undefined,
             debug: structuredClone(playerDebug),
             frameIndex: frameIndex - frameWindowStart,
@@ -337,12 +354,18 @@ async function main() {
     await page.waitForTimeout(2_000);
 
     const meta = await lab.evaluate((element) => ({
+      avatarProfile: element.getAttribute("data-avatar-profile") || "",
       frameCount: Number(element.getAttribute("data-frame-count") || 0),
+      inputContractId: element.getAttribute("data-input-contract-id") || "",
+      parityProofMode: element.getAttribute("data-parity-proof-mode") || "",
+      recordingSchemaVersion: Number(element.getAttribute("data-recording-schema-version") || 0) || null,
       runtimeContract: element.getAttribute("data-runtime-contract") || "",
       runtimeLanes: (element.getAttribute("data-runtime-lanes") || "")
         .split(",")
         .filter(Boolean),
       sessionId: element.getAttribute("data-active-session-id") || "",
+      setupPolicyId: element.getAttribute("data-setup-policy-id") || "",
+      sourcePacketHash: element.getAttribute("data-source-packet-hash") || "",
     }));
     const frameStart = args.frameStart ?? 0;
     const frameEnd = args.frameEnd ?? meta.frameCount - 1;
@@ -439,14 +462,30 @@ async function main() {
       : missingFrameIndexes(processedFrames, meta.frameCount);
     const missingFrames = args.deterministic ? renderedMissingFrames : processedMissingFrames;
     const playbackCompleted = capture.currentFrameIndex === frameEnd;
+    const proofMode = args.threeParty ? "three-party-mirror" : "player-avatar";
+    const code = {
+      commit: movementCodeCommit(),
+      motionPipelineFingerprint: movementPipelineFingerprint(),
+    };
+    const identity = {
+      avatarProfile: meta.avatarProfile || null,
+      inputContractId: meta.inputContractId || null,
+      proofMode: meta.parityProofMode || null,
+      recordingSchemaVersion: meta.recordingSchemaVersion,
+      runtimeContract: meta.runtimeContract || null,
+      setupPolicyId: meta.setupPolicyId || null,
+      sourcePacketHash: meta.sourcePacketHash || null,
+    };
     const result = {
       capturedAt: new Date().toISOString(),
+      code,
       currentFrameIndex: capture.currentFrameIndex,
       frameCount: captureFrameCount,
       frames,
       missingFrameCount: missingFrames.length,
       missingFrames,
-      motionPipelineFingerprint: movementPipelineFingerprint(),
+      identity,
+      motionPipelineFingerprint: code.motionPipelineFingerprint,
       playbackCompleted,
       playbackClock: capture.playbackClock ?? null,
       processedFrameCount: args.deterministic ? frames.length : processedFrames.length,
@@ -458,7 +497,7 @@ async function main() {
       playbackMode: args.deterministic
         ? "deterministic-rendered-frame-step"
         : "uninterrupted-source-time-sequence",
-      proofMode: args.threeParty ? "three-party-mirror" : "player-avatar",
+      proofMode,
       recordingId: expectedSessionId,
       runtimeContract: meta.runtimeContract,
       runtimeLanes: meta.runtimeLanes,

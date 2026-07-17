@@ -4,6 +4,10 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
+import {
+  movementCodeCommit,
+  movementPipelineFingerprint,
+} from "./lib/movementPipelineFingerprint.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultStorageState = "e2e/.auth/super-admin.json";
@@ -219,12 +223,25 @@ export async function runMountedGamePacketCapture(argv) {
     if (finalProof.instructorFrameIndex !== finalProof.playerFrameIndex) failures.push("instructor/player source indexes diverged");
 
     const report = {
+      code: {
+        commit: movementCodeCommit(),
+        motionPipelineFingerprint: movementPipelineFingerprint(),
+      },
       failures,
       final: finalProof,
       heldFrameIndex: heldProof?.playerFrameIndex ?? null,
       lifecycle: {
         pauseResumeChecked: !args.skipPause,
         playbackMode: args.skipPause ? "uninterrupted" : "pause-resume",
+      },
+      identity: {
+        avatarProfile: finalProof.avatarProfile ?? null,
+        inputContractId: finalProof.inputContractId ?? null,
+        proofMode: finalProof.proofMode ?? null,
+        recordingSchemaVersion: finalProof.recordingSchemaVersion ?? null,
+        runtimeContract: finalProof.runtimeContract ?? null,
+        setupPolicyId: finalProof.setupPolicyId ?? null,
+        sourcePacketHash: finalProof.sourcePacketHash ?? null,
       },
       lobby: lobbyProof,
       passed: failures.length === 0,

@@ -20,6 +20,7 @@ import {
 } from "./vrmRigging";
 
 export const MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION = "movement-game-runtime-v1" as const;
+export const MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE = "replay-mounted-game-player-v1" as const;
 
 export type BuildMovementGamePlayerRuntimeFrameInput = {
   calibration: MovementCalibration | null;

@@ -30,6 +30,8 @@ type MovementFilterDefinition = {
   minCutoff: number;
 };
 
+export const MOVEMENT_PLAYER_SETUP_POLICY_ID = "movement-player-setup-v1";
+
 export const MOVEMENT_PLAYER_INPUT_CONTRACT = {
   detector: {
     faceModelUrl: MEDIAPIPE_FACE_MODEL_URL,
@@ -56,6 +58,7 @@ export const MOVEMENT_PLAYER_INPUT_CONTRACT = {
     },
   },
   setup: {
+    id: MOVEMENT_PLAYER_SETUP_POLICY_ID,
     prefixFrameCount: 60,
     sampleLimit: 12,
   },

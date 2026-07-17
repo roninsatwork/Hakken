@@ -6,6 +6,8 @@ import {
 } from "./saveMovementRecording";
 import type { MovementFrame } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
+import { validateMovementCommissioningEnvelope } from "./movementRecordingCommissioning";
+import { buildMovementFrameEnvelope } from "./movementFrameCodec";
 
 const landmark = { x: 0.1, y: 0.2, visibility: 0.9 };
 const captureStartReadiness: MovementStartReadiness = {
@@ -25,6 +27,22 @@ function makeFrames(count = MIN_MOVEMENT_CAPTURE_FRAMES): MovementFrame[] {
     timestamp: index * 33,
     landmarks: [landmark],
     worldLandmarks: null,
+  }));
+}
+
+function makeCommissioningFrames(count = MIN_MOVEMENT_CAPTURE_FRAMES): MovementFrame[] {
+  const landmarks = Array.from({ length: 33 }, () => ({ ...landmark }));
+  return Array.from({ length: count }, (_, index) => ({
+    blendshapes: [{ categoryName: "jawOpen", score: 0.2 }],
+    camera: { facingMode: "user", frameHeight: 720, frameWidth: 1280 },
+    faceLandmarks: [{ ...landmark }],
+    hands: {
+      left: { landmarks: [{ ...landmark }] },
+    },
+    landmarks,
+    startReadiness: captureStartReadiness,
+    timestamp: index * 33,
+    worldLandmarks: landmarks,
   }));
 }
 
@@ -122,6 +140,66 @@ describe("saveMovementRecording", () => {
       primaryCue: "Keep ribs over hips",
       bodyFocus: ["ribcage", "pelvis"],
     }));
+  });
+
+  it("reports every missing commissioning boundary before hashing", () => {
+    const report = validateMovementCommissioningEnvelope(
+      buildMovementFrameEnvelope(makeFrames(), 30),
+      { requireSourceHash: false },
+    );
+
+    expect(report.passed).toBe(false);
+    expect(report.failures).toEqual(expect.arrayContaining([
+      "Recording must start from a ready full-body setup.",
+      "Readiness evidence is missing from 60 recorded frame(s).",
+      "blendshapes channel evidence is missing.",
+      "camera channel evidence is missing.",
+      "face channel evidence is missing.",
+      "hands channel evidence is missing.",
+      "worldPose channel evidence is missing.",
+    ]));
+  });
+
+  it("saves a complete commissioning packet and returns its recording id", async () => {
+    const createMovement = vi.fn(async () => "commissioning-recording-id");
+    const uploadFetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ storageId: "commissioning-storage-id" }),
+    } as Response));
+
+    await expect(saveMovementRecording({
+      title: "Replay Game commissioning",
+      difficulty: "Intermediate",
+      captureStartReadiness,
+      frames: makeCommissioningFrames(),
+      generateUploadUrl: vi.fn(async () => "https://upload.example"),
+      createMovement,
+      uploadFetch,
+      requireCommissioningPacket: true,
+    })).resolves.toBe("commissioning-recording-id");
+
+    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
+    const envelope = JSON.parse(uploadBody as string);
+    expect(validateMovementCommissioningEnvelope(envelope)).toEqual({
+      failures: [],
+      passed: true,
+    });
+  });
+
+  it("does not upload an incomplete commissioning packet", async () => {
+    const generateUploadUrl = vi.fn(async () => "https://upload.example");
+
+    await expect(saveMovementRecording({
+      title: "Incomplete commissioning take",
+      difficulty: "Beginner",
+      captureStartReadiness,
+      frames: makeFrames(),
+      generateUploadUrl,
+      createMovement: vi.fn(),
+      requireCommissioningPacket: true,
+    })).rejects.toThrow("Commissioning capture is not proof-ready");
+
+    expect(generateUploadUrl).not.toHaveBeenCalled();
   });
 
   it("calculates duration from first and last frame timestamps", () => {

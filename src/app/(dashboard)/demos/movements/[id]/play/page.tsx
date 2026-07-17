@@ -47,7 +47,12 @@ import {
   makeMovementAvatarProofRootBaselinePayload,
   toMovementAvatarProofMode,
 } from "../../_lib/movementAvatarProofFixtures";
+import { getMovementAvatarTrackingProfileName } from "../../_lib/movementAvatarProfiles";
 import { movementBoundaryChecksum } from "../../_lib/movementBoundaryChecksum";
+import {
+  MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
+  MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
+} from "../../_lib/movementGameRuntimeFrame";
 import type { MovementMotionFrame } from "../../_lib/movementMotionFrame";
 import {
   parseMovementDebugGameFrameIndex,
@@ -598,12 +603,23 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retargetSourceModel: effectiveInstructorRetargetSourceModel,
   });
   const recordedGameRenderedFramesRef = useRef(new Map<number, {
+    boundaries: {
+      acquisition: unknown;
+      calibration: unknown;
+      instructorRendered: unknown;
+      motionFrame: unknown;
+      ownersRootSupport: unknown;
+      playerApplied: unknown;
+      playerRendered: unknown;
+      setup: unknown;
+    };
     checksums: {
       acquisition: string;
       calibration: string;
       instructorRendered: string;
       motionFrame: string;
       ownersRootSupport: string;
+      playerApplied: string;
       playerRendered: string;
       setup: string;
     };
@@ -689,30 +705,43 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             playerDebug: structuredClone(playerDebug),
           };
         }
-        recordedGameRenderedFramesRef.current.set(playback.frameIndex, {
-          checksums: {
-            acquisition: movementBoundaryChecksum(effectivePlayerLiveLmRef.current),
-            calibration: movementBoundaryChecksum(effectivePlayerCalibration),
-            instructorRendered: movementBoundaryChecksum(instructorDebug.avatarVisual),
-            motionFrame: movementBoundaryChecksum(playerMotionFrameRef.current),
-            ownersRootSupport: movementBoundaryChecksum({
+        const playerApplied = structuredClone({
+          avatarExpressions: playerDebug.avatarExpressions,
+          avatarHands: playerDebug.avatarHands,
+          avatarHead: playerDebug.avatarHead,
+          avatarRoot: playerDebug.avatarRoot,
+          avatarSpine: playerDebug.avatarSpine,
+        });
+        const boundaries = {
+          acquisition: structuredClone(effectivePlayerLiveLmRef.current),
+          calibration: structuredClone(effectivePlayerCalibration),
+          instructorRendered: structuredClone(instructorDebug.avatarVisual),
+          motionFrame: structuredClone(playerMotionFrameRef.current),
+          ownersRootSupport: structuredClone({
               avatarRoot: playerDebug.avatarRoot,
               bodySupport: playerDebug.bodySupport,
               fallbacks: playerDebug.fallbacks,
               retarget: playerDebug.retarget,
               supportConstraint: playerDebug.supportConstraint,
               supportIntent: playerDebug.supportIntent,
-            }),
-            playerRendered: movementBoundaryChecksum(playerDebug.avatarVisual),
-            setup: movementBoundaryChecksum(automaticPlayerSetup),
-          },
-          playerApplied: structuredClone({
-            avatarExpressions: playerDebug.avatarExpressions,
-            avatarHands: playerDebug.avatarHands,
-            avatarHead: playerDebug.avatarHead,
-            avatarRoot: playerDebug.avatarRoot,
-            avatarSpine: playerDebug.avatarSpine,
           }),
+          playerApplied,
+          playerRendered: structuredClone(playerDebug.avatarVisual),
+          setup: structuredClone(automaticPlayerSetup),
+        };
+        recordedGameRenderedFramesRef.current.set(playback.frameIndex, {
+          boundaries,
+          checksums: {
+            acquisition: movementBoundaryChecksum(boundaries.acquisition),
+            calibration: movementBoundaryChecksum(boundaries.calibration),
+            instructorRendered: movementBoundaryChecksum(boundaries.instructorRendered),
+            motionFrame: movementBoundaryChecksum(boundaries.motionFrame),
+            ownersRootSupport: movementBoundaryChecksum(boundaries.ownersRootSupport),
+            playerApplied: movementBoundaryChecksum(boundaries.playerApplied),
+            playerRendered: movementBoundaryChecksum(boundaries.playerRendered),
+            setup: movementBoundaryChecksum(boundaries.setup),
+          },
+          playerApplied,
           playerMotionRoot: structuredClone(playerMotionFrameRef.current?.rootMotionFrame ?? null),
           playerVisual: structuredClone(playerDebug.avatarVisual),
         });
@@ -745,6 +774,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         : expectedFrameIndexes.slice(gameProofPacket.setupFrameCount, activeFrameStartIndex);
       debugWindow.__sonaeMovementGamePacketProof = {
         activeFrameStartIndex,
+        avatarProfile: getMovementAvatarTrackingProfileName(playerAvatarUrl),
         contractStatus: gameProofPacket.contractStatus,
         expectedFrameCount: expectedFrameIndexes.length,
         firstRenderedBoundary: recordedGameFirstRenderedBoundaryRef.current,
@@ -777,6 +807,8 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         preStartFrameIndexes,
         processedFrameIndexes,
         processedFrameCount: playback.processedFrameIndexes.length,
+        proofMode: MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
+        recordingSchemaVersion: gameProofPacket.session.schemaVersion ?? null,
         renderDiagnostics: {
           instructorDebugSourceCapturedAt: instructorDebug?.sourceCapturedAt ?? null,
           instructorDebugUpdatedAt: instructorDebug?.updatedAt ?? null,
@@ -794,9 +826,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         renderedFrames,
         renderedFrameCount: recordedGameRenderedFramesRef.current.size,
         setupFrameCount: gameProofPacket.setupFrameCount,
+        setupPolicyId: gameProofPacket.session.inputContract?.setup.id ?? null,
         startGate: gameStartGateRef.current,
         startGateFreshFrameCheck: gameStartFreshFrameCheckRef.current,
         sourcePacketHash: gameProofPacket.session.sourcePacketHash ?? null,
+        runtimeContract: MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
       };
       animationFrameId = window.requestAnimationFrame(publish);
     };
@@ -815,6 +849,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     instructorMotionFrameRef,
     instructorFrameIndexRef,
     isLobby,
+    playerAvatarUrl,
     playerMotionFrameRef,
   ]);
   const debugQaPresets = React.useMemo(

@@ -161,6 +161,7 @@ export async function runMovementReplaySessionExportCli(argv: string[]) {
       captureStartReadiness: parsed.captureStartReadiness,
       channelSummary: parsed.channelSummary,
       inputContract: parsed.inputContract,
+      schemaVersion: parsed.schemaVersion,
       setupPrefix: parsed.setupPrefix,
       sourcePacketHash: parsed.sourcePacketHash,
     },

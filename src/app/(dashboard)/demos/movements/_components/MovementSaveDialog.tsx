@@ -23,6 +23,7 @@ type MovementSaveDialogProps = {
   frameCount: number;
   isSaving: boolean;
   saveError: string | null;
+  commissioningFailures?: string[];
   onClose: () => void;
   onTitleChange: (title: string) => void;
   onDifficultyChange: (difficulty: MovementDifficulty) => void;
@@ -42,6 +43,7 @@ export default function MovementSaveDialog({
   frameCount,
   isSaving,
   saveError,
+  commissioningFailures,
   onClose,
   onTitleChange,
   onDifficultyChange,
@@ -50,7 +52,9 @@ export default function MovementSaveDialog({
   onBodyFocusChange,
   onSave,
 }: MovementSaveDialogProps) {
-  const canSave = title.trim().length > 0 && !isSaving && frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES;
+  const canSave = title.trim().length > 0 && !isSaving &&
+    frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES &&
+    (!commissioningFailures || commissioningFailures.length === 0);
   const toggleBodyFocus = (focus: MovementBodyFocus) => {
     onBodyFocusChange(
       bodyFocus.includes(focus)
@@ -149,6 +153,18 @@ export default function MovementSaveDialog({
             ? `Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} posture moments before saving. Current moments: ${frameCount}.`
             : `${frameCount} posture moments ready to save.`}
         </Typography>
+        {commissioningFailures && commissioningFailures.length > 0 && (
+          <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3">
+            <Typography className="text-sm font-medium text-amber-100">
+              This commissioning take is not proof-ready yet:
+            </Typography>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-100/80">
+              {commissioningFailures.map((failure) => (
+                <li key={failure}>{failure}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {saveError && (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
             <Typography className="text-sm font-medium text-red-200">{saveError}</Typography>

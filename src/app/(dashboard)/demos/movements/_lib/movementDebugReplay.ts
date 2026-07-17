@@ -121,6 +121,7 @@ export type MovementDebugReplaySession = {
   movementId: string;
   sampleCount: number;
   samples: MovementDebugReplayFrame[];
+  schemaVersion?: number;
   setupPrefix?: MovementFrameEnvelope["setupPrefix"];
   sourcePacketHash?: string;
   startedAt: number;
@@ -407,6 +408,7 @@ export function parseMovementDebugReplaySession(value: unknown): MovementDebugRe
     movementId: stringValue(value.movementId, "unknown"),
     sampleCount: numberValue(value.sampleCount, samples.length),
     samples,
+    schemaVersion: typeof value.schemaVersion === "number" ? value.schemaVersion : undefined,
     setupPrefix: isRecord(value.setupPrefix)
       ? value.setupPrefix as MovementFrameEnvelope["setupPrefix"]
       : undefined,

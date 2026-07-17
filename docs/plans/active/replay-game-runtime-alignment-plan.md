@@ -1,7 +1,7 @@
 # Replay Studio And Game Studio Runtime Alignment Plan
 
 Last reviewed: 2026-07-17
-Status: active and product-blocked. The shared post-input runtime is substantially aligned, and eight legacy recordings produced zero observed Replay/Game output differences. That evidence is diagnostic rather than final acceptance because the Replay captures are stale against the current fingerprint, the mounted Game artifacts are unversioned and legacy, exact differences are not yet hard failures, and the ordinary live-camera boundary has not been commissioned.
+Status: active and product-blocked. The shared post-input runtime is substantially aligned, proof identity and eight exact comparison boundaries now fail closed, and eight legacy recordings produced zero observed Replay/Game output differences. That historical evidence remains diagnostic rather than final acceptance because no complete current commissioning packet has yet been captured and exercised through fresh Replay and mounted Game runs.
 Owner: shared Movement Studio / Replay Studio / Game Studio motion runtime
 
 Related controlling documents:
@@ -215,7 +215,7 @@ Exit criteria:
 
 ### Phase 1: Define One Runtime Contract
 
-Progress: 80%. The downstream contract is named and shared; acquisition, setup policy, and Game session lifecycle must now join the fingerprint.
+Progress: 85%. The downstream contract is named and shared, and the complete movement library, hooks, Game lifecycle/components, Replay lifecycle, capture page, and final avatar application now participate in the proof fingerprint. A fresh complete packet still has to prove the serializable contract end to end.
 
 Tasks:
 
@@ -354,7 +354,7 @@ Exit criteria:
 
 ### Phase 7: Automated Product Handoff
 
-Progress: 55%. The existing commands prove substantial downstream recorded-runtime behaviour, but current source identity, complete fingerprints, strict exact comparison, fresh artifact generation, and normal live Game commissioning are not closed.
+Progress: 75%. New Replay and mounted Game capture artifacts export matching code and packet identity plus eight raw runtime boundaries, the comparator rejects missing/stale identity and any exact boundary drift, and one command now orchestrates fresh Replay, mounted Game, and comparison. A genuine complete packet and normal live Game commissioning remain open.
 
 Tasks:
 
@@ -367,7 +367,7 @@ The automated handoff is incomplete until the same complete packet can be run th
 
 ### Phase 8: Establish One Shared Acquisition Contract
 
-Progress: 85%. Shared preparation, filters, setup policy, and schema provenance are implemented and focused tests pass. The fingerprint/guard surface is incomplete and no current full-channel packet has proven byte-equivalent live and replayed acquisition/setup output.
+Progress: 90%. Shared preparation, filters, setup policy, schema provenance, and the expanded runtime fingerprint are implemented and focused tests pass. No current full-channel packet has yet proven byte-equivalent live and replayed acquisition/setup output.
 
 Tasks:
 
@@ -377,7 +377,7 @@ Tasks:
 - [x] Replace route-owned numeric setup limits, including the former 60-versus-12 divergence, with that policy.
 - [x] Add an architecture guard that fails on new route-local acquisition filters, setup lengths, or calibration construction.
 - [x] Include detector options, filter profile, setup policy, and calibration builder versions in the recording/runtime provenance.
-- [ ] Extend the architecture guard and pipeline fingerprint to every live acquisition/setup owner and final application hook so a route-local change cannot evade stale-proof detection.
+- [x] Extend the pipeline fingerprint to every movement library and hook plus the Game lifecycle/components, Replay lifecycle, capture page, and final application hook, with a regression requiring the previously omitted live tracking, automatic setup, input-contract, and frame-runtime owners. The architecture guard remains a separate drift gate.
 
 Exit criteria:
 
@@ -387,7 +387,7 @@ Exit criteria:
 
 ### Phase 9: Record One Complete, Replayable Input Packet
 
-Progress: 80%. Schema v2, per-frame readiness history, channel/provenance preservation, and SHA-256 packet integrity are implemented; a current complete canonical commissioning capture and hash propagation into every exported proof artifact remain.
+Progress: 85%. Schema v2, per-frame readiness history, channel/provenance preservation, SHA-256 packet integrity, Replay-session schema propagation, and proof-artifact identity are implemented; a current complete canonical commissioning capture remains open.
 
 Tasks:
 
@@ -396,7 +396,7 @@ Tasks:
 - [x] Record the source packet before movement decisions so future repairs can rerun the unchanged input through current code.
 - [x] Validate channel completeness at save time; unsupported or missing channels remain explicit and cannot be counted as passing evidence for that behaviour.
 - [ ] Capture or migrate a canonical acceptance set. Keep `FULL MOTION EXERCISES` as the named whole-body control, but do not pretend its current pose-only payload proves hands, face, or live camera preparation.
-- [ ] Hash the immutable packet and retain its schema/profile versions in every proof artifact. Save now hashes the complete schema-v2 envelope with SHA-256 and Replay retains the hash; combined exported proof artifacts still need to surface and enforce it.
+- [x] Hash the immutable packet and retain its schema/profile versions in every proof artifact. Save hashes the complete schema-v2 envelope with SHA-256; Replay sessions and both combined proof artifacts now preserve and enforce schema version, packet hash, input/setup IDs, channel summary, and per-frame readiness.
 
 Exit criteria:
 
@@ -406,7 +406,7 @@ Exit criteria:
 
 ### Phase 10: Replay Through The Normal Mounted Game Session
 
-Progress: 80%. The mounted historical lifecycle, frame acknowledgement, setup-prefix handling, start gate, pause/resume, and rendered accounting are implemented. Eight legacy recordings produced 10,327 active frames with zero observed output differences. Closure remains blocked because the comparison reused stale Replay captures, Game reports carry no current pipeline fingerprint, source identity is legacy-unverifiable, exact differences are not hard failures, and the ordinary live-camera setup/calibration path has no complete commissioning packet.
+Progress: 85%. The mounted historical lifecycle, frame acknowledgement, setup-prefix handling, start gate, pause/resume, rendered accounting, fail-closed identity, and exact eight-boundary comparison are implemented. Eight legacy recordings produced 10,327 active frames with zero observed output differences under the former narrower comparator. Closure remains blocked because no fresh complete schema-v2 packet exists locally to exercise the strengthened contract and the ordinary live-camera setup/calibration path has no commissioning packet.
 
 Tasks:
 
@@ -415,18 +415,20 @@ Tasks:
 - [ ] Exercise missing-input hold/recovery with a dedicated packet fixture through the same mounted lifecycle.
 - [x] Feed every packet frame at its recorded source time and require complete processed-source and rendered-frame accounting. The mounted run passed 632/632 processed source frames and 572/572 active rendered frames; the 60 setup frames are deliberately processed before the avatar scene mounts.
 - [ ] Run fresh Replay and mounted Game from the same immutable packet, avatar profile, setup policy, commit, and complete runtime fingerprint. The latest Game run is current, but its Replay comparisons reused captures from a different fingerprint.
-- [ ] Export and enforce comparable acquisition, setup, calibration, motion-frame, owner/root/support, instructor-rendered, player-rendered, and final applied-bone checksums from both routes. Mounted Game exports seven boundary checksums, but the comparator currently enforces only final visual/applied telemetry.
+- [x] Export raw comparable acquisition, setup, calibration, motion-frame, owner/root/support, instructor-rendered, player-rendered, and final applied-bone boundaries from both routes. Mounted Game also exports a declared checksum for each boundary; the comparator recomputes and requires exact one-for-one equality for all eight boundaries.
 - [x] Seed mounted Game's live motion runtime from the same collected 60-frame setup prefix and require a fresh motion-frame render acknowledgement before associating an avatar render with a source index. At frame 60, Replay and Game now match exactly for head input/application, body confidence, spine drive, retarget decisions, hands/expressions, and applied avatar spine.
 - [x] Make Replay and mounted Game use a deterministic source-time final-render lifecycle. Route presentation offsets are normalized, while feet, floor contact and every compared final VRM segment remain tolerance-checked.
 - [x] Advance recorded prestart input only while the normal Game gate is checking visibility, count genuinely new source indexes as fresh checks, and acknowledge each prestart frame before publishing the next. This repairs the former frame-59 deadlock without weakening production readiness rules.
 - [x] Prevent the live motion runtime from consuming the 60-frame setup prefix twice when the current live ref initially repeats the last setup payload. This removes shifted root-turn/contact history and restores exact Spins parity.
 - [x] Derive the comparable active range from the Game-reported `activeFrameStartIndex`; setup and prestart frames are explicit lifecycle evidence rather than hidden or hard-coded exclusions.
-- [ ] Expand the pipeline fingerprint to cover every file that can change acquisition, automatic setup, calibration, motion history, Game lifecycle, Replay lifecycle, and final VRM application, including `useMovementPlayerTracking.ts`, `useMovementLivePlayerSetup.ts`, `movementPlayerInputContract.ts`, and `useVrmAvatarFrameRuntime.ts`.
-- [ ] Export the complete pipeline fingerprint, input-contract ID, source packet hash, commit, avatar profile, setup policy, and proof mode from both Replay and mounted Game artifacts.
-- [ ] Reject reused Replay captures unless their complete fingerprint and packet hash exactly match the current Game run. Stale reuse must trigger recapture, never a pass.
-- [ ] Make any exact comparable boundary-checksum difference a hard failure. Tolerance analysis may diagnose visual fidelity, but it cannot waive Replay/Game identity.
+- [x] Expand the pipeline fingerprint to cover every movement library and hook plus the Game lifecycle/components, Replay lifecycle, capture page, and final VRM application, including `useMovementPlayerTracking.ts`, `useMovementLivePlayerSetup.ts`, `movementPlayerInputContract.ts`, and `useVrmAvatarFrameRuntime.ts`.
+- [x] Export the complete pipeline fingerprint, input-contract ID, source packet hash, commit, avatar profile, setup policy, runtime contract, and shared parity proof mode from new Replay and mounted Game artifacts.
+- [x] Reject reused Replay captures unless their complete fingerprint, commit, packet hash, input contract, setup policy, avatar profile, runtime contract, and parity proof mode exactly match both the current code and the Game run. Legacy or missing identity remains diagnostic-only and cannot pass.
+- [x] Make any exact comparable boundary-checksum difference a hard failure. Tolerance analysis may diagnose visual fidelity, but it cannot waive Replay/Game identity.
 - [ ] Remove `--allow-legacy` from acceptance commands. Legacy sessions may remain diagnostic controls but cannot produce product acceptance.
 - [ ] Exercise the ordinary live Game calibration/readiness path with a complete saved camera-boundary packet; debug recorded-source readiness must not stand in for this final proof.
+- [x] Add `movement:replay-game:packet-proof`, which rejects legacy/incomplete packets before browser startup, captures fresh deterministic three-party Replay and uninterrupted mounted Game artifacts, runs the exact eight-boundary comparator, and writes one binary summary.
+- [x] Add `/demos/movement-capture?commissioning=1`, which blocks saving unless the packet has schema-v2/input/setup identity, a complete setup prefix, a ready capture start, readiness on every retained frame, and non-empty pose/world-pose/hand/face/blendshape/camera evidence. Successful commissioning saves remain on the page and expose the immutable recording ID for the proof handoff.
 - [ ] Fail at the first differing boundary and retain first/worst screenshots or frame strips.
 
 Exit criteria:
@@ -617,24 +619,24 @@ git diff --check
 - Shared motion decision foundation: 100% for the accepted runtime contract.
 - Documented end-to-end alignment design: 100%.
 - Shared post-input motion and final-render foundation: approximately 90%.
-- End-to-end Replay-to-Game implementation: approximately 85%; eight legacy recordings show zero observed differences, but fresh current-fingerprint Replay/Game acceptance is missing.
-- Shared acquisition/setup contract: approximately 85% implementation; no current complete packet has commissioned the ordinary live boundary.
-- Complete record-once packet: 80%.
-- Normal mounted Game-session replay: 80%; lifecycle works, acceptance identity and live equivalence remain open.
+- End-to-end Replay-to-Game implementation: approximately 86%; proof identity is now fail-closed, but fresh current-fingerprint Replay/Game acceptance is missing.
+- Shared acquisition/setup contract: approximately 90% implementation; no current complete packet has commissioned the ordinary live boundary.
+- Complete record-once packet: 97% implementation; capture-time commissioning validation and command preflight now share the same required-channel contract, and the saved recording ID can now drive export, Replay-session conversion, and Replay/Game packet proof in one command. No canonical commissioning packet has been captured.
+- Normal mounted Game-session replay: 85%; lifecycle, acceptance identity, and exact boundary enforcement are implemented, while fresh complete-packet and live equivalence remain open.
 - Zero-escape supported-behaviour matrix: 65%.
-- One-time commissioning and regression lock: 0% of the newly required closure phase.
+- One-time commissioning and regression lock: 45% of the newly required closure phase; capture and proof tooling are fail-closed, and the saved-recording orchestration is automated, while the human recording and resulting fresh proof are still outstanding.
 - Product acceptance: blocked.
 
-The current legacy diagnostic lane observed zero Replay/Game output differences across 10,327 active frames in eight sessions. It does not prove current-code identity because Replay captures were reused from a mismatched fingerprint, mounted Game artifacts carry no pipeline fingerprint, exact differences are not hard failures, all recordings lack hands/face/schema-v2 identity, and live commissioning remains open. The honest overall estimate is approximately **80%**.
+The current legacy diagnostic lane observed zero Replay/Game output differences across 10,327 active frames in eight sessions. It does not prove current-code identity because Replay captures were reused from a mismatched fingerprint, all recordings lack hands/face/schema-v2 identity, and live commissioning remains open. New artifacts now carry fail-closed current code/packet identity, all eight exported runtime boundaries are exact hard gates, the commissioning route refuses incomplete packets, and one command now starts from the saved recording ID and runs export, Replay-session conversion, fresh Replay capture, fresh mounted Game capture, and exact comparison. There is still no qualifying saved packet to run through the proof. The honest overall estimate is approximately **88%**.
 
 ## Immediate Next Slice
 
-1. Complete the fingerprint file set and export the same fingerprint, commit, packet hash, input-contract ID, avatar profile, setup policy, and proof mode from Replay and mounted Game.
-2. Make stale capture reuse, legacy identity, missing metadata, and every exact comparable boundary difference hard failures.
-3. Extend Replay output so acquisition, setup, calibration, motion-frame, owner/root/support, instructor-rendered, player-rendered, and applied-bone boundaries can be compared one-for-one with Game.
-4. Generate fresh Replay and mounted Game evidence from the same current schema-v2 packet in one command; do not pass `--allow-legacy` and do not reuse mismatched artifacts.
-5. Capture one complete real-camera Game commissioning packet with pose, world pose, hands, face, blendshapes, timing, camera metadata, readiness history, and setup provenance.
-6. Rerun that immutable packet through fresh Replay and mounted Game, then require exact all-boundary parity plus browser-visible review.
+1. Treat the existing nine recordings as the first evidence source. They already cover the user-reported movement families, so do not ask for a repeat human capture until their saved packets have failed the current commissioning preflight for a concrete reason.
+2. The saved-recording eligibility preflight now exists as `npm run movement:replay-game:commissioning-eligibility`. It can inspect already-converted session packets or re-convert saved recording IDs from a Convex export before applying the same fail-closed packet validator as `movement:replay-game:packet-proof`.
+3. Current export-backed result: `tmp/movement-replay-lab/current-nine-commissioning-eligibility-from-export.json` reports 0/9 eligible after converting all nine saved recording IDs from `tmp/movement-replay-lab/runs/limit100-movement-recordings.convex-export.zip`. All nine fail for the same packet-level reasons: missing schema-v2 identity, input/setup contract, source hash, complete setup prefix, per-sample readiness, and schema-v2 channel evidence for blendshapes, camera, face, hands, pose, and worldPose. This is a source-packet/evidence limitation, not a claim that the movements are absent from the videos.
+4. If a future existing recording is already schema-v2 complete with setup identity, source hash, readiness history, camera metadata, and pose/world-pose/hand/face/blendshape channel evidence, run `npm run movement:replay-game:commissioning-proof -- --recording-id <saved-id> --out tmp/movement-replay-lab/<run-name> --local-test-auth --secret sonae-local-test-auth`.
+5. Because the current nine fail for concrete packet reasons, a new `/demos/movement-capture?commissioning=1` capture, if required, is a source-packet upgrade, not a request to re-debug squats, leg raises, or side bends manually.
+6. Add browser-visible Replay and ordinary Game review to the same packet result.
 7. Replace or re-record `Head Roll` with both feet visible and regenerate a genuine current 9/9 certificate.
 8. Add the strict targeted, representative, all-nine, and commissioning lanes to the finish gate so a Replay-only repair cannot be accepted.
 
@@ -674,7 +676,16 @@ The current legacy diagnostic lane observed zero Replay/Game output differences 
 - Supported root-turn, hand-curl, and asymmetric-blink failures are blocking in the mounted Game behaviour gate. Both right and left approximately 45-degree lateral leg fixtures now exist at near and far camera scale.
 - Verification passes under Node 22.13.0: acquisition contract guard, `npm run check` (333 test files / 2,389 tests, lint, and typecheck), production build, recording codec/replay tests, automatic setup/tracking-boundary tests, hard-gate policy tests, and `git diff --check`.
 - The parity frame lifecycle was extracted into `useVrmAvatarFrameRuntime`, reducing `VrmAvatar.tsx` from 350 to 133 lines and restoring that renderer adapter to its architecture budget. The broader movement architecture audit now reports only its six pre-existing untouched line-budget failures. Source purity, route-bypass purity, 11,383-frame downstream Replay/Game parity, and all 50 stored Game visual checks pass inside that audit.
-- Still blocked: a setup-valid replacement for `Head Roll`, a fresh complete canonical packet, packet-hash propagation into combined proof artifacts, the remaining zero-escape visual/mirror assertions, and one-time live commissioning.
+- The motion-pipeline fingerprint now covers all non-test movement libraries and hooks, all Game play components, the Game and Replay route lifecycles, Movement Capture, and final VRM application. A focused regression explicitly requires `useMovementPlayerTracking.ts`, `useMovementLivePlayerSetup.ts`, `movementPlayerInputContract.ts`, and `useVrmAvatarFrameRuntime.ts`.
+- New Replay and mounted Game captures now export the same full commit, current pipeline fingerprint, immutable packet hash, input-contract ID, named setup-policy ID, avatar profile, runtime contract, and `replay-mounted-game-player-v1` parity proof mode.
+- Replay/mounted Game comparison now blocks missing or legacy identity, mismatched identity, stale/current-code fingerprint or commit drift, and any exact player-render checksum difference. The former test that allowed a sub-tolerance exact checksum difference to pass is reversed; focused identity/fingerprint/comparator coverage passes 16/16 tests.
+- Replay and mounted Game now export the same eight raw comparison boundaries on every active frame: acquisition, setup, calibration, motion frame, owner/root/support, instructor-rendered, player-rendered, and final player-applied telemetry. The comparator recomputes every checksum, detects a mismatched declared Game checksum, reports the first differing boundary, and blocks any exact difference; focused coverage passes 17/17 tests.
+- Stored recording schema version now survives conversion into a Replay session and is a required parity identity field. `movement:replay-game:packet-proof` validates schema v2, packet/setup identity, complete setup prefix, per-frame readiness, and non-empty pose/world-pose/hand/face/blendshape/camera evidence before launching fresh Replay and mounted Game captures; the focused proof/identity suite passes 21/21 tests.
+- Movement Capture now has an explicit commissioning route that validates the completed schema-v2 envelope before upload, blocks incomplete saves with channel-specific failures, and displays the newly created recording ID rather than navigating away. A drift test locks its six required capture channels to the command-line proof preflight. The running local app renders the commissioning contract banner with tracking ready and no application errors.
+- `movement:replay-game:commissioning-proof` now starts from the saved commissioning recording ID, creates a fresh Convex export with file storage unless an explicit export is supplied, converts that recording to the canonical Replay session packet, invokes the existing fresh Replay/mounted Game packet proof, and writes a top-level binary summary. Focused orchestration coverage passes with the packet-proof preflight suite: 2 files / 8 tests under Node 22.13.0.
+- `movement:replay-game:commissioning-eligibility` now checks existing packets before any repeat capture request. It can inspect a session manifest or re-convert saved recording IDs from a Convex export, then apply the same fail-closed packet validator. The export-backed nine-recording run wrote `tmp/movement-replay-lab/current-nine-commissioning-eligibility-from-export.json` and found 0/9 eligible: every current nine recording lacks schema-v2 packet identity, setup identity, source hash, readiness history, and schema-v2 channel evidence required by the strengthened proof.
+- Current verification passes Node 22.13.0 environment validation, acquisition-contract guard, clean typecheck, focused commissioning proof coverage with 3 files / 12 tests, `npm run check` with 345 test files / 2,428 tests, and `git diff --check`. `lint:all` exits green with two warnings from the generated `tmp/movement-replay-lab/export-replay-session-cli.bundle.mjs` scratch bundle, not source files. The broader architecture guard remains blocked only by the six documented pre-existing line-budget overages; none of those files changed in this slice, while source purity, route-bypass purity, 11,383 Replay/Game parity frames, 50/50 Game visual checks, Phase 14 script contracts, and proof-manifest blocking rows remain green.
+- Still blocked: a setup-valid replacement for `Head Roll`, a fresh complete canonical packet exercised through both routes, one-for-one checksums for the remaining acquisition/setup/calibration/motion/owner/instructor/applied boundaries, the remaining zero-escape visual/mirror assertions, and one-time live commissioning.
 
 ### 2026-07-17 Renewed Mounted All-Nine Evidence
 

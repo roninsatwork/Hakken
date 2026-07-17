@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -8,52 +9,67 @@ const movementLibDir = path.join(
   repoRoot,
   "src/app/(dashboard)/demos/movements/_lib",
 );
+const movementHooksDir = path.join(
+  repoRoot,
+  "src/app/(dashboard)/demos/movements/_hooks",
+);
+const gameComponentsDir = path.join(
+  repoRoot,
+  "src/app/(dashboard)/demos/movements/[id]/play/_components",
+);
 const vrmAvatarPath = "src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx";
 const gamePlayPath = "src/app/(dashboard)/demos/movements/[id]/play/page.tsx";
-const gameRuntimeHookFiles = [
-  "src/app/(dashboard)/demos/movements/_hooks/useMovementInstructorPlayback.ts",
-  "src/app/(dashboard)/demos/movements/_hooks/useMovementLiveMotionFrame.ts",
-  "src/app/(dashboard)/demos/movements/_hooks/useMovementRecordedMotionFrame.ts",
-  "src/app/(dashboard)/demos/movements/_hooks/useMovementTrackingCalibration.ts",
-];
+const movementCapturePath = "src/app/(dashboard)/demos/movement-capture/page.tsx";
 const replayProofFiles = [
   "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabFrameFailures.ts",
   "src/app/(dashboard)/demos/movements/replay-lab/_lib/replayLabHelpers.ts",
   "src/app/(dashboard)/demos/movements/replay-lab/page.tsx",
 ];
-const sharedMotionFiles = new Set([
-  "movementLiveMotionFrame.ts",
-  "movementGameRuntimeFrame.ts",
-  "movementMotionFrame.ts",
-  "movementPlayerMotionFrame.ts",
-  "movementRecordedMotionFrame.ts",
-  "movementRecordedPlayerSetup.ts",
-  "movementReplayPlaybackClock.ts",
-  "movementReplayPlayerMotionFrame.ts",
-  "movementRetargeting.ts",
-  "movementRootMotion.ts",
-]);
+
+function sourceFiles(directory, relativeDirectory) {
+  return readdirSync(directory)
+    .filter((fileName) => (
+      /\.(?:ts|tsx)$/.test(fileName) &&
+      !/\.test\.(?:ts|tsx)$/.test(fileName)
+    ))
+    .map((fileName) => path.posix.join(relativeDirectory, fileName));
+}
 
 export function movementPipelineFingerprintFiles() {
-  const movementFiles = readdirSync(movementLibDir)
-    .filter((fileName) => (
-      fileName.endsWith(".ts") &&
-      !fileName.endsWith(".test.ts") &&
-      fileName !== "movementAvatarProofFixtures.ts" &&
-      (fileName.startsWith("movementAvatar") || sharedMotionFiles.has(fileName))
-    ))
-    .map((fileName) => path.posix.join(
-      "src/app/(dashboard)/demos/movements/_lib",
-      fileName,
-    ));
+  const movementFiles = sourceFiles(
+    movementLibDir,
+    "src/app/(dashboard)/demos/movements/_lib",
+  );
+  const movementHookFiles = sourceFiles(
+    movementHooksDir,
+    "src/app/(dashboard)/demos/movements/_hooks",
+  );
+  const gameComponentFiles = sourceFiles(
+    gameComponentsDir,
+    "src/app/(dashboard)/demos/movements/[id]/play/_components",
+  );
 
-  return [
+  return Array.from(new Set([
     ...movementFiles,
+    ...movementHookFiles,
+    ...gameComponentFiles,
     ...replayProofFiles,
-    ...gameRuntimeHookFiles,
     gamePlayPath,
+    movementCapturePath,
     vrmAvatarPath,
-  ].sort();
+  ])).sort();
+}
+
+export function movementCodeCommit() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
 export function movementPipelineFingerprint() {

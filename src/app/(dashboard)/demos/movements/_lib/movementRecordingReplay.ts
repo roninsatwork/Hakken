@@ -37,6 +37,7 @@ type MovementReplaySessionBuildOptions = {
   captureStartReadiness?: MovementStartReadiness;
   channelSummary?: MovementRecordingChannelSummary;
   inputContract?: MovementFrameEnvelope["inputContract"];
+  schemaVersion?: number;
   setupPrefix?: MovementFrameEnvelope["setupPrefix"];
   sourcePacketHash?: string;
 };
@@ -153,6 +154,7 @@ export function buildMovementReplaySessionFromRecording(
     movementId: recording._id,
     sampleCount: samples.length,
     samples,
+    schemaVersion: options.schemaVersion,
     setupPrefix: options.setupPrefix,
     sourcePacketHash: options.sourcePacketHash,
     startedAt,
@@ -183,6 +185,7 @@ export async function loadMovementReplayRecording(
         captureStartReadiness: parsed.captureStartReadiness,
         channelSummary: parsed.channelSummary,
         inputContract: parsed.inputContract,
+        schemaVersion: parsed.schemaVersion,
         setupPrefix: parsed.setupPrefix,
         sourcePacketHash: parsed.sourcePacketHash,
       },

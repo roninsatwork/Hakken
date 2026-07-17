@@ -2,6 +2,45 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  movementCodeCommit,
+  movementPipelineFingerprint,
+} from "./lib/movementPipelineFingerprint.mjs";
+
+const REQUIRED_IDENTITY_FIELDS = [
+  "avatarProfile",
+  "inputContractId",
+  "proofMode",
+  "recordingSchemaVersion",
+  "runtimeContract",
+  "setupPolicyId",
+  "sourcePacketHash",
+];
+const COMPARABLE_BOUNDARIES = [
+  "acquisition",
+  "setup",
+  "calibration",
+  "motionFrame",
+  "ownersRootSupport",
+  "instructorRendered",
+  "playerRendered",
+  "playerApplied",
+];
+
+function proofIdentity(artifact, fallback = {}) {
+  return Object.fromEntries(REQUIRED_IDENTITY_FIELDS.map((field) => [
+    field,
+    artifact?.identity?.[field] ?? fallback?.[field] ?? null,
+  ]));
+}
+
+function codeIdentity(artifact) {
+  return {
+    commit: artifact?.code?.commit ?? null,
+    motionPipelineFingerprint:
+      artifact?.code?.motionPipelineFingerprint ?? artifact?.motionPipelineFingerprint ?? null,
+  };
+}
 
 function parseArgs(argv) {
   const args = { allowLegacy: false, game: "", out: "", replay: "" };
@@ -221,21 +260,51 @@ export function compareRenderedMovementTelemetry({
 }
 
 export function compareReplayMountedGameChecksums({ allowLegacy = false, game, replay }) {
-  const replayFrames = new Map(
+  const replayFrameRecords = new Map(
     (Array.isArray(replay?.frames) ? replay.frames : []).map((frame) => [
       frame.sourceFrameIndex ?? frame.frameIndex,
+      frame,
+    ]),
+  );
+  const replayFrames = new Map(
+    [...replayFrameRecords.entries()].map(([frameIndex, frame]) => [
+      frameIndex,
       replayPlayerDebug(frame),
     ]),
   );
   const gameFrames = Array.isArray(game?.final?.renderedFrames)
     ? game.final.renderedFrames
     : [];
-  const sourceHashesMatch = Boolean(
-    replay?.sourceHash &&
-    game?.final?.sourcePacketHash &&
-    replay.sourceHash === game.final.sourcePacketHash
-  );
-  const isLegacy = !replay?.sourceHash || !game?.final?.sourcePacketHash;
+  const replayIdentity = proofIdentity(replay, {
+    proofMode: replay?.proofMode,
+    runtimeContract: replay?.runtimeContract,
+    sourcePacketHash: replay?.sourceHash,
+  });
+  const gameIdentity = proofIdentity(game, game?.final);
+  const replayCode = codeIdentity(replay);
+  const gameCode = codeIdentity(game);
+  const currentCode = {
+    commit: movementCodeCommit(),
+    motionPipelineFingerprint: movementPipelineFingerprint(),
+  };
+  const missingIdentityFields = REQUIRED_IDENTITY_FIELDS.filter((field) => (
+    !replayIdentity[field] || !gameIdentity[field]
+  ));
+  const mismatchedIdentityFields = REQUIRED_IDENTITY_FIELDS.filter((field) => (
+    replayIdentity[field] &&
+    gameIdentity[field] &&
+    replayIdentity[field] !== gameIdentity[field]
+  ));
+  const missingCodeFields = ["commit", "motionPipelineFingerprint"].filter((field) => (
+    !replayCode[field] || !gameCode[field]
+  ));
+  const mismatchedCodeFields = ["commit", "motionPipelineFingerprint"].filter((field) => (
+    replayCode[field] && gameCode[field] && replayCode[field] !== gameCode[field]
+  ));
+  const staleCodeFields = ["commit", "motionPipelineFingerprint"].filter((field) => (
+    replayCode[field] !== currentCode[field] || gameCode[field] !== currentCode[field]
+  ));
+  const isLegacy = missingIdentityFields.length > 0 || missingCodeFields.length > 0;
   const exactChecksumDivergences = [];
   const visualToleranceDivergences = [];
   const firstGameFrame = gameFrames[0] ?? null;
@@ -249,17 +318,43 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
   ));
 
   for (const gameFrame of gameFrames) {
+    const replayFrame = replayFrameRecords.get(gameFrame.frameIndex);
     const replayDebug = replayFrames.get(gameFrame.frameIndex);
-    const replayChecksum = replayDebug?.avatarVisual
-      ? movementBoundaryChecksumForComparison(replayDebug.avatarVisual)
-      : null;
-    const gameChecksum = gameFrame?.checksums?.playerRendered ?? null;
-    if (!replayChecksum || replayChecksum !== gameChecksum) {
-      exactChecksumDivergences.push({
-        frameIndex: gameFrame.frameIndex,
-        gameChecksum,
-        replayChecksum,
-      });
+    for (const boundary of COMPARABLE_BOUNDARIES) {
+      const replayBoundary = boundary === "playerApplied"
+        ? normalizeAppliedRoot(
+            replayFrame?.boundaries?.playerApplied ?? appliedSnapshot(replayDebug),
+            replayAppliedBaseline,
+          )
+        : replayFrame?.boundaries?.[boundary];
+      const gameBoundary = boundary === "playerApplied"
+        ? normalizeAppliedRoot(
+            gameFrame?.boundaries?.playerApplied ?? gameFrame?.playerApplied,
+            gameAppliedBaseline,
+          )
+        : gameFrame?.boundaries?.[boundary];
+      const replayChecksum = replayBoundary === undefined
+        ? null
+        : movementBoundaryChecksumForComparison(replayBoundary);
+      const gameComputedChecksum = gameBoundary === undefined
+        ? null
+        : movementBoundaryChecksumForComparison(gameBoundary);
+      const gameDeclaredChecksum = gameFrame?.checksums?.[boundary] ?? null;
+      if (
+        !replayChecksum ||
+        !gameComputedChecksum ||
+        replayChecksum !== gameComputedChecksum ||
+        (gameDeclaredChecksum && boundary !== "playerApplied" &&
+          gameDeclaredChecksum !== gameComputedChecksum)
+      ) {
+        exactChecksumDivergences.push({
+          boundary,
+          frameIndex: gameFrame.frameIndex,
+          gameComputedChecksum,
+          gameDeclaredChecksum,
+          replayChecksum,
+        });
+      }
     }
     if (hasVisualTelemetry) {
       const comparison = compareRenderedMovementTelemetry({
@@ -291,8 +386,24 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
   if (visualToleranceDivergences.length > 0) {
     failures.push(`${visualToleranceDivergences.length} rendered frame(s) exceeded visual tolerances`);
   }
-  if (isLegacy && !allowLegacy) failures.push("source packet identity is legacy or missing");
-  if (!isLegacy && !sourceHashesMatch) failures.push("Replay and mounted Game source packet hashes differ");
+  if (exactChecksumDivergences.length > 0) {
+    failures.push(`${exactChecksumDivergences.length} rendered frame(s) have exact checksum differences`);
+  }
+  if (missingIdentityFields.length > 0) {
+    failures.push(`proof identity is legacy or missing: ${missingIdentityFields.join(", ")}`);
+  }
+  if (mismatchedIdentityFields.length > 0) {
+    failures.push(`Replay and mounted Game proof identity differs: ${mismatchedIdentityFields.join(", ")}`);
+  }
+  if (missingCodeFields.length > 0) {
+    failures.push(`proof code identity is missing: ${missingCodeFields.join(", ")}`);
+  }
+  if (mismatchedCodeFields.length > 0) {
+    failures.push(`Replay and mounted Game code identity differs: ${mismatchedCodeFields.join(", ")}`);
+  }
+  if (staleCodeFields.length > 0) {
+    failures.push(`proof artifacts are stale against current code: ${staleCodeFields.join(", ")}`);
+  }
   const divergencePathCounts = Object.fromEntries(
     [...visualToleranceDivergences.reduce((counts, divergence) => {
       const divergencePath = divergence.worst?.path ?? "unknown";
@@ -304,6 +415,12 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
     .sort((left, right) => (
       (right.worst?.deltaRatio ?? 0) - (left.worst?.deltaRatio ?? 0)
     ))[0] ?? null;
+  const exactChecksumDivergenceBoundaryCounts = Object.fromEntries(
+    [...exactChecksumDivergences.reduce((counts, divergence) => {
+      counts.set(divergence.boundary, (counts.get(divergence.boundary) ?? 0) + 1);
+      return counts;
+    }, new Map()).entries()].sort((left, right) => right[1] - left[1]),
+  );
 
   return {
     comparedFrameCount: gameFrames.length,
@@ -311,15 +428,32 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
     divergences: visualToleranceDivergences,
     divergencePathCounts,
     exactChecksumDivergenceCount: exactChecksumDivergences.length,
+    exactChecksumDivergenceBoundaryCounts,
     exactChecksumDivergences,
     failures,
     firstDivergence: visualToleranceDivergences[0] ?? null,
+    firstExactChecksumDivergence: exactChecksumDivergences[0] ?? null,
     gamePacketId: game?.final?.packetId ?? null,
     identityStatus: isLegacy
       ? "legacy-unverifiable"
-      : sourceHashesMatch
+      : mismatchedIdentityFields.length === 0 &&
+          mismatchedCodeFields.length === 0 &&
+          staleCodeFields.length === 0
         ? "matched"
         : "mismatched",
+    legacyDiagnosticRequested: allowLegacy,
+    metadata: {
+      currentCode,
+      gameCode,
+      gameIdentity,
+      mismatchedCodeFields,
+      mismatchedIdentityFields,
+      missingCodeFields,
+      missingIdentityFields,
+      replayCode,
+      replayIdentity,
+      staleCodeFields,
+    },
     passed: failures.length === 0,
     replayRecordingId: replay?.recordingId ?? replay?.sessionId ?? null,
     visualToleranceComparisonAvailable: hasVisualTelemetry,
@@ -367,7 +501,9 @@ export async function runReplayMountedGameChecksumComparison(argv) {
   }
   console.log(
     `Replay/mounted Game comparison: ${report.comparedFrameCount} frame(s), ` +
-    `${report.divergenceCount} divergence(s), identity ${report.identityStatus}.`,
+    `${report.divergenceCount} tolerance divergence(s), ` +
+    `${report.exactChecksumDivergenceCount} exact boundary divergence(s), ` +
+    `identity ${report.identityStatus}.`,
   );
   if (!report.passed) {
     if (report.firstDivergence) {
@@ -376,6 +512,11 @@ export async function runReplayMountedGameChecksumComparison(argv) {
         `${report.firstDivergence.worst?.path ?? "unknown field"} delta ` +
         `${report.firstDivergence.worst?.delta ?? "unknown"} exceeds ` +
         `${report.firstDivergence.worst?.tolerance ?? "unknown"}.`,
+      );
+    } else if (report.firstExactChecksumDivergence) {
+      console.error(
+        `First exact divergence at frame ${report.firstExactChecksumDivergence.frameIndex}: ` +
+        `${report.firstExactChecksumDivergence.boundary}.`,
       );
     }
     process.exitCode = 1;

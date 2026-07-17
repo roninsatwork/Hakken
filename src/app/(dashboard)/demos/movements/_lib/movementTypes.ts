@@ -91,7 +91,7 @@ export type MovementFrameEnvelope = {
       pose: { beta: number; frequency: number; landmarkCount: number; minCutoff: number };
     };
     id: string;
-    setup: { prefixFrameCount: number; sampleLimit: number };
+    setup: { id?: string; prefixFrameCount: number; sampleLimit: number };
   };
   setupPrefix?: {
     complete: boolean;

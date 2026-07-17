@@ -3,6 +3,7 @@ import {
   buildMovementFrameEnvelope,
   hashMovementFrameEnvelopeSource,
 } from "./movementFrameCodec";
+import { validateMovementCommissioningEnvelope } from "./movementRecordingCommissioning";
 import type {
   MovementBodyFocus,
   MovementDifficulty,
@@ -39,6 +40,7 @@ type SaveMovementRecordingInput = {
   generateUploadUrl: () => Promise<string>;
   createMovement: (input: MovementCreateInput) => Promise<unknown>;
   uploadFetch?: typeof fetch;
+  requireCommissioningPacket?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,6 +79,7 @@ export async function saveMovementRecording({
   generateUploadUrl,
   createMovement,
   uploadFetch = fetch,
+  requireCommissioningPacket = false,
 }: SaveMovementRecordingInput) {
   const trimmedTitle = title.trim();
   if (!trimmedTitle) {
@@ -91,6 +94,14 @@ export async function saveMovementRecording({
     captureStartReadiness,
   });
   payload.sourcePacketHash = await hashMovementFrameEnvelopeSource(payload);
+  if (requireCommissioningPacket) {
+    const commissioningReport = validateMovementCommissioningEnvelope(payload);
+    if (!commissioningReport.passed) {
+      throw new Error(
+        `Commissioning capture is not proof-ready: ${commissioningReport.failures.join(" ")}`,
+      );
+    }
+  }
   const postUrl = await generateUploadUrl();
   const uploadResponse = await uploadFetch(postUrl, {
     method: "POST",

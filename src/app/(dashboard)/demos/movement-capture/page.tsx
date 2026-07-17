@@ -16,6 +16,11 @@ import {
   MIN_MOVEMENT_CAPTURE_FRAMES,
   saveMovementRecording,
 } from "../movements/_lib/saveMovementRecording";
+import { buildMovementFrameEnvelope } from "../movements/_lib/movementFrameCodec";
+import {
+  validateMovementCommissioningEnvelope,
+  type MovementCommissioningPacketReport,
+} from "../movements/_lib/movementRecordingCommissioning";
 import type {
   MovementBodyFocus,
   MovementDifficulty,
@@ -60,6 +65,7 @@ function getCaptureStartReadinessMessage(readiness: MovementStartReadiness | nul
 }
 
 export default function MovementCapturePage() {
+  const [commissioningMode, setCommissioningMode] = useState(false);
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -98,6 +104,12 @@ export default function MovementCapturePage() {
   const [bodyFocus, setBodyFocus] = useState<MovementBodyFocus[]>(["ribcage", "pelvis"]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [commissioningReport, setCommissioningReport] =
+    useState<MovementCommissioningPacketReport | null>(null);
+  const [savedCommissioningRecording, setSavedCommissioningRecording] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [captureStartGate, setCaptureStartGate] = useState<MovementCaptureStartGateState>(
     createIdleCaptureStartGate,
   );
@@ -108,6 +120,10 @@ export default function MovementCapturePage() {
   const createMovement = useMutation(api.movements.create);
   const generateUploadUrl = useMutation(api.movements.generateUploadUrl);
   const router = useRouter();
+
+  React.useEffect(() => {
+    setCommissioningMode(new URLSearchParams(window.location.search).get("commissioning") === "1");
+  }, []);
 
   React.useEffect(() => {
     captureStartReadinessRef.current = captureStartReadiness;
@@ -187,12 +203,22 @@ export default function MovementCapturePage() {
     if (!isVisionReady) return;
 
     if (isRecording) {
-      stopRecording();
+      const frames = stopRecording();
+      if (commissioningMode) {
+        const envelope = buildMovementFrameEnvelope(frames, 30, {
+          captureStartReadiness: recordingStartReadiness,
+        });
+        setCommissioningReport(validateMovementCommissioningEnvelope(envelope, {
+          requireSourceHash: false,
+        }));
+      }
       setCaptureStartGate(createIdleCaptureStartGate());
       setSaveError(null);
       setShowSaveModal(true);
     } else {
       setRecordingStartReadiness(null);
+      setCommissioningReport(null);
+      setSavedCommissioningRecording(null);
       setSaveError(null);
       setCaptureStartGate({
         countdownMsRemaining: MOVEMENT_CAPTURE_START_COUNTDOWN_MS,
@@ -201,7 +227,7 @@ export default function MovementCapturePage() {
         status: "countdown",
       });
     }
-  }, [isRecording, isVisionReady, stopRecording]);
+  }, [commissioningMode, isRecording, isVisionReady, recordingStartReadiness, stopRecording]);
 
   const handleSave = async () => {
     const recordedFrames = getRecordedFrames();
@@ -210,7 +236,7 @@ export default function MovementCapturePage() {
     setSaveError(null);
     
     try {
-      await saveMovementRecording({
+      const movementId = await saveMovementRecording({
         title,
         difficulty,
         spineGoal,
@@ -220,10 +246,15 @@ export default function MovementCapturePage() {
         frames: recordedFrames,
         generateUploadUrl,
         createMovement,
+        requireCommissioningPacket: commissioningMode,
       });
       
       setShowSaveModal(false);
-      router.push("/demos/movements");
+      if (commissioningMode && typeof movementId === "string") {
+        setSavedCommissioningRecording({ id: movementId, title: title.trim() });
+      } else {
+        router.push("/demos/movements");
+      }
     } catch (e) {
       console.error("Failed to save movement:", e);
       setSaveError(e instanceof Error ? e.message : "Failed to save movement. Please try again.");
@@ -242,6 +273,29 @@ export default function MovementCapturePage() {
             Back to Studio Library
           </Link>
         </div>
+        {commissioningMode && (
+          <div className="rounded-2xl border border-[#f6ccbe]/35 bg-[#f6ccbe]/10 px-5 py-4 text-sm text-foreground">
+            <p className="font-semibold">Replay/Game commissioning capture</p>
+            <p className="mt-1 text-secondary">
+              Saving is blocked unless this take contains the shared setup prefix, readiness on every
+              recorded frame, packet identity, and pose, world-pose, hand, face, blendshape, and camera evidence.
+            </p>
+          </div>
+        )}
+        {savedCommissioningRecording && (
+          <div className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-5 py-4 text-sm text-foreground">
+            <p className="font-semibold">Proof-ready recording saved</p>
+            <p className="mt-1 text-secondary">
+              {savedCommissioningRecording.title} · recording ID
+            </p>
+            <code className="mt-2 block select-all break-all rounded-lg bg-black/25 px-3 py-2 text-xs text-emerald-100">
+              {savedCommissioningRecording.id}
+            </code>
+            <p className="mt-2 text-xs text-secondary">
+              Keep this page open and give the ID to Codex; the export and combined Replay/Game proof can now run without another live take.
+            </p>
+          </div>
+        )}
         
         <MovementCapturePanel
           webcamRef={webcamRef}
@@ -276,6 +330,7 @@ export default function MovementCapturePage() {
         frameCount={frameCount}
         isSaving={isSaving}
         saveError={saveError}
+        commissioningFailures={commissioningMode ? commissioningReport?.failures ?? [] : undefined}
         onClose={() => setShowSaveModal(false)}
         onTitleChange={setTitle}
         onDifficultyChange={setDifficulty}

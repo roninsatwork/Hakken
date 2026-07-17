@@ -42,12 +42,16 @@ import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
 import { buildLiveMovementMotionFrame } from "../_lib/movementLiveMotionFrame";
 import { buildRecordedMovementMotionFrame } from "../_lib/movementRecordedMotionFrame";
 import { buildReplayPlayerMovementMotionFrame } from "../_lib/movementReplayPlayerMotionFrame";
+import { getMovementAvatarTrackingProfileName } from "../_lib/movementAvatarProfiles";
 import {
   resolveMovementReplayFrameDelay,
   resolveMovementReplayPlaybackStep,
 } from "../_lib/movementReplayPlaybackClock";
 import { buildMovementPlayerSetupFromPrefix } from "../_lib/movementPlayerInputContract";
-import { MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION } from "../_lib/movementGameRuntimeFrame";
+import {
+  MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
+  MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
+} from "../_lib/movementGameRuntimeFrame";
 import type { MovementRootMotionFrame } from "../_lib/movementRootMotion";
 import type { VrmMotionPayload, VrmMotionRef } from "../_lib/vrmRigging";
 import MovementMatchScene from "../[id]/play/_components/MovementMatchScene";
@@ -123,6 +127,19 @@ function replayFrameMotionPayload(
 }
 
 type MovementReplayLabDeterministicDebugWindow = Window & {
+  __sonaeReplayGameBoundaryProof?: {
+    boundaries: {
+      acquisition: unknown;
+      calibration: unknown;
+      instructorRendered: unknown;
+      motionFrame: unknown;
+      ownersRootSupport: unknown;
+      playerApplied: unknown;
+      playerRendered: unknown;
+      setup: unknown;
+    };
+    frameIndex: number;
+  };
   __sonaeReplayLabPlaybackClock?: {
     currentCapturedAt?: number;
     delayMs: number;
@@ -794,6 +811,71 @@ export default function MovementReplayLabPage() {
   }, [currentThreePartyInstructorPayload, currentThreePartyPlayerPayload, isThreePartyMirrorProof]);
 
   useEffect(() => {
+    const debugWindow = window as MovementReplayLabDeterministicDebugWindow;
+    if (
+      !isThreePartyMirrorProof ||
+      !replaySession ||
+      !currentThreePartyPlayerPayload
+    ) {
+      delete debugWindow.__sonaeReplayGameBoundaryProof;
+      return undefined;
+    }
+
+    let animationFrameId = 0;
+    const publish = () => {
+      const playerDebug = replayAvatarDebugRef.current;
+      const instructorDebug = replayInstructorAvatarDebugRef.current;
+      const expectedFrameSuffix = `:${safeFrameIndex}`;
+      if (
+        playerDebug?.sourceFrameId?.endsWith(expectedFrameSuffix) &&
+        instructorDebug?.sourceFrameId?.endsWith(expectedFrameSuffix) &&
+        playerDebug.avatarVisual &&
+        instructorDebug.avatarVisual
+      ) {
+        debugWindow.__sonaeReplayGameBoundaryProof = {
+          boundaries: {
+            acquisition: structuredClone(currentThreePartyPlayerPayload),
+            calibration: structuredClone(replayThreePartyPlayerCalibration),
+            instructorRendered: structuredClone(instructorDebug.avatarVisual),
+            motionFrame: structuredClone(replayMotionFrameRef.current),
+            ownersRootSupport: structuredClone({
+              avatarRoot: playerDebug.avatarRoot,
+              bodySupport: playerDebug.bodySupport,
+              fallbacks: playerDebug.fallbacks,
+              retarget: playerDebug.retarget,
+              supportConstraint: playerDebug.supportConstraint,
+              supportIntent: playerDebug.supportIntent,
+            }),
+            playerApplied: structuredClone({
+              avatarExpressions: playerDebug.avatarExpressions,
+              avatarHands: playerDebug.avatarHands,
+              avatarHead: playerDebug.avatarHead,
+              avatarRoot: playerDebug.avatarRoot,
+              avatarSpine: playerDebug.avatarSpine,
+            }),
+            playerRendered: structuredClone(playerDebug.avatarVisual),
+            setup: structuredClone(replayThreePartyPlayerSetup),
+          },
+          frameIndex: safeFrameIndex,
+        };
+      }
+      animationFrameId = window.requestAnimationFrame(publish);
+    };
+    publish();
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      delete debugWindow.__sonaeReplayGameBoundaryProof;
+    };
+  }, [
+    currentThreePartyPlayerPayload,
+    isThreePartyMirrorProof,
+    replaySession,
+    replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSetup,
+    safeFrameIndex,
+  ]);
+
+  useEffect(() => {
     const sourceMotion = currentFrame
       ? replayFrameMotionPayload(
           currentFrame,
@@ -1187,6 +1269,12 @@ export default function MovementReplayLabPage() {
         data-spine-forward-lean={currentSpineDrive?.forwardLean ?? ""}
         data-spine-side-bend={currentSpineDrive?.sideBend ?? ""}
         data-spine-twist={currentSpineDrive?.twist ?? ""}
+        data-avatar-profile={getMovementAvatarTrackingProfileName(replayAvatarVrmUrl)}
+        data-input-contract-id={replaySession?.inputContract?.id ?? ""}
+        data-parity-proof-mode={MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE}
+        data-recording-schema-version={replaySession?.schemaVersion ?? ""}
+        data-setup-policy-id={replaySession?.inputContract?.setup.id ?? ""}
+        data-source-packet-hash={replaySession?.sourcePacketHash ?? ""}
         data-runtime-contract={MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION}
         data-runtime-lanes={isThreePartyMirrorProof
           ? "game-instructor,game-player-simulated"

@@ -50,7 +50,11 @@ describe("movement player input contract", () => {
         hand: { frequency: 60, minCutoff: 1.6, beta: 0.08 },
         pose: { frequency: 60, minCutoff: 0.05, beta: 0.1 },
       },
-      setup: { prefixFrameCount: 60, sampleLimit: 12 },
+      setup: {
+        id: "movement-player-setup-v1",
+        prefixFrameCount: 60,
+        sampleLimit: 12,
+      },
     });
   });
 
